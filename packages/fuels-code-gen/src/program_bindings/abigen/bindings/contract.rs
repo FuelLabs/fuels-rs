@@ -15,7 +15,9 @@ use crate::{
     },
     utils::{
         ident,
-        type_path_lookup::{fuels_programs_path, fuels_signers_path, fuels_types_path},
+        type_path_lookup::{
+            fuels_programs_path, fuels_signers_path, fuels_types_path, std_lib_path,
+        },
         TypePath,
     },
 };
@@ -44,6 +46,7 @@ pub(crate) fn contract_bindings(
     let fuels_types = fuels_types_path(no_std);
     let fuels_programs = fuels_programs_path(no_std);
     let fuels_signers = fuels_signers_path(no_std);
+    let std_lib = std_lib_path(no_std);
 
     let code = quote! {
         pub struct #name {
@@ -73,7 +76,7 @@ pub(crate) fn contract_bindings(
                ::core::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, log_decoder: self.log_decoder.clone()})
             }
 
-            pub async fn get_balances(&self) -> #fuels_types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
+            pub async fn get_balances(&self) -> #fuels_types::errors::Result<::std::collections::HashMap<#std_lib::string::String, u64>> {
                 self.wallet.get_provider()?.get_contract_balances(&self.contract_id).await.map_err(Into::into)
             }
 

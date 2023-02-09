@@ -11,7 +11,9 @@ use crate::{
         generated_code::GeneratedCode,
     },
     utils::{
-        type_path_lookup::{fuels_core_path, fuels_signers_path, fuels_tx_path, fuels_types_path},
+        type_path_lookup::{
+            fuels_core_path, fuels_signers_path, fuels_tx_path, fuels_types_path, std_lib_path,
+        },
         TypePath,
     },
 };
@@ -32,17 +34,18 @@ pub(crate) fn predicate_bindings(
     let fuels_core = fuels_core_path(no_std);
     let fuels_signers = fuels_signers_path(no_std);
     let fuels_tx = fuels_tx_path(no_std);
+    let std_lib = std_lib_path(no_std);
 
     let code = quote! {
         #[derive(Debug)]
         pub struct #name {
             address: #fuels_types::bech32::Bech32Address,
-            code: ::std::vec::Vec<u8>,
+            code: #std_lib::vec::Vec<u8>,
             data: #fuels_core::abi_encoder::UnresolvedBytes
         }
 
         impl #name {
-            pub fn new(code: ::std::vec::Vec<u8>) -> Self {
+            pub fn new(code: #std_lib::vec::Vec<u8>) -> Self {
                 let address: #fuels_types::Address = (*#fuels_tx::Contract::root_from_code(&code)).into();
                 Self {
                     address: address.into(),
@@ -59,7 +62,7 @@ pub(crate) fn predicate_bindings(
                 &self.address
             }
 
-            pub fn code(&self) -> ::std::vec::Vec<u8> {
+            pub fn code(&self) -> #std_lib::vec::Vec<u8> {
                 self.code.clone()
             }
 
@@ -71,7 +74,7 @@ pub(crate) fn predicate_bindings(
                                  amount: u64,
                                  asset_id: #fuels_types::AssetId,
                                  tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>
-            ) -> #fuels_types::errors::Result<(::std::string::String, ::std::vec::Vec<#fuels_tx::Receipt>)> {
+            ) -> #fuels_types::errors::Result<(#std_lib::string::String, #std_lib::vec::Vec<#fuels_tx::Receipt>)> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 from
                     .transfer(
@@ -87,7 +90,7 @@ pub(crate) fn predicate_bindings(
                                 amount: u64,
                                 asset_id: #fuels_types::AssetId,
                                 tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>
-            ) -> #fuels_types::errors::Result<::std::vec::Vec<#fuels_tx::Receipt>> {
+            ) -> #fuels_types::errors::Result<#std_lib::vec::Vec<#fuels_tx::Receipt>> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 to
                     .receive_from_predicate(

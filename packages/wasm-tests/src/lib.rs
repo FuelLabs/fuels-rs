@@ -2,142 +2,292 @@
 
 extern crate alloc;
 
-use alloc::{string::ToString, vec};
-
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_macros::wasm_abigen;
-use fuels_types::param_types::ParamType;
-
-wasm_abigen!(Contract(
-    name = "no_name",
-    abi = r#"
-    {
-        "types": [
-          {
-            "typeId": 0,
-            "type": "()",
-            "components": [],
-            "typeParameters": null
-          },
-          {
-            "typeId": 1,
-            "type": "b256",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 2,
-            "type": "bool",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 3,
-            "type": "struct AnotherEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "hash",
-                "type": 1,
-                "typeArguments": null
-              },
-              {
-                "name": "bar",
-                "type": 2,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 4,
-            "type": "struct SomeEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "account",
-                "type": 1,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 5,
-            "type": "u64",
-            "components": null,
-            "typeParameters": null
-          }
-        ],
-        "functions": [
-          {
-            "inputs": [
-              {
-                "name": "e1",
-                "type": 4,
-                "typeArguments": null
-              },
-              {
-                "name": "e2",
-                "type": 3,
-                "typeArguments": null
-              }
-            ],
-            "name": "takes_struct",
-            "output": {
-              "name": "",
-              "type": 0,
-              "typeArguments": null
-            }
-          }
-        ],
-        "loggedTypes": []
-      }
-    "#
-));
-
-pub fn the_fn() {
-    use fuels_types::traits::Tokenizable;
-    let data = vec![
-        0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
-        175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
-        175,
-    ];
-
-    let obj = ABIDecoder::decode_single(
-        &ParamType::Struct {
-            name: "".to_string(),
-            fields: vec![
-                ("unused".to_string(), ParamType::U64),
-                ("unused".to_string(), ParamType::B256),
-            ],
-            generics: vec![],
-        },
-        &data,
-    )
-    .expect("Failed to decode");
-
-    let a_struct = SomeEvent::from_token(obj).unwrap();
-
-    assert_eq!(1020, a_struct.id);
-}
-
 #[cfg(test)]
 mod tests {
+    use alloc::{string::ToString, vec};
+
+    use fuels_core::abi_decoder::ABIDecoder;
+    use fuels_macros::wasm_abigen;
+    use fuels_types::param_types::ParamType;
     use webassembly_test::webassembly_test;
 
     use super::*;
 
     #[webassembly_test]
-    fn test() {
-        the_fn();
+    fn contract_bindings() {
+        wasm_abigen!(Contract(
+            name = "no_name",
+            abi = r#"
+        {
+            "types": [
+              {
+                "typeId": 0,
+                "type": "()",
+                "components": [],
+                "typeParameters": null
+              },
+              {
+                "typeId": 1,
+                "type": "b256",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 2,
+                "type": "bool",
+                "components": null,
+                "typeParameters": null
+              },
+              {
+                "typeId": 3,
+                "type": "struct AnotherEvent",
+                "components": [
+                  {
+                    "name": "id",
+                    "type": 5,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "hash",
+                    "type": 1,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "bar",
+                    "type": 2,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 4,
+                "type": "struct SomeEvent",
+                "components": [
+                  {
+                    "name": "id",
+                    "type": 5,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "account",
+                    "type": 1,
+                    "typeArguments": null
+                  }
+                ],
+                "typeParameters": null
+              },
+              {
+                "typeId": 5,
+                "type": "u64",
+                "components": null,
+                "typeParameters": null
+              }
+            ],
+            "functions": [
+              {
+                "inputs": [
+                  {
+                    "name": "e1",
+                    "type": 4,
+                    "typeArguments": null
+                  },
+                  {
+                    "name": "e2",
+                    "type": 3,
+                    "typeArguments": null
+                  }
+                ],
+                "name": "takes_struct",
+                "output": {
+                  "name": "",
+                  "type": 0,
+                  "typeArguments": null
+                }
+              }
+            ],
+            "loggedTypes": []
+          }
+    "#
+        ));
+        use fuels_types::traits::Tokenizable;
+        let data = vec![
+            0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
+            175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
+            175, 175, 175,
+        ];
+
+        let obj = ABIDecoder::decode_single(
+            &ParamType::Struct {
+                name: "".to_string(),
+                fields: vec![
+                    ("unused".to_string(), ParamType::U64),
+                    ("unused".to_string(), ParamType::B256),
+                ],
+                generics: vec![],
+            },
+            &data,
+        )
+        .expect("Failed to decode");
+
+        let a_struct = SomeEvent::from_token(obj).unwrap();
+
+        assert_eq!(1020, a_struct.id);
+    }
+
+    #[webassembly_test]
+    fn script_bindings() {
+        wasm_abigen!(Script(
+            name = "MyScript",
+            abi = r#"
+                    {
+                      "types": [
+                        {
+                          "typeId": 0,
+                          "type": "struct Bimbam",
+                          "components": [
+                            {
+                              "name": "val",
+                              "type": 2,
+                              "typeArguments": null
+                            }
+                          ],
+                          "typeParameters": null
+                        },
+                        {
+                          "typeId": 1,
+                          "type": "struct SugarySnack",
+                          "components": [
+                            {
+                              "name": "twix",
+                              "type": 2,
+                              "typeArguments": null
+                            },
+                            {
+                              "name": "mars",
+                              "type": 2,
+                              "typeArguments": null
+                            }
+                          ],
+                          "typeParameters": null
+                        },
+                        {
+                          "typeId": 2,
+                          "type": "u64",
+                          "components": null,
+                          "typeParameters": null
+                        }
+                      ],
+                      "functions": [
+                        {
+                          "inputs": [
+                            {
+                              "name": "bim",
+                              "type": 0,
+                              "typeArguments": null
+                            },
+                            {
+                              "name": "bam",
+                              "type": 1,
+                              "typeArguments": null
+                            }
+                          ],
+                          "name": "main",
+                          "output": {
+                            "name": "",
+                            "type": 0,
+                            "typeArguments": null
+                          },
+                          "attributes": null
+                        }
+                      ],
+                      "loggedTypes": [],
+                      "messagesTypes": [],
+                      "configurables": []
+                    }
+        "#
+        ));
+    }
+
+    #[webassembly_test]
+    fn predicate_bindings() {
+        wasm_abigen!(Predicate(
+            name = "MyPredicate",
+            abi = r#"
+            {
+              "types": [
+                {
+                  "typeId": 0,
+                  "type": "[_; 2]",
+                  "components": [
+                    {
+                      "name": "__array_element",
+                      "type": 2,
+                      "typeArguments": null
+                    }
+                  ],
+                  "typeParameters": null
+                },
+                {
+                  "typeId": 1,
+                  "type": "[_; 3]",
+                  "components": [
+                    {
+                      "name": "__array_element",
+                      "type": 4,
+                      "typeArguments": null
+                    }
+                  ],
+                  "typeParameters": null
+                },
+                {
+                  "typeId": 2,
+                  "type": "b256",
+                  "components": null,
+                  "typeParameters": null
+                },
+                {
+                  "typeId": 3,
+                  "type": "bool",
+                  "components": null,
+                  "typeParameters": null
+                },
+                {
+                  "typeId": 4,
+                  "type": "struct B512",
+                  "components": [
+                    {
+                      "name": "bytes",
+                      "type": 0,
+                      "typeArguments": null
+                    }
+                  ],
+                  "typeParameters": null
+                }
+              ],
+              "functions": [
+                {
+                  "inputs": [
+                    {
+                      "name": "signatures",
+                      "type": 1,
+                      "typeArguments": null
+                    }
+                  ],
+                  "name": "main",
+                  "output": {
+                    "name": "",
+                    "type": 3,
+                    "typeArguments": null
+                  },
+                  "attributes": null
+                }
+              ],
+              "loggedTypes": [],
+              "messagesTypes": [],
+              "configurables": []
+            }
+        "#
+        ));
     }
 }
