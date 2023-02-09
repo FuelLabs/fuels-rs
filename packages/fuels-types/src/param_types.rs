@@ -50,12 +50,6 @@ pub enum ParamType {
     RawSlice,
 }
 
-// impl Default for ParamType {
-//     fn default() -> Self {
-//         ParamType::U8
-//     }
-// }
-
 pub enum ReturnLocation {
     Return,
     ReturnData,
