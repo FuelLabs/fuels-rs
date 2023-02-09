@@ -133,7 +133,7 @@ where
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
 
-    async fn get_tx(&self) -> Result<ScriptTransaction> {
+    async fn build_tx(&self) -> Result<ScriptTransaction> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -158,10 +158,9 @@ where
         )
         .collect();
 
-        let mut tx: ScriptTransaction =
-            ScriptTransaction::new(&inputs, &outputs, self.tx_parameters)
-                .with_script(self.script_call.script_binary.clone())
-                .with_script_data(self.compute_script_data().await?);
+        let mut tx = ScriptTransaction::new(&inputs, &outputs, self.tx_parameters)
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?);
 
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
@@ -176,7 +175,7 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
-        let tx = self.get_tx().await?;
+        let tx = self.build_tx().await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
