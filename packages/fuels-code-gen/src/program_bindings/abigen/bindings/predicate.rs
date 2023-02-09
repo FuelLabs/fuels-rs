@@ -11,7 +11,7 @@ use crate::{
         generated_code::GeneratedCode,
     },
     utils::{
-        type_path_lookup::{fuels_core_path, fuels_types_path},
+        type_path_lookup::{fuels_core_path, fuels_signers_path, fuels_types_path},
         TypePath,
     },
 };
@@ -30,6 +30,7 @@ pub(crate) fn predicate_bindings(
 
     let fuels_types = fuels_types_path(no_std);
     let fuels_core = fuels_core_path(no_std);
+    let fuels_signers = fuels_signers_path(no_std);
 
     let code = quote! {
         #[derive(Debug)]
@@ -65,7 +66,7 @@ pub(crate) fn predicate_bindings(
                 self.data.clone()
             }
 
-            pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked,
+            pub async fn receive(&self, from: &#fuels_signers::wallet::WalletUnlocked,
                                  amount: u64,
                                  asset_id: #fuels_types::AssetId,
                                  tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>
@@ -81,7 +82,7 @@ pub(crate) fn predicate_bindings(
                     .await
             }
 
-            pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked,
+            pub async fn spend(&self, to: &#fuels_signers::wallet::WalletUnlocked,
                                 amount: u64,
                                 asset_id: #fuels_types::AssetId,
                                 tx_parameters: ::core::option::Option<#fuels_core::parameters::TxParameters>

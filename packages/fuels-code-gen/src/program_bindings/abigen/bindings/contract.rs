@@ -15,7 +15,7 @@ use crate::{
     },
     utils::{
         ident,
-        type_path_lookup::{fuels_programs_path, fuels_types_path},
+        type_path_lookup::{fuels_programs_path, fuels_signers_path, fuels_types_path},
         TypePath,
     },
 };
@@ -43,16 +43,17 @@ pub(crate) fn contract_bindings(
 
     let fuels_types = fuels_types_path(no_std);
     let fuels_programs = fuels_programs_path(no_std);
+    let fuels_signers = fuels_signers_path(no_std);
 
     let code = quote! {
         pub struct #name {
-            contract_id: #fuels_types::bech32::Bech32ContractId,
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
+                contract_id: #fuels_types::bech32::Bech32ContractId,
+                wallet: #fuels_signers::wallet::WalletUnlocked,
             log_decoder: #fuels_programs::logs::LogDecoder
         }
 
         impl #name {
-            pub fn new(contract_id: #fuels_types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
+            pub fn new(contract_id: #fuels_types::bech32::Bech32ContractId, wallet: #fuels_signers::wallet::WalletUnlocked) -> Self {
                 let log_decoder = #fuels_programs::logs::LogDecoder { type_lookup: #log_type_lookup };
                 Self { contract_id, wallet, log_decoder }
             }
@@ -61,11 +62,11 @@ pub(crate) fn contract_bindings(
                 &self.contract_id
             }
 
-            pub fn wallet(&self) -> ::fuels::signers::wallet::WalletUnlocked {
+            pub fn wallet(&self) -> #fuels_signers::wallet::WalletUnlocked {
                 self.wallet.clone()
             }
 
-            pub fn with_wallet(&self, mut wallet: ::fuels::signers::wallet::WalletUnlocked) -> #fuels_types::errors::Result<Self> {
+            pub fn with_wallet(&self, mut wallet: #fuels_signers::wallet::WalletUnlocked) -> #fuels_types::errors::Result<Self> {
                let provider = self.wallet.get_provider()?;
                wallet.set_provider(provider.clone());
 
@@ -88,7 +89,7 @@ pub(crate) fn contract_bindings(
         // Implement struct that holds the contract methods
         pub struct #methods_name {
             contract_id: #fuels_types::bech32::Bech32ContractId,
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
+            wallet: #fuels_signers::wallet::WalletUnlocked,
             log_decoder: #fuels_programs::logs::LogDecoder
         }
 
