@@ -42,7 +42,7 @@ fn resolve_logs(
         .map(|l| {
             let resolved_type = resolve_type(&l.application, shared_types, no_std)
                 .expect("Failed to resolve log type");
-            let param_type_call = single_param_type_call(&resolved_type);
+            let param_type_call = single_param_type_call(&resolved_type, no_std);
 
             ResolvedLog {
                 log_id: l.log_id,

@@ -47,7 +47,7 @@ pub(crate) fn script_bindings(
         }
 
         impl #name {
-            pub fn new(wallet: #fuels_signers::wallet::WalletUnlocked, binary_filepath: &::core::str) -> Self {
+            pub fn new(wallet: #fuels_signers::wallet::WalletUnlocked, binary_filepath: &::core::primitive::str) -> Self {
                 Self {
                     wallet,
                     binary_filepath: binary_filepath.to_string(),

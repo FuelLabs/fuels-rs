@@ -350,13 +350,13 @@ mod tests {
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "some_abi_funct",
                         &[
-                            <self::MyStruct1 as #fuels_types::traits::Parameterize>::param_type(),
-                            <self::MyStruct2 as #fuels_types::traits::Parameterize>::param_type()
+                            <self::MyStruct1 as ::fuels::types::traits::Parameterize>::param_type(),
+                            <self::MyStruct2 as ::fuels::types::traits::Parameterize>::param_type()
                         ]
                     ),
                     &[
-                        #fuels_types::traits::Tokenizable::into_token(s_1),
-                        #fuels_types::traits::Tokenizable::into_token(s_2)
+                        ::fuels::types::traits::Tokenizable::into_token(s_1),
+                        ::fuels::types::traits::Tokenizable::into_token(s_2)
                     ],
                     self.log_decoder.clone(),
                     false,
@@ -417,9 +417,9 @@ mod tests {
                     &self.wallet,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "HelloWorld",
-                        &[<bool as #fuels_types::traits::Parameterize>::param_type()]
+                        &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
                     ),
-                    &[#fuels_types::traits::Tokenizable::into_token(bimbam)],
+                    &[::fuels::types::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,
                 )
@@ -533,9 +533,9 @@ mod tests {
                     &self.wallet,
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "hello_world",
-                        &[<self::SomeWeirdFrenchCuisine as #fuels_types::traits::Parameterize>::param_type()]
+                        &[<self::SomeWeirdFrenchCuisine as ::fuels::types::traits::Parameterize>::param_type()]
                     ),
-                    &[#fuels_types::traits::Tokenizable::into_token(
+                    &[::fuels::types::traits::Tokenizable::into_token(
                         the_only_allowed_input
                     )],
                     self.log_decoder.clone(),

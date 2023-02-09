@@ -57,23 +57,25 @@ impl Component {
 /// Returns TokenStreams representing calls to `Parameterize::param_type` for
 /// all given Components. Makes sure to properly handle calls when generics are
 /// involved.
-pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> {
+pub(crate) fn param_type_calls(field_entries: &[Component], no_std: bool) -> Vec<TokenStream> {
     field_entries
         .iter()
-        .map(|Component { field_type, .. }| single_param_type_call(field_type))
+        .map(|Component { field_type, .. }| single_param_type_call(field_type, no_std))
         .collect()
 }
 
 /// Returns a TokenStream representing the call to `Parameterize::param_type` for
 /// the given ResolvedType. Makes sure to properly handle calls when generics are
 /// involved.
-pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
+pub(crate) fn single_param_type_call(field_type: &ResolvedType, no_std: bool) -> TokenStream {
     let type_name = &field_type.type_name;
     let parameters = field_type
         .generic_params
         .iter()
         .map(|resolved_type| resolved_type.to_token_stream())
         .collect::<Vec<_>>();
+
+    let fuels_types = fuels_types_path(no_std);
 
     if parameters.is_empty() {
         quote! { <#type_name as #fuels_types::traits::Parameterize>::param_type() }

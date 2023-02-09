@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::Result,
     program_bindings::{
@@ -25,6 +26,7 @@ pub(crate) fn predicate_bindings(
 
     let encode_function = expand_fn(&abi, shared_types, no_std)?;
 
+    let fuels_types = fuels_types_path(no_std);
     let code = quote! {
         #[derive(Debug)]
         pub struct #name {

@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
+use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -20,6 +21,7 @@ pub(crate) struct FunctionGenerator {
     output_type: TokenStream,
     body: TokenStream,
     doc: Option<String>,
+    no_std: bool,
 }
 
 impl FunctionGenerator {
@@ -38,6 +40,7 @@ impl FunctionGenerator {
             output_type: output_type.to_token_stream(),
             body: Default::default(),
             doc: None,
+            no_std,
         })
     }
 
@@ -56,7 +59,7 @@ impl FunctionGenerator {
     }
 
     pub fn fn_selector(&self) -> TokenStream {
-        let param_type_calls = param_type_calls(&self.args);
+        let param_type_calls = param_type_calls(&self.args, self.no_std);
 
         let name = &self.name;
         quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
@@ -64,6 +67,7 @@ impl FunctionGenerator {
 
     pub fn tokenized_args(&self) -> TokenStream {
         let arg_names = self.args.iter().map(|component| &component.field_name);
+        let fuels_types = fuels_types_path(self.no_std);
         quote! {[#(#fuels_types::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 

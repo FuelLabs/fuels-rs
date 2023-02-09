@@ -125,7 +125,7 @@ mod tests {
         ];
 
         // act
-        let result = param_type_calls(&components);
+        let result = param_type_calls(&components, false);
 
         // assert
         let stringified_result = result
