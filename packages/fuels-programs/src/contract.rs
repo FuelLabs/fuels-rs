@@ -794,7 +794,7 @@ impl MultiContractCallHandler {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn get_tx(&self) -> Result<ScriptTransaction> {
+    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
@@ -825,7 +825,7 @@ impl MultiContractCallHandler {
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
         let provider = self.wallet.get_provider()?;
-        let tx = self.get_tx().await?;
+        let tx = self.build_tx().await?;
 
         let receipts = if simulate {
             simulate_and_validate(provider, &tx).await?
@@ -839,7 +839,7 @@ impl MultiContractCallHandler {
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let provider = self.wallet.get_provider()?;
-        let tx = self.get_tx().await?;
+        let tx = self.build_tx().await?;
 
         simulate_and_validate(provider, &tx).await?;
 
@@ -889,7 +889,7 @@ impl MultiContractCallHandler {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script = self.get_tx().await?;
+        let script = self.build_tx().await?;
 
         let transaction_cost = self
             .wallet

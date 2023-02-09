@@ -77,6 +77,7 @@ pub mod prelude {
             constants::*,
             errors::{Error, Result},
             parameters::*,
+            transaction::*,
             Address, AssetId, ContractId, RawSlice,
         },
     };

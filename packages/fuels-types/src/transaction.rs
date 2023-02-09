@@ -38,6 +38,8 @@ pub trait Transaction: Into<FuelTransaction> {
 
     fn with_gas_limit(self, gas_price: u64) -> Self;
 
+    fn with_tx_params(self, tx_params: TxParameters) -> Self;
+
     fn metered_bytes_size(&self) -> usize;
 
     fn inputs(&self) -> &Vec<Input>;
@@ -128,6 +130,13 @@ macro_rules! impl_tx_wrapper {
                 self
             }
 
+            fn with_tx_params(self, tx_params: TxParameters) -> Self {
+                self.with_gas_limit(tx_params.gas_limit)
+                    .with_gas_price(tx_params.gas_price)
+                    .with_maturity(tx_params.maturity)
+            }
+
+
             fn metered_bytes_size(&self) -> usize {
                 self.tx.metered_bytes_size()
             }
@@ -196,13 +205,11 @@ impl ScriptTransaction {
         self
     }
 
-    /// Craft a transaction used to transfer funds between two addresses.
-    pub fn build_transfer_tx(
+    pub fn new(
         inputs: &[Input],
         outputs: &[Output],
         params: TxParameters,
     ) -> ScriptTransaction {
-        // This script is empty, since all this transaction does is move Inputs and Outputs around.
         FuelTransaction::script(
             params.gas_price,
             params.gas_limit,

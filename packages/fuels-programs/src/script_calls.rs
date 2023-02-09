@@ -159,7 +159,7 @@ where
         .collect();
 
         let mut tx: ScriptTransaction =
-            ScriptTransaction::build_transfer_tx(&inputs, &outputs, self.tx_parameters)
+            ScriptTransaction::new(&inputs, &outputs, self.tx_parameters)
                 .with_script(self.script_call.script_binary.clone())
                 .with_script_data(self.compute_script_data().await?);
 

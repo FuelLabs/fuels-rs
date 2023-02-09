@@ -497,7 +497,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = ScriptTransaction::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = ScriptTransaction::new(&inputs, &outputs, tx_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -605,7 +605,7 @@ impl WalletUnlocked {
             Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
-        let mut tx = ScriptTransaction::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        let mut tx = ScriptTransaction::new(&inputs, &outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;

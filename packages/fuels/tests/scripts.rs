@@ -53,7 +53,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_2);
 
     let provider = &wallet.get_provider()?;
-    let tx = multi_call_handler.get_tx().await?;
+    let tx = multi_call_handler.build_tx().await?;
     let receipts = provider.send_transaction(&tx).await?;
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
