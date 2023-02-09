@@ -7,7 +7,7 @@ use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
-    parameters::{CallParameters, TxParameters},
+    parameters::TxParameters,
     script_transaction::{ScriptTransaction, Transaction},
     traits::{Parameterize, Tokenizable},
 };
@@ -15,7 +15,7 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    call_utils::{generate_contract_inputs, generate_contract_outputs, simulate_and_validate},
     contract::{get_decoded_output, SettableContract},
     logs::{map_revert_error, LogDecoder},
 };
@@ -28,8 +28,6 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
-    // This field is not currently used but it will be in the future.
-    pub call_parameters: CallParameters,
 }
 
 impl ScriptCall {
@@ -80,7 +78,6 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
-            call_parameters: Default::default(),
         };
         Self {
             script_call,
@@ -186,7 +183,7 @@ where
         )?;
 
         let receipts = if simulate {
-            self.provider.dry_run(&tx).await?
+            simulate_and_validate(&self.provider, &tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };

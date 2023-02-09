@@ -34,7 +34,7 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::build_tx_contract_calls,
+    call_utils::{build_tx_from_contract_calls, simulate_and_validate},
     logs::{map_revert_error, LogDecoder},
 };
 
@@ -653,8 +653,8 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn get_tx(&self) -> Result<ScriptTransaction> {
-        build_tx_contract_calls(
+    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
+        build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
             &self.wallet,
@@ -679,10 +679,10 @@ where
     }
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.get_tx().await?;
+        let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            self.provider.dry_run(&tx).await?
+            simulate_and_validate(&self.provider, &tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };
@@ -731,7 +731,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script = self.get_tx().await?;
+        let script = self.build_tx().await?;
 
         let transaction_cost = self
             .provider
@@ -799,7 +799,7 @@ impl MultiContractCallHandler {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -828,7 +828,7 @@ impl MultiContractCallHandler {
         let tx = self.get_tx().await?;
 
         let receipts = if simulate {
-            provider.dry_run(&tx).await?
+            simulate_and_validate(provider, &tx).await?
         } else {
             provider.send_transaction(&tx).await?
         };
@@ -841,7 +841,7 @@ impl MultiContractCallHandler {
         let provider = self.wallet.get_provider()?;
         let tx = self.get_tx().await?;
 
-        provider.dry_run(&tx).await?;
+        simulate_and_validate(provider, &tx).await?;
 
         Ok(())
     }

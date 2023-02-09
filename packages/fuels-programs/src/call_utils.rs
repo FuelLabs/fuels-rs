@@ -1,13 +1,20 @@
 use std::{collections::HashSet, iter, vec};
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Transaction, TxPointer, UtxoId};
+use fuel_tx::{
+    AssetId, Bytes32, ContractId, Input, Output, Receipt, ScriptExecutionResult, TxPointer, UtxoId,
+};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_core::offsets::call_script_data_offset;
-use fuels_signers::{Signer, WalletUnlocked};
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, constants::WORD_SIZE, errors::Result,
-    parameters::TxParameters, resource::Resource, script_transaction::ScriptTransaction,
+    bech32::Bech32Address,
+    constants::BASE_ASSET_ID,
+    constants::WORD_SIZE,
+    errors::{Error, Result},
+    parameters::TxParameters,
+    resource::Resource,
+    script_transaction::{ScriptTransaction, Transaction},
 };
 use itertools::{chain, Itertools};
 
@@ -26,7 +33,7 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_contract_calls(
+pub async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
     tx_parameters: &TxParameters,
     wallet: &WalletUnlocked,
@@ -57,17 +64,10 @@ pub async fn build_tx_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx: ScriptTransaction = Transaction::script(
-        tx_parameters.gas_price,
-        tx_parameters.gas_limit,
-        tx_parameters.maturity,
-        script,
-        script_data,
-        inputs,
-        outputs,
-        vec![],
-    )
-    .into();
+    let mut tx: ScriptTransaction =
+        ScriptTransaction::build_transfer_tx(&inputs, &outputs, *tx_parameters);
+    *tx.script_mut() = script;
+    *tx.script_data_mut() = script_data;
 
     let base_asset_amount = required_asset_amounts
         .iter()
@@ -394,6 +394,36 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
                 .chain(iter::once((&call.contract_id).into()))
         })
         .collect()
+}
+
+/// Execute the transaction in a simulated manner, not modifying blockchain state
+pub async fn simulate_and_validate<T: Transaction + Clone>(
+    provider: &Provider,
+    tx: &T,
+) -> Result<Vec<Receipt>> {
+    let receipts = provider.dry_run(tx).await?;
+    validate_script_succedded(&receipts)?;
+
+    Ok(receipts)
+}
+
+fn validate_script_succedded(receipts: &[Receipt]) -> Result<()> {
+    receipts
+        .iter()
+        .find_map(|receipt| match receipt {
+            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                Some(format!("{result:?}"))
+            }
+            _ => None,
+        })
+        .map(|error_message| {
+            Err(Error::RevertTransactionError {
+                reason: error_message,
+                revert_id: 0,
+                receipts: receipts.to_owned(),
+            })
+        })
+        .unwrap_or(Ok(()))
 }
 
 #[cfg(test)]
