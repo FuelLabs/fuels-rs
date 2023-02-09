@@ -3,9 +3,6 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::utils::type_path_lookup::{
-    fuels_core_path, fuels_programs_path, fuels_signers_path, std_lib_path,
-};
 use crate::{
     error::Result,
     program_bindings::{
@@ -16,7 +13,12 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::TypePath,
+    utils::{
+        type_path_lookup::{
+            fuels_core_path, fuels_programs_path, fuels_signers_path, std_lib_path,
+        },
+        TypePath,
+    },
 };
 
 pub(crate) fn script_bindings(

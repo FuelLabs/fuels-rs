@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::utils::type_path_lookup::fuels_types_path;
 use crate::{
     error::Result,
     program_bindings::{
@@ -11,7 +10,7 @@ use crate::{
         abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
         generated_code::GeneratedCode,
     },
-    utils::TypePath,
+    utils::{type_path_lookup::fuels_types_path, TypePath},
 };
 
 pub(crate) fn predicate_bindings(

@@ -4,7 +4,6 @@ use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::utils::type_path_lookup::{fuels_core_path, fuels_macros_path, fuels_types_path};
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -13,7 +12,11 @@ use crate::{
         generated_code::GeneratedCode,
         utils::Component,
     },
-    utils::{ident, TypePath},
+    utils::{
+        ident,
+        type_path_lookup::{fuels_core_path, fuels_macros_path, fuels_types_path},
+        TypePath,
+    },
 };
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
