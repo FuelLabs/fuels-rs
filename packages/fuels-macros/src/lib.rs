@@ -82,7 +82,7 @@ pub fn setup_contract_test(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath))]
+#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, NoStd))]
 pub fn parameterize(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -91,7 +91,7 @@ pub fn parameterize(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Tokenizable)]
+#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, NoStd))]
 pub fn tokenizable(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -100,7 +100,7 @@ pub fn tokenizable(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(TryFrom)]
+#[proc_macro_derive(TryFrom, attributes(FuelsCorePath, NoStd))]
 pub fn try_from(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 

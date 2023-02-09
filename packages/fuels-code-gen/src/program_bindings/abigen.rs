@@ -5,6 +5,7 @@ use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
+use regex::Regex;
 
 use crate::{
     error::Result,
@@ -38,12 +39,38 @@ impl Abigen {
         let generated_code = Self::generate_code(no_std, parsed_targets)?;
 
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
-        let code = generated_code.code;
+
+        let code = if no_std {
+            Self::wasm_paths_hotfix(generated_code.code)
+        } else {
+            generated_code.code
+        };
 
         Ok(quote! {
             #code
             #use_statements
         })
+    }
+    fn wasm_paths_hotfix(code: TokenStream) -> TokenStream {
+        [
+            (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
+            (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
+            (r#"::\s*fuels\s*::\s*programs"#, "::fuels_programs"),
+            (r#"::\s*fuels\s*::\s*signers"#, "::fuels_signers"),
+            (r#"::\s*fuels\s*::\s*tx"#, "::fuel_tx"),
+            (r#"::\s*fuels\s*::\s*types"#, "::fuels_types"),
+            (r#"::\s*std\s*::\s*string"#, "::alloc::string"),
+            (r#"::\s*std\s*::\s*format"#, "::alloc::format"),
+            (r#"::\s*std\s*::\s*vec"#, "::alloc::vec"),
+            (r#"::\s*std\s*::\s*boxed"#, "::alloc::boxed"),
+        ]
+        .map(|(reg_expr_str, substitute)| (Regex::new(reg_expr_str).unwrap(), substitute))
+        .into_iter()
+        .fold(code.to_string(), |code, (regex, wasm_include)| {
+            regex.replace_all(&code, wasm_include).to_string()
+        })
+        .parse()
+        .expect("Wasm hotfix failed!")
     }
 
     fn generate_code(
@@ -54,7 +81,7 @@ impl Abigen {
         let shared_types = Self::filter_shared_types(all_custom_types);
 
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
-        let shared_types = Self::generate_shared_types(shared_types)?;
+        let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
         Ok(shared_types
             .append(bindings)
@@ -81,10 +108,10 @@ impl Abigen {
     ) -> Result<GeneratedCode> {
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
-        let types = generate_types(target.source.types.clone(), shared_types)?;
+        let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std, shared_types)?;
 
-        Ok(limited_std_prelude()
+        Ok(limited_std_prelude(no_std)
             .append(types)
             .append(bindings)
             .wrap_in_mod(&mod_name))
@@ -97,13 +124,16 @@ impl Abigen {
             .collect()
     }
 
-    fn generate_shared_types(shared_types: HashSet<FullTypeDeclaration>) -> Result<GeneratedCode> {
-        let types = generate_types(shared_types, &HashSet::default())?;
+    fn generate_shared_types(
+        shared_types: HashSet<FullTypeDeclaration>,
+        no_std: bool,
+    ) -> Result<GeneratedCode> {
+        let types = generate_types(shared_types, &HashSet::default(), no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())
         } else {
-            Ok(limited_std_prelude()
+            Ok(limited_std_prelude(no_std)
                 .append(types)
                 .wrap_in_mod(&ident("shared_types")))
         }
@@ -132,18 +162,25 @@ impl Abigen {
     }
 }
 
-fn limited_std_prelude() -> GeneratedCode {
+fn limited_std_prelude(no_std: bool) -> GeneratedCode {
+    let lib = if no_std {
+        quote! {::alloc}
+    } else {
+        quote! {::std}
+    };
+
     let code = quote! {
-            use ::std::{
+            use ::core::{
                 clone::Clone,
                 convert::{Into, TryFrom, From},
-                format,
                 iter::IntoIterator,
                 iter::Iterator,
                 marker::Sized,
-                panic, vec,
-                string::ToString
+                panic,
             };
+
+            use #lib::{string::ToString, format, vec};
+
     };
 
     GeneratedCode {

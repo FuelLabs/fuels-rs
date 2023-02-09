@@ -21,6 +21,7 @@ use crate::{
 pub(crate) fn expand_custom_enum(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
     let enum_name = extract_custom_type_name(type_field).ok_or_else(|| {
@@ -37,7 +38,7 @@ pub(crate) fn expand_custom_enum(
     }
     let generics = extract_generic_parameters(type_decl)?;
 
-    let code = enum_decl(&enum_ident, &components, &generics);
+    let code = enum_decl(&enum_ident, &components, &generics, no_std);
 
     let enum_type_path = TypePath::new(&enum_name).expect("Enum name is not empty!");
 
@@ -51,6 +52,7 @@ fn enum_decl(
     enum_ident: &Ident,
     components: &[Component],
     generics: &[TokenStream],
+    no_std: bool,
 ) -> TokenStream {
     let enum_variants = components.iter().map(
         |Component {
@@ -64,6 +66,7 @@ fn enum_decl(
             }
         },
     );
+    let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -76,6 +79,9 @@ fn enum_decl(
             ::fuels::macros::Tokenizable,
             ::fuels::macros::TryFrom
         )]
+        #[FuelsTypesPath("::fuels::types")]
+        #[FuelsCorePath("::fuels::core")]
+        #maybe_disable_std
         pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
             #(#enum_variants),*
         }

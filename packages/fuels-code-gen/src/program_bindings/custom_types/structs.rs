@@ -21,6 +21,7 @@ use crate::{
 pub(crate) fn expand_custom_struct(
     type_decl: &FullTypeDeclaration,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<GeneratedCode> {
     let type_field = &type_decl.type_field;
     let struct_name = extract_custom_type_name(&type_decl.type_field)
@@ -30,7 +31,7 @@ pub(crate) fn expand_custom_struct(
     let components = extract_components(type_decl, true, shared_types)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
-    let code = struct_decl(&struct_ident, &components, &generic_parameters);
+    let code = struct_decl(&struct_ident, &components, &generic_parameters, no_std);
 
     let struct_type_path = TypePath::new(&struct_name).expect("Struct name is not empty!");
 
@@ -44,6 +45,7 @@ fn struct_decl(
     struct_ident: &Ident,
     components: &[Component],
     generic_parameters: &Vec<TokenStream>,
+    no_std: bool,
 ) -> TokenStream {
     let fields = components.iter().map(
         |Component {
@@ -53,6 +55,7 @@ fn struct_decl(
             quote! { pub #field_name: #field_type }
         },
     );
+    let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     quote! {
         #[derive(
@@ -64,6 +67,9 @@ fn struct_decl(
             ::fuels::macros::Tokenizable,
             ::fuels::macros::TryFrom
         )]
+        #[FuelsTypesPath("::fuels::types")]
+        #[FuelsCorePath("::fuels::core")]
+        #maybe_disable_std
         pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
             #(#fields),*
         }
