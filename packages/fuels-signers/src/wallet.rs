@@ -994,7 +994,7 @@ mod tests {
             .await
             .pop()
             .unwrap();
-        let mut tx = ScriptTransaction::build_transfer_tx(&[], &[], TxParameters::default());
+        let mut tx = ScriptTransaction::new(&[], &[], TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
@@ -1033,8 +1033,7 @@ mod tests {
             BASE_ASSET_ID,
             base_amount,
         );
-        let mut tx =
-            ScriptTransaction::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = ScriptTransaction::new(&inputs, &outputs, TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
 

@@ -136,7 +136,6 @@ macro_rules! impl_tx_wrapper {
                     .with_maturity(tx_params.maturity)
             }
 
-
             fn metered_bytes_size(&self) -> usize {
                 self.tx.metered_bytes_size()
             }
@@ -205,11 +204,7 @@ impl ScriptTransaction {
         self
     }
 
-    pub fn new(
-        inputs: &[Input],
-        outputs: &[Output],
-        params: TxParameters,
-    ) -> ScriptTransaction {
+    pub fn new(inputs: &[Input], outputs: &[Output], params: TxParameters) -> ScriptTransaction {
         FuelTransaction::script(
             params.gas_price,
             params.gas_limit,
