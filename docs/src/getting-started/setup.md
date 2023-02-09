@@ -88,7 +88,7 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 ```
 forc build --path packages/fuels
 ```
-> The `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
+> `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
 
 After building the projects, we can run the tests with
 
