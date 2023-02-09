@@ -47,3 +47,11 @@ pub fn fuels_programs_path(no_std: bool) -> TokenStream {
         quote! {::fuels::programs}
     }
 }
+
+pub fn fuels_tx_path(no_std: bool) -> TokenStream {
+    if no_std {
+        quote! {::fuel_tx}
+    } else {
+        quote! {::fuels::tx}
+    }
+}
