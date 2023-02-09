@@ -27,7 +27,7 @@ pub(crate) fn contract_bindings(
     }
 
     let log_type_lookup = logs_lookup_instantiation_code(
-        Some(quote! {contract_id.clone()}),
+        Some(quote! {contract_id.clone().into()}),
         &abi.logged_types,
         shared_types,
     );

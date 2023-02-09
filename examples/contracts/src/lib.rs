@@ -401,7 +401,11 @@ mod tests {
             .send_message(base_layer_address, amount)
             .call()
             .await;
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
 
         Ok(())
     }
@@ -445,7 +449,10 @@ mod tests {
             .call()
             .await;
 
-        assert!(matches!(response, Err(Error::RevertTransactionError(..))));
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
         // ANCHOR_END: dependency_estimation_fail
 
         // ANCHOR: dependency_estimation_manual
@@ -514,7 +521,9 @@ mod tests {
                     println!("Provider request failed with reason: {reason}");
                 }
                 // The transaction is valid but reverts
-                Err(Error::RevertTransactionError(reason, receipts)) => {
+                Err(Error::RevertTransactionError {
+                    reason, receipts, ..
+                }) => {
                     println!("ContractCall failed with reason: {reason}");
                     println!("Transaction receipts are: {receipts:?}");
                 }
