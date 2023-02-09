@@ -66,8 +66,8 @@ pub async fn build_tx_from_contract_calls(
 
     let mut tx: ScriptTransaction =
         ScriptTransaction::build_transfer_tx(&inputs, &outputs, *tx_parameters)
-    .with_script(script)
-    .with_script_data(script_data);
+            .with_script(script)
+            .with_script_data(script_data);
 
     let base_asset_amount = required_asset_amounts
         .iter()

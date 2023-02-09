@@ -481,7 +481,9 @@ impl Provider {
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
 
         // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
-        dry_run_tx.with_gas_price(gas_price).with_gas_limit(gas_used);
+        dry_run_tx
+            .with_gas_price(gas_price)
+            .with_gas_limit(gas_used);
 
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
@@ -499,9 +501,7 @@ impl Provider {
     // Remove limits from an existing Transaction to get an accurate gas estimation
     fn generate_dry_run_tx<T: Transaction + Clone>(tx: &T) -> T {
         // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
-        tx.clone()
-        .with_gas_limit(MAX_GAS_PER_TX)
-        .with_gas_price(0)
+        tx.clone().with_gas_limit(MAX_GAS_PER_TX).with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance
