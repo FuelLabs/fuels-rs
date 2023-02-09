@@ -31,7 +31,7 @@ Then, in Rust, after setting up and deploying the above contract, you can config
 You can also use `CallParameters::default()` to use the default values:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-core/src/constants.rs:default_call_parameters}}
+{{#include ../../../packages/fuels-types/src/constants.rs:default_call_parameters}}
 ```
 
 This way:
