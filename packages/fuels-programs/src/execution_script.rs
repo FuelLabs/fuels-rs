@@ -104,14 +104,29 @@ impl ExecutableFuelCall {
         )?;
 
         let receipts = provider.dry_run(&self.tx.clone().into()).await?;
-        if receipts
-            .iter()
-            .any(|r|
-                matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-        ) {
-            return Err(Error::RevertTransactionError(Default::default(), receipts));
-        }
+        Self::validate_script_succedded(&receipts)?;
 
         Ok(receipts)
+    }
+
+    fn validate_script_succedded(receipts: &[Receipt]) -> Result<()> {
+        receipts
+            .iter()
+            .find_map(|receipt| match receipt {
+                Receipt::ScriptResult { result, .. }
+                    if *result != ScriptExecutionResult::Success =>
+                {
+                    Some(format!("{result:?}"))
+                }
+                _ => None,
+            })
+            .map(|error_message| {
+                Err(Error::RevertTransactionError {
+                    reason: error_message,
+                    revert_id: 0,
+                    receipts: receipts.to_owned(),
+                })
+            })
+            .unwrap_or(Ok(()))
     }
 }

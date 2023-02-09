@@ -16,7 +16,6 @@ use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     parameters::{CallParameters, StorageConfiguration, TxParameters},
 };
 use fuels_signers::{
@@ -33,8 +32,9 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
+    logs::{map_revert_error, LogDecoder},
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -682,7 +682,7 @@ where
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -693,7 +693,7 @@ where
     pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Simulates a call without needing to resolve the generic for the return type
@@ -715,13 +715,13 @@ where
             let result = self.simulate_without_decode().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self = self.append_variable_outputs(1);
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self = self.append_contract(contract_id);
@@ -827,7 +827,7 @@ impl MultiContractCallHandler {
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(self, false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -838,7 +838,7 @@ impl MultiContractCallHandler {
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(self, true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
@@ -877,7 +877,7 @@ impl MultiContractCallHandler {
             let result = self.simulate_without_decode().await;
 
             match result {
-                Err(Error::RevertTransactionError(_, receipts))
+                Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
                     self.contract_calls
@@ -886,7 +886,7 @@ impl MultiContractCallHandler {
                         .for_each(|call| call.append_variable_outputs(1));
                 }
 
-                Err(Error::RevertTransactionError(_, ref receipts)) => {
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
                         self.contract_calls

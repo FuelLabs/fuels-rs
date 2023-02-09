@@ -19,7 +19,7 @@ use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
 use fuels_types::{
     coin::{Coin, CoinStatus},
-    message::Message,
+    message::{Message, MessageStatus},
     param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -136,7 +136,7 @@ pub fn setup_single_message(
         amount,
         data,
         da_height: 0,
-        fuel_block_spend: None,
+        status: MessageStatus::Unspent,
     }]
 }
 
