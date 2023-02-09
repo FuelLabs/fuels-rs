@@ -2,8 +2,10 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
     iter::FilterMap,
+    iter::FilterMap,
 };
 
+use fuel_tx::{ContractId, Receipt};
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{traits::DecodableLog, try_from_bytes};
 use fuels_types::{
@@ -12,8 +14,10 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
 };
 
-const REQUIRE_ID: u64 = 0xffff_ffff_ffff_0000;
-const ASSERT_EQ_ID: u64 = 0xffff_ffff_ffff_0003;
+use crate::constants::{
+    FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
+    FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
+};
 
 /// Holds a unique log ID
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
@@ -88,39 +92,53 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
     }
 }
 
-/// Decodes the logged type from the receipt of a `RevertTransactionError` if available
-pub fn decode_revert_error(err: Error, log_decoder: &LogDecoder) -> Error {
+trait ExtractLogIdData {
+    type Output: Iterator<Item = (LogId, Vec<u8>)>;
+    fn extract_log_id_and_data(self) -> Self::Output;
+}
+
+impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
+    type Output = FilterMap<Self, fn(&Receipt) -> Option<(LogId, Vec<u8>)>>;
+    fn extract_log_id_and_data(self) -> Self::Output {
+        self.filter_map(|r| match r {
+            Receipt::LogData { rb, data, id, .. } => Some((LogId(*id, *rb), data.clone())),
+            Receipt::Log { ra, rb, id, .. } => Some((LogId(*id, *rb), ra.to_be_bytes().to_vec())),
+            _ => None,
+        })
+    }
+}
+
+/// Map the provided `RevertTransactionError` based on the `revert_id`.
+/// If applicable, decode the logged types from the receipt.
+pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
     if let Error::RevertTransactionError {
         revert_id,
-        receipts,
-        ..
-    } = &err
+        ref receipts,
+        ref mut reason,
+    } = err
     {
-        match *revert_id {
-            REQUIRE_ID => return decode_require_revert(log_decoder, receipts),
-            ASSERT_EQ_ID => return decode_assert_eq_revert(log_decoder, receipts),
+        match revert_id {
+            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, receipts),
+            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, receipts),
+            FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
+            FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
+            FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
             _ => {}
         }
     }
     err
 }
 
-fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Error {
-    let reason = log_decoder
+fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
+    log_decoder
         .get_logs(receipts)
         .ok()
         .and_then(|logs| logs.last().cloned())
-        .unwrap_or_else(|| "Failed to decode log from require revert".to_string());
-
-    Error::RevertTransactionError {
-        reason,
-        revert_id: REQUIRE_ID,
-        receipts: receipts.to_owned(),
-    }
+        .unwrap_or_else(|| "failed to decode log from require revert".to_string())
 }
 
-fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Error {
-    let reason = log_decoder
+fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
+    log_decoder
         .get_logs(receipts)
         .ok()
         .and_then(|logs| {
@@ -131,13 +149,7 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> Er
             }
             None
         })
-        .unwrap_or_else(|| "Failed to decode logs from assert_eq revert".to_string());
-
-    Error::RevertTransactionError {
-        reason,
-        revert_id: ASSERT_EQ_ID,
-        receipts: receipts.to_owned(),
-    }
+        .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
 }
 
 pub fn log_type_lookup(

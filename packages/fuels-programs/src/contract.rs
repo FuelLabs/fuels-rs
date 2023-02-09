@@ -34,8 +34,9 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
+    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     call_utils::build_tx_contract_calls,
-    logs::{decode_revert_error, LogDecoder},
+    logs::{map_revert_error, LogDecoder},
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -666,7 +667,7 @@ where
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -675,7 +676,7 @@ where
     pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
@@ -806,7 +807,7 @@ impl MultiContractCallHandler {
     pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -817,7 +818,7 @@ impl MultiContractCallHandler {
     pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
