@@ -17,8 +17,8 @@ pub(crate) fn logs_lookup_instantiation_code(
     let resolved_logs = resolve_logs(logged_types, shared_types);
     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
     let contract_id = contract_id
-        .map(|id| quote! { ::std::option::Option::Some(#id) })
-        .unwrap_or_else(|| quote! {::std::option::Option::None});
+        .map(|id| quote! { ::core::option::Option::Some(#id) })
+        .unwrap_or_else(|| quote! {::core::option::Option::None});
     quote! {::fuels::programs::logs::log_type_lookup(&[#(#log_id_param_type_pairs),*], #contract_id)}
 }
 

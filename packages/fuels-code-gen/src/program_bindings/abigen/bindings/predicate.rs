@@ -44,7 +44,7 @@ pub(crate) fn predicate_bindings(
             }
 
             pub fn load_from(file_path: &str) -> ::fuels::types::errors::Result<Self> {
-                ::std::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
+                ::core::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
             }
 
             pub fn address(&self) -> &::fuels::types::bech32::Bech32Address {
@@ -62,7 +62,7 @@ pub(crate) fn predicate_bindings(
             pub async fn receive(&self, from: &::fuels::signers::wallet::WalletUnlocked,
                                  amount: u64,
                                  asset_id: ::fuels::types::AssetId,
-                                 tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
+                                 tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
             ) -> ::fuels::types::errors::Result<(::std::string::String, ::std::vec::Vec<::fuels::tx::Receipt>)> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 from
@@ -78,7 +78,7 @@ pub(crate) fn predicate_bindings(
             pub async fn spend(&self, to: &::fuels::signers::wallet::WalletUnlocked,
                                 amount: u64,
                                 asset_id: ::fuels::types::AssetId,
-                                tx_parameters: ::std::option::Option<::fuels::core::parameters::TxParameters>
+                                tx_parameters: ::core::option::Option<::fuels::core::parameters::TxParameters>
             ) -> ::fuels::types::errors::Result<::std::vec::Vec<::fuels::tx::Receipt>> {
                 let tx_parameters = tx_parameters.unwrap_or_default();
                 to
