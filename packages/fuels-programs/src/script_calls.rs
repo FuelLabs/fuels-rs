@@ -179,7 +179,6 @@ where
             outputs,
             vec![],
         );
-
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
 
