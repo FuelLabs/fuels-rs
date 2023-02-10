@@ -281,23 +281,27 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         .collect()
 }
 
-pub(crate) fn extract_input_ids(&inputs: Iterator<Item = Input>) -> (Vec<UtxoId>, Vec<MessageId>) {
-    let utxos = inputs
-        .filter_map(|input| match input {
-            Input::CoinSigned { utxo_id, .. } => Some(utxo_id.clone()),
-            _ => None,
-        })
-        .collect();
+pub(crate) fn extract_base_input_ids<'a, I>(inputs: I) -> (Vec<UtxoId>, Vec<MessageId>)
+where
+    I: Iterator<Item = &'a Input>,
+{
+    let (coins, messages): (Vec<_>, Vec<_>) = inputs.partition(|input| match input {
+        Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID => true,
+        Input::MessageSigned { .. } => true,
+        _ => false,
+    });
 
-    let message_ids = inputs
+    let utxo_ids = coins
         .iter()
-        .filter_map(|input| match input {
-            Input::MessageSigned { message_id, .. } => Some(message_id.clone()),
-            _ => None,
-        })
+        .map(|coin| coin.utxo_id().unwrap().clone())
         .collect();
 
-    (utxos, message_ids)
+    let message_ids = messages
+        .iter()
+        .map(|message| message.message_id().unwrap().clone())
+        .collect();
+
+    (utxo_ids, message_ids)
 }
 
 #[cfg(test)]
