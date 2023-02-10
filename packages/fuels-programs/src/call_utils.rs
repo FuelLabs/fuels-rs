@@ -344,14 +344,11 @@ where
         _ => false,
     });
 
-    let utxo_ids = coins
-        .iter()
-        .map(|coin| coin.utxo_id().unwrap().clone())
-        .collect();
+    let utxo_ids = coins.iter().map(|coin| *coin.utxo_id().unwrap()).collect();
 
     let message_ids = messages
         .iter()
-        .map(|message| message.message_id().unwrap().clone())
+        .map(|message| *message.message_id().unwrap())
         .collect();
 
     (utxo_ids, message_ids)

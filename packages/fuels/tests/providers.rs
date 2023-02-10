@@ -642,7 +642,7 @@ async fn test_parse_block_time() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_spendable_with_exclusion() -> Result<(), Error> {
+async fn test_get_spendable_with_exclusion() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let c_amount_1 = 1000;

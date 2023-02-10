@@ -241,7 +241,7 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
         excluded: (Vec<UtxoId>, Vec<MessageId>),
-    ) -> Result<Vec<Resource>, Error> {
+    ) -> Result<Vec<Resource>> {
         self.get_provider()?
             .get_spendable_resources_with_exclusion(&self.address, asset_id, amount, excluded)
             .await

@@ -14,8 +14,8 @@ use fuel_tx::{
     field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
     UtxoId,
 };
-use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
 use fuel_types::MessageId;
+use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
 use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -269,26 +269,8 @@ impl Provider {
         asset_id: AssetId,
         amount: u64,
     ) -> ProviderResult<Vec<Resource>> {
-        use itertools::Itertools;
-
-        let res = self
-            .client
-            .resources_to_spend(
-                &from.hash().to_string(),
-                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
-                None,
-            )
-            .await?
-            .into_iter()
-            .flatten()
-            .map(|resource| {
-                resource
-                    .try_into()
-                    .map_err(ProviderError::ClientRequestError)
-            })
-            .try_collect()?;
-
-        Ok(res)
+        self.get_spendable_resources_with_exclusion(from, asset_id, amount, (vec![], vec![]))
+            .await
     }
 
     /// Same as `get_spendable_resources` but the coins and messages specified with `excluded`
@@ -299,18 +281,18 @@ impl Provider {
         asset_id: AssetId,
         amount: u64,
         excluded_ids: (Vec<UtxoId>, Vec<MessageId>),
-    ) -> Result<Vec<Resource>, ProviderError> {
+    ) -> ProviderResult<Vec<Resource>> {
         use itertools::Itertools;
 
         let utxos_as_str = excluded_ids
             .0
             .iter()
-            .map(|utxo_id| format!("{:#x}", utxo_id))
+            .map(|utxo_id| format!("{utxo_id:#x}"))
             .collect::<Vec<_>>();
         let msg_ids_as_str = excluded_ids
             .1
             .iter()
-            .map(|msg_id| format!("{:#x}", msg_id))
+            .map(|msg_id| format!("{msg_id:#x}"))
             .collect::<Vec<_>>();
 
         let excluded_as_str = Some((
@@ -328,16 +310,16 @@ impl Provider {
             .client
             .resources_to_spend(
                 &from.hash().to_string(),
-                vec![(format!("{:#x}", asset_id).as_str(), amount, None)],
+                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
                 excluded_as_str,
             )
             .await?
             .into_iter()
             .flatten()
             .map(|resource| {
-                let resource: Result<Resource, _> = resource.try_into();
-
-                resource.map_err(ProviderError::ClientRequestError)
+                resource
+                    .try_into()
+                    .map_err(ProviderError::ClientRequestError)
             })
             .try_collect()?;
 
