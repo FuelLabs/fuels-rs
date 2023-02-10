@@ -254,6 +254,36 @@ async fn can_set_custom_block_time() -> Result<()> {
 }
 
 #[tokio::test]
+async fn can_retrieve_latest_block_time() -> Result<()> {
+    use chrono::{TimeZone, Utc};
+
+    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+    let wallet = &wallets[0];
+    let provider = wallet.get_provider()?;
+
+    assert_eq!(provider.latest_block_height().await?, 0);
+
+    let latest_timestamp = Utc.timestamp_opt(1676039910, 0).unwrap();
+    let time = TimeParameters {
+        start_time: latest_timestamp,
+        block_time_interval: Duration::seconds(1),
+    };
+    provider.produce_blocks(1, Some(time)).await?;
+
+    assert_eq!(
+        provider.latest_block_time().await?.unwrap(),
+        latest_timestamp
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
