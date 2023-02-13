@@ -56,16 +56,12 @@ jobs:
           fi
 
       - name: Build Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- build
+        run: forc build --terse
+        working-directory: packages/fuels
 
       - name: Check format of Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- format --check
+        run: forc fmt --check
+        working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
         with:
@@ -196,7 +192,8 @@ jobs:
 
       - name: Check Docs. Warnings
         run: |
-          ! cargo doc |& grep -q "broken_intra_doc_links"
+          ! cargo doc |& grep -A 6  "warning: unresolved link to"
+
 
   # Ensure workspace is publishable
   publish-crates-check:
