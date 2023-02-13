@@ -206,12 +206,13 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <h2 id="the-fuel-rust-sdk-source-code"><a class="header" href="#the-fuel-rust-sdk-source-code">The Fuel Rust SDK source code</a></h2>
 <p>Another way to experience the SDK is to look at the source code. The <code>packages/fuels/tests/</code> folder is full of integration tests that go through almost all aspects of the SDK.</p>
 <blockquote>
-<p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The SDK has a binary that will go through all projects and build them for us. You can use it with the following command.</p>
+<p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The file <code>packages/fuels/Forc.toml</code> contains a `[workspace], which members are the paths to all integration tests. 
+To build these tests, run the following command:</p>
 </blockquote>
-<pre><code>cargo run --bin test-projects -- build
+<pre><code>forc build --path packages/fuels
 </code></pre>
 <blockquote>
-<p>The <code>test-projects</code> binary can also be used to clean and format the test projects. Check the <code>help</code> output for more info.</p>
+<p><code>forc</code> can also be used to clean and format the test projects. Check the <code>help</code> output for more info.</p>
 </blockquote>
 <p>After building the projects, we can run the tests with</p>
 <pre><code>cargo test
