@@ -12,7 +12,7 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
 };
 
-use crate::constants::{
+use fuel_abi_types::error_codes::{
     FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
