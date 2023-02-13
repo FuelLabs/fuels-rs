@@ -56,7 +56,7 @@ jobs:
           fi
 
       - name: Build Sway test projects
-        run: forc build
+        run: forc build --terse
         working-directory: packages/fuels
 
       - name: Check format of Sway test projects
