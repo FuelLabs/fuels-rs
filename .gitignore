@@ -23,3 +23,6 @@ packages/fuels/tests/**/**/target/
 
 # Don't add .gitignore files from test Sway projects.
 packages/fuels/tests/**/**/.gitignore
+
+# Don't add lock files in the fuels directory.
+packages/fuels/Forc.lock

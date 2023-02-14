@@ -8,6 +8,7 @@ use std::{
     str::FromStr,
 };
 
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
     Output, Receipt, Salt, StorageSlot, Transaction,
@@ -32,7 +33,6 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     execution_script::ExecutableFuelCall,
     logs::{map_revert_error, LogDecoder},
 };
