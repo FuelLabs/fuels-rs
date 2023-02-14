@@ -26,7 +26,7 @@ fn get_test_coins_and_messages(
     let asset_id = AssetId::default();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
-        .flat_map(|i| {
+        .map(|i| {
             setup_single_message(
                 &Bech32Address::default(),
                 address,

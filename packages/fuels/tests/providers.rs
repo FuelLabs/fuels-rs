@@ -109,13 +109,13 @@ async fn test_input_message() -> Result<()> {
     // Coin to pay transaction fee.
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
 
-    let messages = setup_single_message(
+    let messages = vec![setup_single_message(
         &Bech32Address::default(),
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
         0,
         vec![1, 2],
-    );
+    )];
 
     let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
@@ -161,7 +161,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         vec![],
     );
 
-    let (provider, _) = setup_test_provider(vec![], messages, None, None).await;
+    let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await;
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -673,58 +673,69 @@ async fn test_parse_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_spendable_with_exclusion() -> Result<()> {
+    let coin_amount_1 = 1000;
+    let coin_amount_2 = 500;
+
     let mut wallet = WalletUnlocked::new_random(None);
+    let address = wallet.address();
 
-    let c_amount_1 = 1000;
-    let c_amount_2 = 500;
-    let msg_amount = 200;
-    let requested_amount = c_amount_1;
+    let coins = [coin_amount_1, coin_amount_2]
+        .into_iter()
+        .flat_map(|amount| setup_single_asset_coins(address, BASE_ASSET_ID, 1, amount))
+        .collect::<Vec<_>>();
 
-    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, c_amount_1);
-    let coin_2 = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, c_amount_2);
-    coins.extend(coin_2);
-
-    let messages = setup_single_message(
-        &Bech32Address {
-            hrp: "".to_string(),
-            hash: Default::default(),
-        },
-        wallet.address(),
-        msg_amount,
-        0,
-        vec![],
-    );
+    let message_amount = 200;
+    let message = given_a_message(address.clone(), message_amount);
 
     let coin_1_utxo_id = coins[0].utxo_id;
     let coin_2_utxo_id = coins[1].utxo_id;
-    let message_id = messages[0].message_id();
 
-    let (provider, _) = setup_test_provider(coins, messages, None, None).await;
+    let message_id = message.message_id();
+
+    let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
+
     wallet.set_provider(provider);
 
-    // all resources will be included because `get_spendable_resources` tries to
-    // return 2x the requested amount due to its dusting countermeasures
+    let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {
-        let resources = wallet
-            .get_spendable_resources(BASE_ASSET_ID, requested_amount)
-            .await?;
+        let filter = ResourceFilter {
+            from: wallet.address().clone(),
+            amount: requested_amount,
+            ..Default::default()
+        };
+        let resources = wallet.get_spendable_resources(filter).await.unwrap();
         assert_eq!(resources.len(), 3);
     }
 
     {
-        let excluded = (vec![coin_2_utxo_id], vec![message_id]);
-        let resources = wallet
-            .get_spendable_resources_with_exclusion(BASE_ASSET_ID, requested_amount, excluded)
-            .await?;
-
-        assert_eq!(resources.len(), 1);
-
-        let retrieved_utxo_id = match &resources[0] {
-            Resource::Coin(coin) => coin.utxo_id,
-            _ => panic!("This shouldn't happen!"),
+        let filter = ResourceFilter {
+            from: wallet.address().clone(),
+            amount: coin_amount_1,
+            excluded_utxos: vec![coin_2_utxo_id],
+            excluded_message_ids: vec![message_id],
+            ..Default::default()
         };
-        assert_eq!(retrieved_utxo_id, coin_1_utxo_id);
+        let resources = wallet.get_spendable_resources(filter).await.unwrap();
+
+        match resources.as_slice() {
+            [Resource::Coin(coin)] => {
+                assert_eq!(coin.utxo_id, coin_1_utxo_id);
+            }
+            _ => {
+                panic!("This shouldn't happen!")
+            }
+        }
     }
 
     Ok(())
+}
+
+fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
+    setup_single_message(
+        &Bech32Address::default(),
+        &address,
+        message_amount,
+        0,
+        vec![],
+    )
 }

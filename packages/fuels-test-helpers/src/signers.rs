@@ -111,7 +111,7 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use fuels_core::constants::BASE_ASSET_ID;
-    use fuels_signers::fuel_crypto::fuel_types::AssetId;
+    use fuels_signers::{fuel_crypto::fuel_types::AssetId, provider::ResourceFilter};
     use fuels_types::{errors::Result, resource::Resource};
     use rand::Fill;
 
@@ -176,9 +176,13 @@ mod tests {
 
         for asset in assets {
             for wallet in &wallets {
-                let resources = wallet
-                    .get_spendable_resources(asset.id, asset.num_coins * asset.coin_amount)
-                    .await?;
+                let filter = ResourceFilter {
+                    from: wallet.address().clone(),
+                    asset_id: asset.id,
+                    amount: asset.num_coins * asset.coin_amount,
+                    ..Default::default()
+                };
+                let resources = wallet.get_spendable_resources(filter).await?;
                 assert_eq!(resources.len() as u64, asset.num_coins);
 
                 for resource in resources {

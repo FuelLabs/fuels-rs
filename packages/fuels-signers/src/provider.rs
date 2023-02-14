@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
@@ -16,7 +17,7 @@ use fuel_tx::{
 };
 use fuel_types::MessageId;
 use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
-use fuels_core::constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
+use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
@@ -58,6 +59,90 @@ impl From<TimeParameters> for FuelTimeParameters {
         Self {
             start_time: Tai64::from_unix(time.start_time.timestamp()).0.into(),
             block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
+        }
+    }
+}
+
+pub(crate) struct ResourceQueries {
+    utxos: Vec<String>,
+    messages: Vec<String>,
+    asset_id: String,
+    amount: u64,
+}
+
+impl ResourceQueries {
+    pub fn new(
+        utxo_ids: Vec<UtxoId>,
+        message_ids: Vec<MessageId>,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Self {
+        let utxos = utxo_ids
+            .iter()
+            .map(|utxo_id| format!("{utxo_id:#x}"))
+            .collect::<Vec<_>>();
+
+        let messages = message_ids
+            .iter()
+            .map(|msg_id| format!("{msg_id:#x}"))
+            .collect::<Vec<_>>();
+
+        Self {
+            utxos,
+            messages,
+            asset_id: format!("{asset_id:#x}"),
+            amount,
+        }
+    }
+
+    pub fn exclusion_query(&self) -> Option<(Vec<&str>, Vec<&str>)> {
+        if self.utxos.is_empty() && self.messages.is_empty() {
+            return None;
+        }
+
+        let utxos_as_str = self.utxos.iter().map(AsRef::as_ref).collect::<Vec<_>>();
+
+        let msg_ids_as_str = self.messages.iter().map(AsRef::as_ref).collect::<Vec<_>>();
+
+        Some((utxos_as_str, msg_ids_as_str))
+    }
+
+    pub fn spend_query(&self) -> Vec<(&str, u64, Option<u64>)> {
+        vec![(self.asset_id.as_str(), self.amount, None)]
+    }
+}
+
+pub struct ResourceFilter {
+    pub from: Bech32Address,
+    pub asset_id: AssetId,
+    pub amount: u64,
+    pub excluded_utxos: Vec<UtxoId>,
+    pub excluded_message_ids: Vec<MessageId>,
+}
+
+impl ResourceFilter {
+    pub fn owner(&self) -> String {
+        self.from.hash().to_string()
+    }
+
+    pub(crate) fn resource_queries(&self) -> ResourceQueries {
+        ResourceQueries::new(
+            self.excluded_utxos.clone(),
+            self.excluded_message_ids.clone(),
+            self.asset_id,
+            self.amount,
+        )
+    }
+}
+
+impl Default for ResourceFilter {
+    fn default() -> Self {
+        Self {
+            from: Default::default(),
+            asset_id: BASE_ASSET_ID,
+            amount: Default::default(),
+            excluded_utxos: Default::default(),
+            excluded_message_ids: Default::default(),
         }
     }
 }
@@ -265,53 +350,16 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_resources(
         &self,
-        from: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
+        filter: ResourceFilter,
     ) -> ProviderResult<Vec<Resource>> {
-        self.get_spendable_resources_with_exclusion(from, asset_id, amount, (vec![], vec![]))
-            .await
-    }
-
-    /// Same as `get_spendable_resources` but the coins and messages specified with `excluded`
-    /// will be ignored when searching for resources that fit the amount
-    pub async fn get_spendable_resources_with_exclusion(
-        &self,
-        from: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
-        excluded_ids: (Vec<UtxoId>, Vec<MessageId>),
-    ) -> ProviderResult<Vec<Resource>> {
-        use itertools::Itertools;
-
-        let utxos_as_str = excluded_ids
-            .0
-            .iter()
-            .map(|utxo_id| format!("{utxo_id:#x}"))
-            .collect::<Vec<_>>();
-        let msg_ids_as_str = excluded_ids
-            .1
-            .iter()
-            .map(|msg_id| format!("{msg_id:#x}"))
-            .collect::<Vec<_>>();
-
-        let excluded_as_str = Some((
-            utxos_as_str
-                .iter()
-                .map(AsRef::as_ref)
-                .collect::<Vec<&str>>(),
-            msg_ids_as_str
-                .iter()
-                .map(AsRef::as_ref)
-                .collect::<Vec<&str>>(),
-        ));
+        let queries = filter.resource_queries();
 
         let res = self
             .client
             .resources_to_spend(
-                &from.hash().to_string(),
-                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
-                excluded_as_str,
+                &filter.owner(),
+                queries.spend_query(),
+                queries.exclusion_query(),
             )
             .await?
             .into_iter()

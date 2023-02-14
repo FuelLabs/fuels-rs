@@ -144,16 +144,24 @@ mod tests {
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let id = AssetId::from_str(&id_string).unwrap();
+            let asset_id = AssetId::from_str(&id_string).unwrap();
 
             // leave the base asset to cover transaction fees
-            if id == BASE_ASSET_ID {
+            if asset_id == BASE_ASSET_ID {
                 continue;
             }
-            let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
+
+            let filter = ResourceFilter {
+                from: wallet_1.address().clone(),
+                amount,
+                asset_id,
+                ..Default::default()
+            };
+            let input = wallet_1.get_asset_inputs_for_amount(filter, 0).await?;
             inputs.extend(input);
 
-            let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
+            let output =
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), asset_id, amount);
             outputs.extend(output);
         }
         // ANCHOR_END: transfer_multiple_inout
@@ -225,9 +233,13 @@ mod tests {
 
         // ANCHOR: modify_call_inputs_execute
         const SEND_AMOUNT: u64 = 1000;
-        let input = wallet_1
-            .get_asset_inputs_for_amount(some_asset_id, SEND_AMOUNT, 0)
-            .await?;
+        let filter = ResourceFilter {
+            from: wallet_1.address().clone(),
+            amount: SEND_AMOUNT,
+            asset_id: some_asset_id,
+            ..Default::default()
+        };
+        let input = wallet_1.get_asset_inputs_for_amount(filter, 0).await?;
         executable_call.tx.inputs_mut().extend(input);
 
         let output =

@@ -64,9 +64,12 @@ mod tests {
         // ANCHOR_END: get_coins
 
         // ANCHOR: get_spendable_resources
-        let spendable_resources = provider
-            .get_spendable_resources(wallet.address(), BASE_ASSET_ID, 1)
-            .await?;
+        let filter = ResourceFilter {
+            from: wallet.address().clone(),
+            amount: 1,
+            ..Default::default()
+        };
+        let spendable_resources = provider.get_spendable_resources(filter).await?;
         assert_eq!(spendable_resources.len(), 1);
         // ANCHOR_END: get_spendable_resources
 
