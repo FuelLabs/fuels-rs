@@ -29,7 +29,7 @@ This method returns all coins (of a given asset ID) from a wallet, including spe
 The following example shows how to fetch resources owned by an address. First, you need to create a  `ResourceFilter` which let's you specify the target address, asset id and amount. You can also define utxo ids and message ids that should be excluded when retrieving the specified resources:
 
 ```rust,ignore
-{{#include ../../../packages/providers/fuels-signers/src/lib.rs:resource_filter}}
+{{#include ../../../packages/providers/fuels-signers/src/provider.rs:resource_filter}}
 ```
 
 The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the ids lists respectively:
