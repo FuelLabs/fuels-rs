@@ -63,7 +63,6 @@ pub mod prelude {
     //! use fuels::prelude::*;
     //! ```
     pub use super::{
-        core::{constants::*, parameters::*},
         fuel_node::*,
         macros::{abigen, setup_contract_test},
         programs::{
@@ -75,7 +74,10 @@ pub mod prelude {
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
+            constants::*,
             errors::{Error, Result},
+            parameters::*,
+            transaction::*,
             Address, AssetId, ContractId, RawSlice,
         },
     };

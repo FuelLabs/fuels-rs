@@ -110,9 +110,8 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use fuels_core::constants::BASE_ASSET_ID;
     use fuels_signers::fuel_crypto::fuel_types::AssetId;
-    use fuels_types::{errors::Result, resource::Resource};
+    use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};

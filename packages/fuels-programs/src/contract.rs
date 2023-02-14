@@ -1,18 +1,17 @@
 use std::{collections::HashSet, fmt::Debug, fs, marker::PhantomData, path::Path, str::FromStr};
 
 use fuel_tx::{
-    Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks, Output, Salt,
-    StorageSlot, Transaction,
+    Bytes32, Contract as FuelContract, ContractId, Output, Salt, StorageSlot,
+    Transaction as FuelTransaction,
 };
-use fuels_core::{
-    abi_encoder::ABIEncoder,
-    parameters::{CallParameters, StorageConfiguration, TxParameters},
-};
+use fuels_core::abi_encoder::ABIEncoder;
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::{error, Error, Result},
+    parameters::{CallParameters, StorageConfiguration, TxParameters},
     traits::{Parameterize, Tokenizable},
+    transaction::{CreateTransaction, Transaction},
     Selector, Token,
 };
 
@@ -282,7 +281,7 @@ impl Contract {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         params: TxParameters,
-    ) -> Result<(Create, Bech32ContractId)> {
+    ) -> Result<(CreateTransaction, Bech32ContractId)> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -291,7 +290,7 @@ impl Contract {
 
         let outputs = vec![Output::contract_created(contract_id, state_root)];
 
-        let tx = Transaction::create(
+        let tx = FuelTransaction::create(
             params.gas_price,
             params.gas_limit,
             params.maturity,
@@ -303,7 +302,7 @@ impl Contract {
             witnesses,
         );
 
-        Ok((tx, contract_id.into()))
+        Ok((tx.into(), contract_id.into()))
     }
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
