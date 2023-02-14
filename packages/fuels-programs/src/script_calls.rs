@@ -194,7 +194,6 @@ where
         } else {
             tx_execution.execute(&self.provider).await?
         };
-
         self.get_response(receipts)
     }
 

@@ -77,41 +77,42 @@ async fn setup_predicate_test(
         asset_id,
     ))
 }
+
+// #[tokio::test]
+// async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
+//     let num_coins = 16;
+//     let num_messages = 32;
+//     let amount = 64;
+//     let total_balance = (num_coins + num_messages) * amount;
+//
+//     let mut wallet = WalletUnlocked::new_random(None);
+//
+//     let (coins, messages, asset_id) =
+//         get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
+//
+//     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+//
+//     wallet.set_provider(provider.clone());
+//
+//     abigen!(Predicate(
+//         name = "MyPredicate",
+//         abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
+//     ));
+//
+//     let predicate =
+//         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
+//
+//     predicate
+//         .receive(&wallet, total_balance, asset_id, None)
+//         .await?;
+//
+//     The predicate has received the funds
+// assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
+//
+// Ok(())
+// }
+
 /*
-
-#[tokio::test]
-async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
-    let num_coins = 16;
-    let num_messages = 32;
-    let amount = 64;
-    let total_balance = (num_coins + num_messages) * amount;
-
-    let mut wallet = WalletUnlocked::new_random(None);
-
-    let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
-
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
-
-    wallet.set_provider(provider.clone());
-
-    abigen!(Predicate(
-        name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
-    ));
-
-    let predicate =
-        MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
-
-    predicate
-        .receive(&wallet, total_balance, asset_id, None)
-        .await?;
-
-    // The predicate has received the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
-
-    Ok(())
-}
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
@@ -121,7 +122,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     ));
 
     let predicate =
-        MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
+        MyPredicateTest::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
 
     let num_coins = 4;
     let num_messages = 8;
@@ -155,6 +156,8 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
         receiver_balance + predicate_balance,
     )
     .await;
+
+    assert!(false);
 
     Ok(())
 }
@@ -204,6 +207,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     Ok(())
 }
+
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_address() -> Result<()> {
@@ -593,72 +597,49 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
 }
 */
 
+// /*
+
 #[tokio::test]
 async fn pay_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ) // Predicate(
-          //     name = "MyPredicate",
-          //     abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-          // )
+        ),
+        Predicate(
+              name = "MyPredicate",
+              abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+        )
     );
+
+    let mut predicate: Predicate = MyPredicate::load_from(
+        "tests/predicates/predicate_u64/out/debug/predicate_u64.bin",
+    )?
+    .encode_data(32768)
+    .get_predicate();
 
     // let mut predicate =
-    //     MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
-    //
-    // let num_coins = 4;
-    // let num_messages = 8;
-    // let amount = 16;
-    // let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-    //     setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-    //
-    // predicate.set_provider(Some(provider.clone()));
-    //
-    // let contract_id = Contract::deploy(
-    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
-    //     &predicate,
-    //     TxParameters::default(),
-    //     StorageConfiguration::default(),
-    // )
-    // .await?;
-    //
-    // let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
+    //     MyPredicateHandlerTest::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
 
-    // let response = contract_instance_connected
-    //     .methods()
-    //     .initialize_counter(42) // Build the ABI call
-    //     .call() // Perform the network call
-    //     .await?;
-    // assert_eq!(42, response.value);
-    //
-    let mut wallet = WalletUnlocked::new_random(None);
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    let coins = setup_single_asset_coins(
-        wallet.address(),
-        BASE_ASSET_ID,
-        DEFAULT_NUM_COINS,
-        DEFAULT_COIN_AMOUNT,
-    );
-    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
-    let connected_provider = Provider::connect(address.to_string()).await?;
-
-    wallet.set_provider(connected_provider);
+    predicate.set_provider(provider.clone());
+    // let a = predicate.encode_data(32768); // change this part
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
+        &predicate,
         TxParameters::default(),
         StorageConfiguration::default(),
     )
     .await?;
 
+    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
     let tx_params = TxParameters::new(Some(10), Some(10000), None);
-
-    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
-
-    dbg!(&wallet.clone().get_balances().await?);
 
     let response = contract_instance_connected
         .methods()
@@ -666,19 +647,120 @@ async fn pay_with_predicate() -> Result<()> {
         .tx_params(tx_params)
         .call() // Perform the network call
         .await?;
+
     assert_eq!(42, response.value);
 
-    wallet.set_provider(launched_provider);
-    let contract_instance_launched = MyContract::new(contract_id, wallet.clone());
+    // */
+    /*
+            let mut wallet = WalletUnlocked::new_random(None);
 
-    let response = contract_instance_launched
-        .methods()
-        .increment_counter(10)
-        .tx_params(tx_params)
-        .call()
-        .await?;
-    assert_eq!(52, response.value);
-    dbg!(&wallet.get_balances().await?);
+            let coins = setup_single_asset_coins(
+                wallet.address(),
+                BASE_ASSET_ID,
+                DEFAULT_NUM_COINS,
+                DEFAULT_COIN_AMOUNT,
+            );
+            let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
+            let connected_provider = Provider::connect(address.to_string()).await?;
 
+            wallet.set_provider(connected_provider);
+
+            let contract_id = Contract::deploy(
+                "tests/contracts/contract_test/out/debug/contract_test.bin",
+                &wallet,
+                TxParameters::default(),
+                StorageConfiguration::default(),
+            )
+            .await?;
+
+            let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
+
+            dbg!(&wallet.clone().get_balances().await?);
+
+            let response = contract_instance_connected
+                .methods()
+                .initialize_counter(42) // Build the ABI call
+                .tx_params(tx_params)
+                .call() // Perform the network call
+                .await?;
+            assert_eq!(42, response.value);
+
+            wallet.set_provider(launched_provider);
+            let contract_instance_launched = MyContract::new(contract_id, wallet.clone());
+
+            let response = contract_instance_launched
+                .methods()
+                .increment_counter(10)
+                .tx_params(tx_params)
+                .call()
+                .await?;
+            assert_eq!(52, response.value);
+            dbg!(&wallet.get_balances().await?);
+    */
     Ok(())
 }
+
+#[allow(clippy::too_many_arguments)]
+#[no_implicit_prelude]
+pub mod abigen_bindings_test {
+    #[allow(clippy::too_many_arguments)]
+    #[no_implicit_prelude]
+    pub mod my_predicate_test_mod {
+        use ::std::{
+            clone::Clone,
+            convert::{From, Into, TryFrom},
+            format,
+            iter::IntoIterator,
+            iter::Iterator,
+            marker::Sized,
+            panic,
+            string::ToString,
+            vec,
+        };
+        #[derive(Debug, Clone)]
+        pub struct MyPredicateHandlerTest {
+            address: ::fuels::types::bech32::Bech32Address,
+            code: ::std::vec::Vec<u8>,
+            data: ::fuels::core::abi_encoder::UnresolvedBytes,
+            provider: ::std::option::Option<::fuels::prelude::Provider>,
+        }
+        impl MyPredicateHandlerTest {
+            pub fn get_predicate(&self) -> ::fuels::programs::predicate::Predicate {
+                ::fuels::programs::predicate::Predicate {
+                    address: self.address.clone(),
+                    code: self.code.clone(),
+                    data: self.data.clone(),
+                    provider: self.provider.clone(),
+                }
+            }
+            pub fn new(code: ::std::vec::Vec<u8>) -> Self {
+                let address: ::fuels::types::Address =
+                    (*::fuels::tx::Contract::root_from_code(&code)).into();
+                Self {
+                    address: address.clone().into(),
+                    code,
+                    data: ::fuels::core::abi_encoder::UnresolvedBytes::new(),
+                    provider: ::std::option::Option::None,
+                }
+            }
+            pub fn load_from(file_path: &str) -> ::fuels::types::errors::Result<Self> {
+                ::std::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
+            }
+            #[doc = "Run the predicate's encode function with the provided arguments"]
+            pub fn encode_data(&self, a: u64) -> Self {
+                let data = ::fuels::core::abi_encoder::ABIEncoder::encode(&[
+                    ::fuels::types::traits::Tokenizable::into_token(a),
+                ])
+                    .expect("Cannot encode predicate data");
+                Self {
+                    address: self.address.clone(),
+                    code: self.code.clone(),
+                    data,
+                    provider: self.provider.clone(),
+                }
+            }
+        }
+    }
+}
+pub use abigen_bindings_test::my_predicate_test_mod::MyPredicateHandlerTest;
+use fuels_programs::predicate::Predicate;

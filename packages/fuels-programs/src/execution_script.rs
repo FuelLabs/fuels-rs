@@ -119,13 +119,6 @@ where
         )?;
 
         let receipts = provider.dry_run(&self.tx.clone().into()).await?;
-        // if receipts
-        //     .iter()
-        //     .any(|r|
-        //         matches!(r, Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success)
-        //     ) {
-        //     return Err(Error::RevertTransactionError(Default::default(), receipts));
-        // }
         Self::validate_script_succedded(&receipts)?;
 
         Ok(receipts)

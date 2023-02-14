@@ -542,10 +542,16 @@ impl WalletUnlocked {
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
+
+        ::std::dbg!(&new_base_inputs);
+
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
             .chain(new_base_inputs.into_iter())
             .collect();
+
+        ::std::dbg!(&adjusted_inputs);
+
         *tx.inputs_mut() = adjusted_inputs;
 
         let is_base_change_present = tx.outputs().iter().any(|output| {
