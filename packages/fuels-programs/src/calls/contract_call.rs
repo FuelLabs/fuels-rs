@@ -6,7 +6,8 @@ use fuel_vm::fuel_asm::PanicReason;
 
 use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_signers::{
-    provider::{Provider, TransactionCost}, WalletUnlocked,
+    provider::{Provider, TransactionCost},
+    WalletUnlocked,
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -18,13 +19,11 @@ use fuels_types::{
     Selector, Token,
 };
 
-use crate::calls::call_utils::simulate_and_validate;
+use crate::calls::call_utils::simulate_and_check_success;
 use crate::{
     calls::call_response::FuelCallResponse,
     calls::call_utils::get_decoded_output,
-    calls::contract_call_utils::{
-        build_tx_from_contract_calls,
-    },
+    calls::contract_call_utils::build_tx_from_contract_calls,
     logs::{map_revert_error, LogDecoder},
 };
 
@@ -303,7 +302,7 @@ where
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            simulate_and_validate(&self.provider, &tx).await?
+            simulate_and_check_success(&self.provider, &tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };
@@ -449,7 +448,7 @@ impl MultiContractCallHandler {
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            simulate_and_validate(provider, &tx).await?
+            simulate_and_check_success(provider, &tx).await?
         } else {
             provider.send_transaction(&tx).await?
         };
@@ -462,7 +461,7 @@ impl MultiContractCallHandler {
         let provider = self.wallet.get_provider()?;
         let tx = self.build_tx().await?;
 
-        simulate_and_validate(provider, &tx).await?;
+        simulate_and_check_success(provider, &tx).await?;
 
         Ok(())
     }
