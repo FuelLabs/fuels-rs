@@ -24,7 +24,6 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
-    constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
     parameters::{CallParameters, StorageConfiguration, TxParameters},
@@ -36,7 +35,6 @@ use fuels_types::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, simulate_and_validate},
-    execution_script::ExecutableFuelCall,
     logs::{map_revert_error, LogDecoder},
 };
 
