@@ -159,12 +159,12 @@ impl Wallet {
     /// by this method.
     pub async fn get_asset_inputs_for_amount(
         &self,
-        filter: ResourceFilter,
+        asset_id: AssetId,
+        amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>> {
-        let asset_id = filter.asset_id;
         Ok(self
-            .get_spendable_resources(filter)
+            .get_spendable_resources(asset_id, amount)
             .await?
             .iter()
             .map(|resource| match resource {
@@ -226,7 +226,17 @@ impl Wallet {
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
     /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
     /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    pub async fn get_spendable_resources(&self, filter: ResourceFilter) -> Result<Vec<Resource>> {
+    pub async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Resource>> {
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            ..Default::default()
+        };
         self.get_provider()?
             .get_spendable_resources(filter)
             .await
@@ -532,13 +542,8 @@ impl WalletUnlocked {
             new_base_amount = MIN_AMOUNT;
         }
 
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            amount: new_base_amount,
-            ..Default::default()
-        };
         let new_base_inputs = self
-            .get_asset_inputs_for_amount(filter, witness_index)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
         let adjusted_inputs: Vec<_> = remaining_inputs
             .into_iter()
@@ -608,12 +613,9 @@ impl WalletUnlocked {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>)> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            amount,
-            ..Default::default()
-        };
-        let inputs = self.get_asset_inputs_for_amount(filter, 0).await?;
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
@@ -640,12 +642,9 @@ impl WalletUnlocked {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> Result<(String, String, Vec<Receipt>)> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            amount,
-            ..Default::default()
-        };
-        let inputs = self.get_asset_inputs_for_amount(filter, 0).await?;
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
 
         let mut tx = Wallet::build_message_to_output_tx(to.into(), amount, &inputs, tx_parameters);
 
@@ -681,7 +680,7 @@ impl WalletUnlocked {
         let predicate = self.get_provider()?;
 
         let filter = ResourceFilter {
-            from: self.address().clone(),
+            from: predicate_address.clone(),
             amount,
             ..Default::default()
         };
@@ -816,14 +815,10 @@ impl WalletUnlocked {
             TxPointer::default(),
             plain_contract_id,
         )];
-
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            amount: balance,
-            asset_id,
-            ..Default::default()
-        };
-        inputs.extend(self.get_asset_inputs_for_amount(filter, 0).await?);
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+                .await?,
+        );
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -1154,13 +1149,8 @@ mod tests {
             .unwrap();
 
         let base_amount = 30;
-        let filter = ResourceFilter {
-            from: wallet.address().clone(),
-            amount: base_amount,
-            ..Default::default()
-        };
         let inputs = wallet
-            .get_asset_inputs_for_amount(filter, 0)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
             .await?;
         let outputs = wallet.get_asset_outputs_for_amount(
             &Address::zeroed().into(),

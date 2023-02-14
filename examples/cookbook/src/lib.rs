@@ -151,13 +151,9 @@ mod tests {
                 continue;
             }
 
-            let filter = ResourceFilter {
-                from: wallet_1.address().clone(),
-                amount,
-                asset_id,
-                ..Default::default()
-            };
-            let input = wallet_1.get_asset_inputs_for_amount(filter, 0).await?;
+            let input = wallet_1
+                .get_asset_inputs_for_amount(asset_id, amount, 0)
+                .await?;
             inputs.extend(input);
 
             let output =
@@ -233,13 +229,9 @@ mod tests {
 
         // ANCHOR: modify_call_inputs_execute
         const SEND_AMOUNT: u64 = 1000;
-        let filter = ResourceFilter {
-            from: wallet_1.address().clone(),
-            amount: SEND_AMOUNT,
-            asset_id: some_asset_id,
-            ..Default::default()
-        };
-        let input = wallet_1.get_asset_inputs_for_amount(filter, 0).await?;
+        let input = wallet_1
+            .get_asset_inputs_for_amount(some_asset_id, SEND_AMOUNT, 0)
+            .await?;
         executable_call.tx.inputs_mut().extend(input);
 
         let output =

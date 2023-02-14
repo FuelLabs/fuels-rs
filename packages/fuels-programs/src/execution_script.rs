@@ -2,10 +2,7 @@ use std::{fmt::Debug, vec};
 
 use fuel_tx::{AssetId, FormatValidityChecks, Receipt, Script, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
-use fuels_signers::{
-    provider::{Provider, ResourceFilter},
-    Signer, WalletUnlocked,
-};
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::{Error, Result};
 
 use crate::{
@@ -55,13 +52,7 @@ impl ExecutableFuelCall {
 
         // Find the spendable resources required for those calls
         for (asset_id, amount) in &required_asset_amounts {
-            let filter = ResourceFilter {
-                from: wallet.address().clone(),
-                asset_id: *asset_id,
-                amount: *amount,
-                ..Default::default()
-            };
-            let resources = wallet.get_spendable_resources(filter).await?;
+            let resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
             spendable_resources.extend(resources);
         }
 

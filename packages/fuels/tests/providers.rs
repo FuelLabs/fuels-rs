@@ -1,6 +1,6 @@
 use std::{iter, str::FromStr, vec};
 
-use chrono::Duration;
+use chrono::{Duration, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
     client::{PageDirection, PaginationRequest},
@@ -217,8 +217,6 @@ async fn can_increase_block_height() -> Result<()> {
 
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
-    use chrono::{TimeZone, Utc};
-
     // ANCHOR: use_produce_blocks_custom_time
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
@@ -255,20 +253,10 @@ async fn can_set_custom_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn can_retrieve_latest_block_time() -> Result<()> {
-    use chrono::{TimeZone, Utc};
+    let provider = given_a_provider().await;
+    let since_epoch = 1676039910;
 
-    let config = Config {
-        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
-        ..Config::local_node()
-    };
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
-    let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
-
-    assert_eq!(provider.latest_block_height().await?, 0);
-
-    let latest_timestamp = Utc.timestamp_opt(1676039910, 0).unwrap();
+    let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
     let time = TimeParameters {
         start_time: latest_timestamp,
         block_time_interval: Duration::seconds(1),
@@ -281,6 +269,16 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     );
 
     Ok(())
+}
+
+async fn given_a_provider() -> Provider {
+    let config = Config {
+        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        ..Config::local_node()
+    };
+    setup_test_provider(vec![], vec![], Some(config), None)
+        .await
+        .0
 }
 
 #[tokio::test]
@@ -694,16 +692,14 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
 
-    wallet.set_provider(provider);
+    wallet.set_provider(provider.clone());
 
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {
-        let filter = ResourceFilter {
-            from: wallet.address().clone(),
-            amount: requested_amount,
-            ..Default::default()
-        };
-        let resources = wallet.get_spendable_resources(filter).await.unwrap();
+        let resources = wallet
+            .get_spendable_resources(BASE_ASSET_ID, requested_amount)
+            .await
+            .unwrap();
         assert_eq!(resources.len(), 3);
     }
 
@@ -715,7 +711,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
             excluded_message_ids: vec![message_id],
             ..Default::default()
         };
-        let resources = wallet.get_spendable_resources(filter).await.unwrap();
+        let resources = provider.get_spendable_resources(filter).await.unwrap();
 
         match resources.as_slice() {
             [Resource::Coin(coin)] => {

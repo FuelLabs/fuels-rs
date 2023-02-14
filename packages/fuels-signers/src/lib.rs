@@ -196,8 +196,9 @@ mod tests {
         assert_eq!(script.price(), gas_price);
         assert_eq!(*script.maturity(), maturity);
 
-        let wallet_1_spendable_resources =
-            wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
+        let wallet_1_spendable_resources = wallet_1
+            .get_spendable_resources(BASE_ASSET_ID, amount)
+            .await?;
         let wallet_2_spendable_resources = wallet_2
             .get_spendable_resources(BASE_ASSET_ID, amount + 1)
             .await?;
