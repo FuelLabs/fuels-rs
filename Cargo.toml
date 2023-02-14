@@ -43,6 +43,7 @@ fuel-merkle = "0.26"
 fuel-storage = "0.26"
 fuel-tx = "0.26"
 fuel-types = "0.26"
+fuel-abi-types = "0.2.1"
 fuel-core = { version = "0.17", default-features = false }
 fuel-core-client = "0.17"
 fuel-core-chain-config = "0.17"
