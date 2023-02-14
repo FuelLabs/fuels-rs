@@ -1,8 +1,8 @@
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{Output, Receipt};
 use fuel_types::{Address, AssetId};
 use fuel_vm::fuel_asm::PanicReason;
 
-use fuels_core::constants::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuels_types::bech32::Bech32ContractId;
 
 use crate::logs::LogDecoder;

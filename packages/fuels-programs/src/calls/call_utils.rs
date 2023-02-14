@@ -1,14 +1,21 @@
 use std::collections::HashSet;
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{
+    AssetId, Bytes32, ContractId, Input, Output, Receipt, ScriptExecutionResult, TxPointer, UtxoId,
+};
 
 use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_types::bech32::Bech32ContractId;
-use fuels_types::errors::Result;
-use fuels_types::param_types::{ParamType, ReturnLocation};
-use fuels_types::Token;
-use fuels_types::{bech32::Bech32Address, resource::Resource};
+use fuels_signers::provider::Provider;
+use fuels_types::errors::Error;
+use fuels_types::transaction::Transaction;
+use fuels_types::{
+    bech32::Bech32ContractId,
+    constants::BASE_ASSET_ID,
+    errors::Result,
+    param_types::{ParamType, ReturnLocation},
+    Token,
+    {bech32::Bech32Address, resource::Resource},
+};
 use itertools::Itertools;
 
 /// Based on the receipts returned by the call, the contract ID (which is null in the case of a
@@ -55,6 +62,36 @@ pub(crate) fn get_decoded_output(
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
+}
+
+/// Execute the transaction in a simulated manner, not modifying blockchain state
+pub async fn simulate_and_check_success<T: Transaction + Clone>(
+    provider: &Provider,
+    tx: &T,
+) -> Result<Vec<Receipt>> {
+    let receipts = provider.dry_run(tx).await?;
+    has_script_succeeded(&receipts)?;
+
+    Ok(receipts)
+}
+
+fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
+    receipts
+        .iter()
+        .find_map(|receipt| match receipt {
+            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                Some(format!("{result:?}"))
+            }
+            _ => None,
+        })
+        .map(|error_message| {
+            Err(Error::RevertTransactionError {
+                reason: error_message,
+                revert_id: 0,
+                receipts: receipts.to_owned(),
+            })
+        })
+        .unwrap_or(Ok(()))
 }
 
 /// Sum up the amounts required in each call for each asset ID, so you can get a total for each

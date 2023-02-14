@@ -17,10 +17,10 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
     let call_handler = contract_instance.methods().initialize_counter(42);
 
-    let execution_script = call_handler.get_executable_call().await?;
+    let tx = call_handler.build_tx().await?;
 
     let provider = wallet.get_provider()?;
-    let receipts = execution_script.execute(provider).await?;
+    let receipts = provider.send_transaction(&tx).await?;
 
     let response = call_handler.get_response(receipts)?;
     assert_eq!(response.value, 42);
@@ -53,8 +53,8 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_2);
 
     let provider = &wallet.get_provider()?;
-    let execution_script = multi_call_handler.get_executable_call().await?;
-    let receipts = execution_script.execute(provider).await.unwrap();
+    let tx = multi_call_handler.build_tx().await?;
+    let receipts = provider.send_transaction(&tx).await?;
     let (counter, array) = multi_call_handler
         .get_response::<(u64, [u64; 2])>(receipts)?
         .value;
@@ -316,7 +316,7 @@ async fn test_script_raw_slice() -> Result<()> {
 #[tokio::test]
 async fn test_script_signing() -> Result<()> {
     abigen!(Script(
-        name = "bimbam_script",
+        name = "BimBamScript",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
     ));
 
@@ -331,7 +331,7 @@ async fn test_script_signing() -> Result<()> {
     let wallet = wallets.first().unwrap();
 
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
-    let instance = bimbam_script::new(wallet.clone(), bin_path);
+    let instance = BimBamScript::new(wallet.clone(), bin_path);
 
     let a = 1000u64;
     let b = 2000u32;

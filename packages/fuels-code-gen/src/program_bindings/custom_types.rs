@@ -31,15 +31,16 @@ mod utils;
 pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
+    no_std: bool,
 ) -> Result<GeneratedCode> {
     HashSet::from_iter(types)
         .difference(shared_types)
         .filter(|ttype| !should_skip_codegen(&ttype.type_field))
         .filter_map(|ttype| {
             if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, shared_types))
+                Some(expand_custom_struct(ttype, shared_types, no_std))
             } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, shared_types))
+                Some(expand_custom_enum(ttype, shared_types, no_std))
             } else {
                 None
             }
@@ -133,6 +134,7 @@ mod tests {
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -147,6 +149,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub enum MatchaTea<> {
                 LongIsland(u64),
                 MoscowMule(bool)
@@ -170,6 +174,7 @@ mod tests {
         expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )
         .expect_err("Was able to construct an enum without variants");
 
@@ -224,6 +229,7 @@ mod tests {
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -238,6 +244,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub enum Amsterdam<> {
                 Infrastructure(self::Building),
                 Service(u32)
@@ -290,6 +298,7 @@ mod tests {
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -304,6 +313,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
             }
@@ -368,6 +379,7 @@ mod tests {
         let actual = expand_custom_enum(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -382,6 +394,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
             }
@@ -447,6 +461,7 @@ mod tests {
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -460,6 +475,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub struct Cocktail < > {
                 pub long_island: bool,
                 pub cosmopolitan: u64,
@@ -485,6 +502,7 @@ mod tests {
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -498,6 +516,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub struct SomeEmptyStruct < > {}
         };
 
@@ -551,6 +571,7 @@ mod tests {
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -564,6 +585,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub struct Cocktail < > {
                 pub long_island: self::Shaker,
                 pub mojito: u32
@@ -657,6 +680,7 @@ mod tests {
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(s1, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -670,6 +694,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub struct MyStruct1 < > {
                 pub x: u64,
                 pub y: ::fuels::types::Bits256
@@ -683,6 +709,7 @@ mod tests {
         let actual = expand_custom_struct(
             &FullTypeDeclaration::from_counterpart(s2, &types),
             &HashSet::default(),
+            false,
         )?
         .code;
 
@@ -696,6 +723,8 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
+            #[FuelsTypesPath("::fuels::types")]
+            #[FuelsCorePath("::fuels::core")]
             pub struct MyStruct2 < > {
                 pub x: bool,
                 pub y: self::MyStruct1
@@ -714,7 +743,8 @@ mod tests {
         let shared_types = HashSet::from_iter(types.iter().take(1).cloned());
 
         // when
-        let generated_code = generate_types(types, &shared_types).expect("Should have succeeded.");
+        let generated_code =
+            generate_types(types, &shared_types, false).expect("Should have succeeded.");
 
         // then
         assert_eq!(

@@ -1,18 +1,16 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Input, Output, Receipt, Transaction};
+use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 
-use fuels_core::{
-    abi_encoder::UnresolvedBytes,
-    offsets::base_offset,
-    parameters::{CallParameters, TxParameters},
-};
+use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
+    parameters::{TxParameters},
     traits::{Parameterize, Tokenizable},
+    transaction::{ScriptTransaction, Transaction},
 };
 use itertools::chain;
 
@@ -20,10 +18,12 @@ use crate::{
     calls::{
         call::SettableContract,
         call_response::FuelCallResponse,
-        call_utils::{generate_contract_inputs, generate_contract_outputs, get_decoded_output},
+        call_utils::{
+            generate_contract_inputs, generate_contract_outputs, get_decoded_output,
+            simulate_and_check_success,
+        },
     },
-    execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
+    logs::{map_revert_error, LogDecoder},
 };
 
 #[derive(Debug)]
@@ -34,8 +34,6 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
-    // This field is not currently used but it will be in the future.
-    pub call_parameters: CallParameters,
 }
 
 impl ScriptCall {
@@ -74,7 +72,6 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
-            call_parameters: Default::default(),
         };
         Self {
             script_call,
@@ -125,12 +122,7 @@ where
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
 
-    /// Call a script on the node. If `simulate == true`, then the call is done in a
-    /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
-    /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
-    /// it will be a bool, works also for structs thanks to the `abigen!()`).
-    /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn build_tx(&self) -> Result<ScriptTransaction> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -139,7 +131,7 @@ where
             .collect();
         let num_of_contracts = contract_ids.len();
 
-        let inputs = chain!(
+        let inputs: Vec<_> = chain!(
             generate_contract_inputs(contract_ids),
             self.script_call.inputs.clone(),
         )
@@ -149,31 +141,40 @@ where
         // contract_inputs are referencing them via `output_index`. The node
         // will, upon receiving our request, use `output_index` to index the
         // `inputs` array we've sent over.
-        let outputs = chain!(
+        let outputs: Vec<_> = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
         )
         .collect();
 
-        let mut tx = Transaction::script(
-            self.tx_parameters.gas_price,
-            self.tx_parameters.gas_limit,
-            self.tx_parameters.maturity,
-            self.script_call.script_binary.clone(),
-            self.compute_script_data().await?,
-            inputs,
-            outputs,
-            vec![],
-        );
+        let mut tx = ScriptTransaction::new(&inputs, &outputs, self.tx_parameters)
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?);
+
         self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
         self.wallet.sign_transaction(&mut tx).await?;
 
-        let tx_execution = ExecutableFuelCall { tx };
+        Ok(tx)
+    }
+
+    /// Call a script on the node. If `simulate == true`, then the call is done in a
+    /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
+    /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
+    /// it will be a bool, works also for structs thanks to the `abigen!()`).
+    /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
+    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+        let chain_info = self.provider.chain_info().await?;
+        let tx = self.build_tx().await?;
+
+        tx.check_without_signatures(
+            chain_info.latest_block.header.height,
+            &chain_info.consensus_parameters,
+        )?;
 
         let receipts = if simulate {
-            tx_execution.simulate(&self.provider).await?
+            simulate_and_check_success(&self.provider, &tx).await?
         } else {
-            tx_execution.execute(&self.provider).await?
+            self.provider.send_transaction(&tx).await?
         };
 
         self.get_response(receipts)
@@ -181,9 +182,9 @@ where
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
-        Self::call_or_simulate(&self, false)
+        self.call_or_simulate(false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
@@ -192,9 +193,9 @@ where
     ///
     /// [`call`]: Self::call
     pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
-        Self::call_or_simulate(&self, true)
+        self.call_or_simulate(true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

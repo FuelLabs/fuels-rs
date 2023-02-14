@@ -4,13 +4,20 @@ use std::{collections::HashSet, iter, vec};
 use fuel_tx::{AssetId, ContractId, Input, Output};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
-
-use crate::calls::call_utils::{
-    convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
-    generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
+use fuels_core::offsets::call_script_data_offset;
+use fuels_signers::{Signer, WalletUnlocked};
+use fuels_types::{
+    bech32::Bech32Address, constants::WORD_SIZE, errors::Result, parameters::TxParameters,
+    resource::Resource, transaction::ScriptTransaction,
 };
-use crate::calls::contract_call::ContractCall;
+
+use crate::calls::{
+    call_utils::{
+        convert_to_signed_resources, extract_unique_asset_ids, generate_asset_change_outputs,
+        generate_contract_inputs, generate_contract_outputs, sum_up_amounts_for_each_asset_id,
+    },
+    contract_call::ContractCall,
+};
 
 #[derive(Default)]
 /// Specifies offsets of [`Instruction::CALL`] parameters stored in the script
@@ -20,6 +27,56 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
+}
+
+/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
+/// initialized with the actual script instructions, script data needed to perform the call and
+/// transaction inputs/outputs consisting of assets and contracts.
+pub async fn build_tx_from_contract_calls(
+    calls: &[ContractCall],
+    tx_parameters: &TxParameters,
+    wallet: &WalletUnlocked,
+) -> Result<ScriptTransaction> {
+    let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
+
+    // Calculate instructions length for call instructions
+    // Use placeholder for call param offsets, we only care about the length
+    let calls_instructions_len =
+        get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * calls.len();
+
+    let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
+
+    let (script_data, call_param_offsets) =
+        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);
+
+    let script = get_instructions(calls, call_param_offsets);
+
+    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let mut spendable_resources = vec![];
+
+    // Find the spendable resources required for those calls
+    for (asset_id, amount) in &required_asset_amounts {
+        let resources = wallet.get_spendable_resources(*asset_id, *amount).await?;
+        spendable_resources.extend(resources);
+    }
+
+    let (inputs, outputs) =
+        get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
+
+    let mut tx = ScriptTransaction::new(&inputs, &outputs, *tx_parameters)
+        .with_script(script)
+        .with_script_data(script_data);
+
+    let base_asset_amount = required_asset_amounts
+        .iter()
+        .find(|(asset_id, _)| *asset_id == AssetId::default());
+    match base_asset_amount {
+        Some((_, base_amount)) => wallet.add_fee_resources(&mut tx, *base_amount, 0).await?,
+        None => wallet.add_fee_resources(&mut tx, 0, 0).await?,
+    }
+    wallet.sign_transaction(&mut tx).await.unwrap();
+
+    Ok(tx)
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -248,11 +305,12 @@ mod test {
     use std::slice;
 
     use fuel_tx::{Bytes32, TxPointer, UtxoId};
-    use fuels_core::{abi_encoder::ABIEncoder, parameters::CallParameters};
+    use fuels_core::abi_encoder::ABIEncoder;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         param_types::ParamType,
+        parameters::CallParameters,
         Token,
     };
     use rand::Rng;
