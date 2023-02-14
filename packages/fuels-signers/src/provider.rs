@@ -120,7 +120,7 @@ pub struct ResourceFilter {
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_ids: Vec<MessageId>,
 }
-// ANCHOR: resource_filter
+// ANCHOR_END: resource_filter
 
 impl ResourceFilter {
     pub fn owner(&self) -> String {
