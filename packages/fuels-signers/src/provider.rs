@@ -112,6 +112,7 @@ impl ResourceQueries {
     }
 }
 
+// ANCHOR: resource_filter
 pub struct ResourceFilter {
     pub from: Bech32Address,
     pub asset_id: AssetId,
@@ -119,6 +120,7 @@ pub struct ResourceFilter {
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_ids: Vec<MessageId>,
 }
+// ANCHOR: resource_filter
 
 impl ResourceFilter {
     pub fn owner(&self) -> String {

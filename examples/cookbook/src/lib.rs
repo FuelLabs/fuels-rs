@@ -144,20 +144,17 @@ mod tests {
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let asset_id = AssetId::from_str(&id_string).unwrap();
+            let id = AssetId::from_str(&id_string).unwrap();
 
             // leave the base asset to cover transaction fees
-            if asset_id == BASE_ASSET_ID {
+            if id == BASE_ASSET_ID {
                 continue;
             }
 
-            let input = wallet_1
-                .get_asset_inputs_for_amount(asset_id, amount, 0)
-                .await?;
+            let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
-            let output =
-                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), asset_id, amount);
+            let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
             outputs.extend(output);
         }
         // ANCHOR_END: transfer_multiple_inout
