@@ -22,7 +22,7 @@ use crate::calls::contract_call::SettableContract;
 use crate::{
     calls::call_response::FuelCallResponse,
     execution_script::ExecutableFuelCall,
-    logs::{decode_revert_error, LogDecoder},
+    logs::{map_revert_error, LogDecoder},
 };
 
 #[derive(Debug)]
@@ -189,7 +189,7 @@ where
     pub async fn call(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, false)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
@@ -200,7 +200,7 @@ where
     pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
         Self::call_or_simulate(&self, true)
             .await
-            .map_err(|err| decode_revert_error(err, &self.log_decoder))
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

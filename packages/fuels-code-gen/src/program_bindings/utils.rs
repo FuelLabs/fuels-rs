@@ -127,8 +127,8 @@ pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
         "::fuels::types::B512",
         "::fuels::types::RawSlice",
         "::std::vec::Vec",
-        "::std::result::Result",
-        "::std::option::Option",
+        "::core::result::Result",
+        "::core::option::Option",
     ]
     .map(|type_path_str| {
         TypePath::new(type_path_str).expect("known at compile time to be correctly formed")

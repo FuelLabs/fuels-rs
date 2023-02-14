@@ -16,8 +16,10 @@ use fuels_types::{
     Selector, Token,
 };
 
-use crate::calls::contract_call::{ContractCall, ContractCallHandler};
-use crate::logs::LogDecoder;
+use crate::{
+    calls::contract_call::{ContractCall, ContractCallHandler},
+    logs::LogDecoder,
+};
 
 /// A compiled representation of a contract.
 #[derive(Debug, Clone, Default)]
