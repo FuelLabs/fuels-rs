@@ -15,7 +15,7 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs, simulate_and_validate},
+    call_utils::{generate_contract_inputs, generate_contract_outputs, simulate_and_check_success},
     contract::{get_decoded_output, SettableContract},
     logs::{map_revert_error, LogDecoder},
 };
@@ -183,7 +183,7 @@ where
         )?;
 
         let receipts = if simulate {
-            simulate_and_validate(&self.provider, &tx).await?
+            simulate_and_check_success(&self.provider, &tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };

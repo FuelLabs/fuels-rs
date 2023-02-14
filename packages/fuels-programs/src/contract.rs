@@ -34,7 +34,7 @@ use fuels_types::{
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{build_tx_from_contract_calls, simulate_and_validate},
+    call_utils::{build_tx_from_contract_calls, simulate_and_check_success},
     logs::{map_revert_error, LogDecoder},
 };
 
@@ -682,7 +682,7 @@ where
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            simulate_and_validate(&self.provider, &tx).await?
+            simulate_and_check_success(&self.provider, &tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };
@@ -828,7 +828,7 @@ impl MultiContractCallHandler {
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            simulate_and_validate(provider, &tx).await?
+            simulate_and_check_success(provider, &tx).await?
         } else {
             provider.send_transaction(&tx).await?
         };
@@ -841,7 +841,7 @@ impl MultiContractCallHandler {
         let provider = self.wallet.get_provider()?;
         let tx = self.build_tx().await?;
 
-        simulate_and_validate(provider, &tx).await?;
+        simulate_and_check_success(provider, &tx).await?;
 
         Ok(())
     }

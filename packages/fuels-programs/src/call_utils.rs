@@ -396,17 +396,17 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 }
 
 /// Execute the transaction in a simulated manner, not modifying blockchain state
-pub async fn simulate_and_validate<T: Transaction + Clone>(
+pub async fn simulate_and_check_success<T: Transaction + Clone>(
     provider: &Provider,
     tx: &T,
 ) -> Result<Vec<Receipt>> {
     let receipts = provider.dry_run(tx).await?;
-    validate_script_succedded(&receipts)?;
+    has_script_succeeded(&receipts)?;
 
     Ok(receipts)
 }
 
-fn validate_script_succedded(receipts: &[Receipt]) -> Result<()> {
+fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
     receipts
         .iter()
         .find_map(|receipt| match receipt {
