@@ -33,6 +33,7 @@ pub struct Config {
     pub manual_blocks_enabled: bool,
     pub vm_backtrace: bool,
     pub silent: bool,
+    pub poa_interval_millis: u64,
 }
 
 impl Config {
@@ -43,6 +44,7 @@ impl Config {
             manual_blocks_enabled: false,
             vm_backtrace: false,
             silent: true,
+            poa_interval_millis: 2500,
         }
     }
 }
@@ -215,6 +217,7 @@ pub async fn new_fuel_node(
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
+        let poa_str = format!("{}ms", config.poa_interval_millis);
         let mut args = vec![
             "run", // `fuel-core` is now run with `fuel-core run`
             "--ip",
@@ -223,6 +226,8 @@ pub async fn new_fuel_node(
             port,
             "--db-type",
             "in-memory",
+            "--poa-interval-period",
+            poa_str.as_str(),
             "--chain",
             temp_config_file.path().to_str().unwrap(),
         ];
@@ -260,18 +265,19 @@ pub async fn new_fuel_node(
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let mut running_node = command
-            .args(args)
-            .kill_on_drop(true)
-            .spawn()
-            .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed.");
+        let running_node = command.args(args).kill_on_drop(true).output();
 
         let client = FuelClient::from(config.addr);
         server_health_check(&client).await;
         // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
 
-        running_node.wait().await
+        let result = running_node
+            .await
+            .expect("error: Couldn't find fuel-core in PATH.");
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
     });
     // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
     rx.await.unwrap();

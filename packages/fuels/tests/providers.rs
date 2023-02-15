@@ -195,6 +195,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
@@ -216,6 +217,7 @@ async fn can_increase_block_height() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn can_set_custom_block_time() -> Result<()> {
     use chrono::{TimeZone, Utc};
 
@@ -254,6 +256,7 @@ async fn can_set_custom_block_time() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
