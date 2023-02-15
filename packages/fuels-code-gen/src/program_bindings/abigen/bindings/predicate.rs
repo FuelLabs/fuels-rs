@@ -57,7 +57,7 @@ pub(crate) fn predicate_bindings(
             }
 
             pub fn load_from(file_path: &str) -> ::fuels::types::errors::Result<Self> {
-                ::std::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
+                ::core::result::Result::Ok(Self::new(::std::fs::read(file_path)?))
             }
 
            #encode_function

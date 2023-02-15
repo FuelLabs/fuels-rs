@@ -316,7 +316,7 @@ async fn test_script_raw_slice() -> Result<()> {
 #[tokio::test]
 async fn test_script_signing() -> Result<()> {
     abigen!(Script(
-        name = "bimbam_script",
+        name = "BimBamScript",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
     ));
 
@@ -331,7 +331,7 @@ async fn test_script_signing() -> Result<()> {
     let wallet = wallets.first().unwrap();
 
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
-    let instance = bimbam_script::new(wallet.clone(), bin_path);
+    let instance = BimBamScript::new(wallet.clone(), bin_path);
 
     let a = 1000u64;
     let b = 2000u32;
