@@ -38,6 +38,11 @@ use crate::{
     logs::{map_revert_error, LogDecoder},
 };
 
+#[derive(Default)]
+pub struct ReplaceConfigurable {
+    pub configurables: Vec<(u64, Vec<u8>)>,
+}
+
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
@@ -186,6 +191,7 @@ impl Contract {
         wallet: &WalletUnlocked,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
+        replace: ReplaceConfigurable,
         salt: Salt,
     ) -> Result<Bech32ContractId> {
         let mut compiled_contract = Contract::load_contract_with_parameters(
@@ -194,9 +200,24 @@ impl Contract {
             salt,
         )?;
 
+        Self::replace_configurables(&replace, &mut compiled_contract);
+
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
         Self::deploy_loaded(&(compiled_contract), wallet, params).await
+    }
+
+    fn replace_configurables(
+        replace: &ReplaceConfigurable,
+        compiled_contract: &mut CompiledContract,
+    ) {
+        replace.configurables.iter().for_each(|(offset, data)| {
+            let offset = *offset as usize;
+
+            compiled_contract
+                .raw
+                .splice(offset..offset + data.len(), data.iter().cloned());
+        });
     }
 
     fn merge_storage_vectors(
@@ -958,6 +979,7 @@ mod test {
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
+            ReplaceConfigurable::default(),
             Salt::default(),
         )
         .await

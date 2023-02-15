@@ -7,7 +7,7 @@ use quote::{quote, ToTokens};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
+        abi_types::{FullConfigurable, FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
     },
     utils::{safe_ident, TypePath},
