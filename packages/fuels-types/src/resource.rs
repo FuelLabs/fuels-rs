@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_client::client::schema::resource::Resource as ClientResource;
 
 use crate::{coin::Coin, message::Message};

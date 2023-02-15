@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use std::str::FromStr;
 
 use chrono::{DateTime, NaiveDateTime, Utc};

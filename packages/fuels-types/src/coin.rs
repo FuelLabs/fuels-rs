@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_chain_config::CoinConfig;
 use fuel_core_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
 use fuel_tx::{AssetId, UtxoId};

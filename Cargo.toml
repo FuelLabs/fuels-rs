@@ -56,4 +56,4 @@ fuels-macros = { version = "0.36.0", path = "./packages/fuels-macros" }
 fuels-programs = { version = "0.36.0", path = "./packages/fuels-programs" }
 fuels-signers = { version = "0.36.0", path = "./packages/fuels-signers" }
 fuels-test-helpers = { version = "0.36.0", path = "./packages/fuels-test-helpers" }
-fuels-types = { version = "0.36.0", path = "./packages/fuels-types" }
+fuels-types = { version = "0.36.0", path = "./packages/fuels-types", default-features = false }
