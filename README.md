@@ -29,8 +29,26 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 - [ ] Wallet integration
 - [ ] Events querying/monitoring
 
-
 ## FAQ
+
+### What dependencies do I need?
+
+- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/introduction/installation.html);
+- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo).
+
+### How can I run the SDK tests?
+
+First, build the test projects using `forc`:
+
+```shell
+forc build --path packages/fuels
+```
+
+Then you can run the SDK tests with:
+
+```shell
+cargo test -- --show-output
+```
 
 ### Why is the prefix `fuels` and not `fuel`?
 
