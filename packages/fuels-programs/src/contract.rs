@@ -467,13 +467,53 @@ pub fn get_decoded_output(
     contract_id: Option<&Bech32ContractId>,
     output_param: &ParamType,
 ) -> Result<Token> {
+    let null_contract_id = ContractId::new([0u8; 32]);
     // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
     let contract_id: ContractId = match contract_id {
         Some(contract_id) => contract_id.into(),
         // During a script execution, the script's contract id is the **null** contract id
-        None => ContractId::new([0u8; 32]),
+        None => null_contract_id,
     };
     let encoded_value = match output_param.get_return_location() {
+        ReturnLocation::ReturnData if output_param.is_vector() => {
+            // If the output of the function is a vector, then there are 2 consecutive ReturnData
+            // receipts. The first one is the one that returns the pointer to the vec struct in the
+            // VM memory, the second one contains the actual vector bytes (that the previous receipt
+            // points to).
+            // We ensure to take the right "first" ReturnData receipt by checking for the
+            // contract_id. There are no receipts in between the two ReturnData receipts because of
+            // the way the scripts are built (the calling script adds a RETD just after the CALL
+            // opcode, see `get_single_call_instructions`).
+            // Find the position of the first corresponding ReturnData receipt
+            let pos = receipts
+                .iter()
+                .position(|receipt| {
+                    matches!(receipt,
+                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
+                })
+                .expect("There should be at least a ReturnData receipt");
+            // Get the data contained in the one that immediately follows
+            let return_data_receipt = receipts
+                .get(pos + 1)
+                .expect("There should be at least two receipts");
+            // Its contract id must be null (it comes from a script)
+            if !matches!(return_data_receipt,
+                        Receipt::ReturnData { id, .. } if *id == null_contract_id)
+            {
+                return Err(error!(
+                    InvalidData,
+                    "The next should be a ReturnData receipt with non-empty data and a \
+                    null contract id: {:?}",
+                    return_data_receipt
+                ));
+            };
+            Some(
+                return_data_receipt
+                    .data()
+                    .expect("ReturnData should have data")
+                    .to_vec(),
+            )
+        }
         ReturnLocation::ReturnData => receipts
             .iter()
             .find(|receipt| {

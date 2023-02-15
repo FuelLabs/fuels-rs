@@ -124,8 +124,6 @@ pub(crate) fn get_instructions(
     calls: &[ContractCall],
     offsets: Vec<CallOpcodeParamsOffset>,
 ) -> Vec<u8> {
-    let num_calls = calls.len();
-
     let mut instructions = vec![];
     for (call, call_offsets) in calls.iter().zip(offsets.iter()) {
         instructions.extend(get_single_call_instructions(

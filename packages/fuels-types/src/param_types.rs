@@ -69,10 +69,7 @@ impl ParamType {
     }
 
     pub fn is_vector(&self) -> bool {
-        match self {
-            Self::Vector(..) => true,
-            _ => false,
-        }
+        matches!(self, Self::Vector(..))
     }
 
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.

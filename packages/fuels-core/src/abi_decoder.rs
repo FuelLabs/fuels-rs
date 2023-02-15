@@ -70,8 +70,38 @@ impl ABIDecoder {
         }
     }
 
-    fn decode_vector(_param_type: &ParamType, _bytes: &[u8]) -> Result<DecodeResult> {
-        unimplemented!("Cannot decode Vectors until we get support from the compiler.")
+    fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        let memory_size = match param_type {
+            ParamType::U64 => Ok(std::mem::size_of::<u64>()),
+            ParamType::U32 => Ok(std::mem::size_of::<u32>()),
+            ParamType::U16 => Ok(std::mem::size_of::<u16>()),
+            ParamType::U8 => Ok(std::mem::size_of::<u8>()),
+            _ => Err(error!(
+                InvalidData,
+                "Only decoding vector of integers are supported for now, got {:?}", param_type
+            )),
+        }
+        .unwrap();
+        if bytes.len() % memory_size != 0 {
+            return Err(error!(
+                InvalidData,
+                "The bytes provided do not correspond to a raw slice with {:?} integers, got: {:?}",
+                param_type,
+                bytes
+            ));
+        }
+        let mut results = vec![];
+        let mut bytes_read = 0;
+        while bytes_read < bytes.len() {
+            let res = Self::decode_param(param_type, skip(bytes, bytes_read)?)?;
+            bytes_read += res.bytes_read;
+            results.push(res.token);
+        }
+
+        Ok(DecodeResult {
+            token: Token::Vector(results),
+            bytes_read,
+        })
     }
 
     fn decode_tuple(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
