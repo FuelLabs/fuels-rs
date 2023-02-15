@@ -68,6 +68,13 @@ impl ParamType {
         }
     }
 
+    pub fn is_vector(&self) -> bool {
+        match self {
+            Self::Vector(..) => true,
+            _ => false,
+        }
+    }
+
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
     pub fn compute_encoding_width(&self) -> usize {
         const fn count_words(bytes: usize) -> usize {

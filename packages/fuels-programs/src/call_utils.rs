@@ -127,8 +127,11 @@ pub(crate) fn get_instructions(
     let num_calls = calls.len();
 
     let mut instructions = vec![];
-    for (_, call_offsets) in (0..num_calls).zip(offsets.iter()) {
-        instructions.extend(get_single_call_instructions(call_offsets));
+    for (call, call_offsets) in calls.iter().zip(offsets.iter()) {
+        instructions.extend(get_single_call_instructions(
+            call_offsets,
+            call.output_param.is_vector(),
+        ));
     }
 
     instructions.extend(op::ret(RegId::ONE).to_bytes());
@@ -213,7 +216,10 @@ pub(crate) fn build_script_data_from_contract_calls(
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
-pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
+pub(crate) fn get_single_call_instructions(
+    offsets: &CallOpcodeParamsOffset,
+    uses_vector: bool,
+) -> Vec<u8> {
     let call_data_offset = offsets
         .call_data_offset
         .try_into()
@@ -230,7 +236,8 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
         .asset_id_offset
         .try_into()
         .expect("asset_id_offset out of range");
-    let instructions = [
+
+    let mut instructions = [
         op::movi(0x10, call_data_offset),
         op::movi(0x11, gas_forwarded_offset),
         op::lw(0x11, 0x11, 0),
@@ -238,7 +245,23 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
         op::lw(0x12, 0x12, 0),
         op::movi(0x13, asset_id_offset),
         op::call(0x10, 0x12, 0x13, 0x11),
-    ];
+    ]
+    .to_vec();
+    // The instructions are different if you want to return data that was on the heap
+    if uses_vector {
+        instructions.extend([
+            // 0X0D contains the pointer address of the `CALL` return (13912 or something)
+            // 0X0E contains the length of the `CALL` return (24 because the vec struct takes 3 bytes)
+            // Load the word at place 13912, it's a word that translates to 63xxxxxx (64MB basically)
+            op::lw(0x15, 0x0D, 0),
+            // We know a vector struct has its third byte contain the length of the vector, so use a
+            // 2 offset
+            op::lw(0x16, 0x0D, 2),
+            // The size of a u64 is 8 bytes so in-memory size is vector_length * 8
+            op::muli(0x16, 0x16, 8),
+            op::retd(0x15, 0x16),
+        ]);
+    }
 
     #[allow(clippy::iter_cloned_collect)]
     instructions.into_iter().collect::<Vec<u8>>()

@@ -10,7 +10,7 @@ use fuel_abi_types::utils::{
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use regex::Regex;
+use regex::{Error, Regex};
 
 use crate::{
     error::{error, Result},
@@ -33,8 +33,7 @@ impl ResolvedType {
     pub fn is_unit(&self) -> bool {
         self.type_name.to_string() == "()"
     }
-    // Used to prevent returning vectors until we get
-    // the compiler support for it.
+    // Used to see if the type uses a vector so we can know what calling script to use
     #[must_use]
     pub fn uses_vectors(&self) -> bool {
         lazy_static! {

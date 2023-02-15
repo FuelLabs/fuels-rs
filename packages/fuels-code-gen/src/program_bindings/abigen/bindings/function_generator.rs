@@ -4,7 +4,7 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
-    error::{error, Result},
+    error::Result,
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
@@ -87,15 +87,7 @@ fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<ResolvedType> {
-    let output_type = resolve_type(function.output(), shared_types)?;
-    if output_type.uses_vectors() {
-        Err(error!(
-            "function '{}' contains a vector in its return type. This currently isn't supported.",
-            function.name()
-        ))
-    } else {
-        Ok(output_type)
-    }
+    resolve_type(function.output(), shared_types)
 }
 
 impl From<&FunctionGenerator> for TokenStream {
