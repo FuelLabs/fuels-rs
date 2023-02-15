@@ -96,7 +96,7 @@ impl Provider {
     /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
     ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
-    ///   let tx = Script::default();
+    ///   let tx = ScriptTransaction::new(&[], &[], TxParameters::default());
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);

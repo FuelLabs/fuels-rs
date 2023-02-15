@@ -16,9 +16,7 @@ use fuels_types::{
 };
 
 use crate::{
-    calls::{
-        contract_call::{ContractCall, ContractCallHandler},
-    },
+    calls::contract_call::{ContractCall, ContractCallHandler},
     logs::LogDecoder,
 };
 
