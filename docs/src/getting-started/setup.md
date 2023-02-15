@@ -82,12 +82,13 @@ use fuels::prelude::*;
 
 Another way to experience the SDK is to look at the source code. The `packages/fuels/tests/` folder is full of integration tests that go through almost all aspects of the SDK.
 
-> **Note** Before running the tests, we need to build all the Sway test projects. The SDK has a binary that will go through all projects and build them for us. You can use it with the following command.
+> **Note** Before running the tests, we need to build all the Sway test projects. The file `packages/fuels/Forc.toml` contains a `[workspace], which members are the paths to all integration tests. 
+> To build these tests, run the following command:
 
 ```
-cargo run --bin test-projects -- build
+forc build --path packages/fuels
 ```
-> The `test-projects` binary can also be used to clean and format the test projects. Check the `help` output for more info.
+> `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
 
 After building the projects, we can run the tests with
 

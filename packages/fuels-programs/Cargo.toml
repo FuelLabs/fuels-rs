@@ -17,6 +17,7 @@ fuel-tx = { workspace = true }
 fuels-core = { workspace = true }
 fuels-signers = { workspace = true }
 fuels-types = { workspace = true }
+fuel-abi-types = { workspace = true }
 futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.3"
