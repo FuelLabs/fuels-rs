@@ -3,6 +3,8 @@ use fuels::{
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
+use fuels_programs::predicate::Predicate;
+use fuels_signers::Spender;
 
 // use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(
@@ -78,40 +80,42 @@ async fn setup_predicate_test(
     ))
 }
 
-// #[tokio::test]
-// async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
-//     let num_coins = 16;
-//     let num_messages = 32;
-//     let amount = 64;
-//     let total_balance = (num_coins + num_messages) * amount;
-//
-//     let mut wallet = WalletUnlocked::new_random(None);
-//
-//     let (coins, messages, asset_id) =
-//         get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
-//
-//     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
-//
-//     wallet.set_provider(provider.clone());
-//
-//     abigen!(Predicate(
-//         name = "MyPredicate",
-//         abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
-//     ));
-//
-//     let predicate =
-//         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?;
-//
-//     predicate
-//         .receive(&wallet, total_balance, asset_id, None)
-//         .await?;
-//
-//     The predicate has received the funds
-// assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
-//
-// Ok(())
-// }
+#[tokio::test]
+async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
+    let num_coins = 16;
+    let num_messages = 32;
+    let amount = 64;
+    let total_balance = (num_coins + num_messages) * amount;
 
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let (coins, messages, asset_id) =
+        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
+
+    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+
+    wallet.set_provider(provider.clone());
+
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"
+    ));
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?
+            .get_predicate();
+
+    predicate.set_provider(provider.clone());
+
+    predicate
+        .receive(&wallet, total_balance, asset_id, None)
+        .await?;
+
+    //     The predicate has received the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
+    Ok(())
+}
+//
 /*
 
 #[tokio::test]
@@ -607,16 +611,15 @@ async fn pay_with_predicate() -> Result<()> {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
-              name = "MyPredicate",
-              abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
+            name = "MyPredicate",
+            abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
         )
     );
 
-    let mut predicate: Predicate = MyPredicate::load_from(
-        "tests/predicates/predicate_u64/out/debug/predicate_u64.bin",
-    )?
-    .encode_data(32768)
-    .get_predicate();
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
+            .encode_data(32768)
+            .get_predicate();
 
     // let mut predicate =
     //     MyPredicateHandlerTest::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?;
@@ -639,7 +642,9 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-    let tx_params = TxParameters::new(Some(10), Some(10000), None);
+    let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
+
+    dbg!(predicate.get_balances().await?);
 
     let response = contract_instance_connected
         .methods()
@@ -649,7 +654,9 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
+    dbg!(predicate.get_balances().await?);
 
+    assert!(false);
     // */
     /*
             let mut wallet = WalletUnlocked::new_random(None);
@@ -699,6 +706,8 @@ async fn pay_with_predicate() -> Result<()> {
     */
     Ok(())
 }
+
+/*
 
 #[allow(clippy::too_many_arguments)]
 #[no_implicit_prelude]
@@ -764,3 +773,5 @@ pub mod abigen_bindings_test {
 }
 pub use abigen_bindings_test::my_predicate_test_mod::MyPredicateHandlerTest;
 use fuels_programs::predicate::Predicate;
+use fuels_signers::Account;
+*/

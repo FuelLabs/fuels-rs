@@ -203,7 +203,7 @@ async fn can_increase_block_height() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
@@ -226,7 +226,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
@@ -263,7 +263,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.provider()?;
 
     let deploy_w_maturity = |maturity| {
         let parameters = TxParameters {
@@ -623,7 +623,7 @@ async fn test_parse_block_time() -> Result<()> {
         .await?;
 
     let tx_response = wallet
-        .get_provider()
+        .provider()
         .unwrap()
         .get_transaction_by_id(tx_id.as_str())
         .await?
@@ -631,7 +631,7 @@ async fn test_parse_block_time() -> Result<()> {
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .get_provider()
+        .provider()
         .unwrap()
         .block(tx_response.block_id.unwrap().to_string().as_str())
         .await?

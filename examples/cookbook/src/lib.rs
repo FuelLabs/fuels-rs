@@ -234,7 +234,7 @@ mod tests {
             wallet_1.get_asset_outputs_for_amount(wallet_2.address(), some_asset_id, SEND_AMOUNT);
         executable_call.tx.outputs_mut().extend(output);
 
-        let provider = wallet_1.get_provider()?;
+        let provider = wallet_1.provider()?;
         let receipts = executable_call.execute(provider).await?;
         // ANCHOR_END: modify_call_inputs_execute
 

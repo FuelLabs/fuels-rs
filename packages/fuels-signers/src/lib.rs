@@ -1,23 +1,21 @@
 extern crate core;
 
 use std::error::Error;
-use std::fmt::{Debug, Formatter};
 
 use async_trait::async_trait;
-use fuel_core_client::client::schema::schema::__fields::InputCoin::witnessIndex;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::field::{Inputs, Outputs};
-use fuel_tx::{field, Cacheable, Chargeable, UniqueIdentifier};
+use fuel_tx::{field, Cacheable, Receipt, UniqueIdentifier};
 use fuel_types::AssetId;
+use fuels_core::abi_encoder::UnresolvedBytes;
+use fuels_core::parameters::TxParameters;
 
 use fuels_types::bech32::Bech32Address;
 use fuels_types::resource::Resource;
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
-use crate::wallet::WalletError;
 
 pub mod provider;
 pub mod wallet;
@@ -42,7 +40,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
-    fn address(&self) -> &Bech32Address;
+    // fn address(&self) -> &Bech32Address;
 
     async fn add_fee_resources<
         'a_t,
@@ -54,15 +52,11 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
         witness_index: u8,
     ) -> Result<(), Self::Error>;
 
-    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+    // fn get_provider(&self) -> Result<&Provider, Self::Error>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait PayFee: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
-
-    fn address(&self) -> &Bech32Address;
-
+pub trait PayFee: Spender + std::fmt::Debug + Send + Sync {
     async fn pay_fee_resources<
         'a_t,
         Tx: fuel_tx::Chargeable
@@ -77,21 +71,49 @@ pub trait PayFee: std::fmt::Debug + Send + Sync {
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<(), Self::Error>;
-
-    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+    ) -> Result<(), <Self as Spender>::Error>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Account: PayFee + std::fmt::Debug + Send + Sync {
+pub trait Spender: std::fmt::Debug + Send + Sync {
+    type Error: Error + Send + Sync;
+
     fn address(&self) -> &Bech32Address;
-    fn get_provider(&self) -> Result<&Provider, <Self as PayFee>::Error>;
+    fn get_provider(&self) -> Result<&Provider, Self::Error>;
     fn set_provider(&mut self, provider: Provider);
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Resource>, <Self as PayFee>::Error>;
+    ) -> Result<Vec<Resource>, Self::Error>;
+
+    async fn receive<T: Spender>(
+        // Todo this stays here
+        &self,
+        from: &T,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: Option<TxParameters>,
+    ) -> Result<(String, Vec<Receipt>), Self::Error>;
+
+    async fn transfer(
+        // Todo this stays here
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, Vec<Receipt>), Self::Error>;
+    // Todo make new Trait
+    async fn receive_from_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        predicate_code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        predicate_data: UnresolvedBytes,
+        tx_parameters: TxParameters,
+    ) -> std::result::Result<Vec<Receipt>, Self::Error>;
 }
 
 #[cfg(test)]

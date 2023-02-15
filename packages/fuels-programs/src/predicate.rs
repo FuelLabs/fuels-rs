@@ -1,44 +1,24 @@
-use std::fs::read;
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+use std::collections::HashMap;
+use std::fmt::Debug;
 
 use fuel_tx::field::{Inputs, Outputs, Witnesses};
 use fuel_tx::{
-    field, Cacheable, Chargeable, Contract, ContractId, Input, Output, Receipt, Transaction,
-    TransactionFee, TxPointer, UniqueIdentifier,
+    Cacheable, Chargeable, Input, Output, Receipt, Script, Transaction, TransactionFee, TxPointer,
+    UniqueIdentifier,
 };
-use fuel_types::bytes::padded_len_usize;
-use fuel_types::{Address, AssetId};
-use itertools::chain;
+use fuel_types::AssetId;
 
-use fuels_core::abi_encoder::ABIEncoder;
 use fuels_core::constants::BASE_ASSET_ID;
-use fuels_core::{
-    abi_encoder::UnresolvedBytes,
-    offsets,
-    offsets::base_offset,
-    parameters::{CallParameters, TxParameters},
-};
+use fuels_core::parameters::TxParameters;
+use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_signers::wallet::WalletError;
-use fuels_signers::{provider::Provider, Account, PayFee, Signer, WalletUnlocked};
+use fuels_signers::{provider::Provider, PayFee, Spender};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::coin::Coin;
 use fuels_types::errors::Error;
+use fuels_types::errors::Result;
 use fuels_types::message::Message;
 use fuels_types::resource::Resource;
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Result,
-    traits::{Parameterize, Tokenizable},
-    B512,
-};
-
-use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
-    contract::{get_decoded_output, SettableContract},
-    execution_script::ExecutableFuelCall,
-    logs::{map_revert_error, LogDecoder},
-};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -55,12 +35,63 @@ impl Predicate {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
+    pub async fn spend<T: Spender>(
+        &self,
+        to: &T,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: Option<TxParameters>,
+    ) -> PredicateResult<Vec<Receipt>> {
+        let tx_parameters = tx_parameters.unwrap_or_default();
+        to.receive_from_predicate(
+            self.address(),
+            self.code.clone(),
+            amount,
+            asset_id,
+            self.data.clone(),
+            tx_parameters,
+        )
+        .await
+        .map_err(|e| WalletError::NoProvider)
+    }
+
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
+        self.provider()?
+            .get_balances(&self.address)
+            .await
+            .map_err(Into::into)
+    }
+
     pub fn set_provider(&mut self, provider: Provider) {
         self.provider = Some(provider)
     }
 
     pub fn address(&self) -> &Bech32Address {
         &self.address
+    }
+
+    async fn transfer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> PredicateResult<(String, Vec<Receipt>)> {
+        let inputs = self
+            .get_asset_inputs_for_amount_predicates(asset_id, amount)
+            .await?;
+
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let mut tx = Self::build_transfer_tx(&inputs, &outputs, tx_parameters);
+        // if we are not transferring the base asset, previous base amount is 0
+        if asset_id == AssetId::default() {
+            self.pay_fee_resources(&mut tx, amount, 0).await?;
+        } else {
+            self.pay_fee_resources(&mut tx, 0, 0).await?;
+        };
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        Ok((tx.id().to_string(), receipts))
     }
 
     pub async fn get_asset_inputs_for_amount_predicates(
@@ -97,9 +128,21 @@ impl Predicate {
             })
             .collect::<Vec<Input>>();
 
-        dbg!(&inputs);
-
         Ok(inputs)
+    }
+
+    pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
+        // This script is empty, since all this transaction does is move Inputs and Outputs around.
+        Transaction::script(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            vec![],
+            vec![],
+            inputs.to_vec(),
+            outputs.to_vec(),
+            vec![],
+        )
     }
 
     fn create_coin_predicate(
@@ -138,16 +181,25 @@ impl Predicate {
             predicate_data,
         )
     }
+
+    /// Returns a vector containing the output coin and change output given an asset and amount
+    pub fn get_asset_outputs_for_amount(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change((&self.address).into(), 0, asset_id),
+        ]
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl PayFee for Predicate {
-    type Error = WalletError;
-
-    fn address(&self) -> &Bech32Address {
-        &self.address
-    }
-
     async fn pay_fee_resources<
         'a_t,
         Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + Witnesses,
@@ -155,10 +207,8 @@ impl PayFee for Predicate {
         &'a_t self,
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
-        witness_index: u8,
+        _witness_index: u8,
     ) -> PredicateResult<()> {
-        dbg!(&self.data);
-
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
         let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
             .expect("Error calculating TransactionFee");
@@ -207,19 +257,17 @@ impl PayFee for Predicate {
         }
         Ok(())
     }
-
-    fn get_provider(&self) -> PredicateResult<&Provider> {
-        self.provider.as_ref().ok_or(WalletError::NoProvider)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for Predicate {
+impl Spender for Predicate {
+    type Error = WalletError;
+
     fn address(&self) -> &Bech32Address {
         &self.address
     }
 
-    fn get_provider(&self) -> std::result::Result<&Provider, <Self as PayFee>::Error> {
+    fn get_provider(&self) -> std::result::Result<&Provider, Self::Error> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
     }
 
@@ -231,10 +279,45 @@ impl Account for Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> std::result::Result<Vec<Resource>, <Self as PayFee>::Error> {
+    ) -> std::result::Result<Vec<Resource>, Self::Error> {
         self.provider()?
             .get_spendable_resources(&self.address, asset_id, amount)
             .await
             .map_err(Into::into)
+    }
+
+    async fn receive<T: Spender>(
+        &self,
+        from: &T,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: Option<TxParameters>,
+    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+        let tx_parameters = tx_parameters.unwrap_or_default();
+        from.transfer(self.address(), amount, asset_id, tx_parameters)
+            .await
+            .map_err(|e| WalletError::NoProvider) // TODO Emir Fix this error
+    }
+
+    async fn transfer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+        todo!()
+    }
+
+    async fn receive_from_predicate(
+        &self,
+        predicate_address: &Bech32Address,
+        predicate_code: Vec<u8>,
+        amount: u64,
+        asset_id: AssetId,
+        predicate_data: UnresolvedBytes,
+        tx_parameters: TxParameters,
+    ) -> std::result::Result<Vec<Receipt>, Self::Error> {
+        todo!()
     }
 }

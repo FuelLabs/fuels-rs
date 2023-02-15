@@ -3,7 +3,7 @@ use std::{fmt::Debug, vec};
 
 use fuel_tx::{AssetId, FormatValidityChecks, Receipt, Script, ScriptExecutionResult, Transaction};
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
-use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
+use fuels_signers::provider::Provider;
 use fuels_types::errors::{Error, Result};
 
 use crate::{
@@ -22,10 +22,9 @@ pub struct ExecutableFuelCall<T> {
     pub phantom_account: PhantomData<T>,
 }
 
-impl<T: fuels_signers::Account + fuels_signers::PayFee> ExecutableFuelCall<T>
+impl<T: fuels_signers::Spender + fuels_signers::PayFee> ExecutableFuelCall<T>
 where
-    // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
-    fuels_types::errors::Error: From<<T as fuels_signers::PayFee>::Error>,
+    fuels_types::errors::Error: From<<T as fuels_signers::Spender>::Error>,
 {
     pub fn new(tx: Script) -> Self {
         Self {
@@ -43,7 +42,7 @@ where
         account: &T,
     ) -> Result<Self> {
         // let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
-        let consensus_parameters = fuels_signers::Account::get_provider(account)?
+        let consensus_parameters = fuels_signers::Spender::get_provider(account)?
             .consensus_parameters()
             .await?;
         // Calculate instructions length for call instructions
@@ -64,14 +63,14 @@ where
         // Find the spendable resources required for those calls
         for (asset_id, amount) in &required_asset_amounts {
             let resources =
-                fuels_signers::Account::get_spendable_resources(account, *asset_id, *amount)
+                fuels_signers::Spender::get_spendable_resources(account, *asset_id, *amount)
                     .await?;
             spendable_resources.extend(resources);
         }
 
         let (inputs, outputs) = get_transaction_inputs_outputs(
             calls,
-            fuels_signers::Account::address(account),
+            fuels_signers::Spender::address(account),
             spendable_resources,
         );
 

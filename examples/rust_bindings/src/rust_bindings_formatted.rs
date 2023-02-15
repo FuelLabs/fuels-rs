@@ -18,7 +18,7 @@ pub mod abigen_bindings {
                 self.wallet.clone()
             }
             pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, Error> {
-                let provider = self.wallet.get_provider()?;
+                let provider = self.wallet.provider()?;
                 wallet.set_provider(provider.clone());
                 Ok(Self {
                     contract_id: self.contract_id.clone(),
@@ -48,7 +48,7 @@ pub mod abigen_bindings {
         impl MyContractNameMethods {
             #[doc = "Calls the contract's `initialize_counter` function"]
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<u64> {
-                let provider = self.wallet.get_provider().expect("Provider not set up");
+                let provider = self.wallet.provider().expect("Provider not set up");
                 let log_decoder = LogDecoder {
                     logs_map: self.logs_map.clone(),
                 };
@@ -68,7 +68,7 @@ pub mod abigen_bindings {
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<u64> {
-                let provider = self.wallet.get_provider().expect("Provider not set up");
+                let provider = self.wallet.provider().expect("Provider not set up");
                 let log_decoder = LogDecoder {
                     logs_map: self.logs_map.clone(),
                 };

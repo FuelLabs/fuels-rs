@@ -7,7 +7,7 @@ use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
 };
-use fuels_signers::{provider::Provider, Account, PayFee, Signer, WalletUnlocked};
+use fuels_signers::{provider::Provider, Spender};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -66,10 +66,10 @@ pub struct ScriptCallHandler<T, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: fuels_signers::Account + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
+impl<T: fuels_signers::Spender + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
-    fuels_types::errors::Error: From<<T as PayFee>::Error>,
+    fuels_types::errors::Error: From<<T as Spender>::Error>,
 {
     pub fn new(
         script_binary: Vec<u8>,
@@ -146,10 +146,7 @@ where
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>>
-where
-        // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
-        // fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
-    {
+where {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts

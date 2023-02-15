@@ -38,8 +38,8 @@ pub(crate) fn script_bindings(
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
-            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::PayFee>::Error>
+        impl<T: ::fuels::signers::Spender + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
+            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::Spender>::Error>
         {
             pub fn new(account: T, binary_filepath: &str) -> Self {
                 Self {
@@ -74,7 +74,7 @@ fn expand_fn(
             let script_binary = ::std::fs::read(&self.binary_filepath)
                                         .expect("Could not read from binary filepath");
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
-            let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up")
+            let provider = ::fuels::signers::Spender::get_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
                 script_binary,
