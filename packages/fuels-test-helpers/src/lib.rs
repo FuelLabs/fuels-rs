@@ -1,6 +1,7 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
+use std::time::Duration;
 use std::{
     iter::{repeat, zip},
     net::SocketAddr,
@@ -15,35 +16,35 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
+use futures::task::SpawnExt;
+#[cfg(not(feature = "fuel-core-lib"))]
+use portpicker::is_free;
+use rand::Fill;
+
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
+use fuels_types::bech32::Bech32Address;
 use fuels_types::{
     coin::{Coin, CoinStatus},
     message::{Message, MessageStatus},
     param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, Config};
+pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::is_free;
-use rand::Fill;
+pub use node::{get_socket_address, new_fuel_node, Config};
+#[cfg(feature = "fuels-signers")]
+pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
+pub use wallets_config::*;
 
-#[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
 #[cfg(feature = "fuels-signers")]
 mod signers;
 mod utils;
 mod wallets_config;
-
-use fuels_types::bech32::Bech32Address;
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::*;
-#[cfg(feature = "fuels-signers")]
-pub use signers::*;
-pub use wallets_config::*;
 
 pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
     zip(repeat("unused".to_string()), types).collect()
@@ -169,9 +170,15 @@ pub async fn setup_test_client(
     config.chain_conf = chain_conf;
 
     let srv = FuelService::new_node(config).await.unwrap();
-    let client = FuelClient::from(srv.bound_address);
+    let address = srv.bound_address;
+    tokio::spawn(async move {
+        let _own_the_handle = srv;
+        let () = futures::future::pending().await;
+    });
 
-    (client, srv.bound_address)
+    let client = FuelClient::from(address);
+
+    (client, address)
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]

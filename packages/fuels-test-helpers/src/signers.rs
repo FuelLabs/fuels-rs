@@ -8,6 +8,7 @@ use fuels_types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
+use crate::node::FuelServiceHandle;
 use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.

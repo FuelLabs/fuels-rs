@@ -12,17 +12,19 @@ use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
-use fuels_types::{
-    coin::Coin,
-    errors::{error, Error},
-    message::Message,
-};
 use portpicker::{is_free, pick_unused_port};
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
+use tokio::io::AsyncReadExt;
 use tokio::{process::Command, sync::oneshot};
+
+use fuels_types::{
+    coin::Coin,
+    errors::{error, Error},
+    message::Message,
+};
 
 use crate::utils::{into_coin_configs, into_message_configs};
 
@@ -33,6 +35,7 @@ pub struct Config {
     pub manual_blocks_enabled: bool,
     pub vm_backtrace: bool,
     pub silent: bool,
+    pub poa_interval_millis: u64,
 }
 
 impl Config {
@@ -43,6 +46,7 @@ impl Config {
             manual_blocks_enabled: false,
             vm_backtrace: false,
             silent: true,
+            poa_interval_millis: 500,
         }
     }
 }
@@ -215,6 +219,7 @@ pub async fn new_fuel_node(
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = &config.addr.port().to_string();
+        let poa_str = format!("{}ms", config.poa_interval_millis);
         let mut args = vec![
             "run", // `fuel-core` is now run with `fuel-core run`
             "--ip",
@@ -223,6 +228,8 @@ pub async fn new_fuel_node(
             port,
             "--db-type",
             "in-memory",
+            "--poa-interval-period",
+            poa_str.as_str(),
             "--chain",
             temp_config_file.path().to_str().unwrap(),
         ];
@@ -260,18 +267,17 @@ pub async fn new_fuel_node(
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let mut running_node = command
-            .args(args)
-            .kill_on_drop(true)
-            .spawn()
-            .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed.");
+        let mut running_node = command.args(args).kill_on_drop(true).output();
 
         let client = FuelClient::from(config.addr);
         server_health_check(&client).await;
         // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
 
-        running_node.wait().await
+        let result = running_node.await.unwrap();
+        let mut stdout = String::from_utf8_lossy(&result.stdout);
+        let mut stderr = String::from_utf8_lossy(&result.stderr);
+        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
     });
     // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
     rx.await.unwrap();
@@ -297,11 +303,30 @@ pub fn get_socket_address() -> SocketAddr {
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
-pub struct FuelService {
+#[cfg(feature = "fuel-core-lib")]
+pub struct FuelServiceHandle {
+    pub service: ::fuel_core::service::FuelService,
+}
+
+#[cfg(feature = "fuel-core-lib")]
+impl FuelServiceHandle {
+    pub fn new(fuel_service: ::fuel_core::service::FuelService) -> Self {
+        Self {
+            service: fuel_service,
+        }
+    }
+}
+
+#[cfg(not(feature = "fuel-core-lib"))]
+pub struct FuelServiceHandle {
     pub bound_address: SocketAddr,
 }
 
-impl FuelService {
+#[cfg(not(feature = "fuel-core-lib"))]
+impl FuelServiceHandle {
+    pub fn new(bound_address: SocketAddr) -> Self {
+        Self { bound_address }
+    }
     pub async fn new_node(config: Config) -> Result<Self, Error> {
         let requested_port = config.addr.port();
 
@@ -325,6 +350,6 @@ impl FuelService {
         )
         .await;
 
-        Ok(FuelService { bound_address })
+        Ok(FuelServiceHandle { bound_address })
     }
 }
