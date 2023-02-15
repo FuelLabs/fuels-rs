@@ -1677,3 +1677,29 @@ async fn test_b512() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_integer_vector_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "VectorOutputContract",
+            abi = "packages/fuels/tests/types/vector_output"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.u8_vec(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+    let response = contract_methods.u16_vec(11).call().await?;
+    assert_eq!(response.value, (0..11).collect::<Vec<_>>());
+    let response = contract_methods.u32_vec(12).call().await?;
+    assert_eq!(response.value, (0..12).collect::<Vec<_>>());
+    let response = contract_methods.u64_vec(13).call().await?;
+    assert_eq!(response.value, (0..13).collect::<Vec<_>>());
+    Ok(())
+}

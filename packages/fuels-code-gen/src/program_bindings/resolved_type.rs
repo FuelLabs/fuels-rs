@@ -11,7 +11,6 @@ use fuel_abi_types::utils::{
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-
 use crate::{
     error::{error, Result},
     program_bindings::{
