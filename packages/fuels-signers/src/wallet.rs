@@ -151,51 +151,25 @@ impl Wallet {
             .await?)
     }
 
-    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
-    /// The `witness_index` is the position of the witness
-    /// (signature) in the transaction's list of witnesses.
-    /// Meaning that, in the validation process, the node will
-    /// use the witness at this index to validate the coins returned
-    /// by this method.
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
     pub async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
         amount: u64,
         witness_index: u8,
     ) -> Result<Vec<Input>> {
-        Ok(self
-            .get_spendable_resources(asset_id, amount)
-            .await?
-            .iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
-                Resource::Message(message) => self.create_message_input(message, witness_index),
-            })
-            .collect::<Vec<Input>>())
-    }
-
-    fn create_coin_input(&self, coin: &Coin, asset_id: AssetId, witness_index: u8) -> Input {
-        Input::coin_signed(
-            coin.utxo_id,
-            coin.owner.clone().into(),
-            coin.amount,
+        let filter = ResourceFilter {
+            from: self.address().clone(),
             asset_id,
-            TxPointer::default(),
-            witness_index,
-            0,
-        )
-    }
-
-    fn create_message_input(&self, message: &InputMessage, witness_index: u8) -> Input {
-        Input::message_signed(
-            message.message_id(),
-            message.sender.clone().into(),
-            message.recipient.clone().into(),
-            message.amount,
-            message.nonce,
-            witness_index,
-            message.data.clone(),
-        )
+            amount,
+            ..Default::default()
+        };
+        self.get_provider()?
+            .get_asset_inputs_for_filter(filter, witness_index)
+            .await
     }
 
     /// Returns a vector containing the output coin and change output given an asset and amount

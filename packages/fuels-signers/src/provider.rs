@@ -12,8 +12,8 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{
-    field, AssetId, ConsensusParameters, Receipt, Transaction, TransactionFee, UniqueIdentifier,
-    UtxoId,
+    field, AssetId, ConsensusParameters, Input, Receipt, Transaction, TransactionFee, TxPointer,
+    UniqueIdentifier, UtxoId,
 };
 use fuel_types::MessageId;
 use fuel_vm::{interpreter::ExecutableTransaction, state::ProgramState};
@@ -374,6 +374,51 @@ impl Provider {
             .try_collect()?;
 
         Ok(res)
+    }
+
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// `ResourceFilter`. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
+    pub async fn get_asset_inputs_for_filter(
+        &self,
+        filter: ResourceFilter,
+        witness_index: u8,
+    ) -> Result<Vec<Input>> {
+        let asset_id = filter.asset_id;
+        Ok(self
+            .get_spendable_resources(filter)
+            .await?
+            .iter()
+            .map(|resource| match resource {
+                Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
+                Resource::Message(message) => self.create_message_input(message, witness_index),
+            })
+            .collect::<Vec<Input>>())
+    }
+
+    fn create_coin_input(&self, coin: &Coin, asset_id: AssetId, witness_index: u8) -> Input {
+        Input::coin_signed(
+            coin.utxo_id,
+            coin.owner.clone().into(),
+            coin.amount,
+            asset_id,
+            TxPointer::default(),
+            witness_index,
+            0,
+        )
+    }
+
+    fn create_message_input(&self, message: &Message, witness_index: u8) -> Input {
+        Input::message_signed(
+            message.message_id(),
+            message.sender.clone().into(),
+            message.recipient.clone().into(),
+            message.amount,
+            message.nonce,
+            witness_index,
+            message.data.clone(),
+        )
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
