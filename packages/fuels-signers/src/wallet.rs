@@ -575,6 +575,7 @@ impl WalletUnlocked {
     /// use fuels::test_helpers::setup_single_asset_coins;
     /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
+    /// use fuels_signers::Spender;
     /// #[cfg(feature = "fuel-core-lib")]
     /// use fuels_test_helpers::Config;
     ///
@@ -597,7 +598,7 @@ impl WalletUnlocked {
     ///
     ///   // Transfer 1 from wallet 1 to wallet 2
     ///   let _receipts = wallet_1
-    ///        .transfer(&wallet_2.address(), 1, Default::default(), TxParameters::default())
+    ///        .transfer(&wallet_2.address(), 1, Default::default(), None)
     ///        .await
     ///        .unwrap();
     ///
@@ -608,31 +609,33 @@ impl WalletUnlocked {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn transfer(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-        asset_id: AssetId,
-        tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>)> {
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, 0)
-            .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+    ///
 
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
-
-        // if we are not transferring the base asset, previous base amount is 0
-        if asset_id == AssetId::default() {
-            self.pay_fee_resources(&mut tx, amount, 0).await?;
-        } else {
-            self.pay_fee_resources(&mut tx, 0, 0).await?;
-        };
-
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
-
-        Ok((tx.id().to_string(), receipts))
-    }
+    // pub async fn transfer(
+    //     &self,
+    //     to: &Bech32Address,
+    //     amount: u64,
+    //     asset_id: AssetId,
+    //     tx_parameters: TxParameters,
+    // ) -> Result<(String, Vec<Receipt>)> {
+    //     let inputs = self
+    //         .get_asset_inputs_for_amount(asset_id, amount, 0)
+    //         .await?;
+    //     let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+    //
+    //     let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
+    //
+    //     // if we are not transferring the base asset, previous base amount is 0
+    //     if asset_id == AssetId::default() {
+    //         self.pay_fee_resources(&mut tx, amount, 0).await?;
+    //     } else {
+    //         self.pay_fee_resources(&mut tx, 0, 0).await?;
+    //     };
+    //
+    //     let receipts = self.get_provider()?.send_transaction(&tx).await?;
+    //
+    //     Ok((tx.id().to_string(), receipts))
+    // }
 
     /// Withdraws an amount of the base asset to
     /// an address on the base chain.
@@ -873,47 +876,31 @@ impl Spender for WalletUnlocked {
             .map_err(Into::into)
     }
 
-    async fn receive<T>(
-        &self,
-        from: &T,
-        amount: u64,
-        asset_id: AssetId,
-        tx_parameters: Option<TxParameters>,
-    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
-        todo!()
-    }
-
     async fn transfer(
-        // Todo This belongs here
         &self,
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
-        Ok(self.transfer(to, amount, asset_id, tx_parameters).await?)
-    }
+        let inputs = self
+            .get_asset_inputs_for_amount(asset_id, amount, 0)
+            .await?;
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-    async fn receive_from_predicate(
-        &self,
-        predicate_address: &Bech32Address,
-        predicate_code: Vec<u8>,
-        amount: u64,
-        asset_id: AssetId,
-        predicate_data: UnresolvedBytes,
-        tx_parameters: TxParameters,
-    ) -> std::result::Result<Vec<Receipt>, Self::Error> {
-        Ok(self
-            .spend_predicate(
-                predicate_address,
-                predicate_code,
-                amount,
-                asset_id,
-                &self.address.clone().into(),
-                predicate_data,
-                tx_parameters,
-            )
-            .await?)
+        let mut tx =
+            Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters.unwrap_or_default());
+
+        // if we are not transferring the base asset, previous base amount is 0
+        if asset_id == AssetId::default() {
+            self.pay_fee_resources(&mut tx, amount, 0).await?;
+        } else {
+            self.pay_fee_resources(&mut tx, 0, 0).await?;
+        };
+
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
     }
 }
 

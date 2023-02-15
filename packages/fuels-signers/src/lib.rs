@@ -8,7 +8,6 @@ pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{field, Cacheable, Receipt, UniqueIdentifier};
 use fuel_types::AssetId;
-use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_core::parameters::TxParameters;
 
 use fuels_types::bech32::Bech32Address;
@@ -87,33 +86,13 @@ pub trait Spender: std::fmt::Debug + Send + Sync {
         amount: u64,
     ) -> Result<Vec<Resource>, Self::Error>;
 
-    async fn receive<T: Spender>(
-        // Todo this stays here
-        &self,
-        from: &T,
-        amount: u64,
-        asset_id: AssetId,
-        tx_parameters: Option<TxParameters>,
-    ) -> Result<(String, Vec<Receipt>), Self::Error>;
-
     async fn transfer(
-        // Todo this stays here
         &self,
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_parameters: Option<TxParameters>,
     ) -> Result<(String, Vec<Receipt>), Self::Error>;
-    // Todo make new Trait
-    async fn receive_from_predicate(
-        &self,
-        predicate_address: &Bech32Address,
-        predicate_code: Vec<u8>,
-        amount: u64,
-        asset_id: AssetId,
-        predicate_data: UnresolvedBytes,
-        tx_parameters: TxParameters,
-    ) -> std::result::Result<Vec<Receipt>, Self::Error>;
 }
 
 #[cfg(test)]
@@ -263,7 +242,7 @@ mod tests {
 
         // Transfer 1 from wallet 1 to wallet 2.
         let (tx_id, _receipts) = wallet_1
-            .transfer(wallet_2.address(), 1, BASE_ASSET_ID, tx_params)
+            .transfer(wallet_2.address(), 1, BASE_ASSET_ID, Some(tx_params))
             .await?;
 
         // Assert that the transaction was properly configured.
@@ -299,7 +278,7 @@ mod tests {
                 wallet_2.address(),
                 2000000,
                 Default::default(),
-                TxParameters::default(),
+                None,
             )
             .await;
 
@@ -338,7 +317,7 @@ mod tests {
                 wallet_2.address(),
                 2,
                 BASE_ASSET_ID,
-                TxParameters::default(),
+                None,
             )
             .await?;
 

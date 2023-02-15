@@ -73,16 +73,18 @@ mod tests {
         // ANCHOR: predicate_load
         abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));
 
-        let predicate: Predicate = MyPredicate::load_from(
+        let mut predicate: Predicate = MyPredicate::load_from(
             "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
         )?.encode_data(signatures).get_predicate();
+
+        predicate.set_provider(provider.clone());
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
         let amount_to_predicate = 512;
 
-        predicate
-            .receive(&wallet, amount_to_predicate, asset_id, None)
+        wallet
+            .transfer(&predicate.address(), amount_to_predicate, asset_id, None)
             .await?;
 
         let predicate_balance = provider
@@ -93,7 +95,7 @@ mod tests {
 
         // ANCHOR: predicate_spend
         predicate
-            .spend(&receiver, amount_to_predicate, asset_id, None)
+            .transfer(&receiver.address(), amount_to_predicate, asset_id, None)
             .await?;
 
         let receiver_balance_after = provider
@@ -133,14 +135,20 @@ mod tests {
 
         abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
 
-        let predicate: Predicate = MyPredicate::load_from(
+        let mut predicate: Predicate = MyPredicate::load_from(
             "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
-        )?.encode_data(4096, 4096).get_predicate();
+        )?
+        .encode_data(4096, 4096)
+        .get_predicate();
+
+        predicate.set_provider(first_wallet.get_provider()?.clone());
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
-        predicate.receive(first_wallet, 500, asset_id, None).await?;
+        first_wallet
+            .transfer(predicate.address(), 500, asset_id, None)
+            .await?;
 
         // Check predicate balance.
         let balance = first_wallet
@@ -162,7 +170,7 @@ mod tests {
         let amount_to_unlock = 500;
 
         predicate
-            .spend(second_wallet, amount_to_unlock, asset_id, None)
+            .transfer(second_wallet.address(), amount_to_unlock, asset_id, None)
             .await?;
 
         // Predicate balance is zero.
