@@ -78,10 +78,11 @@ mdbook build
 
 ### What to do if my tests are failing on `master`
 
-Before doing anything else, try this: 
+Before doing anything else, try all these commands:
 
 ```shell
 cargo clean
 rm Cargo.lock
+forc build --path packages/fuels
 cargo test
 ```
