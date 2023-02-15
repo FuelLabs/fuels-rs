@@ -219,7 +219,8 @@ impl PayFee for Predicate {
         if base_inputs_sum < previous_base_amount {
             return Err(fuels_signers::wallet::WalletError::LowAmount(
                 Error::WalletError(
-                    "The provided base asset amount is less than the present input coins".to_string()
+                    "The provided base asset amount is less than the present input coins"
+                        .to_string(),
                 ),
             ));
         }
