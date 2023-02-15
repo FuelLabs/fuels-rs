@@ -1,8 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, marker::PhantomData, panic};
 
-
 use fuel_tx::{AssetId, Output, Receipt};
-
 
 use fuels_core::abi_encoder::UnresolvedBytes;
 use fuels_signers::{
