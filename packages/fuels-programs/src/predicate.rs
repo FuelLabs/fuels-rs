@@ -218,9 +218,9 @@ impl PayFee for Predicate {
             .sum();
         if base_inputs_sum < previous_base_amount {
             return Err(fuels_signers::wallet::WalletError::LowAmount(
-                Error::WalletError(format!(
-                    "The provided base asset amount is less than the present input coins"
-                )),
+                Error::WalletError(
+                    "The provided base asset amount is less than the present input coins".to_string()
+                ),
             ));
         }
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;

@@ -227,9 +227,10 @@ impl<T: Spender + PayFee + Clone> Contract<T> {
         spender
             .pay_fee_resources(&mut tx, 0, 1)
             .await
-            .map_err(|err| ProviderError(format!("{}", err)))?;
+            .map_err(|err| ProviderError(format!("{err}")))?;
 
-        let provider = spender.get_provider()
+        let provider = spender
+            .get_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
@@ -703,7 +704,7 @@ where
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
-        let provider  = self.spender.get_provider()?;
+        let provider = self.spender.get_provider()?;
 
         script.simulate(provider).await?;
 
@@ -923,7 +924,9 @@ where
     ) -> Result<TransactionCost> {
         let script = self.get_executable_call().await?;
 
-        let transaction_cost = self.spender.get_provider()?
+        let transaction_cost = self
+            .spender
+            .get_provider()?
             .estimate_transaction_cost(&script.tx, tolerance)
             .await?;
 

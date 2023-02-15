@@ -42,9 +42,7 @@ where
         spender: &T,
     ) -> Result<Self> {
         // let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
-        let consensus_parameters = spender.get_provider()?
-            .consensus_parameters()
-            .await?;
+        let consensus_parameters = spender.get_provider()?.consensus_parameters().await?;
         // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
         let calls_instructions_len =
@@ -62,17 +60,12 @@ where
 
         // Find the spendable resources required for those calls
         for (asset_id, amount) in &required_asset_amounts {
-            let resources =
-                spender.get_spendable_resources(*asset_id, *amount)
-                    .await?;
+            let resources = spender.get_spendable_resources(*asset_id, *amount).await?;
             spendable_resources.extend(resources);
         }
 
-        let (inputs, outputs) = get_transaction_inputs_outputs(
-            calls,
-            spender.address(),
-            spendable_resources,
-        );
+        let (inputs, outputs) =
+            get_transaction_inputs_outputs(calls, spender.address(), spendable_resources);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,

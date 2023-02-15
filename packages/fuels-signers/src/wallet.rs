@@ -754,7 +754,7 @@ impl WalletUnlocked {
             predicate_code,
             amount,
             asset_id,
-            &self.address.clone().into(),
+            &self.address.clone(),
             predicate_data,
             tx_parameters,
         )
@@ -949,7 +949,6 @@ impl Signer for WalletUnlocked {
         self.add_fee_resources(tx, previous_base_amount, witness_index)
             .await
     }
-
 }
 
 impl fmt::Debug for Wallet {

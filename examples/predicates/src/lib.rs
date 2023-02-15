@@ -84,7 +84,7 @@ mod tests {
         let amount_to_predicate = 512;
 
         wallet
-            .transfer(&predicate.address(), amount_to_predicate, asset_id, None)
+            .transfer(predicate.address(), amount_to_predicate, asset_id, None)
             .await?;
 
         let predicate_balance = provider
@@ -95,7 +95,7 @@ mod tests {
 
         // ANCHOR: predicate_spend
         predicate
-            .transfer(&receiver.address(), amount_to_predicate, asset_id, None)
+            .transfer(receiver.address(), amount_to_predicate, asset_id, None)
             .await?;
 
         let receiver_balance_after = provider
