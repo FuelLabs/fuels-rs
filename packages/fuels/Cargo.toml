@@ -19,7 +19,6 @@ fuels-core = { workspace = true }
 fuels-signers = { workspace = true }
 fuels-test-helpers = { workspace = true }
 fuels-types = { workspace = true }
-async-trait = { version = "0.1.50", default-features = false }
 
 [dev-dependencies]
 chrono = "0.4.2"

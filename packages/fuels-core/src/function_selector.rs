@@ -6,6 +6,7 @@ use crate::utils::first_four_bytes_of_sha256_hash;
 /// the function selector as specified in the Fuel specs.
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     let fn_signature = resolve_fn_signature(name, inputs);
+
     first_four_bytes_of_sha256_hash(&fn_signature)
 }
 

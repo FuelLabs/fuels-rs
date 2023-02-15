@@ -63,14 +63,14 @@ pub struct CompiledContract {
 /// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract<T> {
     pub compiled_contract: CompiledContract,
-    pub account: T,
+    pub spender: T,
 }
 
 impl<T: Spender + PayFee + Clone> Contract<T> {
-    pub fn new(compiled_contract: CompiledContract, account: T) -> Self {
+    pub fn new(compiled_contract: CompiledContract, spender: T) -> Self {
         Self {
             compiled_contract,
-            account,
+            spender,
         }
     }
 
@@ -108,7 +108,7 @@ impl<T: Spender + PayFee + Clone> Contract<T> {
     pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
         provider: &Provider,
         contract_id: Bech32ContractId,
-        account: &T,
+        spender: &T,
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
@@ -139,7 +139,7 @@ impl<T: Spender + PayFee + Clone> Contract<T> {
         Ok(ContractCallHandler {
             contract_call,
             tx_parameters,
-            account: account.clone(),
+            spender: spender.clone(),
             provider: provider.clone(),
             datatype: PhantomData,
             log_decoder,
@@ -218,18 +218,18 @@ impl<T: Spender + PayFee + Clone> Contract<T> {
     /// wallet will also receive the change.
     pub async fn deploy_loaded(
         compiled_contract: &CompiledContract,
-        account: &T,
+        spender: &T,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
-        account
+        spender
             .pay_fee_resources(&mut tx, 0, 1)
             .await
             .map_err(|err| ProviderError(format!("{}", err)))?;
 
-        let provider = Spender::get_provider(account)
+        let provider = spender.get_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
@@ -513,7 +513,7 @@ pub fn get_decoded_output(
 pub struct ContractCallHandler<T, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    pub account: T,
+    pub spender: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
@@ -677,7 +677,7 @@ where
         ExecutableFuelCall::from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
-            &self.account,
+            &self.spender,
         )
         .await
     }
@@ -703,7 +703,7 @@ where
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
-        let provider = Spender::get_provider(&self.account)?;
+        let provider  = self.spender.get_provider()?;
 
         script.simulate(provider).await?;
 
@@ -783,18 +783,18 @@ pub struct MultiContractCallHandler<T> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
-    pub account: T,
+    pub spender: T,
 }
 
 impl<T: fuels_signers::Spender + fuels_signers::PayFee> MultiContractCallHandler<T>
 where
     fuels_types::errors::Error: From<<T as Spender>::Error>,
 {
-    pub fn new(account: T) -> Self {
+    pub fn new(spender: T) -> Self {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
-            account,
+            spender,
             log_decoder: LogDecoder {
                 type_lookup: HashMap::new(),
             },
@@ -828,7 +828,7 @@ where
         ExecutableFuelCall::from_contract_calls(
             &self.contract_calls,
             &self.tx_parameters,
-            &self.account,
+            &self.spender,
         )
         .await
     }
@@ -857,7 +857,7 @@ where
     ) -> Result<FuelCallResponse<D>> {
         let script = self.get_executable_call().await?;
 
-        let provider = Spender::get_provider(&self.account)?;
+        let provider = self.spender.get_provider()?;
 
         let receipts = if simulate {
             script.simulate(provider).await?
@@ -871,7 +871,7 @@ where
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let script = self.get_executable_call().await?;
-        let provider = Spender::get_provider(&self.account)?;
+        let provider = self.spender.get_provider()?;
 
         script.simulate(provider).await?;
 
@@ -923,7 +923,7 @@ where
     ) -> Result<TransactionCost> {
         let script = self.get_executable_call().await?;
 
-        let transaction_cost = Spender::get_provider(&self.account)?
+        let transaction_cost = self.spender.get_provider()?
             .estimate_transaction_cost(&script.tx, tolerance)
             .await?;
 

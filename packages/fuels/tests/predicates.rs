@@ -150,7 +150,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -189,7 +189,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -205,8 +205,8 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_address/out/debug/predicate_address.bin",
     )?
-    .encode_data(addr)
-    .get_predicate();
+        .encode_data(addr)
+        .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -215,18 +215,6 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
-
-    // // Run predicate with wrong data
-    // predicate
-    //     .encode_data(wrong_addr)
-    //     .transfer(&receiver, predicate_balance, asset_id, None)
-    //     .await
-    //     .expect_err("Should error");
-    //
-    // // No funds were transferred
-    // assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
-    //
-    //
 
     predicate
         .transfer(&receiver.address(), predicate_balance, asset_id, None)
@@ -242,7 +230,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -281,7 +269,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -293,14 +281,14 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_structs/out/debug/predicate_structs.bin",
     )?
-    .encode_data(
-        TestStruct { value: 192 },
-        AnotherTestStruct {
-            value: 64,
-            number: 128,
-        },
-    )
-    .get_predicate();
+        .encode_data(
+            TestStruct { value: 192 },
+            AnotherTestStruct {
+                value: 64,
+                number: 128,
+            },
+        )
+        .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -324,7 +312,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -363,7 +351,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -403,7 +391,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -435,20 +423,20 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
     )?
-    .encode_data(
-        u32_vec,
-        vec_in_vec,
-        struct_in_vec,
-        vec_in_struct,
-        array_in_vec,
-        vec_in_array,
-        vec_in_enum,
-        enum_in_vec,
-        tuple_in_vec,
-        vec_in_tuple,
-        vec_in_a_vec_in_a_struct_in_a_vec,
-    )
-    .get_predicate();
+        .encode_data(
+            u32_vec,
+            vec_in_vec,
+            struct_in_vec,
+            vec_in_struct,
+            array_in_vec,
+            vec_in_array,
+            vec_in_enum,
+            enum_in_vec,
+            tuple_in_vec,
+            vec_in_tuple,
+            vec_in_a_vec_in_a_struct_in_a_vec,
+        )
+        .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -472,7 +460,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -488,8 +476,8 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_generics/out/debug/predicate_generics.bin",
     )?
-    .encode_data(generic_struct, generic_enum)
-    .get_predicate();
+        .encode_data(generic_struct, generic_enum)
+        .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -513,7 +501,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-    .await;
+        .await;
 
     Ok(())
 }
@@ -550,12 +538,12 @@ async fn pay_with_predicate() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-    .await?;
+        .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
     let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
 
-    dbg!(predicate.get_balances().await?);
+    assert_eq!(*predicate.get_balances().await?.get(format!("{:#?}", AssetId::default()).as_str()).unwrap(), 192);
 
     let response = contract_instance_connected
         .methods()
@@ -565,55 +553,8 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
-    dbg!(predicate.get_balances().await?);
+    assert_eq!(*predicate.get_balances().await?.get(format!("{:#?}", AssetId::default()).as_str()).unwrap(), 187);
 
-    // assert!(false);
-    // */
-    /*
-            let mut wallet = WalletUnlocked::new_random(None);
 
-            let coins = setup_single_asset_coins(
-                wallet.address(),
-                BASE_ASSET_ID,
-                DEFAULT_NUM_COINS,
-                DEFAULT_COIN_AMOUNT,
-            );
-            let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
-            let connected_provider = Provider::connect(address.to_string()).await?;
-
-            wallet.set_provider(connected_provider);
-
-            let contract_id = Contract::deploy(
-                "tests/contracts/contract_test/out/debug/contract_test.bin",
-                &wallet,
-                TxParameters::default(),
-                StorageConfiguration::default(),
-            )
-            .await?;
-
-            let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
-
-            dbg!(&wallet.clone().get_balances().await?);
-
-            let response = contract_instance_connected
-                .methods()
-                .initialize_counter(42) // Build the ABI call
-                .tx_params(tx_params)
-                .call() // Perform the network call
-                .await?;
-            assert_eq!(42, response.value);
-
-            wallet.set_provider(launched_provider);
-            let contract_instance_launched = MyContract::new(contract_id, wallet.clone());
-
-            let response = contract_instance_launched
-                .methods()
-                .increment_counter(10)
-                .tx_params(tx_params)
-                .call()
-                .await?;
-            assert_eq!(52, response.value);
-            dbg!(&wallet.get_balances().await?);
-    */
     Ok(())
 }

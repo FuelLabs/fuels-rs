@@ -519,7 +519,7 @@ async fn test_wallet_getter() -> Result<()> {
         ),
     );
 
-    assert_eq!(contract_instance.account().address(), wallet.address());
+    assert_eq!(contract_instance.spender().address(), wallet.address());
     //`contract_id()` is tested in
     // async fn test_contract_calling_contract() -> Result<()> {
     Ok(())
@@ -562,7 +562,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        .with_account(wallet_2.clone())?
+        .with_spender(wallet_2.clone())?
         .methods()
         .initialize_counter(42)
         .tx_params(tx_params)

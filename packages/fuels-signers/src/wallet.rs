@@ -117,8 +117,6 @@ pub enum WalletError {
     LowAmount(#[from] fuels_types::errors::Error),
     #[error(transparent)]
     ProviderError(#[from] provider::ProviderError),
-    #[error("Account Error!")]
-    AccountError,
 }
 
 impl From<WalletError> for Error {
@@ -611,32 +609,6 @@ impl WalletUnlocked {
     /// ```
     ///
 
-    // pub async fn transfer(
-    //     &self,
-    //     to: &Bech32Address,
-    //     amount: u64,
-    //     asset_id: AssetId,
-    //     tx_parameters: TxParameters,
-    // ) -> Result<(String, Vec<Receipt>)> {
-    //     let inputs = self
-    //         .get_asset_inputs_for_amount(asset_id, amount, 0)
-    //         .await?;
-    //     let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-    //
-    //     let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters);
-    //
-    //     // if we are not transferring the base asset, previous base amount is 0
-    //     if asset_id == AssetId::default() {
-    //         self.pay_fee_resources(&mut tx, amount, 0).await?;
-    //     } else {
-    //         self.pay_fee_resources(&mut tx, 0, 0).await?;
-    //     };
-    //
-    //     let receipts = self.get_provider()?.send_transaction(&tx).await?;
-    //
-    //     Ok((tx.id().to_string(), receipts))
-    // }
-
     /// Withdraws an amount of the base asset to
     /// an address on the base chain.
     /// Returns the transaction ID, message ID and the list of receipts.
@@ -978,9 +950,6 @@ impl Signer for WalletUnlocked {
             .await
     }
 
-    // fn get_provider(&self) -> WalletResult<&Provider> {
-    //     self.provider.as_ref().ok_or(WalletError::AccountError)
-    // }
 }
 
 impl fmt::Debug for Wallet {

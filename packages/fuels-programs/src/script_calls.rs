@@ -60,7 +60,7 @@ impl ScriptCall {
 pub struct ScriptCallHandler<T, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
-    pub account: T,
+    pub spender: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
@@ -74,7 +74,7 @@ where
     pub fn new(
         script_binary: Vec<u8>,
         encoded_args: UnresolvedBytes,
-        wallet: T,
+        spender: T,
         provider: Provider,
         log_decoder: LogDecoder,
     ) -> Self {
@@ -89,7 +89,7 @@ where
         Self {
             script_call,
             tx_parameters: TxParameters::default(),
-            account: wallet,
+            spender,
             provider,
             datatype: PhantomData,
             log_decoder,
@@ -182,7 +182,7 @@ where {
             vec![],
         );
 
-        self.account.pay_fee_resources(&mut tx, 0, 0).await?;
+        self.spender.pay_fee_resources(&mut tx, 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall::<T>::new(tx);
 

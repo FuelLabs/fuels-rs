@@ -13,4 +13,3 @@ description = "Fuel Rust SDK cookbook examples."
 fuels = { workspace = true }
 rand = "0.8"
 tokio = { version = "1.10", features = ["full"] }
-async-trait = { version = "0.1.50", default-features = false }
