@@ -64,7 +64,7 @@ pub(crate) fn contract_bindings(
                 let provider = ::fuels::signers::Spender::get_provider(&self.account)?;
                 account.set_provider(provider.clone());
 
-               ::core::result::Result::Ok(Self { contract_id: self.contract_id.clone(), wallet: wallet, log_decoder: self.log_decoder.clone()})
+               ::core::result::Result::Ok(Self { contract_id: self.contract_id.clone(), account: account, log_decoder: self.log_decoder.clone()})
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {

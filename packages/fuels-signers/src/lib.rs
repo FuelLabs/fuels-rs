@@ -274,12 +274,7 @@ mod tests {
 
         // Transferring more than balance should fail.
         let response = wallet_1
-            .transfer(
-                wallet_2.address(),
-                2000000,
-                Default::default(),
-                None,
-            )
+            .transfer(wallet_2.address(), 2000000, Default::default(), None)
             .await;
 
         assert!(response.is_err());
@@ -313,12 +308,7 @@ mod tests {
 
         // Transfer 2 from wallet 1 to wallet 2.
         let _receipts = wallet_1
-            .transfer(
-                wallet_2.address(),
-                2,
-                BASE_ASSET_ID,
-                None,
-            )
+            .transfer(wallet_2.address(), 2, BASE_ASSET_ID, None)
             .await?;
 
         let wallet_1_final_coins = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
