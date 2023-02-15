@@ -140,6 +140,7 @@ pub fn setup_single_message(
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
 #[cfg(feature = "fuel-core-lib")]
+#[allow(clippy::let_unit_value)]
 pub async fn setup_test_client(
     coins: Vec<Coin>,
     messages: Vec<Message>,
