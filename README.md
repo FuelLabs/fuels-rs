@@ -75,3 +75,13 @@ You can build the book by running:
 ```shell
 mdbook build
 ```
+
+### What to do if my tests are failing on `master`
+
+Before doing anything else, try this: 
+
+```shell
+cargo clean
+rm Cargo.lock
+cargo test
+```
