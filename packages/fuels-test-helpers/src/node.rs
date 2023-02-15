@@ -12,18 +12,17 @@ use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
+use fuels_types::{
+    coin::Coin,
+    errors::{error, Error},
+    message::Message,
+};
 use portpicker::{is_free, pick_unused_port};
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
-
-use fuels_types::{
-    coin::Coin,
-    errors::{error, Error},
-    message::Message,
-};
 
 use crate::utils::{into_coin_configs, into_message_configs};
 

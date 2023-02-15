@@ -15,21 +15,19 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::is_free;
-use rand::Fill;
-
 use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
-use fuels_types::bech32::Bech32Address;
 use fuels_types::{
+    bech32::Bech32Address,
     coin::{Coin, CoinStatus},
     message::{Message, MessageStatus},
     param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
+#[cfg(not(feature = "fuel-core-lib"))]
+use portpicker::is_free;
+use rand::Fill;
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]

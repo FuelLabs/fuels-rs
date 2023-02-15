@@ -2,7 +2,6 @@ use std::{iter, str::FromStr};
 
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
