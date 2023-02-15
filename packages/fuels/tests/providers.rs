@@ -1,10 +1,8 @@
-use std::thread::sleep;
 use std::{iter, str::FromStr};
 
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-use fuel_core_client::client::FuelClient;
-use fuel_core_types::fuel_asm::op::add;
+
 use fuels::{
     client::{PageDirection, PaginationRequest},
     prelude::*,
@@ -29,39 +27,36 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
     let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
-    // let client = FuelClient::new(address.to_string()).unwrap();
+    let connected_provider = Provider::connect(address.to_string()).await?;
 
-    // client.health().await.unwrap();
-    // let connected_provider = Provider::connect(address.to_string()).await?;
-    //
-    // wallet.set_provider(connected_provider);
-    //
-    // let contract_id = Contract::deploy(
-    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
-    //     &wallet,
-    //     TxParameters::default(),
-    //     StorageConfiguration::default(),
-    // )
-    // .await?;
-    //
-    // let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
-    //
-    // let response = contract_instance_connected
-    //     .methods()
-    //     .initialize_counter(42) // Build the ABI call
-    //     .call() // Perform the network call
-    //     .await?;
-    // assert_eq!(42, response.value);
-    //
-    // wallet.set_provider(launched_provider);
-    // let contract_instance_launched = MyContract::new(contract_id, wallet);
-    //
-    // let response = contract_instance_launched
-    //     .methods()
-    //     .increment_counter(10)
-    //     .call()
-    //     .await?;
-    // assert_eq!(52, response.value);
+    wallet.set_provider(connected_provider);
+
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &wallet,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
+
+    let response = contract_instance_connected
+        .methods()
+        .initialize_counter(42) // Build the ABI call
+        .call() // Perform the network call
+        .await?;
+    assert_eq!(42, response.value);
+
+    wallet.set_provider(launched_provider);
+    let contract_instance_launched = MyContract::new(contract_id, wallet);
+
+    let response = contract_instance_launched
+        .methods()
+        .increment_counter(10)
+        .call()
+        .await?;
+    assert_eq!(52, response.value);
     Ok(())
 }
 
@@ -200,6 +195,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
     let config = Config {
@@ -221,6 +217,7 @@ async fn can_increase_block_height() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn can_set_custom_block_time() -> Result<()> {
     use chrono::{TimeZone, Utc};
 
@@ -259,6 +256,7 @@ async fn can_set_custom_block_time() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 

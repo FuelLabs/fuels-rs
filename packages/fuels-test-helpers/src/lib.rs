@@ -1,7 +1,6 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
-use std::time::Duration;
 use std::{
     iter::{repeat, zip},
     net::SocketAddr,
@@ -16,7 +15,7 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-use futures::task::SpawnExt;
+
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
@@ -31,14 +30,13 @@ use fuels_types::{
 };
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, Config};
 #[cfg(feature = "fuels-signers")]
 pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
+#[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
 #[cfg(feature = "fuels-signers")]

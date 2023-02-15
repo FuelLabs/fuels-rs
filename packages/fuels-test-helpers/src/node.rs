@@ -17,7 +17,6 @@ use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
-use tokio::io::AsyncReadExt;
 use tokio::{process::Command, sync::oneshot};
 
 use fuels_types::{
@@ -46,7 +45,7 @@ impl Config {
             manual_blocks_enabled: false,
             vm_backtrace: false,
             silent: true,
-            poa_interval_millis: 500,
+            poa_interval_millis: 2500,
         }
     }
 }
@@ -267,16 +266,18 @@ pub async fn new_fuel_node(
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let mut running_node = command.args(args).kill_on_drop(true).output();
+        let running_node = command.args(args).kill_on_drop(true).output();
 
         let client = FuelClient::from(config.addr);
         server_health_check(&client).await;
         // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
 
-        let result = running_node.await.unwrap();
-        let mut stdout = String::from_utf8_lossy(&result.stdout);
-        let mut stderr = String::from_utf8_lossy(&result.stderr);
+        let result = running_node
+            .await
+            .expect("error: Couldn't find fuel-core in PATH.");
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let stderr = String::from_utf8_lossy(&result.stderr);
         eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
     });
     // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
@@ -303,30 +304,11 @@ pub fn get_socket_address() -> SocketAddr {
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
-#[cfg(feature = "fuel-core-lib")]
-pub struct FuelServiceHandle {
-    pub service: ::fuel_core::service::FuelService,
-}
-
-#[cfg(feature = "fuel-core-lib")]
-impl FuelServiceHandle {
-    pub fn new(fuel_service: ::fuel_core::service::FuelService) -> Self {
-        Self {
-            service: fuel_service,
-        }
-    }
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub struct FuelServiceHandle {
+pub struct FuelService {
     pub bound_address: SocketAddr,
 }
 
-#[cfg(not(feature = "fuel-core-lib"))]
-impl FuelServiceHandle {
-    pub fn new(bound_address: SocketAddr) -> Self {
-        Self { bound_address }
-    }
+impl FuelService {
     pub async fn new_node(config: Config) -> Result<Self, Error> {
         let requested_port = config.addr.port();
 
@@ -350,6 +332,6 @@ impl FuelServiceHandle {
         )
         .await;
 
-        Ok(FuelServiceHandle { bound_address })
+        Ok(FuelService { bound_address })
     }
 }
