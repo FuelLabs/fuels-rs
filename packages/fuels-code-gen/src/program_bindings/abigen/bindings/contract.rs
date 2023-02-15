@@ -38,7 +38,7 @@ pub(crate) fn contract_bindings(
 
     let contract_functions = expand_functions(&abi.functions, shared_types)?;
 
-    let configuration_struct_name = ident(&format!("{name}Configurable"));
+    let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code = generate_code_for_configurable_constatnts(
         &configuration_struct_name,
         &abi.configurables,
