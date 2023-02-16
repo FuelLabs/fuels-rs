@@ -29,6 +29,7 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 serde_with = { version = "1.11", features = ["serde_json"] }
 tempfile = { version = "3.0.1", default-features = false }
 tokio = { version = "1.15", default-features = false }
+futures = "0.3.26"
 which = { version = "4.3", default-features = false }
 
 [features]
