@@ -1,3 +1,4 @@
+use itertools::{chain, Itertools};
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
@@ -6,16 +7,16 @@ use fuel_tx::{
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_core::offsets::call_script_data_offset;
-use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
+use fuels_signers::WalletUnlocked;
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
+    param_types::ParamType,
     parameters::TxParameters,
     resource::Resource,
     transaction::{ScriptTransaction, Transaction},
 };
-use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 
@@ -128,7 +129,7 @@ pub(crate) fn get_instructions(
     for (call, call_offsets) in calls.iter().zip(offsets.iter()) {
         instructions.extend(get_single_call_instructions(
             call_offsets,
-            call.output_param.is_vector(),
+            &call.output_param,
         ));
     }
 
@@ -216,7 +217,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
-    uses_vector: bool,
+    output_param_type: &ParamType,
 ) -> Vec<u8> {
     let call_data_offset = offsets
         .call_data_offset
@@ -246,19 +247,29 @@ pub(crate) fn get_single_call_instructions(
     ]
     .to_vec();
     // The instructions are different if you want to return data that was on the heap
-    if uses_vector {
-        instructions.extend([
-            // 0X0D contains the pointer address of the `CALL` return (13912 or something)
-            // 0X0E contains the length of the `CALL` return (24 because the vec struct takes 3 bytes)
-            // Load the word at place 13912, it's a word that translates to 63xxxxxx (64MB basically)
-            op::lw(0x15, 0x0D, 0),
-            // We know a vector struct has its third byte contain the length of the vector, so use a
-            // 2 offset
-            op::lw(0x16, 0x0D, 2),
-            // The size of a u64 is 8 bytes so in-memory size is vector_length * 8
-            op::muli(0x16, 0x16, 8),
-            op::retd(0x15, 0x16),
-        ]);
+    if output_param_type.is_vector() {
+        if let ParamType::Vector(inner_param_type) = output_param_type {
+            let inner_type_byte_size: u16 =
+                (inner_param_type.compute_encoding_width() * WORD_SIZE) as u16;
+            instructions.extend([
+                // The RET register contains the pointer address of the `CALL` return (a stack
+                // address).
+                // The RETL register contains the length of the `CALL` return (=24 because the vec
+                // struct takes 3 bytes). We don't actually need it unless the vec struct encoding
+                // changes in the compiler.
+                // Load the word located at the address contained in RET, it's a word that
+                // translates to a heap address. 0x15 is a free register.
+                op::lw(0x15, RegId::RET, 0),
+                // We know a vector struct has its third byte contain the length of the vector, so
+                // use a 2 offset to store the vector length in 0x16, which is a free register.
+                op::lw(0x16, RegId::RET, 2),
+                // The in-memory size of the vector is (in-memory size of the inner type) * length
+                op::muli(0x16, 0x16, inner_type_byte_size),
+                op::retd(0x15, 0x16),
+            ]);
+        } else {
+            panic!("Couldn't match to a ParamType::Vector even though `.is_vector()` is true")
+        }
     }
 
     #[allow(clippy::iter_cloned_collect)]

@@ -72,22 +72,17 @@ impl ABIDecoder {
 
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         let memory_size = match param_type {
-            ParamType::U64 => Ok(std::mem::size_of::<u64>()),
-            ParamType::U32 => Ok(std::mem::size_of::<u32>()),
-            ParamType::U16 => Ok(std::mem::size_of::<u16>()),
-            ParamType::U8 => Ok(std::mem::size_of::<u8>()),
-            _ => Err(error!(
+            ParamType::Vector(..) => Err(error!(
                 InvalidData,
-                "Only decoding vector of integers are supported for now, got {:?}", param_type
+                "Vectors containing vectors are not supported!"
             )),
+            _ => Ok(param_type.compute_encoding_width()),
         }
         .unwrap();
         if bytes.len() % memory_size != 0 {
             return Err(error!(
                 InvalidData,
-                "The bytes provided do not correspond to a raw slice with {:?} integers, got: {:?}",
-                param_type,
-                bytes
+                "The bytes provided do not correspond to a Vec<{:?}> got: {:?}", param_type, bytes
             ));
         }
         let mut results = vec![];

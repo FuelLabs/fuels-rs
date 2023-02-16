@@ -4,6 +4,7 @@ use fuel_tx::{AssetId, FormatValidityChecks, Receipt, Script, ScriptExecutionRes
 use fuels_core::{offsets::call_script_data_offset, parameters::TxParameters};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::errors::{Error, Result};
+use fuels_types::param_types::ParamType;
 
 use crate::{
     call_utils::{
@@ -36,15 +37,19 @@ impl ExecutableFuelCall {
         let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
         let n_vectors_calls = calls.iter().filter(|c| c.output_param.is_vector()).count();
 
-        // Calculate instructions length for call instructions.
-        // Use placeholder for call param offsets, we only care about the length.
-        // The length of the script depends on wether or not we use vectors.
+        // Compute the length of the calling scripts for the two types of contract calls.
+        // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
+        // the script doesn't depend on the underlying data, just on whether or not the contract
+        // call output is a vector.
         let calls_instructions_len_no_vectors =
-            get_single_call_instructions(&CallOpcodeParamsOffset::default(), false).len()
+            get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
                 * (calls.len() - n_vectors_calls);
-        let calls_instructions_len_vectors =
-            get_single_call_instructions(&CallOpcodeParamsOffset::default(), true).len()
-                * n_vectors_calls;
+        let calls_instructions_len_vectors = get_single_call_instructions(
+            &CallOpcodeParamsOffset::default(),
+            &ParamType::Vector(Box::from(ParamType::U64)),
+        )
+        .len()
+            * n_vectors_calls;
 
         let calls_instructions_len =
             calls_instructions_len_no_vectors + calls_instructions_len_vectors;

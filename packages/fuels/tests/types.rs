@@ -1703,3 +1703,38 @@ async fn test_integer_vector_output() -> Result<()> {
     assert_eq!(response.value, (0..13).collect::<Vec<_>>());
     Ok(())
 }
+#[tokio::test]
+async fn test_struct_in_vec_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "VectorOutputContract",
+            abi = "packages/fuels/tests/types/vector_output"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    let mut expected: Vec<Bimbam> = Vec::new();
+    let a = Bimbam {
+        bim: 1111,
+        bam: 2222_u32,
+    };
+    expected.push(a);
+    let b = Bimbam {
+        bim: 3333,
+        bam: 4444_u32,
+    };
+    expected.push(b);
+    let c = Bimbam {
+        bim: 5555,
+        bam: 6666_u32,
+    };
+    expected.push(c);
+    let response = contract_methods.struct_vec().call().await?.value;
+    assert_eq!(response, expected);
+    Ok(())
+}

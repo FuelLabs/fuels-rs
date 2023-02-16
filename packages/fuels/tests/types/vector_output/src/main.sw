@@ -1,10 +1,16 @@
 contract;
 
+struct Bimbam {
+    bim: u64,
+    bam: u32,
+}
+
 abi VectorsOutputContract {
     fn u8_vec(len: u8) -> Vec<u8>;
     fn u16_vec(len: u16) -> Vec<u16>;
     fn u32_vec(len: u32) -> Vec<u32>;
     fn u64_vec(len: u64) -> Vec<u64>;
+    fn struct_vec() -> Vec<Bimbam>;
 }
 
 impl VectorsOutputContract for Contract {
@@ -45,6 +51,26 @@ impl VectorsOutputContract for Contract {
             vec.push(i);
             i += 1_u64;
         }
+        vec
+    }
+
+    fn struct_vec() -> Vec<Bimbam> {
+        let mut vec: Vec<Bimbam> = Vec::new();
+        let a = Bimbam {
+            bim: 1111,
+            bam: 2222_u32,
+        };
+        vec.push(a);
+        let b = Bimbam {
+            bim: 3333,
+            bam: 4444_u32,
+        };
+        vec.push(b);
+        let c = Bimbam {
+            bim: 5555,
+            bam: 6666_u32,
+        };
+        vec.push(c);
         vec
     }
 }
