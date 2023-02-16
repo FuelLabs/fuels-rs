@@ -26,7 +26,7 @@ abi VectorsOutputContract {
 }
 
 impl VectorsOutputContract for Contract {
-    fn array_in_vec() -> Vec<[u64; 4]>{
+    fn array_in_vec() -> Vec<[u64; 4]> {
         let mut vec: Vec<[u64; 4]> = Vec::new();
         vec.push([1, 1, 1, 1]);
         vec.push([2, 2, 2, 2]);
@@ -84,13 +84,12 @@ impl VectorsOutputContract for Contract {
     }
 
     fn tuple_in_vec() -> Vec<(u64, u32)> {
-        let mut vec : Vec<(u64, u32)> = Vec::new();
+        let mut vec: Vec<(u64, u32)> = Vec::new();
         vec.push((1111, 2222_u32));
         vec.push((3333, 4444_u32));
         vec.push((5555, 6666_u32));
         vec
     }
-
 
     fn u8_in_vec(len: u8) -> Vec<u8> {
         let mut vec: Vec<u8> = Vec::new();
