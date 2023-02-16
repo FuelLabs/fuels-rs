@@ -94,7 +94,7 @@ fn expand_fn(
 
     generator
         .set_doc("Run the predicate's encode function with the provided arguments".to_string())
-        .set_name("encode_data".to_string())
+        .set_name("set_data".to_string())
         .set_output_type(quote! {Self})
         .set_body(body);
 

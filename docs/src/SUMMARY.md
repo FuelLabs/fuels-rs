@@ -72,3 +72,4 @@
   - [Integration tests structure](./contributing/tests-structure.md)
 - [Command Line Interfaces](./cli/index.md)
   - [`fuels-abi-cli`](./cli/fuels-abi-cli.md)
+- [Account](./account/index.md)

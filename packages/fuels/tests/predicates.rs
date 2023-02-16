@@ -125,7 +125,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
-            .encode_data(32768)
+            .set_data(32768)
             .get_predicate();
 
     let num_coins = 4;
@@ -164,7 +164,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_basic/out/debug/predicate_basic.bin")?
-            .encode_data(4097, 4097)
+            .set_data(4097, 4097)
             .get_predicate();
 
     let num_coins = 4;
@@ -205,7 +205,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_address/out/debug/predicate_address.bin",
     )?
-    .encode_data(addr)
+    .set_data(addr)
     .get_predicate();
 
     let num_coins = 4;
@@ -244,7 +244,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_enums/out/debug/predicate_enums.bin")?
-            .encode_data(TestEnum::A(32), AnotherTestEnum::B(32))
+            .set_data(TestEnum::A(32), AnotherTestEnum::B(32))
             .get_predicate();
 
     let num_coins = 4;
@@ -281,7 +281,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_structs/out/debug/predicate_structs.bin",
     )?
-    .encode_data(
+    .set_data(
         TestStruct { value: 192 },
         AnotherTestStruct {
             value: 64,
@@ -326,7 +326,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_tuple/out/debug/predicate_tuple.bin")?
-            .encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128)
+            .set_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128)
             .get_predicate();
 
     let num_coins = 4;
@@ -366,7 +366,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
-            .encode_data(2, 4, vec![2, 4, 42])
+            .set_data(2, 4, vec![2, 4, 42])
             .get_predicate();
 
     let num_coins = 4;
@@ -423,7 +423,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
     )?
-    .encode_data(
+    .set_data(
         u32_vec,
         vec_in_vec,
         struct_in_vec,
@@ -476,7 +476,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_generics/out/debug/predicate_generics.bin",
     )?
-    .encode_data(generic_struct, generic_enum)
+    .set_data(generic_struct, generic_enum)
     .get_predicate();
 
     let num_coins = 4;
@@ -521,7 +521,7 @@ async fn pay_with_predicate() -> Result<()> {
 
     let mut predicate: Predicate =
         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
-            .encode_data(32768)
+            .set_data(32768)
             .get_predicate();
 
     let num_coins = 4;

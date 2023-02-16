@@ -75,7 +75,7 @@ mod tests {
 
         let mut predicate: Predicate = MyPredicate::load_from(
             "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
-        )?.encode_data(signatures).get_predicate();
+        )?.set_data(signatures).get_predicate();
 
         predicate.set_provider(provider.clone());
         // ANCHOR_END: predicate_load
@@ -138,7 +138,7 @@ mod tests {
         let mut predicate: Predicate = MyPredicate::load_from(
             "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
         )?
-        .encode_data(4096, 4096)
+        .set_data(4096, 4096)
         .get_predicate();
 
         predicate.set_provider(first_wallet.get_provider()?.clone());
@@ -160,7 +160,7 @@ mod tests {
         // ANCHOR_END: predicate_data_lock_amount
         //
         // ANCHOR: encode_predicate_data
-        // let predicate = predicate.encode_data(4096, 4096);
+        // let predicate = predicate.set_data(4096, 4096);
         // ANCHOR_END: encode_predicate_data
 
         // ANCHOR: predicate_data_unlock
