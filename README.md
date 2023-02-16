@@ -50,6 +50,23 @@ Then you can run the SDK tests with:
 cargo test
 ```
 
+You can run only some part of the test. Using this syntax will run only the `types` module tests that contain the string `in_vector`, and show their outputs:
+
+```shell
+cargo test --test types in_vector -- --show-output
+``` 
+
+### What to do if my tests are failing on `master`
+
+Before doing anything else, try all these commands:
+
+```shell
+cargo clean
+rm Cargo.lock
+forc build --path packages/fuels
+cargo test
+```
+
 ### Why is the prefix `fuels` and not `fuel`?
 
 In order to make the SDK for Fuel feel familiar with those coming from the [ethers.js](https://github.com/ethers-io/ethers.js) ecosystem, this project opted for an `s` at the end. The `fuels-*` family of SDKs is inspired by The Ethers Project.
@@ -76,13 +93,3 @@ You can build the book by running:
 mdbook build
 ```
 
-### What to do if my tests are failing on `master`
-
-Before doing anything else, try all these commands:
-
-```shell
-cargo clean
-rm Cargo.lock
-forc build --path packages/fuels
-cargo test
-```
