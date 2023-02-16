@@ -7,10 +7,8 @@ use crate::abi_decoder::ABIDecoder;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
-pub mod constants;
 pub mod function_selector;
 pub mod offsets;
-pub mod parameters;
 pub mod traits;
 pub mod utils;
 

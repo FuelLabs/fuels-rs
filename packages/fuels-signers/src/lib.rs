@@ -9,8 +9,7 @@ use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{field, Cacheable, UniqueIdentifier};
-use fuels_types::bech32::Bech32Address;
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
 /// Trait for signing transactions and messages
@@ -27,9 +26,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+    async fn sign_transaction<T: Transaction + Send>(
         &self,
-        message: &mut Tx,
+        message: &mut T,
     ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
@@ -43,11 +42,15 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
-        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
-        TxPointer, UtxoId,
+        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output,
+        Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
+    use fuels_types::{
+        constants::BASE_ASSET_ID,
+        parameters::TxParameters,
+        transaction::{ScriptTransaction, Transaction},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -113,7 +116,7 @@ mod tests {
             AssetId::from([0u8; 32]),
         );
 
-        let mut tx = Transaction::script(
+        let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
             0,
@@ -122,7 +125,8 @@ mod tests {
             vec![input_coin],
             vec![output_coin],
             vec![],
-        );
+        )
+        .into();
 
         // Sign the transaction.
         let signature = wallet.sign_transaction(&mut tx).await?;
