@@ -2,31 +2,31 @@ pub mod abigen_bindings {
     pub mod my_contract_name_mod {
         pub struct MyContractName {
             contract_id: Bech32ContractId,
-            spender: WalletUnlocked,
+            account: WalletUnlocked,
         }
         impl MyContractName {
             pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -> Self {
                 Self {
                     contract_id,
-                    spender: wallet,
+                    account: wallet,
                 }
             }
             pub fn contract_id(&self) -> &Bech32ContractId {
                 &self.contract_id
             }
             pub fn wallet(&self) -> WalletUnlocked {
-                self.spender.clone()
+                self.account.clone()
             }
             pub fn with_wallet(&self, mut wallet: WalletUnlocked) -> Result<Self, Error> {
-                let provider = self.spender.provider()?;
+                let provider = self.account.provider()?;
                 wallet.set_provider(provider.clone());
                 Ok(Self {
                     contract_id: self.contract_id.clone(),
-                    spender: wallet,
+                    account: wallet,
                 })
             }
             pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
-                self.spender
+                self.account
                     .get_provider()?
                     .get_contract_balances(&self.contract_id)
                     .await
@@ -35,7 +35,7 @@ pub mod abigen_bindings {
             pub fn methods(&self) -> MyContractNameMethods {
                 MyContractNameMethods {
                     contract_id: self.contract_id.clone(),
-                    wallet: self.spender.clone(),
+                    wallet: self.account.clone(),
                     logs_map: get_logs_hashmap(&[], Some(self.contract_id.clone())),
                 }
             }

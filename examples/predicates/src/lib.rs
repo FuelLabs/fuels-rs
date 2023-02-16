@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::programs::predicate::Predicate;
-    use fuels::signers::Spender;
+    use fuels::signers::Account;
     use fuels::{prelude::*, types::B512};
 
     #[tokio::test]

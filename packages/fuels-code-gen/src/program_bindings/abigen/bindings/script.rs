@@ -33,17 +33,17 @@ pub(crate) fn script_bindings(
     let code = quote! {
         #[derive(Debug)]
         pub struct #name<T>{
-            spender: T,
+            account: T,
             binary_filepath: ::std::string::String,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::signers::Spender + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
-            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::Spender>::Error>
+        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
+            where ::fuels::types::errors::Error: From<<T as ::fuels::signers::Account>::Error>
         {
-            pub fn new(spender: T, binary_filepath: &str) -> Self {
+            pub fn new(account: T, binary_filepath: &str) -> Self {
                 Self {
-                    spender,
+                    account,
                     binary_filepath: binary_filepath.to_string(),
                     log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
@@ -74,12 +74,12 @@ fn expand_fn(
             let script_binary = ::std::fs::read(&self.binary_filepath)
                                         .expect("Could not read from binary filepath");
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
-            let provider = ::fuels::signers::Spender::get_provider(&self.spender).expect("Provider not set up")
+            let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
                 script_binary,
                 encoded_args,
-                self.spender.clone(),
+                self.account.clone(),
                 provider,
                 self.log_decoder.clone()
             )

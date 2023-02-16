@@ -12,7 +12,7 @@ use fuels_core::constants::BASE_ASSET_ID;
 use fuels_core::parameters::TxParameters;
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_signers::wallet::WalletError;
-use fuels_signers::{provider::Provider, PayFee, Spender};
+use fuels_signers::{provider::Provider, PayFee, Account};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::coin::Coin;
 use fuels_types::errors::Error;
@@ -258,7 +258,7 @@ impl PayFee for Predicate {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Spender for Predicate {
+impl Account for Predicate {
     type Error = WalletError;
 
     fn address(&self) -> &Bech32Address {

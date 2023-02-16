@@ -7,7 +7,7 @@ use fuels_core::{
     offsets::base_offset,
     parameters::{CallParameters, TxParameters},
 };
-use fuels_signers::{provider::Provider, Spender};
+use fuels_signers::{provider::Provider, Account};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -60,21 +60,21 @@ impl ScriptCall {
 pub struct ScriptCallHandler<T, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
-    pub spender: T,
+    pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
 
-impl<T: fuels_signers::Spender + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
+impl<T: fuels_signers::Account + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
-    fuels_types::errors::Error: From<<T as Spender>::Error>,
+    fuels_types::errors::Error: From<<T as Account>::Error>,
 {
     pub fn new(
         script_binary: Vec<u8>,
         encoded_args: UnresolvedBytes,
-        spender: T,
+        account: T,
         provider: Provider,
         log_decoder: LogDecoder,
     ) -> Self {
@@ -89,7 +89,7 @@ where
         Self {
             script_call,
             tx_parameters: TxParameters::default(),
-            spender,
+            account,
             provider,
             datatype: PhantomData,
             log_decoder,
@@ -182,7 +182,7 @@ where {
             vec![],
         );
 
-        self.spender.pay_fee_resources(&mut tx, 0, 0).await?;
+        self.account.pay_fee_resources(&mut tx, 0, 0).await?;
 
         let tx_execution = ExecutableFuelCall::<T>::new(tx);
 

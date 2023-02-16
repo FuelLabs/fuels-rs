@@ -55,7 +55,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait PayFee: Spender + std::fmt::Debug + Send + Sync {
+pub trait PayFee: Account + std::fmt::Debug + Send + Sync {
     async fn pay_fee_resources<
         'a_t,
         Tx: fuel_tx::Chargeable
@@ -70,11 +70,11 @@ pub trait PayFee: Spender + std::fmt::Debug + Send + Sync {
         tx: &'a_t mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<(), <Self as Spender>::Error>;
+    ) -> Result<(), <Self as Account>::Error>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Spender: std::fmt::Debug + Send + Sync {
+pub trait Account: std::fmt::Debug + Send + Sync {
     type Error: Error + Send + Sync;
 
     fn address(&self) -> &Bech32Address;

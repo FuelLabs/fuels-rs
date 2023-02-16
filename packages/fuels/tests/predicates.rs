@@ -4,7 +4,7 @@ use fuels::{
     types::{coin::Coin, message::Message},
 };
 use fuels_programs::predicate::Predicate;
-use fuels_signers::Spender;
+use fuels_signers::Account;
 
 // use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(

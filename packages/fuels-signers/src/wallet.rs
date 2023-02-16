@@ -32,7 +32,7 @@ use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 use crate::wallet::WalletError::LowAmount;
-use crate::{provider, provider::Provider, PayFee, Signer, Spender};
+use crate::{provider, provider::Provider, PayFee, Signer, Account};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -573,7 +573,7 @@ impl WalletUnlocked {
     /// use fuels::test_helpers::setup_single_asset_coins;
     /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
     /// use std::str::FromStr;
-    /// use fuels_signers::Spender;
+    /// use fuels_signers::Account;
     /// #[cfg(feature = "fuel-core-lib")]
     /// use fuels_test_helpers::Config;
     ///
@@ -822,7 +822,7 @@ impl WalletUnlocked {
     }
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Spender for WalletUnlocked {
+impl Account for WalletUnlocked {
     type Error = WalletError;
 
     fn address(&self) -> &Bech32Address {

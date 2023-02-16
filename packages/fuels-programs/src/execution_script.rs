@@ -19,17 +19,17 @@ use crate::{
 #[derive(Debug)]
 pub struct ExecutableFuelCall<T> {
     pub tx: Script,
-    pub phantom_spender: PhantomData<T>,
+    pub phantom_account: PhantomData<T>,
 }
 
-impl<T: fuels_signers::Spender + fuels_signers::PayFee> ExecutableFuelCall<T>
+impl<T: fuels_signers::Account + fuels_signers::PayFee> ExecutableFuelCall<T>
 where
-    fuels_types::errors::Error: From<<T as fuels_signers::Spender>::Error>,
+    fuels_types::errors::Error: From<<T as fuels_signers::Account>::Error>,
 {
     pub fn new(tx: Script) -> Self {
         Self {
             tx,
-            phantom_spender: PhantomData,
+            phantom_account: PhantomData,
         }
     }
 
@@ -39,10 +39,10 @@ where
     pub async fn from_contract_calls(
         calls: &[ContractCall],
         tx_parameters: &TxParameters,
-        spender: &T,
+        account: &T,
     ) -> Result<Self> {
         // let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
-        let consensus_parameters = spender.get_provider()?.consensus_parameters().await?;
+        let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
         // Calculate instructions length for call instructions
         // Use placeholder for call param offsets, we only care about the length
         let calls_instructions_len =
@@ -60,12 +60,12 @@ where
 
         // Find the spendable resources required for those calls
         for (asset_id, amount) in &required_asset_amounts {
-            let resources = spender.get_spendable_resources(*asset_id, *amount).await?;
+            let resources = account.get_spendable_resources(*asset_id, *amount).await?;
             spendable_resources.extend(resources);
         }
 
         let (inputs, outputs) =
-            get_transaction_inputs_outputs(calls, spender.address(), spendable_resources);
+            get_transaction_inputs_outputs(calls, account.address(), spendable_resources);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,
@@ -82,8 +82,8 @@ where
             .iter()
             .find(|(asset_id, _)| *asset_id == AssetId::default());
         match base_asset_amount {
-            Some((_, base_amount)) => spender.pay_fee_resources(&mut tx, *base_amount, 0).await?,
-            None => spender.pay_fee_resources(&mut tx, 0, 0).await?,
+            Some((_, base_amount)) => account.pay_fee_resources(&mut tx, *base_amount, 0).await?,
+            None => account.pay_fee_resources(&mut tx, 0, 0).await?,
         }
 
         Ok(ExecutableFuelCall::new(tx))
