@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use fuel_asm::GTFArgs;
+use fuel_asm::{op, RegId};
 use fuel_tx::field::{
     GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
 };
@@ -8,8 +10,6 @@ use fuel_tx::{
     FormatValidityChecks, Input, Output, Script, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
-use fuel_vm::fuel_asm::{op, RegId};
-use fuel_vm::prelude::GTFArgs;
 
 use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
 use crate::errors::Error;
@@ -227,8 +227,8 @@ impl ScriptTransaction {
         to: ContractId,
         amount: u64,
         asset_id: AssetId,
-        inputs: &[Input],
-        outputs: &[Output],
+        inputs: Vec<Input>,
+        outputs: Vec<Output>,
         params: TxParameters,
     ) -> ScriptTransaction {
         let script_data: Vec<u8> = [
@@ -274,7 +274,7 @@ impl ScriptTransaction {
     pub fn build_message_to_output_tx(
         to: Address,
         amount: u64,
-        inputs: &[Input],
+        inputs: Vec<Input>,
         params: TxParameters,
     ) -> ScriptTransaction {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
@@ -309,8 +309,8 @@ impl ScriptTransaction {
             params.maturity,
             script,
             script_data,
-            inputs.to_vec(),
-            outputs.to_vec(),
+            inputs,
+            outputs,
             vec![],
         )
         .into()
