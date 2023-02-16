@@ -42,7 +42,7 @@ pub(crate) fn generate_code_for_configurable_constatnts(
         .map(|c| ResolvedConfigurable::new(c, shared_types))
         .collect::<Result<Vec<_>>>()?;
 
-    let config_methods = generate_configigurable_impl(name, &resolved_configurables);
+    let config_methods = generate_configurable_impl(name, &resolved_configurables);
     let from_impl = generate_from_impl(name);
 
     Ok(quote! {
@@ -56,7 +56,7 @@ pub(crate) fn generate_code_for_configurable_constatnts(
     })
 }
 
-fn generate_configigurable_impl(
+fn generate_configurable_impl(
     name: &Ident,
     resolved_configurables: &[ResolvedConfigurable],
 ) -> TokenStream {
