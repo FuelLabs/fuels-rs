@@ -192,7 +192,7 @@
             AssetId::from([0u8; 32]),
         );
 
-        let mut tx = Transaction::script(
+        let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
             0,
@@ -201,7 +201,8 @@
             vec![input_coin],
             vec![output_coin],
             vec![],
-        );
+        )
+        .into();
 
         // Sign the transaction.
         let signature = wallet.sign_transaction(&amp;mut tx).await?;

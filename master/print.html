@@ -709,7 +709,7 @@ coins and coin amount</p>
             AssetId::from([0u8; 32]),
         );
 
-        let mut tx = Transaction::script(
+        let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
             0,
@@ -718,7 +718,8 @@ coins and coin amount</p>
             vec![input_coin],
             vec![output_coin],
             vec![],
-        );
+        )
+        .into();
 
         // Sign the transaction.
         let signature = wallet.sign_transaction(&amp;mut tx).await?;
@@ -2764,7 +2765,7 @@ impl LiquidityPool for Contract {
         }
 </code></pre>
 <p>All that is left is to build the transaction with the helper <code>build_transfer_transaction()</code>, have <code>wallet_1</code> sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:</p>
-<pre><code class="language-rust ignore">        let mut tx = Wallet::build_transfer_tx(&amp;inputs, &amp;outputs, TxParameters::default());
+<pre><code class="language-rust ignore">        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
         wallet_1.sign_transaction(&amp;mut tx).await?;
 
         let _receipts = provider.send_transaction(&amp;tx).await?;
