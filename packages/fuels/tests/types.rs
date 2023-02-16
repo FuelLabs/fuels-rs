@@ -4,6 +4,7 @@ use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, B512},
 };
+use fuels_types::SizedAsciiString;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -1679,7 +1680,7 @@ async fn test_b512() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_integer_vector_output() -> Result<()> {
+async fn test_base_type_in_vec_output() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1693,18 +1694,20 @@ async fn test_integer_vector_output() -> Result<()> {
         ),
     );
     let contract_methods = contract_instance.methods();
-    let response = contract_methods.u8_vec(10).call().await?;
+    let response = contract_methods.u8_in_vec(10).call().await?;
     assert_eq!(response.value, (0..10).collect::<Vec<_>>());
-    let response = contract_methods.u16_vec(11).call().await?;
+    let response = contract_methods.u16_in_vec(11).call().await?;
     assert_eq!(response.value, (0..11).collect::<Vec<_>>());
-    let response = contract_methods.u32_vec(12).call().await?;
+    let response = contract_methods.u32_in_vec(12).call().await?;
     assert_eq!(response.value, (0..12).collect::<Vec<_>>());
-    let response = contract_methods.u64_vec(13).call().await?;
+    let response = contract_methods.u64_in_vec(13).call().await?;
     assert_eq!(response.value, (0..13).collect::<Vec<_>>());
+    let response = contract_methods.bool_in_vec().call().await?;
+    assert_eq!(response.value, [true, false, true, false].to_vec());
     Ok(())
 }
 #[tokio::test]
-async fn test_struct_in_vec_output() -> Result<()> {
+async fn test_composite_types_in_vec_output() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -1718,23 +1721,60 @@ async fn test_struct_in_vec_output() -> Result<()> {
         ),
     );
     let contract_methods = contract_instance.methods();
-    let mut expected: Vec<Bimbam> = Vec::new();
-    let a = Bimbam {
-        bim: 1111,
-        bam: 2222_u32,
-    };
-    expected.push(a);
-    let b = Bimbam {
-        bim: 3333,
-        bam: 4444_u32,
-    };
-    expected.push(b);
-    let c = Bimbam {
-        bim: 5555,
-        bam: 6666_u32,
-    };
-    expected.push(c);
-    let response = contract_methods.struct_vec().call().await?.value;
-    assert_eq!(response, expected);
+
+    {
+        let expected: Vec<[u64; 4]> = vec![
+            ([1, 1, 1, 1]),
+            ([2, 2, 2, 2]),
+            ([3, 3, 3, 3]),
+            ([4, 4, 4, 4]),
+        ];
+        let response = contract_methods.array_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+    {
+        let expected: Vec<Pasta> = vec![
+            (Pasta::Tortelini(Bimbam {
+                bim: 1111,
+                bam: 2222_u32,
+            })),
+            (Pasta::Rigatoni(1987)),
+            (Pasta::Spaghetti(true)),
+        ];
+        let response = contract_methods.enum_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<Bimbam> = vec![
+            Bimbam {
+                bim: 1111,
+                bam: 2222_u32,
+            },
+            Bimbam {
+                bim: 3333,
+                bam: 4444_u32,
+            },
+            Bimbam {
+                bim: 5555,
+                bam: 6666_u32,
+            },
+        ];
+        let response = contract_methods.struct_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<(u64, u32)> = vec![(1111, 2222_u32), (3333, 4444_u32), (5555, 6666_u32)];
+        let response = contract_methods.tuple_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<SizedAsciiString<4>> =
+            vec!["hell".try_into()?, "ello".try_into()?, "lloh".try_into()?];
+        let response = contract_methods.str_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
     Ok(())
 }
