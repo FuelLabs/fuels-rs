@@ -204,15 +204,19 @@ impl ScriptTransaction {
         self
     }
 
-    pub fn new(inputs: &[Input], outputs: &[Output], params: TxParameters) -> ScriptTransaction {
+    pub fn new(
+        inputs: Vec<Input>,
+        outputs: Vec<Output>,
+        params: TxParameters,
+    ) -> ScriptTransaction {
         FuelTransaction::script(
             params.gas_price,
             params.gas_limit,
             params.maturity,
             vec![],
             vec![],
-            inputs.to_vec(),
-            outputs.to_vec(),
+            inputs,
+            outputs,
             vec![],
         )
         .into()

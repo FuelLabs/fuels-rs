@@ -497,7 +497,7 @@ impl WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = ScriptTransaction::new(&inputs, &outputs, tx_parameters);
+        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -600,12 +600,12 @@ impl WalletUnlocked {
             })
             .collect::<Vec<_>>();
 
-        let outputs = [
+        let outputs = vec![
             Output::coin(to.into(), amount, asset_id),
             Output::coin(predicate_address.into(), input_amount - amount, asset_id),
         ];
 
-        let mut tx = ScriptTransaction::new(&inputs, &outputs, tx_parameters);
+        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters);
         // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
@@ -994,7 +994,7 @@ mod tests {
             .await
             .pop()
             .unwrap();
-        let mut tx = ScriptTransaction::new(&[], &[], TxParameters::default());
+        let mut tx = ScriptTransaction::new(vec![], vec![], TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, 0, 0).await?;
 
@@ -1033,7 +1033,7 @@ mod tests {
             BASE_ASSET_ID,
             base_amount,
         );
-        let mut tx = ScriptTransaction::new(&inputs, &outputs, TxParameters::default());
+        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
 
         wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
 

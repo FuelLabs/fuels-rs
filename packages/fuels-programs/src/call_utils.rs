@@ -64,7 +64,7 @@ pub async fn build_tx_from_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx = ScriptTransaction::new(&inputs, &outputs, *tx_parameters)
+    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
         .with_script(script)
         .with_script_data(script_data);
 
