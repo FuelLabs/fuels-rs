@@ -72,6 +72,7 @@ async fn script_uses_default_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn contract_configurables() -> Result<()> {
+    // ANCHOR: contract_configurables
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
@@ -85,6 +86,7 @@ async fn contract_configurables() -> Result<()> {
         field_2: 32,
     };
     let new_enum = EnumWithGeneric::VariantTwo;
+
     let configurables = MyContractConfigurables::new()
         .set_str_4(new_str.clone())
         .set_struct(new_struct.clone())
@@ -103,6 +105,7 @@ async fn contract_configurables() -> Result<()> {
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
+    // ANCHOR_END: contract_configurables
 
     let response = contract_instance
         .methods()
@@ -126,6 +129,7 @@ async fn contract_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn script_configurables() -> Result<()> {
+    // ANCHOR: script_configurables
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -138,6 +142,7 @@ async fn script_configurables() -> Result<()> {
         field_2: 32,
     };
     let new_enum = EnumWithGeneric::VariantTwo;
+
     let configurables = MyScriptConfigurables::new()
         .set_str_4(new_str.clone())
         .set_struct(new_struct.clone())
@@ -148,6 +153,7 @@ async fn script_configurables() -> Result<()> {
         .main()
         .call()
         .await?;
+    // ANCHOR_END: script_configurables
 
     let expected_value = (
         8u8,
