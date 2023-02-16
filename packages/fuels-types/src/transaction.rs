@@ -1,19 +1,20 @@
 use std::fmt::Debug;
 
-use fuel_asm::GTFArgs;
-use fuel_asm::{op, RegId};
-use fuel_tx::field::{
-    GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
-};
+use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
+    field::{
+        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+    },
     Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
     FormatValidityChecks, Input, Output, Script, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
 
-use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
-use crate::errors::Error;
-use crate::parameters::TxParameters;
+use crate::{
+    constants::{BASE_ASSET_ID, WORD_SIZE},
+    errors::Error,
+    parameters::TxParameters,
+};
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;

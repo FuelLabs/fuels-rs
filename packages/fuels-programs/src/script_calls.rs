@@ -2,8 +2,6 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use itertools::chain;
-
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
@@ -13,6 +11,7 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction},
 };
+use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
