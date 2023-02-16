@@ -9,8 +9,7 @@ use fuels_core::offsets::call_script_data_offset;
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32Address,
-    constants::BASE_ASSET_ID,
-    constants::WORD_SIZE,
+    constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     parameters::TxParameters,
     resource::Resource,
@@ -64,7 +63,7 @@ pub async fn build_tx_from_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx = ScriptTransaction::new(&inputs, &outputs, *tx_parameters)
+    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
         .with_script(script)
         .with_script_data(script_data);
 

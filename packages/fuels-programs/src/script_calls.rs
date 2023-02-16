@@ -142,7 +142,7 @@ where
             .collect();
         let num_of_contracts = contract_ids.len();
 
-        let inputs: Vec<_> = chain!(
+        let inputs = chain!(
             generate_contract_inputs(contract_ids),
             self.script_call.inputs.clone(),
         )
@@ -152,13 +152,13 @@ where
         // contract_inputs are referencing them via `output_index`. The node
         // will, upon receiving our request, use `output_index` to index the
         // `inputs` array we've sent over.
-        let outputs: Vec<_> = chain!(
+        let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
         )
         .collect();
 
-        let mut tx = ScriptTransaction::new(&inputs, &outputs, self.tx_parameters)
+        let mut tx = ScriptTransaction::new(inputs, outputs, self.tx_parameters)
             .with_script(self.script_call.script_binary.clone())
             .with_script_data(self.compute_script_data().await?);
 

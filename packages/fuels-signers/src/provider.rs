@@ -164,9 +164,9 @@ impl Provider {
         Ok(())
     }
 
-    async fn submit_with_feedback<T: Transaction>(
+    async fn submit_with_feedback(
         &self,
-        tx: T,
+        tx: impl Transaction,
     ) -> ProviderResult<(TransactionStatus, Vec<Receipt>)> {
         let tx_id = tx.id().to_string();
         let status = self.client.submit_and_await_commit(&tx.into()).await?;
