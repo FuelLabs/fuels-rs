@@ -7,7 +7,7 @@ use crate::{
     error::Result,
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        resolved_type::resolve_type,
         utils::{param_type_calls, Component},
     },
     utils::safe_ident,
@@ -26,8 +26,7 @@ impl FunctionGenerator {
     pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
         let args = function_arguments(fun.inputs(), shared_types)?;
 
-        let output_type = resolve_fn_output_type(fun, shared_types)?;
-
+        let output_type = resolve_type(fun.output(), shared_types)?;
         Ok(Self {
             name: fun.name().to_string(),
             args,
@@ -81,13 +80,6 @@ fn function_arguments(
         .iter()
         .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<_>>()
-}
-
-fn resolve_fn_output_type(
-    function: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType> {
-    resolve_type(function.output(), shared_types)
 }
 
 impl From<&FunctionGenerator> for TokenStream {
