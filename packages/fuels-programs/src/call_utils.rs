@@ -6,8 +6,9 @@ use fuel_tx::{
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
+
 use fuels_core::offsets::call_script_data_offset;
-use fuels_signers::WalletUnlocked;
+use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -39,12 +40,23 @@ pub async fn build_tx_from_contract_calls(
     wallet: &WalletUnlocked,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
+    let n_vectors_calls = calls.iter().filter(|c| c.output_param.is_vector()).count();
 
-    // Calculate instructions length for call instructions
-    // Use placeholder for call param offsets, we only care about the length
-    let calls_instructions_len =
-        get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * calls.len();
+    // Compute the length of the calling scripts for the two types of contract calls.
+    // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of the
+    // calling script doesn't depend on the underlying type, just on whether or not the contract
+    // call output is a vector.
+    let calls_instructions_len_no_vectors =
+        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
+            * (calls.len() - n_vectors_calls);
+    let calls_instructions_len_vectors = get_single_call_instructions(
+        &CallOpcodeParamsOffset::default(),
+        &ParamType::Vector(Box::from(ParamType::U64)),
+    )
+    .len()
+        * n_vectors_calls;
 
+    let calls_instructions_len = calls_instructions_len_no_vectors + calls_instructions_len_vectors;
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
