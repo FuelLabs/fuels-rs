@@ -16,6 +16,7 @@ bech32 = "0.9.0"
 chrono = "0.4.2"
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true }
+fuel-asm = { workspace = true }
 fuel-abi-types = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true, default-features = false }

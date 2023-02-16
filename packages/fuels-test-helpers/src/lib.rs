@@ -15,11 +15,11 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-use fuels_core::constants::BASE_ASSET_ID;
 use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
 use fuels_types::{
     bech32::Bech32Address,
     coin::{Coin, CoinStatus},
+    constants::BASE_ASSET_ID,
     message::{Message, MessageStatus},
     param_types::ParamType,
 };
@@ -219,10 +219,12 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_core::parameters::{StorageConfiguration, TxParameters};
     use fuels_programs::contract::Contract;
     use fuels_signers::{provider::Provider, WalletUnlocked};
-    use fuels_types::bech32::FUEL_BECH32_HRP;
+    use fuels_types::{
+        bech32::FUEL_BECH32_HRP,
+        parameters::{StorageConfiguration, TxParameters},
+    };
 
     use super::*;
 
