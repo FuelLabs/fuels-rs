@@ -2,6 +2,7 @@
 use std::future::Future;
 
 use fuels::prelude::*;
+use fuels_types::Bits256;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -660,6 +661,43 @@ async fn test_output_variable_estimation() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_output_message_estimation() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+    ));
+
+    let (wallets, _, _, contract_id) = setup_output_variable_estimation_test().await?;
+
+    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
+    let contract_methods = contract_instance.methods();
+    let amount = 1000;
+
+    let address = Bits256([1u8; 32]);
+    {
+        // Should fail due to lack of output messages
+        let response = contract_methods.send_message(address, amount).call().await;
+
+        assert!(matches!(
+            response,
+            Err(Error::RevertTransactionError { .. })
+        ));
+    }
+
+    {
+        // Should add 1 output message automatically
+        let _ = contract_methods
+            .send_message(address, amount)
+            .estimate_tx_dependencies(Some(1))
+            .await?
+            .call()
+            .await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -703,10 +741,14 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let amount = 1000;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..3).for_each(|_| {
+    (0..2).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
     });
+
+    let base_layer_addres = Bits256([1u8; 32]);
+    let call_handler = contract_methods.send_message(base_layer_addres, amount);
+    multi_call_handler.add_call(call_handler);
 
     let _ = multi_call_handler
         .estimate_tx_dependencies(None)
@@ -716,7 +758,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     for wallet in wallets.iter() {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-        assert_eq!(balance, 3 * amount);
+        assert_eq!(balance, 2 * amount);
     }
 
     Ok(())

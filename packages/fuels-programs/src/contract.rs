@@ -8,7 +8,7 @@ use std::{
     str::FromStr,
 };
 
-use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Create, FormatValidityChecks,
     Output, Receipt, Salt, StorageSlot, Transaction,
@@ -448,6 +448,12 @@ impl ContractCall {
         )
     }
 
+    fn is_missing_message_output(receipts: &[Receipt]) -> bool {
+        receipts
+            .iter()
+            .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_SEND_MESSAGE_SIGNAL))
+    }
+
     fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
         receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
@@ -721,6 +727,12 @@ where
                     self = self.append_variable_outputs(1);
                 }
 
+                Err(Error::RevertTransactionError { receipts, .. })
+                    if ContractCall::is_missing_message_output(&receipts) =>
+                {
+                    self = self.append_message_outputs(1);
+                }
+
                 Err(Error::RevertTransactionError { ref receipts, .. }) => {
                     if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
                         let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
@@ -884,6 +896,15 @@ impl MultiContractCallHandler {
                         .iter_mut()
                         .take(1)
                         .for_each(|call| call.append_variable_outputs(1));
+                }
+
+                Err(Error::RevertTransactionError { receipts, .. })
+                    if ContractCall::is_missing_message_output(&receipts) =>
+                {
+                    self.contract_calls
+                        .iter_mut()
+                        .take(1)
+                        .for_each(|call| call.append_message_outputs(1));
                 }
 
                 Err(Error::RevertTransactionError { ref receipts, .. }) => {
