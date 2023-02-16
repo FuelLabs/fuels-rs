@@ -22,7 +22,7 @@ use fuels_core::{
 };
 use fuels_signers::{
     provider::{Provider, TransactionCost},
-    PayFee, Account,
+    Account, PayFee,
 };
 use fuels_types::errors::Error::ProviderError;
 use fuels_types::{

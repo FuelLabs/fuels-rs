@@ -32,7 +32,7 @@ use std::{collections::HashMap, fmt, ops, path::Path};
 use thiserror::Error;
 
 use crate::wallet::WalletError::LowAmount;
-use crate::{provider, provider::Provider, PayFee, Signer, Account};
+use crate::{provider, provider::Provider, Account, PayFee, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
