@@ -47,7 +47,7 @@ forc build --path packages/fuels
 Then you can run the SDK tests with:
 
 ```shell
-cargo test -- --show-output
+cargo test
 ```
 
 ### Why is the prefix `fuels` and not `fuel`?
