@@ -11,17 +11,15 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt};
+use fuel_tx::{AssetId, ConsensusParameters, Input, Receipt, TxPointer, UtxoId};
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
-use fuels_core::constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX};
-use fuel_tx::{AssetId, ConsensusParameters, Receipt};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
     chain_info::ChainInfo,
     coin::Coin,
-    constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     errors::{error, Error, Result},
     message::Message,
     message_proof::MessageProof,
