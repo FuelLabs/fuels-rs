@@ -3,10 +3,7 @@ use std::{collections::HashMap, fmt, ops, path::Path};
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
-use fuel_core_client::client::{
-    schema::schema::__fields::Query::_contract_balance_arguments::asset, PaginatedResult,
-    PaginationRequest,
-};
+use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{
     field, AssetId, Bytes32, Cacheable, Chargeable, ContractId, Input, Output, Receipt, Script,
