@@ -552,13 +552,13 @@ async fn pay_with_predicate() -> Result<()> {
         192
     );
 
-    let call_params = CallParameters::new(Some(100), None, None);
+    // let call_params = CallParameters::new(Some(100), None, None);
 
     let response = contract_instance_connected
         .methods()
         .initialize_counter(42) // Build the ABI call
         .tx_params(tx_params)
-        .call_params(call_params)?
+        // .call_params(call_params)?
         .call() // Perform the network call
         .await?;
 
