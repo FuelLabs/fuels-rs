@@ -741,7 +741,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let amount = 1000;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..2).for_each(|_| {
+    (0..3).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
     });
@@ -758,7 +758,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     for wallet in wallets.iter() {
         let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-        assert_eq!(balance, 2 * amount);
+        assert_eq!(balance, 3 * amount);
     }
 
     Ok(())

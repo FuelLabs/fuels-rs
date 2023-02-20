@@ -892,19 +892,15 @@ impl MultiContractCallHandler {
                 Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_output_variables(&receipts) =>
                 {
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_variable_outputs(1));
+                    // It doesn't matter where the missing output is added,
+                    // all calls will be merged to a single script tx
+                    self.contract_calls[0].append_variable_outputs(1);
                 }
 
                 Err(Error::RevertTransactionError { receipts, .. })
                     if ContractCall::is_missing_message_output(&receipts) =>
                 {
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_message_outputs(1));
+                    self.contract_calls[0].append_message_outputs(1);
                 }
 
                 Err(Error::RevertTransactionError { ref receipts, .. }) => {
