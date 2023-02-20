@@ -4,7 +4,6 @@ use std::{collections::HashMap, io};
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
-use fuel_core::state::Transaction;
 use fuel_core_client::client::{
     schema::{
         balance::Balance, block::TimeParameters as FuelTimeParameters, contract::ContractBalance,
@@ -98,7 +97,7 @@ impl Provider {
     /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
     ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
-    ///   let tx = Script::default();
+    ///   let tx = ScriptTransaction::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);

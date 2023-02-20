@@ -19,7 +19,6 @@ use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
 };
-use fuels_core::parameters::{CallParameters, StorageConfiguration, TxParameters};
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     Account, PayFee,
@@ -811,7 +810,7 @@ where
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.account).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

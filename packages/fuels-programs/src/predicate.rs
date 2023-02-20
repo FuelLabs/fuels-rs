@@ -1,24 +1,23 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use fuel_tx::field::{Inputs, Outputs, Witnesses};
-use fuel_tx::{
-    Cacheable, Chargeable, Input, Output, Receipt, Script, Transaction, TransactionFee, TxPointer,
-    UniqueIdentifier,
-};
+use fuel_tx::{Input, Output, Receipt, TxPointer};
 use fuel_types::AssetId;
 
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_core::parameters::TxParameters;
+use fuels_types::transaction::Transaction;
+
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_signers::wallet::WalletError;
 use fuels_signers::{provider::Provider, Account, PayFee};
 use fuels_types::bech32::Bech32Address;
 use fuels_types::coin::Coin;
+use fuels_types::constants::BASE_ASSET_ID;
 use fuels_types::errors::Error;
 use fuels_types::errors::Result;
 use fuels_types::message::Message;
+use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
+use fuels_types::transaction::ScriptTransaction;
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -85,20 +84,6 @@ impl Predicate {
             .collect::<Vec<Input>>();
 
         Ok(inputs)
-    }
-
-    pub fn build_transfer_tx(inputs: &[Input], outputs: &[Output], params: TxParameters) -> Script {
-        // This script is empty, since all this transaction does is move Inputs and Outputs around.
-        Transaction::script(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            vec![],
-            vec![],
-            inputs.to_vec(),
-            outputs.to_vec(),
-            vec![],
-        )
     }
 
     /// Returns a vector containing the output coin and change output given an asset and amount
@@ -197,17 +182,15 @@ impl Predicate {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl PayFee for Predicate {
-    async fn pay_fee_resources<
-        'a_t,
-        Tx: Chargeable + Inputs + Outputs + Send + Cacheable + UniqueIdentifier + Witnesses,
-    >(
-        &'a_t self,
-        tx: &'a_t mut Tx,
+    async fn pay_fee_resources<Tx: fuels_types::transaction::Transaction + Send>(
+        &self,
+        tx: &mut Tx,
         previous_base_amount: u64,
         _witness_index: u8,
     ) -> PredicateResult<()> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
-        let transaction_fee = TransactionFee::checked_from_tx(&consensus_parameters, tx)
+        let transaction_fee = tx
+            .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
             matches!(input , Input::MessageSigned { .. }) || matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) });
@@ -296,7 +279,7 @@ impl Account for Predicate {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = Self::build_transfer_tx(&inputs, &outputs, tx_parameters.unwrap_or_default());
+        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -310,9 +293,8 @@ impl Account for Predicate {
         Ok((tx.id().to_string(), receipts))
     }
 
-    fn convert_to_signed_resources(
-        &self,
-        spendable_resources: Vec<Resource>,
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>,
+
     ) -> Vec<Input> {
 
         let mut offset = 0;

@@ -3,15 +3,14 @@ extern crate core;
 use std::error::Error;
 
 use async_trait::async_trait;
-use fuel_core::state::Transaction;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Input, Receipt};
 use fuel_types::AssetId;
-use fuels_core::parameters::TxParameters;
-use fuels_types::{bech32::Bech32Address, transaction::Transaction};
+use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
@@ -33,20 +32,17 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<'a_t, Tx: Transaction + Send>(
-        &'a_t self,
-        message: &'a_t mut Tx,
+    async fn sign_transaction<Tx: Transaction + Send>(
+        &self,
+        message: &mut Tx,
     ) -> Result<Signature, Self::Error>;
 
     /// Returns the signer's Fuel Address
     // fn address(&self) -> &Bech32Address;
 
-    async fn add_fee_resources<
-        'a_t,
-        Tx: Transaction + Send,
-    >(
-        &'a_t self,
-        tx: &'a_t mut Tx,
+    async fn add_fee_resources<Tx: Transaction + Send>(
+        &self,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Self::Error>;
@@ -56,12 +52,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait PayFee: Account + std::fmt::Debug + Send + Sync {
-    async fn pay_fee_resources<
-        'a_t,
-        Tx: Transaction + Send
-    >(
-        &'a_t self,
-        tx: &'a_t mut Tx,
+    async fn pay_fee_resources<Tx: Transaction + Send>(
+        &self,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), <Self as Account>::Error>;
@@ -88,10 +81,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         tx_parameters: Option<TxParameters>,
     ) -> Result<(String, Vec<Receipt>), Self::Error>;
 
-    fn convert_to_signed_resources(
-        &self,
-        spendable_resources: Vec<Resource>,
-    ) -> Vec<Input>;
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input>;
 }
 
 #[cfg(test)]
@@ -106,12 +96,12 @@ mod tests {
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
 
-use fuels_types::{
+    use crate::{provider::Provider, wallet::WalletUnlocked};
+    use fuels_types::{
         constants::BASE_ASSET_ID,
         parameters::TxParameters,
         transaction::{ScriptTransaction, Transaction},
     };
-    use crate::{provider::Provider, wallet::WalletUnlocked};
 
     use super::*;
 

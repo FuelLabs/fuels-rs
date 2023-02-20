@@ -87,6 +87,14 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl Default for $wrapper {
+            fn default() -> Self {
+                Self {
+                    tx: $wrapped::default(),
+                }
+            }
+        }
+
         impl Transaction for $wrapper {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)

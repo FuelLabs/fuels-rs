@@ -3,7 +3,6 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::field::{Inputs, Outputs};
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId, Witness};
 use fuel_types::MessageId;
 use fuels_core::{
@@ -23,9 +22,7 @@ use fuels_types::{
 };
 use rand::{CryptoRng, Rng};
 use std::{collections::HashMap, fmt, ops, path::Path};
-use fuel_core::state::Transaction;
 use thiserror::Error;
-use fuels_core::parameters::TxParameters;
 
 use crate::wallet::WalletError::LowAmount;
 use crate::{provider, provider::Provider, Account, PayFee, Signer};
@@ -495,33 +492,6 @@ impl WalletUnlocked {
     ///   Ok(())
     /// }
     /// ```
-    pub async fn transfer(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-        asset_id: AssetId,
-        tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>)> {
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, 0)
-            .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-
-        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters);
-
-        // if we are not transferring the base asset, previous base amount is 0
-        if asset_id == AssetId::default() {
-            self.add_fee_resources(&mut tx, amount, 0).await?;
-        } else {
-            self.add_fee_resources(&mut tx, 0, 0).await?;
-        };
-        self.sign_transaction(&mut tx).await?;
-
-        let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
-
-        Ok((tx_id, receipts))
-    }
 
     /// Withdraws an amount of the base asset to
     /// an address on the base chain.
@@ -776,8 +746,7 @@ impl Account for WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx =
-            Wallet::build_transfer_tx(&inputs, &outputs, tx_parameters.unwrap_or_default());
+        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -786,16 +755,14 @@ impl Account for WalletUnlocked {
             self.pay_fee_resources(&mut tx, 0, 0).await?;
         };
 
+        let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id().to_string(), receipts))
+        Ok((tx_id, receipts))
     }
 
-    fn convert_to_signed_resources(
-        &self,
-        spendable_resources: Vec<Resource>,
-    ) -> Vec<Input> {
-       let inputs= spendable_resources
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
+        let inputs = spendable_resources
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
@@ -818,18 +785,15 @@ impl Account for WalletUnlocked {
                 ),
             })
             .collect::<Vec<_>>();
-       inputs
+        inputs
     }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl PayFee for WalletUnlocked {
-    async fn pay_fee_resources<
-        'a_t,
-        Tx: Transaction,
-    >(
-        &'a_t self,
-        tx: &'a_t mut Tx,
+    async fn pay_fee_resources<Tx: Transaction + Send>(
+        &self,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {
@@ -886,9 +850,9 @@ impl Signer for WalletUnlocked {
     //     &self.address
     // }
 
-    async fn add_fee_resources<'a_t, Tx: Transaction + std::marker::Send>(
-        &'a_t self,
-        tx: &'a_t mut Tx,
+    async fn add_fee_resources<Tx: Transaction + std::marker::Send>(
+        &self,
+        tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> WalletResult<()> {

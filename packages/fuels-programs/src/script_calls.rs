@@ -12,7 +12,6 @@ use fuels_types::{
     transaction::{ScriptTransaction, Transaction},
 };
 use itertools::chain;
-use fuels_core::parameters::TxParameters;
 
 use crate::{
     call_response::FuelCallResponse,
