@@ -50,7 +50,7 @@ Then you can run the SDK tests with:
 cargo test
 ```
 
-You can run only some part of the test. Using this syntax will run only the `types` module tests that contain the string `in_vector`, and show their outputs:
+You can also run specific tests. The following example will run all integration tests in `types.rs` whose names contain `in_vector` and show their outputs:
 
 ```shell
 cargo test --test types in_vector -- --show-output
