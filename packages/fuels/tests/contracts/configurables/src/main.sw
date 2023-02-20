@@ -15,7 +15,10 @@ configurable {
     BOOL: bool = true,
     ARRAY: [u32; 3] = [253u32, 254u32, 255u32],
     STR_4: str[4] = "fuel",
-    STRUCT: StructWithGeneric<u8> = StructWithGeneric{field_1: 8u8, field_2: 16},
+    STRUCT: StructWithGeneric<u8> = StructWithGeneric {
+        field_1: 8u8,
+        field_2: 16,
+    },
     ENUM: EnumWithGeneric<bool> = EnumWithGeneric::VariantOne(true),
 }
 
