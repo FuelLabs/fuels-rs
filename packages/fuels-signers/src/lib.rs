@@ -108,7 +108,7 @@ mod tests {
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
         // ANCHOR: sign_message
-        let mut rng = StdRng::seed_from_u64(2322u64);
+        let mut rng = String::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 

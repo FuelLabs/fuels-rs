@@ -293,10 +293,7 @@ impl Account for Predicate {
         Ok((tx.id().to_string(), receipts))
     }
 
-    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>,
-
-    ) -> Vec<Input> {
-
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
         let mut offset = 0;
 
         let inputs = spendable_resources

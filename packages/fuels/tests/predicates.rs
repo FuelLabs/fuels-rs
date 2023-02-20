@@ -572,7 +572,6 @@ async fn pay_with_predicate() -> Result<()> {
         187
     );
 
-
     // add call params.
     // append params?
     // test transfer over predicates
@@ -580,7 +579,6 @@ async fn pay_with_predicate() -> Result<()> {
     // transfer on base layer
     // transfer on contract
     // transfer on contract
-
 
     Ok(())
 }
