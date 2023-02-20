@@ -95,6 +95,10 @@ mod tests {
         Transaction as FuelTransaction, TxPointer, UtxoId,
     };
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
+    use rand::rngs::StdRng;
+
+    use rand::RngCore;
+    use rand::SeedableRng;
 
     use crate::{provider::Provider, wallet::WalletUnlocked};
     use fuels_types::{
@@ -108,7 +112,7 @@ mod tests {
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
         // ANCHOR: sign_message
-        let mut rng = String::seed_from_u64(2322u64);
+        let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
