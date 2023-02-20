@@ -762,7 +762,7 @@ impl Account for WalletUnlocked {
     }
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
-        let inputs = spendable_resources
+        spendable_resources
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => Input::coin_signed(
@@ -784,8 +784,7 @@ impl Account for WalletUnlocked {
                     message.data,
                 ),
             })
-            .collect::<Vec<_>>();
-        inputs
+            .collect::<Vec<_>>()
     }
 }
 

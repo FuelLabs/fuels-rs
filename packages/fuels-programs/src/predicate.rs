@@ -296,7 +296,7 @@ impl Account for Predicate {
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
         let mut offset = 0;
 
-        let inputs = spendable_resources
+        spendable_resources
             .into_iter()
             .map(|resource| match resource {
                 Resource::Coin(coin) => {
@@ -314,10 +314,9 @@ impl Account for Predicate {
                     let data = self.data.clone().resolve(offset as u64);
                     offset += data.len();
 
-                    self.create_message_predicate(message.clone(), self.code.clone(), data)
+                    self.create_message_predicate(message, self.code.clone(), data)
                 }
             })
-            .collect::<Vec<_>>();
-        inputs
+            .collect::<Vec<_>>()
     }
 }

@@ -578,7 +578,6 @@ async fn pay_with_predicate() -> Result<()> {
     // test transfer over wallet
     // transfer on base layer
     // transfer on contract
-    // transfer on contract
 
     Ok(())
 }
