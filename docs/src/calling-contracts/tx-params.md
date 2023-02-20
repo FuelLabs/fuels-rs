@@ -9,7 +9,7 @@ Transaction parameters are:
 You can configure these parameters by creating an instance of `TxParameters`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-core/src/parameters.rs:tx_parameter}}
+{{#include ../../../packages/fuels-types/src/parameters.rs:tx_parameter}}
 ```
 
 and passing it to a chain method called `tx_params`:
@@ -21,7 +21,7 @@ and passing it to a chain method called `tx_params`:
 You can also use `TxParameters::default()` to use the default values:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-core/src/constants.rs:default_tx_parameters}}
+{{#include ../../../packages/fuels-types/src/constants.rs:default_tx_parameters}}
 ```
 
 This way:

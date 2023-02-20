@@ -3,14 +3,14 @@ extern crate core;
 use std::error::Error;
 
 use async_trait::async_trait;
+use fuel_core::state::Transaction;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{field, Cacheable, Input, Receipt, UniqueIdentifier};
+use fuel_tx::{Input, Receipt};
 use fuel_types::AssetId;
 use fuels_core::parameters::TxParameters;
-
-use fuels_types::bech32::Bech32Address;
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 use fuels_types::resource::Resource;
 pub use wallet::{Wallet, WalletUnlocked};
 
@@ -33,7 +33,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<'a_t, Tx: Cacheable + UniqueIdentifier + field::Witnesses + Send>(
+    async fn sign_transaction<'a_t, Tx: Transaction + Send>(
         &'a_t self,
         message: &'a_t mut Tx,
     ) -> Result<Signature, Self::Error>;
@@ -43,7 +43,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
     async fn add_fee_resources<
         'a_t,
-        Tx: fuel_tx::Chargeable + field::Inputs + field::Outputs + std::marker::Send,
+        Tx: Transaction + Send,
     >(
         &'a_t self,
         tx: &'a_t mut Tx,
@@ -58,13 +58,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 pub trait PayFee: Account + std::fmt::Debug + Send + Sync {
     async fn pay_fee_resources<
         'a_t,
-        Tx: fuel_tx::Chargeable
-            + field::Inputs
-            + field::Outputs
-            + std::marker::Send
-            + Cacheable
-            + UniqueIdentifier
-            + field::Witnesses,
+        Tx: Transaction + Send
     >(
         &'a_t self,
         tx: &'a_t mut Tx,
@@ -107,14 +101,16 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
-        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output, Transaction,
-        TxPointer, UtxoId,
+        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output,
+        Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use rand::{rngs::StdRng, RngCore, SeedableRng};
-
-    use fuels_core::{constants::BASE_ASSET_ID, parameters::TxParameters};
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
 
+use fuels_types::{
+        constants::BASE_ASSET_ID,
+        parameters::TxParameters,
+        transaction::{ScriptTransaction, Transaction},
+    };
     use crate::{provider::Provider, wallet::WalletUnlocked};
 
     use super::*;
@@ -179,7 +175,7 @@ mod tests {
             AssetId::from([0u8; 32]),
         );
 
-        let mut tx = Transaction::script(
+        let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
             0,
@@ -188,7 +184,8 @@ mod tests {
             vec![input_coin],
             vec![output_coin],
             vec![],
-        );
+        )
+        .into();
 
         // Sign the transaction.
         let signature = wallet.sign_transaction(&mut tx).await?;
