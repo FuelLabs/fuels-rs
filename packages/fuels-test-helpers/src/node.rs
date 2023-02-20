@@ -260,18 +260,19 @@ pub async fn new_fuel_node(
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        let mut running_node = command
-            .args(args)
-            .kill_on_drop(true)
-            .spawn()
-            .expect("error: Couldn't read fuel-core: No such file or directory. Please check if fuel-core library is installed.");
+        let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
         let client = FuelClient::from(config.addr);
         server_health_check(&client).await;
         // Sending single to RX to inform that the fuel core node is ready.
         tx.send(()).unwrap();
 
-        running_node.wait().await
+        let result = running_node
+            .await
+            .expect("error: Couldn't find fuel-core in PATH.");
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
     });
     // Awaiting a signal from Tx that informs us if the fuel-core node is ready.
     rx.await.unwrap();
