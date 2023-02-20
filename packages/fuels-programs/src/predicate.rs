@@ -101,43 +101,6 @@ impl Predicate {
         )
     }
 
-    fn create_coin_predicate(
-        &self,
-        coin: Coin,
-        asset_id: AssetId,
-        code: Vec<u8>,
-        predicate_data: Vec<u8>,
-    ) -> Input {
-        Input::coin_predicate(
-            coin.utxo_id,
-            coin.owner.into(),
-            coin.amount,
-            asset_id,
-            TxPointer::new(0, 0),
-            0,
-            code,
-            predicate_data,
-        )
-    }
-
-    fn create_message_predicate(
-        &self,
-        message: Message,
-        code: Vec<u8>,
-        predicate_data: Vec<u8>,
-    ) -> Input {
-        Input::message_predicate(
-            message.message_id(),
-            message.sender.into(),
-            message.recipient.into(),
-            message.amount,
-            message.nonce,
-            message.data,
-            code,
-            predicate_data,
-        )
-    }
-
     /// Returns a vector containing the output coin and change output given an asset and amount
     pub fn get_asset_outputs_for_amount(
         &self,
@@ -191,6 +154,43 @@ impl Predicate {
             message.nonce,
             witness_index,
             message.data,
+        )
+    }
+
+    fn create_coin_predicate(
+        &self,
+        coin: Coin,
+        asset_id: AssetId,
+        code: Vec<u8>,
+        predicate_data: Vec<u8>,
+    ) -> Input {
+        Input::coin_predicate(
+            coin.utxo_id,
+            coin.owner.into(),
+            coin.amount,
+            asset_id,
+            TxPointer::new(0, 0),
+            0,
+            code,
+            predicate_data,
+        )
+    }
+
+    fn create_message_predicate(
+        &self,
+        message: Message,
+        code: Vec<u8>,
+        predicate_data: Vec<u8>,
+    ) -> Input {
+        Input::message_predicate(
+            message.message_id(),
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount,
+            message.nonce,
+            message.data,
+            code,
+            predicate_data,
         )
     }
 }
@@ -308,5 +308,37 @@ impl Account for Predicate {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    fn convert_to_signed_resources(
+        &self,
+        spendable_resources: Vec<Resource>,
+    ) -> Vec<Input> {
+
+        let mut offset = 0;
+
+        let inputs = spendable_resources
+            .into_iter()
+            .map(|resource| match resource {
+                Resource::Coin(coin) => {
+                    offset += offsets::coin_predicate_data_offset(self.code.len());
+
+                    let data = self.data.clone().resolve(offset as u64);
+                    offset += data.len();
+
+                    self.create_coin_predicate(coin.clone(), coin.asset_id, self.code.clone(), data)
+                }
+                Resource::Message(message) => {
+                    offset +=
+                        offsets::message_predicate_data_offset(message.data.len(), self.code.len());
+
+                    let data = self.data.clone().resolve(offset as u64);
+                    offset += data.len();
+
+                    self.create_message_predicate(message.clone(), self.code.clone(), data)
+                }
+            })
+            .collect::<Vec<_>>();
+        inputs
     }
 }

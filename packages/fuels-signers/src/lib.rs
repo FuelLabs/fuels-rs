@@ -6,7 +6,7 @@ use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{field, Cacheable, Receipt, UniqueIdentifier};
+use fuel_tx::{field, Cacheable, Input, Receipt, UniqueIdentifier};
 use fuel_types::AssetId;
 use fuels_core::parameters::TxParameters;
 
@@ -93,6 +93,11 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
     ) -> Result<(String, Vec<Receipt>), Self::Error>;
+
+    fn convert_to_signed_resources(
+        &self,
+        spendable_resources: Vec<Resource>,
+    ) -> Vec<Input>;
 }
 
 #[cfg(test)]

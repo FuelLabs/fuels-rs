@@ -4,6 +4,7 @@ use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, TxPointer, UtxoId};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_core::constants::BASE_ASSET_ID;
+use fuels_signers::Account;
 use fuels_types::{bech32::Bech32Address, constants::WORD_SIZE, resource::Resource};
 use itertools::{chain, Itertools};
 
@@ -186,10 +187,11 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
 /// and created ([`Output`]s) by the transaction
-pub(crate) fn get_transaction_inputs_outputs(
+pub(crate) fn get_transaction_inputs_outputs<T: Account>(
     calls: &[ContractCall],
     wallet_address: &Bech32Address,
     spendable_resources: Vec<Resource>,
+    account: &T,
 ) -> (Vec<Input>, Vec<Output>) {
     let asset_ids = extract_unique_asset_ids(&spendable_resources);
     let contract_ids = extract_unique_contract_ids(calls);
@@ -197,7 +199,7 @@ pub(crate) fn get_transaction_inputs_outputs(
 
     let inputs = chain!(
         generate_contract_inputs(contract_ids),
-        convert_to_signed_resources(spendable_resources),
+        account.convert_to_signed_resources(spendable_resources),
     )
     .collect();
 
@@ -280,32 +282,6 @@ pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> 
         .collect()
 }
 
-fn convert_to_signed_resources(spendable_resources: Vec<Resource>) -> Vec<Input> {
-    spendable_resources
-        .into_iter()
-        .map(|resource| match resource {
-            Resource::Coin(coin) => Input::coin_signed(
-                coin.utxo_id,
-                coin.owner.into(),
-                coin.amount,
-                coin.asset_id,
-                TxPointer::default(),
-                0,
-                coin.maturity,
-            ),
-            Resource::Message(message) => Input::message_signed(
-                message.message_id(),
-                message.sender.into(),
-                message.recipient.into(),
-                message.amount,
-                message.nonce,
-                0,
-                message.data,
-            ),
-        })
-        .collect()
-}
-
 pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
     contract_ids
         .into_iter()
@@ -346,6 +322,7 @@ mod test {
         Token,
     };
     use rand::Rng;
+    use fuels_signers::WalletUnlocked;
 
     use super::*;
 
@@ -480,11 +457,9 @@ mod test {
     fn contract_input_present() {
         let call = ContractCall::new_with_random_id();
 
-        let (inputs, _) = get_transaction_inputs_outputs(
-            slice::from_ref(&call),
-            &random_bech32_addr(),
-            Default::default(),
-        );
+        let wallet = WalletUnlocked::new_random(None);
+
+        let (inputs, _) = get_transaction_inputs_outputs(slice::from_ref(&call), &random_bech32_addr(), Default::default(), &wallet);
 
         assert_eq!(
             inputs,
@@ -504,10 +479,12 @@ mod test {
         let call_w_same_contract =
             ContractCall::new_with_random_id().with_contract_id(call.contract_id.clone());
 
+        let wallet = WalletUnlocked::new_random(None);
+
         let calls = [call, call_w_same_contract];
 
         let (inputs, _) =
-            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default());
+            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default(), &wallet);
 
         assert_eq!(
             inputs,
@@ -525,8 +502,10 @@ mod test {
     fn contract_output_present() {
         let call = ContractCall::new_with_random_id();
 
+        let wallet = WalletUnlocked::new_random(None);
+
         let (_, outputs) =
-            get_transaction_inputs_outputs(&[call], &random_bech32_addr(), Default::default());
+            get_transaction_inputs_outputs(&[call], &random_bech32_addr(), Default::default(), &wallet);
 
         assert_eq!(
             outputs,
@@ -541,11 +520,14 @@ mod test {
         let call = ContractCall::new_with_random_id()
             .with_external_contracts(vec![external_contract_id.clone()]);
 
+        let wallet = WalletUnlocked::new_random(None);
+
         // when
         let (inputs, _) = get_transaction_inputs_outputs(
             slice::from_ref(&call),
             &random_bech32_addr(),
             Default::default(),
+            &wallet
         );
 
         // then
@@ -582,9 +564,11 @@ mod test {
         let call =
             ContractCall::new_with_random_id().with_external_contracts(vec![external_contract_id]);
 
+        let wallet = WalletUnlocked::new_random(None);
+
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&[call], &random_bech32_addr(), Default::default());
+            get_transaction_inputs_outputs(&[call], &random_bech32_addr(), Default::default(), &wallet);
 
         // then
         let expected_outputs = (0..=1)
@@ -616,8 +600,10 @@ mod test {
             .collect();
         let call = ContractCall::new_with_random_id();
 
+        let wallet = WalletUnlocked::new_random(None);
+
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], &wallet_addr, coins);
+        let (_, outputs) = get_transaction_inputs_outputs(&[call], &wallet_addr, coins, &wallet);
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -659,11 +645,15 @@ mod test {
 
         let call = ContractCall::new_with_random_id();
 
+        let wallet = WalletUnlocked::new_random(None);
+
+
         // when
         let (inputs, _) = get_transaction_inputs_outputs(
             &[call],
             &random_bech32_addr(),
             generate_spendable_resources(),
+            &wallet
         );
 
         // then
@@ -703,9 +693,11 @@ mod test {
             })
             .collect::<Vec<_>>();
 
+        let wallet = WalletUnlocked::new_random(None);
+
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default());
+            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default(), &wallet);
 
         // then
         let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
@@ -728,9 +720,11 @@ mod test {
             })
             .collect::<Vec<_>>();
 
+        let wallet = WalletUnlocked::new_random(None);
+
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default());
+            get_transaction_inputs_outputs(&calls, &random_bech32_addr(), Default::default(), &wallet);
 
         // then
         let actual_message_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();

@@ -65,7 +65,7 @@ where
         }
 
         let (inputs, outputs) =
-            get_transaction_inputs_outputs(calls, account.address(), spendable_resources);
+            get_transaction_inputs_outputs(calls, account.address(), spendable_resources, account);
 
         let mut tx = Transaction::script(
             tx_parameters.gas_price,

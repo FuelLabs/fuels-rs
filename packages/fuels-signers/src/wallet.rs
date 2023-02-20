@@ -874,6 +874,36 @@ impl Account for WalletUnlocked {
 
         Ok((tx.id().to_string(), receipts))
     }
+
+    fn convert_to_signed_resources(
+        &self,
+        spendable_resources: Vec<Resource>,
+    ) -> Vec<Input> {
+       let inputs= spendable_resources
+            .into_iter()
+            .map(|resource| match resource {
+                Resource::Coin(coin) => Input::coin_signed(
+                    coin.utxo_id,
+                    coin.owner.into(),
+                    coin.amount,
+                    coin.asset_id,
+                    TxPointer::default(),
+                    0,
+                    coin.maturity,
+                ),
+                Resource::Message(message) => Input::message_signed(
+                    message.message_id(),
+                    message.sender.into(),
+                    message.recipient.into(),
+                    message.amount,
+                    message.nonce,
+                    0,
+                    message.data,
+                ),
+            })
+            .collect::<Vec<_>>();
+       inputs
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
