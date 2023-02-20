@@ -159,7 +159,7 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = Wallet::build_transfer_tx(&inputs, &outputs, TxParameters::default());
+        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;
@@ -178,10 +178,7 @@ mod tests {
     #[tokio::test]
     async fn modify_contract_call_transaction_inputs() -> Result<()> {
         // ANCHOR: modify_call_inputs_include
-        use fuels::{
-            prelude::*,
-            tx::field::{Inputs, Outputs},
-        };
+        use fuels::prelude::*;
         // ANCHOR_END: modify_call_inputs_include
 
         // ANCHOR: modify_call_inputs_setup
@@ -220,7 +217,7 @@ mod tests {
         let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
         let call_handler = contract_instance.methods().initialize_counter(42);
-        let mut executable_call = call_handler.get_executable_call().await?;
+        let mut tx = call_handler.build_tx().await?;
         // ANCHOR_END: modify_call_inputs_instance
 
         // ANCHOR: modify_call_inputs_execute
@@ -228,14 +225,14 @@ mod tests {
         let input = wallet_1
             .get_asset_inputs_for_amount(some_asset_id, SEND_AMOUNT, 0)
             .await?;
-        executable_call.tx.inputs_mut().extend(input);
+        tx.inputs_mut().extend(input);
 
         let output =
             wallet_1.get_asset_outputs_for_amount(wallet_2.address(), some_asset_id, SEND_AMOUNT);
-        executable_call.tx.outputs_mut().extend(output);
+        tx.outputs_mut().extend(output);
 
         let provider = wallet_1.get_provider()?;
-        let receipts = executable_call.execute(provider).await?;
+        let receipts = provider.send_transaction(&tx).await?;
         // ANCHOR_END: modify_call_inputs_execute
 
         // ANCHOR: modify_call_inputs_verify
