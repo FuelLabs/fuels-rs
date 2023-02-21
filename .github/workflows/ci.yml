@@ -122,9 +122,9 @@ jobs:
           - command: clippy
             args: --all-targets --all-features
           - command: test
-            args: --all-targets --all-features
+            args: --all-targets --all-features --workspace
           - command: test
-            args: --all-targets
+            args: --all-targets --workspace
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
