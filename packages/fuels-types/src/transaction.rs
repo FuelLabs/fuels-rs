@@ -75,6 +75,12 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl Default for $wrapper {
+            fn default() -> Self {
+                $wrapped::default().into()
+            }
+        }
+
         impl From<$wrapper> for $wrapped {
             fn from(tx: $wrapper) -> Self {
                 tx.tx
