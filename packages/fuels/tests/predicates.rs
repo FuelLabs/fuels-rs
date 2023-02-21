@@ -1,9 +1,9 @@
+use fuels::signers::fuel_crypto::rand;
 use fuels::{
     prelude::*,
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
-use fuels::signers::fuel_crypto::rand;
 use fuels_programs::predicate::Predicate;
 use fuels_signers::Account;
 
@@ -151,7 +151,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -190,7 +190,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -206,8 +206,8 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_address/out/debug/predicate_address.bin",
     )?
-        .set_data(addr)
-        .get_predicate();
+    .set_data(addr)
+    .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -231,7 +231,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -270,7 +270,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -282,14 +282,14 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_structs/out/debug/predicate_structs.bin",
     )?
-        .set_data(
-            TestStruct { value: 192 },
-            AnotherTestStruct {
-                value: 64,
-                number: 128,
-            },
-        )
-        .get_predicate();
+    .set_data(
+        TestStruct { value: 192 },
+        AnotherTestStruct {
+            value: 64,
+            number: 128,
+        },
+    )
+    .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -313,7 +313,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -352,7 +352,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -392,7 +392,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -424,20 +424,20 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
     )?
-        .set_data(
-            u32_vec,
-            vec_in_vec,
-            struct_in_vec,
-            vec_in_struct,
-            array_in_vec,
-            vec_in_array,
-            vec_in_enum,
-            enum_in_vec,
-            tuple_in_vec,
-            vec_in_tuple,
-            vec_in_a_vec_in_a_struct_in_a_vec,
-        )
-        .get_predicate();
+    .set_data(
+        u32_vec,
+        vec_in_vec,
+        struct_in_vec,
+        vec_in_struct,
+        array_in_vec,
+        vec_in_array,
+        vec_in_enum,
+        enum_in_vec,
+        tuple_in_vec,
+        vec_in_tuple,
+        vec_in_a_vec_in_a_struct_in_a_vec,
+    )
+    .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -461,7 +461,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -477,8 +477,8 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     let mut predicate: Predicate = MyPredicate::load_from(
         "tests/predicates/predicate_generics/out/debug/predicate_generics.bin",
     )?
-        .set_data(generic_struct, generic_enum)
-        .get_predicate();
+    .set_data(generic_struct, generic_enum)
+    .get_predicate();
 
     let num_coins = 4;
     let num_messages = 8;
@@ -502,7 +502,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
         asset_id,
         receiver_balance + predicate_balance,
     )
-        .await;
+    .await;
 
     Ok(())
 }
@@ -539,7 +539,7 @@ async fn pay_with_predicate() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
     let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
@@ -572,7 +572,6 @@ async fn pay_with_predicate() -> Result<()> {
             .unwrap(),
         187
     );
-
 
     // add call params.
     // append params?
@@ -740,11 +739,8 @@ async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
     // // ANCHOR_END: script_with_tx_params
     // assert_eq!(result.value, "hello");
 
-
-
     Ok(())
 }
-
 
 #[tokio::test]
 async fn pay_with_predicate_vector_data() -> Result<()> {
@@ -779,7 +775,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
     let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
@@ -812,7 +808,6 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         187
     );
 
-
     // add call params.
     // append params?
     // test transfer over predicates
@@ -822,4 +817,3 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     Ok(())
 }
-

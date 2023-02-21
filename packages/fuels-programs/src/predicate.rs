@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use fuel_tx::InputRepr::Contract;
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
@@ -56,7 +57,8 @@ impl Predicate {
     ) -> Result<Vec<Input>> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
-        let mut offset = offsets::base_offset(&consensus_parameters);
+        let mut offset =
+            offsets::base_offset(&consensus_parameters) + offsets::contract_input_offset();
 
         let inputs = self
             .get_spendable_resources(asset_id, amount)
@@ -217,8 +219,6 @@ impl PayFee for Predicate {
             new_base_amount = MIN_AMOUNT;
         }
 
-        // Zna sve input!!!
-
         let new_base_inputs = self
             .get_asset_inputs_for_amount_predicates(BASE_ASSET_ID, new_base_amount)
             .await?;
@@ -240,9 +240,6 @@ impl PayFee for Predicate {
         }
         Ok(())
     }
-
-
-
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]

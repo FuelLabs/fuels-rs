@@ -9,11 +9,11 @@ pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
+use fuels_types::bech32::Bech32ContractId;
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
-use fuels_types::{bech32::Bech32Address, transaction::Transaction};
-use fuels_types::bech32::Bech32ContractId;
 use fuels_types::transaction::ScriptTransaction;
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
