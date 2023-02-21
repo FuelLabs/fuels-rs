@@ -1,16 +1,19 @@
 extern crate core;
 
 use std::error::Error;
+use std::vec;
 
 use async_trait::async_trait;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Input, Receipt};
-use fuel_types::AssetId;
+use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
 use fuels_types::{bech32::Bech32Address, transaction::Transaction};
+use fuels_types::bech32::Bech32ContractId;
+use fuels_types::transaction::ScriptTransaction;
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
@@ -65,8 +68,11 @@ pub trait Account: std::fmt::Debug + Send + Sync {
     type Error: Error + Send + Sync;
 
     fn address(&self) -> &Bech32Address;
+
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
+
     fn set_provider(&mut self, provider: Provider);
+
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
@@ -79,6 +85,14 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
+    ) -> Result<(String, Vec<Receipt>), Self::Error>;
+
+    async fn force_transfer_to_contract(
+        &self,
+        to: &Bech32ContractId,
+        balance: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>), Self::Error>;
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input>;

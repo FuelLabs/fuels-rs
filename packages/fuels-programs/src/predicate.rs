@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use fuel_tx::{Input, Output, Receipt, TxPointer};
-use fuel_types::AssetId;
+use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId};
 
 use fuels_types::transaction::Transaction;
 
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_signers::wallet::WalletError;
 use fuels_signers::{provider::Provider, Account, PayFee};
-use fuels_types::bech32::Bech32Address;
+use fuels_types::bech32::{Bech32Address, Bech32ContractId};
 use fuels_types::coin::Coin;
 use fuels_types::constants::BASE_ASSET_ID;
 use fuels_types::errors::Error;
@@ -217,6 +217,8 @@ impl PayFee for Predicate {
             new_base_amount = MIN_AMOUNT;
         }
 
+        // Zna sve input!!!
+
         let new_base_inputs = self
             .get_asset_inputs_for_amount_predicates(BASE_ASSET_ID, new_base_amount)
             .await?;
@@ -238,6 +240,9 @@ impl PayFee for Predicate {
         }
         Ok(())
     }
+
+
+
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
@@ -274,9 +279,14 @@ impl Account for Predicate {
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+        // let inputs = self
+        //     .get_asset_inputs_for_amount_predicates(asset_id, amount)
+        //     .await?;
+
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
+
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
@@ -291,6 +301,61 @@ impl Account for Predicate {
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
+    }
+
+    // todo
+
+    async fn force_transfer_to_contract(
+        &self,
+        to: &Bech32ContractId,
+        balance: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
+    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+        let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
+
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            TxPointer::default(),
+            plain_contract_id,
+        )];
+
+        inputs.extend(
+            self.get_asset_inputs_for_amount_predicates(asset_id, balance)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            Output::change((&self.address).into(), 0, asset_id),
+        ];
+
+        // Build transaction and sign it
+        let mut tx = ScriptTransaction::build_contract_transfer_tx(
+            plain_contract_id,
+            balance,
+            asset_id,
+            inputs,
+            outputs,
+            tx_parameters,
+        );
+
+        // if we are not transferring the base asset, previous base amount is 0
+        let base_amount = if asset_id == AssetId::default() {
+            balance
+        } else {
+            0
+        };
+
+        self.pay_fee_resources(&mut tx, base_amount, 0).await?;
+
+        let tx_id = tx.id();
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        Ok((tx_id.to_string(), receipts))
     }
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
