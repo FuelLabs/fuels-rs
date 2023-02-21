@@ -88,9 +88,9 @@ async fn contract_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::new()
-        .set_str_4(new_str.clone())
-        .set_struct(new_struct.clone())
-        .set_enum(new_enum.clone());
+        .set_STR_4(new_str.clone())
+        .set_STRUCT(new_struct.clone())
+        .set_ENUM(new_enum.clone());
 
     let contract_id = Contract::deploy_with_parameters(
         "tests/contracts/configurables/out/debug/configurables.bin",
@@ -144,9 +144,9 @@ async fn script_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyScriptConfigurables::new()
-        .set_str_4(new_str.clone())
-        .set_struct(new_struct.clone())
-        .set_enum(new_enum.clone());
+        .set_STR_4(new_str.clone())
+        .set_STRUCT(new_struct.clone())
+        .set_ENUM(new_enum.clone());
 
     let response = instance
         .with_configurables(configurables.into())

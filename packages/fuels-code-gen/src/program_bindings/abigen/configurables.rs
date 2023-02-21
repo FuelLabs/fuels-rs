@@ -25,7 +25,7 @@ impl ResolvedConfigurable {
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<ResolvedConfigurable> {
         Ok(ResolvedConfigurable {
-            name: safe_ident(&format!("set_{}", configurable.name.to_lowercase())),
+            name: safe_ident(&format!("set_{}", configurable.name)),
             ttype: resolve_type(&configurable.application, shared_types)?,
             offset: configurable.offset,
         })
@@ -33,7 +33,7 @@ impl ResolvedConfigurable {
 }
 
 pub(crate) fn generate_code_for_configurable_constatnts(
-    name: &Ident,
+    configurable_struct_name: &Ident,
     configurables: &[FullConfigurable],
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream> {
@@ -42,28 +42,34 @@ pub(crate) fn generate_code_for_configurable_constatnts(
         .map(|c| ResolvedConfigurable::new(c, shared_types))
         .collect::<Result<Vec<_>>>()?;
 
-    let config_methods = generate_configurable_impl(name, &resolved_configurables);
-    let from_impl = generate_from_impl(name);
+    let struct_decl = generate_struct_decl(configurable_struct_name);
+    let setter_methods = generate_struct_impl(configurable_struct_name, &resolved_configurables);
+    let from_impl = generate_from_impl(configurable_struct_name);
 
     Ok(quote! {
-        #[derive(Clone, Debug, Default)]
-        pub struct #name {
-            pub offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>
-        }
-
-        #config_methods
+        #struct_decl
+        #setter_methods
         #from_impl
     })
 }
 
-fn generate_configurable_impl(
-    name: &Ident,
+fn generate_struct_decl(configurable_struct_name: &Ident) -> TokenStream {
+    quote! {
+        #[derive(Clone, Debug, Default)]
+        pub struct #configurable_struct_name {
+            offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>
+        }
+    }
+}
+
+fn generate_struct_impl(
+    configurable_struct_name: &Ident,
     resolved_configurables: &[ResolvedConfigurable],
 ) -> TokenStream {
-    let methods = generate_method_functions(resolved_configurables);
+    let methods = generate_setter_methods(resolved_configurables);
 
     quote! {
-        impl #name {
+        impl #configurable_struct_name {
             pub fn new() -> Self {
                 ::std::default::Default::default()
             }
@@ -73,7 +79,7 @@ fn generate_configurable_impl(
     }
 }
 
-fn generate_method_functions(resolved_configurables: &[ResolvedConfigurable]) -> TokenStream {
+fn generate_setter_methods(resolved_configurables: &[ResolvedConfigurable]) -> TokenStream {
     let methods = resolved_configurables.iter().map(
         |ResolvedConfigurable {
              name,
@@ -105,13 +111,11 @@ fn generate_encoder_code(ttype: &ResolvedType) -> TokenStream {
     }
 }
 
-fn generate_from_impl(name: &Ident) -> TokenStream {
+fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
     quote! {
-        impl From<#name> for ::fuels::programs::Configurables {
-            fn from(config: #name) -> Self {
-                ::fuels::programs::Configurables {
-                    offsets_with_data: config.offsets_with_data.clone()
-                }
+        impl From<#configurable_struct_name> for ::fuels::programs::Configurables {
+            fn from(config: #configurable_struct_name) -> Self {
+                ::fuels::programs::Configurables::new(config.offsets_with_data)
             }
         }
     }

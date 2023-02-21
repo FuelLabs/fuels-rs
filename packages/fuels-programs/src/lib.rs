@@ -6,16 +6,18 @@ pub mod script_calls;
 
 #[derive(Debug, Default)]
 pub struct Configurables {
-    pub offsets_with_data: Vec<(u64, Vec<u8>)>,
+    offsets_with_data: Vec<(u64, Vec<u8>)>,
 }
 
-pub fn replace_configurables(configurables: Configurables, binary: &mut Vec<u8>) {
-    configurables
-        .offsets_with_data
-        .iter()
-        .for_each(|(offset, data)| {
-            let offset = *offset as usize;
+impl Configurables {
+    pub fn new(offsets_with_data: Vec<(u64, Vec<u8>)>) -> Self {
+        Self { offsets_with_data }
+    }
 
-            binary.splice(offset..offset + data.len(), data.iter().cloned());
+    pub fn update(&self, binary: &mut [u8]) {
+        self.offsets_with_data.iter().for_each(|(offset, data)| {
+            let offset = *offset as usize;
+            binary[offset..offset + data.len()].copy_from_slice(data)
         });
+    }
 }

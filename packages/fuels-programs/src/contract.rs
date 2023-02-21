@@ -36,7 +36,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, simulate_and_check_success},
     logs::{map_revert_error, LogDecoder},
-    replace_configurables, Configurables,
+    Configurables,
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -196,7 +196,7 @@ impl Contract {
             salt,
         )?;
 
-        replace_configurables(configurables, &mut compiled_contract.raw);
+        configurables.update(&mut compiled_contract.raw);
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
