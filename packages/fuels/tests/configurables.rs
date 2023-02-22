@@ -96,9 +96,7 @@ async fn contract_configurables() -> Result<()> {
         "tests/contracts/configurables/out/debug/configurables.bin",
         &wallet,
         TxParameters::default(),
-        StorageConfiguration::with_storage_path(Some(
-            "tests/contracts/configurables/out/debug/configurables-storage_slots.json".to_string(),
-        )),
+        StorageConfiguration::default(),
         configurables.into(),
         Salt::default(),
     )
