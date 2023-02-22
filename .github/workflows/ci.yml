@@ -146,12 +146,9 @@ jobs:
         if: ${{ matrix.command == 'test' }}
         run: rustup target add wasm32-unknown-unknown
 
-      - name: Install WebAssembly Test harness
+      - name: Install Wasm-Pack for testing
         if: ${{ matrix.command == 'test' }}
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: wasm-pack
-          cache-key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install Node.js
         if: ${{ matrix.command == 'test' }}
