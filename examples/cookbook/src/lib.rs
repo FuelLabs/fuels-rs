@@ -40,8 +40,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
             wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -209,8 +208,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet_1,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 

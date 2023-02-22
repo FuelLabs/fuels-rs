@@ -585,8 +585,7 @@ async fn setup_output_variable_estimation_test(
     let contract_id = Contract::deploy(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
         &wallets[0],
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
@@ -1048,33 +1047,30 @@ async fn test_contract_raw_slice() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() -> Result<()> {
+async fn test_deploy_error_messages() {
     let wallet = launch_provider_and_get_wallet().await;
-    let mut response = Contract::deploy(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await
-    .expect_err("Should have failed");
+    {
+        let binary_path =
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let expected = format!("Invalid data: file '{binary_path}' does not exist");
 
-    let expected = "Invalid data: Failed to read binary file with path";
-    assert!(response.to_string().starts_with(expected));
+        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
+            .await
+            .expect_err("Should have failed");
 
-    response = Contract::deploy(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.biz",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-    )
-    .await
-    .expect_err("Should have failed");
+        assert_eq!(response.to_string(), expected);
+    }
+    {
+        let binary_path =
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let expected = format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
 
-    let expected = "Invalid data: The file extension 'biz' is not recognized. Did you mean '.bin'?";
-    assert!(response.to_string().starts_with(expected));
+        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
+            .await
+            .expect_err("Should have failed");
 
-    Ok(())
+        assert_eq!(response.to_string(), expected);
+    }
 }
 
 #[tokio::test]

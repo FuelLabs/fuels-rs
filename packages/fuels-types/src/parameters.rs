@@ -1,4 +1,4 @@
-use fuel_tx::{AssetId, StorageSlot};
+use fuel_tx::AssetId;
 
 use crate::constants::{
     BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
@@ -58,35 +58,6 @@ impl TxParameters {
             gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
             gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
             maturity: maturity.unwrap_or(DEFAULT_MATURITY),
-        }
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct StorageConfiguration {
-    pub storage_path: Option<String>,
-    pub manual_storage_vec: Option<Vec<StorageSlot>>,
-}
-
-impl StorageConfiguration {
-    pub fn new(storage_path: Option<String>, manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
-        Self {
-            storage_path,
-            manual_storage_vec,
-        }
-    }
-
-    pub fn with_storage_path(storage_path: Option<String>) -> Self {
-        Self {
-            storage_path,
-            manual_storage_vec: None,
-        }
-    }
-
-    pub fn with_manual_storage(manual_storage_vec: Option<Vec<StorageSlot>>) -> Self {
-        Self {
-            storage_path: None,
-            manual_storage_vec,
         }
     }
 }

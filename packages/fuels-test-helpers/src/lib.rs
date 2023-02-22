@@ -219,12 +219,9 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_programs::contract::Contract;
+    use fuels_programs::contract::{Contract, DeployConfiguration};
     use fuels_signers::{provider::Provider, WalletUnlocked};
-    use fuels_types::{
-        bech32::FUEL_BECH32_HRP,
-        parameters::{StorageConfiguration, TxParameters},
-    };
+    use fuels_types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
 
@@ -383,8 +380,7 @@ mod tests {
         let result = Contract::deploy(
             "../fuels/tests/types/contract_output_test/out/debug/contract_output_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await;
 

@@ -66,7 +66,10 @@ pub mod prelude {
         fuel_node::*,
         macros::{abigen, setup_contract_test},
         programs::{
-            contract::{Contract, MultiContractCallHandler, SettableContract},
+            contract::{
+                Contract, DeployConfiguration, MultiContractCallHandler, SettableContract,
+                StorageConfiguration,
+            },
             logs::{LogDecoder, LogId},
             Configurables,
         },
