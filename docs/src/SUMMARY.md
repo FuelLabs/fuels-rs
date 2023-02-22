@@ -22,6 +22,7 @@
   - [The JSON ABI file](abigen/the-json-abi-file.md)
   - [The `abigen!` macro](abigen/the-abigen-macro.md)
 - [Deploying contracts](./getting-started/contracts.md)
+  - [Configurable constants](./contracts/configurable-constants.md)
   - [Interacting with contracts](./contracts/interacting-with-contracts.md)
   - [The FuelVM Binary file](./contracts/the-fuelvm-binary-file.md)
 - [Calling contracts](./getting-started/calling-contracts.md)

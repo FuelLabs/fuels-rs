@@ -92,7 +92,6 @@ impl Provider {
     /// ## Sending a transaction
     ///
     /// ```
-    /// use fuels::tx::Script;
     /// use fuels::prelude::*;
     /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node

@@ -79,13 +79,11 @@ Install `mdbook` by running:
 cargo install mdbook
 ```
 
-Next, navigate to the `docs` folder and run the command below to start a local server.
+Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
 
 ```shell
-mdbook serve
+mdbook serve --open
 ```
-
-To view the docs, navigate to the localhost address output by `mdbook`, which is http://localhost:3000/ by default.
 
 You can build the book by running:
 

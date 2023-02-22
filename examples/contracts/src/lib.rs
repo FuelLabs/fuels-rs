@@ -183,6 +183,7 @@ mod tests {
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
+            Configurables::default(),
             Salt::from(salt),
         )
         .await?;
@@ -212,6 +213,7 @@ mod tests {
             &wallets[0],
             TxParameters::default(),
             StorageConfiguration::default(),
+            Configurables::default(),
             salt,
         )
         .await?;
@@ -234,6 +236,7 @@ mod tests {
             &wallets[1],
             TxParameters::default(),
             StorageConfiguration::default(),
+            Configurables::default(),
             salt,
         )
         .await?;

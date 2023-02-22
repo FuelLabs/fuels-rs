@@ -40,6 +40,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, simulate_and_check_success},
     logs::{map_revert_error, LogDecoder},
+    Configurables,
 };
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -190,6 +191,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
         wallet: &T,
         params: TxParameters,
         storage_configuration: StorageConfiguration,
+        configurables: Configurables,
         salt: Salt,
     ) -> Result<Bech32ContractId> {
         let mut compiled_contract = Contract::<T>::load_contract_with_parameters(
@@ -197,6 +199,8 @@ impl<T: Account + PayFee + Clone> Contract<T> {
             &storage_configuration.storage_path,
             salt,
         )?;
+
+        configurables.update_constants_in(&mut compiled_contract.raw);
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 
@@ -982,6 +986,7 @@ mod test {
             &wallet,
             TxParameters::default(),
             StorageConfiguration::default(),
+            Configurables::default(),
             Salt::default(),
         )
         .await

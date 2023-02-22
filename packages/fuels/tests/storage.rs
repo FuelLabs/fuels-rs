@@ -26,6 +26,7 @@ async fn test_storage_initialization() -> Result<()> {
         &wallet,
         TxParameters::default(),
         StorageConfiguration::with_manual_storage(Some(storage_vec)),
+        Configurables::default(),
         Salt::from([0; 32]),
     )
     .await?;
@@ -54,6 +55,7 @@ async fn test_init_storage_automatically() -> Result<()> {
         TxParameters::default(),
         StorageConfiguration::with_storage_path(
             Some("tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slots.json".to_string())),
+        Configurables::default(),
         Salt::default(),
     )
         .await?;
@@ -97,6 +99,7 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<()> {
             "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
                 .to_string(),
         )),
+        Configurables::default(),
         Salt::default(),
     )
     .await
