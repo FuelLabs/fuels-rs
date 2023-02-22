@@ -549,7 +549,7 @@ impl WalletUnlocked {
             amount,
             ..Default::default()
         };
-        let spendable_predicate_resources = predicate.get_spendable_resources(filter).await?;
+        let spendable_predicate_resources = provider.get_spendable_resources(filter).await?;
 
         // input amount is: amount < input_amount < 2*amount
         // because of "random improve" used by get_spendable_coins()
