@@ -542,7 +542,7 @@ impl WalletUnlocked {
         predicate_data: UnresolvedBytes,
         tx_parameters: TxParameters,
     ) -> Result<Vec<Receipt>> {
-        let predicate = self.get_provider()?;
+        let provider = self.get_provider()?;
 
         let filter = ResourceFilter {
             from: predicate_address.clone(),
@@ -560,7 +560,7 @@ impl WalletUnlocked {
 
         // Iterate through the spendable resources and calculate the appropriate offsets
         // for the coin or message predicates
-        let mut offset = base_offset(&predicate.consensus_parameters().await?);
+        let mut offset = base_offset(&provider.consensus_parameters().await?);
         let inputs = spendable_predicate_resources
             .into_iter()
             .map(|resource| match resource {
@@ -593,7 +593,7 @@ impl WalletUnlocked {
         self.add_fee_resources(&mut tx, 0, 0).await?;
         self.sign_transaction(&mut tx).await?;
 
-        predicate.send_transaction(&tx).await
+        provider.send_transaction(&tx).await
     }
 
     fn create_coin_predicate(

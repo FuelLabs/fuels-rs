@@ -167,13 +167,11 @@ mod tests {
     }
 
     async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
-        // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
         let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
 
-        // Setup a provider and node with both set of coins.
         let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
         let provider = Provider::new(client);
 
@@ -280,8 +278,6 @@ mod tests {
         let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
         assert_eq!(wallet_2_final_coins.len(), 1);
 
-        // Check that wallet 2's amount is 7:
-        // 5 initial + 2 that was sent to it.
         let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
         assert_eq!(total_amount, SEND_AMOUNT);
         Ok(())
