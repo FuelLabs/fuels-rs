@@ -168,10 +168,13 @@ jobs:
         if: ${{ matrix.cargo_command && matrix.package }}
         run: cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
 
-      - name: Test WASM
+      - name: Install NodeJS for WASM testing
+        if: ${{ matrix.command == 'test_wasm' }}
         uses: actions/setup-node@v3
         with:
           node-version:  18
+
+      - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
         run: |
           rustup target add wasm32-unknown-unknown
