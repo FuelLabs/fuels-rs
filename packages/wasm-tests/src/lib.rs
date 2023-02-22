@@ -1,16 +1,17 @@
-#![no_std]
-
 extern crate alloc;
 
-use alloc::{string::ToString, vec};
+#[cfg(test)]
+mod tests {
+    use wasm_bindgen_test::wasm_bindgen_test;
 
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_macros::wasm_abigen;
-use fuels_types::param_types::ParamType;
+    use fuels_core::abi_encoder::ABIEncoder;
+    use fuels_macros::wasm_abigen;
+    use fuels_types::traits::Tokenizable;
+    use fuels_types::Bits256;
 
-wasm_abigen!(Contract(
-    name = "no_name",
-    abi = r#"
+    wasm_abigen!(Contract(
+        name = "no_name",
+        abi = r#"
     {
         "types": [
           {
@@ -102,42 +103,22 @@ wasm_abigen!(Contract(
         "loggedTypes": []
       }
     "#
-));
+    ));
 
-pub fn the_fn() {
-    use fuels_types::traits::Tokenizable;
-    let data = vec![
-        0, 0, 0, 0, 0, 0, 3, 252, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
-        175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175, 175,
-        175,
-    ];
+    #[wasm_bindgen_test]
+    fn decoding_and_encoding() {
+        let original_event = AnotherEvent {
+            id: 2,
+            hash: Bits256([2; 32]),
+            bar: true,
+        };
 
-    let obj = ABIDecoder::decode_single(
-        &ParamType::Struct {
-            name: "".to_string(),
-            fields: vec![
-                ("unused".to_string(), ParamType::U64),
-                ("unused".to_string(), ParamType::B256),
-            ],
-            generics: vec![],
-        },
-        &data,
-    )
-    .expect("Failed to decode");
+        let bytes = ABIEncoder::encode(&[original_event.clone().into_token()])
+            .unwrap()
+            .resolve(0);
 
-    let a_struct = SomeEvent::from_token(obj).unwrap();
+        let reconstructed_event: AnotherEvent = bytes.try_into().unwrap();
 
-    assert_eq!(1020, a_struct.id);
-}
-
-#[cfg(test)]
-mod tests {
-    use webassembly_test::webassembly_test;
-
-    use super::*;
-
-    #[webassembly_test]
-    fn test() {
-        the_fn();
+        assert_eq!(original_event, reconstructed_event);
     }
 }

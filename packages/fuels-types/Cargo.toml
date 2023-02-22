@@ -33,4 +33,4 @@ fuels-macros = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["fuel-core-client"]
+std = ["dep:fuel-core-client"]

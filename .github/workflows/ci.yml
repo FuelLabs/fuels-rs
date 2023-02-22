@@ -113,18 +113,24 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [check]
+        cargo_command: [check]
         args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
-          - command: fmt
+          - cargo_command: fmt
             args: --all --verbose -- --check
-          - command: clippy
+          - cargo_command: clippy
             args: --all-targets --all-features
-          - command: test
+          - cargo_command: test
             args: --all-targets --all-features --workspace
-          - command: test
+          - cargo_command: test
             args: --all-targets --workspace
+          - command: test_wasm
+            args:
+          - command: check_doc_anchors_valid
+            args:
+          - command: check_doc_unresolved_links
+            args:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -140,29 +146,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2.0.1
         continue-on-error: true
         with:
-          key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
-
-      - name: Add WASM target
-        if: ${{ matrix.command == 'test' }}
-        run: rustup target add wasm32-unknown-unknown
-
-      - name: Install WebAssembly Test harness
-        if: ${{ matrix.command == 'test' }}
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: webassembly-test-runner
-          cache-key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
-
-      # TODO: Enable WASM tests
-      # - name: Test WASM package
-      #   if: ${{ matrix.command == 'test' }}
-      #   run: |
-      #     cd packages/wasm-tests
-      #     cargo test --target wasm32-unknown-unknown --all-targets --all-features
-      #     cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+          key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       - name: Install Fuel Core
-        if: ${{ matrix.command == 'test' }}
+        if: ${{ matrix.cargo_command == 'test' }}
         run: |
           curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
           tar -xvf fuel-core.tar.gz
@@ -170,29 +157,43 @@ jobs:
           mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
 
       - name: Download sway example artifacts
-        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+        if: ${{ matrix.cargo_command == 'test' || matrix.cargo_command == 'clippy' }}
         uses: actions/download-artifact@v3
         with:
           name: sway-examples
           path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
-        if: ${{ !matrix.package }}
-        run: cargo ${{ matrix.command }} ${{ matrix.args }}
+        if: ${{ matrix.cargo_command && !matrix.package }}
+        run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)
-        if: ${{ matrix.package }}
-        run: cargo ${{ matrix.command }} -p ${{ matrix.package }} ${{ matrix.args }}
+        if: ${{ matrix.cargo_command && matrix.package }}
+        run: cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
 
-      - name: Check Docs. Validity
-        uses: actions-rs/cargo@v1
+      - name: Install NodeJS for WASM testing
+        if: ${{ matrix.command == 'test_wasm' }}
+        uses: actions/setup-node@v3
         with:
-          command: run
-          args: --bin check-docs
+          node-version:  18
 
-      - name: Check Docs. Warnings
+      - name: Test WASM
+        if: ${{ matrix.command == 'test_wasm' }}
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd packages/wasm-tests
+          wasm-pack test --node
+
+      - name: Check for invalid documentation anchors
+        if: ${{ matrix.command == 'check_doc_anchors_valid' }}
+        run: cargo run --bin check-docs
+
+      - name: Check for unresolved documentation links
+        if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc |& grep -A 6  "warning: unresolved link to"
+
 
 
   # Ensure workspace is publishable
