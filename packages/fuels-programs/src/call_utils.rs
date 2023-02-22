@@ -74,7 +74,11 @@ where
 
     let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
         .with_script(script)
-        .with_script_data(script_data);
+        .with_script_data(script_data.clone());
+
+    tx.tx_offset = data_offset + script_data.len() + 160;
+
+    dbg!(&tx.tx_offset);
 
     let base_asset_amount = required_asset_amounts
         .iter()

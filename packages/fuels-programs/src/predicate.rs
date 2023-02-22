@@ -61,8 +61,8 @@ impl Predicate {
 
         dbg!(offsets::contract_input_offset());
 
-        let mut offset = tx.base_offset(&consensus_parameters);
-        dbg!(&offset);
+        // let mut offset = tx.base_offset(&consensus_parameters);
+        let mut offset = tx.tx_offset();
             // offsets::base_offset(&consensus_parameters)
             //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
 
@@ -288,9 +288,6 @@ impl Account for Predicate {
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
-        // let inputs = self
-        //     .get_asset_inputs_for_amount_predicates(asset_id, amount)
-        //     .await?;
 
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
@@ -299,6 +296,9 @@ impl Account for Predicate {
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
+
+        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+        tx.tx_offset = offsets::base_offset(&consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {

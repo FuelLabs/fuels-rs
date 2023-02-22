@@ -63,18 +63,21 @@ pub trait Transaction: Into<FuelTransaction> {
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
 
     fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
+
+    fn tx_offset(&self) -> usize;
 }
 
 macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
+            pub tx_offset: usize,
             pub tx: $wrapped,
         }
 
         impl From<$wrapped> for $wrapper {
             fn from(tx: $wrapped) -> Self {
-                $wrapper { tx }
+                $wrapper { tx_offset: 0, tx }
             }
         }
 
@@ -93,6 +96,7 @@ macro_rules! impl_tx_wrapper {
         impl Default for $wrapper {
             fn default() -> Self {
                 Self {
+                    tx_offset: 0,
                     tx: $wrapped::default(),
                 }
             }
@@ -125,6 +129,10 @@ macro_rules! impl_tx_wrapper {
 
             fn id(&self) -> Bytes32 {
                 self.tx.id()
+            }
+
+            fn tx_offset(&self) -> usize {
+                self.tx_offset
             }
 
             fn maturity(&self) -> u64 {
