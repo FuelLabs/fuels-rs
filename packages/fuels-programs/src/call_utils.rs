@@ -50,10 +50,16 @@ where
 
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
+    dbg!(data_offset); // 10376
+
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);
 
+    dbg!(script_data.len()); // 96
+
     let script = get_instructions(calls, call_param_offsets);
+
+    dbg!(script.len()); // 32
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
     let mut spendable_resources = vec![];
@@ -261,7 +267,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         generate_contract_inputs(contract_ids),
         account.convert_to_signed_resources(spendable_resources),
     )
-    .collect();
+        .collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node

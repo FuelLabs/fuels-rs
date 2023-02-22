@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
+use fuel_tx::field::Salt;
 use fuel_tx::InputRepr::Contract;
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
@@ -50,15 +51,24 @@ impl Predicate {
         &self.address
     }
 
-    pub async fn get_asset_inputs_for_amount_predicates(
+    pub async fn get_asset_inputs_for_amount_predicates<T: Transaction>(
         &self,
+        tx: &mut T,
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Input>> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
-        let mut offset =
-            offsets::base_offset(&consensus_parameters) + offsets::contract_input_offset();
+        dbg!(offsets::contract_input_offset());
+
+        let mut offset = tx.base_offset(&consensus_parameters);
+        dbg!(&offset);
+            // offsets::base_offset(&consensus_parameters)
+            //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
+
+        // let mut offset =
+        // offsets::base_offset(&consensus_parameters)
+        //     offsets::contract_input_offset();
 
         let inputs = self
             .get_spendable_resources(asset_id, amount)
@@ -67,24 +77,19 @@ impl Predicate {
             .map(|resource| match resource {
                 Resource::Coin(coin) => {
                     offset += offsets::coin_predicate_data_offset(self.code.len());
-
                     let data = self.data.clone().resolve(offset as u64);
                     offset += data.len();
-
                     self.create_coin_predicate(coin, asset_id, self.code.clone(), data)
                 }
                 Resource::Message(message) => {
                     offset +=
                         offsets::message_predicate_data_offset(message.data.len(), self.code.len());
-
                     let data = self.data.clone().resolve(offset as u64);
                     offset += data.len();
-
                     self.create_message_predicate(message, self.code.clone(), data)
                 }
             })
             .collect::<Vec<Input>>();
-
         Ok(inputs)
     }
 
@@ -184,12 +189,13 @@ impl Predicate {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl PayFee for Predicate {
-    async fn pay_fee_resources<Tx: fuels_types::transaction::Transaction + Send>(
+    async fn pay_fee_resources<Tx: fuels_types::transaction::Transaction + Send + std::fmt::Debug>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         _witness_index: u8,
     ) -> PredicateResult<()> {
+
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
@@ -209,6 +215,7 @@ impl PayFee for Predicate {
                 ),
             ));
         }
+
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
         let is_consuming_utxos = tx
             .inputs()
@@ -218,9 +225,10 @@ impl PayFee for Predicate {
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
+        //TODO find out is it Contract deploy or sscript
 
         let new_base_inputs = self
-            .get_asset_inputs_for_amount_predicates(BASE_ASSET_ID, new_base_amount)
+            .get_asset_inputs_for_amount_predicates(tx, BASE_ASSET_ID, new_base_amount)
             .await?;
 
         let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
@@ -238,6 +246,10 @@ impl PayFee for Predicate {
             tx.outputs_mut()
                 .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
         }
+
+        dbg!(&tx);
+
+
         Ok(())
     }
 }
@@ -300,8 +312,6 @@ impl Account for Predicate {
         Ok((tx.id().to_string(), receipts))
     }
 
-    // todo
-
     async fn force_transfer_to_contract(
         &self,
         to: &Bech32ContractId,
@@ -319,11 +329,11 @@ impl Account for Predicate {
             TxPointer::default(),
             plain_contract_id,
         )];
-
-        inputs.extend(
-            self.get_asset_inputs_for_amount_predicates(asset_id, balance)
-                .await?,
-        );
+        // Todo fix this
+        // inputs.extend(
+        //     self.get_asset_inputs_for_amount_predicates(, asset_id, balance)
+        //         .await?,
+        // );
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),

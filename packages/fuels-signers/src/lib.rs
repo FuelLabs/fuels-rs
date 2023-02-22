@@ -55,7 +55,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait PayFee: Account + std::fmt::Debug + Send + Sync {
-    async fn pay_fee_resources<Tx: Transaction + Send>(
+    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,

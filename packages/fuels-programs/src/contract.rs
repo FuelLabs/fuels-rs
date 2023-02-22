@@ -239,6 +239,7 @@ impl<T: Account + PayFee + Clone> Contract<T> {
             chain_info.latest_block.header.height,
             &chain_info.consensus_parameters,
         )?;
+
         provider.send_transaction(&tx).await?;
 
         Ok(contract_id)
