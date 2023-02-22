@@ -763,10 +763,10 @@ impl Account for WalletUnlocked {
 
     async fn force_transfer_to_contract(
         &self,
-        to: &Bech32ContractId,
-        balance: u64,
-        asset_id: AssetId,
-        tx_parameters: TxParameters,
+        _to: &Bech32ContractId,
+        _balance: u64,
+        _asset_id: AssetId,
+        _tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
         todo!()
     }

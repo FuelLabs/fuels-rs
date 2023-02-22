@@ -227,9 +227,15 @@ impl<T: Account + PayFee + Clone> Contract<T> {
         let (mut tx, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
-        let consensus_parameters = account.get_provider().expect("Could not get provider").chain_info().await?.consensus_parameters;
+        let consensus_parameters = account
+            .get_provider()
+            .expect("Could not get provider")
+            .chain_info()
+            .await?
+            .consensus_parameters;
 
-        tx.tx_offset = consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
+        tx.tx_offset =
+            consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
 
         account
             .pay_fee_resources(&mut tx, 0, 1)

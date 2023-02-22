@@ -109,13 +109,19 @@ macro_rules! impl_tx_wrapper {
 
             fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
                 match () {
-                     _ if std::any::type_name::<$wrapper>() == std::any::type_name::<CreateTransaction>() => {
-                        consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
-                    },
-                     _ if std::any::type_name::<$wrapper>() == std::any::type_name::<ScriptTransaction>() => {
+                    _ if std::any::type_name::<$wrapper>()
+                        == std::any::type_name::<CreateTransaction>() =>
+                    {
+                        consensus_parameters.tx_offset()
+                            + fuel_tx::Create::salt_offset_static()
+                            + Bytes32::LEN
+                    }
+                    _ if std::any::type_name::<$wrapper>()
+                        == std::any::type_name::<ScriptTransaction>() =>
+                    {
                         10376 + 96 + 160
-                    },
-                     () => todo!(),
+                    }
+                    () => todo!(),
                 }
             }
 
@@ -233,7 +239,6 @@ impl ScriptTransaction {
     // }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
-
         *self.tx.script_mut() = script;
         self
     }
@@ -246,8 +251,6 @@ impl ScriptTransaction {
         *self.tx.script_data_mut() = script_data;
         self
     }
-
-
 
     pub fn new(
         inputs: Vec<Input>,
@@ -264,7 +267,7 @@ impl ScriptTransaction {
             outputs,
             vec![],
         )
-            .into()
+        .into()
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -281,9 +284,9 @@ impl ScriptTransaction {
             amount.to_be_bytes().to_vec(),
             asset_id.to_vec(),
         ]
-            .into_iter()
-            .flatten()
-            .collect();
+        .into_iter()
+        .flatten()
+        .collect();
 
         // This script loads:
         //  - a pointer to the contract id,
@@ -299,8 +302,8 @@ impl ScriptTransaction {
             op::tr(0x10, 0x12, 0x13),
             op::ret(RegId::ONE),
         ]
-            .into_iter()
-            .collect();
+        .into_iter()
+        .collect();
 
         FuelTransaction::script(
             params.gas_price,
@@ -312,7 +315,7 @@ impl ScriptTransaction {
             outputs.to_vec(),
             vec![],
         )
-            .into()
+        .into()
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
@@ -339,8 +342,8 @@ impl ScriptTransaction {
             op::smo(0x10, 0x00, 0x00, 0x11),
             op::ret(RegId::ONE),
         ]
-            .into_iter()
-            .collect();
+        .into_iter()
+        .collect();
 
         let outputs = vec![
             // when signing a transaction, recipient and amount are set to zero
@@ -358,6 +361,6 @@ impl ScriptTransaction {
             outputs,
             vec![],
         )
-            .into()
+        .into()
     }
 }

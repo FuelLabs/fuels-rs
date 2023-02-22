@@ -271,7 +271,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         generate_contract_inputs(contract_ids),
         account.convert_to_signed_resources(spendable_resources),
     )
-        .collect();
+    .collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node

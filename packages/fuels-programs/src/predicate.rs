@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 
-use fuel_tx::field::Salt;
-use fuel_tx::InputRepr::Contract;
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
@@ -57,18 +55,7 @@ impl Predicate {
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Input>> {
-        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
-
-        dbg!(offsets::contract_input_offset());
-
-        // let mut offset = tx.base_offset(&consensus_parameters);
         let mut offset = tx.tx_offset();
-            // offsets::base_offset(&consensus_parameters)
-            //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
-
-        // let mut offset =
-        // offsets::base_offset(&consensus_parameters)
-        //     offsets::contract_input_offset();
 
         let inputs = self
             .get_spendable_resources(asset_id, amount)
@@ -189,13 +176,14 @@ impl Predicate {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl PayFee for Predicate {
-    async fn pay_fee_resources<Tx: fuels_types::transaction::Transaction + Send + std::fmt::Debug>(
+    async fn pay_fee_resources<
+        Tx: fuels_types::transaction::Transaction + Send + std::fmt::Debug,
+    >(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         _witness_index: u8,
     ) -> PredicateResult<()> {
-
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
@@ -247,9 +235,6 @@ impl PayFee for Predicate {
                 .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
         }
 
-        dbg!(&tx);
-
-
         Ok(())
     }
 }
@@ -288,7 +273,6 @@ impl Account for Predicate {
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
-
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -322,7 +306,7 @@ impl Account for Predicate {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
-        let mut inputs = vec![Input::contract(
+        let inputs = vec![Input::contract(
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
@@ -331,7 +315,7 @@ impl Account for Predicate {
         )];
         // Todo fix this
         // inputs.extend(
-        //     self.get_asset_inputs_for_amount_predicates(, asset_id, balance)
+        //     self.get_asset_inputs_for_amount_predicates(&mut (), asset_id, balance)
         //         .await?,
         // );
 

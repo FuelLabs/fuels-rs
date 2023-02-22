@@ -1,4 +1,3 @@
-use fuels::signers::fuel_crypto::rand;
 use fuels::{
     prelude::*,
     tx::AssetId,
@@ -790,24 +789,24 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         192
     );
 
-    let call_params = CallParameters::new(Some(100), None, None);
+    let _call_params = CallParameters::new(Some(100), None, None);
 
     let response = contract_instance_connected
         .methods()
         .initialize_counter(42) // Build the ABI call
-        // .tx_params(tx_params)
+        .tx_params(tx_params)
         .call() // Perform the network call
         .await?;
 
-    // assert_eq!(42, response.value);
-    // assert_eq!(
-    //     *predicate
-    //         .get_balances()
-    //         .await?
-    //         .get(format!("{:#?}", AssetId::default()).as_str())
-    //         .unwrap(),
-    //     187
-    // );
+    assert_eq!(42, response.value);
+    assert_eq!(
+        *predicate
+            .get_balances()
+            .await?
+            .get(format!("{:#?}", AssetId::default()).as_str())
+            .unwrap(),
+        186
+    );
 
     // add call params.
     // append params?
