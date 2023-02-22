@@ -126,8 +126,11 @@ jobs:
           - cargo_command: test
             args: --all-targets --workspace
           - command: test_wasm
+            args:
           - command: check_doc_anchors_valid
+            args:
           - command: check_doc_unresolved_links
+            args:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
