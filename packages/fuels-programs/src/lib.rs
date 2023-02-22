@@ -15,9 +15,9 @@ impl Configurables {
     }
 
     pub fn update_constants_in(&self, binary: &mut [u8]) {
-        self.offsets_with_data.iter().for_each(|(offset, data)| {
+        for (offset, data) in &self.offsets_with_data {
             let offset = *offset as usize;
             binary[offset..offset + data.len()].copy_from_slice(data)
-        });
+        }
     }
 }
