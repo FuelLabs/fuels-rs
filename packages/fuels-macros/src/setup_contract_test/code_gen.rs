@@ -129,6 +129,7 @@ fn contract_deploying_code(
                         StorageConfiguration::with_storage_path(Some(
                             #storage_path.to_string(),
                         )),
+                        Configurables::default(),
                         Salt::from([#(#salt),*]),
                     )
                     .await
