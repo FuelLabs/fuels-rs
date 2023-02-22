@@ -150,15 +150,20 @@ jobs:
         if: ${{ matrix.command == 'test' }}
         uses: baptiste0928/cargo-install@v1
         with:
-          crate: webassembly-test-runner
+          crate: wasm-pack
           cache-key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
+
+      - name: Install Node.js
+        if: ${{ matrix.command == 'test' }}
+        uses: actions/setup-node@v3
+        with:
+          node-version:  18
 
       - name: Test WASM package
         if: ${{ matrix.command == 'test' }}
         run: |
           cd packages/wasm-tests
-          cargo test --target wasm32-unknown-unknown --all-targets --all-features
-          cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+          wasm-pack test --node
 
       - name: Install Fuel Core
         if: ${{ matrix.command == 'test' }}
