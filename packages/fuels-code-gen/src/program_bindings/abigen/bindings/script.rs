@@ -9,11 +9,12 @@ use crate::{
         abi_types::{FullProgramABI, FullTypeDeclaration},
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+            configurables::generate_code_for_configurable_constatnts,
             logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
-    utils::TypePath,
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn script_bindings(
@@ -30,29 +31,48 @@ pub(crate) fn script_bindings(
 
     let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types, shared_types);
 
+    let configuration_struct_name = ident(&format!("{name}Configurables"));
+    let constant_configuration_code = generate_code_for_configurable_constatnts(
+        &configuration_struct_name,
+        &abi.configurables,
+        shared_types,
+    )?;
+
     let code = quote! {
         #[derive(Debug)]
         pub struct #name{
             wallet: ::fuels::signers::wallet::WalletUnlocked,
-            binary_filepath: ::std::string::String,
+            binary: ::std::vec::Vec<u8>,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
         impl #name {
             pub fn new(wallet: ::fuels::signers::wallet::WalletUnlocked, binary_filepath: &str) -> Self {
+                let binary = ::std::fs::read(binary_filepath)
+                                            .expect("Could not read from binary filepath");
                 Self {
                     wallet,
-                    binary_filepath: binary_filepath.to_string(),
+                    binary,
                     log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
             }
 
+            pub fn with_configurables(mut self, configurables: ::fuels::programs::Configurables) -> Self {
+                configurables.update_constants_in(&mut self.binary);
+                self
+            }
+
             #main_function
         }
+
+        #constant_configuration_code
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
+    let type_paths = [name, &configuration_struct_name]
+        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
+        .into_iter()
+        .collect();
 
     Ok(GeneratedCode {
         code,
@@ -69,13 +89,11 @@ fn expand_fn(
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let script_binary = ::std::fs::read(&self.binary_filepath)
-                                        .expect("Could not read from binary filepath");
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = self.wallet.get_provider().expect("Provider not set up").clone();
 
             ::fuels::programs::script_calls::ScriptCallHandler::new(
-                script_binary,
+                self.binary.clone(),
                 encoded_args,
                 self.wallet.clone(),
                 provider,

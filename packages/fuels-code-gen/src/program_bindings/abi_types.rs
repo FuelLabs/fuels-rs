@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use fuel_abi_types::program_abi::{
-    ABIFunction, Attribute, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
+    ABIFunction, Attribute, Configurable, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
 
 use crate::error::{error, Result};
@@ -16,6 +16,7 @@ pub(crate) struct FullProgramABI {
     pub types: Vec<FullTypeDeclaration>,
     pub functions: Vec<FullABIFunction>,
     pub logged_types: Vec<FullLoggedType>,
+    pub configurables: Vec<FullConfigurable>,
 }
 
 impl FullProgramABI {
@@ -50,10 +51,18 @@ impl FullProgramABI {
             .map(|logged_type| FullLoggedType::from_counterpart(logged_type, &lookup))
             .collect();
 
+        let configurables = program_abi
+            .configurables
+            .iter()
+            .flatten()
+            .map(|configurable| FullConfigurable::from_counterpart(configurable, &lookup))
+            .collect();
+
         Ok(Self {
             types,
             functions,
             logged_types,
+            configurables,
         })
     }
 }
@@ -205,6 +214,26 @@ impl FullLoggedType {
         FullLoggedType {
             log_id: logged_type.log_id,
             application: FullTypeApplication::from_counterpart(&logged_type.application, types),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub(crate) struct FullConfigurable {
+    pub name: String,
+    pub application: FullTypeApplication,
+    pub offset: u64,
+}
+
+impl FullConfigurable {
+    pub(crate) fn from_counterpart(
+        configurable: &Configurable,
+        types: &HashMap<usize, TypeDeclaration>,
+    ) -> FullConfigurable {
+        FullConfigurable {
+            name: configurable.name.clone(),
+            application: FullTypeApplication::from_counterpart(&configurable.application, types),
+            offset: configurable.offset,
         }
     }
 }

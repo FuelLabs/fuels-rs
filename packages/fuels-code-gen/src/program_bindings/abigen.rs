@@ -20,6 +20,7 @@ use crate::{
 
 mod abigen_target;
 mod bindings;
+mod configurables;
 mod logs;
 
 pub struct Abigen;
