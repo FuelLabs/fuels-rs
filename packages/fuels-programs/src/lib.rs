@@ -14,7 +14,7 @@ impl Configurables {
         Self { offsets_with_data }
     }
 
-    pub fn update(&self, binary: &mut [u8]) {
+    pub fn update_constants_in(&self, binary: &mut [u8]) {
         self.offsets_with_data.iter().for_each(|(offset, data)| {
             let offset = *offset as usize;
             binary[offset..offset + data.len()].copy_from_slice(data)

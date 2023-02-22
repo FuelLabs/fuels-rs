@@ -196,7 +196,7 @@ impl Contract {
             salt,
         )?;
 
-        configurables.update(&mut compiled_contract.raw);
+        configurables.update_constants_in(&mut compiled_contract.raw);
 
         Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
 

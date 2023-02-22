@@ -43,12 +43,12 @@ pub(crate) fn generate_code_for_configurable_constatnts(
         .collect::<Result<Vec<_>>>()?;
 
     let struct_decl = generate_struct_decl(configurable_struct_name);
-    let setter_methods = generate_struct_impl(configurable_struct_name, &resolved_configurables);
+    let struct_impl = generate_struct_impl(configurable_struct_name, &resolved_configurables);
     let from_impl = generate_from_impl(configurable_struct_name);
 
     Ok(quote! {
         #struct_decl
-        #setter_methods
+        #struct_impl
         #from_impl
     })
 }
@@ -66,7 +66,7 @@ fn generate_struct_impl(
     configurable_struct_name: &Ident,
     resolved_configurables: &[ResolvedConfigurable],
 ) -> TokenStream {
-    let methods = generate_setter_methods(resolved_configurables);
+    let setter_methods = generate_setter_methods(resolved_configurables);
 
     quote! {
         impl #configurable_struct_name {
@@ -74,7 +74,7 @@ fn generate_struct_impl(
                 ::std::default::Default::default()
             }
 
-            #methods
+            #setter_methods
         }
     }
 }
