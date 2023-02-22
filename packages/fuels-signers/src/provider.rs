@@ -91,13 +91,11 @@ impl Provider {
     /// ## Sending a transaction
     ///
     /// ```
-    /// use std::default::Default;
-    /// use fuels::tx::Script;
     /// use fuels::prelude::*;
     /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
     ///   // Setup local test node
     ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
-    ///   let tx = ScriptTransaction::new(vec![],vec![], TxParameters::default());
+    ///   let tx = ScriptTransaction::default();
     ///
     ///   let receipts = provider.send_transaction(&tx).await?;
     ///   dbg!(receipts);
