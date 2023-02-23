@@ -29,4 +29,12 @@ sha2 = "0.9.5"
 tokio = "1.15.0"
 
 [features]
-fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "fuel-core"]
+default = ["std",  "fuels-test-helpers/fuels-signers"]
+std = [
+    "fuels-programs/std",
+    "fuels-core/std",
+    "fuels-signers/std",
+    "fuels-test-helpers/std",
+    "fuels-types/std",
+]
+fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "dep:fuel-core"]
