@@ -1,3 +1,4 @@
+use fuel_tx::Input;
 use fuels::{
     prelude::*,
     tx::AssetId,
@@ -688,59 +689,68 @@ async fn pay_with_predicate() -> Result<()> {
 //     Ok(())
 // }
 //
-// #[tokio::test]
-// async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
-//     abigen!(
-//         Script(
-//             name = "bimbam_script",
-//             abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
-//     ),
-//         Predicate(
-//             name = "MyPredicate",
-//             abi = "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
-//         )
-//     );
-//
-//     let mut predicate: Predicate =
-//         MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
-//             .set_data(2, 4, vec![2, 4, 42])
-//             .get_predicate();
-//
-//     let num_coins = 4;
-//     let num_messages = 8;
-//     let amount = 16;
-//     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-//         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-//
-//     predicate.set_provider(provider.clone());
-//     let wallet = launch_provider_and_get_wallet().await;
-//
-//     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
-//     let instance = bimbam_script::new(predicate.clone(), bin_path);
-//
-//     // // let inputs = predicate.get_asset_inputs_for_amount_predicates(AssetId::default(), 2).await?;
-//     //
-//     let a = 1000u64;
-//     let b = 2000u32;
-//
-//     // nstance.main(a, b).with_inputs(&inputs);
-//
-//     let result = instance.main(a, b).call().await?;
-// assert_eq!(result.value, "hello");
-// // ANCHOR: script_with_tx_params
-// let parameters = TxParameters {
-//     gas_price: 1,
-//     gas_limit: 10000,
-//     ..Default::default()
-// };
-//
-// let result = instance.main(a, b).tx_params(parameters).call().await?;
-//
-// // ANCHOR_END: script_with_tx_params
-// assert_eq!(result.value, "hello");
+#[tokio::test]
+async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
+    abigen!(
+        Script(
+            name = "bimbam_script",
+            abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+    ),
+        Predicate(
+            name = "MyPredicate",
+            abi = "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+        )
+    );
 
-// Ok(())
-// }
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, _, _, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let instance = bimbam_script::new(predicate.clone(), bin_path);
+
+    let a = 1000u64;
+    let b = 2000u32;
+
+    let input = Input::coin_signed(
+        Default::default(),
+        Default::default(),
+        10,
+        Default::default(),
+        Default::default(),
+        0,
+        0,
+    );
+
+    let result = instance
+        .main(a, b)
+        .with_inputs(vec![input.clone(), input.clone(), input])
+        .call()
+        .await?;
+
+    assert_eq!(result.value, "hello");
+
+    let parameters = TxParameters {
+        gas_price: 1,
+        gas_limit: 10000,
+        ..Default::default()
+    };
+
+    let result = instance.main(a, b).tx_params(parameters).call().await?;
+
+    assert_eq!(result.value, "hello");
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn pay_with_predicate_vector_data() -> Result<()> {
@@ -814,6 +824,166 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     // test transfer over wallet
     // transfer on base layer
     // transfer on contract
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ),
+         Predicate(
+            name="MyPredicate",
+            abi="packages/fuels/tests/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"
+        )
+    );
+
+    let u32_vec = vec![0, 4, 3];
+    let vec_in_vec = vec![vec![0, 2, 2], vec![0, 1, 2]];
+    let struct_in_vec = vec![SomeStruct { a: 8 }, SomeStruct { a: 1 }];
+    let vec_in_struct = SomeStruct { a: vec![0, 16, 2] };
+    let array_in_vec = vec![[0u64, 1u64], [32u64, 1u64]];
+    let vec_in_enum = SomeEnum::A(vec![0, 1, 128]);
+    let enum_in_vec = vec![SomeEnum::A(0), SomeEnum::A(16)];
+    let tuple_in_vec = vec![(0, 0), (128, 1)];
+    let vec_in_tuple = (vec![0, 64, 2], vec![0, 1, 2]);
+    let vec_in_a_vec_in_a_struct_in_a_vec = vec![
+        SomeStruct {
+            a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+        },
+        SomeStruct {
+            a: vec![vec![6, 7, 8], vec![9, 32, 11]],
+        },
+    ];
+
+    let vec_in_array = [vec![0, 64, 2], vec![0, 1, 2]];
+
+    let mut predicate: Predicate = MyPredicate::load_from(
+        "tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
+    )?
+    .set_data(
+        u32_vec,
+        vec_in_vec,
+        struct_in_vec,
+        vec_in_struct,
+        array_in_vec,
+        vec_in_array,
+        vec_in_enum,
+        enum_in_vec,
+        tuple_in_vec,
+        vec_in_tuple,
+        vec_in_a_vec_in_a_struct_in_a_vec,
+    )
+    .get_predicate();
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 30;
+    let (provider, _, _, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &predicate,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
+    let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
+    //
+    assert_eq!(
+        *predicate
+            .get_balances()
+            .await?
+            .get(format!("{:#?}", AssetId::default()).as_str())
+            .unwrap(),
+        360
+    );
+
+    let _call_params = CallParameters::new(Some(100), None, None);
+
+    let response = contract_instance_connected
+        .methods()
+        .initialize_counter(42) // Build the ABI call
+        .tx_params(tx_params)
+        .call() // Perform the network call
+        .await?;
+
+    assert_eq!(42, response.value);
+    assert_eq!(
+        *predicate
+            .get_balances()
+            .await?
+            .get(format!("{:#?}", AssetId::default()).as_str())
+            .unwrap(),
+        341
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_contract_transfer() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+    ));
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 300;
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &predicate,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_balances = predicate
+        .provider()?
+        .get_contract_balances(&contract_id)
+        .await?;
+    assert!(contract_balances.is_empty());
+
+    let amount = 300;
+    let (_tx_id, _receipts) = predicate
+        .force_transfer_to_contract(
+            &contract_id,
+            amount,
+            AssetId::default(),
+            TxParameters::default(),
+        )
+        .await?;
+
+    let contract_balances = predicate
+        .provider()?
+        .get_contract_balances(&contract_id)
+        .await?;
+    assert_eq!(contract_balances.len(), 1);
+
+    let random_asset_balance = contract_balances
+        .get(format!("{:#?}", AssetId::default()).as_str())
+        .unwrap();
+    assert_eq!(*random_asset_balance, 300);
 
     Ok(())
 }

@@ -6,6 +6,7 @@ use fuel_types::{AssetId, Bytes32, ContractId};
 
 use fuels_types::transaction::Transaction;
 
+use fuels_core::offsets::base_offset;
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_signers::wallet::WalletError;
 use fuels_signers::{provider::Provider, Account, PayFee};
@@ -306,18 +307,18 @@ impl Account for Predicate {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
-        let inputs = vec![Input::contract(
+        let mut inputs = vec![Input::contract(
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
             TxPointer::default(),
             plain_contract_id,
         )];
-        // Todo fix this
-        // inputs.extend(
-        //     self.get_asset_inputs_for_amount_predicates(&mut (), asset_id, balance)
-        //         .await?,
-        // );
+
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+                .await?,
+        );
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -333,6 +334,15 @@ impl Account for Predicate {
             outputs,
             tx_parameters,
         );
+
+        let consensus_parameters = self
+            .provider
+            .as_ref()
+            .expect("No provider avilable")
+            .consensus_parameters()
+            .await?;
+        let script_offset = base_offset(&consensus_parameters);
+        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() + 160; // contract offset
 
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {

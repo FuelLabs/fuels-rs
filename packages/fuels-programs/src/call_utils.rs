@@ -76,7 +76,7 @@ where
         .with_script(script)
         .with_script_data(script_data.clone());
 
-    tx.tx_offset = data_offset + script_data.len() + 160;
+    tx.tx_offset = data_offset + script_data.len() + 160; // contract_input_offset
 
     dbg!(&tx.tx_offset);
 

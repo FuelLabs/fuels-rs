@@ -163,6 +163,10 @@ where
             .with_script(self.script_call.script_binary.clone())
             .with_script_data(self.compute_script_data().await?);
 
+        let consensus_parameters = self.provider.consensus_parameters().await?;
+        let script_offset = base_offset(&consensus_parameters);
+
+        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64; // strange 64
         self.account.pay_fee_resources(&mut tx, 0, 0).await?;
 
         Ok(tx)
