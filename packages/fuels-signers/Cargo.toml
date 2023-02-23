@@ -33,8 +33,8 @@ tokio = { version = "1.10.1", features = ["full"] }
 tai64 = { version = "4.0", features = ["serde"] }
 
 [dev-dependencies]
-fuels = { path = "../fuels" }
-fuels-test-helpers = { path = "../fuels-test-helpers", default-features = false }
+fuels = { workspace = true }
+fuels-test-helpers = { workspace = true, features = ["std"] }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 tempfile = "3.3.0"
 
@@ -42,7 +42,6 @@ tempfile = "3.3.0"
 default = ["std"]
 std = [
     "fuels-core/std",
-    "fuels-test-helpers/std",
     "fuels-types/std",
 ]
 test-helpers = ["fuel-core"]
