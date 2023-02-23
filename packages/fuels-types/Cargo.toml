@@ -20,7 +20,7 @@ fuel-asm = { workspace = true }
 fuel-abi-types = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true, default-features = false }
-fuel-core-client = { workspace = true, default-features = false }
+fuel-core-client = { workspace = true, default-features = false, optional = true }
 hex = { version = "0.4.3", features = ["std"] }
 proc-macro2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
@@ -29,6 +29,8 @@ strum = "0.21"
 strum_macros = "0.21"
 itertools = "0.10.5"
 thiserror = { version = "1.0.26", default-features = false }
-tokio = "1.15"
 fuels-macros = { workspace = true }
 
+[features]
+default = ["std"]
+std = ["dep:fuel-core-client"]

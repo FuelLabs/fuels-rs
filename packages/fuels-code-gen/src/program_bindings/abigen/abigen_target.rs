@@ -2,7 +2,8 @@ use std::convert::TryFrom;
 
 use crate::{
     error::{Error, Result},
-    program_bindings::{abi_types::FullProgramABI, source::Source},
+    program_bindings::abi_types::FullProgramABI,
+    utils::Source,
 };
 
 #[derive(Debug, Clone)]

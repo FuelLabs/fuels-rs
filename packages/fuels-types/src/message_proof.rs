@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_client::client::schema::message::MessageProof as ClientMessageProof;
 use fuel_tx::{Bytes32, Bytes64};
 
