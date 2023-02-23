@@ -17,8 +17,8 @@ use fuels_types::{
     constants::BASE_ASSET_ID,
     errors::{error, Error, Result},
     message::Message as InputMessage,
-    parameters::TxParameters,
     resource::Resource,
+    transaction::TxParameters,
     transaction::{ScriptTransaction, Transaction},
     transaction_response::TransactionResponse,
 };

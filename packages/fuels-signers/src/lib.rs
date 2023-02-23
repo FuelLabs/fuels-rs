@@ -48,7 +48,7 @@ mod tests {
     use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
     use fuels_types::{
         constants::BASE_ASSET_ID,
-        parameters::TxParameters,
+        transaction::TxParameters,
         transaction::{ScriptTransaction, Transaction},
     };
     use rand::{rngs::StdRng, RngCore, SeedableRng};

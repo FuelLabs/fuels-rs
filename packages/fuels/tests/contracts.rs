@@ -222,7 +222,11 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::new(Some(gas_price), Some(gas_limit), None))
+        .tx_params(
+            TxParameters::new()
+                .with_gas_price(gas_price)
+                .with_gas_limit(gas_limit),
+        )
         .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
@@ -326,11 +330,11 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
     );
 
     let call_w_maturity = |call_maturity| {
-        let mut prepared_call = contract_instance
+        contract_instance
             .methods()
-            .calling_this_will_produce_a_block();
-        prepared_call.tx_parameters.maturity = call_maturity;
-        prepared_call.call()
+            .calling_this_will_produce_a_block()
+            .tx_params(TxParameters::new().with_maturity(call_maturity))
+            .call()
     };
 
     call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -548,7 +552,7 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR_END: contract_setup_macro_manual_wallet
 
     // pay for call with wallet
-    let tx_params = TxParameters::new(Some(10), Some(10000), None);
+    let tx_params = TxParameters::new().with_gas_price(10).with_gas_limit(10000);
     contract_instance
         .methods()
         .initialize_counter(42)

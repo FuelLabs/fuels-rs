@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot, Transaction as FuelTransaction,
+    StorageSlot,
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
@@ -18,9 +18,9 @@ use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
-    parameters::{CallParameters, TxParameters},
+    parameters::CallParameters,
     traits::{Parameterize, Tokenizable},
-    transaction::{CreateTransaction, ScriptTransaction, Transaction},
+    transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
     Selector, Token,
 };
 use itertools::Itertools;
@@ -311,19 +311,16 @@ impl Contract {
         let outputs = vec![Output::contract_created(contract_id, state_root)];
         let witnesses = vec![compiled_contract.binary.into()];
 
-        let tx = FuelTransaction::create(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
+        let tx = CreateTransaction::build_contract_deployment_tx(
             bytecode_witness_index,
-            compiled_contract.salt,
-            compiled_contract.storage_slots,
-            vec![],
             outputs,
             witnesses,
+            compiled_contract.salt,
+            compiled_contract.storage_slots,
+            params,
         );
 
-        (tx.into(), contract_id.into())
+        (tx, contract_id.into())
     }
 
     fn get_storage_slots(configuration: StorageConfiguration) -> Result<Vec<StorageSlot>> {
@@ -654,7 +651,7 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
-            &self.tx_parameters,
+            self.tx_parameters,
             &self.wallet,
         )
         .await
@@ -797,7 +794,7 @@ impl MultiContractCallHandler {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.wallet).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

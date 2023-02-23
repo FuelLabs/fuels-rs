@@ -43,15 +43,10 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await;
 
         // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let gas_price = 0;
-        let gas_limit = 1_000_000;
-        let maturity = 0;
-
-        let tx_parameters = TxParameters {
-            gas_price,
-            gas_limit,
-            maturity,
-        };
+        let tx_parameters = TxParameters::new()
+            .with_gas_price(0)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
 
         // This will deploy your contract binary onto the chain so that its ID can
         // be used to initialize the instance
@@ -220,7 +215,7 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None))
+            .tx_params(TxParameters::new().with_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
@@ -240,7 +235,7 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None))
+            .tx_params(TxParameters::new().with_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
@@ -268,8 +263,7 @@ mod tests {
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+        let my_tx_params = TxParameters::new().with_gas_limit(1_000_000);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
@@ -287,15 +281,7 @@ mod tests {
             .await?;
 
         // ANCHOR_END: tx_parameters_default
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
-
-        let response = contract_methods
-            .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
-            .call() // Perform the contract call.
-            .await?; // This is an async call, `.await` for it.
-
+        //
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
@@ -312,13 +298,13 @@ mod tests {
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
+
         // ANCHOR: call_parameters_default
         let response = contract_methods
             .initialize_counter(42)
             .call_params(CallParameters::default())?
             .call()
             .await?;
-
         // ANCHOR_END: call_parameters_default
         Ok(())
     }
@@ -574,10 +560,10 @@ mod tests {
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
-        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 4300 to specify that the
-        // contract call transaction may consume up to 10000 gas, while the actual call may only use 4300
+        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that the
+        // contract call transaction may consume up to 10_000 gas, while the actual call may only use 4300
         // gas
-        let tx_params = TxParameters::new(None, Some(10000), None);
+        let tx_params = TxParameters::new().with_gas_limit(10_000);
         let call_params = CallParameters::new(None, None, Some(4300));
 
         let response = contract_methods

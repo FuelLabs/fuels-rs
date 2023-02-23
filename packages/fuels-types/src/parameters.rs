@@ -1,18 +1,6 @@
 use fuel_tx::AssetId;
 
-use crate::constants::{
-    BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE,
-    DEFAULT_MATURITY,
-};
-
-#[derive(Debug, Copy, Clone)]
-//ANCHOR: tx_parameter
-pub struct TxParameters {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
-}
-//ANCHOR_END: tx_parameter
+use crate::constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT};
 
 #[derive(Debug)]
 pub struct CallParameters {
@@ -41,23 +29,3 @@ impl Default for CallParameters {
     }
 }
 
-impl Default for TxParameters {
-    fn default() -> Self {
-        Self {
-            gas_price: DEFAULT_GAS_PRICE,
-            gas_limit: DEFAULT_GAS_LIMIT,
-            // By default, transaction is immediately valid
-            maturity: DEFAULT_MATURITY,
-        }
-    }
-}
-
-impl TxParameters {
-    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, maturity: Option<u64>) -> Self {
-        Self {
-            gas_price: gas_price.unwrap_or(DEFAULT_GAS_PRICE),
-            gas_limit: gas_limit.unwrap_or(DEFAULT_GAS_LIMIT),
-            maturity: maturity.unwrap_or(DEFAULT_MATURITY),
-        }
-    }
-}

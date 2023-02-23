@@ -11,9 +11,8 @@ use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
-    parameters::TxParameters,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
 };
 use itertools::{chain, Itertools};
 
@@ -32,9 +31,9 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls(
+pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: &TxParameters,
+    tx_parameters: TxParameters,
     wallet: &WalletUnlocked,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
@@ -47,7 +46,7 @@ pub async fn build_tx_from_contract_calls(
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);
+        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
 
     let script = get_instructions(calls, call_param_offsets);
 
@@ -63,7 +62,7 @@ pub async fn build_tx_from_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
+    let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters)
         .with_script(script)
         .with_script_data(script_data);
 
