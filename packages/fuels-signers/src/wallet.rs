@@ -162,7 +162,7 @@ impl Wallet {
             ..Default::default()
         };
         self.get_provider()?
-            .get_asset_inputs_for_filter(filter, witness_index)
+            .get_asset_inputs(filter, witness_index)
             .await
     }
 

@@ -390,7 +390,7 @@ impl Provider {
     /// `ResourceFilter`. The `witness_index` is the position of the witness (signature)
     /// in the transaction's list of witnesses. In the validation process, the node will
     /// use the witness at this index to validate the coins returned by this method.
-    pub async fn get_asset_inputs_for_filter(
+    pub async fn get_asset_inputs(
         &self,
         filter: ResourceFilter,
         witness_index: u8,
