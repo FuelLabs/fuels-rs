@@ -330,13 +330,14 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         let mut prepared_call = contract_instance
             .methods()
             .calling_this_will_produce_a_block();
+
         prepared_call.tx_parameters.maturity = call_maturity;
-        prepared_call.call()
+        prepared_call
     };
 
-    call_w_maturity(1).await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(3).await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
     Ok(())
 }
 
