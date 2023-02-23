@@ -16,9 +16,9 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
+    constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
-    parameters::CallParameters,
     traits::{Parameterize, Tokenizable},
     transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
     Selector, Token,
@@ -31,6 +31,56 @@ use crate::{
     logs::{map_revert_error, LogDecoder},
     Configurables,
 };
+
+#[derive(Debug)]
+pub struct CallParameters {
+    amount: u64,
+    asset_id: AssetId,
+    gas_forwarded: Option<u64>,
+}
+
+impl CallParameters {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_amount(mut self, amount: u64) -> Self {
+        self.amount = amount;
+        self
+    }
+
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn asset_id(&self) -> AssetId {
+        self.asset_id
+    }
+
+    pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
+        self.gas_forwarded = Some(gas_forwarded);
+        self
+    }
+
+    pub fn gas_forwarded(&self) -> Option<u64> {
+        self.gas_forwarded
+    }
+}
+
+impl Default for CallParameters {
+    fn default() -> Self {
+        Self {
+            amount: DEFAULT_CALL_PARAMS_AMOUNT,
+            asset_id: BASE_ASSET_ID,
+            gas_forwarded: None,
+        }
+    }
+}
 
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;

@@ -1096,7 +1096,11 @@ async fn test_payable_annotation() -> Result<()> {
 
     let response = contract_methods
         .payable()
-        .call_params(CallParameters::new(Some(100), None, Some(20000)))?
+        .call_params(
+            CallParameters::new()
+                .with_amount(100)
+                .with_gas_forwarded(20_000),
+        )?
         .call()
         .await?;
 
@@ -1105,14 +1109,15 @@ async fn test_payable_annotation() -> Result<()> {
     // ANCHOR: non_payable_params
     let err = contract_methods
         .non_payable()
-        .call_params(CallParameters::new(Some(100), None, None))
+        .call_params(CallParameters::new().with_amount(100))
         .expect_err("Should return call params error.");
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
-    // ANCHOR_END: non_payable_params */
+    // ANCHOR_END: non_payable_params
+
     let response = contract_methods
         .non_payable()
-        .call_params(CallParameters::new(None, None, Some(20000)))?
+        .call_params(CallParameters::new().with_gas_forwarded(20_000))?
         .call()
         .await?;
 

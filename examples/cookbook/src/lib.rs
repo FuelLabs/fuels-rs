@@ -49,7 +49,10 @@ mod tests {
 
         // ANCHOR: liquidity_deposit
         let deposit_amount = 1_000_000;
-        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        let call_params = CallParameters::new()
+            .with_amount(deposit_amount)
+            .with_asset_id(base_asset_id);
+
         contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)?
@@ -62,7 +65,10 @@ mod tests {
         let lp_asset_id = AssetId::from(*contract_id.hash());
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
-        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        let call_params = CallParameters::new()
+            .with_amount(lp_token_balance)
+            .with_asset_id(lp_asset_id);
+
         contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)?

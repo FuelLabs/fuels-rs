@@ -354,7 +354,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let tx_params = TxParameters::new().with_gas_limit(1_000_000);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters::new(Some(1_000_000), None, None);
+    let call_params = CallParameters::new().with_amount(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
@@ -385,7 +385,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
 
     let asset_id = AssetId::from(*contract_id.hash());
-    let call_params = CallParameters::new(Some(0), Some(asset_id), None);
+    let call_params = CallParameters::new().with_amount(0).with_asset_id(asset_id);
     let tx_params = TxParameters::new().with_gas_limit(1_000_000);
 
     let response = contract_methods
@@ -495,7 +495,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new().with_gas_limit(3000))
-        .call_params(CallParameters::new(None, None, Some(1)))?
+        .call_params(CallParameters::new().with_gas_forwarded(1))?
         .call()
         .await
         .expect_err("should error");
@@ -507,7 +507,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let response = contract_methods
         .initialize_counter(42)
         .tx_params(TxParameters::new().with_gas_limit(1))
-        .call_params(CallParameters::new(None, None, Some(1000)))?
+        .call_params(CallParameters::new().with_gas_forwarded(1_000))?
         .call()
         .await
         .expect_err("should error");

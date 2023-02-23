@@ -289,7 +289,7 @@ mod tests {
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::new(Some(1_000_000), None, None);
+        let call_params = CallParameters::new().with_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -564,7 +564,7 @@ mod tests {
         // contract call transaction may consume up to 10_000 gas, while the actual call may only use 4300
         // gas
         let tx_params = TxParameters::new().with_gas_limit(10_000);
-        let call_params = CallParameters::new(None, None, Some(4300));
+        let call_params = CallParameters::new().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
