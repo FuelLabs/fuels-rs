@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::schema::block::{Block as ClientBlock, Header as ClientHeader};
 use fuel_tx::Bytes32;

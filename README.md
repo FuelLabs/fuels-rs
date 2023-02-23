@@ -55,7 +55,17 @@ You can also run specific tests. The following example will run all integration 
 ```shell
 cargo test --test types in_vector -- --show-output
 ``` 
+### How to run WASM tests?
+You need to have wasm32 as a target, if you don't already:
+```shell
+ rustup target add wasm32-unknown-unknown
+```
+You also need `wasm-pack`, if you don't already: 
+```shell
+cargo install wasm-pack
+```
 
+Navigate to `packages/wasm-tests` and run `wasm-pack test`.
 ### What to do if my tests are failing on `master`
 
 Before doing anything else, try all these commands:
@@ -79,13 +89,11 @@ Install `mdbook` by running:
 cargo install mdbook
 ```
 
-Next, navigate to the `docs` folder and run the command below to start a local server.
+Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
 
 ```shell
-mdbook serve
+mdbook serve --open
 ```
-
-To view the docs, navigate to the localhost address output by `mdbook`, which is http://localhost:3000/ by default.
 
 You can build the book by running:
 

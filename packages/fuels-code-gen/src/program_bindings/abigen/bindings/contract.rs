@@ -9,7 +9,9 @@ use crate::{
     program_bindings::{
         abi_types::{FullABIFunction, FullProgramABI, FullTypeDeclaration},
         abigen::{
-            bindings::function_generator::FunctionGenerator, logs::logs_lookup_instantiation_code,
+            bindings::function_generator::FunctionGenerator,
+            configurables::generate_code_for_configurable_constatnts,
+            logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
@@ -35,6 +37,13 @@ pub(crate) fn contract_bindings(
     let methods_name = ident(&format!("{name}Methods"));
 
     let contract_functions = expand_functions(&abi.functions, shared_types)?;
+
+    let configuration_struct_name = ident(&format!("{name}Configurables"));
+    let constant_configuration_code = generate_code_for_configurable_constatnts(
+        &configuration_struct_name,
+        &abi.configurables,
+        shared_types,
+    )?;
 
     let code = quote! {
         pub struct #name {
@@ -96,10 +105,12 @@ pub(crate) fn contract_bindings(
                 self.log_decoder.clone()
             }
         }
+
+        #constant_configuration_code
     };
 
     // All publicly available types generated above should be listed here.
-    let type_paths = [name, &methods_name]
+    let type_paths = [name, &methods_name, &configuration_struct_name]
         .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
         .into_iter()
         .collect();

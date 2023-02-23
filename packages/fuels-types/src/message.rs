@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_chain_config::MessageConfig;
 use fuel_core_client::client::schema::message::{
     Message as ClientMessage, MessageStatus as ClientMessageStatus,

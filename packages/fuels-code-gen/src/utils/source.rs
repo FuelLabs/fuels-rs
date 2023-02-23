@@ -9,7 +9,7 @@ use crate::error::{error, Error, Result};
 
 /// A source of a Truffle artifact JSON.
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) enum Source {
+pub enum Source {
     /// A raw ABI string
     String(String),
 

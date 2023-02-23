@@ -20,3 +20,10 @@ sha2 = "0.9.5"
 
 [dev-dependencies]
 fuels-test-helpers = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "fuels-test-helpers/std",
+    "fuels-types/std",
+]
