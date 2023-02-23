@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use fuel_core_client::client::schema::node_info::NodeInfo as ClientNodeInfo;
 
 #[derive(Debug)]

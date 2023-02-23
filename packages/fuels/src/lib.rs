@@ -68,6 +68,7 @@ pub mod prelude {
         programs::{
             contract::{Contract, MultiContractCallHandler, SettableContract},
             logs::{LogDecoder, LogId},
+            Configurables,
         },
         signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,

@@ -35,3 +35,14 @@ And this is an example that uses `set_contract_ids(&[&contract_id, ...])`.
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/logs.rs:external_contract_ids}}
 ```
+
+# Configurable constants
+Same as contracts, you can define `configurable` constants in `scripts` which can be changed during the script execution. Here is an example how the constants are defined.
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/scripts/script_configurables/src/main.sw}}
+```
+Each of the configurable constants will get a dedicated `set` method in the SDK. For example, the constant `STR_4` will get the `set_str_4` method which accepts the same types as defined in sway. Below is an example where we chain several `set` methods and execute the script with the new constants.
+
+```rust,ignore
+{{#include ../../../packages/fuels/tests/configurables.rs:script_configurables}}

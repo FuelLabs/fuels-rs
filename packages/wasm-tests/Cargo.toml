@@ -14,4 +14,4 @@ fuels-macros = { workspace = true }
 fuels-core = { workspace = true }
 
 [dev-dependencies]
-webassembly-test = "0.1"
+wasm-bindgen-test = "0.3.34"
