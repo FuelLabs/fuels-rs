@@ -33,13 +33,12 @@ thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
 
 [dev-dependencies]
-fuels-test-helpers = { path = "../fuels-test-helpers" }
+fuels-test-helpers = { workspace = true, features = ["std", "fuels-signers"] }
 
 [features]
 default = ["std"]
 std = [
     "fuels-core/std",
     "fuels-signers/std",
-    "fuels-test-helpers/std",
     "fuels-types/std",
 ]
