@@ -42,19 +42,13 @@ mod tests {
         // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 
-        // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let tx_parameters = TxParameters::new()
-            .with_gas_price(0)
-            .with_gas_limit(1_000_000)
-            .with_maturity(0);
-
         // This will deploy your contract binary onto the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            DeployConfiguration::new().with_tx_parameters(tx_parameters),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -152,7 +146,10 @@ mod tests {
     #[tokio::test]
     async fn deploy_with_parameters() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: deploy_with_parameters
-        use fuels::prelude::*;
+        use fuels::{
+            prelude::*,
+            tx::{Bytes32, StorageSlot},
+        };
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
         // ANCHOR: abigen_example
@@ -173,13 +170,29 @@ mod tests {
 
         println!("Contract deployed @ {contract_id_1}");
 
+        // Optional: Configure deployment parameters or use `TxParameters::default()`
+        let tx_parameters = TxParameters::new()
+            .with_gas_price(0)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
+
+        // Optional: Configure storage
+        let key = Bytes32::from([1u8; 32]);
+        let value = Bytes32::from([2u8; 32]);
+        let storage_slot = StorageSlot::new(key, value);
+        let storage_configuration =
+            StorageConfiguration::new().with_manual_storage(vec![storage_slot]);
+
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
         let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            DeployConfiguration::new().with_salt(salt.into()),
+            DeployConfiguration::new()
+                .with_storage_configuration(storage_configuration)
+                .with_salt(salt.into())
+                .with_tx_parameters(tx_parameters),
         )
         .await?;
 
@@ -263,11 +276,14 @@ mod tests {
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        let my_tx_params = TxParameters::new().with_gas_limit(1_000_000);
+        let my_tx_parameters = TxParameters::new()
+            .with_gas_price(1)
+            .with_gas_limit(1_000_000)
+            .with_maturity(3);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .tx_params(my_tx_parameters) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 

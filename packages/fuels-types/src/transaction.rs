@@ -16,13 +16,11 @@ use crate::{
 };
 
 #[derive(Debug, Copy, Clone)]
-//ANCHOR: tx_parameter
 pub struct TxParameters {
     gas_price: u64,
     gas_limit: u64,
     maturity: u64,
 }
-//ANCHOR_END: tx_parameter
 
 macro_rules! impl_setter_getter {
     ($setter_name: ident, $field: ident) => {

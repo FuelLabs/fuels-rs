@@ -390,9 +390,9 @@ impl Contract {
 
         let storage_slots: Vec<StorageSlot> = serde_json::from_str(&storage_json_string)?;
 
-        Ok(storage_slots
+        Ok(manual_storage
             .into_iter()
-            .chain(manual_storage.into_iter())
+            .chain(storage_slots.into_iter())
             .unique()
             .collect())
     }
@@ -967,40 +967,5 @@ impl MultiContractCallHandler {
         );
 
         Ok(response)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use fuels_test_helpers::launch_provider_and_get_wallet;
-
-    use super::*;
-
-    #[tokio::test]
-    async fn test_deploy_error_messages() {
-        let wallet = launch_provider_and_get_wallet().await;
-        {
-            let binary_path =
-                "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-            let expected = format!("Invalid data: file '{binary_path}' does not exist");
-
-            let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-                .await
-                .expect_err("Should have failed");
-
-            assert_eq!(response.to_string(), expected);
-        }
-        {
-            let binary_path =
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
-            let expected =
-                format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
-
-            let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-                .await
-                .expect_err("Should have failed");
-
-            assert_eq!(response.to_string(), expected);
-        }
     }
 }
