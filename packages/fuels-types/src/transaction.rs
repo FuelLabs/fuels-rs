@@ -223,20 +223,10 @@ macro_rules! impl_tx_wrapper {
 impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 
-// impl CreateTransaction {
-//     pub fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-//         consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
-//     }
-// }
-
 impl ScriptTransaction {
     pub fn script(&self) -> &Vec<u8> {
         self.tx.script()
     }
-
-    // pub fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-    //     consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
-    // }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
         *self.tx.script_mut() = script;
@@ -335,7 +325,7 @@ impl ScriptTransaction {
         //  - the amount
         // into the registers 0x10, 0x11
         // and calls the SMO instruction
-        let script = vec![
+        let script: Vec<u8> = vec![
             op::gtf(0x10, 0x00, GTFArgs::ScriptData.into()),
             op::addi(0x11, 0x10, Bytes32::LEN as u16),
             op::lw(0x11, 0x11, 0),

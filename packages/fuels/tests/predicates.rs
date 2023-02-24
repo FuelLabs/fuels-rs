@@ -584,111 +584,6 @@ async fn pay_with_predicate() -> Result<()> {
     Ok(())
 }
 
-// #[tokio::test]
-// async fn transfer_to_contract() -> Result<()> {
-//     abigen!(
-//         Contract(
-//             name = "MyContract",
-//             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-//         ),
-//         Predicate(
-//             name = "MyPredicate",
-//             abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-//         )
-//     );
-//
-//     let mut predicate: Predicate =
-//         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
-//             .set_data(32768)
-//             .get_predicate();
-//
-//     let num_coins = 4;
-//     let num_messages = 8;
-//     let amount = 16;
-//     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-//         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-//
-//     predicate.set_provider(provider.clone());
-//
-//     let contract_id = Contract::deploy(
-//         "tests/contracts/contract_test/out/debug/contract_test.bin",
-//         &predicate,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//         .await?;
-//
-//     Ok(())
-// }
-
-//
-// #[tokio::test]
-// async fn predicate_contract_transfer() -> Result<()> {
-//     use fuels::prelude::*;
-//     use rand::Fill;
-//     let mut rng = rand::thread_rng();
-//
-//     abigen!(
-//         Predicate(
-//             name = "MyPredicate",
-//             abi = "packages/fuels/tests/predicates/predicate_u64/out/debug/predicate_u64-abi.json"
-//         )
-//     );
-//
-//     let mut predicate: Predicate =
-//         MyPredicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
-//             .set_data(32768)
-//             .get_predicate();
-//
-//     let num_coins = 4;
-//     let num_messages = 8;
-//     let amount = 16;
-//     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-//         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-//
-//     predicate.set_provider(provider.clone());
-//
-//     let base_asset = AssetConfig {
-//         id: BASE_ASSET_ID,
-//         num_coins: 1,
-//         coin_amount: 1000,
-//     };
-//
-//     let mut random_asset_id = AssetId::zeroed();
-//
-//     let contract_id = Contract::deploy(
-//         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-//         &predicate,
-//         TxParameters::default(),
-//         StorageConfiguration::default(),
-//     )
-//         .await?;
-//
-//     let contract_balances = predicate
-//         .provider()?
-//         .get_contract_balances(&contract_id)
-//         .await?;
-//     assert!(contract_balances.is_empty());
-//
-//     let amount = 300;
-//     let asset_id = random_asset_id;
-//     let (_tx_id, _receipts) = predicate
-//         .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
-//         .await?;
-//
-//     let contract_balances = predicate
-//         .provider()?
-//         .get_contract_balances(&contract_id)
-//         .await?;
-//     assert_eq!(contract_balances.len(), 1);
-//
-//     let random_asset_id_key = format!("{random_asset_id:#x}");
-//     let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
-//     assert_eq!(*random_asset_balance, 300);
-//
-//     Ok(())
-// }
-//
 #[tokio::test]
 async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
     abigen!(
@@ -985,5 +880,51 @@ async fn predicate_contract_transfer() -> Result<()> {
         .unwrap();
     assert_eq!(*random_asset_balance, 300);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_transfer_to_base_layer() -> Result<()> {
+    use std::str::FromStr;
+
+    use fuels::prelude::*;
+
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+    ));
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 300;
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let amount = 1000;
+    let base_layer_address =
+        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
+            .expect("Invalid address.");
+    let base_layer_address = Bech32Address::from(base_layer_address);
+
+    let (tx_id, msg_id, _receipts) = predicate
+        .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
+        .await?;
+
+    let proof = predicate
+        .provider()?
+        .get_message_proof(&tx_id, &msg_id)
+        .await?
+        .expect("Failed to retrieve message proof.");
+
+    assert_eq!(proof.amount, amount);
+    assert_eq!(proof.recipient, base_layer_address);
     Ok(())
 }

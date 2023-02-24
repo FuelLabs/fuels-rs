@@ -5,10 +5,6 @@ use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId, Witness};
 use fuel_types::MessageId;
-use fuels_core::{
-    abi_encoder::UnresolvedBytes,
-    offsets::{base_offset, coin_predicate_data_offset, message_predicate_data_offset},
-};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
@@ -509,8 +505,7 @@ impl WalletUnlocked {
         let mut tx =
             ScriptTransaction::build_message_to_output_tx(to.into(), amount, inputs, tx_parameters);
 
-        self.add_fee_resources(&mut tx, amount, 0).await?;
-        self.sign_transaction(&mut tx).await?;
+        self.pay_fee_resources(&mut tx, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -526,125 +521,6 @@ impl WalletUnlocked {
             .iter()
             .find(|r| matches!(r, Receipt::MessageOut { .. }))
             .and_then(|m| m.message_id())
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    pub async fn spend_predicate(
-        &self,
-        predicate_address: &Bech32Address,
-        code: Vec<u8>,
-        amount: u64,
-        asset_id: AssetId,
-        to: &Bech32Address,
-        predicate_data: UnresolvedBytes,
-        tx_parameters: TxParameters,
-    ) -> Result<Vec<Receipt>> {
-        let predicate = self.get_provider()?;
-        let spendable_predicate_resources = predicate
-            .get_spendable_resources(predicate_address, asset_id, amount)
-            .await?;
-
-        // input amount is: amount < input_amount < 2*amount
-        // because of "random improve" used by get_spendable_coins()
-        let input_amount: u64 = spendable_predicate_resources
-            .iter()
-            .map(|resource| resource.amount())
-            .sum();
-
-        // Iterate through the spendable resources and calculate the appropriate offsets
-        // for the coin or message predicates
-        let mut offset = base_offset(&predicate.consensus_parameters().await?);
-        let inputs = spendable_predicate_resources
-            .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => {
-                    offset += coin_predicate_data_offset(code.len());
-
-                    let data = predicate_data.clone().resolve(offset as u64);
-                    offset += data.len();
-
-                    self.create_coin_predicate(coin, asset_id, code.clone(), data)
-                }
-                Resource::Message(message) => {
-                    offset += message_predicate_data_offset(message.data.len(), code.len());
-
-                    let data = predicate_data.clone().resolve(offset as u64);
-                    offset += data.len();
-
-                    self.create_message_predicate(message, code.clone(), data)
-                }
-            })
-            .collect::<Vec<_>>();
-
-        let outputs = vec![
-            Output::coin(to.into(), amount, asset_id),
-            Output::coin(predicate_address.into(), input_amount - amount, asset_id),
-        ];
-
-        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters);
-        // we set previous base amount to 0 because it only applies to signed coins, not predicate coins
-        self.add_fee_resources(&mut tx, 0, 0).await?;
-        self.sign_transaction(&mut tx).await?;
-
-        predicate.send_transaction(&tx).await
-    }
-
-    fn create_coin_predicate(
-        &self,
-        coin: Coin,
-        asset_id: AssetId,
-        code: Vec<u8>,
-        predicate_data: Vec<u8>,
-    ) -> Input {
-        Input::coin_predicate(
-            coin.utxo_id,
-            coin.owner.into(),
-            coin.amount,
-            asset_id,
-            TxPointer::default(),
-            0,
-            code,
-            predicate_data,
-        )
-    }
-
-    fn create_message_predicate(
-        &self,
-        message: InputMessage,
-        code: Vec<u8>,
-        predicate_data: Vec<u8>,
-    ) -> Input {
-        Input::message_predicate(
-            message.message_id(),
-            message.sender.into(),
-            message.recipient.into(),
-            message.amount,
-            message.nonce,
-            message.data,
-            code,
-            predicate_data,
-        )
-    }
-
-    pub async fn receive_from_predicate(
-        &self,
-        predicate_address: &Bech32Address,
-        predicate_code: Vec<u8>,
-        amount: u64,
-        asset_id: AssetId,
-        predicate_data: UnresolvedBytes,
-        tx_parameters: TxParameters,
-    ) -> Result<Vec<Receipt>> {
-        self.spend_predicate(
-            predicate_address,
-            predicate_code,
-            amount,
-            asset_id,
-            &self.address.clone(),
-            predicate_data,
-            tx_parameters,
-        )
-        .await
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -763,12 +639,53 @@ impl Account for WalletUnlocked {
 
     async fn force_transfer_to_contract(
         &self,
-        _to: &Bech32ContractId,
-        _balance: u64,
-        _asset_id: AssetId,
-        _tx_parameters: TxParameters,
+        to: &Bech32ContractId,
+        balance: u64,
+        asset_id: AssetId,
+        tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
-        todo!()
+        let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
+
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            TxPointer::default(),
+            plain_contract_id,
+        )];
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            Output::change((&self.address).into(), 0, asset_id),
+        ];
+
+        // Build transaction and sign it
+        let mut tx = ScriptTransaction::build_contract_transfer_tx(
+            plain_contract_id,
+            balance,
+            asset_id,
+            inputs,
+            outputs,
+            tx_parameters,
+        );
+        // if we are not transferring the base asset, previous base amount is 0
+        let base_amount = if asset_id == AssetId::default() {
+            balance
+        } else {
+            0
+        };
+        self.add_fee_resources(&mut tx, base_amount, 0).await?;
+        self.sign_transaction(&mut tx).await?;
+
+        let tx_id = tx.id();
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        Ok((tx_id.to_string(), receipts))
     }
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {

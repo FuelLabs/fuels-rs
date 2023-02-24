@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::fmt::Debug;
 
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId};
+use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
 
 use fuels_types::transaction::Transaction;
 
@@ -33,13 +33,6 @@ type PredicateResult<T> = std::result::Result<T, WalletError>;
 impl Predicate {
     pub fn provider(&self) -> PredicateResult<&Provider> {
         self.provider.as_ref().ok_or(WalletError::NoProvider)
-    }
-
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.provider()?
-            .get_balances(&self.address)
-            .await
-            .map_err(Into::into)
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
@@ -173,6 +166,53 @@ impl Predicate {
             predicate_data,
         )
     }
+
+    pub async fn withdraw_to_base_layer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, String, Vec<Receipt>)> {
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .await?;
+
+        let mut tx =
+            ScriptTransaction::build_message_to_output_tx(to.into(), amount, inputs, tx_parameters);
+
+        let consensus_parameters = self
+            .get_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
+
+        let script_offset = base_offset(&consensus_parameters);
+        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64; // strange 64
+
+        self.pay_fee_resources(&mut tx, amount, 0).await?;
+
+        let tx_id = tx.id().to_string();
+        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+
+        let message_id = Predicate::extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx_id, message_id.to_string(), receipts))
+    }
+
+    fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+        receipts
+            .iter()
+            .find(|r| matches!(r, Receipt::MessageOut { .. }))
+            .and_then(|m| m.message_id())
+    }
+
+    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
+        self.provider()?
+            .get_balances(&self.address)
+            .await
+            .map_err(Into::into)
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
@@ -197,12 +237,9 @@ impl PayFee for Predicate {
             .map(|input| input.amount().unwrap())
             .sum();
         if base_inputs_sum < previous_base_amount {
-            return Err(fuels_signers::wallet::WalletError::LowAmount(
-                Error::WalletError(
-                    "The provided base asset amount is less than the present input coins"
-                        .to_string(),
-                ),
-            ));
+            return Err(WalletError::LowAmount(Error::WalletError(
+                "The provided base asset amount is less than the present input coins".to_string(),
+            )));
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
@@ -214,7 +251,6 @@ impl PayFee for Predicate {
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
-        //TODO find out is it Contract deploy or sscript
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount_predicates(tx, BASE_ASSET_ID, new_base_amount)
@@ -338,9 +374,10 @@ impl Account for Predicate {
         let consensus_parameters = self
             .provider
             .as_ref()
-            .expect("No provider avilable")
+            .expect("No provider available")
             .consensus_parameters()
             .await?;
+
         let script_offset = base_offset(&consensus_parameters);
         tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() + 160; // contract offset
 

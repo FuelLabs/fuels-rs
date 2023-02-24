@@ -38,17 +38,12 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
         message: &mut Tx,
     ) -> Result<Signature, Self::Error>;
 
-    /// Returns the signer's Fuel Address
-    // fn address(&self) -> &Bech32Address;
-
     async fn add_fee_resources<Tx: Transaction + Send>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Self::Error>;
-
-    // fn get_provider(&self) -> Result<&Provider, Self::Error>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
