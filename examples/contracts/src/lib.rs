@@ -279,15 +279,14 @@ mod tests {
         let my_tx_parameters = TxParameters::new()
             .with_gas_price(1)
             .with_gas_limit(1_000_000)
-            .with_maturity(3);
+            .with_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
             .tx_params(my_tx_parameters) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
-        // ANCHOR_END: tx_parameters
+                     // ANCHOR_END: tx_parameters
 
         // ANCHOR: tx_parameters_default
         let response = contract_methods
