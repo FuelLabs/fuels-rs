@@ -1,10 +1,8 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
-use std::{
-    iter::{repeat, zip},
-    net::SocketAddr,
-};
+use std::
+    net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
@@ -21,7 +19,6 @@ use fuels_types::{
     coin::{Coin, CoinStatus},
     constants::BASE_ASSET_ID,
     message::{Message, MessageStatus},
-    param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
@@ -41,10 +38,6 @@ pub mod node;
 mod signers;
 mod utils;
 mod wallets_config;
-
-pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
-    zip(repeat("unused".to_string()), types).collect()
-}
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
