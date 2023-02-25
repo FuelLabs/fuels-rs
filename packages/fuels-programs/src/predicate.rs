@@ -229,13 +229,19 @@ impl PayFee for Predicate {
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
+
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
-            matches!(input , Input::MessageSigned { .. }) || matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) });
+            matches!(input , Input::MessageSigned { .. }) ||
+                matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
+                matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
+                matches!(input , Input::MessagePredicate { .. })
+        });
 
         let base_inputs_sum: u64 = base_asset_inputs
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
+
         if base_inputs_sum < previous_base_amount {
             return Err(WalletError::LowAmount(Error::WalletError(
                 "The provided base asset amount is less than the present input coins".to_string(),

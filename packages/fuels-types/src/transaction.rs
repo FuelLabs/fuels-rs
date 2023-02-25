@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_tx::field::Salt;
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
@@ -19,8 +18,6 @@ use crate::{
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
-
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize;
 
     fn check_without_signatures(
         &self,
@@ -105,24 +102,6 @@ macro_rules! impl_tx_wrapper {
         impl Transaction for $wrapper {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
-            }
-
-            fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-                match () {
-                    _ if std::any::type_name::<$wrapper>()
-                        == std::any::type_name::<CreateTransaction>() =>
-                    {
-                        consensus_parameters.tx_offset()
-                            + fuel_tx::Create::salt_offset_static()
-                            + Bytes32::LEN
-                    }
-                    _ if std::any::type_name::<$wrapper>()
-                        == std::any::type_name::<ScriptTransaction>() =>
-                    {
-                        10376 + 96 + 160
-                    }
-                    () => todo!(),
-                }
             }
 
             fn check_without_signatures(

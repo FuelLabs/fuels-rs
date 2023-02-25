@@ -56,6 +56,7 @@ where
     let script = get_instructions(calls, call_param_offsets);
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
+
     let mut spendable_resources = vec![];
 
     // Find the spendable resources required for those calls
@@ -63,6 +64,10 @@ where
         let resources = account.get_spendable_resources(*asset_id, *amount).await?;
         spendable_resources.extend(resources);
     }
+
+    dbg!(&spendable_resources);
+
+    dbg!("EMIR");
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
 

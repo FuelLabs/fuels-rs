@@ -398,6 +398,7 @@ impl WalletUnlocked {
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
+
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
             return Err(LowAmount(error!(

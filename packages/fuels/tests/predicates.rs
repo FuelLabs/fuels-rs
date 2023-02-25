@@ -553,17 +553,13 @@ async fn pay_with_predicate() -> Result<()> {
         192
     );
 
-    // let call_params = CallParameters::new(Some(100), None, None);
-
     let response = contract_instance_connected
         .methods()
         .initialize_counter(42) // Build the ABI call
         .tx_params(tx_params)
-        // .call_params(call_params)?
         .call() // Perform the network call
         .await?;
-    //
-    // // TODO Create Transaction:  consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
+
     assert_eq!(42, response.value);
     assert_eq!(
         *predicate
@@ -573,13 +569,6 @@ async fn pay_with_predicate() -> Result<()> {
             .unwrap(),
         187
     );
-
-    // add call params.
-    // append params?
-    // test transfer over predicates
-    // test transfer over wallet
-    // transfer on base layer
-    // transfer on contract
 
     Ok(())
 }
@@ -715,10 +704,10 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     // add call params.
     // append params?
-    // test transfer over predicates
-    // test transfer over wallet
-    // transfer on base layer
-    // transfer on contract
+    // test transfer over predicates +
+    // test transfer over wallet +
+    // transfer on base layer +
+    // transfer on contract +
 
     Ok(())
 }
@@ -926,5 +915,92 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
+    use fuels::prelude::*;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ),
+        Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+        )
+    );
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let num_coins = 1;
+    let num_messages = 1;
+    let amount = 1_000_000_000;
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let balance = predicate.get_balances().await?;
+
+    dbg!(balance);
+    let contract_id = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        &predicate,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+    println!("Contract deployed @ {contract_id}");
+    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
+
+    let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+
+    let response = contract_methods
+        .initialize_counter(42) // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
+        .call() // Perform the contract call.
+        .await?; // This is an async call, `.await` for it.
+
+    let response = contract_methods
+        .initialize_counter(42)
+        .tx_params(TxParameters::default())
+        .call()
+        .await?;
+
+    let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+
+    let response = contract_methods
+        .initialize_counter(42) // Our contract method.
+        .tx_params(my_tx_params) // Chain the tx params setting method.
+        .call() // Perform the contract call.
+        .await?; // This is an async call, `.await` for it.
+
+    let contract_methods = MyContract::new(contract_id, predicate.clone()).methods();
+
+    let tx_params = TxParameters::default();
+
+    let call_params = CallParameters::new(Some(1_000_000), None, None);
+
+    let response = contract_methods
+        .get_msg_amount() // Our contract method.
+        .tx_params(tx_params) // Chain the tx params setting method.
+        .call_params(call_params)? // Chain the call params setting method.
+        .call() // Perform the contract call.
+        .await?;
+
+    let response = contract_methods
+        .initialize_counter(42)
+        .call_params(CallParameters::default())?
+        .call()
+        .await?;
+
     Ok(())
 }

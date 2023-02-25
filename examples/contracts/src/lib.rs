@@ -265,6 +265,7 @@ mod tests {
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
+
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
