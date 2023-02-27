@@ -8,7 +8,7 @@ use std::{
     str::FromStr,
 };
 
-use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
     StorageSlot, Transaction as FuelTransaction,
@@ -453,6 +453,12 @@ impl ContractCall {
         )
     }
 
+    fn is_missing_message_output(receipts: &[Receipt]) -> bool {
+        receipts
+            .iter()
+            .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_SEND_MESSAGE_SIGNAL))
+    }
+
     fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
         receipts.iter().find(
             |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
@@ -700,34 +706,37 @@ where
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.simulate().await;
-
-            match result {
-                Err(Error::RevertTransactionError { receipts, .. })
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self = self.append_variable_outputs(1);
-                }
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
 
                 Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
-                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                        self = self.append_contract(contract_id);
-                    } else {
-                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
-                    }
+                    self = self.append_missing_deps(receipts);
                 }
 
-                Err(e) => return Err(e),
-                _ => return Ok(self),
+                Err(other_error) => return Err(other_error),
             }
         }
 
-        // confirm if successful or propagate error
-        match self.simulate().await {
-            Ok(_) => Ok(self),
-            Err(e) => Err(e),
+        self.simulate().await.map(|_| self)
+    }
+
+    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
+        if ContractCall::is_missing_output_variables(receipts) {
+            self = self.append_variable_outputs(1)
         }
+        if ContractCall::is_missing_message_output(receipts) {
+            self = self.append_message_outputs(1);
+        }
+        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            self = self.append_contract(contract_id);
+        }
+
+        self
     }
 
     /// Get a contract's estimated cost
@@ -856,36 +865,50 @@ impl MultiContractCallHandler {
         let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
         for _ in 0..attempts {
-            let result = self.simulate_without_decode().await;
-
-            match result {
-                Err(Error::RevertTransactionError { receipts, .. })
-                    if ContractCall::is_missing_output_variables(&receipts) =>
-                {
-                    self.contract_calls
-                        .iter_mut()
-                        .take(1)
-                        .for_each(|call| call.append_variable_outputs(1));
-                }
+            match self.simulate_without_decode().await {
+                Ok(_) => return Ok(self),
 
                 Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    if let Some(receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
-                        let contract_id = Bech32ContractId::from(*receipt.contract_id().unwrap());
-                        self.contract_calls
-                            .iter_mut()
-                            .take(1)
-                            .for_each(|call| call.append_external_contracts(contract_id.clone()));
-                    } else {
-                        return Err(result.expect_err("Couldn't estimate tx dependencies because we couldn't find the missing contract input"));
-                    }
+                    self = self.append_missing_dependencies(receipts);
                 }
 
-                Err(e) => return Err(e),
-                _ => return Ok(self),
+                Err(other_error) => return Err(other_error),
             }
         }
 
         Ok(self)
+    }
+
+    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
+        // Append to any call, they will be merged to a single script tx
+        // At least 1 call should exist at this point, otherwise simulate would have failed
+        if ContractCall::is_missing_output_variables(receipts) {
+            self.contract_calls
+                .iter_mut()
+                .take(1)
+                .for_each(|call| call.append_variable_outputs(1));
+        }
+
+        if ContractCall::is_missing_message_output(receipts) {
+            self.contract_calls
+                .iter_mut()
+                .take(1)
+                .for_each(|call| call.append_message_outputs(1));
+        }
+
+        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            self.contract_calls
+                .iter_mut()
+                .take(1)
+                .for_each(|call| call.append_external_contracts(contract_id.clone()));
+        }
+
+        self
     }
 
     /// Get a contract's estimated cost
