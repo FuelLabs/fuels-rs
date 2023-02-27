@@ -1,14 +1,18 @@
 extern crate core;
 
-use std::error::Error;
+use std::collections::HashMap;
 
 use async_trait::async_trait;
+use eth_keystore::KeystoreError;
+use thiserror::Error;
+
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Input, Receipt};
 use fuel_types::AssetId;
 use fuels_types::bech32::Bech32ContractId;
+use fuels_types::errors::{Error, Result as FuelsResult};
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
 use fuels_types::{bech32::Bech32Address, transaction::Transaction};
@@ -27,49 +31,88 @@ pub mod wallet;
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
-    /// Signs the hash of the provided message
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> Result<Signature, Self::Error>;
+    ) -> Result<Signature, Error>;
 
     /// Signs the transaction
     async fn sign_transaction<Tx: Transaction + Send>(
         &self,
         message: &mut Tx,
-    ) -> Result<Signature, Self::Error>;
+    ) -> Result<Signature, Error>;
 
     async fn add_fee_resources<Tx: Transaction + Send>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<(), Self::Error>;
+    ) -> Result<(), Error>;
 }
+
+#[derive(Error, Debug)]
+/// Error thrown by the Wallet module
+pub enum AccountError {
+    /// Error propagated from the hex crate.
+    #[error(transparent)]
+    Hex(#[from] hex::FromHexError),
+    /// Error propagated by parsing of a slice
+    #[error("Failed to parse slice")]
+    Parsing(#[from] std::array::TryFromSliceError),
+    #[error("No provider was setup: make sure to set_provider in your wallet!")]
+    NoProvider,
+    /// Keystore error
+    #[error(transparent)]
+    KeystoreError(#[from] KeystoreError),
+    #[error(transparent)]
+    FuelCrypto(#[from] fuel_crypto::Error),
+    #[error(transparent)]
+    LowAmount(#[from] fuels_types::errors::Error),
+}
+
+impl From<AccountError> for Error {
+    fn from(e: AccountError) -> Self {
+        Error::AccountError(e.to_string())
+    }
+}
+
+type AccountResult<T> = std::result::Result<T, AccountError>;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: std::fmt::Debug + Send + Sync {
-    type Error: Error + Send + Sync;
-
     fn address(&self) -> &Bech32Address;
 
-    fn get_provider(&self) -> Result<&Provider, Self::Error>;
+    fn get_provider(&self) -> AccountResult<&Provider>;
 
     fn set_provider(&mut self, provider: Provider);
+
+    /// Get all the spendable balances of all assets for the account. This is different from getting
+    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
+    /// coins themselves.
+    async fn get_balances(&self) -> FuelsResult<HashMap<String, u64>> {
+        self.get_provider()?
+            .get_balances(self.address())
+            .await
+            .map_err(Into::into)
+    }
+
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> std::result::Result<Vec<Resource>, Error> {
+        self.get_provider()?
+            .get_spendable_resources(self.address(), asset_id, amount)
+            .await
+            .map_err(Into::into)
+    }
 
     async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<(), Self::Error>;
-
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Resource>, Self::Error>;
+    ) -> Result<(), Error>;
 
     async fn transfer(
         &self,
@@ -77,7 +120,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
-    ) -> Result<(String, Vec<Receipt>), Self::Error>;
+    ) -> Result<(String, Vec<Receipt>), Error>;
 
     async fn force_transfer_to_contract(
         &self,
@@ -85,14 +128,14 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>), Self::Error>;
+    ) -> Result<(String, Vec<Receipt>), Error>;
 
     async fn withdraw_to_base_layer(
         &self,
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> Result<(String, String, Vec<Receipt>), Self::Error>;
+    ) -> Result<(String, String, Vec<Receipt>), Error>;
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input>;
 }
@@ -123,7 +166,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
+    async fn sign_and_verify() -> Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: sign_message
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
@@ -154,7 +197,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sign_tx_and_verify() -> Result<(), Box<dyn Error>> {
+    async fn sign_tx_and_verify() -> Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: sign_tx
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",

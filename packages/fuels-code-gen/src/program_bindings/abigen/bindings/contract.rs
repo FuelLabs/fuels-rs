@@ -53,8 +53,6 @@ pub(crate) fn contract_bindings(
         }
 
         impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #name<T>
-        where
-            ::fuels::types::errors::Error: From<<T as ::fuels::accounts::Account>::Error>,
         {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };

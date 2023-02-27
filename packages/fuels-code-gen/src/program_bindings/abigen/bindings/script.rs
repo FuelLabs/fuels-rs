@@ -47,7 +47,6 @@ pub(crate) fn script_bindings(
         }
 
         impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #name<T>
-            where ::fuels::types::errors::Error: From<<T as ::fuels::accounts::Account>::Error>
         {
             pub fn new(account: T, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)

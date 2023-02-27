@@ -3,7 +3,7 @@ use std::{mem::size_of, net::SocketAddr};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
-use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, WalletUnlocked};
+use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, Account, WalletUnlocked};
 use fuels_types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -110,7 +110,7 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use fuels_accounts::fuel_crypto::fuel_types::AssetId;
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account};
     use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
     use rand::Fill;
 

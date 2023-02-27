@@ -38,10 +38,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     calls: &[ContractCall],
     tx_parameters: &TxParameters,
     account: &T,
-) -> Result<ScriptTransaction>
-where
-    fuels_types::errors::Error: From<<T as Account>::Error>,
-{
+) -> Result<ScriptTransaction> {
     let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
 
     // Calculate instructions length for call instructions

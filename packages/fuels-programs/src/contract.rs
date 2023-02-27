@@ -541,7 +541,6 @@ pub struct ContractCallHandler<T, D> {
 impl<T, D> ContractCallHandler<T, D>
 where
     T: fuels_accounts::Account,
-    fuels_types::errors::Error: From<<T as Account>::Error>,
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
@@ -788,10 +787,7 @@ pub struct MultiContractCallHandler<T> {
     pub account: T,
 }
 
-impl<T: fuels_accounts::Account> MultiContractCallHandler<T>
-where
-    fuels_types::errors::Error: From<<T as Account>::Error>,
-{
+impl<T: fuels_accounts::Account> MultiContractCallHandler<T> {
     pub fn new(account: T) -> Self {
         Self {
             contract_calls: vec![],

@@ -1,6 +1,5 @@
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
-use eth_keystore::KeystoreError;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId, Witness};
@@ -8,7 +7,8 @@ use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
     constants::BASE_ASSET_ID,
-    errors::{error, Error, Result},
+    error,
+    errors::{Error, Result},
     message::Message as InputMessage,
     parameters::TxParameters,
     resource::Resource,
@@ -16,12 +16,13 @@ use fuels_types::{
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
-use std::{collections::HashMap, fmt, ops, path::Path};
-use thiserror::Error;
+use std::{fmt, ops, path::Path};
 
-use crate::accounts_utils::{create_coin_input, create_message_input, extract_message_id};
-use crate::wallet::AccountError::LowAmount;
-use crate::{provider, provider::Provider, Account, Signer};
+use crate::{
+    accounts_utils::{create_coin_input, create_message_input, extract_message_id},
+    AccountError, AccountResult,
+};
+use crate::{provider::Provider, Account, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -84,34 +85,6 @@ pub struct Wallet {
 pub struct WalletUnlocked {
     wallet: Wallet,
     pub(crate) private_key: SecretKey,
-}
-
-#[derive(Error, Debug)]
-/// Error thrown by the Wallet module
-pub enum AccountError {
-    /// Error propagated from the hex crate.
-    #[error(transparent)]
-    Hex(#[from] hex::FromHexError),
-    /// Error propagated by parsing of a slice
-    #[error("Failed to parse slice")]
-    Parsing(#[from] std::array::TryFromSliceError),
-    #[error("No provider was setup: make sure to set_provider in your wallet!")]
-    NoProvider,
-    /// Keystore error
-    #[error(transparent)]
-    KeystoreError(#[from] KeystoreError),
-    #[error(transparent)]
-    FuelCrypto(#[from] fuel_crypto::Error),
-    #[error(transparent)]
-    LowAmount(#[from] fuels_types::errors::Error),
-    #[error(transparent)]
-    ProviderError(#[from] provider::ProviderError),
-}
-
-impl From<AccountError> for Error {
-    fn from(e: AccountError) -> Self {
-        Error::AccountError(e.to_string())
-    }
 }
 
 impl Wallet {
@@ -207,16 +180,6 @@ impl Wallet {
     pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
         self.provider()?
             .get_asset_balance(&self.address, *asset_id)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get all the spendable balances of all assets for the wallet. This is different from getting
-    /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
-    /// coins themselves.
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.provider()?
-            .get_balances(&self.address)
             .await
             .map_err(Into::into)
     }
@@ -353,7 +316,7 @@ impl WalletUnlocked {
         tx: &mut impl Transaction,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> WalletResult<()> {
+    ) -> Result<()> {
         let consensus_parameters = self
             .get_provider()?
             .chain_info()
@@ -377,10 +340,11 @@ impl WalletUnlocked {
 
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
-            return Err(LowAmount(error!(
+            return Err(AccountError::LowAmount(error!(
                 AccountError,
                 "The provided base asset amount is less than the present input coins"
-            )));
+            ))
+            .into());
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
@@ -423,13 +387,11 @@ impl WalletUnlocked {
 }
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for WalletUnlocked {
-    type Error = AccountError;
-
     fn address(&self) -> &Bech32Address {
         &self.address
     }
 
-    fn get_provider(&self) -> std::result::Result<&Provider, Self::Error> {
+    fn get_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
@@ -437,80 +399,28 @@ impl Account for WalletUnlocked {
         self.wallet.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send>(
+    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> WalletResult<()> {
+    ) -> Result<()> {
         self.add_fee_resources(tx, previous_base_amount, witness_index)
             .await?;
         self.sign_transaction(tx).await?;
         Ok(())
     }
 
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> std::result::Result<Vec<Resource>, AccountError> {
-        self.provider()?
-            .get_spendable_resources(&self.address, asset_id, amount)
-            .await
-            .map_err(Into::into)
-    }
-
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
-    ///
-    /// # Examples
-    /// ```
-    /// use fuels::prelude::*;
-    /// use fuels::test_helpers::setup_single_asset_coins;
-    /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
-    /// use std::str::FromStr;
-    /// use fuels_accounts::Account;
-    /// #[cfg(feature = "fuel-core-lib")]
-    /// use fuels_test_helpers::Config;
-    ///
-    /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    ///  // Create the actual wallets/accounts
-    ///  let mut wallet_1 = WalletUnlocked::new_random(None);
-    ///  let mut wallet_2 = WalletUnlocked::new_random(None).lock();
-    ///
-    ///   // Setup a coin for each wallet
-    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),BASE_ASSET_ID, 1, 1);
-    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),BASE_ASSET_ID, 1, 1);
-    ///   coins_1.extend(coins_2);
-    ///
-    ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None, None).await;
-    ///
-    ///   // Set provider for wallets
-    ///   wallet_1.set_provider(provider.clone());
-    ///   wallet_2.set_provider(provider);
-    ///
-    ///   // Transfer 1 from wallet 1 to wallet 2
-    ///   let _receipts = wallet_1
-    ///        .transfer(&wallet_2.address(), 1, Default::default(), None)
-    ///        .await
-    ///        .unwrap();
-    ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
-    ///
-    ///   // Check that wallet two now has two coins
-    ///   assert_eq!(wallet_2_final_coins.len(), 2);
-    ///   Ok(())
-    /// }
-    /// ```
     async fn transfer(
         &self,
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
-    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -546,7 +456,7 @@ impl Account for WalletUnlocked {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -599,7 +509,7 @@ impl Account for WalletUnlocked {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
@@ -648,21 +558,13 @@ impl Account for WalletUnlocked {
 #[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    type Error = AccountError;
-
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> WalletResult<Signature> {
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(
-        &self,
-        tx: &mut Tx,
-    ) -> WalletResult<Signature> {
+    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> Result<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -687,16 +589,12 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    // fn address(&self) -> &Bech32Address {
-    //     &self.address
-    // }
-
     async fn add_fee_resources<Tx: Transaction + std::marker::Send>(
         &self,
         tx: &mut Tx,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> WalletResult<()> {
+    ) -> Result<()> {
         self.add_fee_resources(tx, previous_base_amount, witness_index)
             .await
     }

@@ -2,7 +2,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_accounts::{provider::Provider, Account};
+use fuels_accounts::provider::Provider;
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
 use fuels_types::{
     bech32::Bech32ContractId,
@@ -64,7 +64,6 @@ pub struct ScriptCallHandler<T, D> {
 impl<T: fuels_accounts::Account + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
-    fuels_types::errors::Error: From<<T as Account>::Error>,
 {
     pub fn new(
         script_binary: Vec<u8>,

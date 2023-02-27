@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::fmt::Debug;
 
 use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
@@ -11,8 +10,7 @@ use crate::accounts_utils::{
     extract_message_id,
 };
 use crate::provider::Provider;
-use crate::wallet::AccountError;
-use crate::Account;
+use crate::{Account, AccountError, AccountResult};
 use fuels_core::offsets::base_offset;
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
@@ -108,24 +106,15 @@ impl Predicate {
             })
             .collect::<Vec<Input>>())
     }
-
-    pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.provider()?
-            .get_balances(&self.address)
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for Predicate {
-    type Error = AccountError;
-
     fn address(&self) -> &Bech32Address {
         &self.address
     }
 
-    fn get_provider(&self) -> std::result::Result<&Provider, Self::Error> {
+    fn get_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
@@ -138,7 +127,7 @@ impl Account for Predicate {
         tx: &mut Tx,
         previous_base_amount: u64,
         _witness_index: u8,
-    ) -> std::result::Result<(), Self::Error> {
+    ) -> std::result::Result<(), Error> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
         let transaction_fee = tx
             .fee_checked_from_tx(&consensus_parameters)
@@ -159,7 +148,8 @@ impl Account for Predicate {
         if base_inputs_sum < previous_base_amount {
             return Err(AccountError::LowAmount(Error::AccountError(
                 "The provided base asset amount is less than the present input coins".to_string(),
-            )));
+            ))
+            .into());
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
@@ -195,24 +185,13 @@ impl Account for Predicate {
         Ok(())
     }
 
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> std::result::Result<Vec<Resource>, Self::Error> {
-        self.provider()?
-            .get_spendable_resources(&self.address, asset_id, amount)
-            .await
-            .map_err(Into::into)
-    }
-
     async fn transfer(
         &self,
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
-    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, 0)
             .await?;
@@ -242,7 +221,7 @@ impl Account for Predicate {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -307,7 +286,7 @@ impl Account for Predicate {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, String, Vec<Receipt>), Self::Error> {
+    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
