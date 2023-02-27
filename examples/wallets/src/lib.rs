@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use fuels::accounts::Account;
     use fuels::prelude::Result;
-    use fuels::signers::Account;
 
     #[tokio::test]
     async fn create_random_wallet() {
@@ -22,7 +22,7 @@ mod tests {
         // ANCHOR: create_wallet_from_secret_key
         use std::str::FromStr;
 
-        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
+        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
         let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;

@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use fuels::programs::predicate::Predicate;
-    use fuels::signers::Account;
+    use fuels::accounts::predicate::Predicate;
+    use fuels::accounts::Account;
     use fuels::{prelude::*, types::B512};
 
     #[tokio::test]
     async fn predicate_example() -> Result<()> {
-        use fuels::signers::fuel_crypto::SecretKey;
+        use fuels::accounts::fuel_crypto::SecretKey;
 
         // ANCHOR: predicate_wallets
         let secret_key1: SecretKey =

@@ -15,7 +15,7 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
+use fuels_accounts::fuel_crypto::{fuel_types::AssetId, rand};
 use fuels_types::{
     bech32::Bech32Address,
     coin::{Coin, CoinStatus},
@@ -28,7 +28,7 @@ pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuels-accounts")]
 pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
@@ -37,7 +37,7 @@ pub use wallets_config::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuels-accounts")]
 mod signers;
 mod utils;
 mod wallets_config;
@@ -219,8 +219,8 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
+    use fuels_accounts::{provider::Provider, WalletUnlocked};
     use fuels_programs::contract::Contract;
-    use fuels_signers::{provider::Provider, WalletUnlocked};
     use fuels_types::{
         bech32::FUEL_BECH32_HRP,
         parameters::{StorageConfiguration, TxParameters},

@@ -1,11 +1,12 @@
-use fuel_tx::Input;
+use fuel_tx::{Input, Output, TxPointer, UtxoId};
+use fuels::tx::Bytes32;
 use fuels::{
     prelude::*,
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
-use fuels_programs::predicate::Predicate;
-use fuels_signers::Account;
+use fuels_accounts::predicate::Predicate;
+use fuels_accounts::Account;
 
 // use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(
@@ -605,7 +606,7 @@ async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
     let a = 1000u64;
     let b = 2000u32;
 
-    let input = Input::coin_signed(
+    let coin = Input::coin_signed(
         Default::default(),
         Default::default(),
         10,
@@ -615,9 +616,40 @@ async fn test_basic_script_with_tx_parameters_predicate() -> Result<()> {
         0,
     );
 
+    let message = Input::message_signed(
+        Default::default(),
+        Default::default(),
+        Default::default(),
+        10,
+        0,
+        0,
+        vec![],
+    );
+
+    let zeroes = Bytes32::zeroed();
+
+    let contract_id = Contract::deploy(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        &predicate,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+
+    let contract_input = Input::contract(
+        UtxoId::new(zeroes, 0),
+        zeroes,
+        zeroes,
+        TxPointer::default(),
+        contract_id.into(),
+    );
+
+    let contract_output = Output::contract(0, zeroes, zeroes);
+
     let result = instance
         .main(a, b)
-        .with_inputs(vec![input.clone(), input.clone(), input])
+        .with_inputs(vec![coin, message, contract_input])
+        .with_outputs(vec![contract_output])
         .call()
         .await?;
 
@@ -701,13 +733,6 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
             .unwrap(),
         186
     );
-
-    // add call params.
-    // append params?
-    // test transfer over predicates +
-    // test transfer over wallet +
-    // transfer on base layer +
-    // transfer on contract +
 
     Ok(())
 }
@@ -995,6 +1020,8 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         .call_params(call_params)? // Chain the call params setting method.
         .call() // Perform the contract call.
         .await?;
+
+    // Todo ContractCall add,   asset transfer append_custom_asset
 
     let response = contract_methods
         .initialize_counter(42)

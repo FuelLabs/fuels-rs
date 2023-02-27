@@ -2,8 +2,8 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
+use fuels_accounts::{provider::Provider, Account};
 use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
-use fuels_signers::{provider::Provider, Account};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -61,7 +61,7 @@ pub struct ScriptCallHandler<T, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: fuels_signers::Account + fuels_signers::PayFee + Clone, D> ScriptCallHandler<T, D>
+impl<T: fuels_accounts::Account + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
     fuels_types::errors::Error: From<<T as Account>::Error>,
@@ -166,7 +166,7 @@ where
         let consensus_parameters = self.provider.consensus_parameters().await?;
         let script_offset = base_offset(&consensus_parameters);
 
-        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64; // strange 64
+        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
         self.account.pay_fee_resources(&mut tx, 0, 0).await?;
 
         Ok(tx)

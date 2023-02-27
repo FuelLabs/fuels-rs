@@ -1,13 +1,14 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
-    AssetId, Bytes32, ContractId, Input, Output, Receipt, ScriptExecutionResult, TxPointer, UtxoId,
+    AssetId, Bytes32, ContractId, Input, InputRepr, Output, Receipt, ScriptExecutionResult,
+    TxPointer, UtxoId,
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
+use fuels_accounts::provider::Provider;
+use fuels_accounts::Account;
 use fuels_core::offsets::call_script_data_offset;
-use fuels_signers::provider::Provider;
-use fuels_signers::{Account, PayFee};
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -33,7 +34,7 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls<T: PayFee>(
+pub async fn build_tx_from_contract_calls<T: Account>(
     calls: &[ContractCall],
     tx_parameters: &TxParameters,
     account: &T,
@@ -65,17 +66,16 @@ where
         spendable_resources.extend(resources);
     }
 
-    dbg!(&spendable_resources);
-
-    dbg!("EMIR");
-
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
 
     let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
         .with_script(script)
         .with_script_data(script_data.clone());
 
-    tx.tx_offset = data_offset + script_data.len() + 160; // contract_input_offset
+    tx.tx_offset = data_offset
+        + script_data.len()
+        + InputRepr::Contract.contract_id_offset().unwrap()
+        + ContractId::LEN;
 
     let base_asset_amount = required_asset_amounts
         .iter()
@@ -411,8 +411,8 @@ fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
 mod test {
     use std::slice;
 
+    use fuels_accounts::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_signers::WalletUnlocked;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},

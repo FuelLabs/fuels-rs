@@ -37,8 +37,8 @@ pub(crate) fn predicate_bindings(
 
         impl #name {
 
-            pub fn get_predicate(&self) -> ::fuels::programs::predicate::Predicate {
-                ::fuels::programs::predicate::Predicate {
+            pub fn get_predicate(&self) -> ::fuels::accounts::predicate::Predicate {
+                ::fuels::accounts::predicate::Predicate {
                     address: self.address.clone(),
                     code: self.code.clone(),
                     data: self.data.clone(),

@@ -17,13 +17,13 @@ use fuel_vm::fuel_asm::PanicReason;
 
 use fuel_tx::field::Salt as OtherSalt;
 
+use fuels_accounts::{
+    provider::{Provider, TransactionCost},
+    Account,
+};
 use fuels_core::{
     abi_decoder::ABIDecoder,
     abi_encoder::{ABIEncoder, UnresolvedBytes},
-};
-use fuels_signers::{
-    provider::{Provider, TransactionCost},
-    Account, PayFee,
 };
 use fuels_types::errors::Error::ProviderError;
 use fuels_types::{
@@ -70,7 +70,7 @@ pub struct Contract<T> {
     pub account: T,
 }
 
-impl<T: Account + PayFee + Clone> Contract<T> {
+impl<T: Account + Clone> Contract<T> {
     pub fn new(compiled_contract: CompiledContract, account: T) -> Self {
         Self {
             compiled_contract,
@@ -540,7 +540,7 @@ pub struct ContractCallHandler<T, D> {
 
 impl<T, D> ContractCallHandler<T, D>
 where
-    T: fuels_signers::Account + fuels_signers::PayFee,
+    T: fuels_accounts::Account,
     fuels_types::errors::Error: From<<T as Account>::Error>,
     D: Tokenizable + Debug,
 {
@@ -788,7 +788,7 @@ pub struct MultiContractCallHandler<T> {
     pub account: T,
 }
 
-impl<T: fuels_signers::Account + fuels_signers::PayFee> MultiContractCallHandler<T>
+impl<T: fuels_accounts::Account> MultiContractCallHandler<T>
 where
     fuels_types::errors::Error: From<<T as Account>::Error>,
 {

@@ -2,6 +2,7 @@
 use std::future::Future;
 
 use fuels::prelude::*;
+use fuels_accounts::Account;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {

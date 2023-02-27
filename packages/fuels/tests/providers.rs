@@ -3,13 +3,13 @@ use std::{iter, str::FromStr};
 use chrono::Duration;
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
+    accounts::fuel_crypto::SecretKey,
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    signers::fuel_crypto::SecretKey,
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
-use fuels_signers::Account;
+use fuels_accounts::Account;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -478,8 +478,10 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
+    dbg!(&response.to_string());
+
     let expected =
-        "Wallet error: Provider error: Response errors; not enough resources to fit the target";
+        "Account error: Provider error: Response errors; not enough resources to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }

@@ -16,6 +16,8 @@ pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
 
+pub mod accounts_utils;
+pub mod predicate;
 pub mod provider;
 pub mod wallet;
 
@@ -47,16 +49,6 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait PayFee: Account + std::fmt::Debug + Send + Sync {
-    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
-        &self,
-        tx: &mut Tx,
-        previous_base_amount: u64,
-        witness_index: u8,
-    ) -> Result<(), <Self as Account>::Error>;
-}
-
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: std::fmt::Debug + Send + Sync {
     type Error: Error + Send + Sync;
 
@@ -65,6 +57,13 @@ pub trait Account: std::fmt::Debug + Send + Sync {
     fn get_provider(&self) -> Result<&Provider, Self::Error>;
 
     fn set_provider(&mut self, provider: Provider);
+
+    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
+        &self,
+        tx: &mut Tx,
+        previous_base_amount: u64,
+        witness_index: u8,
+    ) -> Result<(), Self::Error>;
 
     async fn get_spendable_resources(
         &self,
@@ -87,6 +86,13 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>), Self::Error>;
+
+    async fn withdraw_to_base_layer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        tx_parameters: TxParameters,
+    ) -> Result<(String, String, Vec<Receipt>), Self::Error>;
 
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input>;
 }

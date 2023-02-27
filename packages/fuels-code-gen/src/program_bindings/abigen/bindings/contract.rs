@@ -52,9 +52,9 @@ pub(crate) fn contract_bindings(
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #name<T>
+        impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #name<T>
         where
-            ::fuels::types::errors::Error: From<<T as ::fuels::signers::Account>::Error>,
+            ::fuels::types::errors::Error: From<<T as ::fuels::accounts::Account>::Error>,
         {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
@@ -70,14 +70,14 @@ pub(crate) fn contract_bindings(
             }
 
             pub fn with_account(&self, mut account: T) -> ::fuels::types::errors::Result<Self> {
-                let provider = ::fuels::signers::Account::get_provider(&self.account)?;
+                let provider = ::fuels::accounts::Account::get_provider(&self.account)?;
                 account.set_provider(provider.clone());
 
                ::core::result::Result::Ok(Self { contract_id: self.contract_id.clone(), account: account, log_decoder: self.log_decoder.clone()})
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
-                ::fuels::signers::Account::get_provider(&self.account)?
+                ::fuels::accounts::Account::get_provider(&self.account)?
                                   .get_contract_balances(&self.contract_id)
                                   .await
                                   .map_err(::std::convert::Into::into)
@@ -99,11 +99,11 @@ pub(crate) fn contract_bindings(
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee + ::std::clone::Clone> #methods_name<T> {
+        impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #methods_name<T> {
             #contract_functions
         }
 
-        impl<T: ::fuels::signers::Account + ::fuels::signers::PayFee>
+        impl<T: ::fuels::accounts::Account>
             ::fuels::programs::contract::SettableContract for #name<T>
         {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
@@ -168,7 +168,7 @@ pub(crate) fn expand_fn(
     let arg_tokens = generator.tokenized_args();
     let is_payable = abi_fun.is_payable();
     let body = quote! {
-            let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+            let provider = ::fuels::accounts::Account::get_provider(&self.account).expect("Provider not set up");
             ::fuels::programs::contract::Contract::<T>::method_hash(
                 &provider,
                 self.contract_id.clone(),
@@ -354,7 +354,7 @@ mod tests {
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
-                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                let provider = ::fuels::accounts::Account::get_provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),
@@ -421,7 +421,7 @@ mod tests {
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
-                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                let provider = ::fuels::accounts::Account::get_provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),
@@ -536,7 +536,7 @@ mod tests {
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
-                let provider = ::fuels::signers::Account::get_provider(&self.account).expect("Provider not set up");
+                let provider = ::fuels::accounts::Account::get_provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::<T>::method_hash(
                     &provider,
                     self.contract_id.clone(),

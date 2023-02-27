@@ -1,5 +1,5 @@
 [package]
-name = "fuels-signers"
+name = "fuels-accounts"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -7,7 +7,7 @@ homepage = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 rust-version = { workspace = true }
-description = "Fuel Rust SDK signers."
+description = "Fuel Rust SDK accounts."
 
 [dependencies]
 async-trait = { version = "0.1.50", default-features = false }

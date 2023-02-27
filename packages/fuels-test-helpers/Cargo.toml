@@ -19,7 +19,7 @@ fuel-core-client = { workspace = true, default-features = false }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
 fuels-programs = { workspace = true }
 fuels-core = { workspace = true }
-fuels-signers = { workspace = true, optional = true }
+fuels-accounts = { workspace = true, optional = true }
 fuels-types = { workspace = true }
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 portpicker = { version = "0.1.1" }
@@ -33,11 +33,11 @@ futures = "0.3.26"
 which = { version = "4.3", default-features = false }
 
 [features]
-default = ["fuels-signers", "std"]
+default = ["fuels-accounts", "std"]
 std = [
     "fuels-programs/std",
     "fuels-core/std",
-    "fuels-signers?/std",
+    "fuels-accounts?/std",
     "fuels-types/std",
 ]
 fuel-core-lib = ["fuel-core"]

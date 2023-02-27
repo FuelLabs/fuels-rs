@@ -32,8 +32,8 @@ pub mod core {
     pub use fuels_core::*;
 }
 
-pub mod signers {
-    pub use fuels_signers::*;
+pub mod accounts {
+    pub use fuels_accounts::*;
 }
 
 pub mod types {
@@ -63,6 +63,7 @@ pub mod prelude {
     //! use fuels::prelude::*;
     //! ```
     pub use super::{
+        accounts::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         fuel_node::*,
         macros::{abigen, setup_contract_test},
         programs::{
@@ -70,7 +71,6 @@ pub mod prelude {
             logs::{LogDecoder, LogId},
             Configurables,
         },
-        signers::{provider::*, wallet::generate_mnemonic_phrase, Signer, Wallet, WalletUnlocked},
         test_helpers::*,
         tx::Salt,
         types::{
