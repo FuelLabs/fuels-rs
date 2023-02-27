@@ -2,8 +2,8 @@
 use std::future::Future;
 
 use fuels::prelude::*;
-use fuels_types::Bits256;
 use fuels_accounts::Account;
+use fuels_types::Bits256;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {

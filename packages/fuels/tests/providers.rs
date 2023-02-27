@@ -480,8 +480,7 @@ async fn test_gas_errors() -> Result<()> {
 
     dbg!(&response.to_string());
 
-    let expected =
-        "Provider error: Response errors; not enough resources to fit the target";
+    let expected = "Provider error: Response errors; not enough resources to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
