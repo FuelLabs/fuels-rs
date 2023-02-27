@@ -1,0 +1,90 @@
+{
+  "types": [
+    {
+      "typeId": 0,
+      "type": "()",
+      "components": [],
+      "typeParameters": null
+    },
+    {
+      "typeId": 1,
+      "type": "[_; 1]",
+      "components": [
+        {
+          "name": "__array_element",
+          "type": 5,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 2,
+      "type": "struct some_library::AWrappingStruct",
+      "components": [
+        {
+          "name": "a",
+          "type": 3,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 3,
+      "type": "struct duplicate_types::SomeStruct",
+      "components": [
+        {
+          "name": "a",
+          "type": 1,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 4,
+      "type": "struct original_types::SomeStruct",
+      "components": [
+        {
+          "name": "a",
+          "type": 5,
+          "typeArguments": null
+        }
+      ],
+      "typeParameters": null
+    },
+    {
+      "typeId": 5,
+      "type": "u32",
+      "components": null,
+      "typeParameters": null
+    }
+  ],
+  "functions": [
+    {
+      "inputs": [
+        {
+          "name": "a",
+          "type": 2,
+          "typeArguments": null
+        },
+        {
+          "name": "b",
+          "type": 4,
+          "typeArguments": null
+        }
+      ],
+      "name": "test_function",
+      "output": {
+        "name": "",
+        "type": 0,
+        "typeArguments": null
+      },
+      "attributes": null
+    }
+  ],
+  "loggedTypes": [],
+  "messagesTypes": [],
+  "configurables": []
+}
