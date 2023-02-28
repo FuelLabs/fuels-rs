@@ -120,6 +120,8 @@ jobs:
         uses: katyo/publish-crates@v2
         with:
           dry-run: true
+          check-repo: false
+          ignore-unpublished-changes: true
 
   cargo-verifications:
     needs:
