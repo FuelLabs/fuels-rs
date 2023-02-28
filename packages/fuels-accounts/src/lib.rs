@@ -41,13 +41,6 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
         &self,
         message: &mut Tx,
     ) -> Result<Signature, Error>;
-
-    async fn add_fee_resources<Tx: Transaction + Send>(
-        &self,
-        tx: &mut Tx,
-        previous_base_amount: u64,
-        witness_index: u8,
-    ) -> Result<(), Error>;
 }
 
 #[derive(Error, Debug)]

@@ -330,7 +330,7 @@ impl WalletUnlocked {
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::MessageSigned { .. })
-                    || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -587,16 +587,6 @@ impl Signer for WalletUnlocked {
         }
 
         Ok(sig)
-    }
-
-    async fn add_fee_resources<Tx: Transaction + std::marker::Send>(
-        &self,
-        tx: &mut Tx,
-        previous_base_amount: u64,
-        witness_index: u8,
-    ) -> Result<()> {
-        self.add_fee_resources(tx, previous_base_amount, witness_index)
-            .await
     }
 }
 

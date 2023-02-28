@@ -2,12 +2,11 @@
 
 use fuel_core_chain_config::CoinConfig;
 use fuel_core_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
-use fuel_tx::{AssetId, UtxoId};
+use fuel_tx::{AssetId, Input as FuelInput, UtxoId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone)]
-
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CoinStatus {
     Unspent,
     Spent,
@@ -22,7 +21,7 @@ impl From<ClientCoinStatus> for CoinStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Coin {
     pub amount: u64,
     pub block_created: u64,

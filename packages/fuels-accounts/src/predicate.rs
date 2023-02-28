@@ -134,10 +134,8 @@ impl Account for Predicate {
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
-            matches!(input , Input::MessageSigned { .. }) ||
-                matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
-                matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
-                matches!(input , Input::MessagePredicate { .. })
+            matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
+            matches!(input , Input::MessagePredicate { .. })
         });
 
         let base_inputs_sum: u64 = base_asset_inputs

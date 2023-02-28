@@ -70,6 +70,13 @@ async fn setup_predicate_test(
         receiver_amount,
     ));
 
+    coins.extend(setup_single_asset_coins(
+        predicate_address,
+        AssetId::from([1u8; 32]),
+        num_coins,
+        amount,
+    ));
+
     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
     receiver.set_provider(provider.clone());
 
@@ -1027,6 +1034,56 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         .initialize_counter(42)
         .call_params(CallParameters::default())?
         .call()
+        .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn diff_asset_predicate_payment() -> Result<()> {
+    use fuels::prelude::*;
+
+    abigen!(
+        Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ),
+        Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+        )
+    );
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let num_coins = 1;
+    let num_messages = 1;
+    let amount = 1_000_000_000;
+    let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let contract_id = Contract::deploy(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        &predicate,
+        TxParameters::default(),
+        StorageConfiguration::default(),
+    )
+    .await?;
+    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
+
+    let call_params = CallParameters::new(Some(1_000_000), Some(AssetId::from([1u8; 32])), None);
+
+    let response = contract_methods
+        .get_msg_amount() // Our contract method.
+        .call_params(call_params)? // Chain the call params setting method.
+        .call() // Perform the contract call.
         .await?;
 
     Ok(())
