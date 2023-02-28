@@ -1,7 +1,7 @@
 [project]
 authors = ["Ahmed Sagdati"]
-entry = "main.sw"
+entry = "lib.sw"
 license = "Apache-2.0"
-name = "identical_type_names"
+name = "shared_lib"
 
 [dependencies]
