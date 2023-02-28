@@ -40,6 +40,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/book
           destination_dir: ${{ steps.branch_name.outputs.BRANCH_NAME }}
+          cname: rust.fuel.network
         if: startsWith(github.ref, 'refs/tags')
 
       - name: Create latest HTML redirect file
