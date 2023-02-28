@@ -1,6 +1,6 @@
 use std::iter::{repeat, zip};
 
-use fuels_types::{ByteArray, param_types::ParamType};
+use fuels_types::{param_types::ParamType, ByteArray};
 use sha2::{Digest, Sha256};
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
