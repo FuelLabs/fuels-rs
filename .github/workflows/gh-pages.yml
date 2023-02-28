@@ -26,6 +26,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./docs/book
           destination_dir: master
+          cname: rust.fuel.network
         if: github.ref == 'refs/heads/master'
 
       - name: Get tag
@@ -60,4 +61,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./latest/
           destination_dir: ./latest/
+          cname: rust.fuel.network
         if: startsWith(github.ref, 'refs/tags')
