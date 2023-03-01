@@ -94,7 +94,10 @@ async fn contract_configurables() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
         &wallet,
-        DeployConfiguration::new().with_configurables(configurables.into()),
+        DeployConfiguration {
+            configurables: configurables.into(),
+            ..Default::default()
+        },
     )
     .await?;
 

@@ -34,42 +34,9 @@ use crate::{
 
 #[derive(Debug)]
 pub struct CallParameters {
-    amount: u64,
-    asset_id: AssetId,
-    gas_forwarded: Option<u64>,
-}
-
-impl CallParameters {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_amount(mut self, amount: u64) -> Self {
-        self.amount = amount;
-        self
-    }
-
-    pub fn amount(&self) -> u64 {
-        self.amount
-    }
-
-    pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
-        self.asset_id = asset_id;
-        self
-    }
-
-    pub fn asset_id(&self) -> AssetId {
-        self.asset_id
-    }
-
-    pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
-        self.gas_forwarded = Some(gas_forwarded);
-        self
-    }
-
-    pub fn gas_forwarded(&self) -> Option<u64> {
-        self.gas_forwarded
-    }
+    pub amount: u64,
+    pub asset_id: AssetId,
+    pub gas_forwarded: Option<u64>,
 }
 
 impl Default for CallParameters {
@@ -103,59 +70,17 @@ pub struct CompiledContract {
 /// Configuration for contract storage
 #[derive(Debug, Clone, Default)]
 pub struct StorageConfiguration {
-    storage_path: String,
-    manual_storage: Vec<StorageSlot>,
-}
-
-impl StorageConfiguration {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_storage_path(mut self, storage_path: String) -> Self {
-        self.storage_path = storage_path;
-        self
-    }
-
-    pub fn with_manual_storage(mut self, manual_storage: Vec<StorageSlot>) -> Self {
-        self.manual_storage = manual_storage;
-        self
-    }
+    pub storage_path: String,
+    pub manual_storage: Vec<StorageSlot>,
 }
 
 /// Configuration for contract deployment
 #[derive(Debug, Clone, Default)]
 pub struct DeployConfiguration {
-    tx_parameters: TxParameters,
-    storage: StorageConfiguration,
-    configurables: Configurables,
-    salt: Salt,
-}
-
-impl DeployConfiguration {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn with_tx_parameters(mut self, tx_parameters: TxParameters) -> Self {
-        self.tx_parameters = tx_parameters;
-        self
-    }
-
-    pub fn with_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
-        self.storage = storage;
-        self
-    }
-
-    pub fn with_configurables(mut self, configurables: Configurables) -> Self {
-        self.configurables = configurables;
-        self
-    }
-
-    pub fn with_salt(mut self, salt: Salt) -> Self {
-        self.salt = salt;
-        self
-    }
+    pub tx_parameters: TxParameters,
+    pub storage: StorageConfiguration,
+    pub configurables: Configurables,
+    pub salt: Salt,
 }
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as

@@ -177,10 +177,11 @@ mod tests {
         let gas_limit = 500_000;
         let maturity = 0;
 
-        let tx_params = TxParameters::new()
-            .with_gas_price(gas_price)
-            .with_gas_limit(gas_limit)
-            .with_maturity(maturity);
+        let tx_params = TxParameters {
+            gas_price,
+            gas_limit,
+            maturity,
+        };
 
         // Transfer 1 from wallet 1 to wallet 2.
         let (tx_id, _receipts) = wallet_1

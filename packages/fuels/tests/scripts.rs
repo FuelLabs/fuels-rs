@@ -243,7 +243,11 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     let result = instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
     // ANCHOR: script_with_tx_params
-    let parameters = TxParameters::new().with_gas_price(1).with_gas_limit(10_000);
+    let parameters = TxParameters {
+        gas_price: 1,
+        gas_limit: 10_000,
+        ..Default::default()
+    };
     let result = instance.main(a, b).tx_params(parameters).call().await?;
     // ANCHOR_END: script_with_tx_params
     assert_eq!(result.value, "hello");
