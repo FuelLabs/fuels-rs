@@ -72,9 +72,40 @@ impl ABIDecoder {
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
+            ParamType::Bytes => Self::decode_bytes(bytes),
         }
     }
 
+    fn decode_raw_untyped_ptr(bytes: &[u8]) -> Result<DecodeResult> {
+        println!("Trying to decode raw_untyped_ptr");
+        Ok(DecodeResult {
+            token: Token::RawUntypedPtr(peek_u64(bytes)?),
+            bytes_read: 8,
+        })
+    }
+
+    fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
+        // `Bytes` is actually a vec of u8.
+        let u8_size = std::mem::size_of::<u8>();
+        if bytes.len() % u8_size != 0 {
+            return Err(error!(
+                InvalidData,
+                "The bytes provided do not correspond to a Bytes type, got: {:?}", bytes
+            ));
+        }
+        let u8_length = bytes.len() / u8_size;
+        let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U8; u8_length], bytes)?;
+        let elements = tokens
+            .into_iter()
+            .map(u8::from_token)
+            .collect::<Result<Vec<u8>>>()
+            .map_err(|e| error!(InvalidData, "{e}"))?;
+
+        Ok(DecodeResult {
+            token: Token::Bytes(elements),
+            bytes_read,
+        })
+    }
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         let num_of_elements = calculate_num_of_elements(param_type, bytes)?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;

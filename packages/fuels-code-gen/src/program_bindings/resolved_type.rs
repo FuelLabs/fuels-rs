@@ -83,6 +83,8 @@ pub(crate) fn resolve_type(
         to_sized_ascii_string,
         to_tuple,
         to_raw_slice,
+        to_bytes,
+        to_raw_untyped_ptr,
         to_custom_type,
     ]
     .into_iter()
@@ -96,6 +98,39 @@ pub(crate) fn resolve_type(
         )
     })
     .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
+}
+
+fn to_bytes(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
+) -> Option<ResolvedType> {
+    if type_field == "struct Bytes" {
+        let type_name = quote! {::fuels::types::Bytes};
+        Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
+}
+
+fn to_raw_untyped_ptr(
+    type_field: &str,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: impl Fn() -> Vec<ResolvedType>,
+    _: bool,
+) -> Option<ResolvedType> {
+    if type_field == "raw untyped ptr" {
+        Some(ResolvedType {
+            type_name: quote! {::fuels::types::RawUntypedPtr},
+            generic_params: vec![],
+        })
+    } else {
+        None
+    }
 }
 
 fn to_generic(

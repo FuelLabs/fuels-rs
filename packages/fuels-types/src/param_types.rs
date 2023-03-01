@@ -47,6 +47,8 @@ pub enum ParamType {
     },
     Tuple(Vec<ParamType>),
     RawSlice,
+    Bytes,
+    RawUntypedPtr,
 }
 
 pub enum ReturnLocation {
@@ -135,6 +137,12 @@ impl ParamType {
             // The ParamType::RawSlice is basically a wrapper around a U8 vector
             ParamType::RawSlice => unimplemented!(
                 "Raw slices are not supported as inputs, so needing the encoding width of a RawSlice should not happen."
+            ),
+            ParamType::Bytes => unimplemented!(
+                "Bytes are not supported as inputs, so needing the encoding width of a Bytes should not happen."
+            ),
+            ParamType::RawUntypedPtr => unimplemented!(
+                "RawUntypedPtr are not supported as inputs, so needing the encoding width of a RawUntypedPtr should not happen."
             ),
         }
     }
