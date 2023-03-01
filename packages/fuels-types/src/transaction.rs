@@ -1,20 +1,18 @@
 use std::fmt::Debug;
 
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_tx::{
-    field::{
-        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
-    },
-    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
-    FormatValidityChecks, Input, Output, Script, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
-};
+use fuel_tx::{field::{
+    GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+}, Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create, FormatValidityChecks, Input as FuelInputs, Output, Script, Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness, StorageSlot};
+use fuel_types::Salt;
 
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::Error,
     parameters::TxParameters,
 };
+use crate::input::Input;
+
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
@@ -43,11 +41,11 @@ pub trait Transaction: Into<FuelTransaction> {
 
     fn metered_bytes_size(&self) -> usize;
 
-    fn inputs(&self) -> &Vec<Input>;
+    fn inputs(&self) -> &Vec<FuelInputs>;
 
-    fn inputs_mut(&mut self) -> &mut Vec<Input>;
+    fn inputs_mut(&mut self) -> &mut Vec<FuelInputs>;
 
-    fn with_inputs(self, inputs: Vec<Input>) -> Self;
+    fn with_inputs(self, inputs: Vec<FuelInputs>) -> Self;
 
     fn outputs(&self) -> &Vec<Output>;
 
@@ -64,42 +62,39 @@ pub trait Transaction: Into<FuelTransaction> {
     fn tx_offset(&self) -> usize;
 }
 
-macro_rules! impl_tx_wrapper {
-    ($wrapper: ident, $wrapped: ident) => {
-        #[derive(Debug, Clone)]
-        pub struct $wrapper {
-            pub tx_offset: usize,
-            pub tx: $wrapped,
-        }
+#[derive(Debug, Clone)]
+pub struct ScriptTransaction {
+    pub(crate) gas_price: u64,
+    pub(crate) gas_limit: u64,
+    pub(crate) maturity: u64,
+    pub(crate) script: Vec<u8>,
+    pub(crate) script_data: Vec<u8>,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) witnesses: Vec<Witness>,
+    pub tx_offset: usize,
+}
 
-        impl From<$wrapped> for $wrapper {
-            fn from(tx: $wrapped) -> Self {
-                $wrapper { tx_offset: 0, tx }
-            }
-        }
+#[derive(Debug, Clone)]
+pub struct CreateTransaction {
+    pub(crate) gas_price: u64,
+    pub(crate) gas_limit: u64,
+    pub(crate) maturity: u64,
+    pub(crate) bytecode_length: u64,
+    pub(crate) bytecode_witness_index: u8,
+    pub(crate) storage_slots: Vec<StorageSlot>,
+    pub(crate) inputs: Vec<Input>,
+    pub(crate) outputs: Vec<Output>,
+    pub(crate) witnesses: Vec<Witness>,
+    pub(crate) salt: Salt,
+    pub tx_offset: usize,
+}
 
-        impl From<$wrapper> for $wrapped {
-            fn from(tx: $wrapper) -> Self {
-                tx.tx
-            }
-        }
 
-        impl From<$wrapper> for FuelTransaction {
-            fn from(tx: $wrapper) -> Self {
-                tx.tx.into()
-            }
-        }
 
-        impl Default for $wrapper {
-            fn default() -> Self {
-                Self {
-                    tx_offset: 0,
-                    tx: $wrapped::default(),
-                }
-            }
-        }
-
-        impl Transaction for $wrapper {
+macro_rules! impl_tx_trait {
+    ($ty: ident) => {
+        impl Transaction for $ty {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
             }
@@ -199,8 +194,8 @@ macro_rules! impl_tx_wrapper {
     };
 }
 
-impl_tx_wrapper!(ScriptTransaction, Script);
-impl_tx_wrapper!(CreateTransaction, Create);
+impl_tx_wrapper!(ScriptTransaction);
+impl_tx_wrapper!(CreateTransaction);
 
 impl ScriptTransaction {
     pub fn script(&self) -> &Vec<u8> {
@@ -222,7 +217,7 @@ impl ScriptTransaction {
     }
 
     pub fn new(
-        inputs: Vec<Input>,
+        inputs: Vec<FuelInputs>,
         outputs: Vec<Output>,
         params: TxParameters,
     ) -> ScriptTransaction {
@@ -236,7 +231,7 @@ impl ScriptTransaction {
             outputs,
             vec![],
         )
-        .into()
+            .into()
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -244,7 +239,7 @@ impl ScriptTransaction {
         to: ContractId,
         amount: u64,
         asset_id: AssetId,
-        inputs: Vec<Input>,
+        inputs: Vec<FuelInputs>,
         outputs: Vec<Output>,
         params: TxParameters,
     ) -> ScriptTransaction {
@@ -253,9 +248,9 @@ impl ScriptTransaction {
             amount.to_be_bytes().to_vec(),
             asset_id.to_vec(),
         ]
-        .into_iter()
-        .flatten()
-        .collect();
+            .into_iter()
+            .flatten()
+            .collect();
 
         // This script loads:
         //  - a pointer to the contract id,
@@ -271,8 +266,8 @@ impl ScriptTransaction {
             op::tr(0x10, 0x12, 0x13),
             op::ret(RegId::ONE),
         ]
-        .into_iter()
-        .collect();
+            .into_iter()
+            .collect();
 
         FuelTransaction::script(
             params.gas_price,
@@ -284,14 +279,14 @@ impl ScriptTransaction {
             outputs.to_vec(),
             vec![],
         )
-        .into()
+            .into()
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
     pub fn build_message_to_output_tx(
         to: Address,
         amount: u64,
-        inputs: Vec<Input>,
+        inputs: Vec<FuelInputs>,
         params: TxParameters,
     ) -> ScriptTransaction {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
@@ -311,8 +306,8 @@ impl ScriptTransaction {
             op::smo(0x10, 0x00, 0x00, 0x11),
             op::ret(RegId::ONE),
         ]
-        .into_iter()
-        .collect();
+            .into_iter()
+            .collect();
 
         let outputs = vec![
             // when signing a transaction, recipient and amount are set to zero
@@ -330,6 +325,7 @@ impl ScriptTransaction {
             outputs,
             vec![],
         )
-        .into()
+            .into()
     }
 }
+

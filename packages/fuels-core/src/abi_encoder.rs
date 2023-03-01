@@ -1,8 +1,11 @@
+use fuels_types::unresolved_bytes::{Data, UnresolvedBytes};
 use fuels_types::{
     constants::WORD_SIZE, errors::Result, pad_string, pad_u16, pad_u32, pad_u8, EnumSelector,
-    StringToken, Token, unresolved_bytes::UnresolvedBytes,
+    StringToken, Token,
 };
 use itertools::Itertools;
+
+
 
 pub struct ABIEncoder;
 
@@ -12,7 +15,7 @@ impl ABIEncoder {
     pub fn encode(args: &[Token]) -> Result<UnresolvedBytes> {
         let data = Self::encode_tokens(args)?;
 
-        Ok(UnresolvedBytes { data })
+        Ok(UnresolvedBytes::new(data))
     }
 
     fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>> {

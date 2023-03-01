@@ -1,7 +1,7 @@
 use crate::constants::WORD_SIZE;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-enum Data {
+pub enum Data {
     // Write the enclosed data immediately.
     Inline(Vec<u8>),
     // The enclosed data should be written somewhere else and only a pointer
@@ -18,7 +18,11 @@ pub struct UnresolvedBytes {
 }
 
 impl UnresolvedBytes {
-    pub fn new() -> Self {
+    pub fn new(data: Vec<Data>) -> Self {
+        Self { data }
+    }
+
+    pub fn default() -> Self {
         Default::default()
     }
 

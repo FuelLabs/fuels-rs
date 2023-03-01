@@ -1,10 +1,11 @@
-use fuel_tx::{Input, Receipt, TxPointer};
+use fuel_tx::{Input as FuelInput, Receipt, TxPointer};
 use fuel_types::{AssetId, MessageId};
 use fuels_types::coin::Coin;
+use fuels_types::input::Input;
 use fuels_types::message::Message;
 
-pub fn create_coin_input(coin: Coin, asset_id: AssetId, witness_index: u8) -> Input {
-    Input::coin_signed(
+pub fn create_coin_input(coin: Coin, asset_id: AssetId, witness_index: u8) -> FuelInput {
+    FuelInput::coin_signed(
         coin.utxo_id,
         coin.owner.into(),
         coin.amount,
@@ -15,8 +16,8 @@ pub fn create_coin_input(coin: Coin, asset_id: AssetId, witness_index: u8) -> In
     )
 }
 
-pub fn create_message_input(message: Message, witness_index: u8) -> Input {
-    Input::message_signed(
+pub fn create_message_input(message: Message, witness_index: u8) -> FuelInput {
+    FuelInput::message_signed(
         message.message_id(),
         message.sender.into(),
         message.recipient.into(),
@@ -32,8 +33,8 @@ pub fn create_coin_predicate(
     asset_id: AssetId,
     code: Vec<u8>,
     predicate_data: Vec<u8>,
-) -> Input {
-    Input::coin_predicate(
+) -> FuelInput {
+    FuelInput::coin_predicate(
         coin.utxo_id,
         coin.owner.into(),
         coin.amount,
@@ -45,8 +46,12 @@ pub fn create_coin_predicate(
     )
 }
 
-pub fn create_message_predicate(message: Message, code: Vec<u8>, predicate_data: Vec<u8>) -> Input {
-    Input::message_predicate(
+pub fn create_message_predicate(
+    message: Message,
+    code: Vec<u8>,
+    predicate_data: Vec<u8>,
+) -> FuelInput {
+    FuelInput::message_predicate(
         message.message_id(),
         message.sender.into(),
         message.recipient.into(),

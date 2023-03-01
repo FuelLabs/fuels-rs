@@ -1,25 +1,27 @@
 use std::fmt::Debug;
 
-use fuel_tx::{Input, Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{Input as FuelInput, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
+use fuels_core::offsets;
+use fuels_core::offsets::base_offset;
+use fuels_types::bech32::{Bech32Address, Bech32ContractId};
+use fuels_types::constants::BASE_ASSET_ID;
+use fuels_types::errors::Error;
+use fuels_types::errors::Result;
+use fuels_types::input::Input;
+use fuels_types::parameters::TxParameters;
+use fuels_types::resource::Resource;
+use fuels_types::transaction::ScriptTransaction;
 use fuels_types::transaction::Transaction;
+use fuels_types::unresolved_bytes::UnresolvedBytes;
 
+use crate::{Account, AccountError, AccountResult};
 use crate::accounts_utils::{
     create_coin_input, create_coin_predicate, create_message_input, create_message_predicate,
     extract_message_id,
 };
 use crate::provider::Provider;
-use crate::{Account, AccountError, AccountResult};
-use fuels_core::offsets::base_offset;
-use fuels_core::{abi_encoder::UnresolvedBytes, offsets};
-use fuels_types::bech32::{Bech32Address, Bech32ContractId};
-use fuels_types::constants::BASE_ASSET_ID;
-use fuels_types::errors::Error;
-use fuels_types::errors::Result;
-use fuels_types::parameters::TxParameters;
-use fuels_types::resource::Resource;
-use fuels_types::transaction::ScriptTransaction;
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -101,11 +103,28 @@ impl Predicate {
             .await?
             .into_iter()
             .map(|resource| match resource {
-                Resource::Coin(coin) => create_coin_input(coin, asset_id, witness_index),
-                Resource::Message(message) => create_message_input(message, witness_index),
+                Resource::Coin(coin) => Input::coin_predicate(coin, self.code.clone(), self.data.clone()),
+                Resource::Message(message) => Input::message_predicate(message, self.code.clone(), self.data.clone()),
             })
             .collect::<Vec<Input>>())
     }
+
+    // pub async fn get_asset_inputs_for_amount(
+    //     &self,
+    //     asset_id: AssetId,
+    //     amount: u64,
+    //     witness_index: u8,
+    // ) -> Result<Vec<Input>> {
+    //     Ok(self
+    //         .get_spendable_resources(asset_id, amount)
+    //         .await?
+    //         .into_iter()
+    //         .map(|resource| match resource {
+    //             Resource::Coin(coin) => create_coin_input(coin, asset_id, witness_index),
+    //             Resource::Message(message) => create_message_input(message, witness_index),
+    //         })
+    //         .collect::<Vec<Input>>())
+    // }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
@@ -134,9 +153,13 @@ impl Account for Predicate {
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
+            matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
+            matches!(input , Input::MessageSigned { .. }) ||
             matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
             matches!(input , Input::MessagePredicate { .. })
         });
+
+        dbg!(&base_asset_inputs);
 
         let base_inputs_sum: u64 = base_asset_inputs
             .iter()
@@ -223,7 +246,7 @@ impl Account for Predicate {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
-        let mut inputs = vec![Input::contract(
+        let mut inputs = vec![FuelInput::contract(
             UtxoId::new(zeroes, 0),
             zeroes,
             zeroes,
@@ -312,7 +335,7 @@ impl Account for Predicate {
         Ok((tx_id, message_id.to_string(), receipts))
     }
 
-    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<FuelInput> {
         let mut offset = 0;
 
         spendable_resources

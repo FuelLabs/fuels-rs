@@ -21,11 +21,9 @@ use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_core::{
-    abi_decoder::ABIDecoder,
-    abi_encoder::{ABIEncoder, UnresolvedBytes},
-};
+use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::errors::Error::ProviderError;
+use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     errors::{error, Error, Result},

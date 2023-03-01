@@ -31,7 +31,7 @@ pub(crate) fn predicate_bindings(
         pub struct #name {
             address: ::fuels::types::bech32::Bech32Address,
             code: ::std::vec::Vec<u8>,
-            data: ::fuels::core::abi_encoder::UnresolvedBytes,
+            data: ::fuels::types::unresolved_bytes::UnresolvedBytes,
             provider: ::std::option::Option<::fuels::prelude::Provider>
         }
 
@@ -51,7 +51,7 @@ pub(crate) fn predicate_bindings(
                 Self {
                     address: address.clone().into(),
                     code,
-                    data: ::fuels::core::abi_encoder::UnresolvedBytes::new(),
+                    data: ::fuels::types::unresolved_bytes::UnresolvedBytes::default(),
                     provider: ::std::option::Option::None
                 }
             }
