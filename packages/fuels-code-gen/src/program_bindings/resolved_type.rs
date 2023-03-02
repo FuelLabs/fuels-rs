@@ -18,7 +18,7 @@ use crate::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
         utils::sdk_provided_custom_types_lookup,
     },
-    utils::{ident, safe_ident, TypePath},
+    utils::{safe_ident, TypePath},
 };
 
 // Represents a type alongside its generic parameters. Can be converted into a

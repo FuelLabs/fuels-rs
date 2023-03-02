@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::utils::extract_custom_type_name;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -12,7 +11,7 @@ use crate::{
         generated_code::GeneratedCode,
         utils::Component,
     },
-    utils::{ident, TypePath},
+    utils::TypePath,
 };
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,

@@ -1,10 +1,10 @@
-use std::str::FromStr;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::error::{error, Result};
-use crate::utils::ident;
+use crate::{
+    error::{error, Result},
+    utils::ident,
+};
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TypePath {
@@ -46,7 +46,7 @@ impl TypePath {
     }
 
     pub fn ident(&self) -> &Ident {
-        &self.parts.last().expect("Must have at least one element")
+        self.parts.last().expect("Must have at least one element")
     }
 }
 

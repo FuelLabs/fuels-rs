@@ -1,12 +1,17 @@
 use std::collections::HashMap;
 
-use fuel_abi_types::program_abi::{
-    ABIFunction, Attribute, Configurable, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
+use fuel_abi_types::{
+    program_abi::{
+        ABIFunction, Attribute, Configurable, LoggedType, ProgramABI, TypeApplication,
+        TypeDeclaration,
+    },
+    utils::extract_custom_type_name,
 };
-use fuel_abi_types::utils::extract_custom_type_name;
 
-use crate::error::{error, Result};
-use crate::utils::TypePath;
+use crate::{
+    error::{error, Result},
+    utils::TypePath,
+};
 
 /// 'Full' versions of the ABI structures are needed to simplify duplicate
 /// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
