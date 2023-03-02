@@ -6,7 +6,7 @@ use fuels_types::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
     param_types::ParamType,
-    unzip_param_types, StringToken, Token,
+    unzip_param_types, Byte, StringToken, Token,
 };
 
 use crate::Tokenizable;
@@ -77,7 +77,6 @@ impl ABIDecoder {
     }
 
     fn decode_raw_untyped_ptr(bytes: &[u8]) -> Result<DecodeResult> {
-        println!("Trying to decode raw_untyped_ptr");
         Ok(DecodeResult {
             token: Token::RawUntypedPtr(peek_u64(bytes)?),
             bytes_read: 8,
@@ -85,29 +84,26 @@ impl ABIDecoder {
     }
 
     fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
-        // `Bytes` is actually a vec of u8.
-        let u8_size = std::mem::size_of::<u8>();
-        if bytes.len() % u8_size != 0 {
-            return Err(error!(
-                InvalidData,
-                "The bytes provided do not correspond to a Bytes type, got: {:?}", bytes
-            ));
-        }
-        let u8_length = bytes.len() / u8_size;
-        let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U8; u8_length], bytes)?;
-        let elements = tokens
+        let num_of_elements = calculate_num_of_elements(&ParamType::Byte, bytes, true)?;
+        let (tokens, bytes_read) =
+            Self::decode_multiple(&vec![ParamType::Byte; num_of_elements], bytes)?;
+
+        let u8_vec = tokens
             .into_iter()
-            .map(u8::from_token)
-            .collect::<Result<Vec<u8>>>()
-            .map_err(|e| error!(InvalidData, "{e}"))?;
+            .map(Byte::from_token)
+            .collect::<Result<Vec<Byte>>>()
+            .map_err(|e| error!(InvalidData, "{e}"))?
+            .into_iter()
+            .map(|b| u8::from(b))
+            .collect();
 
         Ok(DecodeResult {
-            token: Token::Bytes(elements),
+            token: Token::Bytes(u8_vec),
             bytes_read,
         })
     }
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(param_type, bytes)?;
+        let num_of_elements = calculate_num_of_elements(param_type, bytes, false)?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
 
         Ok(DecodeResult {
@@ -162,7 +158,7 @@ impl ABIDecoder {
     }
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(&ParamType::U64, bytes)?;
+        let num_of_elements = calculate_num_of_elements(&ParamType::U64, bytes, false)?;
         let (tokens, bytes_read) =
             Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
         let elements = tokens
@@ -228,6 +224,14 @@ impl ABIDecoder {
         Ok(DecodeResult {
             token: Token::U16(peek_u16(bytes)?),
             bytes_read: 8,
+        })
+    }
+
+    fn decode_byte(bytes: &[u8]) -> Result<DecodeResult> {
+        let bytes_array: [u8; 1] = <[u8; 1]>::try_from(peek(bytes, 1)?)?;
+        Ok(DecodeResult {
+            token: Token::Byte(u8::from_be_bytes(bytes_array)),
+            bytes_read: 1,
         })
     }
 
@@ -355,8 +359,16 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     }
 }
 
-fn calculate_num_of_elements(param_type: &ParamType, bytes: &[u8]) -> Result<usize> {
-    let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
+fn calculate_num_of_elements(
+    param_type: &ParamType,
+    bytes: &[u8],
+    is_byte_packed: bool,
+) -> Result<usize> {
+    let memory_size = if is_byte_packed {
+        param_type.compute_encoding_width()
+    } else {
+        param_type.compute_encoding_width() * WORD_SIZE
+    };
     if bytes.len() % memory_size != 0 {
         return Err(error!(
             InvalidData,

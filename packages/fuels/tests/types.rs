@@ -1805,3 +1805,23 @@ async fn test_nested_vector_methods_fail() -> Result<()> {
         .expect_err("Should fail because nested vectors are not supported");
     Ok(())
 }
+
+#[tokio::test]
+async fn test_bytes_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "BytesOutputContract",
+            abi = "packages/fuels/tests/types/bytes"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "BytesOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.return_bytes(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+    Ok(())
+}

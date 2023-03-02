@@ -107,6 +107,10 @@ impl ParamType {
         matches!(self, Self::Vector(..))
     }
 
+    pub fn is_vm_heap_type(&self) -> bool {
+        self.is_vector() || matches!(self, Self::Bytes)
+    }
+
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
     pub fn compute_encoding_width(&self) -> usize {
         const fn count_words(bytes: usize) -> usize {
