@@ -100,7 +100,7 @@ impl Contract {
         }
     }
 
-    fn compute_contract_id_and_state_root(
+    pub fn compute_contract_id_and_state_root(
         compiled_contract: &CompiledContract,
     ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.binary.as_slice());
@@ -310,8 +310,12 @@ impl Contract {
 
         Self::validate_path_and_extension(&storage_path, "json")?;
 
-        let storage_json_string = fs::read_to_string(&storage_path)
-            .map_err(|_| error!(InvalidData, "failed to read json file: '{storage_path}'"))?;
+        let storage_json_string = fs::read_to_string(&storage_path).map_err(|_| {
+            error!(
+                InvalidData,
+                "failed to read storage configuration from: '{storage_path}'"
+            )
+        })?;
 
         let storage_slots: Vec<StorageSlot> = serde_json::from_str(&storage_json_string)?;
 
