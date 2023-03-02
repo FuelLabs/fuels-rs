@@ -31,6 +31,7 @@ use fuels_types::{
     transaction::{CreateTransaction, ScriptTransaction, Transaction},
     Selector, Token,
 };
+use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -489,34 +490,15 @@ pub fn get_decoded_output(
             // the way the scripts are built (the calling script adds a RETD just after the CALL
             // opcode, see `get_single_call_instructions`).
             // Find the position of the first corresponding ReturnData receipt
-            let pos = receipts
+            let vector_data = receipts
                 .iter()
-                .position(|receipt| {
-                    matches!(receipt,
-                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
+                .tuple_windows()
+                .find_map(|(current_receipt, next_receipt)| {
+                    extract_vec_data(current_receipt, next_receipt, contract_id)
                 })
-                .expect("There should be at least a ReturnData receipt");
-            // Get the data contained in the one that immediately follows
-            let return_data_receipt = receipts
-                .get(pos + 1)
-                .expect("There should be at least two receipts");
-            // Its contract id must be null (it comes from a script)
-            if !matches!(return_data_receipt,
-                        Receipt::ReturnData { id, .. } if *id == null_contract_id)
-            {
-                return Err(error!(
-                    InvalidData,
-                    "The next should be a ReturnData receipt with non-empty data and a \
-                    null contract id: {:?}",
-                    return_data_receipt
-                ));
-            };
-            Some(
-                return_data_receipt
-                    .data()
-                    .expect("ReturnData should have data")
-                    .to_vec(),
-            )
+                .cloned()
+                .expect("Could not extract vector data");
+            Some(vector_data)
         }
         ReturnLocation::ReturnData => receipts
             .iter()
@@ -548,6 +530,33 @@ pub fn get_decoded_output(
 
     let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
     Ok(decoded_value)
+}
+
+fn extract_vec_data<'a>(
+    current_receipt: &Receipt,
+    next_receipt: &'a Receipt,
+    contract_id: ContractId,
+) -> Option<&'a Vec<u8>> {
+    match (current_receipt, next_receipt) {
+        (
+            Receipt::ReturnData {
+                id: first_id,
+                data: first_data,
+                ..
+            },
+            Receipt::ReturnData {
+                id: second_id,
+                data: vec_data,
+                ..
+            },
+        ) if *first_id == contract_id
+            && !first_data.is_empty()
+            && *second_id == ContractId::zeroed() =>
+        {
+            Some(vec_data)
+        }
+        _ => None,
+    }
 }
 
 #[derive(Debug)]
