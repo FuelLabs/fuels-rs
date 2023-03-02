@@ -16,12 +16,12 @@ use fuels_types::transaction::ScriptTransaction;
 use fuels_types::transaction::Transaction;
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 
-use crate::{Account, AccountError, AccountResult};
 use crate::accounts_utils::{
     create_coin_input, create_coin_predicate, create_message_input, create_message_predicate,
     extract_message_id,
 };
 use crate::provider::Provider;
+use crate::{Account, AccountError, AccountResult};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -103,8 +103,12 @@ impl Predicate {
             .await?
             .into_iter()
             .map(|resource| match resource {
-                Resource::Coin(coin) => Input::coin_predicate(coin, self.code.clone(), self.data.clone()),
-                Resource::Message(message) => Input::message_predicate(message, self.code.clone(), self.data.clone()),
+                Resource::Coin(coin) => {
+                    Input::coin_predicate(coin, self.code.clone(), self.data.clone())
+                }
+                Resource::Message(message) => {
+                    Input::message_predicate(message, self.code.clone(), self.data.clone())
+                }
             })
             .collect::<Vec<Input>>())
     }

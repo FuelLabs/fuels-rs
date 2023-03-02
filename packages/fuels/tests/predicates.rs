@@ -1076,6 +1076,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         StorageConfiguration::default(),
     )
     .await?;
+
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
     let call_params = CallParameters::new(Some(1_000_000), Some(AssetId::from([1u8; 32])), None);

@@ -15,6 +15,7 @@ pub mod input;
 pub mod message;
 pub mod message_proof;
 pub mod node_info;
+pub mod offsets;
 pub mod param_types;
 pub mod parameters;
 pub mod resource;

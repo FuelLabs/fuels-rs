@@ -65,6 +65,8 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
 
+    dbg!(&inputs);
+
     let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
         .with_script(script)
         .with_script_data(script_data.clone());

@@ -5,8 +5,6 @@ use fuels_types::{
 };
 use itertools::Itertools;
 
-
-
 pub struct ABIEncoder;
 
 impl ABIEncoder {

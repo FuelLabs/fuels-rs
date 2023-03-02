@@ -2,20 +2,18 @@ use fuel_asm::Word;
 use fuel_tx::{Address, AssetId, Input as FuelInput, TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId, MessageId};
 
+use crate::resource::Resource;
 use crate::unresolved_bytes::UnresolvedBytes;
 use crate::{coin::Coin, message::Message};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Input {
-    CoinSigned(Coin),
-    MessageSigned(Message),
-    CoinPredicate {
-        coin: Coin,
-        code: Vec<u8>,
-        data: UnresolvedBytes,
+    ResourceSigned {
+        resource: Resource,
+        witness_index: u8,
     },
-    MessagePredicate {
-        message: Message,
+    ResourcePredicate {
+        resource: Resource,
         code: Vec<u8>,
         data: UnresolvedBytes,
     },
@@ -29,31 +27,15 @@ pub enum Input {
 }
 
 impl Input {
-    pub const fn coin_predicate(coin: Coin, code: Vec<u8>, data: UnresolvedBytes) -> Self {
-        Self::CoinPredicate { coin, code, data }
-    }
-
-    pub const fn message_predicate(message: Message, code: Vec<u8>, data: UnresolvedBytes) -> Self {
-        Self::MessagePredicate {
-            message,
+    pub const fn resource_predicate(
+        resource: Resource,
+        code: Vec<u8>,
+        data: UnresolvedBytes,
+    ) -> Self {
+        Self::ResourcePredicate {
+            resource,
             code,
             data,
-        }
-    }
-}
-
-impl From<Input> for FuelInput {
-    fn from(input: Input) -> Self {
-        match input {
-            Input::CoinSigned(coin) => todo!(),
-            Input::MessageSigned(_) => todo!(),
-            Input::CoinPredicate { coin, code, data } => todo!(),
-            Input::MessagePredicate {
-                message,
-                code,
-                data,
-            } => todo!(),
-            Input::Contract { .. } => todo!(),
         }
     }
 }

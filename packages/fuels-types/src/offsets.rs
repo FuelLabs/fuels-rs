@@ -1,3 +1,4 @@
+use fuel_asm::Instruction;
 use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_types::ContractId;
@@ -31,6 +32,14 @@ pub fn coin_predicate_data_offset(code_len: usize) -> usize {
 
 pub fn message_predicate_data_offset(message_data_len: usize, code_len: usize) -> usize {
     InputRepr::Message
+        .data_offset()
+        .expect("should have data offset")
+        + padded_len_usize(message_data_len)
+        + padded_len_usize(code_len)
+}
+
+pub fn coin_signed_data_offset() -> usize {
+    InputRepr::Coin
         .data_offset()
         .expect("should have data offset")
         + padded_len_usize(message_data_len)
