@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
@@ -117,20 +117,22 @@ mod tests {
     }
 }
 
-pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
+pub(crate) fn sdk_provided_types_lookup() -> HashMap<TypePath, TypePath> {
     [
-        "::fuels::types::ContractId",
-        "::fuels::types::AssetId",
-        "::fuels::types::Address",
-        "::fuels::types::Identity",
-        "::fuels::types::EvmAddress",
-        "::fuels::types::B512",
-        "::fuels::types::RawSlice",
-        "::std::vec::Vec",
-        "::core::result::Result",
-        "::core::option::Option",
+        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
+        ("std::address::Address", "::fuels::types::Address"),
+        ("std::identity::Identity", "::fuels::types::Identity"),
+        (
+            "std::vm::evm::evm_address::EvmAddress",
+            "::fuels::types::EvmAddress",
+        ),
+        ("std::b512::B512", "::fuels::types::B512"),
+        ("raw untyped slice", "::fuels::types::RawSlice"),
+        ("std::vec::Vec", "::std::vec::Vec"),
+        ("std::result::Result", "::core::result::Result"),
+        ("std::option::Option", "::core::option::Option"),
     ]
-    .map(|type_path_str| {
+    .map(|(original_type_path, provided_type_path)| {
         TypePath::new(type_path_str).expect("known at compile time to be correctly formed")
     })
     .to_vec()

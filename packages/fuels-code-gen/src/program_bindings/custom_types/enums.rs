@@ -23,14 +23,7 @@ pub(crate) fn expand_custom_enum(
     shared_types: &HashSet<FullTypeDeclaration>,
     no_std: bool,
 ) -> Result<GeneratedCode> {
-    let type_field = &type_decl.type_field;
-    let enum_name = extract_custom_type_name(type_field).ok_or_else(|| {
-        error!(
-            "Could not extract enum name from type_field: {}",
-            type_field
-        )
-    })?;
-    let enum_ident = ident(&enum_name);
+    let enum_type_path = type_decl.custom_type_path()?;
 
     let components = extract_components(type_decl, false, shared_types)?;
     if components.is_empty() {
@@ -38,9 +31,7 @@ pub(crate) fn expand_custom_enum(
     }
     let generics = extract_generic_parameters(type_decl)?;
 
-    let code = enum_decl(&enum_ident, &components, &generics, no_std);
-
-    let enum_type_path = TypePath::new(&enum_name).expect("Enum name is not empty!");
+    let code = enum_decl(&enum_type_path.ident(), &components, &generics, no_std);
 
     Ok(GeneratedCode {
         code,

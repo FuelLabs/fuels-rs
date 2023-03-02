@@ -16,7 +16,7 @@ use crate::{
     error::{error, Result},
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
-        utils::get_sdk_provided_types,
+        utils::sdk_provided_types_lookup,
     },
     utils::{ident, safe_ident, TypePath},
 };
@@ -266,9 +266,9 @@ fn to_custom_type(
 ) -> Option<ResolvedType> {
     let type_name = extract_custom_type_name(type_field)?;
 
-    let type_path = get_sdk_provided_types()
+    let type_path = sdk_provided_types_lookup()
         .into_iter()
-        .find(|provided_type| provided_type.type_name() == type_name)
+        .find(|provided_type| provided_type.ident() == type_name)
         .unwrap_or_else(|| {
             let custom_type_name = ident(&type_name);
             let path_str = if is_shared {
@@ -587,7 +587,7 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
-        let provided_type_names = get_sdk_provided_types()
+        let provided_type_names = sdk_provided_types_lookup()
             .into_iter()
             .map(|type_path| (type_path.type_name().to_string(), type_path))
             .collect::<HashMap<_, _>>();

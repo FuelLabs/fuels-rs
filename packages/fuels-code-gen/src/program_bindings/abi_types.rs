@@ -3,8 +3,10 @@ use std::collections::HashMap;
 use fuel_abi_types::program_abi::{
     ABIFunction, Attribute, Configurable, LoggedType, ProgramABI, TypeApplication, TypeDeclaration,
 };
+use fuel_abi_types::utils::extract_custom_type_name;
 
 use crate::error::{error, Result};
+use crate::utils::TypePath;
 
 /// 'Full' versions of the ABI structures are needed to simplify duplicate
 /// detection later on. The original ones([`ProgramABI`], [`TypeApplication`],
@@ -164,6 +166,15 @@ impl FullTypeDeclaration {
             components,
             type_parameters,
         }
+    }
+
+    pub(crate) fn custom_type_path(&self) -> Result<TypePath> {
+        let type_field = &self.type_field;
+
+        let type_name = extract_custom_type_name(type_field)
+            .ok_or_else(|| error!("Couldn't extract custom type name from '{type_field}'"))?;
+
+        TypePath::new(type_name)
     }
 }
 

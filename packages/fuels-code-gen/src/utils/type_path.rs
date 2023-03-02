@@ -1,41 +1,31 @@
 use std::str::FromStr;
 
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
 use crate::error::{error, Result};
+use crate::utils::ident;
 
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TypePath {
-    parts: Vec<String>,
+    parts: Vec<Ident>,
 }
 
 impl TypePath {
     pub fn new<T: ToString>(path: T) -> Result<Self> {
-        let path_str = path.to_string().trim().to_string();
-
-        if path_str.is_empty() {
-            return Err(error!(
-                "TypePath cannot be constructed from '{path_str}' because it's empty!"
-            ));
-        }
-
+        let path_str = path.to_string();
         let parts = path_str
             .split("::")
-            .map(|part| part.trim().to_string())
-            .collect::<Vec<_>>();
+            .map(|part| {
+                let trimmed_part = part.trim().to_string();
+                if trimmed_part.is_empty() {
+                    return Err(error!("TypePath cannot be constructed from '{path_str}' since it has it has empty parts"))
+                }
+                Ok(ident(&trimmed_part))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
-        let type_name = parts
-            .last()
-            .expect("Cannot be empty, since we started off with a non-empty string");
-
-        if type_name.is_empty() {
-            Err(error!(
-                "TypePath cannot be constructed from '{path_str}'! Missing ident at the end."
-            ))
-        } else {
-            Ok(Self { parts })
-        }
+        Ok(Self { parts })
     }
 
     pub fn prepend(self, mut another: TypePath) -> Self {
@@ -43,11 +33,12 @@ impl TypePath {
         another
     }
 
-    pub fn type_name(&self) -> &str {
-        self.parts
-            .last()
-            .expect("Must have at least one element")
-            .as_str()
+    pub fn type_name(&self) -> String {
+        self.ident().to_string()
+    }
+
+    pub fn ident(&self) -> &Ident {
+        &self.parts.last().expect("Must have at least one element")
     }
 }
 

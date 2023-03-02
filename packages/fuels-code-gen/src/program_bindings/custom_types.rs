@@ -9,7 +9,7 @@ use crate::{
         abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
-        utils::get_sdk_provided_types,
+        utils::sdk_provided_types_lookup,
     },
 };
 
@@ -64,9 +64,9 @@ fn should_skip_codegen(type_field: &str) -> bool {
 }
 
 fn is_type_sdk_provided(name: &str) -> bool {
-    get_sdk_provided_types()
+    sdk_provided_types_lookup()
         .iter()
-        .any(|type_path| type_path.type_name() == name)
+        .any(|type_path| type_path.ident() == name)
 }
 
 fn is_type_unused(name: &str) -> bool {

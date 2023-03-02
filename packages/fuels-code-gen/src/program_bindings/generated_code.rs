@@ -57,8 +57,8 @@ impl GeneratedCode {
     fn types_with_unique_names(&self) -> Vec<&TypePath> {
         self.usable_types
             .iter()
-            .sorted_by(|&lhs, &rhs| lhs.type_name().cmp(rhs.type_name()))
-            .group_by(|&e| e.type_name())
+            .sorted_by(|&lhs, &rhs| lhs.ident().cmp(rhs.ident()))
+            .group_by(|&e| e.ident())
             .into_iter()
             .filter_map(|(_, group)| {
                 let mut types = group.collect::<Vec<_>>();
