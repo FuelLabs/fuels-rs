@@ -1694,16 +1694,22 @@ async fn test_base_type_in_vec_output() -> Result<()> {
         ),
     );
     let contract_methods = contract_instance.methods();
+
     let response = contract_methods.u8_in_vec(10).call().await?;
     assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+
     let response = contract_methods.u16_in_vec(11).call().await?;
     assert_eq!(response.value, (0..11).collect::<Vec<_>>());
+
     let response = contract_methods.u32_in_vec(12).call().await?;
     assert_eq!(response.value, (0..12).collect::<Vec<_>>());
+
     let response = contract_methods.u64_in_vec(13).call().await?;
     assert_eq!(response.value, (0..13).collect::<Vec<_>>());
+
     let response = contract_methods.bool_in_vec().call().await?;
     assert_eq!(response.value, [true, false, true, false].to_vec());
+
     Ok(())
 }
 #[tokio::test]
@@ -1723,24 +1729,20 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
-        let expected: Vec<[u64; 4]> = vec![
-            ([1, 1, 1, 1]),
-            ([2, 2, 2, 2]),
-            ([3, 3, 3, 3]),
-            ([4, 4, 4, 4]),
-        ];
+        let expected: Vec<[u64; 4]> = vec![[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4]];
         let response = contract_methods.array_in_vec().call().await?.value;
         assert_eq!(response, expected);
     }
     {
         let expected: Vec<Pasta> = vec![
-            (Pasta::Tortelini(Bimbam {
+            Pasta::Tortelini(Bimbam {
                 bim: 1111,
                 bam: 2222_u32,
-            })),
-            (Pasta::Rigatoni(1987)),
-            (Pasta::Spaghetti(true)),
+            }),
+            Pasta::Rigatoni(1987),
+            Pasta::Spaghetti(true),
         ];
+
         let response = contract_methods.enum_in_vec().call().await?.value;
         assert_eq!(response, expected);
     }

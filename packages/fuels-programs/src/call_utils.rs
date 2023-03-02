@@ -267,7 +267,7 @@ pub(crate) fn get_single_call_instructions(
                 // The RET register contains the pointer address of the `CALL` return (a stack
                 // address).
                 // The RETL register contains the length of the `CALL` return (=24 because the vec
-                // struct takes 3 bytes). We don't actually need it unless the vec struct encoding
+                // struct takes 3 WORDs). We don't actually need it unless the vec struct encoding
                 // changes in the compiler.
                 // Load the word located at the address contained in RET, it's a word that
                 // translates to a heap address. 0x15 is a free register.
