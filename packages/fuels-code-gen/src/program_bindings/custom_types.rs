@@ -85,9 +85,8 @@ mod tests {
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
-    use crate::{program_bindings::abi_types::FullTypeApplication, utils::TypePath};
-
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeApplication;
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {

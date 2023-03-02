@@ -78,9 +78,8 @@ impl GeneratedCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::ident;
-
     use super::*;
+    use crate::utils::ident;
 
     #[test]
     fn will_wrap_code_in_mod() {
