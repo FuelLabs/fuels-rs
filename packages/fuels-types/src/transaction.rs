@@ -1,21 +1,14 @@
 use std::fmt::Debug;
-use std::iter::Map;
-use std::slice::Iter;
 
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_core::types::fuel_vm::interpreter::diff::AnyDebug;
-use fuel_core_client::client::schema::schema::Transaction;
-use fuel_tx::Input::Contract;
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
-    FormatValidityChecks, Input as FuelInput, InputRepr, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId,
+    FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
+    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness, Script,
 };
-use fuel_tx::Transaction::Script;
-use fuel_types::bytes::padded_len_usize;
 use fuel_types::Salt;
 
 use crate::coin::Coin;
@@ -29,7 +22,7 @@ use crate::{
     parameters::TxParameters,
 };
 
-pub trait Transaction: Into<FuelTransaction> {
+pub trait Transaction: Into<FuelTransaction> + Chargeable {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
     fn check_without_signatures(
@@ -56,11 +49,11 @@ pub trait Transaction: Into<FuelTransaction> {
 
     fn metered_bytes_size(&self) -> usize;
 
-    fn inputs(&self) -> &Vec<FuelInputs>;
+    fn inputs(&self) -> &Vec<Input>;
 
-    fn inputs_mut(&mut self) -> &mut Vec<FuelInputs>;
+    fn inputs_mut(&mut self) -> &mut Vec<Input>;
 
-    fn with_inputs(self, inputs: Vec<FuelInputs>) -> Self;
+    fn with_inputs(self, inputs: Vec<Input>) -> Self;
 
     fn outputs(&self) -> &Vec<Output>;
 
@@ -77,7 +70,7 @@ pub trait Transaction: Into<FuelTransaction> {
     fn tx_offset(&self) -> usize;
 }
 
-pub(crate) fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
+fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
     let mut new_offset = offset;
 
     inputs.into_iter().map(|input| match input {
@@ -114,7 +107,7 @@ pub(crate) fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<Fue
             }
             Resource::Message(message) => {
                 new_offset += offsets::message_signed_data_offset();
-                create_message_input(message.clone(), *witness_index);
+                create_message_input(message.clone(), *witness_index)
             }
         },
         Input::Contract {
@@ -203,7 +196,24 @@ impl From<ScriptTransaction> for FuelTransaction {
             tx.maturity.into(),
             tx.script,
             tx.script_data,
+            convert_to_fuel_inputs(&tx.inputs, 0), //placeholder offset
             vec![],
+            tx.witnesses.into(),
+        )
+        .into()
+    }
+}
+
+impl From<CreateTransaction> for FuelTransaction {
+    fn from(tx: CreateTransaction) -> Self {
+        FuelTransaction::create(
+            tx.gas_limit.into(),
+            tx.gas_limit.into(),
+            tx.maturity.into(),
+            tx.bytecode_witness_index,
+            tx.salt,
+            tx.storage_slots,
+            convert_to_fuel_inputs(&tx.inputs, 0), //placeholder offset
             vec![],
             tx.witnesses.into(),
         )
@@ -239,42 +249,17 @@ pub struct CreateTransaction {
     pub tx_offset: usize,
 }
 
-pub enum TempTx {
-    Script(Script),
-    Create(Create),
-}
-
-
-impl CreateTransaction {
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-        let fuel_inputs = convert_to_fuel_inputs(&self.inputs, 0);
-        let a = match self {
-            1 => FuelTransaction::Script(FuelTransaction::script(0, 0, 0, vec![], vec![], fuel_inputs, vec![], vec![])),
-            2 => FuelTransaction::Create(FuelTransaction::create(0, 0, 0, 0, Default::default(), vec![], fuel_inputs, vec![], vec![]),
-        };
-
-        TransactionFee::checked_from_tx(params, &a)
-    }
-}
-
 macro_rules! impl_tx_trait {
     ($ty: ident) => {
-        impl Transaction for $ty {
-            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                convert_to_fuel_inputs(&self.tx.inputs)
-
-                //let tx = match () {
-                // _ if std::any::type_name::<ty>() == std::any::type_name::<CreateTransaction>() => {
-                //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
-                // },
-                // _ if std::any::type_name::<ty>() == std::any::type_name::<ScriptTransaction>() => {
-                //     10376 + 96 + 160
-                // },
-            () => todo!(),
+        impl Chargeable for $ty {
+            fn price(&self) -> u64 { self.gas_price() }
+            fn limit(&self) -> u64 { self.gas_limit() }
+            fn metered_bytes_size(&self) -> usize { Transaction::metered_bytes_size(self) }
         }
 
-
-                TransactionFee::checked_from_tx(params, &self.tx)
+        impl Transaction for $ty {
+            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+                TransactionFee::checked_from_tx(params, self)
             }
 
             fn check_without_signatures(
@@ -369,11 +354,11 @@ macro_rules! impl_tx_trait {
                 self
             }
         }
-    };
+    }
 }
 
-impl_tx_wrapper!(ScriptTransaction);
-impl_tx_wrapper!(CreateTransaction);
+impl_tx_trait!(ScriptTransaction);
+impl_tx_trait!(CreateTransaction);
 
 impl ScriptTransaction {
     pub fn script(&self) -> &Vec<u8> {
@@ -395,7 +380,7 @@ impl ScriptTransaction {
     }
 
     pub fn new(
-        inputs: Vec<FuelInputs>,
+        inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
     ) -> ScriptTransaction {
@@ -417,7 +402,7 @@ impl ScriptTransaction {
         to: ContractId,
         amount: u64,
         asset_id: AssetId,
-        inputs: Vec<FuelInputs>,
+        inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
     ) -> ScriptTransaction {
@@ -464,7 +449,7 @@ impl ScriptTransaction {
     pub fn build_message_to_output_tx(
         to: Address,
         amount: u64,
-        inputs: Vec<FuelInputs>,
+        inputs: Vec<Input>,
         params: TxParameters,
     ) -> ScriptTransaction {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
