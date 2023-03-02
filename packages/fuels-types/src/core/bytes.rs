@@ -11,7 +11,7 @@ pub struct RawUntypedPtr(pub u64);
 
 impl From<RawUntypedPtr> for u64 {
     fn from(ptr: RawUntypedPtr) -> Self {
-        u64::from(ptr.0)
+        ptr.0
     }
 }
 

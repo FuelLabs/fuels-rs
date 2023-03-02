@@ -94,7 +94,7 @@ impl ABIDecoder {
             .collect::<Result<Vec<Byte>>>()
             .map_err(|e| error!(InvalidData, "{e}"))?
             .into_iter()
-            .map(|b| u8::from(b))
+            .map(u8::from)
             .collect();
 
         Ok(DecodeResult {
