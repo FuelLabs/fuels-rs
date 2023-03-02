@@ -6,8 +6,12 @@ Transaction parameters are:
 2. Gas limit;
 3. Maturity.
 
-You can configure these parameters by creating an instance of `TxParameters` and using the available setter methods.
-Then, you can modify the contract call by passing the configuration to a chain method called `tx_params`:
+You can configure these parameters by creating an instance of `TxParameters`:
+
+```rust,ignore
+{{#include ../../../packages/fuels-types/src/transaction.rs:tx_parameter}}
+```
+and passing it to a chain method called `tx_params`:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}
