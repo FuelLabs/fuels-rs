@@ -16,7 +16,7 @@ use crate::{
     error::{error, Result},
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
-        utils::sdk_provided_types_lookup,
+        utils::sdk_provided_custom_types_lookup,
     },
     utils::{ident, safe_ident, TypePath},
 };
@@ -264,13 +264,14 @@ fn to_custom_type(
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_shared: bool,
 ) -> Option<ResolvedType> {
-    let type_name = extract_custom_type_name(type_field)?;
+    let type_path = extract_custom_type_name(type_field)?;
 
-    let type_path = sdk_provided_types_lookup()
-        .into_iter()
-        .find(|provided_type| provided_type.ident() == type_name)
+    let type_path = sdk_provided_custom_types_lookup()
+        .get(&type_path)
+        .cloned()
         .unwrap_or_else(|| {
-            let custom_type_name = ident(&type_name);
+            let type_path = TypePath::new(type_path).unwrap();
+            let custom_type_name = type_path.ident();
             let path_str = if is_shared {
                 format!("super::shared_types::{custom_type_name}")
             } else {
@@ -397,7 +398,7 @@ mod tests {
             &[
                 TypeDeclaration {
                     type_id: 0,
-                    type_field: "struct Vec".to_string(),
+                    type_field: "struct std::vec::Vec".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             name: "buf".to_string(),
@@ -427,7 +428,7 @@ mod tests {
                 },
                 TypeDeclaration {
                     type_id: 3,
-                    type_field: "struct RawVec".to_string(),
+                    type_field: "struct std::vec::RawVec".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             name: "ptr".to_string(),
@@ -587,15 +588,9 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
-        let provided_type_names = sdk_provided_types_lookup()
-            .into_iter()
-            .map(|type_path| (type_path.type_name().to_string(), type_path))
-            .collect::<HashMap<_, _>>();
-
-        for (type_name, expected_path) in provided_type_names {
+        for (type_name, expected_path) in sdk_provided_custom_types_lookup() {
             let resolved_type =
-                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false)
-                    .expect("Should have succeeded.");
+                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false).unwrap();
 
             let expected_type_name = expected_path.into_token_stream();
             assert_eq!(

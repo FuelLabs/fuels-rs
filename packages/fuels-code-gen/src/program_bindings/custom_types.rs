@@ -9,7 +9,7 @@ use crate::{
         abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
-        utils::sdk_provided_types_lookup,
+        utils::sdk_provided_custom_types_lookup,
     },
 };
 
@@ -64,13 +64,11 @@ fn should_skip_codegen(type_field: &str) -> bool {
 }
 
 fn is_type_sdk_provided(name: &str) -> bool {
-    sdk_provided_types_lookup()
-        .iter()
-        .any(|type_path| type_path.ident() == name)
+    sdk_provided_custom_types_lookup().contains_key(name)
 }
 
 fn is_type_unused(name: &str) -> bool {
-    ["raw untyped ptr", "RawVec"].contains(&name)
+    ["raw untyped ptr", "std::vec::RawVec"].contains(&name)
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
@@ -87,8 +85,9 @@ mod tests {
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
-    use super::*;
     use crate::{program_bindings::abi_types::FullTypeApplication, utils::TypePath};
+
+    use super::*;
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {

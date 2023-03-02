@@ -9,13 +9,17 @@ use crate::utils::ident;
 #[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TypePath {
     parts: Vec<Ident>,
+    is_absolute: bool,
 }
 
 impl TypePath {
     pub fn new<T: ToString>(path: T) -> Result<Self> {
         let path_str = path.to_string();
+        let is_absolute = Self::is_absolute(&path_str);
+
         let parts = path_str
             .split("::")
+            .skip(is_absolute as usize)
             .map(|part| {
                 let trimmed_part = part.trim().to_string();
                 if trimmed_part.is_empty() {
@@ -25,7 +29,11 @@ impl TypePath {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        Ok(Self { parts })
+        Ok(Self { parts, is_absolute })
+    }
+
+    fn is_absolute(path_str: &str) -> bool {
+        path_str.trim_start().starts_with("::")
     }
 
     pub fn prepend(self, mut another: TypePath) -> Self {
@@ -44,14 +52,10 @@ impl TypePath {
 
 impl ToTokens for TypePath {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let parts = self
-            .parts
-            .iter()
-            .map(|part| TokenStream::from_str(part).unwrap());
+        let parts = &self.parts;
+        let leading_delimiter = self.is_absolute.then_some(quote! {::});
 
-        let tokenized_parts = quote! { #(#parts)::* };
-
-        tokens.extend(tokenized_parts);
+        tokens.extend(quote! { #leading_delimiter #(#parts)::* });
     }
 }
 
@@ -67,7 +71,7 @@ mod tests {
 
         assert_eq!(
             err.to_string(),
-            "TypePath cannot be constructed from '' because it's empty!"
+            "TypePath cannot be constructed from '   ' since it has it has empty parts"
         );
     }
 
@@ -79,7 +83,7 @@ mod tests {
 
         assert_eq!(
             err.to_string(),
-            "TypePath cannot be constructed from '::missing_ident::'! Missing ident at the end."
+            "TypePath cannot be constructed from '  ::missing_ident:: ' since it has it has empty parts"
         );
     }
 
@@ -109,5 +113,34 @@ mod tests {
         let type_name = path.type_name();
 
         assert_eq!(type_name, "ident");
+    }
+
+    #[test]
+    fn can_handle_absolute_paths() {
+        let absolute_path = " ::std :: vec:: Vec";
+
+        let type_path = TypePath::new(absolute_path);
+
+        type_path.unwrap();
+    }
+
+    #[test]
+    fn leading_delimiter_present_when_path_is_absolute() {
+        let type_path = TypePath::new(" ::std :: vec:: Vec").unwrap();
+
+        let tokens = type_path.to_token_stream();
+
+        let expected = quote! {::std::vec::Vec};
+        assert_eq!(expected.to_string(), tokens.to_string())
+    }
+
+    #[test]
+    fn leading_delimiter_not_present_when_path_is_relative() {
+        let type_path = TypePath::new(" std :: vec:: Vec").unwrap();
+
+        let tokens = type_path.to_token_stream();
+
+        let expected = quote! {std::vec::Vec};
+        assert_eq!(expected.to_string(), tokens.to_string())
     }
 }

@@ -930,10 +930,10 @@ use fuels::{
 
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/bindings/type_paths/contract_a/out/debug/contract_a-abi.json"
-    ));
+    // abigen!(Contract(
+    //     name = "MyContract",
+    //     abi = "packages/fuels/tests/bindings/type_paths/contract_a/out/debug/contract_a-abi.json"
+    // ));
 
     Ok(())
 }

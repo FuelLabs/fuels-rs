@@ -117,7 +117,7 @@ mod tests {
     }
 }
 
-pub(crate) fn sdk_provided_types_lookup() -> HashMap<TypePath, TypePath> {
+pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<String, TypePath> {
     [
         ("std::contract_id::ContractId", "::fuels::types::ContractId"),
         ("std::address::Address", "::fuels::types::Address"),
@@ -127,13 +127,17 @@ pub(crate) fn sdk_provided_types_lookup() -> HashMap<TypePath, TypePath> {
             "::fuels::types::EvmAddress",
         ),
         ("std::b512::B512", "::fuels::types::B512"),
-        ("raw untyped slice", "::fuels::types::RawSlice"),
         ("std::vec::Vec", "::std::vec::Vec"),
         ("std::result::Result", "::core::result::Result"),
         ("std::option::Option", "::core::option::Option"),
     ]
+    .into_iter()
     .map(|(original_type_path, provided_type_path)| {
-        TypePath::new(type_path_str).expect("known at compile time to be correctly formed")
+        (
+            original_type_path.to_string(),
+            TypePath::new(provided_type_path)
+                .expect("known at compile time to be correctly formed"),
+        )
     })
-    .to_vec()
+    .collect()
 }
