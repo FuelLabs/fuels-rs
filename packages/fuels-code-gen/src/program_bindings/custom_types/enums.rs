@@ -33,10 +33,7 @@ pub(crate) fn expand_custom_enum(
     let code = enum_decl(enum_type_path.ident(), &components, &generics, no_std);
 
     let enum_type_path = TypePath::new(enum_type_path.ident().to_string()).unwrap();
-    Ok(GeneratedCode {
-        code,
-        usable_types: HashSet::from([enum_type_path]),
-    })
+    Ok(GeneratedCode::new(code, HashSet::from([enum_type_path])))
 }
 
 fn enum_decl(

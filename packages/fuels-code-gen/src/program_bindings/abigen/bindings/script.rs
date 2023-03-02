@@ -74,10 +74,7 @@ pub(crate) fn script_bindings(
         .into_iter()
         .collect();
 
-    Ok(GeneratedCode {
-        code,
-        usable_types: type_paths,
-    })
+    Ok(GeneratedCode::new(code, type_paths))
 }
 
 fn expand_fn(

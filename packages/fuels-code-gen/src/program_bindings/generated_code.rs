@@ -8,16 +8,24 @@ use crate::utils::TypePath;
 
 #[derive(Default, Debug)]
 pub(crate) struct GeneratedCode {
-    pub code: TokenStream,
-    pub usable_types: HashSet<TypePath>,
+    code: TokenStream,
+    usable_types: HashSet<TypePath>,
 }
 
 impl GeneratedCode {
+    pub fn new(code: TokenStream, usable_types: HashSet<TypePath>) -> Self {
+        Self { code, usable_types }
+    }
+
+    pub fn code(&self) -> &TokenStream {
+        &self.code
+    }
+
     pub fn is_empty(&self) -> bool {
         self.code.is_empty()
     }
 
-    pub fn append(mut self, another: GeneratedCode) -> Self {
+    pub fn merge(mut self, another: GeneratedCode) -> Self {
         self.code.extend(another.code);
         self.usable_types.extend(another.usable_types);
         self
@@ -70,8 +78,9 @@ impl GeneratedCode {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::utils::ident;
+
+    use super::*;
 
     #[test]
     fn will_wrap_code_in_mod() {
@@ -128,7 +137,7 @@ mod tests {
         };
 
         // when
-        let joined = code_1.append(code_2);
+        let joined = code_1.merge(code_2);
 
         // then
         assert_eq!(joined.code.to_string(), "some code 1 some code 2");

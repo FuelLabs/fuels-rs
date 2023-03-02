@@ -35,10 +35,7 @@ pub(crate) fn expand_custom_struct(
     );
 
     let struct_type_path = TypePath::new(struct_type_path.ident().to_string()).unwrap();
-    Ok(GeneratedCode {
-        code,
-        usable_types: HashSet::from([struct_type_path]),
-    })
+    Ok(GeneratedCode::new(code, HashSet::from([struct_type_path])))
 }
 
 fn struct_decl(

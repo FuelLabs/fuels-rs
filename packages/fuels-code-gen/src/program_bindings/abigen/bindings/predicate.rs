@@ -100,10 +100,7 @@ pub(crate) fn predicate_bindings(
     // All publicly available types generated above should be listed here.
     let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
 
-    Ok(GeneratedCode {
-        code,
-        usable_types: type_paths,
-    })
+    Ok(GeneratedCode::new(code, type_paths))
 }
 
 fn expand_fn(

@@ -42,9 +42,9 @@ impl Abigen {
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
 
         let code = if no_std {
-            Self::wasm_paths_hotfix(generated_code.code)
+            Self::wasm_paths_hotfix(generated_code.code())
         } else {
-            generated_code.code
+            generated_code.code().clone()
         };
 
         Ok(quote! {
@@ -52,7 +52,7 @@ impl Abigen {
             #use_statements
         })
     }
-    fn wasm_paths_hotfix(code: TokenStream) -> TokenStream {
+    fn wasm_paths_hotfix(code: &TokenStream) -> TokenStream {
         [
             (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
             (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
@@ -85,7 +85,7 @@ impl Abigen {
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
         Ok(shared_types
-            .append(bindings)
+            .merge(bindings)
             .wrap_in_mod(&ident("abigen_bindings")))
     }
 
@@ -98,7 +98,7 @@ impl Abigen {
             .into_iter()
             .map(|target| Self::generate_binding(target, no_std, shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-                acc.append(generated_code)
+                acc.merge(generated_code)
             })
     }
 
@@ -113,8 +113,8 @@ impl Abigen {
         let bindings = generate_bindings(target, no_std, shared_types)?;
 
         Ok(limited_std_prelude(no_std)
-            .append(types)
-            .append(bindings)
+            .merge(types)
+            .merge(bindings)
             .wrap_in_mod(&mod_name))
     }
 
@@ -135,7 +135,7 @@ impl Abigen {
             Ok(Default::default())
         } else {
             Ok(limited_std_prelude(no_std)
-                .append(types)
+                .merge(types)
                 .wrap_in_mod(&ident("shared_types")))
         }
     }
@@ -184,10 +184,7 @@ fn limited_std_prelude(no_std: bool) -> GeneratedCode {
 
     };
 
-    GeneratedCode {
-        code,
-        ..Default::default()
-    }
+    GeneratedCode::new(code, Default::default())
 }
 
 #[cfg(test)]

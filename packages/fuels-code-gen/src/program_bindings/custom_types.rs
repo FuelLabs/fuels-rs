@@ -46,7 +46,7 @@ pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
             }
         })
         .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-            acc.append(generated_code)
+            acc.merge(generated_code)
         })
 }
 
@@ -85,8 +85,9 @@ mod tests {
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
-    use super::*;
     use crate::{program_bindings::abi_types::FullTypeApplication, utils::TypePath};
+
+    use super::*;
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {
@@ -133,8 +134,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -155,7 +155,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -228,8 +228,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -250,7 +249,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -297,8 +296,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -318,7 +316,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -378,8 +376,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -399,7 +396,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -460,8 +457,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -482,7 +478,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
@@ -501,8 +497,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -519,7 +514,7 @@ mod tests {
             pub struct SomeEmptyStruct < > {}
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
@@ -570,8 +565,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(&p, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -591,7 +585,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -679,8 +673,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(s1, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -700,7 +693,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         let s2 = types.get(&4).unwrap();
 
@@ -708,8 +701,7 @@ mod tests {
             &FullTypeDeclaration::from_counterpart(s2, &types),
             &HashSet::default(),
             false,
-        )?
-        .code;
+        )?;
 
         let expected = quote! {
             #[derive(
@@ -729,7 +721,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
@@ -745,10 +737,7 @@ mod tests {
             generate_types(types, &shared_types, false).expect("Should have succeeded.");
 
         // then
-        assert_eq!(
-            generated_code.usable_types,
-            HashSet::from([TypePath::new("SomeEnum").expect("Hand crafted, should not fail")])
-        );
+        assert!(!generated_code.code().to_string().contains("SomeStruct"));
     }
 
     fn given_a_custom_type(type_field: &str) -> FullTypeDeclaration {
