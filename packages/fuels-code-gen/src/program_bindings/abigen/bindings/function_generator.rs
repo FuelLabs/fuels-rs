@@ -26,6 +26,8 @@ impl FunctionGenerator {
     pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
         let args = function_arguments(fun.inputs(), shared_types)?;
 
+        // We are not checking that the ABI contains non-SDK supported types so that the user can
+        // still interact with an ABI even if some methods will fail at runtime.
         let output_type = resolve_type(fun.output(), shared_types)?;
         Ok(Self {
             name: fun.name().to_string(),

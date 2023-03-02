@@ -259,29 +259,25 @@ pub(crate) fn get_single_call_instructions(
     ]
     .to_vec();
     // The instructions are different if you want to return data that was on the heap
-    if output_param_type.is_vector() {
-        if let ParamType::Vector(inner_param_type) = output_param_type {
-            let inner_type_byte_size: u16 =
-                (inner_param_type.compute_encoding_width() * WORD_SIZE) as u16;
-            instructions.extend([
-                // The RET register contains the pointer address of the `CALL` return (a stack
-                // address).
-                // The RETL register contains the length of the `CALL` return (=24 because the vec
-                // struct takes 3 WORDs). We don't actually need it unless the vec struct encoding
-                // changes in the compiler.
-                // Load the word located at the address contained in RET, it's a word that
-                // translates to a heap address. 0x15 is a free register.
-                op::lw(0x15, RegId::RET, 0),
-                // We know a vector struct has its third byte contain the length of the vector, so
-                // use a 2 offset to store the vector length in 0x16, which is a free register.
-                op::lw(0x16, RegId::RET, 2),
-                // The in-memory size of the vector is (in-memory size of the inner type) * length
-                op::muli(0x16, 0x16, inner_type_byte_size),
-                op::retd(0x15, 0x16),
-            ]);
-        } else {
-            panic!("Couldn't match to a ParamType::Vector even though `.is_vector()` is true")
-        }
+    if let ParamType::Vector(inner_param_type) = output_param_type {
+        let inner_type_byte_size: u16 =
+            (inner_param_type.compute_encoding_width() * WORD_SIZE) as u16;
+        instructions.extend([
+            // The RET register contains the pointer address of the `CALL` return (a stack
+            // address).
+            // The RETL register contains the length of the `CALL` return (=24 because the vec
+            // struct takes 3 WORDs). We don't actually need it unless the vec struct encoding
+            // changes in the compiler.
+            // Load the word located at the address contained in RET, it's a word that
+            // translates to a heap address. 0x15 is a free register.
+            op::lw(0x15, RegId::RET, 0),
+            // We know a vector struct has its third byte contain the length of the vector, so
+            // use a 2 offset to store the vector length in 0x16, which is a free register.
+            op::lw(0x16, RegId::RET, 2),
+            // The in-memory size of the vector is (in-memory size of the inner type) * length
+            op::muli(0x16, 0x16, inner_type_byte_size),
+            op::retd(0x15, 0x16),
+        ]);
     }
 
     #[allow(clippy::iter_cloned_collect)]
