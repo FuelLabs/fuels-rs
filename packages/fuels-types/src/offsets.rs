@@ -42,8 +42,12 @@ pub fn coin_signed_data_offset() -> usize {
     InputRepr::Coin
         .data_offset()
         .expect("should have data offset")
-        + padded_len_usize(message_data_len)
-        + padded_len_usize(code_len)
+}
+
+pub fn message_signed_data_offset() -> usize {
+    InputRepr::Message
+        .data_offset()
+        .expect("should have data offset")
 }
 
 pub fn contract_input_offset() -> usize {

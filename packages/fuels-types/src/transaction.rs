@@ -1,7 +1,11 @@
 use std::fmt::Debug;
+use std::iter::Map;
+use std::slice::Iter;
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_core::types::fuel_vm::interpreter::diff::AnyDebug;
+use fuel_core_client::client::schema::schema::Transaction;
+use fuel_tx::Input::Contract;
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
@@ -10,6 +14,7 @@ use fuel_tx::{
     FormatValidityChecks, Input as FuelInput, InputRepr, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
+use fuel_tx::Transaction::Script;
 use fuel_types::bytes::padded_len_usize;
 use fuel_types::Salt;
 
@@ -72,10 +77,10 @@ pub trait Transaction: Into<FuelTransaction> {
     fn tx_offset(&self) -> usize;
 }
 
-pub(crate) fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) {
+pub(crate) fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
     let mut new_offset = offset;
 
-    let _ = inputs.into_iter().map(|input| match input {
+    inputs.into_iter().map(|input| match input {
         Input::ResourcePredicate {
             resource,
             code,
@@ -103,19 +108,32 @@ pub(crate) fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) {
             resource,
             witness_index,
         } => match resource {
-            Resource::Coin(coin) =>
-                {
-                    new_offset +=
-                    create_coin_input(coin.clone(), *witness_index)
-                },
-            Resource::Message(message) =>
-                {
-                    new_offset += offsets::
-                    create_message_input(message.clone(), *witness_index);
-                }
+            Resource::Coin(coin) => {
+                new_offset += offsets::message_signed_data_offset();
+                create_coin_input(coin.clone(), *witness_index)
+            }
+            Resource::Message(message) => {
+                new_offset += offsets::message_signed_data_offset();
+                create_message_input(message.clone(), *witness_index);
+            }
         },
-        Input::Contract { .. } => {}
-    });
+        Input::Contract {
+            utxo_id,
+            balance_root,
+            state_root,
+            tx_pointer,
+            contract_id,
+        } => {
+            new_offset += offsets::contract_input_offset();
+            FuelInput::contract(
+                *utxo_id,
+                *balance_root,
+                *state_root,
+                *tx_pointer,
+                *contract_id,
+            )
+        }
+    }).collect::<Vec<FuelInput>>()
 }
 
 pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
@@ -221,10 +239,41 @@ pub struct CreateTransaction {
     pub tx_offset: usize,
 }
 
+pub enum TempTx {
+    Script(Script),
+    Create(Create),
+}
+
+
+impl CreateTransaction {
+    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+        let fuel_inputs = convert_to_fuel_inputs(&self.inputs, 0);
+        let a = match self {
+            1 => FuelTransaction::Script(FuelTransaction::script(0, 0, 0, vec![], vec![], fuel_inputs, vec![], vec![])),
+            2 => FuelTransaction::Create(FuelTransaction::create(0, 0, 0, 0, Default::default(), vec![], fuel_inputs, vec![], vec![]),
+        };
+
+        TransactionFee::checked_from_tx(params, &a)
+    }
+}
+
 macro_rules! impl_tx_trait {
     ($ty: ident) => {
         impl Transaction for $ty {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+                convert_to_fuel_inputs(&self.tx.inputs)
+
+                //let tx = match () {
+                // _ if std::any::type_name::<ty>() == std::any::type_name::<CreateTransaction>() => {
+                //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
+                // },
+                // _ if std::any::type_name::<ty>() == std::any::type_name::<ScriptTransaction>() => {
+                //     10376 + 96 + 160
+                // },
+            () => todo!(),
+        }
+
+
                 TransactionFee::checked_from_tx(params, &self.tx)
             }
 
