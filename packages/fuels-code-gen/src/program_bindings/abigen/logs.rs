@@ -3,12 +3,14 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::program_bindings::{
-    abi_types::{FullLoggedType, FullTypeDeclaration},
-    resolved_type::resolve_type,
-    utils::single_param_type_call,
+use crate::{
+    program_bindings::{
+        abi_types::{FullLoggedType, FullTypeDeclaration},
+        resolved_type::resolve_type,
+        utils::single_param_type_call,
+    },
+    utils::TypePath,
 };
-use crate::utils::TypePath;
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,

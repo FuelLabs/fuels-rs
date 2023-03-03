@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -14,7 +13,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 mod contract;

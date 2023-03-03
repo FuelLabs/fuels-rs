@@ -4,11 +4,10 @@ use fuel_abi_types::utils::extract_generic_name;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{abi_types::FullTypeDeclaration, utils::Component},
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 /// Transforms components from inside the given `FullTypeDeclaration` into a vector

@@ -143,9 +143,8 @@ impl GeneratedCode {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::ident;
-
     use super::*;
+    use crate::utils::ident;
 
     #[test]
     fn can_merge_top_level_code() {

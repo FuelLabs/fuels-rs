@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use fuels::prelude::*;
-    use fuels_code_gen::{Abigen, AbigenTarget, ProgramType};
 
     #[tokio::test]
     async fn example_of_abigen_usage() -> Result<()> {

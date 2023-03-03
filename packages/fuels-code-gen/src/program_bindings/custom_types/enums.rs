@@ -11,7 +11,6 @@ use crate::{
         generated_code::GeneratedCode,
         utils::Component,
     },
-    utils::TypePath,
 };
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,

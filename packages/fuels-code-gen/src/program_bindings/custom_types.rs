@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -86,9 +85,8 @@ mod tests {
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
-    use crate::program_bindings::abi_types::FullTypeApplication;
-
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeApplication;
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {

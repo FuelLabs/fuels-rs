@@ -3,7 +3,6 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-use crate::utils::TypePath;
 use crate::{
     error::{error, Result},
     program_bindings::{
@@ -11,7 +10,7 @@ use crate::{
         resolved_type::{resolve_type, ResolvedType},
         utils::{param_type_calls, Component},
     },
-    utils::safe_ident,
+    utils::{safe_ident, TypePath},
 };
 
 #[derive(Debug)]

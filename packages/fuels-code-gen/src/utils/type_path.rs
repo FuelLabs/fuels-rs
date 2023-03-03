@@ -1,10 +1,9 @@
 use std::cmp::min;
 
-use itertools::{chain, izip, Itertools};
+use itertools::{chain, izip};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::error::Error;
 use crate::{
     error::{error, Result},
     utils::ident,

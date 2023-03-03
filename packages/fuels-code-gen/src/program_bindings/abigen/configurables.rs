@@ -3,14 +3,13 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
         abi_types::{FullConfigurable, FullTypeDeclaration},
         resolved_type::{resolve_type, ResolvedType},
     },
-    utils::safe_ident,
+    utils::{safe_ident, TypePath},
 };
 
 #[derive(Debug)]

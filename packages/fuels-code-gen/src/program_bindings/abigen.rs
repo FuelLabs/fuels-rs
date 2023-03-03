@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 
+pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 use regex::Regex;
 
-pub use abigen_target::{AbigenTarget, ProgramType};
-
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -17,7 +15,7 @@ use crate::{
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
-    utils::ident,
+    utils::TypePath,
 };
 
 mod abigen_target;
@@ -46,7 +44,7 @@ impl Abigen {
         let code = if no_std {
             Self::wasm_paths_hotfix(&generated_code.code())
         } else {
-            generated_code.code().clone()
+            generated_code.code()
         };
 
         Ok(quote! {
