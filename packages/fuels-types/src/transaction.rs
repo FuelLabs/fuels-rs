@@ -7,8 +7,8 @@ use fuel_tx::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
     Address, AssetId, Bytes32, Chargeable, CheckError, ConsensusParameters, ContractId, Create,
-    FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    FormatValidityChecks, Input as FuelInput, Output, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
 use fuel_types::Salt;
 
@@ -24,15 +24,15 @@ use crate::{
 };
 
 pub trait Transaction: Into<FuelTransaction> + ConvertableTransaction {
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
-
-    fn check_without_signatures(
-        &self,
-        block_height: u64,
-        parameters: &ConsensusParameters,
-    ) -> Result<(), Error>;
-
-    fn id(&self) -> Bytes32;
+    // fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+    //
+    // fn check_without_signatures(
+    //     &self,
+    //     block_height: u64,
+    //     parameters: &ConsensusParameters,
+    // ) -> Result<(), Error>;
+    //
+    // fn id(&self) -> Bytes32;
 
     fn maturity(&self) -> u64;
 
@@ -267,11 +267,25 @@ pub struct CreateTransaction {
 
 pub trait ConvertableTransaction {
     fn convert_to_fuel_tx(self, offset: usize) -> FuelTransaction;
+    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+    fn check_without_signatures(
+        &self,
+        block_height: u64,
+        parameters: &ConsensusParameters,
+    ) -> Result<(), Error>;
 }
 
 impl ConvertableTransaction for CreateTransaction {
     fn convert_to_fuel_tx(self, offset: usize) -> FuelTransaction {
         self.convert_to_fuel_create(offset).into()
+    }
+
+    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+        TransactionFee::checked_from_tx(params, &self.convert_to_fuel_create(0))
+    }
+
+    fn check_without_signatures(&self, block_height: u64, parameters: &ConsensusParameters) -> Result<(), Error> {
+        Ok(self.convert_to_fuel_create(0).check_without_signatures()?)
     }
 }
 
@@ -279,44 +293,49 @@ impl ConvertableTransaction for ScriptTransaction {
     fn convert_to_fuel_tx(self, offset: usize) -> FuelTransaction {
         self.convert_to_fuel_script(offset).into()
     }
+
+    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+        TransactionFee::checked_from_tx(params, &self.convert_to_fuel_script(0))
+    }
+
+    fn check_without_signatures(&self, block_height: u64, parameters: &ConsensusParameters) -> Result<(), Error> {
+        Ok(self.convert_to_fuel_script(0).check_without_signatures()?)
+    }
 }
 
 macro_rules! impl_tx_trait {
     ($ty: ident) => {
         impl Transaction for $ty {
+            // fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+            //     // let tx: FuelTransaction = (*self).into();
+            //     // let tx: Script = tx.into();
+            //
+            //      match () {
+            //       _ if std::any::type_name::<$ty>()
+            //             == std::any::type_name::<CreateTransaction>() => {
+            //
+            //         TransactionFee::checked_from_tx(params, &self)
+            //
+            //       }
+            //       _ if std::any::type_name::<$ty>()
+            //           == std::any::type_name::<ScriptTransaction>() => {
+            //     TransactionFee::checked_from_tx(params, &self)
+            //         FuelTransaction::Script(self.convert_to_fuel_tx(offset))
+            //       }
+            //         () => todo!(),
+            //     };
+            //
+            //
+            //     TransactionFee::checked_from_tx(params, &self)
+            // }
 
-            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                // let tx: FuelTransaction = (*self).into();
-                // let tx: Script = tx.into();
-
-                 match () {
-                  _ if std::any::type_name::<$ty>()
-                        == std::any::type_name::<CreateTransaction>() => {
-
-                    TransactionFee::checked_from_tx(params, &self)
-
-                  }
-                  _ if std::any::type_name::<$ty>()
-                      == std::any::type_name::<ScriptTransaction>() => {
-                TransactionFee::checked_from_tx(params, &self)
-                    FuelTransaction::Script(self.convert_to_fuel_tx(offset))
-                  }
-                    () => todo!(),
-                };
-
-
-                TransactionFee::checked_from_tx(params, &self)
-            }
-
-            fn check_without_signatures(
-                &self,
-                block_height: u64,
-                parameters: &ConsensusParameters,
-            ) -> Result<(), Error> {
-
-
-                Ok(self.check_without_signatures(block_height, parameters)?)
-            }
+            // fn check_without_signatures(
+            //     &self,
+            //     block_height: u64,
+            //     parameters: &ConsensusParameters,
+            // ) -> Result<(), Error> {
+            //     Ok(self.check_without_signatures(block_height, parameters)?)
+            // }
 
             fn id(&self) -> Bytes32 {
                 self.id()
@@ -402,7 +421,7 @@ macro_rules! impl_tx_trait {
                 self
             }
         }
-    }
+    };
 }
 
 impl_tx_trait!(ScriptTransaction);
@@ -424,9 +443,8 @@ impl CreateTransaction {
     }
 }
 
-
 impl ScriptTransaction {
-    fn convert_to_fuel_script(self, offset: usize) -> Script {
+    fn convert_to_fuel_script(self, offset: usize) -> fuel_tx::Script {
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
