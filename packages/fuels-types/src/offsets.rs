@@ -1,13 +1,20 @@
 use fuel_asm::Instruction;
-use fuel_tx::Input as FuelInput;
+use fuel_tx::Bytes32;
+use fuel_tx::field::Salt;
 use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_types::ContractId;
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.
-pub fn base_offset(consensus_parameters: &ConsensusParameters) -> usize {
+pub fn base_offset_script(consensus_parameters: &ConsensusParameters) -> usize {
     consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
+}
+
+/// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
+/// field of the `ConsensusParameters` and the static offset.
+pub fn base_offset_create(consensus_parameters: &ConsensusParameters) -> usize {
+    consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
 }
 
 /// Calculates the length of the script based on the number of contract calls it
@@ -20,7 +27,7 @@ pub fn call_script_data_offset(
     // from the script. This doesn't happen in the predicate.
     let opcode_len = Instruction::SIZE;
 
-    base_offset(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
+    base_offset_script(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
 }
 
 pub fn coin_predicate_data_offset(code_len: usize) -> usize {

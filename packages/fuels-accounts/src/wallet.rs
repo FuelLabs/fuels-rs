@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::{AssetId, Bytes32, ContractId, Input, Output, Receipt, TxPointer, UtxoId, Witness};
+use fuel_tx::{AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId, Witness};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
@@ -13,7 +13,7 @@ use fuels_types::{
     parameters::TxParameters,
     resource::Resource,
     transaction::{ScriptTransaction, Transaction},
-    transaction_response::TransactionResponse,
+    transaction_response::TransactionResponse, input::Input,
 };
 use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
@@ -329,8 +329,7 @@ impl WalletUnlocked {
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tx.inputs().iter().cloned().partition(|input| {
-                matches!(input, Input::MessageSigned { .. })
-                || matches!(input, Input::CoinSigned { asset_id, .. } if asset_id == &BASE_ASSET_ID)
+                matches!(input, Input::ResourceSigned { resource, .. }  if resource.asset_id() == BASE_ASSET_ID)
             });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -385,6 +384,7 @@ impl WalletUnlocked {
         Ok(())
     }
 }
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for WalletUnlocked {
     fn address(&self) -> &Bech32Address {

@@ -38,4 +38,12 @@ impl Input {
             data,
         }
     }
+
+    pub fn amount(&self) -> Option<u64> {
+        match self {
+            Input::ResourceSigned { resource, ..}
+            | Input::ResourcePredicate { resource, ..} => Some(resource.amount()),
+            _ => None,
+        }
+    }
 }
