@@ -96,19 +96,14 @@ impl Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
-        witness_index: u8,
+        _witness_index: u8,
     ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
             .await?
             .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => {
-                    Input::coin_predicate(coin, self.code.clone(), self.data.clone())
-                }
-                Resource::Message(message) => {
-                    Input::message_predicate(message, self.code.clone(), self.data.clone())
-                }
+            .map(|resource| {
+                Input::resource_predicate(resource.clone(), self.code.clone(), self.data.clone())
             })
             .collect::<Vec<Input>>())
     }
@@ -158,9 +153,9 @@ impl Account for Predicate {
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
             matches!(input , Input::CoinSigned { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
-            matches!(input , Input::MessageSigned { .. }) ||
-            matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
-            matches!(input , Input::MessagePredicate { .. })
+                matches!(input , Input::MessageSigned { .. }) ||
+                matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
+                matches!(input , Input::MessagePredicate { .. })
         });
 
         dbg!(&base_asset_inputs);

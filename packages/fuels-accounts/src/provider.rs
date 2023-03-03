@@ -29,6 +29,7 @@ use fuels_types::{
 };
 use tai64::Tai64;
 use thiserror::Error;
+use fuels_types::transaction::ConvertableTransaction;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -111,6 +112,8 @@ impl Provider {
             min_gas_price,
             ..
         } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
+
+        tx.convert_to_fuel_tx()
 
         if gas_used > tx.gas_limit() {
             return Err(error!(

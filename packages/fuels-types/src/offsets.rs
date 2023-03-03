@@ -3,7 +3,6 @@ use fuel_tx::Input as FuelInput;
 use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_types::ContractId;
-use fuel_vm::prelude::Instruction;
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.
