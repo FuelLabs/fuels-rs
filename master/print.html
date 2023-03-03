@@ -316,7 +316,7 @@ To build these tests, run the following command:</p>
 <ul>
 <li><a href="providers/querying.html#set-up">Set up</a></li>
 <li><a href="providers/querying.html#get-all-coins-from-an-address">Get all coins from an address</a></li>
-<li><a href="providers/querying.html#get-spendable-resources-from-an-address">Get spendable resources from an address</a></li>
+<li><a href="providers/querying.html#get-spendable-resources-owned-by-an-address">Get spendable resources owned by an address</a></li>
 <li><a href="providers/querying.html#get-balances-from-an-address">Get balances from an address</a></li>
 </ul>
 </li>
@@ -350,11 +350,23 @@ To build these tests, run the following command:</p>
 <pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
-<h2 id="get-spendable-resources-from-an-address"><a class="header" href="#get-spendable-resources-from-an-address">Get spendable resources from an address</a></h2>
-<p>The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID) or messages. If you ask for more spendable resources than the amount of resources you have, it returns an error.</p>
-<pre><code class="language-rust ignore">        let spendable_resources = provider
-            .get_spendable_resources(wallet.address(), BASE_ASSET_ID, 1)
-            .await?;
+<h2 id="get-spendable-resources-owned-by-an-address"><a class="header" href="#get-spendable-resources-owned-by-an-address">Get spendable resources owned by an address</a></h2>
+<p>The following example shows how to fetch resources owned by an address. First, you create a  <code>ResourceFilter</code> which specifies the target address, asset id, and amount. You can also define utxo ids and message ids that should be excluded when retrieving the resources:</p>
+<pre><code class="language-rust ignore">pub struct ResourceFilter {
+    pub from: Bech32Address,
+    pub asset_id: AssetId,
+    pub amount: u64,
+    pub excluded_utxos: Vec&lt;UtxoId&gt;,
+    pub excluded_message_ids: Vec&lt;MessageId&gt;,
+}
+</code></pre>
+<p>The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the id lists respectively:</p>
+<pre><code class="language-rust ignore">        let filter = ResourceFilter {
+            from: wallet.address().clone(),
+            amount: 1,
+            ..Default::default()
+        };
+        let spendable_resources = provider.get_spendable_resources(filter).await?;
         assert_eq!(spendable_resources.len(), 1);
 </code></pre>
 <h2 id="get-balances-from-an-address"><a class="header" href="#get-balances-from-an-address">Get balances from an address</a></h2>
@@ -2881,6 +2893,7 @@ impl LiquidityPool for Contract {
             if id == BASE_ASSET_ID {
                 continue;
             }
+
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
