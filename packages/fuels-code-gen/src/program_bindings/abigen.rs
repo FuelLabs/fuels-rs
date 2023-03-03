@@ -42,7 +42,7 @@ impl Abigen {
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
 
         let code = if no_std {
-            Self::wasm_paths_hotfix(generated_code.code())
+            Self::wasm_paths_hotfix(&generated_code.code())
         } else {
             generated_code.code().clone()
         };
@@ -86,7 +86,7 @@ impl Abigen {
 
         Ok(shared_types
             .merge(bindings)
-            .wrap_in_mod(&ident("abigen_bindings")))
+            .wrap_in_mod(ident("abigen_bindings")))
     }
 
     fn generate_all_bindings(
@@ -115,7 +115,7 @@ impl Abigen {
         Ok(limited_std_prelude(no_std)
             .merge(types)
             .merge(bindings)
-            .wrap_in_mod(&mod_name))
+            .wrap_in_mod(mod_name))
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
@@ -136,7 +136,7 @@ impl Abigen {
         } else {
             Ok(limited_std_prelude(no_std)
                 .merge(types)
-                .wrap_in_mod(&ident("shared_types")))
+                .wrap_in_mod(ident("shared_types")))
         }
     }
 

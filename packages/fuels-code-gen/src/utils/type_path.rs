@@ -32,6 +32,10 @@ impl TypePath {
         Ok(Self { parts, is_absolute })
     }
 
+    pub fn has_multiple_parts(&self) -> bool {
+        self.parts.len() > 1
+    }
+
     fn is_absolute(path_str: &str) -> bool {
         path_str.trim_start().starts_with("::")
     }
