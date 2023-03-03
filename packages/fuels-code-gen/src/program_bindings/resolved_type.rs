@@ -73,11 +73,12 @@ impl Display for ResolvedType {
 pub(crate) fn resolve_type(
     type_application: &FullTypeApplication,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<ResolvedType> {
     let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
         type_applications
             .iter()
-            .map(|type_application| resolve_type(type_application, shared_types))
+            .map(|type_application| resolve_type(type_application, shared_types, mod_name))
             .collect::<Result<Vec<_>>>()
             .expect("Failed to resolve types")
     };
@@ -105,6 +106,7 @@ pub(crate) fn resolve_type(
             move || recursively_resolve(&base_type.components),
             move || recursively_resolve(&type_application.type_arguments),
             is_shared,
+            mod_name,
         )
     })
     .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
@@ -115,6 +117,7 @@ fn to_generic(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let name = extract_generic_name(type_field)?;
 
@@ -130,6 +133,7 @@ fn to_array(
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let len = extract_array_len(type_field)?;
 
@@ -153,6 +157,7 @@ fn to_sized_ascii_string(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let len = extract_str_len(type_field)?;
 
@@ -172,6 +177,7 @@ fn to_tuple(
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if has_tuple_format(type_field) {
         let inner_types = components_supplier();
@@ -193,6 +199,7 @@ fn to_simple_type(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     match type_field {
         "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
@@ -214,6 +221,7 @@ fn to_byte(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
         Some(ResolvedType {
@@ -230,6 +238,7 @@ fn to_bits256(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
         Some(ResolvedType {
@@ -246,6 +255,7 @@ fn to_raw_slice(
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
     _: bool,
+    _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "raw untyped slice" {
         let type_name = quote! {::fuels::types::RawSlice};
@@ -263,6 +273,7 @@ fn to_custom_type(
     _: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
     is_shared: bool,
+    current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let type_path = extract_custom_type_name(type_field)?;
 
@@ -270,14 +281,16 @@ fn to_custom_type(
         .get(&type_path)
         .cloned()
         .unwrap_or_else(|| {
-            let type_path = TypePath::new(type_path).unwrap();
-            let custom_type_name = type_path.ident().unwrap();
-            let path_str = if is_shared {
-                format!("super::shared_types::{custom_type_name}")
+            let original_type_path = TypePath::new(type_path).unwrap();
+
+            if is_shared {
+                current_mod
+                    .relative_path_from(&TypePath::default())
+                    .append(TypePath::new("super::shared_types").unwrap())
+                    .append(original_type_path)
             } else {
-                format!("self::{custom_type_name}")
-            };
-            TypePath::new(path_str).expect("Known to be well formed")
+                original_type_path.relative_path_from(current_mod)
+            }
         });
 
     Some(ResolvedType {
@@ -308,8 +321,9 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, &HashSet::default())
-            .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
+        let resolved_type =
+            resolve_type(&application, &HashSet::default(), &TypePath::default())
+                .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
 
         assert_eq!(actual, expected);
@@ -589,8 +603,14 @@ mod tests {
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
         for (type_name, expected_path) in sdk_provided_custom_types_lookup() {
-            let resolved_type =
-                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false).unwrap();
+            let resolved_type = to_custom_type(
+                &format!("struct {type_name}"),
+                Vec::new,
+                Vec::new,
+                false,
+                &TypePath::default(),
+            )
+            .unwrap();
 
             let expected_type_name = expected_path.into_token_stream();
             assert_eq!(
@@ -601,12 +621,18 @@ mod tests {
     }
     #[test]
     fn handles_shared_types() {
-        let resolved_type =
-            to_custom_type("struct SomeStruct", Vec::new, Vec::new, true).expect("should succeed");
+        let resolved_type = to_custom_type(
+            "struct SomeStruct",
+            Vec::new,
+            Vec::new,
+            true,
+            &TypePath::default(),
+        )
+        .expect("should succeed");
 
         assert_eq!(
             resolved_type.type_name.to_string(),
-            "super :: shared_types :: SomeStruct"
+            "self :: super :: shared_types :: SomeStruct"
         )
     }
 }

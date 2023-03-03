@@ -25,7 +25,7 @@ pub(crate) fn expand_custom_enum(
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, false, shared_types)?;
+    let components = extract_components(type_decl, false, shared_types, &enum_type_path.parent())?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }
@@ -33,9 +33,7 @@ pub(crate) fn expand_custom_enum(
 
     let code = enum_decl(enum_ident, &components, &generics, no_std);
 
-    let enum_type_path = TypePath::new(enum_ident.to_string()).unwrap();
-
-    let enum_code = GeneratedCode::new(code, HashSet::from([enum_ident.into()]));
+    let enum_code = GeneratedCode::new(code, HashSet::from([enum_ident.into()]), no_std);
 
     Ok(enum_code.wrap_in_mod(enum_type_path.parent()))
 }

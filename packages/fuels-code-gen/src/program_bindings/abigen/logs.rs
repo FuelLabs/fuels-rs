@@ -8,13 +8,15 @@ use crate::program_bindings::{
     resolved_type::resolve_type,
     utils::single_param_type_call,
 };
+use crate::utils::TypePath;
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,
     logged_types: &[FullLoggedType],
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> TokenStream {
-    let resolved_logs = resolve_logs(logged_types, shared_types);
+    let resolved_logs = resolve_logs(logged_types, shared_types, mod_name);
     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
     let contract_id = contract_id
         .map(|id| quote! { ::core::option::Option::Some(#id) })
@@ -32,12 +34,13 @@ struct ResolvedLog {
 fn resolve_logs(
     logged_types: &[FullLoggedType],
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Vec<ResolvedLog> {
     logged_types
         .iter()
         .map(|l| {
-            let resolved_type =
-                resolve_type(&l.application, shared_types).expect("Failed to resolve log type");
+            let resolved_type = resolve_type(&l.application, shared_types, mod_name)
+                .expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);
 
             ResolvedLog {

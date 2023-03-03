@@ -10,7 +10,7 @@ use crate::{
     utils::ident,
 };
 
-#[derive(Clone, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Default, Debug, Hash, Eq, PartialEq, Ord, PartialOrd)]
 pub struct TypePath {
     parts: Vec<Ident>,
     is_absolute: bool,
@@ -25,6 +25,13 @@ impl From<&Ident> for TypePath {
 impl TypePath {
     pub fn new<T: ToString>(path: T) -> Result<Self> {
         let path_str = path.to_string();
+        if path_str.trim().is_empty() {
+            return Ok(Self {
+                parts: vec![],
+                is_absolute: false,
+            });
+        }
+
         let is_absolute = Self::is_absolute(&path_str);
 
         let parts = path_str
@@ -54,29 +61,29 @@ impl TypePath {
         }
     }
 
-    pub fn relative_path_to(&self, path: &TypePath) -> TypePath {
+    pub fn relative_path_from(&self, path: &TypePath) -> TypePath {
         let our_parent = self.parent();
-        let their_parent = path.parent();
 
-        let number_of_consecutively_matching_parts = izip!(&our_parent.parts, &their_parent.parts)
+        let number_of_consecutively_matching_parts = izip!(&our_parent.parts, &path.parts)
             .enumerate()
             .find_map(|(matches_so_far, (our_part, their_part))| {
                 (our_part != their_part).then_some(matches_so_far)
             })
-            .unwrap_or_else(|| min(our_parent.len(), their_parent.len()));
+            .unwrap_or_else(|| min(our_parent.len(), path.len()));
 
-        let prefix = if their_parent.starts_with(&our_parent) {
+        let prefix = if our_parent.starts_with(path) {
             vec![ident("self")]
         } else {
-            vec![ident("super"); our_parent.len() - number_of_consecutively_matching_parts]
+            vec![ident("super"); path.len() - number_of_consecutively_matching_parts]
         };
 
-        let non_matching_path_parts = their_parent
-            .take_parts()
-            .into_iter()
-            .skip(number_of_consecutively_matching_parts);
+        let non_matching_path_parts = our_parent
+            .parts
+            .iter()
+            .skip(number_of_consecutively_matching_parts)
+            .cloned();
 
-        let type_ident = path.ident().cloned();
+        let type_ident = self.ident().cloned();
 
         TypePath {
             parts: chain!(prefix, non_matching_path_parts, type_ident).collect(),
@@ -113,6 +120,10 @@ impl TypePath {
         another.parts.extend(self.parts);
         another
     }
+    pub fn append(mut self, another: TypePath) -> Self {
+        self.parts.extend(another.parts);
+        self
+    }
 
     pub fn ident(&self) -> Option<&Ident> {
         self.parts.last()
@@ -133,15 +144,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn cannot_be_empty() {
+    fn can_be_empty() {
         let empty_path = "   ";
 
-        let err = TypePath::new(empty_path).expect_err("Should have failed!");
+        let type_path = TypePath::new(empty_path).unwrap();
 
-        assert_eq!(
-            err.to_string(),
-            "TypePath cannot be constructed from '   ' since it has it has empty parts"
-        );
+        assert!(type_path.take_parts().is_empty());
     }
 
     #[test]
@@ -224,58 +232,57 @@ mod tests {
     }
 
     #[test]
-    fn relative_path_same_mod_different_type() {
+    fn relative_path_from_same_mod() {
         let deeper_path = TypePath::new("a::b::SomeType").unwrap();
-        let shallower_path = TypePath::new("a::b::AnotherType").unwrap();
+        let the_same_mod = TypePath::new("a::b").unwrap();
 
-        let relative_path = deeper_path.relative_path_to(&shallower_path);
+        let relative_path = deeper_path.relative_path_from(&the_same_mod);
 
-        let expected_relative_path = TypePath::new("self::AnotherType").unwrap();
+        let expected_relative_path = TypePath::new("self::SomeType").unwrap();
         assert_eq!(relative_path, expected_relative_path);
     }
 
     #[test]
-    fn relative_path_both_on_root_level_different_type() {
+    fn relative_path_from_root_mod() {
         let deeper_path = TypePath::new("SomeType").unwrap();
-        let shallower_path = TypePath::new("AnotherType").unwrap();
+        let root_mod = TypePath::new("").unwrap();
 
-        let relative_path = deeper_path.relative_path_to(&shallower_path);
+        let relative_path = deeper_path.relative_path_from(&root_mod);
 
-        let expected_relative_path = TypePath::new("self::AnotherType").unwrap();
+        let expected_relative_path = TypePath::new("self::SomeType").unwrap();
         assert_eq!(relative_path, expected_relative_path);
     }
 
     #[test]
-    fn relative_path_type_deeper_in() {
+    fn relative_path_from_deeper_mod() {
         let a_path = TypePath::new("a::b::SomeType").unwrap();
-        let sister_path = TypePath::new("a::b::c::d::AnotherType").unwrap();
+        let deeper_mod = TypePath::new("a::b::c::d").unwrap();
 
-        let relative_path = a_path.relative_path_to(&sister_path);
+        let relative_path = a_path.relative_path_from(&deeper_mod);
 
-        let expected_relative_path = TypePath::new("self::c::d::AnotherType").unwrap();
+        let expected_relative_path = TypePath::new("super::super::SomeType").unwrap();
         assert_eq!(relative_path, expected_relative_path);
     }
 
     #[test]
-    fn relative_path_type_located_few_levels_up() {
+    fn relative_path_going_deeper() {
         let a_path = TypePath::new("a::b::c::SomeType").unwrap();
-        let sister_path = TypePath::new("AnotherType").unwrap();
+        let higher_level_mod = TypePath::new("a").unwrap();
 
-        let relative_path = a_path.relative_path_to(&sister_path);
+        let relative_path = a_path.relative_path_from(&higher_level_mod);
 
-        let expected_relative_path = TypePath::new("super::super::super::AnotherType").unwrap();
+        let expected_relative_path = TypePath::new("self::b::c::SomeType").unwrap();
         assert_eq!(relative_path, expected_relative_path);
     }
 
     #[test]
     fn relative_path_up_then_down() {
         let a_path = TypePath::new("a::b::c::SomeType").unwrap();
-        let sister_path = TypePath::new("d::e::AnotherType").unwrap();
+        let sister_path = TypePath::new("d::e").unwrap();
 
-        let relative_path = a_path.relative_path_to(&sister_path);
+        let relative_path = a_path.relative_path_from(&sister_path);
 
-        let expected_relative_path =
-            TypePath::new("super::super::super::d::e::AnotherType").unwrap();
+        let expected_relative_path = TypePath::new("super::super::a::b::c::SomeType").unwrap();
         assert_eq!(relative_path, expected_relative_path);
     }
 

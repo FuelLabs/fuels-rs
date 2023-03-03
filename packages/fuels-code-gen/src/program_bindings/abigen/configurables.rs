@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -23,10 +24,11 @@ impl ResolvedConfigurable {
     pub fn new(
         configurable: &FullConfigurable,
         shared_types: &HashSet<FullTypeDeclaration>,
+        mod_name: &TypePath,
     ) -> Result<ResolvedConfigurable> {
         Ok(ResolvedConfigurable {
             name: safe_ident(&format!("set_{}", configurable.name)),
-            ttype: resolve_type(&configurable.application, shared_types)?,
+            ttype: resolve_type(&configurable.application, shared_types, mod_name)?,
             offset: configurable.offset,
         })
     }
@@ -36,10 +38,11 @@ pub(crate) fn generate_code_for_configurable_constatnts(
     configurable_struct_name: &Ident,
     configurables: &[FullConfigurable],
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<TokenStream> {
     let resolved_configurables = configurables
         .iter()
-        .map(|c| ResolvedConfigurable::new(c, shared_types))
+        .map(|c| ResolvedConfigurable::new(c, shared_types, mod_name))
         .collect::<Result<Vec<_>>>()?;
 
     let struct_decl = generate_struct_decl(configurable_struct_name);

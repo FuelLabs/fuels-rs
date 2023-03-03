@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -26,6 +27,7 @@ pub(crate) fn generate_bindings(
     target: ParsedAbigenTarget,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<GeneratedCode> {
     let bindings_generator = match target.program_type {
         ProgramType::Script => script_bindings,
@@ -35,5 +37,5 @@ pub(crate) fn generate_bindings(
 
     let name = ident(&target.name);
     let abi = target.source;
-    bindings_generator(&name, abi, no_std, shared_types)
+    bindings_generator(&name, abi, no_std, shared_types, mod_name)
 }

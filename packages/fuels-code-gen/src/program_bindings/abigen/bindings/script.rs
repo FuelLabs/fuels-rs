@@ -22,20 +22,23 @@ pub(crate) fn script_bindings(
     abi: FullProgramABI,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
 
-    let main_function = expand_fn(&abi, shared_types)?;
+    let main_function = expand_fn(&abi, shared_types, mod_name)?;
 
-    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types, shared_types);
+    let log_type_lookup =
+        logs_lookup_instantiation_code(None, &abi.logged_types, shared_types, mod_name);
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code = generate_code_for_configurable_constatnts(
         &configuration_struct_name,
         &abi.configurables,
         shared_types,
+        mod_name,
     )?;
 
     let code = quote! {
@@ -74,15 +77,16 @@ pub(crate) fn script_bindings(
         .into_iter()
         .collect();
 
-    Ok(GeneratedCode::new(code, type_paths))
+    Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
 fn expand_fn(
     abi: &FullProgramABI,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(fun, shared_types, mod_name)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {

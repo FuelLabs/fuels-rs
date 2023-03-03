@@ -108,15 +108,12 @@ impl Abigen {
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
-        let mod_name = TypePath::new(&format!("{}_mod", &target.name.to_snake_case()))?;
+        let mod_name = TypePath::new(format!("{}_mod", &target.name.to_snake_case()))?;
 
         let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
-        let bindings = generate_bindings(target, no_std, shared_types)?;
+        let bindings = generate_bindings(target, no_std, shared_types, &TypePath::default())?;
 
-        Ok(limited_std_prelude(no_std)
-            .merge(types)
-            .merge(bindings)
-            .wrap_in_mod(mod_name))
+        Ok(types.merge(bindings).wrap_in_mod(mod_name))
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
@@ -130,15 +127,13 @@ impl Abigen {
         shared_types: HashSet<FullTypeDeclaration>,
         no_std: bool,
     ) -> Result<GeneratedCode> {
+        let mod_name = TypePath::new("shared_types")?;
         let types = generate_types(shared_types, &HashSet::default(), no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())
         } else {
-            let mod_path = TypePath::new("shared_types")?;
-            Ok(limited_std_prelude(no_std)
-                .merge(types)
-                .wrap_in_mod(mod_path))
+            Ok(types.wrap_in_mod(mod_name))
         }
     }
 
@@ -163,30 +158,6 @@ impl Abigen {
     ) -> HashSet<FullTypeDeclaration> {
         all_custom_types.into_iter().duplicates().cloned().collect()
     }
-}
-
-fn limited_std_prelude(no_std: bool) -> GeneratedCode {
-    let lib = if no_std {
-        quote! {::alloc}
-    } else {
-        quote! {::std}
-    };
-
-    let code = quote! {
-            use ::core::{
-                clone::Clone,
-                convert::{Into, TryFrom, From},
-                iter::IntoIterator,
-                iter::Iterator,
-                marker::Sized,
-                panic,
-            };
-
-            use #lib::{string::ToString, format, vec};
-
-    };
-
-    GeneratedCode::new(code, Default::default())
 }
 
 #[cfg(test)]

@@ -11,20 +11,45 @@ pub(crate) struct GeneratedCode {
     top_level_code: TokenStream,
     usable_types: HashSet<TypePath>,
     code_in_mods: HashMap<Ident, GeneratedCode>,
+    no_std: bool,
 }
 
 impl GeneratedCode {
-    pub fn new(code: TokenStream, usable_types: HashSet<TypePath>) -> Self {
+    pub fn new(code: TokenStream, usable_types: HashSet<TypePath>, no_std: bool) -> Self {
         Self {
             top_level_code: code,
             code_in_mods: HashMap::default(),
             usable_types,
+            no_std,
+        }
+    }
+
+    fn prelude(&self) -> TokenStream {
+        let lib = if self.no_std {
+            quote! {::alloc}
+        } else {
+            quote! {::std}
+        };
+
+        quote! {
+                use ::core::{
+                    clone::Clone,
+                    convert::{Into, TryFrom, From},
+                    iter::IntoIterator,
+                    iter::Iterator,
+                    marker::Sized,
+                    panic,
+                };
+
+                use #lib::{string::ToString, format, vec};
+
         }
     }
 
     pub fn code(&self) -> TokenStream {
         let top_level_code = &self.top_level_code;
 
+        let prelude = self.prelude();
         let code_in_mods = self
             .code_in_mods
             .iter()
@@ -38,6 +63,7 @@ impl GeneratedCode {
                     #[allow(clippy::too_many_arguments)]
                     #[no_implicit_prelude]
                     pub mod #mod_name {
+                        #prelude
                         #code
                     }
                 }
@@ -152,6 +178,17 @@ mod tests {
             #[allow(clippy::too_many_arguments)]
             #[no_implicit_prelude]
             pub mod a_mod {
+                use ::core::{
+                    clone::Clone,
+                    convert::{Into, TryFrom, From},
+                    iter::IntoIterator,
+                    iter::Iterator,
+                    marker::Sized,
+                    panic,
+                };
+
+                use ::std::{string::ToString, format, vec};
+
                 struct SomeType;
             }
         };
@@ -197,21 +234,37 @@ mod tests {
             .merge(different_mod_struct);
 
         // then
+        let prelude = quote! {
+                use ::core::{
+                    clone::Clone,
+                    convert::{Into, TryFrom, From},
+                    iter::IntoIterator,
+                    iter::Iterator,
+                    marker::Sized,
+                    panic,
+                };
+                use ::std::{string::ToString, format, vec};
+        };
+
         let expected_code = quote! {
             struct TopLevelStruct;
             #[allow(clippy::too_many_arguments)]
             #[no_implicit_prelude]
             pub mod common_mod {
+                #prelude
+
                 struct SomeStruct2;
                 #[allow(clippy::too_many_arguments)]
                 #[no_implicit_prelude]
                 pub mod deeper_mod {
+                    #prelude
                     struct SomeStruct1;
                 }
             }
             #[allow(clippy::too_many_arguments)]
             #[no_implicit_prelude]
             pub mod different_mod {
+                #prelude
                 struct SomeStruct3;
             }
         };
@@ -237,7 +290,7 @@ mod tests {
             .map(given_type_path)
             .into_iter()
             .collect();
-        let code = GeneratedCode::new(Default::default(), usable_types);
+        let code = GeneratedCode::new(Default::default(), usable_types, false);
 
         let use_statements = code.use_statements_for_uniquely_named_types();
 
@@ -261,6 +314,7 @@ mod tests {
                 given_type_path("some_mod::Unique"),
                 given_type_path("even_though::the_duplicate_is::in_another_mod::NotUnique"),
             ]),
+            false,
         )
         .merge(not_unique_struct);
 
@@ -284,6 +338,7 @@ mod tests {
         GeneratedCode::new(
             quote! {struct #struct_ident;},
             HashSet::from([given_type_path(struct_name)]),
+            false,
         )
     }
 

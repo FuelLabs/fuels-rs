@@ -23,6 +23,7 @@ pub(crate) fn contract_bindings(
     abi: FullProgramABI,
     no_std: bool,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
@@ -32,17 +33,19 @@ pub(crate) fn contract_bindings(
         Some(quote! {contract_id.clone().into()}),
         &abi.logged_types,
         shared_types,
+        mod_name,
     );
 
     let methods_name = ident(&format!("{name}Methods"));
 
-    let contract_functions = expand_functions(&abi.functions, shared_types)?;
+    let contract_functions = expand_functions(&abi.functions, shared_types, mod_name)?;
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code = generate_code_for_configurable_constatnts(
         &configuration_struct_name,
         &abi.configurables,
         shared_types,
+        mod_name,
     )?;
 
     let code = quote! {
@@ -115,16 +118,17 @@ pub(crate) fn contract_bindings(
         .into_iter()
         .collect();
 
-    Ok(GeneratedCode::new(code, type_paths))
+    Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
 fn expand_functions(
     functions: &[FullABIFunction],
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<TokenStream> {
     functions
         .iter()
-        .map(|fun| expand_fn(fun, shared_types))
+        .map(|fun| expand_fn(fun, shared_types, mod_name))
         .fold_ok(TokenStream::default(), |mut all_code, code| {
             all_code.append_all(code);
             all_code
@@ -140,8 +144,9 @@ fn expand_functions(
 pub(crate) fn expand_fn(
     abi_fun: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<TokenStream> {
-    let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(abi_fun, shared_types, mod_name)?;
 
     generator.set_doc(format!(
         "Calls the contract's `{}` function",
@@ -334,6 +339,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&parsed_abi.functions[0], &types)?,
             &HashSet::default(),
+            &TypePath::default(),
         )?;
 
         let expected = quote! {
@@ -405,6 +411,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
+            &TypePath::default(),
         );
 
         let expected = quote! {
@@ -514,6 +521,7 @@ mod tests {
         let result = expand_fn(
             &FullABIFunction::from_counterpart(&the_function, &types)?,
             &HashSet::default(),
+            &TypePath::default(),
         );
 
         //then

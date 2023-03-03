@@ -26,6 +26,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
+        mod_name: &TypePath,
     ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -35,7 +36,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, shared_types)?,
+            field_type: resolve_type(component, shared_types, mod_name)?,
         })
     }
 }
@@ -76,7 +77,12 @@ mod tests {
     fn respects_snake_case_flag() -> Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
-        let sut = Component::new(&type_application, true, &Default::default())?;
+        let sut = Component::new(
+            &type_application,
+            true,
+            &Default::default(),
+            &TypePath::default(),
+        )?;
 
         assert_eq!(sut.field_name, "was_not_snake_cased");
 
@@ -88,7 +94,12 @@ mod tests {
         {
             let type_application = type_application_named("if");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(
+                &type_application,
+                false,
+                &Default::default(),
+                &TypePath::default(),
+            )?;
 
             assert_eq!(sut.field_name, "if_");
         }
@@ -96,7 +107,12 @@ mod tests {
         {
             let type_application = type_application_named("let");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(
+                &type_application,
+                false,
+                &Default::default(),
+                &TypePath::default(),
+            )?;
 
             assert_eq!(sut.field_name, "let_");
         }
