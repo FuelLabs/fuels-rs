@@ -23,6 +23,7 @@ pub(crate) fn expand_custom_enum(
     no_std: bool,
 ) -> Result<GeneratedCode> {
     let enum_type_path = type_decl.custom_type_path()?;
+    let enum_ident = enum_type_path.ident().unwrap();
 
     let components = extract_components(type_decl, false, shared_types)?;
     if components.is_empty() {
@@ -30,10 +31,13 @@ pub(crate) fn expand_custom_enum(
     }
     let generics = extract_generic_parameters(type_decl)?;
 
-    let code = enum_decl(enum_type_path.ident(), &components, &generics, no_std);
+    let code = enum_decl(enum_ident, &components, &generics, no_std);
 
-    let enum_type_path = TypePath::new(enum_type_path.ident().to_string()).unwrap();
-    Ok(GeneratedCode::new(code, HashSet::from([enum_type_path])))
+    let enum_type_path = TypePath::new(enum_ident.to_string()).unwrap();
+
+    let enum_code = GeneratedCode::new(code, HashSet::from([enum_ident.into()]));
+
+    Ok(enum_code.wrap_in_mod(enum_type_path.parent()))
 }
 
 fn enum_decl(

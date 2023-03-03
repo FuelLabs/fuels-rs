@@ -65,7 +65,18 @@ impl GeneratedCode {
         self
     }
 
-    pub fn wrap_in_mod(self, mod_name: Ident) -> Self {
+    pub fn wrap_in_mod(mut self, mod_name: TypePath) -> Self {
+        let mut parts = mod_name.take_parts();
+        parts.reverse();
+
+        for mod_name in parts {
+            self = self.wrap_in_single_mod(mod_name)
+        }
+
+        self
+    }
+
+    fn wrap_in_single_mod(self, mod_name: Ident) -> Self {
         Self {
             code_in_mods: HashMap::from([(mod_name, self)]),
             ..Default::default()
@@ -93,8 +104,8 @@ impl GeneratedCode {
                     .collect::<Vec<_>>()
             })
             .chain(self.usable_types.iter().cloned())
-            .sorted_by(|lhs, rhs| lhs.ident().cmp(rhs.ident()))
-            .group_by(|e| e.ident().clone())
+            .sorted_by(|lhs, rhs| lhs.ident().cmp(&rhs.ident()))
+            .group_by(|e| e.ident().cloned())
             .into_iter()
             .filter_map(|(_, group)| {
                 let mut types = group.collect::<Vec<_>>();
@@ -134,7 +145,7 @@ mod tests {
         let some_type = given_some_struct_code("SomeType");
 
         // when
-        let wrapped_in_mod = some_type.wrap_in_mod(ident("a_mod"));
+        let wrapped_in_mod = some_type.wrap_in_mod(given_type_path("a_mod"));
 
         // then
         let expected_code = quote! {
@@ -152,7 +163,7 @@ mod tests {
     fn wrapping_in_mod_updates_use_statements() {
         // given
         let some_type = given_some_struct_code("SomeType");
-        let wrapped_in_mod = some_type.wrap_in_mod(ident("a_mod"));
+        let wrapped_in_mod = some_type.wrap_in_mod(given_type_path("a_mod"));
 
         // when
         let use_statements = wrapped_in_mod.use_statements_for_uniquely_named_types();
@@ -169,16 +180,15 @@ mod tests {
     fn merging_code_will_merge_mods_as_well() {
         // given
         let common_struct_1 = given_some_struct_code("SomeStruct1")
-            .wrap_in_mod(ident("deeper_mod"))
-            .wrap_in_mod(ident("common_mod"));
+            .wrap_in_mod(given_type_path("common_mod::deeper_mod"));
 
         let common_struct_2 =
-            given_some_struct_code("SomeStruct2").wrap_in_mod(ident("common_mod"));
+            given_some_struct_code("SomeStruct2").wrap_in_mod(given_type_path("common_mod"));
 
         let top_level_struct = given_some_struct_code("TopLevelStruct");
 
         let different_mod_struct =
-            given_some_struct_code("SomeStruct3").wrap_in_mod(ident("different_mod"));
+            given_some_struct_code("SomeStruct3").wrap_in_mod(given_type_path("different_mod"));
 
         // when
         let merged_code = common_struct_1

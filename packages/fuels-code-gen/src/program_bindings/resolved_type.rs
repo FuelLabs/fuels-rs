@@ -271,7 +271,7 @@ fn to_custom_type(
         .cloned()
         .unwrap_or_else(|| {
             let type_path = TypePath::new(type_path).unwrap();
-            let custom_type_name = type_path.ident();
+            let custom_type_name = type_path.ident().unwrap();
             let path_str = if is_shared {
                 format!("super::shared_types::{custom_type_name}")
             } else {

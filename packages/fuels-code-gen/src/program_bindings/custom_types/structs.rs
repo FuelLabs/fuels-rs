@@ -23,19 +23,16 @@ pub(crate) fn expand_custom_struct(
     no_std: bool,
 ) -> Result<GeneratedCode> {
     let struct_type_path = type_decl.custom_type_path()?;
+    let struct_ident = struct_type_path.ident().unwrap();
 
     let components = extract_components(type_decl, true, shared_types)?;
     let generic_parameters = extract_generic_parameters(type_decl)?;
 
-    let code = struct_decl(
-        struct_type_path.ident(),
-        &components,
-        &generic_parameters,
-        no_std,
-    );
+    let code = struct_decl(struct_ident, &components, &generic_parameters, no_std);
 
-    let struct_type_path = TypePath::new(struct_type_path.ident().to_string()).unwrap();
-    Ok(GeneratedCode::new(code, HashSet::from([struct_type_path])))
+    let struct_code = GeneratedCode::new(code, HashSet::from([struct_ident.into()]));
+
+    Ok(struct_code.wrap_in_mod(struct_type_path.parent()))
 }
 
 fn struct_decl(

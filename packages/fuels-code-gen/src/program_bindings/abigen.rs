@@ -1,12 +1,14 @@
 use std::collections::HashSet;
 
-pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 use regex::Regex;
 
+pub use abigen_target::{AbigenTarget, ProgramType};
+
+use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -84,9 +86,8 @@ impl Abigen {
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
-        Ok(shared_types
-            .merge(bindings)
-            .wrap_in_mod(ident("abigen_bindings")))
+        let mod_path = TypePath::new("abigen_bindings").unwrap();
+        Ok(shared_types.merge(bindings).wrap_in_mod(mod_path))
     }
 
     fn generate_all_bindings(
@@ -107,7 +108,7 @@ impl Abigen {
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
-        let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
+        let mod_name = TypePath::new(&format!("{}_mod", &target.name.to_snake_case()))?;
 
         let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std, shared_types)?;
@@ -134,9 +135,10 @@ impl Abigen {
         if types.is_empty() {
             Ok(Default::default())
         } else {
+            let mod_path = TypePath::new("shared_types")?;
             Ok(limited_std_prelude(no_std)
                 .merge(types)
-                .wrap_in_mod(ident("shared_types")))
+                .wrap_in_mod(mod_path))
         }
     }
 

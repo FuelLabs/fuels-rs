@@ -1,6 +1,10 @@
+use std::cmp::min;
+
+use itertools::{chain, izip, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
+use crate::error::Error;
 use crate::{
     error::{error, Result},
     utils::ident,
@@ -10,6 +14,12 @@ use crate::{
 pub struct TypePath {
     parts: Vec<Ident>,
     is_absolute: bool,
+}
+
+impl From<&Ident> for TypePath {
+    fn from(value: &Ident) -> Self {
+        TypePath::new(value).expect("All Idents are valid TypePaths")
+    }
 }
 
 impl TypePath {
@@ -32,6 +42,65 @@ impl TypePath {
         Ok(Self { parts, is_absolute })
     }
 
+    fn len(&self) -> usize {
+        self.parts.len()
+    }
+
+    fn starts_with(&self, path: &TypePath) -> bool {
+        if self.parts.len() < path.parts.len() {
+            false
+        } else {
+            self.parts[..path.parts.len()] == path.parts
+        }
+    }
+
+    pub fn relative_path_to(&self, path: &TypePath) -> TypePath {
+        let our_parent = self.parent();
+        let their_parent = path.parent();
+
+        let number_of_consecutively_matching_parts = izip!(&our_parent.parts, &their_parent.parts)
+            .enumerate()
+            .find_map(|(matches_so_far, (our_part, their_part))| {
+                (our_part != their_part).then_some(matches_so_far)
+            })
+            .unwrap_or_else(|| min(our_parent.len(), their_parent.len()));
+
+        let prefix = if their_parent.starts_with(&our_parent) {
+            vec![ident("self")]
+        } else {
+            vec![ident("super"); our_parent.len() - number_of_consecutively_matching_parts]
+        };
+
+        let non_matching_path_parts = their_parent
+            .take_parts()
+            .into_iter()
+            .skip(number_of_consecutively_matching_parts);
+
+        let type_ident = path.ident().cloned();
+
+        TypePath {
+            parts: chain!(prefix, non_matching_path_parts, type_ident).collect(),
+            is_absolute: false,
+        }
+    }
+
+    pub fn parent(&self) -> TypePath {
+        let parts = if self.parts.is_empty() {
+            vec![]
+        } else {
+            self.parts[..self.parts.len() - 1].to_vec()
+        };
+
+        TypePath {
+            parts,
+            is_absolute: self.is_absolute,
+        }
+    }
+
+    pub fn take_parts(self) -> Vec<Ident> {
+        self.parts
+    }
+
     pub fn has_multiple_parts(&self) -> bool {
         self.parts.len() > 1
     }
@@ -45,12 +114,8 @@ impl TypePath {
         another
     }
 
-    pub fn type_name(&self) -> String {
-        self.ident().to_string()
-    }
-
-    pub fn ident(&self) -> &Ident {
-        self.parts.last().expect("Must have at least one element")
+    pub fn ident(&self) -> Option<&Ident> {
+        self.parts.last()
     }
 }
 
@@ -111,15 +176,6 @@ mod tests {
     }
 
     #[test]
-    fn can_get_type_name() {
-        let path = TypePath::new(" some_mod :: ident ").expect("Should have passed.");
-
-        let type_name = path.type_name();
-
-        assert_eq!(type_name, "ident");
-    }
-
-    #[test]
     fn can_handle_absolute_paths() {
         let absolute_path = " ::std :: vec:: Vec";
 
@@ -146,5 +202,103 @@ mod tests {
 
         let expected = quote! {std::vec::Vec};
         assert_eq!(expected.to_string(), tokens.to_string())
+    }
+
+    #[test]
+    fn path_with_two_or_more_parts_has_a_parent() {
+        let type_path = TypePath::new(":: std::Type").unwrap();
+
+        let parent = type_path.parent();
+
+        let expected_parent = TypePath::new("::std").unwrap();
+        assert_eq!(parent, expected_parent)
+    }
+
+    #[test]
+    fn path_with_only_one_part_has_no_parent() {
+        let type_path = TypePath::new(":: std").unwrap();
+
+        let parent = type_path.parent();
+
+        assert!(parent.take_parts().is_empty());
+    }
+
+    #[test]
+    fn relative_path_same_mod_different_type() {
+        let deeper_path = TypePath::new("a::b::SomeType").unwrap();
+        let shallower_path = TypePath::new("a::b::AnotherType").unwrap();
+
+        let relative_path = deeper_path.relative_path_to(&shallower_path);
+
+        let expected_relative_path = TypePath::new("self::AnotherType").unwrap();
+        assert_eq!(relative_path, expected_relative_path);
+    }
+
+    #[test]
+    fn relative_path_both_on_root_level_different_type() {
+        let deeper_path = TypePath::new("SomeType").unwrap();
+        let shallower_path = TypePath::new("AnotherType").unwrap();
+
+        let relative_path = deeper_path.relative_path_to(&shallower_path);
+
+        let expected_relative_path = TypePath::new("self::AnotherType").unwrap();
+        assert_eq!(relative_path, expected_relative_path);
+    }
+
+    #[test]
+    fn relative_path_type_deeper_in() {
+        let a_path = TypePath::new("a::b::SomeType").unwrap();
+        let sister_path = TypePath::new("a::b::c::d::AnotherType").unwrap();
+
+        let relative_path = a_path.relative_path_to(&sister_path);
+
+        let expected_relative_path = TypePath::new("self::c::d::AnotherType").unwrap();
+        assert_eq!(relative_path, expected_relative_path);
+    }
+
+    #[test]
+    fn relative_path_type_located_few_levels_up() {
+        let a_path = TypePath::new("a::b::c::SomeType").unwrap();
+        let sister_path = TypePath::new("AnotherType").unwrap();
+
+        let relative_path = a_path.relative_path_to(&sister_path);
+
+        let expected_relative_path = TypePath::new("super::super::super::AnotherType").unwrap();
+        assert_eq!(relative_path, expected_relative_path);
+    }
+
+    #[test]
+    fn relative_path_up_then_down() {
+        let a_path = TypePath::new("a::b::c::SomeType").unwrap();
+        let sister_path = TypePath::new("d::e::AnotherType").unwrap();
+
+        let relative_path = a_path.relative_path_to(&sister_path);
+
+        let expected_relative_path =
+            TypePath::new("super::super::super::d::e::AnotherType").unwrap();
+        assert_eq!(relative_path, expected_relative_path);
+    }
+
+    #[test]
+    fn path_starts_with_another() {
+        let a_path = TypePath::new("a::b::c::d").unwrap();
+        let prefix = TypePath::new("a::b").unwrap();
+
+        assert!(a_path.starts_with(&prefix));
+    }
+    #[test]
+    fn path_does_not_start_with_another() {
+        let a_path = TypePath::new("a::b::c::d").unwrap();
+        let prefix = TypePath::new("c::d").unwrap();
+
+        assert!(!a_path.starts_with(&prefix));
+    }
+
+    #[test]
+    fn start_with_size_guard() {
+        let a_path = TypePath::new("a::b::c").unwrap();
+        let prefix = TypePath::new("a::b::c::d").unwrap();
+
+        assert!(!a_path.starts_with(&prefix));
     }
 }
