@@ -60,11 +60,12 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
-               let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?;
-                account.set_provider(provider.clone());
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U, provider: ::std::option::Option <::fuels::accounts::provider::Provider>) -> ::fuels::types::errors::Result<#name<U>> {
 
-               ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
+                let provider = provider.unwrap_or(::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).map(|p| p.clone()).map_err(|err| err).ok().unwrap());
+
+                account.set_provider(provider.clone());
+                ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
