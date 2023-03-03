@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
@@ -10,14 +11,15 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt};
+use fuel_tx::{AssetId, ConsensusParameters, Input, Receipt, TxPointer, UtxoId};
+use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
     chain_info::ChainInfo,
     coin::Coin,
-    constants::{DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     errors::{error, Error, Result},
     message::Message,
     message_proof::MessageProof,
@@ -55,6 +57,92 @@ impl From<TimeParameters> for FuelTimeParameters {
         Self {
             start_time: Tai64::from_unix(time.start_time.timestamp()).0.into(),
             block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
+        }
+    }
+}
+
+pub(crate) struct ResourceQueries {
+    utxos: Vec<String>,
+    messages: Vec<String>,
+    asset_id: String,
+    amount: u64,
+}
+
+impl ResourceQueries {
+    pub fn new(
+        utxo_ids: Vec<UtxoId>,
+        message_ids: Vec<MessageId>,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Self {
+        let utxos = utxo_ids
+            .iter()
+            .map(|utxo_id| format!("{utxo_id:#x}"))
+            .collect::<Vec<_>>();
+
+        let messages = message_ids
+            .iter()
+            .map(|msg_id| format!("{msg_id:#x}"))
+            .collect::<Vec<_>>();
+
+        Self {
+            utxos,
+            messages,
+            asset_id: format!("{asset_id:#x}"),
+            amount,
+        }
+    }
+
+    pub fn exclusion_query(&self) -> Option<(Vec<&str>, Vec<&str>)> {
+        if self.utxos.is_empty() && self.messages.is_empty() {
+            return None;
+        }
+
+        let utxos_as_str = self.utxos.iter().map(AsRef::as_ref).collect::<Vec<_>>();
+
+        let msg_ids_as_str = self.messages.iter().map(AsRef::as_ref).collect::<Vec<_>>();
+
+        Some((utxos_as_str, msg_ids_as_str))
+    }
+
+    pub fn spend_query(&self) -> Vec<(&str, u64, Option<u64>)> {
+        vec![(self.asset_id.as_str(), self.amount, None)]
+    }
+}
+
+// ANCHOR: resource_filter
+pub struct ResourceFilter {
+    pub from: Bech32Address,
+    pub asset_id: AssetId,
+    pub amount: u64,
+    pub excluded_utxos: Vec<UtxoId>,
+    pub excluded_message_ids: Vec<MessageId>,
+}
+// ANCHOR_END: resource_filter
+
+impl ResourceFilter {
+    pub fn owner(&self) -> String {
+        self.from.hash().to_string()
+    }
+
+    pub(crate) fn resource_queries(&self) -> ResourceQueries {
+        ResourceQueries::new(
+            self.excluded_utxos.clone(),
+            self.excluded_message_ids.clone(),
+            self.asset_id,
+            self.amount,
+        )
+    }
+}
+
+impl Default for ResourceFilter {
+    fn default() -> Self {
+        Self {
+            from: Default::default(),
+            asset_id: BASE_ASSET_ID,
+            amount: Default::default(),
+            excluded_utxos: Default::default(),
+            excluded_message_ids: Default::default(),
         }
     }
 }
@@ -274,18 +362,16 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_resources(
         &self,
-        from: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
+        filter: ResourceFilter,
     ) -> ProviderResult<Vec<Resource>> {
-        use itertools::Itertools;
+        let queries = filter.resource_queries();
 
         let res = self
             .client
             .resources_to_spend(
-                &from.hash().to_string(),
-                vec![(format!("{asset_id:#x}").as_str(), amount, None)],
-                None,
+                &filter.owner(),
+                queries.spend_query(),
+                queries.exclusion_query(),
             )
             .await?
             .into_iter()
@@ -298,6 +384,51 @@ impl Provider {
             .try_collect()?;
 
         Ok(res)
+    }
+
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// `ResourceFilter`. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
+    pub async fn get_asset_inputs(
+        &self,
+        filter: ResourceFilter,
+        witness_index: u8,
+    ) -> Result<Vec<Input>> {
+        let asset_id = filter.asset_id;
+        Ok(self
+            .get_spendable_resources(filter)
+            .await?
+            .iter()
+            .map(|resource| match resource {
+                Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
+                Resource::Message(message) => self.create_message_input(message, witness_index),
+            })
+            .collect::<Vec<Input>>())
+    }
+
+    fn create_coin_input(&self, coin: &Coin, asset_id: AssetId, witness_index: u8) -> Input {
+        Input::coin_signed(
+            coin.utxo_id,
+            coin.owner.clone().into(),
+            coin.amount,
+            asset_id,
+            TxPointer::default(),
+            witness_index,
+            0,
+        )
+    }
+
+    fn create_message_input(&self, message: &Message, witness_index: u8) -> Input {
+        Input::message_signed(
+            message.message_id(),
+            message.sender.clone().into(),
+            message.recipient.clone().into(),
+            message.amount,
+            message.nonce,
+            witness_index,
+            message.data.clone(),
+        )
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
@@ -431,7 +562,11 @@ impl Provider {
     }
 
     pub async fn latest_block_height(&self) -> ProviderResult<u64> {
-        Ok(self.client.chain_info().await?.latest_block.header.height.0)
+        Ok(self.chain_info().await?.latest_block.header.height)
+    }
+
+    pub async fn latest_block_time(&self) -> ProviderResult<Option<DateTime<Utc>>> {
+        Ok(self.chain_info().await?.latest_block.header.time)
     }
 
     pub async fn produce_blocks(
