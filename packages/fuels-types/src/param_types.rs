@@ -68,6 +68,39 @@ impl ParamType {
         }
     }
 
+    pub fn contains_no_nested_vectors(&self) -> bool {
+        match &self {
+            ParamType::Vector(param_type) => {
+                !param_type.is_vector() && param_type.contains_no_nested_vectors()
+            }
+            ParamType::Struct {
+                fields, generics, ..
+            } => {
+                fields.into_iter().all(|(_, param_type)| {
+                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                }) && generics.into_iter().all(|param_type| {
+                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                })
+            }
+            ParamType::Array(param_type, ..) => {
+                !param_type.is_vector() && param_type.contains_no_nested_vectors()
+            }
+            ParamType::Tuple(param_types, ..) => param_types.into_iter().all(|param_type| {
+                param_type.contains_no_nested_vectors() && !param_type.is_vector()
+            }),
+            ParamType::Enum {
+                generics, variants, ..
+            } => {
+                generics.into_iter().all(|param_type| {
+                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                }) && variants.param_types().into_iter().all(|param_type| {
+                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                })
+            }
+            _ => true,
+        }
+    }
+
     pub fn is_vector(&self) -> bool {
         matches!(self, Self::Vector(..))
     }
@@ -1217,6 +1250,86 @@ mod tests {
 
         assert_eq!(result, expected_param_type);
 
+        Ok(())
+    }
+
+    #[test]
+    fn contains_no_nested_vectors_false_on_simple_types() -> Result<()> {
+        // Simple types cannot have nested vectors
+        assert!(ParamType::Unit.contains_no_nested_vectors());
+        assert!(ParamType::U8.contains_no_nested_vectors());
+        assert!(ParamType::U16.contains_no_nested_vectors());
+        assert!(ParamType::U32.contains_no_nested_vectors());
+        assert!(ParamType::U64.contains_no_nested_vectors());
+        assert!(ParamType::Bool.contains_no_nested_vectors());
+        assert!(ParamType::Byte.contains_no_nested_vectors());
+        assert!(ParamType::B256.contains_no_nested_vectors());
+        assert!(ParamType::String(10).contains_no_nested_vectors());
+        assert!(ParamType::RawSlice.contains_no_nested_vectors());
+        Ok(())
+    }
+
+    #[test]
+    fn contains_no_nested_vectors_complex_types() -> Result<()> {
+        let base_vector = ParamType::Vector(Box::from(ParamType::U8));
+        let tuples_no_nested_vec = vec![
+            ("Bim".to_string(), ParamType::U16),
+            ("Bam".to_string(), ParamType::Bool),
+        ];
+        let tuples_with_nested_vec = vec![
+            ("Zim".to_string(), ParamType::U64),
+            ("Zam".to_string(), ParamType::U32),
+            ("Boum".to_string(), base_vector.clone()),
+        ];
+        let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
+        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Byte, base_vector.clone()];
+
+        assert!(base_vector.contains_no_nested_vectors());
+        assert!(!ParamType::Vector(Box::from(base_vector.clone())).contains_no_nested_vectors());
+
+        assert!(ParamType::Array(Box::from(ParamType::U8), 10).contains_no_nested_vectors());
+        assert!(!ParamType::Array(Box::from(base_vector.clone()), 10).contains_no_nested_vectors());
+
+        assert!(ParamType::Tuple(param_types_no_nested_vec.clone()).contains_no_nested_vectors());
+        assert!(!ParamType::Tuple(param_types_nested_vec.clone()).contains_no_nested_vectors());
+
+        assert!(ParamType::Struct {
+            name: "StructName".to_string(),
+            generics: param_types_no_nested_vec.clone(),
+            fields: tuples_no_nested_vec.clone(),
+        }
+        .contains_no_nested_vectors());
+        assert!(!ParamType::Struct {
+            name: "StructName".to_string(),
+            generics: param_types_nested_vec.clone(),
+            fields: tuples_no_nested_vec.clone()
+        }
+        .contains_no_nested_vectors());
+        assert!(!ParamType::Struct {
+            name: "StructName".to_string(),
+            generics: param_types_no_nested_vec.clone(),
+            fields: tuples_with_nested_vec.clone()
+        }
+        .contains_no_nested_vectors());
+
+        assert!(ParamType::Enum {
+            name: "EnumName".to_string(),
+            variants: EnumVariants::new(tuples_no_nested_vec.clone())?,
+            generics: param_types_no_nested_vec.clone()
+        }
+        .contains_no_nested_vectors());
+        assert!(!ParamType::Enum {
+            name: "EnumName".to_string(),
+            variants: EnumVariants::new(tuples_with_nested_vec.clone())?,
+            generics: param_types_no_nested_vec.clone()
+        }
+        .contains_no_nested_vectors());
+        assert!(!ParamType::Enum {
+            name: "EnumName".to_string(),
+            variants: EnumVariants::new(tuples_no_nested_vec.clone())?,
+            generics: param_types_nested_vec.clone()
+        }
+        .contains_no_nested_vectors());
         Ok(())
     }
 }

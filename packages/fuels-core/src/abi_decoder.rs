@@ -47,6 +47,12 @@ impl ABIDecoder {
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+        if !param_type.contains_no_nested_vectors() {
+            return Err(error!(
+                InvalidData,
+                "Type {param_type:?} contains nested vectors, this is not supported."
+            ));
+        }
         Ok(Self::decode_param(param_type, bytes)?.token)
     }
 
@@ -60,18 +66,17 @@ impl ABIDecoder {
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::Byte => Self::decode_byte(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::String(length) => Self::decode_string(bytes, *length),
             ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
             ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
-            ParamType::RawSlice => Self::decode_raw_slice(bytes),
         }
     }
 
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        validate_not_nested_vector(param_type)?;
         let num_of_elements = calculate_num_of_elements(param_type, bytes)?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
 
@@ -324,16 +329,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
         ))
     } else {
         Ok(&slice[num_bytes..])
-    }
-}
-
-fn validate_not_nested_vector(param_type: &ParamType) -> Result<()> {
-    match param_type {
-        ParamType::Vector(..) => Err(error!(
-            InvalidData,
-            "Vectors containing vectors are not supported!"
-        )),
-        _ => Ok(()),
     }
 }
 
