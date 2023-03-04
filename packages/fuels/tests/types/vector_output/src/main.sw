@@ -11,7 +11,12 @@ enum Pasta {
     Tortelini: Bimbam,
 }
 
+struct ZimZam {
+    vec_component: Vec<u64>,
+}
+
 abi VectorsOutputContract {
+    fn vec_inside_type() -> ZimZam;
     fn array_in_vec() -> Vec<[u64; 4]>;
     fn bool_in_vec() -> Vec<bool>;
     fn enum_in_vec() -> Vec<Pasta>;
@@ -26,6 +31,17 @@ abi VectorsOutputContract {
 }
 
 impl VectorsOutputContract for Contract {
+    fn vec_inside_type() -> ZimZam {
+        let mut b = Vec::new();
+        b.push(255);
+        b.push(255);
+        b.push(255);
+        b.push(255);
+        ZimZam {
+            vec_component: b,
+        }
+    }
+
     fn array_in_vec() -> Vec<[u64; 4]> {
         let mut vec: Vec<[u64; 4]> = Vec::new();
         vec.push([1, 1, 1, 1]);
