@@ -1783,8 +1783,8 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
 
 #[tokio::test]
 async fn test_nested_vector_methods_fail() -> Result<()> {
-    /// This is just an E2E test of the method `ParamType::contains_no_nested_vectors`, hence
-    /// it's not exhaustive, but its unit tests are.
+    // This is just an E2E test of the method `ParamType::contains_no_nested_vectors`, hence it's
+    // not exhaustive, but its unit tests are.
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
