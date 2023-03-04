@@ -122,14 +122,13 @@ fn contract_deploying_code(
                     Contract::deploy(
                         #bin_path,
                         &#wallet_name,
-                        DeployConfiguration{
-                            storage: StorageConfiguration{
-                                storage_path: #storage_path.to_string(),
-                                ..Default::default()
-                            },
-                            salt: Salt::from([#(#salt),*]),
-                            ..Default::default()
-                        }
+                        DeployConfiguration::new()
+                            .set_storage_configuration(
+                                StorageConfiguration::new().set_storage_path(
+                                    #storage_path.to_string()
+                                )
+                            )
+                            .set_salt([#(#salt),*])
                     )
                     .await
                     .expect("Failed to deploy the contract"),

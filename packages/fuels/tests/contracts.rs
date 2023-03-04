@@ -223,11 +223,11 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters {
-            gas_price,
-            gas_limit,
-            ..Default::default()
-        })
+        .tx_params(
+            TxParameters::new()
+                .set_gas_price(gas_price)
+                .set_gas_limit(gas_limit),
+        )
         .estimate_transaction_cost(Some(tolerance)) // Perform the network call
         .await?;
 
@@ -334,10 +334,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxParameters {
-                maturity,
-                ..Default::default()
-            })
+            .tx_params(TxParameters::new().set_maturity(maturity))
     };
 
     call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -555,11 +552,7 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR_END: contract_setup_macro_manual_wallet
 
     // pay for call with wallet
-    let tx_params = TxParameters {
-        gas_price: 10,
-        gas_limit: 10000,
-        ..Default::default()
-    };
+    let tx_params = TxParameters::new().set_gas_price(10).set_gas_limit(10000);
     contract_instance
         .methods()
         .initialize_counter(42)
@@ -1144,11 +1137,11 @@ async fn test_payable_annotation() -> Result<()> {
 
     let response = contract_methods
         .payable()
-        .call_params(CallParameters {
-            amount: 100,
-            gas_forwarded: Some(20_000),
-            ..Default::default()
-        })?
+        .call_params(
+            CallParameters::new()
+                .set_amount(100)
+                .set_gas_forwarded(20_000),
+        )?
         .call()
         .await?;
 
@@ -1157,10 +1150,7 @@ async fn test_payable_annotation() -> Result<()> {
     // ANCHOR: non_payable_params
     let err = contract_methods
         .non_payable()
-        .call_params(CallParameters {
-            amount: 100,
-            ..Default::default()
-        })
+        .call_params(CallParameters::new().set_amount(100))
         .expect_err("Should return call params error.");
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
@@ -1168,10 +1158,7 @@ async fn test_payable_annotation() -> Result<()> {
 
     let response = contract_methods
         .non_payable()
-        .call_params(CallParameters {
-            gas_forwarded: Some(20_000),
-            ..Default::default()
-        })?
+        .call_params(CallParameters::new().set_gas_forwarded(20_000))?
         .call()
         .await?;
 

@@ -266,13 +266,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         Contract::deploy(
             "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
             wallet,
-            DeployConfiguration {
-                tx_parameters: TxParameters {
-                    maturity,
-                    ..Default::default()
-                },
-                ..Default::default()
-            },
+            DeployConfiguration::new()
+                .set_tx_parameters(TxParameters::new().set_maturity(maturity)),
         )
     };
 
@@ -304,16 +299,11 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         ),
     );
 
-    let gas_limit = 225883;
-    let tx_parameters = TxParameters {
-        gas_limit,
-        ..Default::default()
-    };
-
+    let gas_limit = 225_883;
     let response = contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(tx_parameters)
+        .tx_params(TxParameters::new().set_gas_limit(gas_limit))
         .call()
         .await?;
 
@@ -361,17 +351,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_params = TxParameters {
-        gas_limit: 1_000_000,
-        ..Default::default()
-    };
-
+    let tx_params = TxParameters::new().set_gas_limit(1_000_000);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
-    let call_params = CallParameters {
-        amount: 1_000_000,
-        ..Default::default()
-    };
+    let call_params = CallParameters::new().set_amount(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
@@ -402,16 +385,8 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
 
     let asset_id = AssetId::from(*contract_id.hash());
-    let call_params = CallParameters {
-        amount: 0,
-        asset_id,
-        ..Default::default()
-    };
-
-    let tx_params = TxParameters {
-        gas_limit: 1_000_000,
-        ..Default::default()
-    };
+    let call_params = CallParameters::new().set_amount(0).set_asset_id(asset_id);
+    let tx_params = TxParameters::new().set_gas_limit(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
@@ -466,14 +441,10 @@ async fn test_gas_errors() -> Result<()> {
 
     // Test running out of gas. Gas price as `None` will be 0.
     let gas_limit = 100;
-    let tx_params = TxParameters {
-        gas_limit,
-        ..Default::default()
-    };
     let contract_instace_call = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_params);
+        .tx_params(TxParameters::new().set_gas_limit(gas_limit));
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instace_call
@@ -491,14 +462,10 @@ async fn test_gas_errors() -> Result<()> {
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
-    let tx_params = TxParameters {
-        gas_price: 100_000_000_000,
-        ..Default::default()
-    };
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_params)
+        .tx_params(TxParameters::new().set_gas_price(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
@@ -524,19 +491,11 @@ async fn test_call_param_gas_errors() -> Result<()> {
     );
 
     // Transaction gas_limit is sufficient, call gas_forwarded is too small
-    let tx_params = TxParameters {
-        gas_limit: 3_000,
-        ..Default::default()
-    };
-    let call_params = CallParameters {
-        gas_forwarded: Some(1),
-        ..Default::default()
-    };
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(tx_params)
-        .call_params(call_params)?
+        .tx_params(TxParameters::new().set_gas_limit(3000))
+        .call_params(CallParameters::new().set_gas_forwarded(1))?
         .call()
         .await
         .expect_err("should error");
@@ -545,18 +504,10 @@ async fn test_call_param_gas_errors() -> Result<()> {
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
-    let tx_params = TxParameters {
-        gas_limit: 1,
-        ..Default::default()
-    };
-    let call_params = CallParameters {
-        gas_forwarded: Some(1_000),
-        ..Default::default()
-    };
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(tx_params)
-        .call_params(call_params)?
+        .tx_params(TxParameters::new().set_gas_limit(1))
+        .call_params(CallParameters::new().set_gas_forwarded(1_000))?
         .call()
         .await
         .expect_err("should error");
@@ -621,19 +572,12 @@ async fn testnet_hello_world() -> Result<()> {
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
-    let tx_parameters = TxParameters {
-        gas_price: 1,
-        gas_limit: 2000,
-        ..Default::default()
-    };
+    let tx_params = TxParameters::new().set_gas_price(1).set_gas_limit(2000);
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         &wallet,
-        DeployConfiguration {
-            tx_parameters,
-            ..Default::default()
-        },
+        DeployConfiguration::new().set_tx_parameters(tx_params),
     )
     .await?;
 
@@ -641,7 +585,7 @@ async fn testnet_hello_world() -> Result<()> {
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_parameters)
+        .tx_params(tx_params)
         .call() // Perform the network call
         .await?;
 
@@ -649,7 +593,7 @@ async fn testnet_hello_world() -> Result<()> {
 
     let response = contract_methods
         .increment_counter(10)
-        .tx_params(tx_parameters)
+        .tx_params(tx_params)
         .call()
         .await?;
 
@@ -663,12 +607,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
-
-    let tx_parameters = TxParameters {
-        gas_price: 1,
-        gas_limit: 2000,
-        ..Default::default()
-    };
+    let tx_parameters = TxParameters::new().set_gas_price(1).set_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet

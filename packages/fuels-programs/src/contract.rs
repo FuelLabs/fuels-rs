@@ -34,9 +34,50 @@ use crate::{
 
 #[derive(Debug)]
 pub struct CallParameters {
-    pub amount: u64,
-    pub asset_id: AssetId,
-    pub gas_forwarded: Option<u64>,
+    amount: u64,
+    asset_id: AssetId,
+    gas_forwarded: Option<u64>,
+}
+
+impl CallParameters {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_from(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
+        Self {
+            amount,
+            asset_id,
+            gas_forwarded: Some(gas_forwarded),
+        }
+    }
+
+    pub fn set_amount(mut self, amount: u64) -> Self {
+        self.amount = amount;
+        self
+    }
+
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    pub fn set_asset_id(mut self, asset_id: AssetId) -> Self {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn asset_id(&self) -> AssetId {
+        self.asset_id
+    }
+
+    pub fn set_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
+        self.gas_forwarded = Some(gas_forwarded);
+        self
+    }
+
+    pub fn gas_forwarded(&self) -> Option<u64> {
+        self.gas_forwarded
+    }
 }
 
 impl Default for CallParameters {
@@ -70,17 +111,80 @@ pub struct CompiledContract {
 /// Configuration for contract storage
 #[derive(Debug, Clone, Default)]
 pub struct StorageConfiguration {
-    pub storage_path: String,
-    pub manual_storage: Vec<StorageSlot>,
+    storage_path: String,
+    manual_storage: Vec<StorageSlot>,
+}
+
+impl StorageConfiguration {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_from(storage_path: String, manual_storage: Vec<StorageSlot>) -> Self {
+        Self {
+            storage_path,
+            manual_storage,
+        }
+    }
+
+    pub fn set_storage_path(mut self, storage_path: String) -> Self {
+        self.storage_path = storage_path;
+        self
+    }
+
+    pub fn set_manual_storage(mut self, manual_storage: Vec<StorageSlot>) -> Self {
+        self.manual_storage = manual_storage;
+        self
+    }
 }
 
 /// Configuration for contract deployment
 #[derive(Debug, Clone, Default)]
 pub struct DeployConfiguration {
-    pub tx_parameters: TxParameters,
-    pub storage: StorageConfiguration,
-    pub configurables: Configurables,
-    pub salt: Salt,
+    tx_parameters: TxParameters,
+    storage: StorageConfiguration,
+    configurables: Configurables,
+    salt: Salt,
+}
+
+impl DeployConfiguration {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_from(
+        tx_parameters: TxParameters,
+        storage: StorageConfiguration,
+        configurables: impl Into<Configurables>,
+        salt: impl Into<Salt>,
+    ) -> Self {
+        Self {
+            tx_parameters,
+            storage,
+            configurables: configurables.into(),
+            salt: salt.into(),
+        }
+    }
+
+    pub fn set_tx_parameters(mut self, tx_parameters: TxParameters) -> Self {
+        self.tx_parameters = tx_parameters;
+        self
+    }
+
+    pub fn set_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
+        self.storage = storage;
+        self
+    }
+
+    pub fn set_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
+        self.configurables = configurables.into();
+        self
+    }
+
+    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
+        self.salt = salt.into();
+        self
+    }
 }
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as

@@ -94,10 +94,7 @@ async fn contract_configurables() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
         &wallet,
-        DeployConfiguration {
-            configurables: configurables.into(),
-            ..Default::default()
-        },
+        DeployConfiguration::new().set_configurables(configurables),
     )
     .await?;
 
@@ -146,7 +143,7 @@ async fn script_configurables() -> Result<()> {
         .set_ENUM(new_enum.clone());
 
     let response = instance
-        .with_configurables(configurables.into())
+        .with_configurables(configurables)
         .main()
         .call()
         .await?;

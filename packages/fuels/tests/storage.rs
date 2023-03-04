@@ -16,18 +16,12 @@ async fn test_storage_initialization() -> Result<()> {
     let value = Bytes32::from([2u8; 32]);
     let storage_slot = StorageSlot::new(key, value);
     let storage_vec = vec![storage_slot.clone()];
-    let storage = StorageConfiguration {
-        manual_storage: storage_vec,
-        ..Default::default()
-    };
+    let storage_configuration = StorageConfiguration::new().set_manual_storage(storage_vec);
 
     let contract_id = Contract::deploy(
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
-        DeployConfiguration {
-            storage,
-            ..Default::default()
-        },
+        DeployConfiguration::new().set_storage_configuration(storage_configuration),
     )
     .await?;
 
@@ -49,20 +43,15 @@ async fn test_init_storage_automatically() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let storage = StorageConfiguration {
-        storage_path:
-            "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slots.json"
-                .to_string(),
-        ..Default::default()
-    };
+    let storage_configuration = StorageConfiguration::new().set_storage_path(
+        "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slots.json"
+            .to_string(),
+    );
 
     let contract_id = Contract::deploy(
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
-        DeployConfiguration {
-            storage,
-            ..Default::default()
-        },
+        DeployConfiguration::new().set_storage_configuration(storage_configuration),
     )
     .await?;
 
@@ -96,20 +85,15 @@ async fn test_init_storage_automatically_bad_json_path() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let storage = StorageConfiguration {
-        storage_path:
-            "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
-                .to_string(),
-        ..Default::default()
-    };
+    let storage_configuration = StorageConfiguration::new().set_storage_path(
+        "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
+            .to_string(),
+    );
 
     let response = Contract::deploy(
         "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
         &wallet,
-        DeployConfiguration {
-            storage,
-            ..Default::default()
-        },
+        DeployConfiguration::new().set_storage_configuration(storage_configuration),
     )
     .await
     .expect_err("Should fail");

@@ -18,9 +18,40 @@ use crate::{
 #[derive(Debug, Copy, Clone)]
 //ANCHOR: tx_parameter
 pub struct TxParameters {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
+    gas_price: u64,
+    gas_limit: u64,
+    maturity: u64,
+}
+
+macro_rules! impl_setter_getter {
+    ($setter_name: ident, $field: ident) => {
+        pub fn $setter_name(mut self, $field: u64) -> Self {
+            self.$field = $field;
+            self
+        }
+
+        pub fn $field(&self) -> u64 {
+            self.$field
+        }
+    };
+}
+
+impl TxParameters {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn new_from(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
+        Self {
+            gas_price,
+            gas_limit,
+            maturity,
+        }
+    }
+
+    impl_setter_getter!(set_gas_price, gas_price);
+    impl_setter_getter!(set_gas_limit, gas_limit);
+    impl_setter_getter!(set_maturity, maturity);
 }
 //ANCHOR_END: tx_parameter
 
