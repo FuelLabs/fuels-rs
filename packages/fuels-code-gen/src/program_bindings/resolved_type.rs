@@ -284,9 +284,10 @@ fn to_custom_type(
             let original_type_path = TypePath::new(type_path).unwrap();
 
             if is_shared {
-                current_mod
-                    .relative_path_from(&TypePath::default())
-                    .append(TypePath::new("super::shared_types").unwrap())
+                let path = TypePath::new("super::shared_types").unwrap();
+                TypePath::default()
+                    .relative_path_from(current_mod)
+                    .append(path)
                     .append(original_type_path)
             } else {
                 original_type_path.relative_path_from(current_mod)
