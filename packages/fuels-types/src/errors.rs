@@ -33,6 +33,8 @@ pub enum Error {
         revert_id: u64,
         receipts: Vec<Receipt>,
     },
+    #[error("Transaction is using predicates. Provide consensus parameters by using .set_consensus_parameters().")]
+    TransactionBuildError,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

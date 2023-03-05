@@ -9,19 +9,19 @@ use fuels_types::{
     constants::BASE_ASSET_ID,
     error,
     errors::{Error, Result},
+    input::Input,
     message::Message as InputMessage,
     parameters::TxParameters,
     resource::Resource,
     transaction::{ScriptTransaction, Transaction},
-    transaction_response::TransactionResponse, input::Input,
+    transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
+use fuel_core::schema::tx::types::Transaction;
+use fuels_types::transaction_builders::TransactionBuilder;
 
-use crate::{
-    accounts_utils::{create_coin_input, create_message_input, extract_message_id},
-    AccountError, AccountResult,
-};
+use crate::{accounts_utils::extract_message_id, AccountError, AccountResult};
 use crate::{provider::Provider, Account, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
@@ -131,10 +131,7 @@ impl Wallet {
             .get_spendable_resources(asset_id, amount)
             .await?
             .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => create_coin_input(coin, asset_id, witness_index),
-                Resource::Message(message) => create_message_input(message, witness_index),
-            })
+            .map(|resource| Input::resource_signed(resource, witness_index))
             .collect::<Vec<Input>>())
     }
 
@@ -313,7 +310,7 @@ impl WalletUnlocked {
     /// so that their indexes are retained
     pub async fn add_fee_resources(
         &self,
-        tx: &mut impl Transaction,
+        tx: &mut impl TransactionBuilder,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
@@ -399,14 +396,17 @@ impl Account for WalletUnlocked {
         self.wallet.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
+    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug>(
         &self,
-        tx: &mut Tx,
+        tb: &mut Tb,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
-        self.add_fee_resources(tx, previous_base_amount, witness_index)
+        self.add_fee_resources(tb, previous_base_amount, witness_index)
             .await?;
+
+        let tx = tb.build();
+
         self.sign_transaction(tx).await?;
         Ok(())
     }
@@ -441,7 +441,8 @@ impl Account for WalletUnlocked {
         Ok((tx_id, receipts))
     }
 
-    /// Unconditionally transfers `balance` of type `asset_id` to
+    /// Uncondition
+    /// ally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
     /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.

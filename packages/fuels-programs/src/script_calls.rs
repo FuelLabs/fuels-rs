@@ -4,6 +4,8 @@ use fuel_tx::{ContractId, Input, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::provider::Provider;
 use fuels_core::offsets::base_offset;
+use fuels_types::transaction::ConvertableTransaction;
+use fuels_types::transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::Bech32ContractId,
@@ -165,6 +167,9 @@ where
 
         let consensus_parameters = self.provider.consensus_parameters().await?;
         let script_offset = base_offset(&consensus_parameters);
+        let a = ScriptTransactionBuilder::default()
+            .set_script(vec![])
+            .build();
 
         tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
         self.account.pay_fee_resources(&mut tx, 0, 0).await?;

@@ -1,6 +1,6 @@
 use fuel_asm::Instruction;
-use fuel_tx::Bytes32;
 use fuel_tx::field::Salt;
+use fuel_tx::Bytes32;
 use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
 use fuel_types::bytes::padded_len_usize;
 use fuel_types::ContractId;

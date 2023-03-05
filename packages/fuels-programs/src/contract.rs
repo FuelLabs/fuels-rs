@@ -23,6 +23,7 @@ use fuels_accounts::{
 };
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::errors::Error::ProviderError;
+use fuels_types::transaction::ConvertableTransaction;
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -76,7 +77,7 @@ impl<T: Account + Clone> Contract<T> {
         }
     }
 
-    pub fn compute_contract_id_and_state_root(
+    pub fn eeecompute_contract_id_and_state_root(
         compiled_contract: &CompiledContract,
     ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());

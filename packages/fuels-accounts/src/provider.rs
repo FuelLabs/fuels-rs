@@ -11,7 +11,10 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, UniqueIdentifier};
+use fuel_tx::{
+    AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, UniqueIdentifier,
+};
+use fuel_types::Bytes32;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -37,6 +40,7 @@ pub struct TransactionCost {
     pub min_gas_price: u64,
     pub gas_price: u64,
     pub gas_used: u64,
+    pub metered_bytes_size: u64,
     pub total_fee: u64,
 }
 
@@ -133,8 +137,7 @@ impl Provider {
             &chain_info.consensus_parameters,
         )?;
 
-        let fuel_tx = tx.clone().convert_to_fuel_tx(&chain_info.consensus_parameters);
-        let (status, receipts) = self.submit_with_feedback(fuel_tx).await?;
+        let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
         Self::if_failure_generate_error(&status, &receipts)?;
 
         Ok(receipts)
@@ -166,7 +169,7 @@ impl Provider {
 
     async fn submit_with_feedback(
         &self,
-        tx: FuelTransaction,
+        tx: impl Transaction,
     ) -> ProviderResult<(TransactionStatus, Vec<Receipt>)> {
         let tx_id = tx.id().to_string();
         let status = self.client.submit_and_await_commit(&tx.into()).await?;
@@ -218,10 +221,7 @@ impl Provider {
     }
 
     pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
-        let params = self.consensus_parameters().await?;
-        let fuel_tx = tx.clone().convert_to_fuel_tx(&params);
-        
-        let receipts = self.client.dry_run(&fuel_tx).await?;
+        let receipts = self.client.dry_run(&tx.clone().into()).await?;
 
         Ok(receipts)
     }
@@ -230,12 +230,9 @@ impl Provider {
         &self,
         tx: &T,
     ) -> Result<Vec<Receipt>> {
-        let params = self.consensus_parameters().await?;
-        let fuel_tx = tx.clone().convert_to_fuel_tx(&params);
-
         let receipts = self
             .client
-            .dry_run_opt(&fuel_tx, Some(false))
+            .dry_run_opt(&tx.clone().into(), Some(false))
             .await?;
 
         Ok(receipts)
@@ -499,6 +496,7 @@ impl Provider {
             min_gas_price,
             gas_price,
             gas_used,
+            metered_bytes_size: tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.total(),
         })
     }

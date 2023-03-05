@@ -27,6 +27,13 @@ pub enum Input {
 }
 
 impl Input {
+    pub const fn resource_signed(resource: Resource, witness_index: u8) -> Self {
+        Self::ResourceSigned {
+            resource,
+            witness_index,
+        }
+    }
+
     pub const fn resource_predicate(
         resource: Resource,
         code: Vec<u8>,
@@ -41,8 +48,9 @@ impl Input {
 
     pub fn amount(&self) -> Option<u64> {
         match self {
-            Input::ResourceSigned { resource, ..}
-            | Input::ResourcePredicate { resource, ..} => Some(resource.amount()),
+            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
+                Some(resource.amount())
+            }
             _ => None,
         }
     }

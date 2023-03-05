@@ -11,8 +11,8 @@ description = "Fuel Rust SDK core."
 
 [dependencies]
 fuel-tx = { workspace = true }
-fuel-vm = { workspace = true }
 fuel-types = { workspace = true }
+fuel-vm = { workspace = true }
 fuels-types = { workspace = true }
 hex = { version = "0.4.3", features = ["std"] }
 itertools = "0.10"

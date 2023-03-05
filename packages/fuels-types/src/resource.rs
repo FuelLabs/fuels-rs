@@ -3,7 +3,7 @@
 use fuel_core_client::client::schema::resource::Resource as ClientResource;
 use fuel_tx::AssetId;
 
-use crate::{coin::Coin, message::Message, constants::BASE_ASSET_ID};
+use crate::{coin::Coin, constants::BASE_ASSET_ID, message::Message};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resource {

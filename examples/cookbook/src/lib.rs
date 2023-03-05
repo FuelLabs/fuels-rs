@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::types::transaction_builders::ScriptTransactionBuilder;
     use fuels::{accounts::Account, prelude::Result};
 
     #[tokio::test]
@@ -159,7 +160,8 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
+        let mut tx =
+            ScriptTransactionBuilder::build_transfer(inputs, outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;

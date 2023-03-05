@@ -10,13 +10,13 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK."
 
 [dependencies]
-fuel-tx = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, default-features = false }
+fuel-tx = { workspace = true }
+fuels-accounts = { workspace = true }
+fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
 fuels-programs = { workspace = true }
-fuels-core = { workspace = true }
-fuels-accounts = { workspace = true }
 fuels-test-helpers = { workspace = true }
 fuels-types = { workspace = true }
 
@@ -29,7 +29,7 @@ sha2 = "0.9.5"
 tokio = "1.15.0"
 
 [features]
-default = ["std",  "fuels-test-helpers/fuels-accounts"]
+default = ["std", "fuels-test-helpers/fuels-accounts"]
 std = [
     "fuels-programs/std",
     "fuels-core/std",

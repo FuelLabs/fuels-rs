@@ -21,6 +21,7 @@ pub mod parameters;
 pub mod resource;
 pub mod traits;
 pub mod transaction;
+pub mod transaction_builders;
 pub mod transaction_response;
 pub mod unresolved_bytes;
 

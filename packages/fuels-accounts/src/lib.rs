@@ -16,6 +16,7 @@ use fuels_types::errors::{Error, Result as FuelsResult};
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
 use fuels_types::{bech32::Bech32Address, transaction::Transaction};
+use fuels_types::transaction_builders::TransactionBuilder;
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;
@@ -100,9 +101,9 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .map_err(Into::into)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send + std::fmt::Debug>(
+    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug>(
         &self,
-        tx: &mut Tx,
+        tb: &mut Tb,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<(), Error>;
