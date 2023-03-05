@@ -1,9 +1,5 @@
-use std::{
-    collections::HashSet,
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
-use fuel_abi_types::program_abi::TypeApplication;
 use fuel_abi_types::utils::{
     extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
     has_tuple_format,
@@ -15,10 +11,7 @@ use regex::Regex;
 
 use crate::{
     error::{error, Result},
-    program_bindings::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        utils::sdk_provided_custom_types_lookup,
-    },
+    program_bindings::{abi_types::FullTypeApplication, utils::sdk_provided_custom_types_lookup},
     utils::{safe_ident, TypePath},
 };
 

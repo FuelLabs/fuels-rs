@@ -1,12 +1,10 @@
-use std::collections::HashSet;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullProgramABI, FullTypeDeclaration},
+        abi_types::FullProgramABI,
         abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
         generated_code::GeneratedCode,
     },
@@ -17,14 +15,12 @@ pub(crate) fn predicate_bindings(
     name: &Ident,
     abi: FullProgramABI,
     no_std: bool,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
 
-    let encode_function = expand_fn(&abi, shared_types, mod_name)?;
+    let encode_function = expand_fn(&abi)?;
 
     let code = quote! {
         #[derive(Debug)]
@@ -104,13 +100,9 @@ pub(crate) fn predicate_bindings(
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
-fn expand_fn(
-    abi: &FullProgramABI,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
-) -> Result<TokenStream> {
+fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(fun)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {

@@ -109,7 +109,7 @@ impl Abigen {
         let mod_name = TypePath::new(format!("{}_mod", &target.name.to_snake_case()))?;
 
         let types = generate_types(&target.source.types, shared_types, no_std)?;
-        let bindings = generate_bindings(target, no_std, shared_types, &TypePath::default())?;
+        let bindings = generate_bindings(target, no_std)?;
 
         Ok(types.merge(bindings).wrap_in_mod(mod_name))
     }

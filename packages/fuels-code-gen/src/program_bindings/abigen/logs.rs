@@ -1,24 +1,14 @@
-use std::collections::HashSet;
-
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::program_bindings::resolved_type::TypeResolver;
-use crate::{
-    program_bindings::{
-        abi_types::{FullLoggedType, FullTypeDeclaration},
-        utils::single_param_type_call,
-    },
-    utils::TypePath,
-};
+use crate::program_bindings::{abi_types::FullLoggedType, utils::single_param_type_call};
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,
     logged_types: &[FullLoggedType],
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> TokenStream {
-    let resolved_logs = resolve_logs(logged_types, shared_types, mod_name);
+    let resolved_logs = resolve_logs(logged_types);
     let log_id_param_type_pairs = generate_log_id_param_type_pairs(&resolved_logs);
     let contract_id = contract_id
         .map(|id| quote! { ::core::option::Option::Some(#id) })
@@ -33,17 +23,12 @@ struct ResolvedLog {
 }
 
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs
-fn resolve_logs(
-    logged_types: &[FullLoggedType],
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
-) -> Vec<ResolvedLog> {
+fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
     logged_types
         .iter()
         .map(|l| {
             let type_application = &l.application;
             let resolved_type = TypeResolver::new()
-                .relative_to_mod(mod_name.clone())
                 .resolve(type_application)
                 .expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);

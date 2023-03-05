@@ -18,13 +18,12 @@ use crate::{
 /// given TypeDeclaration.
 pub(crate) fn expand_custom_enum(
     type_decl: &FullTypeDeclaration,
-    shared_types: &HashSet<FullTypeDeclaration>,
     no_std: bool,
 ) -> Result<GeneratedCode> {
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, false, shared_types, &enum_type_path.parent())?;
+    let components = extract_components(type_decl, false, &enum_type_path.parent())?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }

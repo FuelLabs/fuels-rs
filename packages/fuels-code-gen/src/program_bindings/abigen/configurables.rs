@@ -1,16 +1,11 @@
-use std::collections::HashSet;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
-    program_bindings::{
-        abi_types::{FullConfigurable, FullTypeDeclaration},
-        resolved_type::ResolvedType,
-    },
-    utils::{safe_ident, TypePath},
+    program_bindings::{abi_types::FullConfigurable, resolved_type::ResolvedType},
+    utils::safe_ident,
 };
 
 #[derive(Debug)]
@@ -21,17 +16,11 @@ pub(crate) struct ResolvedConfigurable {
 }
 
 impl ResolvedConfigurable {
-    pub fn new(
-        configurable: &FullConfigurable,
-        shared_types: &HashSet<FullTypeDeclaration>,
-        mod_name: &TypePath,
-    ) -> Result<ResolvedConfigurable> {
+    pub fn new(configurable: &FullConfigurable) -> Result<ResolvedConfigurable> {
         let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
             name: safe_ident(&format!("set_{}", configurable.name)),
-            ttype: TypeResolver::new()
-                .relative_to_mod(mod_name.clone())
-                .resolve(type_application)?,
+            ttype: TypeResolver::new().resolve(type_application)?,
             offset: configurable.offset,
         })
     }
@@ -40,12 +29,10 @@ impl ResolvedConfigurable {
 pub(crate) fn generate_code_for_configurable_constatnts(
     configurable_struct_name: &Ident,
     configurables: &[FullConfigurable],
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> Result<TokenStream> {
     let resolved_configurables = configurables
         .iter()
-        .map(|c| ResolvedConfigurable::new(c, shared_types, mod_name))
+        .map(ResolvedConfigurable::new)
         .collect::<Result<Vec<_>>>()?;
 
     let struct_decl = generate_struct_decl(configurable_struct_name);

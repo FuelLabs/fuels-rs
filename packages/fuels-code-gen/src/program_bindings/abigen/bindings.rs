@@ -1,9 +1,6 @@
-use std::collections::HashSet;
-
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         abigen::{
             abigen_target::ParsedAbigenTarget,
             bindings::{
@@ -13,7 +10,7 @@ use crate::{
         },
         generated_code::GeneratedCode,
     },
-    utils::{ident, TypePath},
+    utils::ident,
 };
 
 mod contract;
@@ -22,12 +19,7 @@ mod predicate;
 mod script;
 mod utils;
 
-pub(crate) fn generate_bindings(
-    target: ParsedAbigenTarget,
-    no_std: bool,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
-) -> Result<GeneratedCode> {
+pub(crate) fn generate_bindings(target: ParsedAbigenTarget, no_std: bool) -> Result<GeneratedCode> {
     let bindings_generator = match target.program_type {
         ProgramType::Script => script_bindings,
         ProgramType::Contract => contract_bindings,
@@ -36,5 +28,5 @@ pub(crate) fn generate_bindings(
 
     let name = ident(&target.name);
     let abi = target.source;
-    bindings_generator(&name, abi, no_std, shared_types, mod_name)
+    bindings_generator(&name, abi, no_std)
 }

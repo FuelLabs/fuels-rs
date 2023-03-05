@@ -1,12 +1,10 @@
-use std::collections::HashSet;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullProgramABI, FullTypeDeclaration},
+        abi_types::FullProgramABI,
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constatnts,
@@ -21,25 +19,18 @@ pub(crate) fn script_bindings(
     name: &Ident,
     abi: FullProgramABI,
     no_std: bool,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
 
-    let main_function = expand_fn(&abi, shared_types, mod_name)?;
+    let main_function = expand_fn(&abi)?;
 
-    let log_type_lookup =
-        logs_lookup_instantiation_code(None, &abi.logged_types, shared_types, mod_name);
+    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types);
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
-    let constant_configuration_code = generate_code_for_configurable_constatnts(
-        &configuration_struct_name,
-        &abi.configurables,
-        shared_types,
-        mod_name,
-    )?;
+    let constant_configuration_code =
+        generate_code_for_configurable_constatnts(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
         #[derive(Debug)]
@@ -80,13 +71,9 @@ pub(crate) fn script_bindings(
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
-fn expand_fn(
-    abi: &FullProgramABI,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
-) -> Result<TokenStream> {
+fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types)?;
+    let mut generator = FunctionGenerator::new(fun)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {

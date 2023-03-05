@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -7,7 +5,7 @@ use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::{error, Result},
     program_bindings::{
-        abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
+        abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::ResolvedType,
         utils::{param_type_calls, Component},
     },
@@ -24,10 +22,10 @@ pub(crate) struct FunctionGenerator {
 }
 
 impl FunctionGenerator {
-    pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
-        let args = function_arguments(fun.inputs(), shared_types)?;
+    pub fn new(fun: &FullABIFunction) -> Result<Self> {
+        let args = function_arguments(fun.inputs())?;
 
-        let output_type = resolve_fn_output_type(fun, shared_types)?;
+        let output_type = resolve_fn_output_type(fun)?;
 
         Ok(Self {
             name: fun.name().to_string(),
@@ -74,20 +72,14 @@ impl FunctionGenerator {
     }
 }
 
-fn function_arguments(
-    inputs: &[FullTypeApplication],
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<Vec<Component>> {
+fn function_arguments(inputs: &[FullTypeApplication]) -> Result<Vec<Component>> {
     inputs
         .iter()
-        .map(|input| Component::new(input, true, shared_types, TypePath::default()))
+        .map(|input| Component::new(input, true, TypePath::default()))
         .collect::<Result<_>>()
 }
 
-fn resolve_fn_output_type(
-    function: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType> {
+fn resolve_fn_output_type(function: &FullABIFunction) -> Result<ResolvedType> {
     let type_application = function.output();
     let output_type = TypeResolver::new().resolve(type_application)?;
     if output_type.uses_vectors() {
@@ -139,6 +131,7 @@ impl From<FunctionGenerator> for TokenStream {
 mod tests {
     use std::collections::HashMap;
 
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
     use fuel_abi_types::program_abi::{ABIFunction, TypeApplication, TypeDeclaration};
 
     use super::*;
@@ -168,10 +161,8 @@ mod tests {
         )]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
+        let result =
+            function_arguments(FullABIFunction::from_counterpart(&the_function, &types)?.inputs())?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "some_argument");
@@ -212,10 +203,8 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
+        let result =
+            function_arguments(FullABIFunction::from_counterpart(&the_function, &types)?.inputs())?;
         let component = &result[0];
 
         assert_eq!(&component.field_name.to_string(), "bim_bam");
@@ -282,19 +271,15 @@ mod tests {
         ]
         .into_iter()
         .collect::<HashMap<_, _>>();
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
+        let result =
+            function_arguments(FullABIFunction::from_counterpart(&function, &types)?.inputs())?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "self :: CarMaker");
 
         function.inputs[0].type_id = 2;
-        let result = function_arguments(
-            FullABIFunction::from_counterpart(&function, &types)?.inputs(),
-            &HashSet::default(),
-        )?;
+        let result =
+            function_arguments(FullABIFunction::from_counterpart(&function, &types)?.inputs())?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
         assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
@@ -305,7 +290,7 @@ mod tests {
     #[test]
     fn correct_output_type() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function)?;
 
         let output_type = sut.output_type();
 
@@ -317,7 +302,7 @@ mod tests {
     #[test]
     fn correct_fn_selector_resolving_code() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function)?;
 
         let fn_selector_code = sut.fn_selector();
 
@@ -332,7 +317,7 @@ mod tests {
     #[test]
     fn correct_tokenized_args() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let sut = FunctionGenerator::new(&function)?;
 
         let tokenized_args = sut.tokenized_args();
 
@@ -348,7 +333,7 @@ mod tests {
     fn tokenizes_correctly() -> Result<()> {
         // given
         let function = given_a_fun();
-        let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;
+        let mut sut = FunctionGenerator::new(&function)?;
 
         sut.set_doc("This is a doc".to_string())
             .set_body(quote! {this is ze body});

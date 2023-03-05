@@ -59,9 +59,9 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
             }
 
             if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, shared_types, no_std))
+                Some(expand_custom_struct(ttype, no_std))
             } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, shared_types, no_std))
+                Some(expand_custom_enum(ttype, no_std))
             } else {
                 None
             }
@@ -101,12 +101,10 @@ fn is_type_unused(name: &str) -> bool {
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
 
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
-
-    use crate::program_bindings::abi_types::FullTypeApplication;
 
     use super::*;
 
@@ -151,11 +149,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -190,12 +184,8 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )
-        .expect_err("Was able to construct an enum without variants");
+        expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)
+            .expect_err("Was able to construct an enum without variants");
 
         Ok(())
     }
@@ -245,11 +235,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -313,11 +299,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -393,11 +375,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -474,11 +452,8 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -514,11 +489,8 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -582,11 +554,8 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -690,11 +659,8 @@ mod tests {
 
         let s1 = types.get(&3).unwrap();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(s1, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s1, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -718,11 +684,8 @@ mod tests {
 
         let s2 = types.get(&4).unwrap();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(s2, &types),
-            &HashSet::default(),
-            false,
-        )?;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s2, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -745,21 +708,5 @@ mod tests {
         assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
-    }
-
-    fn given_a_custom_type(type_field: &str) -> FullTypeDeclaration {
-        FullTypeDeclaration {
-            type_field: type_field.to_string(),
-            components: vec![FullTypeApplication {
-                name: "a".to_string(),
-                type_decl: FullTypeDeclaration {
-                    type_field: "u8".to_string(),
-                    components: vec![],
-                    type_parameters: vec![],
-                },
-                type_arguments: vec![],
-            }],
-            type_parameters: vec![],
-        }
     }
 }

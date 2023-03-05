@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
@@ -7,10 +7,7 @@ use quote::{quote, ToTokens};
 use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
-    program_bindings::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        resolved_type::ResolvedType,
-    },
+    program_bindings::{abi_types::FullTypeApplication, resolved_type::ResolvedType},
     utils::{safe_ident, TypePath},
 };
 
@@ -26,7 +23,6 @@ impl Component {
     pub fn new(
         component: &FullTypeApplication,
         snake_case: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
         relative_to_mod: TypePath,
     ) -> Result<Component> {
         let field_name = if snake_case {
@@ -75,17 +71,13 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
-        let sut = Component::new(
-            &type_application,
-            true,
-            &Default::default(),
-            TypePath::default(),
-        )?;
+        let sut = Component::new(&type_application, true, TypePath::default())?;
 
         assert_eq!(sut.field_name, "was_not_snake_cased");
 
@@ -97,12 +89,7 @@ mod tests {
         {
             let type_application = type_application_named("if");
 
-            let sut = Component::new(
-                &type_application,
-                false,
-                &Default::default(),
-                TypePath::default(),
-            )?;
+            let sut = Component::new(&type_application, false, TypePath::default())?;
 
             assert_eq!(sut.field_name, "if_");
         }
@@ -110,12 +97,7 @@ mod tests {
         {
             let type_application = type_application_named("let");
 
-            let sut = Component::new(
-                &type_application,
-                false,
-                &Default::default(),
-                TypePath::default(),
-            )?;
+            let sut = Component::new(&type_application, false, TypePath::default())?;
 
             assert_eq!(sut.field_name, "let_");
         }
