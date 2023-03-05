@@ -4,7 +4,6 @@ use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 use quote::quote;
 
-use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -13,6 +12,7 @@ use crate::{
         generated_code::GeneratedCode,
         utils::sdk_provided_custom_types_lookup,
     },
+    utils::TypePath,
 };
 
 mod enums;

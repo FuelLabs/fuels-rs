@@ -1,8 +1,9 @@
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::program_bindings::resolved_type::TypeResolver;
-use crate::program_bindings::{abi_types::FullLoggedType, utils::single_param_type_call};
+use crate::program_bindings::{
+    abi_types::FullLoggedType, resolved_type::TypeResolver, utils::single_param_type_call,
+};
 
 pub(crate) fn logs_lookup_instantiation_code(
     contract_id: Option<TokenStream>,

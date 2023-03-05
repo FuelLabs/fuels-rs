@@ -4,10 +4,12 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
-use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
-    program_bindings::{abi_types::FullTypeApplication, resolved_type::ResolvedType},
+    program_bindings::{
+        abi_types::FullTypeApplication,
+        resolved_type::{ResolvedType, TypeResolver},
+    },
     utils::{safe_ident, TypePath},
 };
 

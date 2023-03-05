@@ -1,10 +1,12 @@
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
-    program_bindings::{abi_types::FullConfigurable, resolved_type::ResolvedType},
+    program_bindings::{
+        abi_types::FullConfigurable,
+        resolved_type::{ResolvedType, TypeResolver},
+    },
     utils::safe_ident,
 };
 

@@ -1,12 +1,11 @@
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
-use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::{error, Result},
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication},
-        resolved_type::ResolvedType,
+        resolved_type::{ResolvedType, TypeResolver},
         utils::{param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
@@ -131,10 +130,10 @@ impl From<FunctionGenerator> for TokenStream {
 mod tests {
     use std::collections::HashMap;
 
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
     use fuel_abi_types::program_abi::{ABIFunction, TypeApplication, TypeDeclaration};
 
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn test_expand_fn_arguments() -> Result<()> {
