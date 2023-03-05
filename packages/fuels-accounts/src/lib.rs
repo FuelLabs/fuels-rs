@@ -15,8 +15,8 @@ use fuels_types::bech32::Bech32ContractId;
 use fuels_types::errors::{Error, Result as FuelsResult};
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
-use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 use fuels_types::transaction_builders::TransactionBuilder;
+use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::provider::Provider;

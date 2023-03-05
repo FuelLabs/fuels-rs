@@ -3,6 +3,7 @@ use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId, Witness};
+use fuels_types::transaction_builders::TransactionBuilder;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
@@ -18,8 +19,6 @@ use fuels_types::{
 };
 use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
-use fuel_core::schema::tx::types::Transaction;
-use fuels_types::transaction_builders::TransactionBuilder;
 
 use crate::{accounts_utils::extract_message_id, AccountError, AccountResult};
 use crate::{provider::Provider, Account, Signer};
@@ -308,9 +307,9 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_resources(
+    pub async fn add_fee_resources<Tx: Transaction>(
         &self,
-        tx: &mut impl TransactionBuilder,
+        tx: &mut impl TransactionBuilder<Tx>,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
@@ -396,7 +395,10 @@ impl Account for WalletUnlocked {
         self.wallet.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug>(
+    async fn pay_fee_resources<
+        Tx: Transaction,
+        Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug,
+    >(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,

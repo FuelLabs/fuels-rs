@@ -13,7 +13,9 @@ use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
 use fuels_types::transaction::ScriptTransaction;
 use fuels_types::transaction::Transaction;
-use fuels_types::transaction_builders::{create_coin_predicate, create_message_predicate, TransactionBuilder};
+use fuels_types::transaction_builders::{
+    create_coin_predicate, create_message_predicate, TransactionBuilder,
+};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 
 use crate::accounts_utils::extract_message_id;
@@ -113,15 +115,14 @@ impl Account for Predicate {
         _witness_index: u8,
     ) -> std::result::Result<(), Error> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+
         let transaction_fee = tb
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
-        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tx.inputs().iter().cloned().partition(|input| {
+        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tb.inputs().iter().cloned().partition(|input| {
             matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == &BASE_ASSET_ID) ||
                 matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == &BASE_ASSET_ID)
-                // matches!(input , Input::CoinPredicate { asset_id , .. } if asset_id == &BASE_ASSET_ID) ||
-                // matches!(input , Input::MessagePredicate { .. })
         });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -137,7 +138,7 @@ impl Account for Predicate {
         }
 
         let mut new_base_amount = transaction_fee.total() + previous_base_amount;
-        let is_consuming_utxos = tx
+        let is_consuming_utxos = tb
             .inputs()
             .iter()
             .any(|input| !matches!(input, Input::Contract { .. }));
@@ -146,8 +147,9 @@ impl Account for Predicate {
             new_base_amount = MIN_AMOUNT;
         }
 
+        // todo delete this function
         let new_base_inputs = self
-            .get_asset_inputs_for_amount_predicates(tx, BASE_ASSET_ID, new_base_amount)
+            .get_asset_inputs_for_amount_predicates(tb, BASE_ASSET_ID, new_base_amount)
             .await?;
 
         let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
@@ -155,14 +157,14 @@ impl Account for Predicate {
             .chain(new_base_inputs.into_iter())
             .collect();
 
-        *tx.inputs_mut() = adjusted_inputs;
-        let is_base_change_present = tx.outputs().iter().any(|output| {
+        *tb.inputs_mut() = adjusted_inputs;
+        let is_base_change_present = tb.outputs().iter().any(|output| {
             matches!(output , Output::Change { asset_id , .. }
                                         if asset_id == & BASE_ASSET_ID)
         });
 
         if !is_base_change_present && new_base_amount != 0 {
-            tx.outputs_mut()
+            tb.outputs_mut()
                 .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
         }
 
