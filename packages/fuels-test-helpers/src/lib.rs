@@ -125,8 +125,8 @@ pub fn setup_single_message(
     amount: u64,
     nonce: u64,
     data: Vec<u8>,
-) -> Vec<Message> {
-    vec![Message {
+) -> Message {
+    Message {
         sender: sender.clone(),
         recipient: recipient.clone(),
         nonce,
@@ -134,7 +134,7 @@ pub fn setup_single_message(
         data,
         da_height: 0,
         status: MessageStatus::Unspent,
-    }]
+    }
 }
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
