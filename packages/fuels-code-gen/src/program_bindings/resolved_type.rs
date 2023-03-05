@@ -3,6 +3,7 @@ use std::{
     fmt::{Display, Formatter},
 };
 
+use fuel_abi_types::program_abi::TypeApplication;
 use fuel_abi_types::utils::{
     extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
     has_tuple_format,
@@ -66,57 +67,71 @@ impl Display for ResolvedType {
     }
 }
 
-/// Given a type, will recursively proceed to resolve it until it results in a
-/// `ResolvedType` which can be then be converted into a `TokenStream`. As such
-/// it can be used whenever you need the Rust type of the given
-/// `FullTypeApplication`.
-pub(crate) fn resolve_type(
-    type_application: &FullTypeApplication,
-    shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
-) -> Result<ResolvedType> {
-    let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
-        type_applications
-            .iter()
-            .map(|type_application| resolve_type(type_application, shared_types, mod_name))
-            .collect::<Result<Vec<_>>>()
-            .expect("Failed to resolve types")
-    };
+pub(crate) struct TypeResolver {
+    relative_to_mod: TypePath,
+}
 
-    let base_type = &type_application.type_decl;
+impl TypeResolver {
+    pub(crate) fn new() -> Self {
+        Self {
+            relative_to_mod: Default::default(),
+        }
+    }
 
-    let type_field = base_type.type_field.as_str();
+    /// All custom type paths will be resolved relative from the given `type_path`. E.g. When
+    /// resolving a struct containing a field of the custom type `some_lib::another_lib::AType` with
+    /// `type_path` being given as `some_lib::different_lib` the resulting path to `AType` will be
+    /// relative to `type_path`: `super::another_lib::AType`.
+    pub(crate) fn relative_to_mod(&mut self, type_path: TypePath) -> &mut Self {
+        self.relative_to_mod = type_path;
+        self
+    }
 
-    [
-        to_simple_type,
-        to_byte,
-        to_bits256,
-        to_generic,
-        to_array,
-        to_sized_ascii_string,
-        to_tuple,
-        to_raw_slice,
-        to_custom_type,
-    ]
-    .into_iter()
-    .find_map(|fun| {
-        let is_shared = shared_types.contains(base_type);
-        fun(
-            type_field,
-            move || recursively_resolve(&base_type.components),
-            move || recursively_resolve(&type_application.type_arguments),
-            is_shared,
-            mod_name,
-        )
-    })
-    .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
+    /// Given a type, will recursively proceed to resolve it until it results in a
+    /// `ResolvedType` which can be then be converted into a `TokenStream`. As such
+    /// it can be used whenever you need the Rust type of the given
+    /// `FullTypeApplication`.
+    pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
+        let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
+            type_applications
+                .iter()
+                .map(|type_application| self.resolve(type_application))
+                .collect::<Result<Vec<_>>>()
+                .expect("Failed to resolve types")
+        };
+
+        let base_type = &type_application.type_decl;
+
+        let type_field = base_type.type_field.as_str();
+
+        [
+            to_simple_type,
+            to_byte,
+            to_bits256,
+            to_generic,
+            to_array,
+            to_sized_ascii_string,
+            to_tuple,
+            to_raw_slice,
+            to_custom_type,
+        ]
+        .into_iter()
+        .find_map(|fun| {
+            fun(
+                type_field,
+                move || recursively_resolve(&base_type.components),
+                move || recursively_resolve(&type_application.type_arguments),
+                &self.relative_to_mod,
+            )
+        })
+        .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
+    }
 }
 
 fn to_generic(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let name = extract_generic_name(type_field)?;
@@ -132,7 +147,6 @@ fn to_array(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let len = extract_array_len(type_field)?;
@@ -156,7 +170,6 @@ fn to_sized_ascii_string(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let len = extract_str_len(type_field)?;
@@ -176,7 +189,6 @@ fn to_tuple(
     type_field: &str,
     components_supplier: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if has_tuple_format(type_field) {
@@ -198,7 +210,6 @@ fn to_simple_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     match type_field {
@@ -220,7 +231,6 @@ fn to_byte(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "byte" {
@@ -237,7 +247,6 @@ fn to_bits256(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "b256" {
@@ -254,7 +263,6 @@ fn to_raw_slice(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
     _current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     if type_field == "raw untyped slice" {
@@ -272,7 +280,6 @@ fn to_custom_type(
     type_field: &str,
     _: impl Fn() -> Vec<ResolvedType>,
     type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
-    is_shared: bool,
     current_mod: &TypePath,
 ) -> Option<ResolvedType> {
     let type_path = extract_custom_type_name(type_field)?;
@@ -281,17 +288,9 @@ fn to_custom_type(
         .get(&type_path)
         .cloned()
         .unwrap_or_else(|| {
-            let original_type_path = TypePath::new(type_path).unwrap();
-
-            if is_shared {
-                let path = TypePath::new("super::shared_types").unwrap();
-                TypePath::default()
-                    .relative_path_from(current_mod)
-                    .append(path)
-                    .append(original_type_path)
-            } else {
-                original_type_path.relative_path_from(current_mod)
-            }
+            TypePath::new(type_path)
+                .unwrap()
+                .relative_path_from(current_mod)
         });
 
     Some(ResolvedType {
@@ -322,9 +321,11 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type =
-            resolve_type(&application, &HashSet::default(), &TypePath::default())
-                .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
+        let mod_name = &TypePath::default();
+        let resolved_type = TypeResolver::new()
+            .relative_to_mod(mod_name.clone())
+            .resolve(&application)
+            .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
 
         assert_eq!(actual, expected);
@@ -608,7 +609,6 @@ mod tests {
                 &format!("struct {type_name}"),
                 Vec::new,
                 Vec::new,
-                false,
                 &TypePath::default(),
             )
             .unwrap();
@@ -619,21 +619,5 @@ mod tests {
                 expected_type_name.to_string()
             );
         }
-    }
-    #[test]
-    fn handles_shared_types() {
-        let resolved_type = to_custom_type(
-            "struct SomeStruct",
-            Vec::new,
-            Vec::new,
-            true,
-            &TypePath::default(),
-        )
-        .expect("should succeed");
-
-        assert_eq!(
-            resolved_type.type_name.to_string(),
-            "self :: super :: shared_types :: SomeStruct"
-        )
     }
 }

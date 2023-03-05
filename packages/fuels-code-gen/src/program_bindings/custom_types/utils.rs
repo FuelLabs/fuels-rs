@@ -21,7 +21,7 @@ pub(crate) fn extract_components(
     type_decl
         .components
         .iter()
-        .map(|component| Component::new(component, snake_case, shared_types, mod_name))
+        .map(|component| Component::new(component, snake_case, shared_types, mod_name.clone()))
         .collect()
 }
 

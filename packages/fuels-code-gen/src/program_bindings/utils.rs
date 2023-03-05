@@ -4,11 +4,12 @@ use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
+use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
     program_bindings::{
         abi_types::{FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        resolved_type::ResolvedType,
     },
     utils::{safe_ident, TypePath},
 };
@@ -26,7 +27,7 @@ impl Component {
         component: &FullTypeApplication,
         snake_case: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
-        mod_name: &TypePath,
+        relative_to_mod: TypePath,
     ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -36,7 +37,9 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, shared_types, mod_name)?,
+            field_type: TypeResolver::new()
+                .relative_to_mod(relative_to_mod)
+                .resolve(component)?,
         })
     }
 }
@@ -81,7 +84,7 @@ mod tests {
             &type_application,
             true,
             &Default::default(),
-            &TypePath::default(),
+            TypePath::default(),
         )?;
 
         assert_eq!(sut.field_name, "was_not_snake_cased");
@@ -98,7 +101,7 @@ mod tests {
                 &type_application,
                 false,
                 &Default::default(),
-                &TypePath::default(),
+                TypePath::default(),
             )?;
 
             assert_eq!(sut.field_name, "if_");
@@ -111,7 +114,7 @@ mod tests {
                 &type_application,
                 false,
                 &Default::default(),
-                &TypePath::default(),
+                TypePath::default(),
             )?;
 
             assert_eq!(sut.field_name, "let_");

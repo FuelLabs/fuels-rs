@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -23,6 +24,7 @@ pub(crate) fn expand_custom_struct(
 ) -> Result<GeneratedCode> {
     let struct_type_path = type_decl.custom_type_path()?;
     let struct_ident = struct_type_path.ident().unwrap();
+
 
     let components = extract_components(type_decl, true, shared_types, &struct_type_path.parent())?;
     let generic_parameters = extract_generic_parameters(type_decl)?;

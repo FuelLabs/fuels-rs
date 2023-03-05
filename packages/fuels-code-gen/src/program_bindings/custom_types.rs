@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
+use quote::quote;
 
+use crate::utils::TypePath;
 use crate::{
     error::Result,
     program_bindings::{
@@ -28,15 +30,34 @@ mod utils;
 /// * `types`: Types you wish to generate Rust code for.
 /// * `shared_types`: Types that are shared between multiple
 ///                   contracts/scripts/predicates and thus generated elsewhere.
-pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
+pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
     no_std: bool,
 ) -> Result<GeneratedCode> {
-    HashSet::from_iter(types)
-        .difference(shared_types)
+    types
+        .into_iter()
         .filter(|ttype| !should_skip_codegen(&ttype.type_field))
-        .filter_map(|ttype| {
+        .filter_map(|ttype: &FullTypeDeclaration| {
+            if ttype.is_struct_type() || ttype.is_enum_type() {
+                let type_path = ttype.custom_type_path().unwrap();
+
+                if shared_types.contains(ttype) {
+                    let type_mod = type_path.parent();
+                    let path = TypePath::default()
+                        .relative_path_from(&type_mod)
+                        .append(TypePath::new("super::shared_types").unwrap())
+                        .append(type_path);
+
+                    return Some(Ok(GeneratedCode::new(
+                        quote! {pub use #path;},
+                        Default::default(),
+                        no_std,
+                    )
+                    .wrap_in_mod(type_mod)));
+                }
+            }
+
             if ttype.is_struct_type() {
                 Some(expand_custom_struct(ttype, shared_types, no_std))
             } else if ttype.is_enum_type() {
@@ -85,8 +106,9 @@ mod tests {
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
-    use super::*;
     use crate::program_bindings::abi_types::FullTypeApplication;
+
+    use super::*;
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {
@@ -723,20 +745,6 @@ mod tests {
         assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
-    }
-
-    #[test]
-    fn will_skip_shared_types() {
-        // given
-        let types = ["struct SomeStruct", "enum SomeEnum"].map(given_a_custom_type);
-        let shared_types = HashSet::from_iter(types.iter().take(1).cloned());
-
-        // when
-        let generated_code =
-            generate_types(types, &shared_types, false).expect("Should have succeeded.");
-
-        // then
-        assert!(!generated_code.code().to_string().contains("SomeStruct"));
     }
 
     fn given_a_custom_type(type_field: &str) -> FullTypeDeclaration {

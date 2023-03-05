@@ -86,7 +86,7 @@ fn expand_fn(
     mod_name: &TypePath,
 ) -> Result<TokenStream> {
     let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun, shared_types, mod_name)?;
+    let mut generator = FunctionGenerator::new(fun, shared_types)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {

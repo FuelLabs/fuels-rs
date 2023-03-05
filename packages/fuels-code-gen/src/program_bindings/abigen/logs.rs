@@ -3,10 +3,10 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::quote;
 
+use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     program_bindings::{
         abi_types::{FullLoggedType, FullTypeDeclaration},
-        resolved_type::resolve_type,
         utils::single_param_type_call,
     },
     utils::TypePath,
@@ -41,7 +41,10 @@ fn resolve_logs(
     logged_types
         .iter()
         .map(|l| {
-            let resolved_type = resolve_type(&l.application, shared_types, mod_name)
+            let type_application = &l.application;
+            let resolved_type = TypeResolver::new()
+                .relative_to_mod(mod_name.clone())
+                .resolve(type_application)
                 .expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);
 

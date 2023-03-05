@@ -3,11 +3,12 @@ use std::collections::HashSet;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
+use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::Result,
     program_bindings::{
         abi_types::{FullConfigurable, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        resolved_type::ResolvedType,
     },
     utils::{safe_ident, TypePath},
 };
@@ -25,9 +26,12 @@ impl ResolvedConfigurable {
         shared_types: &HashSet<FullTypeDeclaration>,
         mod_name: &TypePath,
     ) -> Result<ResolvedConfigurable> {
+        let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
             name: safe_ident(&format!("set_{}", configurable.name)),
-            ttype: resolve_type(&configurable.application, shared_types, mod_name)?,
+            ttype: TypeResolver::new()
+                .relative_to_mod(mod_name.clone())
+                .resolve(type_application)?,
             offset: configurable.offset,
         })
     }

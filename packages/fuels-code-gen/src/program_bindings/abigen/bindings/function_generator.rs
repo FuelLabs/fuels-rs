@@ -3,11 +3,12 @@ use std::collections::HashSet;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
+use crate::program_bindings::resolved_type::TypeResolver;
 use crate::{
     error::{error, Result},
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        resolved_type::ResolvedType,
         utils::{param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
@@ -23,14 +24,10 @@ pub(crate) struct FunctionGenerator {
 }
 
 impl FunctionGenerator {
-    pub fn new(
-        fun: &FullABIFunction,
-        shared_types: &HashSet<FullTypeDeclaration>,
-        mod_name: &TypePath,
-    ) -> Result<Self> {
-        let args = function_arguments(fun.inputs(), shared_types, mod_name)?;
+    pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
+        let args = function_arguments(fun.inputs(), shared_types)?;
 
-        let output_type = resolve_fn_output_type(fun, shared_types, mod_name)?;
+        let output_type = resolve_fn_output_type(fun, shared_types)?;
 
         Ok(Self {
             name: fun.name().to_string(),
@@ -80,20 +77,19 @@ impl FunctionGenerator {
 fn function_arguments(
     inputs: &[FullTypeApplication],
     shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> Result<Vec<Component>> {
     inputs
         .iter()
-        .map(|input| Component::new(input, true, shared_types, mod_name))
+        .map(|input| Component::new(input, true, shared_types, TypePath::default()))
         .collect::<Result<_>>()
 }
 
 fn resolve_fn_output_type(
     function: &FullABIFunction,
     shared_types: &HashSet<FullTypeDeclaration>,
-    mod_name: &TypePath,
 ) -> Result<ResolvedType> {
-    let output_type = resolve_type(function.output(), shared_types, mod_name)?;
+    let type_application = function.output();
+    let output_type = TypeResolver::new().resolve(type_application)?;
     if output_type.uses_vectors() {
         Err(error!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
@@ -175,7 +171,6 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
-            &TypePath::default(),
         )?;
         let component = &result[0];
 
@@ -220,7 +215,6 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&the_function, &types)?.inputs(),
             &HashSet::default(),
-            &TypePath::default(),
         )?;
         let component = &result[0];
 
@@ -291,7 +285,6 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
-            &TypePath::default(),
         )?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
@@ -301,7 +294,6 @@ mod tests {
         let result = function_arguments(
             FullABIFunction::from_counterpart(&function, &types)?.inputs(),
             &HashSet::default(),
-            &TypePath::default(),
         )?;
 
         assert_eq!(&result[0].field_name.to_string(), "bim_bam");
@@ -313,7 +305,7 @@ mod tests {
     #[test]
     fn correct_output_type() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default(), &TypePath::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
         let output_type = sut.output_type();
 
@@ -325,7 +317,7 @@ mod tests {
     #[test]
     fn correct_fn_selector_resolving_code() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default(), &TypePath::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
         let fn_selector_code = sut.fn_selector();
 
@@ -340,7 +332,7 @@ mod tests {
     #[test]
     fn correct_tokenized_args() -> Result<()> {
         let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function, &HashSet::default(), &TypePath::default())?;
+        let sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
         let tokenized_args = sut.tokenized_args();
 
@@ -356,7 +348,7 @@ mod tests {
     fn tokenizes_correctly() -> Result<()> {
         // given
         let function = given_a_fun();
-        let mut sut = FunctionGenerator::new(&function, &HashSet::default(), &TypePath::default())?;
+        let mut sut = FunctionGenerator::new(&function, &HashSet::default())?;
 
         sut.set_doc("This is a doc".to_string())
             .set_body(quote! {this is ze body});

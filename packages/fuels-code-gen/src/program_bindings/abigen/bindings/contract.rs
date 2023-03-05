@@ -146,7 +146,7 @@ pub(crate) fn expand_fn(
     shared_types: &HashSet<FullTypeDeclaration>,
     mod_name: &TypePath,
 ) -> Result<TokenStream> {
-    let mut generator = FunctionGenerator::new(abi_fun, shared_types, mod_name)?;
+    let mut generator = FunctionGenerator::new(abi_fun, shared_types)?;
 
     generator.set_doc(format!(
         "Calls the contract's `{}` function",

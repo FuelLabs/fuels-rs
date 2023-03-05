@@ -108,7 +108,7 @@ impl Abigen {
     ) -> Result<GeneratedCode> {
         let mod_name = TypePath::new(format!("{}_mod", &target.name.to_snake_case()))?;
 
-        let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
+        let types = generate_types(&target.source.types, shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std, shared_types, &TypePath::default())?;
 
         Ok(types.merge(bindings).wrap_in_mod(mod_name))
@@ -126,7 +126,7 @@ impl Abigen {
         no_std: bool,
     ) -> Result<GeneratedCode> {
         let mod_name = TypePath::new("shared_types")?;
-        let types = generate_types(shared_types, &HashSet::default(), no_std)?;
+        let types = generate_types(&shared_types, &HashSet::default(), no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())
