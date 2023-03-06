@@ -84,7 +84,7 @@ impl ABIDecoder {
     }
 
     fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(&ParamType::Byte, bytes, true)?;
+        let num_of_elements = ParamType::Bytes.calculate_num_of_elements(bytes)?;
         let (tokens, bytes_read) =
             Self::decode_multiple(&vec![ParamType::Byte; num_of_elements], bytes)?;
 
@@ -103,7 +103,8 @@ impl ABIDecoder {
         })
     }
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(param_type, bytes, false)?;
+        let num_of_elements =
+            ParamType::Vector(Box::from(param_type.clone())).calculate_num_of_elements(bytes)?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
 
         Ok(DecodeResult {
@@ -158,7 +159,7 @@ impl ABIDecoder {
     }
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(&ParamType::U64, bytes, false)?;
+        let num_of_elements = ParamType::RawSlice.calculate_num_of_elements(bytes)?;
         let (tokens, bytes_read) =
             Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
         let elements = tokens
@@ -357,25 +358,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     } else {
         Ok(&slice[num_bytes..])
     }
-}
-
-fn calculate_num_of_elements(
-    param_type: &ParamType,
-    bytes: &[u8],
-    is_byte_packed: bool,
-) -> Result<usize> {
-    let memory_size = if is_byte_packed {
-        param_type.compute_encoding_width()
-    } else {
-        param_type.compute_encoding_width() * WORD_SIZE
-    };
-    if bytes.len() % memory_size != 0 {
-        return Err(error!(
-            InvalidData,
-            "The bytes provided do not correspond to a Vec<{:?}> got: {:?}", param_type, bytes
-        ));
-    }
-    Ok(bytes.len() / memory_size)
 }
 
 #[cfg(test)]

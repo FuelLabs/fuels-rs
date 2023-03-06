@@ -69,6 +69,27 @@ impl ParamType {
         }
     }
 
+    pub fn calculate_num_of_elements(&self, bytes: &[u8]) -> Result<usize> {
+        let memory_size = match self {
+            // The `Bytes` type in the VM uses byte-packing, don't multiply by WORD_SIZE
+            ParamType::Bytes => Ok(ParamType::U8.compute_encoding_width()),
+            ParamType::Vector(param_type) => Ok(param_type.compute_encoding_width() * WORD_SIZE),
+            ParamType::RawSlice => Ok(ParamType::U64.compute_encoding_width() * WORD_SIZE),
+            _ => Err(error!(
+                InvalidData,
+                "Method `calculate_num_of_elements` called on an incompatible type: {self:?}"
+            )),
+        }
+        .unwrap();
+        if bytes.len() % memory_size != 0 {
+            return Err(error!(
+                InvalidData,
+                "The bytes provided do not correspond to a {:?} got: {:?}", self, bytes
+            ));
+        }
+        Ok(bytes.len() / memory_size)
+    }
+
     pub fn contains_nested_heap_types(&self) -> bool {
         match &self {
             ParamType::Vector(param_type) => param_type.uses_heap_types(),
