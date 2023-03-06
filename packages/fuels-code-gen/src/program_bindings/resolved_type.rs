@@ -117,7 +117,7 @@ impl TypeResolver {
                 &self.relative_to_mod,
             )
         })
-        .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
+        .ok_or_else(|| error!("Could not resolve '{type_field}' to any known type"))
     }
 }
 
@@ -314,9 +314,7 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let mod_name = &TypePath::default();
         let resolved_type = TypeResolver::new()
-            .relative_to_mod(mod_name.clone())
             .resolve(&application)
             .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();

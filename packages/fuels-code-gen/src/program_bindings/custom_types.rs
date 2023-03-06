@@ -38,32 +38,13 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
     types
         .into_iter()
         .filter(|ttype| !should_skip_codegen(&ttype.type_field))
-        .filter_map(|ttype: &FullTypeDeclaration| {
-            if ttype.is_struct_type() || ttype.is_enum_type() {
-                let type_path = ttype.custom_type_path().unwrap();
-
-                if shared_types.contains(ttype) {
-                    let type_mod = type_path.parent();
-                    let path = TypePath::default()
-                        .relative_path_from(&type_mod)
-                        .append(TypePath::new("super::shared_types").unwrap())
-                        .append(type_path);
-
-                    return Some(Ok(GeneratedCode::new(
-                        quote! {pub use #path;},
-                        Default::default(),
-                        no_std,
-                    )
-                    .wrap_in_mod(type_mod)));
-                }
-            }
-
-            if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, no_std))
-            } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, no_std))
+        .map(|ttype: &FullTypeDeclaration| {
+            if shared_types.contains(ttype) {
+                reexport_the_shared_type(ttype, no_std)
+            } else if ttype.is_struct_type() {
+                expand_custom_struct(ttype, no_std)
             } else {
-                None
+                expand_custom_enum(ttype, no_std)
             }
         })
         .fold_ok(GeneratedCode::default(), |acc, generated_code| {
@@ -71,25 +52,55 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
         })
 }
 
+/// Instead of generating bindings for `ttype` this fn will just generate a `pub use` pointing to
+/// already generated equivalent shared type.
+fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
+    let type_path = ttype
+        .custom_type_path()
+        .expect("This must be a custom type due to the previous filter step");
+
+    let type_mod = type_path.parent();
+
+    let path_to_shared_types =
+        TypePath::new("super::shared_types").expect("This is known to be a valid TypePath");
+
+    let contract_level_mod = TypePath::default();
+
+    let path = contract_level_mod
+        .relative_path_from(&type_mod)
+        .append(path_to_shared_types)
+        .append(type_path);
+
+    let the_reexport = quote! {pub use #path;};
+
+    Ok(GeneratedCode::new(the_reexport, Default::default(), no_std).wrap_in_mod(type_mod))
+}
+
 // Checks whether the given type should not have code generated for it. This
 // is mainly because the corresponding type in Rust already exists --
 // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
 // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
-// Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
+// Others like 'std::vec::RawVec' are skipped because they are
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
 fn should_skip_codegen(type_field: &str) -> bool {
-    let name = extract_custom_type_name(type_field).unwrap_or_else(|| type_field.to_string());
+    !is_custom_type(type_field) || is_type_sdk_provided(type_field) || is_type_unused(type_field)
+}
 
-    is_type_sdk_provided(&name) || is_type_unused(&name)
+fn is_custom_type(name: &str) -> bool {
+    extract_custom_type_name(name).is_some()
 }
 
 fn is_type_sdk_provided(name: &str) -> bool {
-    sdk_provided_custom_types_lookup().contains_key(name)
+    extract_custom_type_name(name)
+        .map(|custom_type_path| sdk_provided_custom_types_lookup().contains_key(&custom_type_path))
+        .unwrap_or(false)
 }
 
 fn is_type_unused(name: &str) -> bool {
-    ["raw untyped ptr", "std::vec::RawVec"].contains(&name)
+    extract_custom_type_name(name)
+        .map(|custom_type_name| custom_type_name == "std::vec::RawVec")
+        .unwrap_or(false)
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
