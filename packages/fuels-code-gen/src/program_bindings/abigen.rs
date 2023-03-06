@@ -1,12 +1,11 @@
 use std::collections::HashSet;
 
+pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 use regex::Regex;
-
-pub use abigen_target::{AbigenTarget, ProgramType};
 
 use crate::{
     error::Result,

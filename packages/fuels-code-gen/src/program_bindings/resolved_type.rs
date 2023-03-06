@@ -1,6 +1,5 @@
 use std::fmt::{Display, Formatter};
 
-use fuel_abi_types::program_abi::TypeApplication;
 use fuel_abi_types::utils::{
     extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
     has_tuple_format,
@@ -10,7 +9,6 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 use regex::Regex;
 
-use crate::program_bindings::abi_types::FullTypeDeclaration;
 use crate::{
     error::{error, Result},
     program_bindings::{abi_types::FullTypeApplication, utils::sdk_provided_custom_types_lookup},
@@ -262,6 +260,7 @@ mod tests {
     use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,
