@@ -272,9 +272,8 @@ mod tests {
 
     use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
-
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,

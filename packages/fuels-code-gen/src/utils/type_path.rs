@@ -1,5 +1,7 @@
-use std::cmp::min;
-use std::fmt::{Display, Formatter};
+use std::{
+    cmp::min,
+    fmt::{Display, Formatter},
+};
 
 use itertools::{chain, izip, Itertools};
 use proc_macro2::{Ident, TokenStream};
