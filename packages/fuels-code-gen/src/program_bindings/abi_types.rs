@@ -176,7 +176,7 @@ impl FullTypeDeclaration {
     pub(crate) fn custom_type_path(&self) -> Result<TypePath> {
         let type_field = &self.type_field;
         let type_name = extract_custom_type_name(type_field)
-            .ok_or_else(|| error!("Couldn't extract custom type name from '{type_field}'"))?;
+            .ok_or_else(|| error!("Couldn't extract custom type path from '{type_field}'"))?;
 
         TypePath::new(type_name)
     }

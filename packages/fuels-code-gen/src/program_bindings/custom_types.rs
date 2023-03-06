@@ -1,6 +1,5 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
 use quote::quote;
 
@@ -37,7 +36,7 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
 ) -> Result<GeneratedCode> {
     types
         .into_iter()
-        .filter(|ttype| !should_skip_codegen(&ttype.type_field))
+        .filter(|ttype| !should_skip_codegen(ttype))
         .map(|ttype: &FullTypeDeclaration| {
             if shared_types.contains(ttype) {
                 reexport_the_shared_type(ttype, no_std)
@@ -83,24 +82,22 @@ fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result
 // Others like 'std::vec::RawVec' are skipped because they are
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
-fn should_skip_codegen(type_field: &str) -> bool {
-    !is_custom_type(type_field) || is_type_sdk_provided(type_field) || is_type_unused(type_field)
+fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
+    if !type_decl.is_custom_type() {
+        return true;
+    }
+
+    let type_path = type_decl.custom_type_path().unwrap();
+
+    is_type_sdk_provided(&type_path) || is_type_unused(&type_path)
 }
 
-fn is_custom_type(name: &str) -> bool {
-    extract_custom_type_name(name).is_some()
+fn is_type_sdk_provided(type_path: &TypePath) -> bool {
+    sdk_provided_custom_types_lookup().contains_key(type_path)
 }
 
-fn is_type_sdk_provided(name: &str) -> bool {
-    extract_custom_type_name(name)
-        .map(|custom_type_path| sdk_provided_custom_types_lookup().contains_key(&custom_type_path))
-        .unwrap_or(false)
-}
-
-fn is_type_unused(name: &str) -> bool {
-    extract_custom_type_name(name)
-        .map(|custom_type_name| custom_type_name == "std::vec::RawVec")
-        .unwrap_or(false)
+fn is_type_unused(type_path: &TypePath) -> bool {
+    *type_path == TypePath::new("std::vec::RawVec").expect("Known to be correct")
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to

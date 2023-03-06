@@ -253,7 +253,7 @@ impl TypeResolver {
         let type_path = type_decl.custom_type_path()?;
 
         let type_path = sdk_provided_custom_types_lookup()
-            .get(&type_path.to_string())
+            .get(&type_path)
             .cloned()
             .unwrap_or_else(|| type_path.relative_path_from(&self.relative_to_mod));
 

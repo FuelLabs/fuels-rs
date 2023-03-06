@@ -120,7 +120,7 @@ mod tests {
     }
 }
 
-pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<String, TypePath> {
+pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
     [
         ("std::contract_id::ContractId", "::fuels::types::ContractId"),
         ("std::address::Address", "::fuels::types::Address"),
@@ -136,10 +136,10 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<String, TypePath> {
     ]
     .into_iter()
     .map(|(original_type_path, provided_type_path)| {
+        let msg = "known at compile time to be correctly formed";
         (
-            original_type_path.to_string(),
-            TypePath::new(provided_type_path)
-                .expect("known at compile time to be correctly formed"),
+            TypePath::new(original_type_path).expect(msg),
+            TypePath::new(provided_type_path).expect(msg),
         )
     })
     .collect()
