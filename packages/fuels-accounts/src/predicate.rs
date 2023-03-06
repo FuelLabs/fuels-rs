@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use fuel_tx::{Input as FuelInput, Output, Receipt, TxPointer, UniqueIdentifier, UtxoId};
+use fuel_tx::{Input as FuelInput, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
@@ -11,10 +11,9 @@ use fuels_types::input::Input;
 use fuels_types::offsets;
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
-use fuels_types::transaction::ScriptTransaction;
-use fuels_types::transaction::Transaction;
+use fuels_types::transaction::{ScriptTransaction, Transaction};
 use fuels_types::transaction_builders::{
-    create_coin_predicate, create_message_predicate, TransactionBuilder,
+    create_coin_predicate, create_message_predicate, TransactionBuilder, ScriptTransactionBuilder,
 };
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 
@@ -64,7 +63,6 @@ impl Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
-        _witness_index: u8,
     ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
@@ -108,7 +106,7 @@ impl Account for Predicate {
         self.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send + Debug>(
+    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,
@@ -121,8 +119,8 @@ impl Account for Predicate {
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) = tb.inputs().iter().cloned().partition(|input| {
-            matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == &BASE_ASSET_ID) ||
-                matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == &BASE_ASSET_ID)
+            matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == BASE_ASSET_ID) ||
+                matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
         });
 
         let base_inputs_sum: u64 = base_asset_inputs
@@ -149,7 +147,7 @@ impl Account for Predicate {
 
         // todo delete this function
         let new_base_inputs = self
-            .get_asset_inputs_for_amount_predicates(tb, BASE_ASSET_ID, new_base_amount)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
             .await?;
 
         let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
@@ -179,23 +177,23 @@ impl Account for Predicate {
         tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, 0)
+            .get_asset_inputs_for_amount(asset_id, amount)
             .await?;
-
+        ///tx.tx_offset = offsets::base_offset_script(&consensus_parameters);
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
-
+        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters.unwrap_or_default());
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
-        tx.tx_offset = offsets::base_offset_script(&consensus_parameters);
+        tx_builder.set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
-            self.pay_fee_resources(&mut tx, amount, 0).await?;
+            self.pay_fee_resources(&mut tx_builder, amount, 0).await?;
         } else {
-            self.pay_fee_resources(&mut tx, 0, 0).await?;
+            self.pay_fee_resources(&mut tx_builder, 0, 0).await?;
         };
 
+        let tx = tx_builder.build()?;
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
@@ -220,7 +218,7 @@ impl Account for Predicate {
         )];
 
         inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, 0)
+            self.get_asset_inputs_for_amount(asset_id, balance)
                 .await?,
         );
 
@@ -274,7 +272,7 @@ impl Account for Predicate {
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
         let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
         let mut tx =
@@ -298,32 +296,5 @@ impl Account for Predicate {
             .expect("MessageId could not be retrieved from tx receipts.");
 
         Ok((tx_id, message_id.to_string(), receipts))
-    }
-
-    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<FuelInput> {
-        let mut offset = 0;
-
-        spendable_resources
-            .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => {
-                    offset += offsets::coin_predicate_data_offset(self.code.len());
-
-                    let data = self.data.clone().resolve(offset as u64);
-                    offset += data.len();
-
-                    create_coin_predicate(coin.clone(), coin.asset_id, self.code.clone(), data)
-                }
-                Resource::Message(message) => {
-                    offset +=
-                        offsets::message_predicate_data_offset(message.data.len(), self.code.len());
-
-                    let data = self.data.clone().resolve(offset as u64);
-                    offset += data.len();
-
-                    create_message_predicate(message, self.code.clone(), data)
-                }
-            })
-            .collect::<Vec<_>>()
     }
 }

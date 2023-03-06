@@ -1,10 +1,9 @@
 use std::fmt::Debug;
 
-use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
-    Address, AssetId, Bytes32, ConsensusParameters, ContractId, Create, FormatValidityChecks,
+    Bytes32, ConsensusParameters, Create, FormatValidityChecks,
     Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    TransactionFee, UniqueIdentifier, Witness,
 };
 
 use fuel_types::Salt;
@@ -20,15 +19,8 @@ use fuel_tx::field::Witnesses;
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Maturity, StorageSlots};
 use fuel_tx::Chargeable;
 
-use crate::coin::Coin;
-use crate::input::Input;
-use crate::message::Message;
-use crate::resource::Resource;
-use crate::transaction_builders::create_coin_input;
 use crate::{
-    constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::Error,
-    offsets,
     parameters::TxParameters,
 };
 

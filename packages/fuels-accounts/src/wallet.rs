@@ -3,7 +3,7 @@ use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId, Witness};
-use fuels_types::transaction_builders::TransactionBuilder;
+use fuels_types::transaction_builders::{TransactionBuilder, ScriptTransactionBuilder};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
@@ -397,7 +397,7 @@ impl Account for WalletUnlocked {
 
     async fn pay_fee_resources<
         Tx: Transaction,
-        Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug,
+        Tb: TransactionBuilder<Tx> + Send,
     >(
         &self,
         tb: &mut Tb,
@@ -428,7 +428,7 @@ impl Account for WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters.unwrap_or_default());
+        let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters.unwrap_or_default());
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {

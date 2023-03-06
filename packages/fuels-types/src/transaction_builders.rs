@@ -8,12 +8,12 @@ use crate::resource::Resource;
 use crate::transaction::{CreateTransaction, ScriptTransaction};
 use crate::{error, offsets};
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_core_client::client::schema::schema::__fields::Contract::bytecode;
-use fuel_tx::{ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, Witness};
+use fuel_tx::{ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, Witness};
 use fuel_types::{Address, AssetId, Bytes32, ContractId, Salt};
 
 pub trait TransactionBuilder<T> {
     fn build(self) -> Result<T>;
+    fn is_using_predicates(&self) -> bool;
 
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
     fn check_without_signatures(
@@ -22,7 +22,6 @@ pub trait TransactionBuilder<T> {
         parameters: &ConsensusParameters,
     ) -> Result<()>;
 
-    fn set_tx_offset(self, offset: usize) -> Self;
     fn set_maturity(self, maturity: u64) -> Self;
     fn set_gas_price(self, gas_price: u64) -> Self;
     fn set_gas_limit(self, gas_limit: u64) -> Self;
@@ -30,8 +29,7 @@ pub trait TransactionBuilder<T> {
     fn set_inputs(self, inputs: Vec<Input>) -> Self;
     fn set_outputs(self, outputs: Vec<Output>) -> Self;
     fn set_witnesses(self, witnesses: Vec<Witness>) -> Self;
-    fn set_consensus_parameters(self, consensus_parameters: Option<ConsensusParameters>) -> Self;
-    fn is_using_predicates(&self) -> bool;
+    fn set_consensus_parameters(self, consensus_parameters: ConsensusParameters) -> Self;
     fn inputs(&self) -> &Vec<Input>;
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
     fn outputs(&self) -> &Vec<Output>;
@@ -73,7 +71,17 @@ macro_rules! impl_tx_trait {
 
         impl TransactionBuilder<$tx_ty> for $ty {
             fn build(self) -> Result<$tx_ty> {
-                self.build()
+                if self.is_using_predicates() && self.consensus_parameters.is_none() {
+                    return Err(Error::TransactionBuildError);
+                }
+                let base_offset = offsets::base_offset_script(&self.consensus_parameters.unwrap());
+                Ok(self.convert_to_fuel_tx(base_offset))
+            }
+
+            fn is_using_predicates(&self) -> bool {
+                self.inputs
+                    .iter()
+                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
@@ -82,80 +90,6 @@ macro_rules! impl_tx_trait {
 
             fn check_without_signatures(&self, block_height: u64, parameters: &ConsensusParameters) -> Result<()> {
                 Ok(self.clone().build().expect("Error in build").tx.check_without_signatures(block_height, parameters)?)
-            }
-
-            fn set_tx_offset(mut self, offset: usize) -> Self {
-                self.tx_offset = offset;
-                self
-            }
-
-            fn set_maturity(mut self, maturity: u64) -> Self {
-                self.maturity = maturity;
-                self
-            }
-
-            fn set_gas_price(mut self, gas_price: u64) -> Self {
-                self.gas_price = gas_price;
-                self
-            }
-
-            fn set_gas_limit(mut self, gas_limit: u64) -> Self {
-                self.gas_limit = gas_limit;
-                self
-            }
-
-            fn set_tx_params(mut self, tx_params: TxParameters) -> Self {
-                self.set_gas_limit(tx_params.gas_limit)
-                    .set_gas_price(tx_params.gas_price)
-                    .set_maturity(tx_params.maturity)
-            }
-
-            fn set_inputs(mut self, inputs: Vec<Input>) -> Self {
-                self.inputs = inputs;
-                self
-            }
-
-            fn set_outputs(mut self, outputs: Vec<Output>) -> Self {
-                self.outputs = outputs;
-                self
-            }
-
-            fn set_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
-                self.witnesses = witnesses;
-                self
-            }
-
-            fn set_consensus_parameters(mut self, consensus_parameters: Option<ConsensusParameters>) -> Self {
-                self.consensus_parameters = consensus_parameters;
-                self
-            }
-
-            fn is_using_predicates(&self) -> bool {
-                self.is_using_predicates()
-            }
-
-            fn inputs(&self) -> &Vec<Input> {
-                self.inputs.as_ref()
-            }
-
-            fn inputs_mut(&mut self) -> &mut Vec<Input> {
-                &mut self.inputs
-            }
-
-            fn outputs(&self) -> &Vec<Output> {
-                self.outputs.as_ref()
-            }
-
-            fn outputs_mut(&mut self) -> &mut Vec<Output> {
-                &mut self.outputs
-            }
-
-        }
-
-        impl $ty {
-            fn set_tx_offset(mut self, offset: usize) -> Self {
-                self.tx_offset = offset;
-                self
             }
 
             fn set_maturity(mut self, maturity: u64) -> Self {
@@ -194,26 +128,25 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            pub fn set_consensus_parameters(
-                mut self,
-                consensus_parameters: Option<ConsensusParameters>,
-            ) -> Self {
-                self.consensus_parameters = consensus_parameters;
+            fn set_consensus_parameters(mut self, consensus_parameters: ConsensusParameters) -> Self {
+                self.consensus_parameters = Some(consensus_parameters);
                 self
             }
 
-            pub(crate) fn is_using_predicates(&self) -> bool {
-                self.inputs
-                    .iter()
-                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
+            fn inputs(&self) -> &Vec<Input> {
+                self.inputs.as_ref()
             }
 
-            pub fn build(self) -> Result<$tx_ty> {
-                if self.is_using_predicates() && self.consensus_parameters.is_none() {
-                    return Err(Error::TransactionBuildError);
-                }
-                let base_offset = offsets::base_offset_script(&self.consensus_parameters.unwrap());
-                Ok(self.convert_to_fuel_tx(base_offset))
+            fn inputs_mut(&mut self) -> &mut Vec<Input> {
+                &mut self.inputs
+            }
+
+            fn outputs(&self) -> &Vec<Output> {
+                self.outputs.as_ref()
+            }
+
+            fn outputs_mut(&mut self) -> &mut Vec<Output> {
+                &mut self.outputs
             }
 
         }
@@ -248,27 +181,26 @@ impl ScriptTransactionBuilder {
         self
     }
 
-    pub fn build_transfer(
+    pub fn prepare_transfer(
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
-    ) -> Result<ScriptTransaction> {
+    ) -> Self {
         ScriptTransactionBuilder::default()
             .set_tx_params(params)
             .set_inputs(inputs)
             .set_outputs(outputs)
-            .build()
     }
 
     /// Craft a transaction used to transfer funds to a contract.
-    pub fn build_contract_transfer(
+    pub fn prepare_contract_transfer(
         to: ContractId,
         amount: u64,
         asset_id: AssetId,
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
-    ) -> Result<ScriptTransaction> {
+    ) -> Self {
         let script_data: Vec<u8> = [
             to.to_vec(),
             amount.to_be_bytes().to_vec(),
@@ -301,16 +233,15 @@ impl ScriptTransactionBuilder {
             .set_script_data(script_data)
             .set_inputs(inputs)
             .set_outputs(outputs)
-            .build()
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
-    pub fn build_message_to_output(
+    pub fn prepare_message_to_output(
         to: Address,
         amount: u64,
         inputs: Vec<Input>,
         params: TxParameters,
-    ) -> Result<ScriptTransaction> {
+    ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
             .flatten()
@@ -343,7 +274,6 @@ impl ScriptTransactionBuilder {
             .set_script_data(script_data)
             .set_inputs(inputs)
             .set_outputs(outputs)
-            .build()
     }
 }
 

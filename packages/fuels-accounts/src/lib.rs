@@ -101,7 +101,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .map_err(Into::into)
     }
 
-    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send + std::fmt::Debug>(
+    async fn pay_fee_resources<Tx: Transaction, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,

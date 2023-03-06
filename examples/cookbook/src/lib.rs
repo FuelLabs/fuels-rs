@@ -161,7 +161,7 @@ mod tests {
 
         // ANCHOR: transfer_multiple_transaction
         let mut tx =
-            ScriptTransactionBuilder::build_transfer(inputs, outputs, TxParameters::default());
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
         wallet_1.sign_transaction(&mut tx).await?;
 
         let _receipts = provider.send_transaction(&tx).await?;
