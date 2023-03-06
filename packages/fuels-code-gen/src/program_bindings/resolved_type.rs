@@ -1,8 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use fuel_abi_types::utils::{
-    extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
-    has_tuple_format,
+    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
 use lazy_static::lazy_static;
 use proc_macro2::TokenStream;
@@ -54,6 +53,7 @@ impl ToTokens for ResolvedType {
         tokens.extend(tokenized_type)
     }
 }
+
 impl Display for ResolvedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_token_stream())
@@ -89,7 +89,7 @@ impl TypeResolver {
 
         let type_field = base_type.type_field.as_str();
 
-        [
+        let resolvers = [
             Self::to_simple_type,
             Self::to_byte,
             Self::to_bits256,
@@ -99,13 +99,17 @@ impl TypeResolver {
             Self::to_tuple,
             Self::to_raw_slice,
             Self::to_custom_type,
-        ]
-        .into_iter()
-        .find_map(|fun| fun(self, type_application))
-        .ok_or_else(|| error!("Could not resolve '{type_field}' to any known type"))
+        ];
+
+        for resolver in resolvers {
+            if let Some(resolved) = resolver(self, type_application)? {
+                return Ok(resolved);
+            }
+        }
+        Err(error!("Could not resolve '{type_field}' to any known type"))
     }
 
-    fn recursively_resolve_2(
+    fn resolve_multiple(
         &self,
         type_applications: &[FullTypeApplication],
     ) -> Result<Vec<ResolvedType>> {
@@ -115,141 +119,150 @@ impl TypeResolver {
             .collect()
     }
 
-    fn to_generic(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        let name = extract_generic_name(&type_application.type_decl.type_field)?;
+    fn to_generic(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let Some(name) = extract_generic_name(&type_application.type_decl.type_field) else {
+            return Ok(None);
+        };
 
         let type_name = safe_ident(&name).into_token_stream();
-        Some(ResolvedType {
+        Ok(Some(ResolvedType {
             type_name,
             generic_params: vec![],
-        })
+        }))
     }
 
-    fn to_array(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        let len = extract_array_len(&type_application.type_decl.type_field)?;
+    fn to_array(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+        let Some(len) = extract_array_len(&type_decl.type_field) else {
+            return Ok(None);
+        };
 
-        let components = self
-            .recursively_resolve_2(&type_application.type_decl.components)
-            .unwrap();
+        let components = self.resolve_multiple(&type_decl.components)?;
         let type_inside = match components.as_slice() {
-            [single_type] => Ok(single_type),
-            other => Err(error!(
-                "Array must have only one component! Actual components: {other:?}"
-            )),
-        }
-        .unwrap();
+            [single_type] => single_type,
+            other => {
+                return Err(error!(
+                    "Array must have only one component! Actual components: {other:?}"
+                ));
+            }
+        };
 
-        Some(ResolvedType {
+        Ok(Some(ResolvedType {
             type_name: quote! { [#type_inside; #len] },
             generic_params: vec![],
-        })
+        }))
     }
 
     fn to_sized_ascii_string(
         &self,
         type_application: &FullTypeApplication,
-    ) -> Option<ResolvedType> {
-        let len = extract_str_len(&type_application.type_decl.type_field)?;
+    ) -> Result<Option<ResolvedType>> {
+        let Some(len) = extract_str_len(&type_application.type_decl.type_field) else {
+            return Ok(None);
+        };
 
         let generic_params = vec![ResolvedType {
             type_name: quote! {#len},
             generic_params: vec![],
         }];
 
-        Some(ResolvedType {
+        Ok(Some(ResolvedType {
             type_name: quote! { ::fuels::types::SizedAsciiString },
             generic_params,
-        })
+        }))
     }
 
-    fn to_tuple(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        if has_tuple_format(&type_application.type_decl.type_field) {
-            let inner_types = self
-                .recursively_resolve_2(&type_application.type_decl.components)
-                .unwrap();
-
-            // it is important to leave a trailing comma because a tuple with
-            // one element is written as (element,) not (element) which is
-            // resolved to just element
-            Some(ResolvedType {
-                type_name: quote! {(#(#inner_types,)*)},
-                generic_params: vec![],
-            })
-        } else {
-            None
+    fn to_tuple(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+        if !has_tuple_format(&type_decl.type_field) {
+            return Ok(None);
         }
+        let inner_types = self.resolve_multiple(&type_decl.components)?;
+
+        // it is important to leave a trailing comma because a tuple with
+        // one element is written as (element,) not (element) which is
+        // resolved to just element
+        Ok(Some(ResolvedType {
+            type_name: quote! {(#(#inner_types,)*)},
+            generic_params: vec![],
+        }))
     }
 
-    fn to_simple_type(&self, type_decl: &FullTypeApplication) -> Option<ResolvedType> {
+    fn to_simple_type(&self, type_decl: &FullTypeApplication) -> Result<Option<ResolvedType>> {
         let type_field = &type_decl.type_decl.type_field;
+
         match type_field.as_str() {
             "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
                 let type_name = type_field
                     .parse()
                     .expect("Couldn't resolve primitive type. Cannot happen!");
 
-                Some(ResolvedType {
+                Ok(Some(ResolvedType {
                     type_name,
                     generic_params: vec![],
-                })
+                }))
             }
-            _ => None,
+            _ => Ok(None),
         }
     }
 
-    fn to_byte(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
+    fn to_byte(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
         if type_application.type_decl.type_field == "byte" {
-            Some(ResolvedType {
+            Ok(Some(ResolvedType {
                 type_name: quote! {::fuels::types::Byte},
                 generic_params: vec![],
-            })
+            }))
         } else {
-            None
+            Ok(None)
         }
     }
 
-    fn to_bits256(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        if type_application.type_decl.type_field == "b256" {
-            Some(ResolvedType {
-                type_name: quote! {::fuels::types::Bits256},
-                generic_params: vec![],
-            })
-        } else {
-            None
+    fn to_bits256(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field != "b256" {
+            return Ok(None);
         }
+
+        Ok(Some(ResolvedType {
+            type_name: quote! {::fuels::types::Bits256},
+            generic_params: vec![],
+        }))
     }
 
-    fn to_raw_slice(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        if type_application.type_decl.type_field == "raw untyped slice" {
-            let type_name = quote! {::fuels::types::RawSlice};
-            Some(ResolvedType {
-                type_name,
-                generic_params: vec![],
-            })
-        } else {
-            None
+    fn to_raw_slice(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field != "raw untyped slice" {
+            return Ok(None);
         }
+
+        let type_name = quote! {::fuels::types::RawSlice};
+        Ok(Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        }))
     }
 
-    fn to_custom_type(&self, type_application: &FullTypeApplication) -> Option<ResolvedType> {
-        let type_path = extract_custom_type_name(&type_application.type_decl.type_field)?;
+    fn to_custom_type(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+
+        if !type_decl.is_custom_type() {
+            return Ok(None);
+        }
+
+        let type_path = type_decl.custom_type_path()?;
 
         let type_path = sdk_provided_custom_types_lookup()
-            .get(&type_path)
+            .get(&type_path.to_string())
             .cloned()
-            .unwrap_or_else(|| {
-                TypePath::new(type_path)
-                    .unwrap()
-                    .relative_path_from(&self.relative_to_mod)
-            });
+            .unwrap_or_else(|| type_path.relative_path_from(&self.relative_to_mod));
 
-        let generic_params = self
-            .recursively_resolve_2(&type_application.type_arguments)
-            .unwrap();
-        Some(ResolvedType {
+        let generic_params = self.resolve_multiple(&type_application.type_arguments)?;
+
+        Ok(Some(ResolvedType {
             type_name: type_path.into_token_stream(),
             generic_params,
-        })
+        }))
     }
 }
 
@@ -259,8 +272,9 @@ mod tests {
 
     use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
-    use super::*;
     use crate::program_bindings::abi_types::FullTypeDeclaration;
+
+    use super::*;
 
     fn test_resolve_first_type(
         expected: &str,

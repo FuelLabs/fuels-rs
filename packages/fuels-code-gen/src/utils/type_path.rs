@@ -1,6 +1,7 @@
 use std::cmp::min;
+use std::fmt::{Display, Formatter};
 
-use itertools::{chain, izip};
+use itertools::{chain, izip, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 
@@ -13,6 +14,15 @@ use crate::{
 pub struct TypePath {
     parts: Vec<Ident>,
     is_absolute: bool,
+}
+
+impl Display for TypePath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let prefix = if self.is_absolute { "::" } else { "" };
+        let parts_str = self.parts.iter().join("::");
+
+        write!(f, "{prefix}{parts_str}")
+    }
 }
 
 impl From<&Ident> for TypePath {
