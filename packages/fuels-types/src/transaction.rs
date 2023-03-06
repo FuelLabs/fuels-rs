@@ -16,7 +16,6 @@ use crate::{
 };
 
 #[derive(Debug, Copy, Clone)]
-//ANCHOR: tx_parameter
 pub struct TxParameters {
     gas_price: u64,
     gas_limit: u64,
@@ -53,7 +52,6 @@ impl TxParameters {
     impl_setter_getter!(set_gas_limit, gas_limit);
     impl_setter_getter!(set_maturity, maturity);
 }
-//ANCHOR_END: tx_parameter
 
 impl Default for TxParameters {
     fn default() -> Self {
