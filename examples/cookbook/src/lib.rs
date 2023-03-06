@@ -150,6 +150,7 @@ mod tests {
             if id == BASE_ASSET_ID {
                 continue;
             }
+
             let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
             inputs.extend(input);
 
