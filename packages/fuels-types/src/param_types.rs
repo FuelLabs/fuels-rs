@@ -2,10 +2,7 @@ use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
     program_abi::{TypeApplication, TypeDeclaration},
-    utils::{
-        extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
-        has_tuple_format,
-    },
+    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use itertools::Itertools;
 use strum_macros::EnumString;
@@ -299,15 +296,7 @@ fn has_struct_format(field: &str) -> bool {
 }
 
 fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
-    let type_field = &the_type.type_field;
-    if has_struct_format(type_field)
-        && extract_custom_type_name(type_field).ok_or_else(|| {
-            error!(
-                InvalidType,
-                "Could not extract struct name from type_field {type_field}"
-            )
-        })? == "Vec"
-    {
+    if the_type.type_field == "struct std::vec::Vec" {
         if the_type.generic_params.len() != 1 {
             return Err(error!(
                 InvalidType,
@@ -400,8 +389,9 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::param_types::ParamType;
+
+    use super::*;
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
@@ -593,7 +583,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 3,
-                type_field: "struct RawVec".to_string(),
+                type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "ptr".to_string(),
@@ -610,7 +600,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 4,
-                type_field: "struct Vec".to_string(),
+                type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "buf".to_string(),
@@ -1051,7 +1041,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 19,
-                type_field: "struct RawVec".to_string(),
+                type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "ptr".to_string(),
@@ -1098,7 +1088,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 23,
-                type_field: "struct Vec".to_string(),
+                type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "buf".to_string(),

@@ -173,14 +173,12 @@ impl FullTypeDeclaration {
         }
     }
 
-    pub(crate) fn extract_custom_type_path(type_field: &str) -> Result<TypePath> {
+    pub(crate) fn custom_type_path(&self) -> Result<TypePath> {
+        let type_field = &self.type_field;
         let type_name = extract_custom_type_name(type_field)
             .ok_or_else(|| error!("Couldn't extract custom type name from '{type_field}'"))?;
 
         TypePath::new(type_name)
-    }
-    pub(crate) fn custom_type_path(&self) -> Result<TypePath> {
-        Self::extract_custom_type_path(&self.type_field)
     }
 }
 
@@ -256,6 +254,10 @@ impl FullConfigurable {
 }
 
 impl FullTypeDeclaration {
+    pub fn is_custom_type(&self) -> bool {
+        self.is_struct_type() || self.is_enum_type()
+    }
+
     pub fn is_enum_type(&self) -> bool {
         let type_field = &self.type_field;
         type_field.starts_with("enum ")

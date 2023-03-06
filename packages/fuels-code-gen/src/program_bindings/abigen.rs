@@ -1,11 +1,12 @@
 use std::collections::HashSet;
 
-pub use abigen_target::{AbigenTarget, ProgramType};
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
 use quote::quote;
 use regex::Regex;
+
+pub use abigen_target::{AbigenTarget, ProgramType};
 
 use crate::{
     error::Result,
@@ -78,8 +79,8 @@ impl Abigen {
         no_std: bool,
         parsed_targets: Vec<ParsedAbigenTarget>,
     ) -> Result<GeneratedCode> {
-        let all_custom_types = Self::extract_custom_types(&parsed_targets);
-        let shared_types = Self::filter_shared_types(all_custom_types);
+        let custom_types = Self::filter_custom_types(&parsed_targets);
+        let shared_types = Self::filter_shared_types(custom_types);
 
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
@@ -135,13 +136,13 @@ impl Abigen {
         }
     }
 
-    fn extract_custom_types(
+    fn filter_custom_types(
         all_types: &[ParsedAbigenTarget],
     ) -> impl Iterator<Item = &FullTypeDeclaration> {
         all_types
             .iter()
             .flat_map(|target| &target.source.types)
-            .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
+            .filter(|ttype| ttype.is_custom_type())
     }
 
     /// A type is considered "shared" if it appears at least twice in
