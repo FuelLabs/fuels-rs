@@ -40,23 +40,8 @@ pub async fn build_tx_from_contract_calls(
     wallet: &WalletUnlocked,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
-    let n_vectors_calls = calls.iter().filter(|c| c.output_param.is_vector()).count();
 
-    // Compute the length of the calling scripts for the two types of contract calls.
-    // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of the
-    // calling script doesn't depend on the underlying type, just on whether or not the contract
-    // call output is a vector.
-    let calls_instructions_len_no_vectors =
-        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
-            * (calls.len() - n_vectors_calls);
-    let calls_instructions_len_vectors = get_single_call_instructions(
-        &CallOpcodeParamsOffset::default(),
-        &ParamType::Vector(Box::from(ParamType::U64)),
-    )
-    .len()
-        * n_vectors_calls;
-
-    let calls_instructions_len = calls_instructions_len_no_vectors + calls_instructions_len_vectors;
+    let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
@@ -90,6 +75,25 @@ pub async fn build_tx_from_contract_calls(
     wallet.sign_transaction(&mut tx).await.unwrap();
 
     Ok(tx)
+}
+
+/// Compute the length of the calling scripts for the two types of contract calls.
+/// Use placeholder for `call_param_offsets` and `output_param_type`, because the length of the
+/// calling script doesn't depend on the underlying type, just on whether or not the contract call
+/// output is a vector.
+fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
+    let n_vectors_calls = calls.iter().filter(|c| c.output_param.is_vector()).count();
+
+    let calls_instructions_len_no_vectors =
+        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
+            * (calls.len() - n_vectors_calls);
+    let calls_instructions_len_vectors = get_single_call_instructions(
+        &CallOpcodeParamsOffset::default(),
+        &ParamType::Vector(Box::from(ParamType::U64)),
+    )
+    .len()
+        * n_vectors_calls;
+    calls_instructions_len_no_vectors + calls_instructions_len_vectors
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
