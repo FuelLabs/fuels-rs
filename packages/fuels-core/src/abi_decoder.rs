@@ -51,10 +51,10 @@ impl ABIDecoder {
     }
 
     fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        if param_type.contains_nested_vectors() {
+        if param_type.contains_nested_heap_types() {
             return Err(error!(
                 InvalidData,
-                "Type {param_type:?} contains nested vectors, this is not supported."
+                "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
             ));
         }
         match param_type {
