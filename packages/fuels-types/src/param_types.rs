@@ -70,31 +70,28 @@ impl ParamType {
 
     pub fn contains_no_nested_vectors(&self) -> bool {
         match &self {
-            ParamType::Vector(param_type) => {
+            ParamType::Vector(param_type) | ParamType::Array(param_type, ..) => {
                 !param_type.is_vector() && param_type.contains_no_nested_vectors()
             }
             ParamType::Struct {
                 fields, generics, ..
             } => {
                 fields.iter().all(|(_, param_type)| {
-                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                    !param_type.is_vector() && param_type.contains_no_nested_vectors()
                 }) && generics.iter().all(|param_type| {
-                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                    !param_type.is_vector() && param_type.contains_no_nested_vectors()
                 })
             }
-            ParamType::Array(param_type, ..) => {
-                !param_type.is_vector() && param_type.contains_no_nested_vectors()
-            }
             ParamType::Tuple(param_types, ..) => param_types.iter().all(|param_type| {
-                param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                !param_type.is_vector() && param_type.contains_no_nested_vectors()
             }),
             ParamType::Enum {
                 generics, variants, ..
             } => {
                 generics.iter().all(|param_type| {
-                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                    !param_type.is_vector() && param_type.contains_no_nested_vectors()
                 }) && variants.param_types().iter().all(|param_type| {
-                    param_type.contains_no_nested_vectors() && !param_type.is_vector()
+                    !param_type.is_vector() && param_type.contains_no_nested_vectors()
                 })
             }
             _ => true,
