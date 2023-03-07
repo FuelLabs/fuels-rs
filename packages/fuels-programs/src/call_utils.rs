@@ -1,14 +1,15 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
-    AssetId, Bytes32, ContractId, Input, InputRepr, Output, Receipt, ScriptExecutionResult,
+    AssetId, Bytes32, ContractId, Output, Receipt, ScriptExecutionResult,
     TxPointer, UtxoId,
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::provider::Provider;
 use fuels_accounts::Account;
-use fuels_core::offsets::call_script_data_offset;
+use fuels_types::offsets::call_script_data_offset;
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -18,6 +19,7 @@ use fuels_types::{
     transaction::{ScriptTransaction, Transaction},
 };
 use itertools::{chain, Itertools};
+use fuels_types::input::Input;
 
 use crate::contract::ContractCall;
 
@@ -67,22 +69,29 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     dbg!(&inputs);
 
-    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
-        .with_script(script)
-        .with_script_data(script_data.clone());
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], outputs, *tx_parameters)
+        .set_script(script)
+        .set_script_data(script_data.clone());
 
-    tx.tx_offset = data_offset
-        + script_data.len()
-        + InputRepr::Contract.contract_id_offset().unwrap()
-        + ContractId::LEN;
+    // Todo delete
+    // let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
+    //     .with_script(script)
+    //     .with_script_data(script_data.clone());
+
+    // tx.tx_offset = data_offset
+    //     + script_data.len()
+    //     + InputRepr::Contract.contract_id_offset().unwrap()
+    //     + ContractId::LEN;
 
     let base_asset_amount = required_asset_amounts
         .iter()
         .find(|(asset_id, _)| *asset_id == AssetId::default());
     match base_asset_amount {
-        Some((_, base_amount)) => account.pay_fee_resources(&mut tx, *base_amount, 0).await?,
-        None => account.pay_fee_resources(&mut tx, 0, 0).await?,
+        Some((_, base_amount)) => account.pay_fee_resources(&mut tb, *base_amount, 0).await?,
+        None => account.pay_fee_resources(&mut tb, 0, 0).await?,
     }
+
+    let tx = tb.build()?;
 
     Ok(tx)
 }

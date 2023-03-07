@@ -11,11 +11,9 @@ use std::{
 use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot, Transaction as FuelTransaction,
+    StorageSlot
 };
 use fuel_vm::fuel_asm::PanicReason;
-
-use fuel_tx::field::Salt as OtherSalt;
 
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
@@ -23,7 +21,7 @@ use fuels_accounts::{
 };
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::errors::Error::ProviderError;
-use fuels_types::transaction::ConvertableTransaction;
+use fuels_types::transaction_builders::{CreateTransactionBuilder, TransactionBuilder};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -31,7 +29,7 @@ use fuels_types::{
     param_types::{ParamType, ReturnLocation},
     parameters::{CallParameters, StorageConfiguration, TxParameters},
     traits::{Parameterize, Tokenizable},
-    transaction::{CreateTransaction, ScriptTransaction, Transaction},
+    transaction::ScriptTransaction,
     Selector, Token,
 };
 
@@ -77,7 +75,7 @@ impl<T: Account + Clone> Contract<T> {
         }
     }
 
-    pub fn eeecompute_contract_id_and_state_root(
+    pub fn compute_contract_id_and_state_root(
         compiled_contract: &CompiledContract,
     ) -> (ContractId, Bytes32) {
         let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
@@ -227,21 +225,21 @@ impl<T: Account + Clone> Contract<T> {
         account: &T,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (mut tx, contract_id) =
+        let (mut tb, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
-        let consensus_parameters = account
-            .get_provider()
-            .expect("Could not get provider")
-            .chain_info()
-            .await?
-            .consensus_parameters;
-
-        tx.tx_offset =
-            consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
+        // let consensus_parameters = account
+        //     .get_provider()
+        //     .expect("Could not get provider")
+        //     .chain_info()
+        //     .await?
+        //     .consensus_parameters;
+        //
+        // tx.tx_offset =
+        //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
 
         account
-            .pay_fee_resources(&mut tx, 0, 1)
+            .pay_fee_resources(&mut tb, 0, 1)
             .await
             .map_err(|err| ProviderError(format!("{err}")))?;
 
@@ -250,10 +248,12 @@ impl<T: Account + Clone> Contract<T> {
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
-        tx.check_without_signatures(
+        tb.check_without_signatures(
             chain_info.latest_block.header.height,
             &chain_info.consensus_parameters,
         )?;
+
+        let tx = tb.build()?;
 
         provider.send_transaction(&tx).await?;
 
@@ -329,7 +329,7 @@ impl<T: Account + Clone> Contract<T> {
     pub async fn contract_deployment_transaction(
         compiled_contract: &CompiledContract,
         params: TxParameters,
-    ) -> Result<(CreateTransaction, Bech32ContractId)> {
+    ) -> Result<(CreateTransactionBuilder, Bech32ContractId)> {
         let bytecode_witness_index = 0;
         let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
         let witnesses = vec![compiled_contract.raw.clone().into()];
@@ -338,19 +338,15 @@ impl<T: Account + Clone> Contract<T> {
 
         let outputs = vec![Output::contract_created(contract_id, state_root)];
 
-        let tx = FuelTransaction::create(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            bytecode_witness_index,
-            compiled_contract.salt,
-            storage_slots,
-            vec![],
-            outputs,
-            witnesses,
-        );
+        let tb = CreateTransactionBuilder::default()
+            .set_tx_params(params)
+            .set_bytecode_witness_index(bytecode_witness_index)
+            .set_salt(compiled_contract.salt)
+            .set_storage_slots(storage_slots)
+            .set_outputs(outputs)
+            .set_witnesses(witnesses);
 
-        Ok((tx.into(), contract_id.into()))
+        Ok((tb, contract_id.into()))
     }
 
     fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {

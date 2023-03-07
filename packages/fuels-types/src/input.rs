@@ -1,10 +1,8 @@
-use fuel_asm::Word;
-use fuel_tx::{Address, AssetId, Input as FuelInput, TxPointer, UtxoId};
-use fuel_types::{Bytes32, ContractId, MessageId};
+use fuel_tx::{TxPointer, UtxoId};
+use fuel_types::{Bytes32, ContractId};
 
 use crate::resource::Resource;
 use crate::unresolved_bytes::UnresolvedBytes;
-use crate::{coin::Coin, message::Message};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Input {
@@ -48,10 +46,26 @@ impl Input {
 
     pub fn amount(&self) -> Option<u64> {
         match self {
-            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
+            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
                 Some(resource.amount())
             }
             _ => None,
+        }
+    }
+
+    pub const fn contract(
+        utxo_id: UtxoId,
+        balance_root: Bytes32,
+        state_root: Bytes32,
+        tx_pointer: TxPointer,
+        contract_id: ContractId,
+    ) -> Self {
+        Self::Contract {
+            utxo_id,
+            balance_root,
+            state_root,
+            tx_pointer,
+            contract_id,
         }
     }
 }

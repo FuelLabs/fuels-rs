@@ -2,7 +2,7 @@
 
 use fuel_core_chain_config::CoinConfig;
 use fuel_core_client::client::schema::coin::{Coin as ClientCoin, CoinStatus as ClientCoinStatus};
-use fuel_tx::{AssetId, Input as FuelInput, UtxoId};
+use fuel_tx::{AssetId, UtxoId};
 
 use crate::bech32::Bech32Address;
 

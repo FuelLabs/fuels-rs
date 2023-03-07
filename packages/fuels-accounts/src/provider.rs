@@ -12,9 +12,7 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{
-    AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, UniqueIdentifier,
-};
-use fuel_types::Bytes32;
+    AssetId, ConsensusParameters, Receipt};
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},

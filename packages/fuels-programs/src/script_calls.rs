@@ -1,11 +1,12 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Input, Output, Receipt};
+use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::provider::Provider;
-use fuels_core::offsets::base_offset;
-use fuels_types::transaction::ConvertableTransaction;
-use fuels_types::transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder};
+use fuels_types::offsets::base_offset_script;
+use fuels_types::transaction_builders::{
+    ScriptTransactionBuilder, TransactionBuilder,
+};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::Bech32ContractId,
@@ -15,6 +16,7 @@ use fuels_types::{
     transaction::{ScriptTransaction, Transaction},
 };
 use itertools::chain;
+use fuels_types::input::Input;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -130,7 +132,7 @@ where
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
-        let script_offset = base_offset(&consensus_parameters)
+        let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
@@ -161,18 +163,21 @@ where
         )
         .collect();
 
-        let mut tx = ScriptTransaction::new(inputs, outputs, self.tx_parameters)
-            .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?);
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
+                .set_script(self.script_call.script_binary.clone())
+                .set_script_data(self.compute_script_data().await?);
 
-        let consensus_parameters = self.provider.consensus_parameters().await?;
-        let script_offset = base_offset(&consensus_parameters);
-        let a = ScriptTransactionBuilder::default()
-            .set_script(vec![])
-            .build();
+        // let consensus_parameters = self.provider.consensus_parameters().await?;
+        // let script_offset = base_offset(&consensus_parameters);
+        // let a = ScriptTransactionBuilder::default()
+        //     .set_script(vec![])
+        //     .build();
+        //
+        // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
+        self.account.pay_fee_resources(&mut tb, 0, 0).await?;
 
-        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
-        self.account.pay_fee_resources(&mut tx, 0, 0).await?;
+        let tx = tb.build()?;
 
         Ok(tx)
     }

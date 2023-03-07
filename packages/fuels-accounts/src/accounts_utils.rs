@@ -1,8 +1,5 @@
-use fuel_tx::{Input as FuelInput, Receipt, TxPointer};
-use fuel_types::{AssetId, MessageId};
-use fuels_types::coin::Coin;
-use fuels_types::input::Input;
-use fuels_types::message::Message;
+use fuel_tx::Receipt;
+use fuel_types::MessageId;
 
 pub fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
     receipts

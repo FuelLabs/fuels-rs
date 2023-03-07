@@ -3,7 +3,7 @@ use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId, Witness};
-use fuels_types::transaction_builders::{TransactionBuilder, ScriptTransactionBuilder};
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
     coin::Coin,
@@ -14,7 +14,7 @@ use fuels_types::{
     message::Message as InputMessage,
     parameters::TxParameters,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::Transaction,
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
@@ -307,9 +307,9 @@ impl WalletUnlocked {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    pub async fn add_fee_resources<Tx: Transaction>(
+    pub async fn add_fee_resources<Tx>(
         &self,
-        tx: &mut impl TransactionBuilder<Tx>,
+        tb: &mut impl TransactionBuilder<Tx>,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
@@ -319,12 +319,12 @@ impl WalletUnlocked {
             .await?
             .consensus_parameters;
 
-        let transaction_fee = tx
+        let transaction_fee = tb
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
-            tx.inputs().iter().cloned().partition(|input| {
+            tb.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::ResourceSigned { resource, .. }  if resource.asset_id() == BASE_ASSET_ID)
             });
 
@@ -346,7 +346,7 @@ impl WalletUnlocked {
         // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
         // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
         // Here we enforce a minimum amount on the base asset to avoid this
-        let is_consuming_utxos = tx
+        let is_consuming_utxos = tb
             .inputs()
             .iter()
             .any(|input| !matches!(input, Input::Contract { .. }));
@@ -364,14 +364,14 @@ impl WalletUnlocked {
             .chain(new_base_inputs.into_iter())
             .collect();
 
-        *tx.inputs_mut() = adjusted_inputs;
+        *tb.inputs_mut() = adjusted_inputs;
 
-        let is_base_change_present = tx.outputs().iter().any(|output| {
+        let is_base_change_present = tb.outputs().iter().any(|output| {
             matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
         });
         // add a change output for the base asset if it doesn't exist and there are base inputs
         if !is_base_change_present && new_base_amount != 0 {
-            tx.outputs_mut().push(Output::change(
+            tb.outputs_mut().push(Output::change(
                 self.address.clone().into(),
                 0,
                 BASE_ASSET_ID,
@@ -396,20 +396,19 @@ impl Account for WalletUnlocked {
     }
 
     async fn pay_fee_resources<
-        Tx: Transaction,
-        Tb: TransactionBuilder<Tx> + Send,
+        Tx: Transaction + Send,
+        Tb: TransactionBuilder<Tx> + Send + Clone,
     >(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
+        //Todo: maybe we should call sign_transaction() outside of this method
         self.add_fee_resources(tb, previous_base_amount, witness_index)
             .await?;
-
-        let tx = tb.build();
-
-        self.sign_transaction(tx).await?;
+        let mut tx = tb.clone().build()?;
+        self.sign_transaction(&mut tx).await?;
         Ok(())
     }
 
@@ -428,14 +427,20 @@ impl Account for WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters.unwrap_or_default());
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            tx_parameters.unwrap_or_default(),
+        );
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
-            self.pay_fee_resources(&mut tx, amount, 0).await?;
+            self.pay_fee_resources(&mut tb, amount, 0).await?;
         } else {
-            self.pay_fee_resources(&mut tx, 0, 0).await?;
+            self.pay_fee_resources(&mut tb, 0, 0).await?;
         };
+
+        let tx = tb.build()?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -481,7 +486,7 @@ impl Account for WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tx = ScriptTransaction::build_contract_transfer_tx(
+        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -495,7 +500,8 @@ impl Account for WalletUnlocked {
         } else {
             0
         };
-        self.add_fee_resources(&mut tx, base_amount, 0).await?;
+        self.add_fee_resources(&mut tb, base_amount, 0).await?;
+        let mut tx = tb.build()?;
         self.sign_transaction(&mut tx).await?;
 
         let tx_id = tx.id();
@@ -517,10 +523,16 @@ impl Account for WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
 
-        let mut tx =
-            ScriptTransaction::build_message_to_output_tx(to.into(), amount, inputs, tx_parameters);
+        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
+            to.into(),
+            amount,
+            inputs,
+            tx_parameters,
+        );
 
-        self.pay_fee_resources(&mut tx, amount, 0).await?;
+        self.pay_fee_resources(&mut tb, amount, 0).await?;
+
+        let tx = tb.build()?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -534,26 +546,7 @@ impl Account for WalletUnlocked {
     fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
         spendable_resources
             .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => Input::coin_signed(
-                    coin.utxo_id,
-                    coin.owner.into(),
-                    coin.amount,
-                    coin.asset_id,
-                    TxPointer::default(),
-                    0,
-                    coin.maturity,
-                ),
-                Resource::Message(message) => Input::message_signed(
-                    message.message_id(),
-                    message.sender.into(),
-                    message.recipient.into(),
-                    message.amount,
-                    message.nonce,
-                    0,
-                    message.data,
-                ),
-            })
+            .map(|resource| Input::resource_signed(resource, 0))
             .collect::<Vec<_>>()
     }
 }
@@ -580,7 +573,7 @@ impl Signer for WalletUnlocked {
 
         let witness = vec![Witness::from(sig.as_ref())];
 
-        let witnesses: &mut Vec<Witness> = tx.witnesses_mut();
+        let witnesses = tx.witnesses_mut();
 
         match witnesses.len() {
             0 => *witnesses = witness,

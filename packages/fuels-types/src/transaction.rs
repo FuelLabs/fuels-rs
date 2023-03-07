@@ -1,9 +1,8 @@
 use std::fmt::Debug;
 
 use fuel_tx::{
-    Bytes32, ConsensusParameters, Create, FormatValidityChecks,
-    Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
 
 use fuel_types::Salt;
@@ -19,10 +18,7 @@ use fuel_tx::field::Witnesses;
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Maturity, StorageSlots};
 use fuel_tx::Chargeable;
 
-use crate::{
-    errors::Error,
-    parameters::TxParameters,
-};
+use crate::{errors::Error, parameters::TxParameters};
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
@@ -56,6 +52,10 @@ pub trait Transaction: Into<FuelTransaction> {
     fn outputs(&self) -> &Vec<Output>;
 
     fn witnesses(&self) -> &Vec<Witness>;
+
+    fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
+
+    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
 }
 
 macro_rules! impl_tx_wrapper {
@@ -153,6 +153,15 @@ macro_rules! impl_tx_wrapper {
 
             fn witnesses(&self) -> &Vec<Witness> {
                 self.tx.witnesses()
+            }
+
+            fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
+                self.tx.witnesses_mut()
+            }
+
+            fn with_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
+                *self.tx.witnesses_mut() = witnesses;
+                self
             }
         }
     };

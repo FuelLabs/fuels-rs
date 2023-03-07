@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use fuel_tx::{Input as FuelInput, Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
 use fuels_types::bech32::{Bech32Address, Bech32ContractId};
@@ -8,12 +8,11 @@ use fuels_types::constants::BASE_ASSET_ID;
 use fuels_types::errors::Error;
 use fuels_types::errors::Result;
 use fuels_types::input::Input;
-use fuels_types::offsets;
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
-use fuels_types::transaction::{ScriptTransaction, Transaction};
+use fuels_types::transaction::Transaction;
 use fuels_types::transaction_builders::{
-    create_coin_predicate, create_message_predicate, TransactionBuilder, ScriptTransactionBuilder,
+    ScriptTransactionBuilder, TransactionBuilder,
 };
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 
@@ -73,23 +72,6 @@ impl Predicate {
             })
             .collect::<Vec<Input>>())
     }
-
-    // pub async fn get_asset_inputs_for_amount(
-    //     &self,
-    //     asset_id: AssetId,
-    //     amount: u64,
-    //     witness_index: u8,
-    // ) -> Result<Vec<Input>> {
-    //     Ok(self
-    //         .get_spendable_resources(asset_id, amount)
-    //         .await?
-    //         .into_iter()
-    //         .map(|resource| match resource {
-    //             Resource::Coin(coin) => create_coin_input(coin, asset_id, witness_index),
-    //             Resource::Message(message) => create_message_input(message, witness_index),
-    //         })
-    //         .collect::<Vec<Input>>())
-    // }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
@@ -106,7 +88,7 @@ impl Account for Predicate {
         self.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx, Tb: TransactionBuilder<Tx> + Send>(
+    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,
@@ -176,15 +158,18 @@ impl Account for Predicate {
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount)
-            .await?;
-        ///tx.tx_offset = offsets::base_offset_script(&consensus_parameters);
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
+        // tx.tx_offset = offsets::base_offset_script(&consensus_parameters);
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters.unwrap_or_default());
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
-        tx_builder.set_consensus_parameters(consensus_parameters);
+
+        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            tx_parameters.unwrap_or_default(),
+        )
+        .set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         if asset_id == AssetId::default() {
@@ -217,10 +202,7 @@ impl Account for Predicate {
             plain_contract_id,
         )];
 
-        inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance)
-                .await?,
-        );
+        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -228,7 +210,7 @@ impl Account for Predicate {
         ];
 
         // Build transaction and sign it
-        let mut tx = ScriptTransaction::build_contract_transfer_tx(
+        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -237,27 +219,29 @@ impl Account for Predicate {
             tx_parameters,
         );
 
-        let consensus_parameters = self
-            .provider
-            .as_ref()
-            .expect("No provider available")
-            .consensus_parameters()
-            .await?;
-
-        let script_offset = base_offset(&consensus_parameters);
-        tx.tx_offset = script_offset
-            + tx.script_data().len()
-            + tx.script().len()
-            + offsets::contract_input_offset();
+        // let consensus_parameters = self
+        //     .provider
+        //     .as_ref()
+        //     .expect("No provider available")
+        //     .consensus_parameters()
+        //     .await?;
+        //
+        // let script_offset = base_offset(&consensus_parameters);
+        // tx.tx_offset = script_offset
+        //     + tx.script_data().len()
+        //     + tx.script().len()
+        //     + offsets::contract_input_offset();
 
         // if we are not transferring the base asset, previous base amount is 0
+
         let base_amount = if asset_id == AssetId::default() {
             balance
         } else {
             0
         };
 
-        self.pay_fee_resources(&mut tx, base_amount, 0).await?;
+        self.pay_fee_resources(&mut tb, base_amount, 0).await?;
+        let tx = tb.build()?;
 
         let tx_id = tx.id();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -275,19 +259,25 @@ impl Account for Predicate {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
-        let mut tx =
-            ScriptTransaction::build_message_to_output_tx(to.into(), amount, inputs, tx_parameters);
+        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
+            to.into(),
+            amount,
+            inputs,
+            tx_parameters,
+        );
 
-        let consensus_parameters = self
-            .get_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        // let consensus_parameters = self
+        //     .get_provider()?
+        //     .chain_info()
+        //     .await?
+        //     .consensus_parameters;
+        //
+        // let script_offset = base_offset(&consensus_parameters);
+        // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
 
-        let script_offset = base_offset(&consensus_parameters);
-        tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
+        self.pay_fee_resources(&mut tb, amount, 0).await?;
 
-        self.pay_fee_resources(&mut tx, amount, 0).await?;
+        let tx = tb.build()?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -296,5 +286,14 @@ impl Account for Predicate {
             .expect("MessageId could not be retrieved from tx receipts.");
 
         Ok((tx_id, message_id.to_string(), receipts))
+    }
+
+    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
+        spendable_resources
+            .into_iter()
+            .map(|resource| {
+                Input::resource_predicate(resource, self.code.clone(), self.data.clone())
+            })
+            .collect::<Vec<_>>()
     }
 }

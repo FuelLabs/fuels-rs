@@ -6,9 +6,12 @@ use crate::message::Message;
 use crate::parameters::TxParameters;
 use crate::resource::Resource;
 use crate::transaction::{CreateTransaction, ScriptTransaction};
-use crate::{error, offsets};
+use crate::offsets;
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_tx::{ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, Witness};
+use fuel_tx::{
+    ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
+    Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
+};
 use fuel_types::{Address, AssetId, Bytes32, ContractId, Salt};
 
 pub trait TransactionBuilder<T> {
@@ -68,7 +71,6 @@ pub struct CreateTransactionBuilder {
 
 macro_rules! impl_tx_trait {
     ($ty: ident, $tx_ty: ident) => {
-
         impl TransactionBuilder<$tx_ty> for $ty {
             fn build(self) -> Result<$tx_ty> {
                 if self.is_using_predicates() && self.consensus_parameters.is_none() {
@@ -85,11 +87,23 @@ macro_rules! impl_tx_trait {
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(params, &self.clone().build().expect("Error in build").tx)
+                TransactionFee::checked_from_tx(
+                    params,
+                    &self.clone().build().expect("Error in build").tx,
+                )
             }
 
-            fn check_without_signatures(&self, block_height: u64, parameters: &ConsensusParameters) -> Result<()> {
-                Ok(self.clone().build().expect("Error in build").tx.check_without_signatures(block_height, parameters)?)
+            fn check_without_signatures(
+                &self,
+                block_height: u64,
+                parameters: &ConsensusParameters,
+            ) -> Result<()> {
+                Ok(self
+                    .clone()
+                    .build()
+                    .expect("Error in build")
+                    .tx
+                    .check_without_signatures(block_height, parameters)?)
             }
 
             fn set_maturity(mut self, maturity: u64) -> Self {
@@ -128,7 +142,10 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            fn set_consensus_parameters(mut self, consensus_parameters: ConsensusParameters) -> Self {
+            fn set_consensus_parameters(
+                mut self,
+                consensus_parameters: ConsensusParameters,
+            ) -> Self {
                 self.consensus_parameters = Some(consensus_parameters);
                 self
             }
@@ -148,7 +165,6 @@ macro_rules! impl_tx_trait {
             fn outputs_mut(&mut self) -> &mut Vec<Output> {
                 &mut self.outputs
             }
-
         }
     };
 }
@@ -187,9 +203,9 @@ impl ScriptTransactionBuilder {
         params: TxParameters,
     ) -> Self {
         ScriptTransactionBuilder::default()
-            .set_tx_params(params)
             .set_inputs(inputs)
             .set_outputs(outputs)
+            .set_tx_params(params)
     }
 
     /// Craft a transaction used to transfer funds to a contract.
