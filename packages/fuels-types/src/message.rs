@@ -8,13 +8,13 @@ use fuel_tx::{Input, MessageId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum MessageStatus {
     Unspent,
     Spent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Message {
     pub amount: u64,
     pub sender: Bech32Address,
@@ -69,6 +69,31 @@ impl From<Message> for MessageConfig {
             amount: message.amount,
             data: message.data,
             da_height: message.da_height.into(),
+        }
+    }
+}
+
+impl Message {
+    pub(crate) fn _from_message_signed(coin: Input) -> Option<Self> {
+        match coin {
+            Input::MessageSigned {
+                message_id: _,
+                sender,
+                recipient,
+                amount,
+                nonce,
+                witness_index: _,
+                data,
+            } => Some(Self {
+                amount,
+                sender: sender.into(),
+                recipient: recipient.into(),
+                nonce,
+                data,
+                da_height: Default::default(),
+                status: MessageStatus::Unspent,
+            }),
+            _ => None,
         }
     }
 }

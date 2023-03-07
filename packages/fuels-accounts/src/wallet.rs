@@ -313,6 +313,7 @@ impl WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
+
         let consensus_parameters = self
             .get_provider()?
             .chain_info()
@@ -398,17 +399,15 @@ impl Account for WalletUnlocked {
     async fn pay_fee_resources<
         Tx: Transaction + Send,
         Tb: TransactionBuilder<Tx> + Send + Clone,
-    >(
+    > (
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
-        //Todo: maybe we should call sign_transaction() outside of this method
         self.add_fee_resources(tb, previous_base_amount, witness_index)
             .await?;
-        let mut tx = tb.clone().build()?;
-        self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(tb).await?;
         Ok(())
     }
 
@@ -501,8 +500,9 @@ impl Account for WalletUnlocked {
             0
         };
         self.add_fee_resources(&mut tb, base_amount, 0).await?;
-        let mut tx = tb.build()?;
-        self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(&mut tb).await?;
+        let tx = tb.build()?;
+
 
         let tx_id = tx.id();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -560,8 +560,9 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> Result<Signature> {
-        let id = tx.id();
+    async fn sign_transaction<Tx: Transaction, Tb: TransactionBuilder<Tx> + Send + Clone>(&self, tb: &mut Tb) -> Result<Signature> {
+
+        let id = tb.clone().build()?.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
         // it can't guarantee that the provided bytes will be the product
@@ -573,7 +574,7 @@ impl Signer for WalletUnlocked {
 
         let witness = vec![Witness::from(sig.as_ref())];
 
-        let witnesses = tx.witnesses_mut();
+        let witnesses = tb.witnesses_mut();
 
         match witnesses.len() {
             0 => *witnesses = witness,

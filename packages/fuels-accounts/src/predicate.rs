@@ -88,12 +88,12 @@ impl Account for Predicate {
         self.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send + Clone>(
         &self,
         tb: &mut Tb,
         previous_base_amount: u64,
         _witness_index: u8,
-    ) -> std::result::Result<(), Error> {
+    ) -> Result<()> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
         let transaction_fee = tb
@@ -104,6 +104,9 @@ impl Account for Predicate {
             matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == BASE_ASSET_ID) ||
                 matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
         });
+
+        dbg!(&base_asset_inputs);
+        dbg!(&remaining_inputs);
 
         let base_inputs_sum: u64 = base_asset_inputs
             .iter()

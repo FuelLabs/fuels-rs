@@ -36,7 +36,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Transaction + Send>(&self, message: &mut Tx)
+    async fn sign_transaction<Tx: Transaction, Tb: TransactionBuilder<Tx> + Send + Clone>(&self, message: &mut Tb)
         -> Result<Signature>;
 }
 

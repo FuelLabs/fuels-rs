@@ -21,7 +21,7 @@ use fuels_accounts::{
 };
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::errors::Error::ProviderError;
-use fuels_types::transaction_builders::{CreateTransactionBuilder, TransactionBuilder};
+use fuels_types::transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder, TransactionBuilder};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -32,6 +32,7 @@ use fuels_types::{
     transaction::ScriptTransaction,
     Selector, Token,
 };
+use fuels_types::transaction::Transaction;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -227,7 +228,6 @@ impl<T: Account + Clone> Contract<T> {
     ) -> Result<Bech32ContractId> {
         let (mut tb, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
-
         // let consensus_parameters = account
         //     .get_provider()
         //     .expect("Could not get provider")
@@ -248,12 +248,17 @@ impl<T: Account + Clone> Contract<T> {
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
-        tb.check_without_signatures(
+        dbg!("momo");
+
+        let tx = tb.build()?;
+
+        tx.check_without_signatures(
             chain_info.latest_block.header.height,
             &chain_info.consensus_parameters,
         )?;
 
-        let tx = tb.build()?;
+
+        // let tx = tb.build()?;
 
         provider.send_transaction(&tx).await?;
 
@@ -675,7 +680,7 @@ where
     }
 
     /// Returns the script that executes the contract call
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
+    pub async fn build_tx(&self) -> Result<ScriptTransactionBuilder> {
         build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
             &self.tx_parameters,
@@ -701,7 +706,7 @@ where
     }
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
+        let tx = self.build_tx().await?.build()?;
 
         let receipts = if simulate {
             simulate_and_check_success(&self.provider, &tx).await?
@@ -756,7 +761,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
+        let script = self.build_tx().await?.build()?;
 
         let transaction_cost = self
             .provider
@@ -822,7 +827,7 @@ impl<T: fuels_accounts::Account> MultiContractCallHandler<T> {
     }
 
     /// Returns the script that executes the contract calls
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
+    pub async fn build_tx(&self) -> Result<ScriptTransactionBuilder> {
         if self.contract_calls.is_empty() {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
@@ -853,7 +858,7 @@ impl<T: fuels_accounts::Account> MultiContractCallHandler<T> {
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
         let provider = self.account.get_provider()?;
-        let tx = self.build_tx().await?;
+        let tx = self.build_tx().await?.build()?;
 
         let receipts = if simulate {
             simulate_and_check_success(provider, &tx).await?
@@ -867,7 +872,7 @@ impl<T: fuels_accounts::Account> MultiContractCallHandler<T> {
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
         let provider = self.account.get_provider()?;
-        let tx = self.build_tx().await?;
+        let tx = self.build_tx().await?.build()?;
 
         simulate_and_check_success(provider, &tx).await?;
 
@@ -931,7 +936,7 @@ impl<T: fuels_accounts::Account> MultiContractCallHandler<T> {
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
+        let script = self.build_tx().await?.build()?;
 
         let transaction_cost = self
             .account

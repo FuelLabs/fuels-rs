@@ -37,6 +37,8 @@ pub trait TransactionBuilder<T> {
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
     fn outputs(&self) -> &Vec<Output>;
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
+    fn witnesses(&self) -> &Vec<Witness>;
+    fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
 }
 
 #[derive(Debug, Clone, Default)]
@@ -76,12 +78,12 @@ macro_rules! impl_tx_trait {
                 if self.is_using_predicates() && self.consensus_parameters.is_none() {
                     return Err(Error::TransactionBuildError);
                 }
-                let base_offset = offsets::base_offset_script(&self.consensus_parameters.unwrap());
+                let base_offset = offsets::base_offset_script(&self.consensus_parameters.unwrap_or_default());
                 Ok(self.convert_to_fuel_tx(base_offset))
             }
 
             fn is_using_predicates(&self) -> bool {
-                self.inputs
+               self.inputs
                     .iter()
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
@@ -165,6 +167,15 @@ macro_rules! impl_tx_trait {
             fn outputs_mut(&mut self) -> &mut Vec<Output> {
                 &mut self.outputs
             }
+
+            fn witnesses(&self) -> &Vec<Witness> {
+                self.witnesses.as_ref()
+            }
+
+            fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
+                &mut self.witnesses
+            }
+
         }
     };
 }
@@ -174,6 +185,9 @@ impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
     fn convert_to_fuel_tx(self, base_offset: usize) -> ScriptTransaction {
+
+        dbg!("script convert_to_fuel_tx");
+
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
@@ -295,6 +309,8 @@ impl ScriptTransactionBuilder {
 
 impl CreateTransactionBuilder {
     fn convert_to_fuel_tx(self, base_offset: usize) -> CreateTransaction {
+        dbg!("create convert_to_fuel_tx");
+
         FuelTransaction::create(
             self.gas_limit.into(),
             self.gas_limit.into(),

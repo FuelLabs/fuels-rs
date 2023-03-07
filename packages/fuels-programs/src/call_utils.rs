@@ -40,7 +40,8 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     calls: &[ContractCall],
     tx_parameters: &TxParameters,
     account: &T,
-) -> Result<ScriptTransaction> {
+// ) -> Result<ScriptTransaction> {
+) -> Result<ScriptTransactionBuilder> {
     let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
 
     // Calculate instructions length for call instructions
@@ -67,9 +68,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
 
-    dbg!(&inputs);
-
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], outputs, *tx_parameters)
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, *tx_parameters)
         .set_script(script)
         .set_script_data(script_data.clone());
 
@@ -89,11 +88,9 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     match base_asset_amount {
         Some((_, base_amount)) => account.pay_fee_resources(&mut tb, *base_amount, 0).await?,
         None => account.pay_fee_resources(&mut tb, 0, 0).await?,
-    }
+    };
 
-    let tx = tb.build()?;
-
-    Ok(tx)
+    Ok(tb)
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -276,7 +273,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         generate_contract_inputs(contract_ids),
         account.convert_to_signed_resources(spendable_resources),
     )
-    .collect();
+        .collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node
@@ -289,7 +286,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         extract_variable_outputs(calls),
         extract_message_outputs(calls)
     )
-    .collect();
+        .collect();
     (inputs, outputs)
 }
 
@@ -751,22 +748,13 @@ mod test {
             get_transaction_inputs_outputs(&[call], generate_spendable_resources(), &wallet);
 
         // then
-        let inputs_as_signed_coins: HashSet<Input> = inputs[1..].iter().cloned().collect();
+        let inputs_as_signed_coins: HashSet<Input> = inputs[1..].iter().cloned().collect::<HashSet<Input>>();
 
         let expected_inputs = generate_spendable_resources()
             .into_iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => Input::coin_signed(
-                    coin.utxo_id,
-                    coin.owner.into(),
-                    coin.amount,
-                    coin.asset_id,
-                    TxPointer::default(),
-                    0,
-                    0,
-                ),
-                Resource::Message(_) => panic!("Resources contained messages."),
-            })
+            .map(|resource|
+                Input::resource_signed(resource, 0)
+            )
             .collect::<HashSet<_>>();
 
         assert_eq!(expected_inputs, inputs_as_signed_coins);
@@ -836,10 +824,10 @@ mod test {
             (asset_id_1, 300),
             (asset_id_2, 400),
         ]
-        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
-        .map(|call_parameters| {
-            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
-        });
+            .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+            .map(|call_parameters| {
+                ContractCall::new_with_random_id().with_call_parameters(call_parameters)
+            });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls);
 

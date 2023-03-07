@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::transaction_builders::ScriptTransactionBuilder;
+    use fuels::types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
     use fuels::{accounts::Account, prelude::Result};
 
     #[tokio::test]
@@ -160,10 +160,11 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx =
+        let mut tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
-        wallet_1.sign_transaction(&mut tx).await?;
+        wallet_1.sign_transaction(&mut tb).await?;
 
+        let tx = tb.build()?;
         let _receipts = provider.send_transaction(&tx).await?;
 
         let balances = wallet_2.get_balances().await?;
@@ -219,7 +220,7 @@ mod tests {
         let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
         let call_handler = contract_instance.methods().initialize_counter(42);
-        let mut tx = call_handler.build_tx().await?;
+        let mut tb = call_handler.build_tx().await?;
         // ANCHOR_END: modify_call_inputs_instance
 
         // ANCHOR: modify_call_inputs_execute
@@ -227,13 +228,14 @@ mod tests {
         let input = wallet_1
             .get_asset_inputs_for_amount(some_asset_id, SEND_AMOUNT, 0)
             .await?;
-        tx.inputs_mut().extend(input);
+        tb.inputs_mut().extend(input);
 
         let output =
             wallet_1.get_asset_outputs_for_amount(wallet_2.address(), some_asset_id, SEND_AMOUNT);
-        tx.outputs_mut().extend(output);
+        tb.outputs_mut().extend(output);
 
         let provider = wallet_1.provider()?;
+        let tx = tb.build()?;
         let receipts = provider.send_transaction(&tx).await?;
         // ANCHOR_END: modify_call_inputs_execute
 

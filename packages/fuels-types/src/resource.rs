@@ -5,7 +5,7 @@ use fuel_tx::AssetId;
 
 use crate::{coin::Coin, constants::BASE_ASSET_ID, message::Message};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Resource {
     Coin(Coin),
     Message(Message),
