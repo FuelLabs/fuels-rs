@@ -97,7 +97,13 @@ fn is_type_sdk_provided(type_path: &TypePath) -> bool {
 }
 
 fn is_type_unused(type_path: &TypePath) -> bool {
-    *type_path == TypePath::new("std::vec::RawVec").expect("Known to be correct")
+    let msg = "Known to be correct";
+    [
+        TypePath::new("std::vec::RawVec").expect(msg),
+        // TODO: remove once forc starts generating type-paths always
+        TypePath::new("RawVec").expect(msg),
+    ]
+    .contains(type_path)
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to

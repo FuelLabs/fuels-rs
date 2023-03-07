@@ -296,21 +296,21 @@ fn has_struct_format(field: &str) -> bool {
 }
 
 fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
-    if the_type.type_field == "struct std::vec::Vec" {
-        if the_type.generic_params.len() != 1 {
-            return Err(error!(
-                InvalidType,
-                "Vec must have exactly one generic argument for its type. Found: {:?}",
-                the_type.generic_params
-            ));
-        }
-
-        let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
-
-        return Ok(Some(ParamType::Vector(Box::new(vec_elem_type))));
+    if !["struct std::vec::Vec", "struct Vec"].contains(&the_type.type_field.as_str()) {
+        return Ok(None);
     }
 
-    Ok(None)
+    if the_type.generic_params.len() != 1 {
+        return Err(error!(
+            InvalidType,
+            "Vec must have exactly one generic argument for its type. Found: {:?}",
+            the_type.generic_params
+        ));
+    }
+
+    let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
+
+    Ok(Some(ParamType::Vector(Box::new(vec_elem_type))))
 }
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
@@ -389,8 +389,9 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::param_types::ParamType;
+
+    use super::*;
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
@@ -1203,5 +1204,35 @@ mod tests {
         assert_eq!(result, expected_param_type);
 
         Ok(())
+    }
+    #[test]
+    fn try_vector_is_type_path_backward_compatible() {
+        // TODO: remove this once forc starts generating type-paths always
+        let the_type = given_vec_type_w_path("Vec");
+
+        let param_type = try_vector(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
+    }
+
+    #[test]
+    fn try_vector_correctly_resolves_param_type() {
+        let the_type = given_vec_type_w_path("std::vec::Vec");
+
+        let param_type = try_vector(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
+    }
+
+    fn given_vec_type_w_path(path: &str) -> Type {
+        Type {
+            type_field: format!("struct {path}"),
+            generic_params: vec![Type {
+                type_field: "u8".to_string(),
+                generic_params: vec![],
+                components: vec![],
+            }],
+            components: vec![],
+        }
     }
 }

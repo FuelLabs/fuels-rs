@@ -37,4 +37,5 @@ std = [
     "fuels-test-helpers/std",
     "fuels-types/std",
 ]
+test-type-paths = []
 fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "dep:fuel-core"]

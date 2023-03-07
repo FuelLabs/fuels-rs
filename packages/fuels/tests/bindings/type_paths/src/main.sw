@@ -1,9 +1,10 @@
 contract;
 
 dep contract_a_types;
+dep another_lib;
 
 use contract_a_types::AWrapper;
-use shared_lib::VeryCommonNameStruct;
+use another_lib::VeryCommonNameStruct;
 
 abi MyContract {
     fn test_function(arg: AWrapper) -> VeryCommonNameStruct;

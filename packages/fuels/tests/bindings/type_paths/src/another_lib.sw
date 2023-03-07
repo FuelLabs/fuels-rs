@@ -1,4 +1,4 @@
-library shared_lib;
+library another_lib;
 
 pub struct VeryCommonNameStruct {
 	field_a: u32

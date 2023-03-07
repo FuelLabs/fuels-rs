@@ -72,8 +72,9 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::program_bindings::abi_types::FullTypeDeclaration;
+
+    use super::*;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
@@ -141,6 +142,17 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
             TypePath::new(original_type_path).expect(msg),
             TypePath::new(provided_type_path).expect(msg),
         )
+    })
+    .flat_map(|(original_type_path, provided_type_path)| {
+        // TODO: remove the flat_map once forc starts generating type-paths always
+        let backward_compat_mapping = original_type_path
+            .ident()
+            .expect("The original type path must have at least one part")
+            .into();
+        [
+            (backward_compat_mapping, provided_type_path.clone()),
+            (original_type_path, provided_type_path),
+        ]
     })
     .collect()
 }

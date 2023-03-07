@@ -1,11 +1,12 @@
 use std::{slice, str::FromStr};
 
+use sha2::{Digest, Sha256};
+
 use fuels::{
     core::abi_encoder::ABIEncoder,
     prelude::*,
     types::{traits::Tokenizable, Bits256, Byte, EvmAddress},
 };
-use sha2::{Digest, Sha256};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -929,10 +930,38 @@ async fn shared_types() -> Result<()> {
 
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/bindings/type_paths/contract_a/out/debug/contract_a-abi.json"
-    ));
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "ContractA",
+            abi = "packages/fuels/tests/bindings/type_paths"
+        ),
+        Deploy(
+            name = "contract_a_instance",
+            contract = "ContractA",
+            wallet = "wallet"
+        ),
+    );
+
+    {
+        let contract_a_type =
+            abigen_bindings::contract_a_mod::contract_a_types::VeryCommonNameStruct {
+                another_field: 10u32,
+            };
+
+        let rtn = contract_a_instance
+            .methods()
+            .test_function(AWrapper {
+                field: contract_a_type,
+            })
+            .call()
+            .await?
+            .value;
+
+        let rtn_using_the_other_type =
+            abigen_bindings::contract_a_mod::another_lib::VeryCommonNameStruct { field_a: 10u32 };
+        assert_eq!(rtn, rtn_using_the_other_type);
+    }
 
     Ok(())
 }
