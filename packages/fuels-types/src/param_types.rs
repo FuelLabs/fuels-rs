@@ -7,7 +7,6 @@ use fuel_abi_types::{
         has_tuple_format,
     },
 };
-use itertools::Itertools;
 use strum_macros::EnumString;
 
 use crate::{
@@ -113,7 +112,7 @@ impl ParamType {
         type_application: &TypeApplication,
         type_lookup: &HashMap<usize, TypeDeclaration>,
     ) -> Result<Self> {
-        Type::from(type_application, type_lookup).try_into()
+        Type::try_from(type_application, type_lookup)?.try_into()
     }
 }
 
@@ -132,10 +131,10 @@ impl Type {
     ///
     /// * `type_application`: the type we wish to resolve
     /// * `types`: all types used in the function call
-    pub fn from(
+    pub fn try_from(
         type_application: &TypeApplication,
         type_lookup: &HashMap<usize, TypeDeclaration>,
-    ) -> Self {
+    ) -> Result<Self> {
         Self::resolve(type_application, type_lookup, &[])
     }
 
@@ -143,41 +142,56 @@ impl Type {
         type_application: &TypeApplication,
         type_lookup: &HashMap<usize, TypeDeclaration>,
         parent_generic_params: &[(usize, Type)],
-    ) -> Self {
-        let type_decl = type_lookup.get(&type_application.type_id).unwrap();
+    ) -> Result<Self> {
+        let type_declaration = type_lookup.get(&type_application.type_id).ok_or_else(|| {
+            error!(
+                InvalidData,
+                "type id {} not found in type lookup", type_application.type_id
+            )
+        })?;
 
-        if extract_generic_name(&type_decl.type_field).is_some() {
+        if extract_generic_name(&type_declaration.type_field).is_some() {
             let (_, generic_type) = parent_generic_params
                 .iter()
                 .find(|(id, _)| *id == type_application.type_id)
-                .unwrap();
+                .ok_or_else(|| {
+                    error!(
+                        InvalidData,
+                        "type id {} not found in parent's generic parameters",
+                        type_application.type_id
+                    )
+                })?;
 
-            return generic_type.clone();
+            return Ok(generic_type.clone());
         }
 
         // Figure out what does the current type do with the inherited generic
         // parameters and reestablish the mapping since the current type might have
         // renamed the inherited generic parameters.
-        let generic_params_lookup =
-            Self::determine_generics_for_type(type_application, type_lookup, parent_generic_params);
+        let generic_params_lookup = Self::determine_generics_for_type(
+            type_application,
+            type_lookup,
+            type_declaration,
+            parent_generic_params,
+        )?;
 
         // Resolve the enclosed components (if any) with the newly resolved generic
         // parameters.
-        let components = type_decl
+        let components = type_declaration
             .components
             .iter()
             .flatten()
             .map(|component| Self::resolve(component, type_lookup, &generic_params_lookup))
-            .collect_vec();
+            .collect::<Result<Vec<_>>>()?;
 
-        Type {
-            type_field: type_decl.type_field.clone(),
+        Ok(Type {
+            type_field: type_declaration.type_field.clone(),
             components,
             generic_params: generic_params_lookup
                 .into_iter()
                 .map(|(_, ty)| ty)
                 .collect(),
-        }
+        })
     }
 
     /// For the given type generates generic_type_id -> Type mapping describing to
@@ -191,11 +205,11 @@ impl Type {
     ///                            enclosing type (a struct/enum/array etc.).
     fn determine_generics_for_type(
         type_application: &TypeApplication,
-        types: &HashMap<usize, TypeDeclaration>,
+        type_lookup: &HashMap<usize, TypeDeclaration>,
+        type_declaration: &TypeDeclaration,
         parent_generic_params: &[(usize, Type)],
-    ) -> Vec<(usize, Self)> {
-        let type_decl = types.get(&type_application.type_id).unwrap();
-        match &type_decl.type_parameters {
+    ) -> Result<Vec<(usize, Self)>> {
+        match &type_declaration.type_parameters {
             // The presence of type_parameters indicates that the current type
             // (a struct or an enum) defines some generic parameters (i.e. SomeStruct<T, K>).
             Some(params) if !params.is_empty() => {
@@ -204,8 +218,8 @@ impl Type {
                     .type_arguments
                     .iter()
                     .flatten()
-                    .map(|ty| Self::resolve(ty, types, parent_generic_params))
-                    .collect_vec();
+                    .map(|ty| Self::resolve(ty, type_lookup, parent_generic_params))
+                    .collect::<Result<Vec<_>>>()?;
 
                 let generics_to_use = if !generic_params_from_current_type.is_empty() {
                     generic_params_from_current_type
@@ -229,9 +243,9 @@ impl Type {
                 //     c: K
                 // }
 
-                zip(params.clone(), generics_to_use).collect()
+                Ok(zip(params.clone(), generics_to_use).collect())
             }
-            _ => parent_generic_params.to_vec(),
+            _ => Ok(parent_generic_params.to_vec()),
         }
     }
 }
