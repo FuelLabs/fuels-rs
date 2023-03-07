@@ -927,6 +927,7 @@ async fn shared_types() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "test-type-paths")]
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
     setup_contract_test!(
