@@ -53,9 +53,9 @@ impl GeneratedCode {
         let code_in_mods = self
             .code_in_mods
             .iter()
-            .sorted_by(|(first_mod_name, _), (second_mod_name, _)| {
+            .sorted_by_key(|(mod_name, _)| {
                 // Sorted to make test expectations maintainable
-                first_mod_name.cmp(second_mod_name)
+                *mod_name
             })
             .map(|(mod_name, generated_code)| {
                 let code = generated_code.code();
@@ -126,7 +126,7 @@ impl GeneratedCode {
             .flat_map(|(mod_name, code)| {
                 code.types_with_unique_names()
                     .into_iter()
-                    .map(|type_path| type_path.prepend(TypePath::new(mod_name).unwrap()))
+                    .map(|type_path| type_path.prepend(mod_name.into()))
                     .collect::<Vec<_>>()
             })
             .chain(self.usable_types.iter().cloned())

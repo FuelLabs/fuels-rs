@@ -234,7 +234,7 @@ mod tests {
     }
 
     #[test]
-    fn path_with_only_one_part_has_no_parent() {
+    fn path_with_only_one_part_has_empty_parent() {
         let type_path = TypePath::new(":: std").unwrap();
 
         let parent = type_path.parent();

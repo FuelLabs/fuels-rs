@@ -63,7 +63,7 @@ Finally, `pub use` statements are inserted, so you don't have to fully qualify t
 > It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling `abigen!` multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the `abigen!` calls into different modules to resolve the collision.
 
 ### Type paths
-Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main `mod` of your program bindings, i.e. a type in a contract binding `MyContract` imported from a library `some_library` would be generated under `my_contract_mod::SomeLibraryType`.
+Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main `mod` of your program bindings, i.e. a type in a contract binding `MyContract` imported from a library `some_library` would be generated under `abigen_bindings::my_contract_mod::SomeLibraryType`.
 
 This can cause problems if you happen to have two types with the same name in different libraries of your program.
 

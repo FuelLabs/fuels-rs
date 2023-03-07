@@ -570,23 +570,31 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
-        for (type_name, expected_path) in sdk_provided_custom_types_lookup() {
-            let type_application = FullTypeApplication {
-                name: "".to_string(),
-                type_decl: FullTypeDeclaration {
-                    type_field: format!("struct {type_name}"),
-                    components: vec![],
-                    type_parameters: vec![],
-                },
-                type_arguments: vec![],
-            };
+        for (type_path, expected_path) in sdk_provided_custom_types_lookup() {
+            // given
+            let type_application = given_fn_arg_of_custom_type(&type_path);
+
+            // when
             let resolved_type = TypeResolver::new().resolve(&type_application).unwrap();
 
+            // then
             let expected_type_name = expected_path.into_token_stream();
             assert_eq!(
                 resolved_type.type_name.to_string(),
                 expected_type_name.to_string()
             );
+        }
+    }
+
+    fn given_fn_arg_of_custom_type(type_path: &TypePath) -> FullTypeApplication {
+        FullTypeApplication {
+            name: "some_arg".to_string(),
+            type_decl: FullTypeDeclaration {
+                type_field: format!("struct {type_path}"),
+                components: vec![],
+                type_parameters: vec![],
+            },
+            type_arguments: vec![],
         }
     }
 }

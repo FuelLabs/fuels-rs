@@ -723,4 +723,39 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn shared_types_are_just_reexported() {
+        // given
+        let type_decl = FullTypeDeclaration {
+            type_field: "struct some_shared_lib::SharedStruct".to_string(),
+            components: vec![],
+            type_parameters: vec![],
+        };
+        let shared_types = HashSet::from([type_decl.clone()]);
+
+        // when
+        let generated_code = generate_types(&[type_decl], &shared_types, false).unwrap();
+
+        // then
+        let expected_code = quote! {
+            #[allow(clippy::too_many_arguments)]
+            #[no_implicit_prelude]
+            pub mod some_shared_lib {
+                use ::core::{
+                    clone::Clone,
+                    convert::{Into, TryFrom, From},
+                    iter::IntoIterator,
+                    iter::Iterator,
+                    marker::Sized,
+                    panic,
+                };
+
+                use ::std::{string::ToString, format, vec};
+                pub use super::super::shared_types::some_shared_lib::SharedStruct;
+            }
+        };
+
+        assert_eq!(generated_code.code().to_string(), expected_code.to_string());
+    }
 }

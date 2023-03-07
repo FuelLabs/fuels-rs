@@ -74,7 +74,13 @@ impl FunctionGenerator {
 fn function_arguments(inputs: &[FullTypeApplication]) -> Result<Vec<Component>> {
     inputs
         .iter()
-        .map(|input| Component::new(input, true, TypePath::default()))
+        .map(|input| {
+            // Currently all our function-related bindings are resolved at the top-level-mod thus
+            // the default used below. If we ever want to change that then the new mod would need to
+            // be propagated to this fn.
+            let code_parent_mod = TypePath::default();
+            Component::new(input, true, code_parent_mod)
+        })
         .collect::<Result<_>>()
 }
 
