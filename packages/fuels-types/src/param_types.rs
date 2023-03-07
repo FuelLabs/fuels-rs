@@ -389,9 +389,8 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::param_types::ParamType;
-
     use super::*;
+    use crate::param_types::ParamType;
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;

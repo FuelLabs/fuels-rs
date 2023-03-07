@@ -72,9 +72,8 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
-
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {

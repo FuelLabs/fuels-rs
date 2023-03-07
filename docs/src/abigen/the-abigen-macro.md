@@ -53,7 +53,7 @@ pub use shared_types::{/*..*/};
 
 Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`. Inside the respective mods, the custom types used by that program are generated, and the bindings through which the actual calls can be made.
 
-One extra `mod` called `shared_types` is generated if `abigen!` detects that the given programs share types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module, generated only once, and then shared between all programs that use it.
+One extra `mod` called `shared_types` is generated if `abigen!` detects that the given programs share types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module, generated only once, and then shared between all program bindings that use it. Reexports are added to each mod so that even if a type is deemed shared, you can still access it as though each `mod` had generated the type for itself (i.e. `my_contract_mod::SharedType`).
 
 A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.
 
