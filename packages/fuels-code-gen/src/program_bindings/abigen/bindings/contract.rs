@@ -8,7 +8,7 @@ use crate::{
         abi_types::{FullABIFunction, FullProgramABI},
         abigen::{
             bindings::function_generator::FunctionGenerator,
-            configurables::generate_code_for_configurable_constatnts,
+            configurables::generate_code_for_configurable_constants,
             logs::logs_lookup_instantiation_code,
         },
         generated_code::GeneratedCode,
@@ -36,7 +36,7 @@ pub(crate) fn contract_bindings(
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
-        generate_code_for_configurable_constatnts(&configuration_struct_name, &abi.configurables)?;
+        generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
         pub struct #name {

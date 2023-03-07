@@ -28,7 +28,7 @@ impl ResolvedConfigurable {
     }
 }
 
-pub(crate) fn generate_code_for_configurable_constatnts(
+pub(crate) fn generate_code_for_configurable_constants(
     configurable_struct_name: &Ident,
     configurables: &[FullConfigurable],
 ) -> Result<TokenStream> {
