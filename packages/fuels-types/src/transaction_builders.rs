@@ -43,31 +43,31 @@ pub trait TransactionBuilder<T> {
 
 #[derive(Debug, Clone, Default)]
 pub struct ScriptTransactionBuilder {
-    pub(crate) gas_price: u64,
-    pub(crate) gas_limit: u64,
-    pub(crate) maturity: u64,
-    pub(crate) script: Vec<u8>,
-    pub(crate) script_data: Vec<u8>,
-    pub(crate) inputs: Vec<Input>,
-    pub(crate) outputs: Vec<Output>,
-    pub(crate) witnesses: Vec<Witness>,
-    pub consensus_parameters: Option<ConsensusParameters>,
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+    pub script: Vec<u8>,
+    pub script_data: Vec<u8>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub witnesses: Vec<Witness>,
+    pub(crate) consensus_parameters: Option<ConsensusParameters>,
     pub tx_offset: usize,
 }
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateTransactionBuilder {
-    pub(crate) gas_price: u64,
-    pub(crate) gas_limit: u64,
-    pub(crate) maturity: u64,
-    pub(crate) bytecode_length: u64,
-    pub(crate) bytecode_witness_index: u8,
-    pub(crate) storage_slots: Vec<StorageSlot>,
-    pub(crate) inputs: Vec<Input>,
-    pub(crate) outputs: Vec<Output>,
-    pub(crate) witnesses: Vec<Witness>,
-    pub(crate) salt: Salt,
-    pub consensus_parameters: Option<ConsensusParameters>,
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+    pub bytecode_length: u64,
+    pub bytecode_witness_index: u8,
+    pub storage_slots: Vec<StorageSlot>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub witnesses: Vec<Witness>,
+    pub salt: Salt,
+    pub(crate) consensus_parameters: Option<ConsensusParameters>,
     pub tx_offset: usize,
 }
 
@@ -89,9 +89,11 @@ macro_rules! impl_tx_trait {
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+                let tx = &self.clone().build().expect("Error in build").tx;
+                dbg!(&tx);
                 TransactionFee::checked_from_tx(
                     params,
-                    &self.clone().build().expect("Error in build").tx,
+                    tx
                 )
             }
 
@@ -124,6 +126,10 @@ macro_rules! impl_tx_trait {
             }
 
             fn set_tx_params(self, tx_params: TxParameters) -> Self {
+
+                dbg!("aswdasdasd");
+                dbg!(tx_params);
+
                 self.set_gas_limit(tx_params.gas_limit)
                     .set_gas_price(tx_params.gas_price)
                     .set_maturity(tx_params.maturity)
@@ -312,7 +318,7 @@ impl CreateTransactionBuilder {
         dbg!("create convert_to_fuel_tx");
 
         FuelTransaction::create(
-            self.gas_limit.into(),
+            self.gas_price.into(),
             self.gas_limit.into(),
             self.maturity.into(),
             self.bytecode_witness_index,

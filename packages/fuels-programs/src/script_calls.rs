@@ -4,16 +4,14 @@ use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::provider::Provider;
 use fuels_types::offsets::base_offset_script;
-use fuels_types::transaction_builders::{
-    ScriptTransactionBuilder, TransactionBuilder,
-};
+use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
     parameters::TxParameters,
     traits::{Parameterize, Tokenizable},
-    transaction::{ScriptTransaction, Transaction},
+    transaction::Transaction,
 };
 use itertools::chain;
 use fuels_types::input::Input;
@@ -138,7 +136,7 @@ where
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
 
-    async fn build_tx(&self) -> Result<ScriptTransaction> {
+    async fn prepare_builder(&self) -> Result<ScriptTransactionBuilder> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -163,7 +161,7 @@ where
         )
         .collect();
 
-        let mut tb =
+        let tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
                 .set_script(self.script_call.script_binary.clone())
                 .set_script_data(self.compute_script_data().await?);
@@ -175,11 +173,9 @@ where
         //     .build();
         //
         // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
-        self.account.pay_fee_resources(&mut tb, 0, 0).await?;
+        // let tx = self.account.pay_fee_resources(tb, 0, 0).await?;
 
-        let tx = tb.build()?;
-
-        Ok(tx)
+        Ok(tb)
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -189,7 +185,9 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
-        let tx = self.build_tx().await?;
+        let tb = self.prepare_builder().await?;
+        // TODO: previous_base_amount
+        let tx = self.account.pay_fee_resources(tb, 0,0).await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

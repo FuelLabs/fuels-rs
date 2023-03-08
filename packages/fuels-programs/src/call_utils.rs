@@ -9,17 +9,18 @@ use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::provider::Provider;
 use fuels_accounts::Account;
 use fuels_types::offsets::call_script_data_offset;
-use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
+use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     parameters::TxParameters,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::Transaction,
 };
 use itertools::{chain, Itertools};
 use fuels_types::input::Input;
+use fuels_types::transaction::ScriptTransaction;
 
 use crate::contract::ContractCall;
 
@@ -40,8 +41,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     calls: &[ContractCall],
     tx_parameters: &TxParameters,
     account: &T,
-// ) -> Result<ScriptTransaction> {
-) -> Result<ScriptTransactionBuilder> {
+) -> Result<ScriptTransaction> {
     let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
 
     // Calculate instructions length for call instructions
@@ -68,7 +68,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
 
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, *tx_parameters)
+    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, *tx_parameters)
         .set_script(script)
         .set_script_data(script_data.clone());
 
@@ -85,12 +85,12 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     let base_asset_amount = required_asset_amounts
         .iter()
         .find(|(asset_id, _)| *asset_id == AssetId::default());
-    match base_asset_amount {
-        Some((_, base_amount)) => account.pay_fee_resources(&mut tb, *base_amount, 0).await?,
-        None => account.pay_fee_resources(&mut tb, 0, 0).await?,
+    let tx = match base_asset_amount {
+        Some((_, base_amount)) => account.pay_fee_resources(tb, *base_amount, 0).await?,
+        None => account.pay_fee_resources(tb, 0, 0).await?,
     };
 
-    Ok(tb)
+    Ok(tx)
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`

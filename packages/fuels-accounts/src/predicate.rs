@@ -88,12 +88,12 @@ impl Account for Predicate {
         self.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send + Clone>(
+    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
-        tb: &mut Tb,
+        mut tb: Tb,
         previous_base_amount: u64,
         _witness_index: u8,
-    ) -> Result<()> {
+    ) -> Result<Tx> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
         let transaction_fee = tb
@@ -104,9 +104,6 @@ impl Account for Predicate {
             matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == BASE_ASSET_ID) ||
                 matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
         });
-
-        dbg!(&base_asset_inputs);
-        dbg!(&remaining_inputs);
 
         let base_inputs_sum: u64 = base_asset_inputs
             .iter()
@@ -151,7 +148,9 @@ impl Account for Predicate {
                 .push(Output::change(self.address().into(), 0, BASE_ASSET_ID));
         }
 
-        Ok(())
+        let tx = tb.build()?;
+
+        Ok(tx)
     }
 
     async fn transfer(
@@ -167,7 +166,7 @@ impl Account for Predicate {
 
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
-        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
             tx_parameters.unwrap_or_default(),
@@ -175,13 +174,12 @@ impl Account for Predicate {
         .set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
-        if asset_id == AssetId::default() {
-            self.pay_fee_resources(&mut tx_builder, amount, 0).await?;
+        let tx = if asset_id == AssetId::default() {
+            self.pay_fee_resources(tx_builder, amount, 0).await?
         } else {
-            self.pay_fee_resources(&mut tx_builder, 0, 0).await?;
+            self.pay_fee_resources(tx_builder, 0, 0).await?
         };
 
-        let tx = tx_builder.build()?;
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
@@ -213,7 +211,7 @@ impl Account for Predicate {
         ];
 
         // Build transaction and sign it
-        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
+        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -243,8 +241,7 @@ impl Account for Predicate {
             0
         };
 
-        self.pay_fee_resources(&mut tb, base_amount, 0).await?;
-        let tx = tb.build()?;
+        let tx = self.pay_fee_resources(tb, base_amount, 0).await?;
 
         let tx_id = tx.id();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -262,7 +259,7 @@ impl Account for Predicate {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
-        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
+        let tb = ScriptTransactionBuilder::prepare_message_to_output(
             to.into(),
             amount,
             inputs,
@@ -278,9 +275,7 @@ impl Account for Predicate {
         // let script_offset = base_offset(&consensus_parameters);
         // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
 
-        self.pay_fee_resources(&mut tb, amount, 0).await?;
-
-        let tx = tb.build()?;
+        let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;

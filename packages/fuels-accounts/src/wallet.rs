@@ -324,6 +324,8 @@ impl WalletUnlocked {
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
+        dbg!(&transaction_fee);
+
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tb.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::ResourceSigned { resource, .. }  if resource.asset_id() == BASE_ASSET_ID)
@@ -333,6 +335,8 @@ impl WalletUnlocked {
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
+
+        dbg!(&base_asset_inputs);
 
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
@@ -355,6 +359,8 @@ impl WalletUnlocked {
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
+
+        dbg!(&new_base_amount);
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
@@ -398,17 +404,18 @@ impl Account for WalletUnlocked {
 
     async fn pay_fee_resources<
         Tx: Transaction + Send,
-        Tb: TransactionBuilder<Tx> + Send + Clone,
+        Tb: TransactionBuilder<Tx> + Send,
     > (
         &self,
-        tb: &mut Tb,
+        mut tb: Tb,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<()> {
-        self.add_fee_resources(tb, previous_base_amount, witness_index)
+    ) -> Result<Tx> {
+        self.add_fee_resources(&mut tb, previous_base_amount, witness_index)
             .await?;
-        self.sign_transaction(tb).await?;
-        Ok(())
+        let mut tx = tb.build()?;
+        self.sign_transaction(&mut tx).await?;
+        Ok(tx)
     }
 
     /// Transfer funds from this wallet to another `Address`.
@@ -426,20 +433,18 @@ impl Account for WalletUnlocked {
             .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        let tb = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
             tx_parameters.unwrap_or_default(),
         );
 
         // if we are not transferring the base asset, previous base amount is 0
-        if asset_id == AssetId::default() {
-            self.pay_fee_resources(&mut tb, amount, 0).await?;
+        let tx = if asset_id == AssetId::default() {
+            self.pay_fee_resources(tb, amount, 0).await?
         } else {
-            self.pay_fee_resources(&mut tb, 0, 0).await?;
+            self.pay_fee_resources(tb, 0, 0).await?
         };
-
-        let tx = tb.build()?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -485,7 +490,7 @@ impl Account for WalletUnlocked {
         ];
 
         // Build transaction and sign it
-        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
+        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -499,10 +504,7 @@ impl Account for WalletUnlocked {
         } else {
             0
         };
-        self.add_fee_resources(&mut tb, base_amount, 0).await?;
-        self.sign_transaction(&mut tb).await?;
-        let tx = tb.build()?;
-
+        let tx = self.pay_fee_resources(tb, base_amount, 0).await?;
 
         let tx_id = tx.id();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -523,16 +525,14 @@ impl Account for WalletUnlocked {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
             .await?;
 
-        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
+        let tb = ScriptTransactionBuilder::prepare_message_to_output(
             to.into(),
             amount,
             inputs,
             tx_parameters,
         );
 
-        self.pay_fee_resources(&mut tb, amount, 0).await?;
-
-        let tx = tb.build()?;
+       let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -560,9 +560,9 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction, Tb: TransactionBuilder<Tx> + Send + Clone>(&self, tb: &mut Tb) -> Result<Signature> {
+    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> Result<Signature> {
 
-        let id = tb.clone().build()?.id();
+        let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
         // it can't guarantee that the provided bytes will be the product
@@ -574,7 +574,7 @@ impl Signer for WalletUnlocked {
 
         let witness = vec![Witness::from(sig.as_ref())];
 
-        let witnesses = tb.witnesses_mut();
+        let witnesses: &mut Vec<Witness> = tx.witnesses_mut();
 
         match witnesses.len() {
             0 => *witnesses = witness,

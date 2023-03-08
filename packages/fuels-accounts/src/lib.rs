@@ -36,7 +36,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Transaction, Tb: TransactionBuilder<Tx> + Send + Clone>(&self, message: &mut Tb)
+    async fn sign_transaction<Tx: Transaction + Send>(&self, message: &mut Tx)
         -> Result<Signature>;
 }
 
@@ -97,12 +97,12 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .map_err(Into::into)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send + Clone>(
+    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
-        tb: &mut Tb,
+        tb: Tb,
         previous_base_amount: u64,
         witness_index: u8,
-    ) -> Result<()>;
+    ) -> Result<Tx>;
 
     async fn transfer(
         &self,

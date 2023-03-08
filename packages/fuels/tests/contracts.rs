@@ -770,9 +770,12 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 async fn test_contract_instance_get_balances() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
+
     let random_asset_id = &asset_ids[1];
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider.clone());
+
+    dbg!(wallet.get_spendable_resources(AssetId::default(), 1).await?);
 
     setup_contract_test!(
         Abigen(
@@ -785,6 +788,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     let contract_id = contract_instance.contract_id();
 
     // Check the current balance of the contract with id 'contract_id'

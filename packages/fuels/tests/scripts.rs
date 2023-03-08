@@ -2,6 +2,8 @@ use fuels::prelude::*;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
+    use fuels_types::transaction_builders::TransactionBuilder;
+
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -18,7 +20,7 @@ async fn test_transaction_script_workflow() -> Result<()> {
     let call_handler = contract_instance.methods().initialize_counter(42);
 
     let tx = call_handler.build_tx().await?;
-
+    // let tx = tb.build()?;
     let provider = wallet.provider()?;
     let receipts = provider.send_transaction(&tx).await?;
 
@@ -29,6 +31,8 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<()> {
+    use fuels_types::transaction_builders::TransactionBuilder;
+
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
