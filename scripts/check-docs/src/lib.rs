@@ -195,45 +195,35 @@ pub fn extract_starts_and_ends(
 }
 
 pub fn parse_md_files(text_w_files: String, path: &str) -> HashSet<PathBuf> {
-    let apply_regex = |regex: Regex| {
-        text_w_files
-            .lines()
-            .filter_map(|line| regex.captures(line))
-            .map(|capture| {
-                PathBuf::from(path)
-                    .join(&capture[1])
-                    .canonicalize()
-                    .expect("could not canonicalize md path")
-            })
-            .collect()
-    };
+    let regex = Regex::new(r"\((.*\.md)\)").expect("could not construct regex");
 
-    apply_regex(Regex::new(r"\((.*.md)\)").expect("could not contstruct regex"))
+    text_w_files
+        .lines()
+        .filter_map(|line| regex.captures(line))
+        .map(|capture| {
+            PathBuf::from(path)
+                .join(&capture[1])
+                .canonicalize()
+                .expect("could not canonicalize md path")
+        })
+        .collect()
 }
 
 pub fn validate_md_files(
     md_files_summary: HashSet<PathBuf>,
     md_files_in_src: String,
 ) -> Vec<Error> {
-    let (_, errors): (Vec<_>, Vec<_>) = md_files_in_src
+    md_files_in_src
         .lines()
-        .map(|file| {
+        .filter_map(|file| {
             let file = PathBuf::from(file)
                 .canonicalize()
                 .expect("could not canonicalize md path");
 
-            if !md_files_summary.contains(&file) {
-                return Err(anyhow!(
-                    "file `{}` not in SUMMARY.md",
-                    file.to_str().unwrap()
-                ));
-            }
-
-            Ok(())
+            (!md_files_summary.contains(&file))
+                .then(|| anyhow!("file `{}` not in SUMMARY.md", file.to_str().unwrap()))
         })
-        .partition_result();
-
-    errors
+        .collect()
 }
 
 pub fn search_for_pattern(pattern: &str, location: &str) -> anyhow::Result<String> {
@@ -249,7 +239,7 @@ pub fn search_for_pattern(pattern: &str, location: &str) -> anyhow::Result<Strin
         .expect("failed grep command");
 
     if !grep_project.status.success() {
-        bail!("Failed running `grep` command for pattern {}", pattern);
+        bail!("Failed running `grep` command for pattern '{}'", pattern);
     }
 
     Ok(String::from_utf8(grep_project.stdout)?)
@@ -257,16 +247,11 @@ pub fn search_for_pattern(pattern: &str, location: &str) -> anyhow::Result<Strin
 
 pub fn find_files(pattern: &str, location: &str, exclude: &str) -> anyhow::Result<String> {
     let find = std::process::Command::new("find")
-        .arg(location)
-        .arg("-type")
-        .arg("f")
-        .arg("-name") // search recursively
-        .arg(pattern)
-        .arg("!") // search recursively
-        .arg("-name") // search recursively
-        .arg(exclude)
+        .args([
+            location, "-type", "f", "-name", pattern, "!", "-name", exclude,
+        ])
         .output()
-        .expect("failed find command");
+        .expect("Program `find` not in PATH");
 
     if !find.status.success() {
         bail!("Failed running `find` command for pattern {}", pattern);
