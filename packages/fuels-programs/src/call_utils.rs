@@ -72,16 +72,6 @@ pub async fn build_tx_from_contract_calls<T: Account>(
         .set_script(script)
         .set_script_data(script_data.clone());
 
-    // Todo delete
-    // let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
-    //     .with_script(script)
-    //     .with_script_data(script_data.clone());
-
-    // tx.tx_offset = data_offset
-    //     + script_data.len()
-    //     + InputRepr::Contract.contract_id_offset().unwrap()
-    //     + ContractId::LEN;
-
     let base_asset_amount = required_asset_amounts
         .iter()
         .find(|(asset_id, _)| *asset_id == AssetId::default());

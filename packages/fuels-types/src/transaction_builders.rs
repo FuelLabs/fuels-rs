@@ -12,6 +12,7 @@ use fuel_tx::{
     ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
 };
+use fuel_types::bytes::padded_len_usize;
 use fuel_types::{Address, AssetId, Bytes32, ContractId, Salt};
 
 pub trait TransactionBuilder<T> {
@@ -75,10 +76,13 @@ macro_rules! impl_tx_trait {
     ($ty: ident, $tx_ty: ident) => {
         impl TransactionBuilder<$tx_ty> for $ty {
             fn build(self) -> Result<$tx_ty> {
-                if self.is_using_predicates() && self.consensus_parameters.is_none() {
-                    return Err(Error::TransactionBuildError);
-                }
-                let base_offset = offsets::base_offset_script(&self.consensus_parameters.unwrap_or_default());
+                let base_offset = if self.is_using_predicates() {
+                    let params = self.consensus_parameters.ok_or(Error::TransactionBuildError)?;
+                    self.base_offset(&params)
+                } else {
+                    0
+                };
+
                 Ok(self.convert_to_fuel_tx(base_offset))
             }
 
@@ -90,7 +94,6 @@ macro_rules! impl_tx_trait {
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 let tx = &self.clone().build().expect("Error in build").tx;
-                dbg!(&tx);
                 TransactionFee::checked_from_tx(
                     params,
                     tx
@@ -126,10 +129,6 @@ macro_rules! impl_tx_trait {
             }
 
             fn set_tx_params(self, tx_params: TxParameters) -> Self {
-
-                dbg!("aswdasdasd");
-                dbg!(tx_params);
-
                 self.set_gas_limit(tx_params.gas_limit)
                     .set_gas_price(tx_params.gas_price)
                     .set_maturity(tx_params.maturity)
@@ -191,9 +190,6 @@ impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
     fn convert_to_fuel_tx(self, base_offset: usize) -> ScriptTransaction {
-
-        dbg!("script convert_to_fuel_tx");
-
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
@@ -205,6 +201,11 @@ impl ScriptTransactionBuilder {
             self.witnesses,
         )
         .into()
+    }
+
+    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
+        offsets::base_offset_script(consensus_parameters) + padded_len_usize(self.script_data.len())
+        + padded_len_usize(self.script.len())
     }
 
     pub fn set_script(mut self, script: Vec<u8>) -> Self {
@@ -315,8 +316,6 @@ impl ScriptTransactionBuilder {
 
 impl CreateTransactionBuilder {
     fn convert_to_fuel_tx(self, base_offset: usize) -> CreateTransaction {
-        dbg!("create convert_to_fuel_tx");
-
         FuelTransaction::create(
             self.gas_price.into(),
             self.gas_limit.into(),
@@ -329,6 +328,10 @@ impl CreateTransactionBuilder {
             self.witnesses.into(),
         )
         .into()
+    }
+
+    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
+        offsets::base_offset_create(consensus_parameters)
     }
 
     pub fn set_bytecode_length(mut self, bytecode_length: u64) -> Self {

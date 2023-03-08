@@ -988,7 +988,6 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     let balance = predicate.get_balances().await?;
 
-    dbg!(balance);
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,

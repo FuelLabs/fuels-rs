@@ -324,8 +324,6 @@ impl WalletUnlocked {
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
 
-        dbg!(&transaction_fee);
-
         let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
             tb.inputs().iter().cloned().partition(|input| {
                 matches!(input, Input::ResourceSigned { resource, .. }  if resource.asset_id() == BASE_ASSET_ID)
@@ -335,8 +333,6 @@ impl WalletUnlocked {
             .iter()
             .map(|input| input.amount().unwrap())
             .sum();
-
-        dbg!(&base_asset_inputs);
 
         // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
         if base_inputs_sum < previous_base_amount {
@@ -359,8 +355,6 @@ impl WalletUnlocked {
         if !is_consuming_utxos && new_base_amount == 0 {
             new_base_amount = MIN_AMOUNT;
         }
-
-        dbg!(&new_base_amount);
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)

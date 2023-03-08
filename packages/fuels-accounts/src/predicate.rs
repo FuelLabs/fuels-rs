@@ -96,6 +96,7 @@ impl Account for Predicate {
     ) -> Result<Tx> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
+        tb = tb.set_consensus_parameters(consensus_parameters);
         let transaction_fee = tb
             .fee_checked_from_tx(&consensus_parameters)
             .expect("Error calculating TransactionFee");
@@ -211,6 +212,11 @@ impl Account for Predicate {
         ];
 
         // Build transaction and sign it
+        let params = self
+             .provider()?
+             .consensus_parameters()
+             .await?;
+
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
@@ -218,23 +224,10 @@ impl Account for Predicate {
             inputs,
             outputs,
             tx_parameters,
-        );
-
-        // let consensus_parameters = self
-        //     .provider
-        //     .as_ref()
-        //     .expect("No provider available")
-        //     .consensus_parameters()
-        //     .await?;
-        //
-        // let script_offset = base_offset(&consensus_parameters);
-        // tx.tx_offset = script_offset
-        //     + tx.script_data().len()
-        //     + tx.script().len()
-        //     + offsets::contract_input_offset();
+        ).set_consensus_parameters(params);
+        dbg!(&tb);
 
         // if we are not transferring the base asset, previous base amount is 0
-
         let base_amount = if asset_id == AssetId::default() {
             balance
         } else {
@@ -265,15 +258,6 @@ impl Account for Predicate {
             inputs,
             tx_parameters,
         );
-
-        // let consensus_parameters = self
-        //     .get_provider()?
-        //     .chain_info()
-        //     .await?
-        //     .consensus_parameters;
-        //
-        // let script_offset = base_offset(&consensus_parameters);
-        // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
 
         let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
