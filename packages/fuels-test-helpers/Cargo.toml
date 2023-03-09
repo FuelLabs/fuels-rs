@@ -18,8 +18,6 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-signers = { workspace = true, optional = true }
-fuels-core = { workspace = true }
-fuels-programs = { workspace = true }
 fuels-types = { workspace = true }
 futures = "0.3.26"
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
