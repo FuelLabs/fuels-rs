@@ -174,7 +174,7 @@
         let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
-<p>This method returns all coins (of a given asset ID) from a wallet, including spent ones.</p>
+<p>This method returns all unspent coins (of a given asset ID) from a wallet.</p>
 <pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
