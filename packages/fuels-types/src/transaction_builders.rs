@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use crate::coin::Coin;
 use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
 use crate::errors::{Error, Result};

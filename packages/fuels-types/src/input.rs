@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use std::hash::Hash;
 use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId};
