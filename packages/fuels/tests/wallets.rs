@@ -3,6 +3,7 @@ use std::iter::repeat;
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
 use fuels_signers::Account;
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -134,9 +135,11 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .await
         .pop()
         .unwrap();
-    let mut tx = ScriptTransaction::new(vec![], vec![], TxParameters::default());
 
-    wallet.add_fee_resources(&mut tx, 0, 0).await?;
+    let mut tb =
+        ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+    wallet.add_fee_resources(&mut tb, 0, 0).await?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -170,9 +173,11 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
-    let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
 
-    wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
+    let mut tb =
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+    wallet.add_fee_resources(&mut tb, base_amount, 0).await?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -217,12 +222,7 @@ async fn test_transfer() -> fuels_types::errors::Result<()> {
 
     // Transfer 1 from wallet 1 to wallet 2
     let _receipts = wallet_1
-        .transfer(
-            wallet_2.address(),
-            1,
-            Default::default(),
-            TxParameters::default(),
-        )
+        .transfer(wallet_2.address(), 1, Default::default(), None)
         .await
         .unwrap();
 
@@ -252,7 +252,12 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let (tx_id, _receipts) = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_params)
+        .transfer(
+            wallet_2.address(),
+            SEND_AMOUNT,
+            BASE_ASSET_ID,
+            Some(tx_params),
+        )
         .await?;
 
     // Assert that the transaction was properly configured.
@@ -290,12 +295,7 @@ async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
     let _receipts = wallet_1
-        .transfer(
-            wallet_2.address(),
-            SEND_AMOUNT,
-            BASE_ASSET_ID,
-            TxParameters::default(),
-        )
+        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, None)
         .await?;
 
     let wallet_1_final_coins = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
@@ -354,12 +354,7 @@ async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
 
     // Transferring more than balance should fail.
     let response = wallet_1
-        .transfer(
-            wallet_2.address(),
-            AMOUNT * 2,
-            Default::default(),
-            TxParameters::default(),
-        )
+        .transfer(wallet_2.address(), AMOUNT * 2, Default::default(), None)
         .await;
 
     assert!(response.is_err());
@@ -388,12 +383,7 @@ async fn transfer_coins_of_non_base_asset() -> fuels_types::errors::Result<()> {
 
     const SEND_AMOUNT: u64 = 200;
     let _receipts = wallet_1
-        .transfer(
-            wallet_2.address(),
-            SEND_AMOUNT,
-            asset_id,
-            TxParameters::default(),
-        )
+        .transfer(wallet_2.address(), SEND_AMOUNT, asset_id, None)
         .await?;
 
     let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;
