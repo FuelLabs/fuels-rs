@@ -21,7 +21,7 @@ use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
 
 use crate::{accounts_utils::extract_message_id, AccountError, AccountResult};
-use crate::{provider::Provider, Account, Signer};
+use crate::{provider::{Provider, ResourceFilter}, Account, Signer};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -114,12 +114,10 @@ impl Wallet {
             .await?)
     }
 
-    /// Returns a proper vector of `Input::Coin`s for the given asset ID, amount, and witness index.
-    /// The `witness_index` is the position of the witness
-    /// (signature) in the transaction's list of witnesses.
-    /// Meaning that, in the validation process, the node will
-    /// use the witness at this index to validate the coins returned
-    /// by this method.
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
     pub async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,
@@ -130,7 +128,9 @@ impl Wallet {
             .get_spendable_resources(asset_id, amount)
             .await?
             .into_iter()
-            .map(|resource| Input::resource_signed(resource, witness_index))
+            .map(|resource| {
+                Input::resource_signed(resource, witness_index)
+            })
             .collect::<Vec<Input>>())
     }
 
@@ -149,9 +149,7 @@ impl Wallet {
         ]
     }
 
-    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
-    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
-    /// returns actual coins (UTXOs).
+    /// Gets all unspent coins of asset `asset_id` owned by the wallet.
     pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
         Ok(self.provider()?.get_coins(&self.address, asset_id).await?)
     }
@@ -164,8 +162,14 @@ impl Wallet {
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Resource>> {
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            ..Default::default()
+        };
         self.provider()?
-            .get_spendable_resources(&self.address, asset_id, amount)
+            .get_spendable_resources(filter)
             .await
             .map_err(Into::into)
     }
@@ -446,8 +450,7 @@ impl Account for WalletUnlocked {
         Ok((tx_id, receipts))
     }
 
-    /// Uncondition
-    /// ally transfers `balance` of type `asset_id` to
+    /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
     /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.

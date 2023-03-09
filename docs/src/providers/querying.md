@@ -5,7 +5,7 @@ Once you have set up a provider, you're ready to interact with the Fuel blockcha
 - [Interacting with the blockchain](#interacting-with-the-blockchain)
   - [Set up](#set-up)
   - [Get all coins from an address](#get-all-coins-from-an-address)
-  - [Get spendable resources from an address](#get-spendable-resources-from-an-address)
+  - [Get spendable resources owned by an address](#get-spendable-resources-owned-by-an-address)
   - [Get balances from an address](#get-balances-from-an-address)
 
 ## Set up
@@ -18,15 +18,21 @@ You might need to set up a test blockchain first. You can skip this step if you'
 
 ## Get all coins from an address
 
-This method returns all coins (of a given asset ID) from a wallet, including spent ones.
+This method returns all unspent coins (of a given asset ID) from a wallet.
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_coins}}
 ```
 
-## Get spendable resources from an address
+## Get spendable resources owned by an address
 
-The last argument says how much you want to spend. This method returns only spendable, i.e., unspent coins (of a given asset ID) or messages. If you ask for more spendable resources than the amount of resources you have, it returns an error.
+The following example shows how to fetch resources owned by an address. First, you create a  `ResourceFilter` which specifies the target address, asset id, and amount. You can also define utxo ids and message ids that should be excluded when retrieving the resources:
+
+```rust,ignore
+{{#include ../../../packages/fuels-signers/src/provider.rs:resource_filter}}
+```
+
+The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the id lists respectively:
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_spendable_resources}}
