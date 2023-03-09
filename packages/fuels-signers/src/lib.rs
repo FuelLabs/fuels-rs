@@ -222,9 +222,9 @@ mod tests {
         let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
         let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
 
-        // wallet_1 has now only one spent coin and one not spent(the remaining not sent coins)
+        // wallet_1 has now only one spent coin
         assert_eq!(wallet_1_spendable_resources.len(), 1);
-        assert_eq!(wallet_1_all_coins.len(), 2);
+        assert_eq!(wallet_1_all_coins.len(), 1);
         // Check that wallet two now has a coin.
         assert_eq!(wallet_2_all_coins.len(), 1);
         assert_eq!(wallet_2_spendable_resources.len(), 1);

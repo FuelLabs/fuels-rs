@@ -322,8 +322,7 @@ impl Provider {
         Ok(receipts)
     }
 
-    /// Gets all coins owned by address `from`, with asset ID `asset_id`, *even spent ones*. This
-    /// returns actual coins (UTXOs).
+    /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
     pub async fn get_coins(
         &self,
         from: &Bech32Address,
