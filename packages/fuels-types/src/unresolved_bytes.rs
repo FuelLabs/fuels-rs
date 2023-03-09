@@ -12,7 +12,7 @@ pub enum Data {
 // To get the final encoded bytes, we need to know the address at which these
 // bytes are going to be loaded at. Once the address is given to `resolve`
 // normal bytes can be retrieved.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct UnresolvedBytes {
     data: Vec<Data>,
 }
@@ -22,6 +22,7 @@ impl UnresolvedBytes {
         Self { data }
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn default() -> Self {
         Default::default()
     }

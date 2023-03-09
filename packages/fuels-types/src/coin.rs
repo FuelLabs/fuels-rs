@@ -6,8 +6,9 @@ use fuel_tx::{AssetId, UtxoId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum CoinStatus {
+    #[default]
     Unspent,
     Spent,
 }
@@ -18,12 +19,6 @@ impl From<ClientCoinStatus> for CoinStatus {
             ClientCoinStatus::Unspent => CoinStatus::Unspent,
             ClientCoinStatus::Spent => CoinStatus::Spent,
         }
-    }
-}
-
-impl Default for CoinStatus {
-    fn default() -> Self {
-        CoinStatus::Unspent
     }
 }
 
