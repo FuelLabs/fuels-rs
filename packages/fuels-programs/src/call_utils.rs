@@ -1,14 +1,15 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
-    AssetId, Bytes32, ContractId, Output, Receipt, ScriptExecutionResult,
-    TxPointer, UtxoId,
+    AssetId, Bytes32, ContractId, Output, Receipt, ScriptExecutionResult, TxPointer, UtxoId,
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_signers::provider::Provider;
 use fuels_signers::Account;
+use fuels_types::input::Input;
 use fuels_types::offsets::call_script_data_offset;
+use fuels_types::transaction::ScriptTransaction;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::{
     bech32::Bech32Address,
@@ -19,8 +20,6 @@ use fuels_types::{
     transaction::Transaction,
 };
 use itertools::{chain, Itertools};
-use fuels_types::input::Input;
-use fuels_types::transaction::ScriptTransaction;
 
 use crate::contract::ContractCall;
 
@@ -263,7 +262,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         generate_contract_inputs(contract_ids),
         account.convert_to_signed_resources(spendable_resources),
     )
-        .collect();
+    .collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node
@@ -276,7 +275,7 @@ pub(crate) fn get_transaction_inputs_outputs<T: Account>(
         extract_variable_outputs(calls),
         extract_message_outputs(calls)
     )
-        .collect();
+    .collect();
     (inputs, outputs)
 }
 
@@ -406,8 +405,8 @@ fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
 mod test {
     use std::slice;
 
-    use fuels_signers::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
+    use fuels_signers::WalletUnlocked;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
@@ -738,13 +737,12 @@ mod test {
             get_transaction_inputs_outputs(&[call], generate_spendable_resources(), &wallet);
 
         // then
-        let inputs_as_signed_coins: HashSet<Input> = inputs[1..].iter().cloned().collect::<HashSet<Input>>();
+        let inputs_as_signed_coins: HashSet<Input> =
+            inputs[1..].iter().cloned().collect::<HashSet<Input>>();
 
         let expected_inputs = generate_spendable_resources()
             .into_iter()
-            .map(|resource|
-                Input::resource_signed(resource, 0)
-            )
+            .map(|resource| Input::resource_signed(resource, 0))
             .collect::<HashSet<_>>();
 
         assert_eq!(expected_inputs, inputs_as_signed_coins);
@@ -814,10 +812,10 @@ mod test {
             (asset_id_1, 300),
             (asset_id_2, 400),
         ]
-            .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
-            .map(|call_parameters| {
-                ContractCall::new_with_random_id().with_call_parameters(call_parameters)
-            });
+        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|call_parameters| {
+            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
+        });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls);
 

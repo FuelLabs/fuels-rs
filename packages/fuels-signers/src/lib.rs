@@ -34,11 +34,16 @@ pub mod wallet;
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Signer: std::fmt::Debug + Send + Sync {
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> AccountResult<Signature>;
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
+        &self,
+        message: S,
+    ) -> AccountResult<Signature>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Transaction + Send>(&self, message: &mut Tx)
-        -> AccountResult<Signature>;
+    async fn sign_transaction<Tx: Transaction + Send>(
+        &self,
+        message: &mut Tx,
+    ) -> AccountResult<Signature>;
 }
 
 #[derive(Error, Debug)]
@@ -306,7 +311,12 @@ mod tests {
         // Transfer 1 from wallet 1 to wallet 2.
         const SEND_AMOUNT: u64 = 1;
         let (tx_id, _receipts) = wallet_1
-            .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, Some(tx_params))
+            .transfer(
+                wallet_2.address(),
+                SEND_AMOUNT,
+                BASE_ASSET_ID,
+                Some(tx_params),
+            )
             .await?;
 
         // Assert that the transaction was properly configured.
@@ -399,12 +409,7 @@ mod tests {
 
         const SEND_AMOUNT: u64 = 200;
         let _receipts = wallet_1
-            .transfer(
-                wallet_2.address(),
-                SEND_AMOUNT,
-                asset_id,
-                None,
-            )
+            .transfer(wallet_2.address(), SEND_AMOUNT, asset_id, None)
             .await?;
 
         let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;

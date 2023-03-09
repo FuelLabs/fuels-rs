@@ -5,10 +5,10 @@ use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
 use crate::errors::{Error, Result};
 use crate::input::Input;
 use crate::message::Message;
+use crate::offsets;
 use crate::parameters::TxParameters;
 use crate::resource::Resource;
 use crate::transaction::{CreateTransaction, ScriptTransaction};
-use crate::offsets;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
     ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
@@ -79,7 +79,9 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder<$tx_ty> for $ty {
             fn build(self) -> Result<$tx_ty> {
                 let base_offset = if self.is_using_predicates() {
-                    let params = self.consensus_parameters.ok_or(Error::TransactionBuildError)?;
+                    let params = self
+                        .consensus_parameters
+                        .ok_or(Error::TransactionBuildError)?;
                     self.base_offset(&params)
                 } else {
                     0
@@ -89,17 +91,14 @@ macro_rules! impl_tx_trait {
             }
 
             fn is_using_predicates(&self) -> bool {
-               self.inputs
+                self.inputs
                     .iter()
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 let tx = &self.clone().build().expect("Error in build").tx;
-                TransactionFee::checked_from_tx(
-                    params,
-                    tx
-                )
+                TransactionFee::checked_from_tx(params, tx)
             }
 
             fn check_without_signatures(
@@ -182,7 +181,6 @@ macro_rules! impl_tx_trait {
             fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
                 &mut self.witnesses
             }
-
         }
     };
 }
@@ -206,8 +204,9 @@ impl ScriptTransactionBuilder {
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_script(consensus_parameters) + padded_len_usize(self.script_data.len())
-        + padded_len_usize(self.script.len())
+        offsets::base_offset_script(consensus_parameters)
+            + padded_len_usize(self.script_data.len())
+            + padded_len_usize(self.script.len())
     }
 
     pub fn set_script(mut self, script: Vec<u8>) -> Self {

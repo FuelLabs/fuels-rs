@@ -21,7 +21,10 @@ use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
 
 use crate::{accounts_utils::extract_message_id, AccountError, AccountResult};
-use crate::{provider::{Provider, ResourceFilter}, Account, Signer};
+use crate::{
+    provider::{Provider, ResourceFilter},
+    Account, Signer,
+};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -128,9 +131,7 @@ impl Wallet {
             .get_spendable_resources(asset_id, amount)
             .await?
             .into_iter()
-            .map(|resource| {
-                Input::resource_signed(resource, witness_index)
-            })
+            .map(|resource| Input::resource_signed(resource, witness_index))
             .collect::<Vec<Input>>())
     }
 
@@ -317,7 +318,6 @@ impl WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
-
         let consensus_parameters = self
             .get_provider()?
             .chain_info()
@@ -400,10 +400,7 @@ impl Account for WalletUnlocked {
         self.wallet.set_provider(provider)
     }
 
-    async fn pay_fee_resources<
-        Tx: Transaction + Send,
-        Tb: TransactionBuilder<Tx> + Send,
-    > (
+    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
@@ -529,7 +526,7 @@ impl Account for WalletUnlocked {
             tx_parameters,
         );
 
-       let tx = self.pay_fee_resources(tb, amount, 0).await?;
+        let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
         let receipts = self.get_provider()?.send_transaction(&tx).await?;
@@ -551,14 +548,19 @@ impl Account for WalletUnlocked {
 #[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> AccountResult<Signature> {
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
+        &self,
+        message: S,
+    ) -> AccountResult<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> AccountResult<Signature> {
-
+    async fn sign_transaction<Tx: Transaction + Send>(
+        &self,
+        tx: &mut Tx,
+    ) -> AccountResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because
@@ -803,7 +805,8 @@ mod tests {
             .pop()
             .unwrap();
 
-        let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
         wallet.add_fee_resources(&mut tb, 0, 0).await?;
         let tx = tb.build()?;
 
@@ -843,7 +846,8 @@ mod tests {
             base_amount,
         );
 
-        let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
         wallet.add_fee_resources(&mut tb, base_amount, 0).await?;
         let tx = tb.build()?;
 

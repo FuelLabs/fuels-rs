@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use fuel_types::MessageId;
 use itertools::Itertools;
+use std::fmt::Debug;
 use std::{collections::HashMap, io};
 
 use chrono::{DateTime, Duration, Utc};
@@ -13,8 +13,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{
-    AssetId, ConsensusParameters, Receipt, UtxoId};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, UtxoId};
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},

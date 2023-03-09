@@ -11,16 +11,17 @@ use std::{
 use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot
+    StorageSlot,
 };
 use fuel_vm::fuel_asm::PanicReason;
 
+use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_types::errors::Error::ProviderError;
+use fuels_types::transaction::Transaction;
 use fuels_types::transaction_builders::{CreateTransactionBuilder, TransactionBuilder};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
@@ -32,7 +33,6 @@ use fuels_types::{
     transaction::ScriptTransaction,
     Selector, Token,
 };
-use fuels_types::transaction::Transaction;
 
 use crate::{
     call_response::FuelCallResponse,

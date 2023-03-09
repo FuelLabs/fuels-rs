@@ -11,9 +11,7 @@ use fuels_types::input::Input;
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
 use fuels_types::transaction::Transaction;
-use fuels_types::transaction_builders::{
-    ScriptTransactionBuilder, TransactionBuilder,
-};
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
 
 use crate::accounts_utils::extract_message_id;
@@ -212,10 +210,7 @@ impl Account for Predicate {
         ];
 
         // Build transaction and sign it
-        let params = self
-             .provider()?
-             .consensus_parameters()
-             .await?;
+        let params = self.provider()?.consensus_parameters().await?;
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -224,7 +219,8 @@ impl Account for Predicate {
             inputs,
             outputs,
             tx_parameters,
-        ).set_consensus_parameters(params);
+        )
+        .set_consensus_parameters(params);
         dbg!(&tb);
 
         // if we are not transferring the base asset, previous base amount is 0

@@ -3,6 +3,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_signers::provider::Provider;
+use fuels_types::input::Input;
 use fuels_types::offsets::base_offset_script;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::unresolved_bytes::UnresolvedBytes;
@@ -14,7 +15,6 @@ use fuels_types::{
     transaction::Transaction,
 };
 use itertools::chain;
-use fuels_types::input::Input;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -161,10 +161,9 @@ where
         )
         .collect();
 
-        let tb =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-                .set_script(self.script_call.script_binary.clone())
-                .set_script_data(self.compute_script_data().await?);
+        let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
+            .set_script(self.script_call.script_binary.clone())
+            .set_script_data(self.compute_script_data().await?);
 
         // let consensus_parameters = self.provider.consensus_parameters().await?;
         // let script_offset = base_offset(&consensus_parameters);
@@ -187,7 +186,7 @@ where
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         // TODO: previous_base_amount
-        let tx = self.account.pay_fee_resources(tb, 0,0).await?;
+        let tx = self.account.pay_fee_resources(tb, 0, 0).await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

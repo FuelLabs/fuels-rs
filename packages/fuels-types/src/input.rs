@@ -1,8 +1,8 @@
 #![cfg(feature = "std")]
 
-use std::hash::Hash;
 use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId};
+use std::hash::Hash;
 
 use crate::resource::Resource;
 use crate::unresolved_bytes::UnresolvedBytes;
@@ -26,7 +26,6 @@ pub enum Input {
         contract_id: ContractId,
     },
 }
-
 
 impl Input {
     pub const fn resource_signed(resource: Resource, witness_index: u8) -> Self {

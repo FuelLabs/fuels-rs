@@ -219,8 +219,8 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_signers::{provider::Provider, WalletUnlocked};
     use fuels_programs::contract::Contract;
+    use fuels_signers::{provider::Provider, WalletUnlocked};
     use fuels_types::{
         bech32::FUEL_BECH32_HRP,
         parameters::{StorageConfiguration, TxParameters},
