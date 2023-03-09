@@ -223,13 +223,12 @@ impl ABIEncoder {
 mod tests {
     use std::slice;
 
-    use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
     use super::*;
-    use crate::utils::first_four_bytes_of_sha256_hash;
+    use crate::utils::{first_four_bytes_of_sha256_hash, generate_unused_field_names};
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;

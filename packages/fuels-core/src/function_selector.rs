@@ -78,8 +78,9 @@ fn resolve_arg(arg: &ParamType) -> String {
 
 #[cfg(test)]
 mod tests {
-    use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::enum_variants::EnumVariants;
+
+    use crate::utils::generate_unused_field_names;
 
     use super::*;
 
