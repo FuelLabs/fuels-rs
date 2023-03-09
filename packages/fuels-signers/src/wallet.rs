@@ -181,9 +181,7 @@ impl Wallet {
         ]
     }
 
-    /// Gets all coins of asset `asset_id` owned by the wallet, *even spent ones* (this is useful
-    /// for some particular cases, but in general, you should use `get_spendable_coins`). This
-    /// returns actual coins (UTXOs).
+    /// Gets all unspent coins of asset `asset_id` owned by the wallet.
     pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
         Ok(self
             .get_provider()?
