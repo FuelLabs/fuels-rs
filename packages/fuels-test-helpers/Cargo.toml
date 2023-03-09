@@ -35,8 +35,6 @@ which = { version = "4.3", default-features = false }
 [features]
 default = ["fuels-signers", "std"]
 std = [
-    "fuels-programs/std",
-    "fuels-core/std",
     "fuels-signers?/std",
     "fuels-types/std",
 ]

@@ -421,7 +421,7 @@ mod tests {
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
 
-    // The same function from fuels-test-helpers cannot
+    // The same function from fuels-core cannot
     // be used here because of a circular dependency
     fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
         zip(std::iter::repeat("unused".to_string()), types).collect()

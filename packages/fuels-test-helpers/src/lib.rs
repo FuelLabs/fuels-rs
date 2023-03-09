@@ -1,10 +1,7 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
-use std::{
-    iter::{repeat, zip},
-    net::SocketAddr,
-};
+use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
@@ -15,13 +12,12 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
+use fuel_types::AssetId;
 use fuels_types::{
     bech32::Bech32Address,
     coin::{Coin, CoinStatus},
     constants::BASE_ASSET_ID,
     message::{Message, MessageStatus},
-    param_types::ParamType,
 };
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
@@ -41,10 +37,6 @@ pub mod node;
 mod signers;
 mod utils;
 mod wallets_config;
-
-pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
-    zip(repeat("unused".to_string()), types).collect()
-}
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
@@ -219,12 +211,7 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_programs::contract::Contract;
-    use fuels_signers::{provider::Provider, WalletUnlocked};
-    use fuels_types::{
-        bech32::FUEL_BECH32_HRP,
-        parameters::{StorageConfiguration, TxParameters},
-    };
+    use fuels_types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
 
@@ -341,58 +328,45 @@ mod tests {
     #[tokio::test]
     async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
-
-        let wallet = WalletUnlocked::new_random(None);
-
-        let coins: Vec<Coin> = setup_single_asset_coins(
-            wallet.address(),
-            Default::default(),
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
-
         let config = Config {
             addr: socket,
+            utxo_validation: true,
+            manual_blocks_enabled: true,
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, vec![], Some(config), None, None).await;
+        let (client, bound_addr) =
+            setup_test_client(vec![], vec![], Some(config.clone()), None, None).await;
+        let node_info = client
+            .node_info()
+            .await
+            .expect("Failed to retrieve node info!");
 
-        assert_eq!(wallets.1, socket);
+        assert_eq!(bound_addr, socket);
+        assert_eq!(node_info.utxo_validation, config.utxo_validation);
+
         Ok(())
     }
 
     #[tokio::test]
     async fn test_setup_test_client_consensus_parameters_config() {
-        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
+        let configured_parameters = ConsensusParameters::DEFAULT
+            .with_max_gas_per_tx(2)
+            .with_gas_per_byte(2)
+            .with_max_inputs(58)
+            .with_max_storage_slots(83);
 
-        let mut wallet = WalletUnlocked::new_random(None);
+        let (client, _) =
+            setup_test_client(vec![], vec![], None, None, Some(configured_parameters)).await;
 
-        let coins: Vec<Coin> = setup_single_asset_coins(
-            wallet.address(),
-            Default::default(),
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
+        let retrieved_parameters: ConsensusParameters = client
+            .chain_info()
+            .await
+            .expect("Failed to retrieve consensus chain info!")
+            .consensus_parameters
+            .into();
 
-        let (fuel_client, _) =
-            setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-        let provider = Provider::new(fuel_client);
-        wallet.set_provider(provider.clone());
-
-        let result = Contract::deploy(
-            "../fuels/tests/types/contract_output_test/out/debug/contract_output_test.bin",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
-        .await;
-
-        let expected = result.expect_err("should fail");
-
-        let error_string = "Validation error: TransactionGasLimit";
-
-        assert!(expected.to_string().contains(error_string));
+        assert_eq!(retrieved_parameters, configured_parameters);
     }
 
     #[tokio::test]
