@@ -1,5 +1,5 @@
 use fuels::prelude::*;
-use fuels_accounts::Account;
+use fuels_signers::Account;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {

@@ -16,7 +16,7 @@ fuel-abi-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true }
 fuel-vm = { workspace = true }
-fuels-accounts = { workspace = true }
+fuels-signers = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
 futures = "0.3.21"
@@ -34,12 +34,12 @@ thiserror = { version = "1.0.26", default-features = false }
 tokio = "1.12"
 
 [dev-dependencies]
-fuels-test-helpers = { workspace = true, features = ["std", "fuels-accounts"] }
+fuels-test-helpers = { workspace = true, features = ["std", "fuels-signers"] }
 
 [features]
 default = ["std"]
 std = [
     "fuels-core/std",
-    "fuels-accounts/std",
+    "fuels-signers/std",
     "fuels-types/std",
 ]

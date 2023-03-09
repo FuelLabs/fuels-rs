@@ -1,14 +1,10 @@
-use fuel_tx::{Input as FuelInput, Output, TxPointer, UtxoId};
-use fuels::tx::Bytes32;
 use fuels::{
     prelude::*,
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
-use fuels_accounts::predicate::Predicate;
-use fuels_accounts::Account;
-use fuels_types::input::Input;
-use fuels_types::resource::Resource;
+use fuels_signers::predicate::Predicate;
+use fuels_signers::Account;
 
 // use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(

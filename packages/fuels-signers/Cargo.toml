@@ -1,5 +1,5 @@
 [package]
-name = "fuels-accounts"
+name = "fuels-signers"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }

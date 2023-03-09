@@ -2,7 +2,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_accounts::provider::Provider;
+use fuels_signers::provider::Provider;
 use fuels_types::offsets::base_offset_script;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::unresolved_bytes::UnresolvedBytes;
@@ -64,7 +64,7 @@ pub struct ScriptCallHandler<T, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: fuels_accounts::Account + Clone, D> ScriptCallHandler<T, D>
+impl<T: fuels_signers::Account + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
 {

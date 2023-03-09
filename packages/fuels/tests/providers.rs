@@ -9,7 +9,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
-use fuels_accounts::Account;
+use fuels_signers::Account;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

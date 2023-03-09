@@ -6,8 +6,8 @@ use fuel_tx::{
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-use fuels_accounts::provider::Provider;
-use fuels_accounts::Account;
+use fuels_signers::provider::Provider;
+use fuels_signers::Account;
 use fuels_types::offsets::call_script_data_offset;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::{
@@ -406,7 +406,7 @@ fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
 mod test {
     use std::slice;
 
-    use fuels_accounts::WalletUnlocked;
+    use fuels_signers::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_types::{
         bech32::Bech32ContractId,
