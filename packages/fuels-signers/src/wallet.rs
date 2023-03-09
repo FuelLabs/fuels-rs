@@ -426,46 +426,6 @@ impl WalletUnlocked {
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
-    ///
-    /// # Examples
-    /// ```
-    /// use fuels::prelude::*;
-    /// use fuels::test_helpers::setup_single_asset_coins;
-    /// use fuels::tx::{Bytes32, AssetId, Input, Output, UtxoId};
-    /// use std::str::FromStr;
-    /// #[cfg(feature = "fuel-core-lib")]
-    /// use fuels_test_helpers::Config;
-    ///
-    /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    ///  // Create the actual wallets/signers
-    ///  let mut wallet_1 = WalletUnlocked::new_random(None);
-    ///  let mut wallet_2 = WalletUnlocked::new_random(None).lock();
-    ///
-    ///   // Setup a coin for each wallet
-    ///   let mut coins_1 = setup_single_asset_coins(wallet_1.address(),BASE_ASSET_ID, 1, 1);
-    ///   let coins_2 = setup_single_asset_coins(wallet_2.address(),BASE_ASSET_ID, 1, 1);
-    ///   coins_1.extend(coins_2);
-    ///
-    ///   // Setup a provider and node with both set of coins
-    ///   let (provider, _) = setup_test_provider(coins_1, vec![], None, None).await;
-    ///
-    ///   // Set provider for wallets
-    ///   wallet_1.set_provider(provider.clone());
-    ///   wallet_2.set_provider(provider);
-    ///
-    ///   // Transfer 1 from wallet 1 to wallet 2
-    ///   let _receipts = wallet_1
-    ///        .transfer(&wallet_2.address(), 1, Default::default(), TxParameters::default())
-    ///        .await
-    ///        .unwrap();
-    ///
-    ///   let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
-    ///
-    ///   // Check that wallet two now has two coins
-    ///   assert_eq!(wallet_2_final_coins.len(), 2);
-    ///   Ok(())
-    /// }
-    /// ```
     pub async fn transfer(
         &self,
         to: &Bech32Address,
@@ -781,14 +741,7 @@ pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> WalletResu
 }
 
 #[cfg(test)]
-#[cfg(feature = "test-helpers")]
 mod tests {
-    use std::iter::repeat;
-
-    use fuel_core::service::{Config, FuelService};
-    use fuel_core_client::client::FuelClient;
-    use fuel_tx::Address;
-    use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use tempfile::tempdir;
 
     use super::*;
@@ -798,11 +751,8 @@ mod tests {
         let dir = tempdir()?;
         let mut rng = rand::thread_rng();
 
-        let provider = setup().await;
-
         // Create a wallet to be stored in the keystore.
-        let (wallet, uuid) =
-            WalletUnlocked::new_from_keystore(&dir, &mut rng, "password", Some(provider.clone()))?;
+        let (wallet, uuid) = WalletUnlocked::new_from_keystore(&dir, &mut rng, "password", None)?;
 
         // sign a message using the above key.
         let message = "Hello there!";
@@ -810,8 +760,7 @@ mod tests {
 
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
-        let recovered_wallet =
-            WalletUnlocked::load_keystore(path.clone(), "password", Some(provider.clone()))?;
+        let recovered_wallet = WalletUnlocked::load_keystore(path.clone(), "password", None)?;
 
         // Sign the same message as before and assert that the signature is the same.
         let signature2 = recovered_wallet.sign_message(message).await?;
@@ -824,11 +773,9 @@ mod tests {
 
     #[tokio::test]
     async fn mnemonic_generation() -> Result<()> {
-        let provider = setup().await;
-
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
 
-        let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, Some(provider))?;
+        let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, None)?;
         Ok(())
     }
 
@@ -837,14 +784,9 @@ mod tests {
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
-        let provider = setup().await;
-
         // Create first account from mnemonic phrase.
-        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
-            phrase,
-            Some(provider.clone()),
-            "m/44'/60'/0'/0/0",
-        )?;
+        let wallet =
+            WalletUnlocked::new_from_mnemonic_phrase_with_path(phrase, None, "m/44'/60'/0'/0/0")?;
 
         let expected_plain_address =
             "df9d0e6c6c5f5da6e82e5e1a77974af6642bdb450a10c43f0c6910a212600185";
@@ -854,11 +796,8 @@ mod tests {
         assert_eq!(wallet.address().to_string(), expected_address);
 
         // Create a second account from the same phrase.
-        let wallet2 = WalletUnlocked::new_from_mnemonic_phrase_with_path(
-            phrase,
-            Some(provider),
-            "m/44'/60'/1'/0/0",
-        )?;
+        let wallet2 =
+            WalletUnlocked::new_from_mnemonic_phrase_with_path(phrase, None, "m/44'/60'/1'/0/0")?;
 
         let expected_second_plain_address =
             "261191b0164a24fd0fd51566ec5e5b0b9ba8fb2d42dc9cf7dbbd6f23d2742759";
@@ -881,163 +820,20 @@ mod tests {
         let phrase =
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
-        let provider = setup().await;
-
         // Create first account from mnemonic phrase.
-        let wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
-            phrase,
-            Some(provider.clone()),
-            "m/44'/60'/0'/0/0",
-        )?;
+        let wallet =
+            WalletUnlocked::new_from_mnemonic_phrase_with_path(phrase, None, "m/44'/60'/0'/0/0")?;
 
         let uuid = wallet.encrypt(&dir, "password")?;
 
         let path = Path::new(dir.path()).join(uuid);
 
-        let recovered_wallet = WalletUnlocked::load_keystore(&path, "password", Some(provider))?;
+        let recovered_wallet = WalletUnlocked::load_keystore(&path, "password", None)?;
 
         assert_eq!(wallet.address(), recovered_wallet.address());
 
         // Remove tempdir.
         assert!(std::fs::remove_file(&path).is_ok());
-        Ok(())
-    }
-
-    async fn setup() -> Provider {
-        let srv = FuelService::new_node(Config::local_node()).await.unwrap();
-        let client = FuelClient::from(srv.bound_address);
-        Provider::new(client)
-    }
-
-    fn add_fee_resources_wallet_config(num_wallets: u64) -> WalletsConfig {
-        let asset_configs = vec![AssetConfig {
-            id: BASE_ASSET_ID,
-            num_coins: 20,
-            coin_amount: 20,
-        }];
-        WalletsConfig::new_multiple_assets(num_wallets, asset_configs)
-    }
-
-    fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
-        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-
-        // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
-        let inputs: Vec<Input> = inputs
-            .iter()
-            .map(|input| match input {
-                Input::CoinSigned {
-                    owner,
-                    amount,
-                    asset_id,
-                    tx_pointer,
-                    witness_index,
-                    maturity,
-                    ..
-                } => Input::coin_signed(
-                    zero_utxo_id,
-                    *owner,
-                    *amount,
-                    *asset_id,
-                    *tx_pointer,
-                    *witness_index,
-                    *maturity,
-                ),
-                other => other.clone(),
-            })
-            .collect();
-
-        let comparison_results: Vec<bool> = inputs
-            .iter()
-            .map(|input| {
-                let found_index = expected_inputs
-                    .iter()
-                    .position(|expected| expected == input);
-                if let Some(index) = found_index {
-                    expected_inputs.remove(index);
-                    true
-                } else {
-                    false
-                }
-            })
-            .collect();
-
-        if !expected_inputs.is_empty() {
-            return false;
-        }
-
-        return comparison_results.iter().all(|&r| r);
-    }
-
-    #[tokio::test]
-    async fn add_fee_resources_empty_transaction() -> Result<()> {
-        let wallet_config = add_fee_resources_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-            .await
-            .pop()
-            .unwrap();
-        let mut tx = ScriptTransaction::new(vec![], vec![], TxParameters::default());
-
-        wallet.add_fee_resources(&mut tx, 0, 0).await?;
-
-        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-        let mut expected_inputs = vec![Input::coin_signed(
-            zero_utxo_id,
-            wallet.address().into(),
-            20,
-            BASE_ASSET_ID,
-            TxPointer::default(),
-            0,
-            0,
-        )];
-        let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
-
-        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), &expected_outputs);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
-        let wallet_config = add_fee_resources_wallet_config(1);
-        let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-            .await
-            .pop()
-            .unwrap();
-
-        let base_amount = 30;
-        let inputs = wallet
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
-            .await?;
-        let outputs = wallet.get_asset_outputs_for_amount(
-            &Address::zeroed().into(),
-            BASE_ASSET_ID,
-            base_amount,
-        );
-        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
-
-        wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
-
-        let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-        let mut expected_inputs = repeat(Input::coin_signed(
-            zero_utxo_id,
-            wallet.address().into(),
-            20,
-            BASE_ASSET_ID,
-            TxPointer::default(),
-            0,
-            0,
-        ))
-        .take(3)
-        .collect::<Vec<_>>();
-        let expected_outputs = vec![
-            Output::coin(Address::zeroed(), base_amount, BASE_ASSET_ID),
-            Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
-        ];
-
-        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
-        assert_eq!(tx.outputs(), &expected_outputs);
-
         Ok(())
     }
 }

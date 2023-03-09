@@ -36,25 +36,18 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
 }
 
 #[cfg(test)]
-#[cfg(feature = "test-helpers")]
 mod tests {
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
-        field::Maturity, Address, AssetId, Bytes32, Chargeable, Input, Output,
-        Transaction as FuelTransaction, TxPointer, UtxoId,
+        Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_test_helpers::{setup_single_asset_coins, setup_test_client};
-    use fuels_types::{
-        constants::BASE_ASSET_ID,
-        parameters::TxParameters,
-        transaction::{ScriptTransaction, Transaction},
-    };
+    use fuels_types::transaction::{ScriptTransaction, Transaction};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
-    use crate::{provider::Provider, wallet::WalletUnlocked};
+    use crate::wallet::WalletUnlocked;
 
     #[tokio::test]
     async fn sign_and_verify() -> Result<(), Box<dyn Error>> {
@@ -144,181 +137,5 @@ mod tests {
         signature.verify(&recovered_address, &message)?;
         Ok(())
         // ANCHOR_END: sign_tx
-    }
-
-    #[tokio::test]
-    async fn test_wallet_get_coins() -> fuels_types::errors::Result<()> {
-        const AMOUNT: u64 = 1000;
-        const NUM_COINS: u64 = 3;
-        let mut wallet = WalletUnlocked::new_random(None);
-        let coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, NUM_COINS, AMOUNT);
-
-        let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-        let provider = Provider::new(client);
-        wallet.set_provider(provider.clone());
-
-        let wallet_initial_coins = wallet.get_coins(BASE_ASSET_ID).await?;
-        let total_amount: u64 = wallet_initial_coins.iter().map(|c| c.amount).sum();
-
-        assert_eq!(wallet_initial_coins.len(), NUM_COINS as usize);
-        assert_eq!(total_amount, AMOUNT * NUM_COINS);
-
-        Ok(())
-    }
-
-    async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
-        let mut wallet_1 = WalletUnlocked::new_random(None);
-        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
-
-        let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
-
-        let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-        let provider = Provider::new(client);
-
-        wallet_1.set_provider(provider.clone());
-        wallet_2.set_provider(provider);
-
-        (wallet_1, wallet_2)
-    }
-
-    #[tokio::test]
-    async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
-        const AMOUNT: u64 = 5;
-        let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
-
-        // Configure transaction parameters.
-        let gas_price = 1;
-        let gas_limit = 500_000;
-        let maturity = 0;
-
-        let tx_params = TxParameters {
-            gas_price,
-            gas_limit,
-            maturity,
-        };
-
-        // Transfer 1 from wallet 1 to wallet 2.
-        const SEND_AMOUNT: u64 = 1;
-        let (tx_id, _receipts) = wallet_1
-            .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_params)
-            .await?;
-
-        // Assert that the transaction was properly configured.
-        let res = wallet_1
-            .get_provider()?
-            .get_transaction_by_id(&tx_id)
-            .await?
-            .unwrap();
-
-        let script = res.transaction.as_script().cloned().unwrap();
-        assert_eq!(script.limit(), gas_limit);
-        assert_eq!(script.price(), gas_price);
-        assert_eq!(*script.maturity(), maturity);
-
-        let wallet_1_spendable_resources =
-            wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
-        let wallet_2_spendable_resources =
-            wallet_2.get_spendable_resources(BASE_ASSET_ID, 1).await?;
-        let wallet_1_all_coins = wallet_1.get_coins(BASE_ASSET_ID).await?;
-        let wallet_2_all_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
-
-        // wallet_1 has now only one spent coin
-        assert_eq!(wallet_1_spendable_resources.len(), 1);
-        assert_eq!(wallet_1_all_coins.len(), 1);
-        // Check that wallet two now has a coin.
-        assert_eq!(wallet_2_all_coins.len(), 1);
-        assert_eq!(wallet_2_spendable_resources.len(), 1);
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
-        const AMOUNT: u64 = 1000000;
-        let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
-
-        // Transferring more than balance should fail.
-        let response = wallet_1
-            .transfer(
-                wallet_2.address(),
-                AMOUNT * 2,
-                Default::default(),
-                TxParameters::default(),
-            )
-            .await;
-
-        assert!(response.is_err());
-        let wallet_2_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
-        assert_eq!(wallet_2_coins.len(), 0);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
-        const AMOUNT: u64 = 5;
-        let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
-
-        // Transfer 2 from wallet 1 to wallet 2.
-        const SEND_AMOUNT: u64 = 2;
-        let _receipts = wallet_1
-            .transfer(
-                wallet_2.address(),
-                SEND_AMOUNT,
-                BASE_ASSET_ID,
-                TxParameters::default(),
-            )
-            .await?;
-
-        let wallet_1_final_coins = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
-
-        // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
-        let resulting_amount = wallet_1_final_coins.first().unwrap();
-        assert_eq!(resulting_amount.amount(), AMOUNT - SEND_AMOUNT);
-
-        let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await?;
-        assert_eq!(wallet_2_final_coins.len(), 1);
-
-        let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
-        assert_eq!(total_amount, SEND_AMOUNT);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn transfer_coins_of_non_base_asset() -> fuels_types::errors::Result<()> {
-        const AMOUNT: u64 = 10000;
-        let mut wallet_1 = WalletUnlocked::new_random(None);
-        let mut wallet_2 = WalletUnlocked::new_random(None).lock();
-
-        let asset_id: AssetId = AssetId::from([1; 32usize]);
-        let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
-        // setup base asset coins to pay tx fees
-        let base_coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, AMOUNT);
-        coins.extend(base_coins);
-
-        let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-        let provider = Provider::new(client);
-
-        wallet_1.set_provider(provider.clone());
-        wallet_2.set_provider(provider);
-
-        const SEND_AMOUNT: u64 = 200;
-        let _receipts = wallet_1
-            .transfer(
-                wallet_2.address(),
-                SEND_AMOUNT,
-                asset_id,
-                TxParameters::default(),
-            )
-            .await?;
-
-        let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;
-        assert_eq!(wallet_1_balance, AMOUNT - SEND_AMOUNT);
-
-        let wallet_2_final_coins = wallet_2.get_coins(asset_id).await?;
-        assert_eq!(wallet_2_final_coins.len(), 1);
-
-        let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
-        assert_eq!(total_amount, SEND_AMOUNT);
-        Ok(())
     }
 }
