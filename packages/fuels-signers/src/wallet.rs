@@ -548,13 +548,13 @@ impl Account for WalletUnlocked {
 #[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature> {
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> AccountResult<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> Result<Signature> {
+    async fn sign_transaction<Tx: Transaction + Send>(&self, tx: &mut Tx) -> AccountResult<Signature> {
 
         let id = tx.id();
 
@@ -611,7 +611,7 @@ mod tests {
 
     use fuel_core::service::{Config, FuelService};
     use fuel_core_client::client::FuelClient;
-    use fuel_tx::Address;
+    use fuel_tx::{Address, Input as FuelInput};
     use fuels_test_helpers::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
     use tempfile::tempdir;
 
@@ -742,14 +742,14 @@ mod tests {
         WalletsConfig::new_multiple_assets(num_wallets, asset_configs)
     }
 
-    fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
+    fn compare_inputs(inputs: &[FuelInput], expected_inputs: &mut Vec<FuelInput>) -> bool {
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
 
         // change UTXO_ids to 0s for comparison, because we can't guess the genesis coin ids
-        let inputs: Vec<Input> = inputs
+        let inputs: Vec<FuelInput> = inputs
             .iter()
             .map(|input| match input {
-                Input::CoinSigned {
+                FuelInput::CoinSigned {
                     owner,
                     amount,
                     asset_id,
@@ -757,7 +757,7 @@ mod tests {
                     witness_index,
                     maturity,
                     ..
-                } => Input::coin_signed(
+                } => FuelInput::coin_signed(
                     zero_utxo_id,
                     *owner,
                     *amount,
@@ -799,12 +799,13 @@ mod tests {
             .await
             .pop()
             .unwrap();
-        let mut tx = ScriptTransaction::new(vec![], vec![], TxParameters::default());
 
-        wallet.add_fee_resources(&mut tx, 0, 0).await?;
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+        wallet.add_fee_resources(&mut tb, 0, 0).await?;
+        let tx = tb.build()?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-        let mut expected_inputs = vec![Input::coin_signed(
+        let mut expected_inputs = vec![FuelInput::coin_signed(
             zero_utxo_id,
             wallet.address().into(),
             20,
@@ -815,7 +816,7 @@ mod tests {
         )];
         let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
-        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert!(compare_inputs(tx.inputs().as_slice(), &mut expected_inputs));
         assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())
@@ -838,12 +839,13 @@ mod tests {
             BASE_ASSET_ID,
             base_amount,
         );
-        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
 
-        wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+        wallet.add_fee_resources(&mut tb, base_amount, 0).await?;
+        let tx = tb.build()?;
 
         let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
-        let mut expected_inputs = repeat(Input::coin_signed(
+        let mut expected_inputs = repeat(FuelInput::coin_signed(
             zero_utxo_id,
             wallet.address().into(),
             20,
@@ -859,7 +861,7 @@ mod tests {
             Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
         ];
 
-        assert!(compare_inputs(tx.inputs(), &mut expected_inputs));
+        assert!(compare_inputs(tx.inputs().as_slice(), &mut expected_inputs));
         assert_eq!(tx.outputs(), &expected_outputs);
 
         Ok(())

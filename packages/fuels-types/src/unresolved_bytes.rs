@@ -1,6 +1,6 @@
 use crate::constants::WORD_SIZE;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Data {
     // Write the enclosed data immediately.
     Inline(Vec<u8>),
@@ -12,7 +12,7 @@ pub enum Data {
 // To get the final encoded bytes, we need to know the address at which these
 // bytes are going to be loaded at. Once the address is given to `resolve`
 // normal bytes can be retrieved.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct UnresolvedBytes {
     data: Vec<Data>,
 }

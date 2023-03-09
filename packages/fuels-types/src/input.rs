@@ -1,11 +1,11 @@
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId};
 
 use crate::resource::Resource;
 use crate::unresolved_bytes::UnresolvedBytes;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input {
     ResourceSigned {
         resource: Resource,
@@ -68,40 +68,6 @@ impl Input {
             state_root,
             tx_pointer,
             contract_id,
-        }
-    }
-}
-
-
-impl Hash for Input {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Input::ResourceSigned {
-                resource, ..
-            } => {
-                0.hash(state);
-                resource.hash(state);
-            }
-            Input::ResourcePredicate {
-                resource, ..
-            } => {
-                1.hash(state);
-                resource.hash(state);
-            }
-            Input::Contract {
-                utxo_id,
-                balance_root,
-                state_root,
-                tx_pointer,
-                contract_id,
-            } => {
-                2.hash(state);
-                utxo_id.hash(state);
-                balance_root.hash(state);
-                state_root.hash(state);
-                tx_pointer.hash(state);
-                contract_id.hash(state);
-            }
         }
     }
 }

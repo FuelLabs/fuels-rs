@@ -317,15 +317,15 @@ impl ScriptTransactionBuilder {
 impl CreateTransactionBuilder {
     fn convert_to_fuel_tx(self, base_offset: usize) -> CreateTransaction {
         FuelTransaction::create(
-            self.gas_price.into(),
-            self.gas_limit.into(),
-            self.maturity.into(),
+            self.gas_price,
+            self.gas_limit,
+            self.maturity,
             self.bytecode_witness_index,
             self.salt,
             self.storage_slots,
             convert_to_fuel_inputs(&self.inputs, base_offset), //placeholder offset
             self.outputs,
-            self.witnesses.into(),
+            self.witnesses,
         )
         .into()
     }
@@ -359,7 +359,7 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
     let mut new_offset = offset;
 
     inputs
-        .into_iter()
+        .iter()
         .map(|input| match input {
             Input::ResourcePredicate {
                 resource,

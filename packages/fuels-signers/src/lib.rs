@@ -33,11 +33,11 @@ pub mod wallet;
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Signer: std::fmt::Debug + Send + Sync {
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature>;
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> AccountResult<Signature>;
 
     /// Signs the transaction
     async fn sign_transaction<Tx: Transaction + Send>(&self, message: &mut Tx)
-        -> Result<Signature>;
+        -> AccountResult<Signature>;
 }
 
 #[derive(Error, Debug)]
@@ -156,7 +156,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn sign_and_verify() -> Result<()> {
+    async fn sign_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: sign_message
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
@@ -187,7 +187,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn sign_tx_and_verify() -> Result<()> {
+    async fn sign_tx_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: sign_tx
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
@@ -246,7 +246,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
+    async fn send_transfer_transactions() -> Result<()> {
         // Setup two sets of coins, one for each wallet, each containing 1 coin with 1 amount.
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None).lock();

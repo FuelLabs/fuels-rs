@@ -21,6 +21,12 @@ impl From<ClientCoinStatus> for CoinStatus {
     }
 }
 
+impl Default for CoinStatus {
+    fn default() -> Self {
+        CoinStatus::Unspent
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Coin {
     pub amount: u64,
