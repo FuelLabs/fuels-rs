@@ -329,8 +329,9 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 mod tests {
     use std::vec;
 
-    use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
+
+    use crate::utils::generate_unused_field_names;
 
     use super::*;
 
