@@ -80,7 +80,7 @@ type AccountResult<T> = std::result::Result<T, AccountError>;
 pub trait Account: std::fmt::Debug + Send + Sync {
     fn address(&self) -> &Bech32Address;
 
-    fn get_provider(&self) -> AccountResult<&Provider>;
+    fn provider(&self) -> AccountResult<&Provider>;
 
     fn set_provider(&mut self, provider: Provider);
 
@@ -88,7 +88,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.get_provider()?
+        self.provider()?
             .get_balances(self.address())
             .await
             .map_err(Into::into)
@@ -105,7 +105,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             amount,
             ..Default::default()
         };
-        self.get_provider()?
+        self.provider()?
             .get_spendable_resources(filter)
             .await
             .map_err(Into::into)

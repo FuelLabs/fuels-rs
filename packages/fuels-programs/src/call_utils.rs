@@ -41,7 +41,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
     tx_parameters: &TxParameters,
     account: &T,
 ) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.get_provider()?.consensus_parameters().await?;
+    let consensus_parameters = account.provider()?.consensus_parameters().await?;
 
     // Calculate instructions length for call instructions
     // Use placeholder for call param offsets, we only care about the length

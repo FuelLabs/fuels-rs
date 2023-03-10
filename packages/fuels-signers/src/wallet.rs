@@ -318,11 +318,7 @@ impl WalletUnlocked {
         previous_base_amount: u64,
         witness_index: u8,
     ) -> Result<()> {
-        let consensus_parameters = self
-            .get_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
         let transaction_fee = tb
             .fee_checked_from_tx(&consensus_parameters)
@@ -392,7 +388,7 @@ impl Account for WalletUnlocked {
         &self.address
     }
 
-    fn get_provider(&self) -> AccountResult<&Provider> {
+    fn provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
@@ -442,7 +438,7 @@ impl Account for WalletUnlocked {
         };
 
         let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id, receipts))
     }
@@ -501,7 +497,7 @@ impl Account for WalletUnlocked {
         let tx = self.pay_fee_resources(tb, base_amount, 0).await?;
 
         let tx_id = tx.id();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -529,7 +525,7 @@ impl Account for WalletUnlocked {
         let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

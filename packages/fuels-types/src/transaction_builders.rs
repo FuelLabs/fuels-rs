@@ -19,9 +19,11 @@ use fuel_types::{Address, AssetId, Bytes32, ContractId, Salt};
 
 pub trait TransactionBuilder<T> {
     fn build(self) -> Result<T>;
+
     fn is_using_predicates(&self) -> bool;
 
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+
     fn check_without_signatures(
         &self,
         block_height: u64,
@@ -42,36 +44,6 @@ pub trait TransactionBuilder<T> {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct ScriptTransactionBuilder {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
-    pub script: Vec<u8>,
-    pub script_data: Vec<u8>,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
-    pub witnesses: Vec<Witness>,
-    pub(crate) consensus_parameters: Option<ConsensusParameters>,
-    pub tx_offset: usize,
-}
-
-#[derive(Debug, Clone, Default)]
-pub struct CreateTransactionBuilder {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
-    pub bytecode_length: u64,
-    pub bytecode_witness_index: u8,
-    pub storage_slots: Vec<StorageSlot>,
-    pub inputs: Vec<Input>,
-    pub outputs: Vec<Output>,
-    pub witnesses: Vec<Witness>,
-    pub salt: Salt,
-    pub(crate) consensus_parameters: Option<ConsensusParameters>,
-    pub tx_offset: usize,
 }
 
 macro_rules! impl_tx_trait {
@@ -183,6 +155,34 @@ macro_rules! impl_tx_trait {
             }
         }
     };
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct ScriptTransactionBuilder {
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+    pub script: Vec<u8>,
+    pub script_data: Vec<u8>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub witnesses: Vec<Witness>,
+    pub(crate) consensus_parameters: Option<ConsensusParameters>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct CreateTransactionBuilder {
+    pub gas_price: u64,
+    pub gas_limit: u64,
+    pub maturity: u64,
+    pub bytecode_length: u64,
+    pub bytecode_witness_index: u8,
+    pub storage_slots: Vec<StorageSlot>,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub witnesses: Vec<Witness>,
+    pub salt: Salt,
+    pub(crate) consensus_parameters: Option<ConsensusParameters>,
 }
 
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);

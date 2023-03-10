@@ -235,7 +235,7 @@ impl<T: Account + Clone> Contract<T> {
             .map_err(|err| ProviderError(format!("{err}")))?;
 
         let provider = account
-            .get_provider()
+            .provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
@@ -840,7 +840,7 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
         &self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.get_provider()?;
+        let provider = self.account.provider()?;
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
@@ -854,7 +854,7 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
-        let provider = self.account.get_provider()?;
+        let provider = self.account.provider()?;
         let tx = self.build_tx().await?;
 
         simulate_and_check_success(provider, &tx).await?;
@@ -923,7 +923,7 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
 
         let transaction_cost = self
             .account
-            .get_provider()?
+            .provider()?
             .estimate_transaction_cost(&script, tolerance)
             .await?;
 

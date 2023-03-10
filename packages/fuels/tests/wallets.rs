@@ -262,7 +262,7 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
 
     // Assert that the transaction was properly configured.
     let res = wallet_1
-        .get_provider()?
+        .provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();

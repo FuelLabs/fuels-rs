@@ -78,7 +78,7 @@ impl Account for Predicate {
         &self.address
     }
 
-    fn get_provider(&self) -> AccountResult<&Provider> {
+    fn provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
@@ -179,7 +179,7 @@ impl Account for Predicate {
             self.pay_fee_resources(tx_builder, 0, 0).await?
         };
 
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -233,7 +233,7 @@ impl Account for Predicate {
         let tx = self.pay_fee_resources(tb, base_amount, 0).await?;
 
         let tx_id = tx.id();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -258,7 +258,7 @@ impl Account for Predicate {
         let tx = self.pay_fee_resources(tb, amount, 0).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self.get_provider()?.send_transaction(&tx).await?;
+        let receipts = self.provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

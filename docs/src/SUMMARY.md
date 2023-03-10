@@ -9,6 +9,7 @@
   - [Connecting to the Testnet or an external node](./providers/external-node.md)
   - [Running a short-lived Fuel node with the SDK](./providers/short-lived.md)
   - [Querying the blockchain](./providers/querying.md)
+- [Accounts](./getting-started/account.md)
 - [Managing wallets](./getting-started/managing-wallets.md)
   - [Creating a wallet from a private key](./wallets/private-keys.md)
   - [Creating a wallet from mnemonic phrases](./wallets/mnemonic-wallet.md)
@@ -73,4 +74,3 @@
   - [Integration tests structure](./contributing/tests-structure.md)
 - [Command Line Interfaces](./cli/index.md)
   - [`fuels-abi-cli`](./cli/fuels-abi-cli.md)
-- [Accounts](./account/index.md)

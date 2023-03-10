@@ -143,7 +143,7 @@ mod tests {
         // ANCHOR: set_predicate_data
         let mut predicate = predicate_handler.set_data(4096, 4096).get_predicate();
 
-        predicate.set_provider(first_wallet.get_provider()?.clone());
+        predicate.set_provider(first_wallet.provider()?.clone());
         // ANCHOR_END: set_predicate_data
 
         // ANCHOR: predicate_data_lock_amount

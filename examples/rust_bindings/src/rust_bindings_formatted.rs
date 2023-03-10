@@ -27,7 +27,7 @@ pub mod abigen_bindings {
             }
             pub async fn get_balances(&self) -> Result<HashMap<String, u64>, Error> {
                 self.account
-                    .get_provider()?
+                    .provider()?
                     .get_contract_balances(&self.contract_id)
                     .await
                     .map_err(Into::into)
