@@ -1764,7 +1764,7 @@ let is_error = response.is_err();
 <p><strong>Note:</strong> if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
-<p>With with the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
+<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
 <pre><code class="language-rust ignore">TransactionCost {
     min_gas_price: u64,
     min_byte_price: u64,
