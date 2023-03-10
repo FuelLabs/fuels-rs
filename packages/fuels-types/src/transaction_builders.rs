@@ -390,11 +390,11 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
                 witness_index,
             } => match resource {
                 Resource::Coin(coin) => {
-                    new_offset += offsets::message_signed_data_offset();
+                    new_offset += offsets::coin_signed_data_offset();
                     create_coin_input(coin.clone(), *witness_index)
                 }
                 Resource::Message(message) => {
-                    new_offset += offsets::message_signed_data_offset();
+                    new_offset += offsets::message_signed_data_offset(message.data.len());
                     create_message_input(message.clone(), *witness_index)
                 }
             },

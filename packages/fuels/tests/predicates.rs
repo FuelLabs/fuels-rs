@@ -1,3 +1,4 @@
+use fuel_tx::Output;
 use fuels::{
     prelude::*,
     tx::AssetId,
@@ -5,6 +6,7 @@ use fuels::{
 };
 use fuels_signers::predicate::Predicate;
 use fuels_signers::Account;
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
 // use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(
@@ -949,6 +951,79 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_transfer_with_signed_resources() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi =
+            "packages/fuels/tests/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+    ));
+
+    let mut predicate: Predicate =
+        MyPredicate::load_from("tests/predicates/predicate_vector/out/debug/predicate_vector.bin")?
+            .set_data(2, 4, vec![2, 4, 42])
+            .get_predicate();
+
+    let predicate_num_coins = 4;
+    let predicate_num_messages = 3;
+    let predicate_amount = 1000;
+    let predicate_balance = (predicate_num_coins + predicate_num_messages) * predicate_amount;
+
+    let mut wallet = WalletUnlocked::new_random(None);
+    let wallet_num_coins = 4;
+    let wallet_num_messages = 3;
+    let wallet_amount = 1000;
+    let wallet_balance = (wallet_num_coins + wallet_num_messages) * wallet_amount;
+
+    let (mut coins, mut messages, asset_id) = get_test_coins_and_messages(
+        predicate.address(),
+        predicate_num_coins,
+        predicate_num_messages,
+        predicate_amount,
+    );
+    let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
+        wallet.address(),
+        wallet_num_coins,
+        wallet_num_messages,
+        wallet_amount,
+    );
+
+    coins.extend(wallet_coins);
+    messages.extend(wallet_messages);
+
+    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    wallet.set_provider(provider.clone());
+    predicate.set_provider(provider.clone());
+
+    let mut inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, wallet_balance, 0)
+        .await?;
+    let predicate_inputs = predicate
+        .get_asset_inputs_for_amount(asset_id, predicate_balance)
+        .await?;
+    inputs.extend(predicate_inputs);
+
+    let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
+
+    let params = provider.consensus_parameters().await?;
+    let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
+        .set_consensus_parameters(params)
+        .build()?;
+    wallet.sign_transaction(&mut tx).await?;
+
+    provider.send_transaction(&tx).await?;
+
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        predicate_balance + wallet_balance,
+    )
+    .await;
+
     Ok(())
 }
 
