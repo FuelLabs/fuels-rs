@@ -141,17 +141,12 @@ pub(crate) fn get_instructions(
     calls: &[ContractCall],
     offsets: Vec<CallOpcodeParamsOffset>,
 ) -> Vec<u8> {
-    let mut instructions = vec![];
-    for (call, call_offsets) in calls.iter().zip(offsets.iter()) {
-        instructions.extend(get_single_call_instructions(
-            call_offsets,
-            &call.output_param,
-        ));
-    }
-
-    instructions.extend(op::ret(RegId::ONE).to_bytes());
-
-    instructions
+    calls
+        .iter()
+        .zip(&offsets)
+        .flat_map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
+        .chain(op::ret(RegId::ONE).to_bytes().into_iter())
+        .collect()
 }
 
 /// Returns script data, consisting of the following items in the given order:

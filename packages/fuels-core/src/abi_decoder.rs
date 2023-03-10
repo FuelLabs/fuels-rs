@@ -47,16 +47,16 @@ impl ABIDecoder {
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        if !param_type.contains_no_nested_vectors() {
+        Ok(Self::decode_param(param_type, bytes)?.token)
+    }
+
+    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        if param_type.contains_nested_vectors() {
             return Err(error!(
                 InvalidData,
                 "Type {param_type:?} contains nested vectors, this is not supported."
             ));
         }
-        Ok(Self::decode_param(param_type, bytes)?.token)
-    }
-
-    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
