@@ -74,7 +74,7 @@ forc build --json-abi-with-callpaths
 
 Now the type from the previous example will be generated under `abigen_bindings::my_contract_mod::some_library::SomeLibraryType`.
 
-This might only become relevant to you if your type doesn't get reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one `abigen!` call. You'll then need to fully qualify the access to it.
+This might only become relevant if your type isn't reexported. This can happen, as explained previously if your type does not have a unique name across all bindings inside one `abigen!` call. You'll then need to fully qualify the access to it.
 
 Including type paths will eventually become the default and the flag will be removed.
 
