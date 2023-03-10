@@ -90,7 +90,7 @@ impl ParamType {
         }
     }
 
-    fn any_nested_vectors(param_types: &Vec<ParamType>) -> bool {
+    fn any_nested_vectors(param_types: &[ParamType]) -> bool {
         param_types
             .iter()
             .any(|param_type| param_type.is_vector() || param_type.contains_nested_vectors())
