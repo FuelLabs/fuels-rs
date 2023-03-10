@@ -495,7 +495,6 @@ pub fn get_decoded_output(
             // contract_id. There are no receipts in between the two ReturnData receipts because of
             // the way the scripts are built (the calling script adds a RETD just after the CALL
             // opcode, see `get_single_call_instructions`).
-            // Find the position of the first corresponding ReturnData receipt
             let vector_data = receipts
                 .iter()
                 .tuple_windows()
