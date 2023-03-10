@@ -6,7 +6,7 @@ use fuels_types::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
     param_types::ParamType,
-    unzip_param_types, Byte, StringToken, Token,
+    unzip_param_types, StringToken, Token,
 };
 
 use crate::Tokenizable;
@@ -77,22 +77,9 @@ impl ABIDecoder {
     }
 
     fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = ParamType::Bytes.calculate_num_of_elements(bytes)?;
-        let (tokens, bytes_read) =
-            Self::decode_multiple(&vec![ParamType::Byte; num_of_elements], bytes)?;
-
-        let u8_vec = tokens
-            .into_iter()
-            .map(Byte::from_token)
-            .collect::<Result<Vec<Byte>>>()
-            .map_err(|e| error!(InvalidData, "{e}"))?
-            .into_iter()
-            .map(u8::from)
-            .collect();
-
         Ok(DecodeResult {
-            token: Token::Bytes(u8_vec),
-            bytes_read,
+            token: Token::Bytes(bytes.to_vec()),
+            bytes_read: bytes.len(),
         })
     }
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {

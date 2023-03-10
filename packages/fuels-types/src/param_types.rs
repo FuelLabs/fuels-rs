@@ -70,8 +70,7 @@ impl ParamType {
 
     pub fn calculate_num_of_elements(&self, bytes: &[u8]) -> Result<usize> {
         let memory_size = match self {
-            // The `Bytes` type in the VM uses byte-packing, don't multiply by WORD_SIZE
-            ParamType::Bytes => Ok(ParamType::U8.compute_encoding_width()),
+            ParamType::Bytes => Ok(std::mem::size_of::<u8>()),
             ParamType::Vector(param_type) => Ok(param_type.compute_encoding_width() * WORD_SIZE),
             ParamType::RawSlice => Ok(ParamType::U64.compute_encoding_width() * WORD_SIZE),
             _ => Err(error!(
@@ -127,6 +126,16 @@ impl ParamType {
 
     pub fn is_vm_heap_type(&self) -> bool {
         matches!(self, ParamType::Vector(..)) || matches!(self, ParamType::Bytes)
+    }
+    pub fn heap_inner_element_size(&self) -> Option<u16> {
+        match &self {
+            ParamType::Vector(inner_param_type) => {
+                Some((inner_param_type.compute_encoding_width() * WORD_SIZE) as u16)
+            }
+            // `Bytes` type is byte-packed in the VM, so it's the size of an u8
+            ParamType::Bytes => Some(std::mem::size_of::<u8>() as u16),
+            _ => None,
+        }
     }
 
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.

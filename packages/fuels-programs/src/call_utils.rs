@@ -12,7 +12,6 @@ use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
-    error,
     errors::{Error, Result},
     param_types::ParamType,
     parameters::TxParameters,
@@ -264,19 +263,7 @@ pub(crate) fn get_single_call_instructions(
     ]
     .to_vec();
     // The instructions are different if you want to return data that was on the heap
-    if output_param_type.is_vm_heap_type() {
-        let inner_type_byte_size = match output_param_type {
-            ParamType::Vector(inner_param_type) => {
-                Ok((inner_param_type.compute_encoding_width() * WORD_SIZE) as u16)
-            }
-            // `Bytes` type is byte-packed in the VM, so don't multiply by WORD_SIZE
-            ParamType::Bytes => Ok(ParamType::Byte.compute_encoding_width() as u16),
-            _ => Err(error!(
-                InvalidData,
-                "If `.uses_heap_data` is true then the type is either `Bytes` or `Vector`"
-            )),
-        }
-        .unwrap();
+    if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).
