@@ -1,4 +1,6 @@
-use fuels_types::ByteArray;
+use std::iter::{repeat, zip};
+
+use fuels_types::{param_types::ParamType, ByteArray};
 use sha2::{Digest, Sha256};
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
@@ -12,4 +14,8 @@ pub fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     let mut output = ByteArray::default();
     output[4..].copy_from_slice(&result[..4]);
     output
+}
+
+pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
+    zip(repeat("unused".to_string()), types).collect()
 }

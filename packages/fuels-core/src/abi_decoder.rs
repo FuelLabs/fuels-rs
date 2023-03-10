@@ -347,8 +347,9 @@ fn calculate_num_of_elements(param_type: &ParamType, bytes: &[u8]) -> Result<usi
 mod tests {
     use std::vec;
 
-    use fuels_test_helpers::generate_unused_field_names;
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
+
+    use crate::utils::generate_unused_field_names;
 
     use super::*;
 
