@@ -77,24 +77,23 @@ impl ParamType {
             } => {
                 fields.iter().any(|(_, param_type)| {
                     param_type.is_vector() || param_type.contains_nested_vectors()
-                }) || generics.iter().any(|param_type| {
-                    param_type.is_vector() || param_type.contains_nested_vectors()
-                })
+                }) || Self::any_nested_vectors(generics)
             }
-            ParamType::Tuple(param_types, ..) => param_types
-                .iter()
-                .any(|param_type| param_type.is_vector() || param_type.contains_nested_vectors()),
+            ParamType::Tuple(param_types, ..) => Self::any_nested_vectors(param_types),
             ParamType::Enum {
                 generics, variants, ..
             } => {
-                generics.iter().any(|param_type| {
-                    param_type.is_vector() || param_type.contains_nested_vectors()
-                }) || variants.param_types().iter().any(|param_type| {
-                    param_type.is_vector() || param_type.contains_nested_vectors()
-                })
+                Self::any_nested_vectors(generics)
+                    || Self::any_nested_vectors(&variants.param_types())
             }
             _ => false,
         }
+    }
+
+    fn any_nested_vectors(param_types: &Vec<ParamType>) -> bool {
+        param_types
+            .iter()
+            .any(|param_type| param_type.is_vector() || param_type.contains_nested_vectors())
     }
 
     pub fn is_vector(&self) -> bool {
