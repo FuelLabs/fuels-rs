@@ -5,7 +5,7 @@ use crate::{
     errors::{error, Error, Result},
     param_types::ParamType,
     traits::Parameterize,
-    Bytes, RawUntypedPtr,
+    Bytes,
 };
 
 pub trait Tokenizable {
@@ -191,25 +191,6 @@ impl Tokenizable for Bytes {
 
     fn into_token(self) -> Token {
         Token::Bytes(Vec::from(self))
-    }
-}
-
-impl Tokenizable for RawUntypedPtr {
-    fn from_token(token: Token) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        match token {
-            Token::RawUntypedPtr(ptr) => Ok(Self(ptr)),
-            _ => Err(error!(
-                InvalidData,
-                "RawUntypedPtr::from_token expected a token of the variant Token::RawUntypedPtr, got: {token}"
-            )),
-        }
-    }
-
-    fn into_token(self) -> Token {
-        Token::RawUntypedPtr(u64::from(self))
     }
 }
 

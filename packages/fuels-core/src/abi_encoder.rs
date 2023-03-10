@@ -131,11 +131,6 @@ impl ABIEncoder {
                     "Encoding a `Bytes` type is currently not supported by the Fuel spec."
                 )
             }
-            Token::RawUntypedPtr(_) => {
-                unimplemented!(
-                    "Encoding a `RawUntypedPtr` type is currently not supported by the Fuel spec."
-                )
-            }
         };
 
         Ok(encoded_token)

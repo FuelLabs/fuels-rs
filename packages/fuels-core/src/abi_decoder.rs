@@ -76,13 +76,6 @@ impl ABIDecoder {
         }
     }
 
-    fn decode_raw_untyped_ptr(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
-            token: Token::RawUntypedPtr(peek_u64(bytes)?),
-            bytes_read: 8,
-        })
-    }
-
     fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
         let num_of_elements = ParamType::Bytes.calculate_num_of_elements(bytes)?;
         let (tokens, bytes_read) =

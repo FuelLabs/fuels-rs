@@ -7,15 +7,6 @@ impl From<Byte> for u8 {
 }
 
 #[derive(Debug, PartialEq, Clone, Eq)]
-pub struct RawUntypedPtr(pub u64);
-
-impl From<RawUntypedPtr> for u64 {
-    fn from(ptr: RawUntypedPtr) -> Self {
-        ptr.0
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Bytes(pub Vec<u8>);
 
 impl From<Bytes> for Vec<u8> {

@@ -70,7 +70,7 @@ fn is_type_sdk_provided(name: &str) -> bool {
 }
 
 fn is_type_unused(name: &str) -> bool {
-    ["raw untyped ptr", "RawVec"].contains(&name)
+    ["raw untyped ptr", "RawVec", "RawBytes"].contains(&name)
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to

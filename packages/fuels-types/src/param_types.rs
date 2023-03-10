@@ -48,7 +48,6 @@ pub enum ParamType {
     Tuple(Vec<ParamType>),
     RawSlice,
     Bytes,
-    RawUntypedPtr,
 }
 
 pub enum ReturnLocation {
@@ -163,9 +162,6 @@ impl ParamType {
             ),
             ParamType::Bytes => unimplemented!(
                 "Bytes are not supported as inputs, so needing the encoding width of a Bytes should not happen."
-            ),
-            ParamType::RawUntypedPtr => unimplemented!(
-                "RawUntypedPtr are not supported as inputs, so needing the encoding width of a RawUntypedPtr should not happen."
             ),
         }
     }

@@ -128,7 +128,6 @@ pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
         "::fuels::types::RawSlice",
         "::fuels::types::Bytes",
         "::fuels::types::Byte",
-        "::fuels::types::RawUntypedPtr",
         "::std::vec::Vec",
         "::core::result::Result",
         "::core::option::Option",

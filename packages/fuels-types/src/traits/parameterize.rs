@@ -6,7 +6,7 @@ use crate::{
     core::{Bits256, RawSlice, SizedAsciiString},
     enum_variants::EnumVariants,
     param_types::ParamType,
-    Bytes, RawUntypedPtr,
+    Bytes,
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
@@ -42,12 +42,6 @@ impl<T: Parameterize> Parameterize for Vec<T> {
 impl Parameterize for Bytes {
     fn param_type() -> ParamType {
         ParamType::Bytes
-    }
-}
-
-impl Parameterize for RawUntypedPtr {
-    fn param_type() -> ParamType {
-        ParamType::RawUntypedPtr
     }
 }
 

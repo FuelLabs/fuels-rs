@@ -17,7 +17,7 @@ mod sized_ascii_string;
 
 pub use crate::core::{
     bits::*,
-    bytes::{Bytes, RawUntypedPtr},
+    byte::{Byte, Bytes},
     native::*,
     raw_slice::RawSlice,
     sized_ascii_string::*,
@@ -93,7 +93,6 @@ pub enum Token {
     Tuple(Vec<Token>),
     RawSlice(Vec<u64>),
     Bytes(Vec<u8>),
-    RawUntypedPtr(u64),
 }
 
 impl fmt::Display for Token {

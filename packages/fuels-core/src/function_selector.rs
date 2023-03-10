@@ -73,9 +73,6 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::RawSlice => unimplemented!("`RawSlice` type is not supported as arguments"),
         ParamType::Bytes => unimplemented!("`Bytes` type is not supported as arguments"),
-        ParamType::RawUntypedPtr => {
-            unimplemented!("`RawUntypedPtr` type is not supported as arguments")
-        }
     }
 }
 
