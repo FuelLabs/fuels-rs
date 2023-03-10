@@ -67,7 +67,7 @@ Normally when using types from libraries in your contract, script or predicate, 
 
 This can cause problems if you happen to have two types with the same name in different libraries of your program.
 
-This behavior can be changed to include the library path by compiling with:
+This behavior can be changed to include the library path by compiling your Sway project with the following:
 ```
 forc build --json-abi-with-callpaths
 ```
