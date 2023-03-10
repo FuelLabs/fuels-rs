@@ -52,41 +52,6 @@ pub struct Wallet {
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
 /// alongside in-memory. Knowing the private key allows a `WalletUlocked` to sign operations, send
 /// transactions, and more.
-///
-/// # Examples
-///
-/// ## Signing and Verifying a message
-///
-/// The wallet can be used to produce ECDSA [`Signature`] objects, which can be then verified.
-///
-/// ```
-/// use fuel_crypto::Message;
-/// use fuels::prelude::*;
-///
-/// async fn foo() -> Result<()> {
-///   // Setup local test node
-///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
-///
-///   // Create a new local wallet with the newly generated key
-///   let wallet = WalletUnlocked::new_random(Some(provider));
-///
-///   let message = "my message";
-///   let signature = wallet.sign_message(message.as_bytes()).await?;
-///
-///   // Lock the wallet when we're done, dropping the private key from memory.
-///   let wallet = wallet.lock();
-///
-///   // Recover address that signed the message
-///   let message = Message::new(message);
-///   let recovered_address = signature.recover(&message).expect("Failed to recover address");
-///
-///   assert_eq!(wallet.address().hash(), recovered_address.hash());
-///
-///   // Verify signature
-///   signature.verify(&recovered_address, &message).unwrap();
-///   Ok(())
-/// }
-/// ```
 #[derive(Clone, Debug)]
 pub struct WalletUnlocked {
     wallet: Wallet,
