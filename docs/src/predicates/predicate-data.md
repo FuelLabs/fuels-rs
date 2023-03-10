@@ -6,19 +6,18 @@ Let's consider the following predicate example:
 {{#include ../../../packages/fuels/tests/predicates/predicate_basic/src/main.sw}}
 ```
 
-Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `encode_data`, and it is accessed through the predicate instance as shown below:
+We will look at a complete example of using the SDK to send and receive funds from a predicate.
 
-```rust,ignore
-{{#include ../../../examples/predicates/src/lib.rs:encode_predicate_data}}
-```
-
-Next, we will look at a complete example of using the SDK to send and receive funds from a predicate.
-
-
-First, we set up the wallets, node, and a predicate instance:
+First, we set up the wallets, node, and a predicate handler instance:
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_setup}}
+```
+
+Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `set_data`, and it is accessed through the predicate handler instance as shown below:
+
+```rust,ignore
+{{#include ../../../examples/predicates/src/lib.rs:set_predicate_data}}
 ```
 
 Next, we lock some assets in this predicate using the first wallet:

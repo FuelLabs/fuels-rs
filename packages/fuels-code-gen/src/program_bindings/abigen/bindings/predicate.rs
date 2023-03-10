@@ -26,7 +26,6 @@ pub(crate) fn predicate_bindings(
     let encode_function = expand_fn(&abi, shared_types)?;
 
     let code = quote! {
-
         #[derive(Debug, Clone)]
         pub struct #name {
             address: ::fuels::types::bech32::Bech32Address,

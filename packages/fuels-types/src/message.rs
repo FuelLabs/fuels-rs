@@ -72,28 +72,3 @@ impl From<Message> for MessageConfig {
         }
     }
 }
-
-impl Message {
-    pub(crate) fn _from_message_signed(coin: Input) -> Option<Self> {
-        match coin {
-            Input::MessageSigned {
-                message_id: _,
-                sender,
-                recipient,
-                amount,
-                nonce,
-                witness_index: _,
-                data,
-            } => Some(Self {
-                amount,
-                sender: sender.into(),
-                recipient: recipient.into(),
-                nonce,
-                data,
-                da_height: Default::default(),
-                status: MessageStatus::Unspent,
-            }),
-            _ => None,
-        }
-    }
-}

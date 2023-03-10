@@ -165,15 +165,6 @@ where
             .set_script(self.script_call.script_binary.clone())
             .set_script_data(self.compute_script_data().await?);
 
-        // let consensus_parameters = self.provider.consensus_parameters().await?;
-        // let script_offset = base_offset(&consensus_parameters);
-        // let a = ScriptTransactionBuilder::default()
-        //     .set_script(vec![])
-        //     .build();
-        //
-        // tx.tx_offset = script_offset + tx.script_data().len() + tx.script().len() - 64;
-        // let tx = self.account.pay_fee_resources(tb, 0, 0).await?;
-
         Ok(tb)
     }
 

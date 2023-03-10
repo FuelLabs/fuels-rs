@@ -18,7 +18,6 @@ async fn test_transaction_script_workflow() -> Result<()> {
     let call_handler = contract_instance.methods().initialize_counter(42);
 
     let tx = call_handler.build_tx().await?;
-    // let tx = tb.build()?;
     let provider = wallet.provider()?;
     let receipts = provider.send_transaction(&tx).await?;
 

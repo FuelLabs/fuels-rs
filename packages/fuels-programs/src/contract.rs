@@ -228,17 +228,6 @@ impl<T: Account + Clone> Contract<T> {
     ) -> Result<Bech32ContractId> {
         let (tb, contract_id) =
             Self::contract_deployment_transaction(compiled_contract, params).await?;
-        // let consensus_parameters = account
-        //     .get_provider()
-        //     .expect("Could not get provider")
-        //     .chain_info()
-        //     .await?
-        //     .consensus_parameters;
-        //
-        // tx.tx_offset =
-        //     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN;
-
-        // dbg!(&account);
 
         let tx = account
             .pay_fee_resources(tb, 0, 1)
@@ -254,7 +243,6 @@ impl<T: Account + Clone> Contract<T> {
             chain_info.latest_block.header.height,
             &chain_info.consensus_parameters,
         )?;
-
         provider.send_transaction(&tx).await?;
 
         Ok(contract_id)

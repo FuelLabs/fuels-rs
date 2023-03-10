@@ -775,12 +775,6 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider.clone());
 
-    dbg!(
-        wallet
-            .get_spendable_resources(AssetId::default(), 1)
-            .await?
-    );
-
     setup_contract_test!(
         Abigen(
             name = "TestContract",
@@ -792,7 +786,6 @@ async fn test_contract_instance_get_balances() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
     let contract_id = contract_instance.contract_id();
 
     // Check the current balance of the contract with id 'contract_id'

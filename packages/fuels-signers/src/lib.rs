@@ -34,16 +34,18 @@ pub mod wallet;
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Signer: std::fmt::Debug + Send + Sync {
+    type Error: std::error::Error + Send + Sync;
+
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> AccountResult<Signature>;
+    ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
     async fn sign_transaction<Tx: Transaction + Send>(
         &self,
         message: &mut Tx,
-    ) -> AccountResult<Signature>;
+    ) -> std::result::Result<Signature, Self::Error>;
 }
 
 #[derive(Error, Debug)]

@@ -133,16 +133,18 @@ mod tests {
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
+        abigen!(Predicate(name="MyPredicateHandler", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
 
-        let mut predicate: Predicate = MyPredicate::load_from(
+        let predicate_handler = MyPredicateHandler::load_from(
             "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
-        )?
-        .set_data(4096, 4096)
-        .get_predicate();
+        )?;
+        // ANCHOR_END: predicate_data_setup
+
+        // ANCHOR: set_predicate_data
+        let mut predicate = predicate_handler.set_data(4096, 4096).get_predicate();
 
         predicate.set_provider(first_wallet.get_provider()?.clone());
-        // ANCHOR_END: predicate_data_setup
+        // ANCHOR_END: set_predicate_data
 
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
@@ -158,10 +160,6 @@ mod tests {
 
         assert_eq!(balance, 500);
         // ANCHOR_END: predicate_data_lock_amount
-        //
-        // ANCHOR: encode_predicate_data
-        // let predicate = predicate.set_data(4096, 4096);
-        // ANCHOR_END: encode_predicate_data
 
         // ANCHOR: predicate_data_unlock
         // We use the Predicate's `encode_data()` to encode the data we want to

@@ -8,7 +8,6 @@ use fuels_signers::predicate::Predicate;
 use fuels_signers::Account;
 use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
-// use crate::my_predicate_mod::MyPredicate;
 async fn assert_address_balance(
     address: &Bech32Address,
     provider: &Provider,
