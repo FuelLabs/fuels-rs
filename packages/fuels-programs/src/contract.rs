@@ -40,11 +40,7 @@ pub struct CallParameters {
 }
 
 impl CallParameters {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn new_from(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
+    pub fn new(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
         Self {
             amount,
             asset_id,
@@ -116,11 +112,7 @@ pub struct StorageConfiguration {
 }
 
 impl StorageConfiguration {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn new_from(storage_path: String, manual_storage: Vec<StorageSlot>) -> Self {
+    pub fn new(storage_path: String, manual_storage: Vec<StorageSlot>) -> Self {
         Self {
             storage_path,
             manual_storage,
@@ -148,11 +140,7 @@ pub struct DeployConfiguration {
 }
 
 impl DeployConfiguration {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn new_from(
+    pub fn new(
         tx_parameters: TxParameters,
         storage: StorageConfiguration,
         configurables: impl Into<Configurables>,

@@ -36,11 +36,7 @@ macro_rules! impl_setter_getter {
 }
 
 impl TxParameters {
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn new_from(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
+    pub fn new(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
         Self {
             gas_price,
             gas_limit,

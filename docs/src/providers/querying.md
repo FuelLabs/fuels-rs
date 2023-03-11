@@ -18,7 +18,7 @@ You might need to set up a test blockchain first. You can skip this step if you'
 
 ## Get all coins from an address
 
-This method returns all coins (of a given asset ID) from a wallet, including spent ones.
+This method returns all unspent coins (of a given asset ID) from a wallet.
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_coins}}

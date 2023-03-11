@@ -501,7 +501,7 @@ mod test {
                 contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
                 encoded_args: args[i].clone(),
-                call_parameters: CallParameters::new_from(i as u64, asset_ids[i], i as u64),
+                call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 message_outputs: None,
@@ -842,7 +842,7 @@ mod test {
             (asset_id_2, 400),
         ]
         .map(|(asset_id, amount)| {
-            CallParameters::new()
+            CallParameters::default()
                 .set_amount(amount)
                 .set_asset_id(asset_id)
         })

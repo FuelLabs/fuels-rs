@@ -171,7 +171,7 @@ mod tests {
         println!("Contract deployed @ {contract_id_1}");
 
         // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let tx_parameters = TxParameters::new()
+        let tx_parameters = TxParameters::default()
             .set_gas_price(0)
             .set_gas_limit(1_000_000)
             .set_maturity(0);
@@ -181,7 +181,7 @@ mod tests {
         let value = Bytes32::from([2u8; 32]);
         let storage_slot = StorageSlot::new(key, value);
         let storage_configuration =
-            StorageConfiguration::new().set_manual_storage(vec![storage_slot]);
+            StorageConfiguration::default().set_manual_storage(vec![storage_slot]);
 
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
@@ -189,7 +189,7 @@ mod tests {
         let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            DeployConfiguration::new()
+            DeployConfiguration::default()
                 .set_storage_configuration(storage_configuration)
                 .set_salt(salt)
                 .set_tx_parameters(tx_parameters),
@@ -228,7 +228,7 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new().set_gas_limit(1_000_000))
+            .tx_params(TxParameters::default().set_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
@@ -238,7 +238,7 @@ mod tests {
         let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[1],
-            DeployConfiguration::new().set_salt(salt),
+            DeployConfiguration::default().set_salt(salt),
         )
         .await?;
 
@@ -248,7 +248,7 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new().set_gas_limit(1_000_000))
+            .tx_params(TxParameters::default().set_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
@@ -276,7 +276,7 @@ mod tests {
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        let my_tx_parameters = TxParameters::new()
+        let my_tx_parameters = TxParameters::default()
             .set_gas_price(1)
             .set_gas_limit(1_000_000)
             .set_maturity(0);
@@ -304,7 +304,7 @@ mod tests {
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::new().set_amount(1_000_000);
+        let call_params = CallParameters::default().set_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -578,8 +578,8 @@ mod tests {
         // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 10_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::new().set_gas_limit(10_000);
-        let call_params = CallParameters::new().set_gas_forwarded(4300);
+        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.

@@ -122,9 +122,9 @@ fn contract_deploying_code(
                     Contract::deploy(
                         #bin_path,
                         &#wallet_name,
-                        DeployConfiguration::new()
+                        DeployConfiguration::default()
                             .set_storage_configuration(
-                                StorageConfiguration::new().set_storage_path(
+                                StorageConfiguration::default().set_storage_path(
                                     #storage_path.to_string()
                                 )
                             )
