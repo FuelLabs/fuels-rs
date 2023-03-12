@@ -7,6 +7,7 @@ use fuel_abi_types::{
         has_tuple_format,
     },
 };
+use itertools::chain;
 use strum_macros::EnumString;
 
 use crate::{
@@ -69,30 +70,35 @@ impl ParamType {
 
     pub fn contains_nested_vectors(&self) -> bool {
         match &self {
-            ParamType::Vector(param_type) | ParamType::Array(param_type, ..) => {
-                param_type.is_vector() || param_type.contains_nested_vectors()
-            }
-            ParamType::Struct {
-                fields, generics, ..
-            } => {
-                fields.iter().any(|(_, param_type)| {
-                    param_type.is_vector() || param_type.contains_nested_vectors()
-                }) || Self::any_nested_vectors(generics)
-            }
+            ParamType::Vector(param_type) => param_type.uses_vectors(),
+            _ => self.uses_vectors(),
+        }
+    }
+
+    fn uses_vectors(&self) -> bool {
+        match &self {
+            ParamType::Vector(..) => true,
+            ParamType::Array(param_type, ..) => param_type.uses_vectors(),
             ParamType::Tuple(param_types, ..) => Self::any_nested_vectors(param_types),
             ParamType::Enum {
                 generics, variants, ..
             } => {
-                Self::any_nested_vectors(generics)
-                    || Self::any_nested_vectors(&variants.param_types())
+                let variants_types = variants.param_types();
+                Self::any_nested_vectors(chain!(generics, &variants_types))
+            }
+            ParamType::Struct {
+                fields, generics, ..
+            } => {
+                let fields = fields.iter().map(|(_, param_type)| param_type);
+                Self::any_nested_vectors(chain!(fields, generics))
             }
             _ => false,
         }
     }
 
-    fn any_nested_vectors(param_types: &[ParamType]) -> bool {
+    fn any_nested_vectors<'a>(param_types: impl IntoIterator<Item = &'a ParamType>) -> bool {
         param_types
-            .iter()
+            .into_iter()
             .any(|param_type| param_type.is_vector() || param_type.contains_nested_vectors())
     }
 
