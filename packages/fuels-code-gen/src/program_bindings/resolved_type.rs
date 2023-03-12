@@ -71,7 +71,7 @@ impl TypeResolver {
         }
     }
 
-    /// All custom type paths will be resolved relative from the given `type_path`. E.g. When
+    /// All custom type paths will be resolved relative from the given `type_path`. E.g. when
     /// resolving a struct containing a field of the custom type `some_lib::another_lib::AType` with
     /// `type_path` being given as `some_lib::different_lib` the resulting path to `AType` will be
     /// relative to `type_path`: `super::another_lib::AType`.
@@ -80,10 +80,6 @@ impl TypeResolver {
         self
     }
 
-    /// Given a type, will recursively proceed to resolve it until it results in a
-    /// `ResolvedType` which can be then be converted into a `TokenStream`. As such
-    /// it can be used whenever you need the Rust type of the given
-    /// `FullTypeApplication`.
     pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
         let base_type = &type_application.type_decl;
 
