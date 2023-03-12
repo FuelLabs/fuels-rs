@@ -14,8 +14,9 @@ use crate::{
     utils::{safe_ident, TypePath},
 };
 
-// Represents a type alongside its generic parameters. Can be converted into a
-// `TokenStream` via `.into()`.
+/// Represents a Rust type alongside its generic parameters. For when you want to reference an ABI
+/// type in Rust code since [`ResolvedType`] can be converted into a [`TokenStream`] via
+/// `resolved_type.to_token_stream()`.
 #[derive(Debug, Clone)]
 pub struct ResolvedType {
     pub type_name: TokenStream,
