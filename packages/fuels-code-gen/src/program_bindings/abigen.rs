@@ -15,7 +15,7 @@ use crate::{
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
-    utils::TypePath,
+    utils::ident,
 };
 
 mod abigen_target;
@@ -84,8 +84,8 @@ impl Abigen {
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
-        let mod_path = TypePath::new("abigen_bindings").unwrap();
-        Ok(shared_types.merge(bindings).wrap_in_mod(mod_path))
+        let mod_name = ident("abigen_bindings");
+        Ok(shared_types.merge(bindings).wrap_in_mod(mod_name))
     }
 
     fn generate_all_bindings(
@@ -106,7 +106,7 @@ impl Abigen {
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
-        let mod_name = TypePath::new(format!("{}_mod", &target.name.to_snake_case()))?;
+        let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
         let types = generate_types(&target.source.types, shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std)?;
@@ -125,12 +125,12 @@ impl Abigen {
         shared_types: HashSet<FullTypeDeclaration>,
         no_std: bool,
     ) -> Result<GeneratedCode> {
-        let mod_name = TypePath::new("shared_types")?;
         let types = generate_types(&shared_types, &HashSet::default(), no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())
         } else {
+            let mod_name = ident("shared_types");
             Ok(types.wrap_in_mod(mod_name))
         }
     }

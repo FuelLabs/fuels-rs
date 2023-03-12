@@ -77,7 +77,7 @@ jobs:
             !packages/fuels/tests/**/Forc.lock
             !packages/fuels/tests/.gitignore
 
-      # TODO: To be removed once type paths become default
+      # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
         run: forc build --terse --json-abi-with-callpaths
         working-directory: packages/fuels

@@ -33,6 +33,12 @@ impl From<&Ident> for TypePath {
     }
 }
 
+impl From<Ident> for TypePath {
+    fn from(value: Ident) -> Self {
+        (&value).into()
+    }
+}
+
 impl TypePath {
     pub fn new<T: ToString>(path: T) -> Result<Self> {
         let path_str = path.to_string();

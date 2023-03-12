@@ -29,7 +29,7 @@ fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
         .iter()
         .map(|l| {
             let type_application = &l.application;
-            let resolved_type = TypeResolver::new()
+            let resolved_type = TypeResolver::default()
                 .resolve(type_application)
                 .expect("Failed to resolve log type");
             let param_type_call = single_param_type_call(&resolved_type);

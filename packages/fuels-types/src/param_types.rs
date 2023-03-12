@@ -1220,7 +1220,7 @@ mod tests {
     }
     #[test]
     fn try_vector_is_type_path_backward_compatible() {
-        // TODO: remove this once forc starts generating type-paths always
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
         let the_type = given_vec_type_w_path("Vec");
 
         let param_type = try_vector(&the_type).unwrap().unwrap();

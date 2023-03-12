@@ -60,31 +60,24 @@ impl Display for ResolvedType {
     }
 }
 
+/// Used to resolve [`FullTypeApplication`]s into [`ResolvedType`]s
 pub(crate) struct TypeResolver {
-    relative_to_mod: TypePath,
+    /// The mod in which the produced [`ResolvedType`]s are going to end up in.
+    current_mod: TypePath,
+}
+
+impl Default for TypeResolver {
+    fn default() -> Self {
+        TypeResolver::new(Default::default())
+    }
 }
 
 impl TypeResolver {
-    pub(crate) fn new() -> Self {
-        Self {
-            relative_to_mod: Default::default(),
-        }
-    }
-
-    /// All custom type paths will be resolved relative from the given `type_path`. E.g. when
-    /// resolving a struct containing a field of the custom type `some_lib::another_lib::AType` with
-    /// `type_path` being given as `some_lib::different_lib` the resulting path to `AType` will be
-    /// relative to `type_path`: `super::another_lib::AType`.
-    pub(crate) fn relative_to_mod(&mut self, type_path: TypePath) -> &mut Self {
-        self.relative_to_mod = type_path;
-        self
+    pub(crate) fn new(current_mod: TypePath) -> Self {
+        Self { current_mod }
     }
 
     pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
-        let base_type = &type_application.type_decl;
-
-        let type_field = base_type.type_field.as_str();
-
         let resolvers = [
             Self::to_simple_type,
             Self::to_byte,
@@ -102,6 +95,8 @@ impl TypeResolver {
                 return Ok(resolved);
             }
         }
+
+        let type_field = &type_application.type_decl.type_field;
         Err(error!("Could not resolve '{type_field}' to any known type"))
     }
 
@@ -251,7 +246,7 @@ impl TypeResolver {
         let type_path = sdk_provided_custom_types_lookup()
             .get(&type_path)
             .cloned()
-            .unwrap_or_else(|| type_path.relative_path_from(&self.relative_to_mod));
+            .unwrap_or_else(|| type_path.relative_path_from(&self.current_mod));
 
         let generic_params = self.resolve_multiple(&type_application.type_arguments)?;
 
@@ -285,7 +280,7 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = TypeResolver::new()
+        let resolved_type = TypeResolver::default()
             .resolve(&application)
             .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
@@ -571,7 +566,7 @@ mod tests {
             let type_application = given_fn_arg_of_custom_type(&type_path);
 
             // when
-            let resolved_type = TypeResolver::new().resolve(&type_application).unwrap();
+            let resolved_type = TypeResolver::default().resolve(&type_application).unwrap();
 
             // then
             let expected_type_name = expected_path.into_token_stream();

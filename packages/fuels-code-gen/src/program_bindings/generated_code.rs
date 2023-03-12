@@ -91,8 +91,8 @@ impl GeneratedCode {
         self
     }
 
-    pub fn wrap_in_mod(mut self, mod_name: TypePath) -> Self {
-        let mut parts = mod_name.take_parts();
+    pub fn wrap_in_mod(mut self, mod_name: impl Into<TypePath>) -> Self {
+        let mut parts = mod_name.into().take_parts();
         parts.reverse();
 
         for mod_name in parts {
@@ -305,7 +305,8 @@ mod tests {
     #[test]
     fn use_statements_only_for_uniquely_named_types() {
         // given
-        let not_unique_struct = given_some_struct_code("NotUnique");
+        let not_unique_struct =
+            given_some_struct_code("NotUnique").wrap_in_mod(TypePath::new("another_mod").unwrap());
 
         let generated_code = GeneratedCode::new(
             Default::default(),

@@ -25,7 +25,7 @@ impl Component {
     pub fn new(
         component: &FullTypeApplication,
         snake_case: bool,
-        relative_to_mod: TypePath,
+        mod_of_component: TypePath,
     ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -35,9 +35,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: TypeResolver::new()
-                .relative_to_mod(relative_to_mod)
-                .resolve(component)?,
+            field_type: TypeResolver::new(mod_of_component).resolve(component)?,
         })
     }
 }
@@ -143,7 +141,7 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         )
     })
     .flat_map(|(original_type_path, provided_type_path)| {
-        // TODO: remove the flat_map once forc starts generating type-paths always
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
         let backward_compat_mapping = original_type_path
             .ident()
             .expect("The original type path must have at least one part")

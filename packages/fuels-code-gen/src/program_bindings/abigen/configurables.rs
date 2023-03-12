@@ -22,7 +22,7 @@ impl ResolvedConfigurable {
         let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
             name: safe_ident(&format!("set_{}", configurable.name)),
-            ttype: TypeResolver::new().resolve(type_application)?,
+            ttype: TypeResolver::default().resolve(type_application)?,
             offset: configurable.offset,
         })
     }

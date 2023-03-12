@@ -54,22 +54,24 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
 /// Instead of generating bindings for `ttype` this fn will just generate a `pub use` pointing to
 /// the already generated equivalent shared type.
 fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
+    // e.g. some_libary::another_mod::SomeStruct
     let type_path = ttype
         .custom_type_path()
         .expect("This must be a custom type due to the previous filter step");
 
     let type_mod = type_path.parent();
 
-    let path_to_shared_types =
+    let from_top_lvl_to_shared_types =
         TypePath::new("super::shared_types").expect("This is known to be a valid TypePath");
 
-    let contract_level_mod = TypePath::default();
+    let top_lvl_mod = TypePath::default();
+    let from_current_mod_to_top_level = top_lvl_mod.relative_path_from(&type_mod);
 
-    let path = contract_level_mod
-        .relative_path_from(&type_mod)
-        .append(path_to_shared_types)
+    let path = from_current_mod_to_top_level
+        .append(from_top_lvl_to_shared_types)
         .append(type_path);
 
+    // e.g. pub use super::super::super::shared_types::some_library::another_mod::SomeStruct;
     let the_reexport = quote! {pub use #path;};
 
     Ok(GeneratedCode::new(the_reexport, Default::default(), no_std).wrap_in_mod(type_mod))
@@ -100,7 +102,7 @@ fn is_type_unused(type_path: &TypePath) -> bool {
     let msg = "Known to be correct";
     [
         TypePath::new("std::vec::RawVec").expect(msg),
-        // TODO: remove once forc starts generating type-paths always
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
         TypePath::new("RawVec").expect(msg),
     ]
     .contains(type_path)

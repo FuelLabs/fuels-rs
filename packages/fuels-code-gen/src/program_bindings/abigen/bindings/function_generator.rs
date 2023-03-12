@@ -75,18 +75,19 @@ fn function_arguments(inputs: &[FullTypeApplication]) -> Result<Vec<Component>> 
     inputs
         .iter()
         .map(|input| {
-            // Currently all our function-related bindings are resolved at the top-level-mod thus
-            // the default used below. If we ever want to change that then the new mod would need to
-            // be propagated to this fn.
-            let code_parent_mod = TypePath::default();
-            Component::new(input, true, code_parent_mod)
+            // All abi-method-calling Rust functions are currently generated at the top-level-mod of
+            // the Program in question (e.g. abigen_bindings::my_contract_mod`). If we ever nest
+            // these functions in a deeper mod we would need to propagate the mod to here instead of
+            // just hard-coding the default path.
+            let mod_of_component = TypePath::default();
+            Component::new(input, true, mod_of_component)
         })
         .collect::<Result<_>>()
 }
 
 fn resolve_fn_output_type(function: &FullABIFunction) -> Result<ResolvedType> {
     let type_application = function.output();
-    let output_type = TypeResolver::new().resolve(type_application)?;
+    let output_type = TypeResolver::default().resolve(type_application)?;
     if output_type.uses_vectors() {
         Err(error!(
             "function '{}' contains a vector in its return type. This currently isn't supported.",
