@@ -161,7 +161,6 @@ impl Contract {
                         | Token::B256(_)
                         | Token::Tuple(_)
                         | Token::Array(_)
-                        | Token::Byte(_)
                         | Token::Vector(_)
                 )
             })

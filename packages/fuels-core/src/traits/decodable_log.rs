@@ -36,7 +36,6 @@ fn paramtype_decode_log(param_type: &ParamType, token: &Token) -> Result<String>
         (ParamType::U32, Token::U32(val)) => val.to_string(),
         (ParamType::U64, Token::U64(val)) => val.to_string(),
         (ParamType::Bool, Token::Bool(val)) => val.to_string(),
-        (ParamType::Byte, Token::Byte(val)) => val.to_string(),
         (ParamType::B256, Token::B256(val)) => {
             format!("Bits256({val:?})")
         }

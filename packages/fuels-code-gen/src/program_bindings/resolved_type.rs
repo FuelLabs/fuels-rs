@@ -77,7 +77,6 @@ pub(crate) fn resolve_type(
 
     [
         to_simple_type,
-        to_byte,
         to_bits256,
         to_generic,
         to_array,
@@ -195,22 +194,6 @@ fn to_simple_type(
             })
         }
         _ => None,
-    }
-}
-
-fn to_byte(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    if type_field == "byte" {
-        Some(ResolvedType {
-            type_name: quote! {::fuels::types::Byte},
-            generic_params: vec![],
-        })
-    } else {
-        None
     }
 }
 
@@ -339,11 +322,6 @@ mod tests {
     #[test]
     fn test_resolve_bool() -> Result<()> {
         test_resolve_primitive_type("bool", "bool")
-    }
-
-    #[test]
-    fn test_resolve_byte() -> Result<()> {
-        test_resolve_primitive_type("byte", ":: fuels :: types :: Byte")
     }
 
     #[test]

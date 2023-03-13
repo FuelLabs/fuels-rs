@@ -64,7 +64,6 @@ impl ABIDecoder {
             ParamType::U32 => Self::decode_u32(bytes),
             ParamType::U64 => Self::decode_u64(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
-            ParamType::Byte => Self::decode_byte(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
             ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::String(length) => Self::decode_string(bytes, *length),
@@ -165,13 +164,6 @@ impl ABIDecoder {
         Ok(DecodeResult {
             token: Token::B256(*peek_fixed::<32>(bytes)?),
             bytes_read: 32,
-        })
-    }
-
-    fn decode_byte(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
-            token: Token::Byte(peek_u8(bytes)?),
-            bytes_read: 8,
         })
     }
 

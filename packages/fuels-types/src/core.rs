@@ -10,12 +10,11 @@ use crate::{
 };
 
 mod bits;
-mod byte;
 mod native;
 mod raw_slice;
 mod sized_ascii_string;
 
-pub use crate::core::{bits::*, byte::*, native::*, raw_slice::RawSlice, sized_ascii_string::*};
+pub use crate::core::{bits::*, native::*, raw_slice::RawSlice, sized_ascii_string::*};
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
@@ -77,7 +76,6 @@ pub enum Token {
     U32(u32),
     U64(u64),
     Bool(bool),
-    Byte(u8),
     B256([u8; 32]),
     Array(Vec<Token>),
     Vector(Vec<Token>),
