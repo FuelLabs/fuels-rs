@@ -6,7 +6,7 @@ use fuels_types::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
     param_types::ParamType,
-    unzip_param_types, StringToken, Token,
+    StringToken, Token,
 };
 
 use crate::Tokenizable;
@@ -95,9 +95,8 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_struct(param_types: &[(String, ParamType)], bytes: &[u8]) -> Result<DecodeResult> {
-        let param_types = unzip_param_types(param_types);
-        let (tokens, bytes_read) = Self::decode_multiple(&param_types, bytes)?;
+    fn decode_struct(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
+        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
 
         Ok(DecodeResult {
             token: Token::Struct(tokens),
@@ -236,7 +235,7 @@ impl ABIDecoder {
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
-        let (_, selected_variant) = variants.select_variant(discriminant)?;
+        let selected_variant = variants.select_variant(discriminant)?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
@@ -350,7 +349,6 @@ mod tests {
     use fuels_types::{enum_variants::EnumVariants, errors::Error};
 
     use super::*;
-    use crate::utils::generate_unused_field_names;
 
     #[test]
     fn decode_int() -> Result<()> {
@@ -462,9 +460,9 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
+        let types = vec![ParamType::U8, ParamType::Bool];
         let param_type = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![ParamType::U8, ParamType::Bool]),
+            fields: types,
             generics: vec![],
         };
 
@@ -483,12 +481,9 @@ mod tests {
         //     y: bool,
         // }
 
-        let inner_enum_types = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::U32,
-            ParamType::Bool,
-        ]))?;
+        let types = vec![ParamType::U32, ParamType::Bool];
+        let inner_enum_types = EnumVariants::new(types)?;
         let types = vec![ParamType::Enum {
-            name: "".to_string(),
             variants: inner_enum_types.clone(),
             generics: vec![],
         }];
@@ -517,21 +512,18 @@ mod tests {
         //     y: u32,
         // }
 
-        let inner_enum_types = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::B256,
-            ParamType::U32,
-        ]))?;
+        let types = vec![ParamType::B256, ParamType::U32];
+        let inner_enum_types = EnumVariants::new(types)?;
 
+        let types = vec![
+            ParamType::Enum {
+                variants: inner_enum_types.clone(),
+                generics: vec![],
+            },
+            ParamType::U32,
+        ];
         let struct_type = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![
-                ParamType::Enum {
-                    name: "".to_string(),
-                    variants: inner_enum_types.clone(),
-                    generics: vec![],
-                },
-                ParamType::U32,
-            ]),
+            fields: types,
             generics: vec![],
         };
 
@@ -572,19 +564,19 @@ mod tests {
         //     b: u8[2],
         // }
 
+        let types = vec![
+            ParamType::Bool,
+            ParamType::Array(Box::new(ParamType::U8), 2),
+        ];
+        let types1 = vec![
+            ParamType::U16,
+            ParamType::Struct {
+                fields: types,
+                generics: vec![],
+            },
+        ];
         let nested_struct = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![
-                ParamType::U16,
-                ParamType::Struct {
-                    name: "".to_string(),
-                    fields: generate_unused_field_names(vec![
-                        ParamType::Bool,
-                        ParamType::Array(Box::new(ParamType::U8), 2),
-                    ]),
-                    generics: vec![],
-                },
-            ]),
+            fields: types1,
             generics: vec![],
         };
 
@@ -622,19 +614,19 @@ mod tests {
         // fn: long_function(Foo,u8[2],b256,str[23])
 
         // Parameters
+        let types = vec![
+            ParamType::Bool,
+            ParamType::Array(Box::new(ParamType::U8), 2),
+        ];
+        let types1 = vec![
+            ParamType::U16,
+            ParamType::Struct {
+                fields: types,
+                generics: vec![],
+            },
+        ];
         let nested_struct = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![
-                ParamType::U16,
-                ParamType::Struct {
-                    name: "".to_string(),
-                    fields: generate_unused_field_names(vec![
-                        ParamType::Bool,
-                        ParamType::Array(Box::new(ParamType::U8), 2),
-                    ]),
-                    generics: vec![],
-                },
-            ]),
+            fields: types1,
             generics: vec![],
         };
 
@@ -692,9 +684,9 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
+        let types = vec![ParamType::Unit, ParamType::U64];
         let struct_type = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![ParamType::Unit, ParamType::U64]),
+            fields: types,
             generics: vec![],
         };
 
@@ -708,12 +700,9 @@ mod tests {
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
-        let variants = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::Unit,
-            ParamType::Unit,
-        ]))?;
+        let types = vec![ParamType::Unit, ParamType::Unit];
+        let variants = EnumVariants::new(types)?;
         let enum_w_only_units = ParamType::Enum {
-            name: "".to_string(),
             variants: variants.clone(),
             generics: vec![],
         };
@@ -728,9 +717,9 @@ mod tests {
     #[test]
     fn out_of_bounds_discriminant_is_detected() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        let variants = EnumVariants::new(generate_unused_field_names(vec![ParamType::U32]))?;
+        let types = vec![ParamType::U32];
+        let variants = EnumVariants::new(types)?;
         let enum_type = ParamType::Enum {
-            name: "".to_string(),
             variants,
             generics: vec![],
         };

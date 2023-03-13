@@ -6,11 +6,11 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
-    variants: Vec<(String, ParamType)>,
+    variants: Vec<ParamType>,
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants> {
+    pub fn new(variants: Vec<ParamType>) -> Result<EnumVariants> {
         if !variants.is_empty() {
             Ok(EnumVariants { variants })
         } else {
@@ -18,19 +18,15 @@ impl EnumVariants {
         }
     }
 
-    pub fn variants(&self) -> &Vec<(String, ParamType)> {
+    pub fn variants(&self) -> &Vec<ParamType> {
         &self.variants
     }
 
     pub fn param_types(&self) -> Vec<ParamType> {
-        self.variants
-            .iter()
-            .map(|(_, param_type)| param_type)
-            .cloned()
-            .collect()
+        self.variants.clone()
     }
 
-    pub fn select_variant(&self, discriminant: u8) -> Result<&(String, ParamType)> {
+    pub fn select_variant(&self, discriminant: u8) -> Result<&ParamType> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
             error!(
                 InvalidData,
@@ -43,7 +39,7 @@ impl EnumVariants {
     pub fn only_units_inside(&self) -> bool {
         self.variants
             .iter()
-            .all(|(_, variant)| *variant == ParamType::Unit)
+            .all(|variant| *variant == ParamType::Unit)
     }
 
     /// Calculates how many WORDs are needed to encode an enum.

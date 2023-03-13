@@ -27,7 +27,7 @@ pub enum ParamType {
     Bool,
     Byte,
     B256,
-    // The Unit paramtype is used for unit variants in Enums. The corresponding type field is `()`,
+    // The Unit ParamType is used for unit variants in Enums. The corresponding type field is `()`,
     // similar to Rust.
     Unit,
     Array(Box<ParamType>, usize),
@@ -36,13 +36,11 @@ pub enum ParamType {
     String(usize),
     #[strum(disabled)]
     Struct {
-        name: String,
-        fields: Vec<(String, ParamType)>,
+        fields: Vec<ParamType>,
         generics: Vec<ParamType>,
     },
     #[strum(disabled)]
     Enum {
-        name: String,
         variants: EnumVariants,
         generics: Vec<ParamType>,
     },
@@ -88,10 +86,7 @@ impl ParamType {
             }
             ParamType::Struct {
                 fields, generics, ..
-            } => {
-                let fields = fields.iter().map(|(_, param_type)| param_type);
-                Self::any_nested_vectors(chain!(fields, generics))
-            }
+            } => Self::any_nested_vectors(chain!(fields, generics)),
             _ => false,
         }
     }
@@ -130,7 +125,7 @@ impl ParamType {
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
             ParamType::Struct { fields, .. } => {
-                fields.iter().map(|(_, p)| p.compute_encoding_width()).sum()
+                fields.iter().map(|param_type| param_type.compute_encoding_width()).sum()
             }
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
@@ -324,22 +319,16 @@ impl TryFrom<&Type> for ParamType {
     }
 }
 
-fn named_param_types(coll: &[Type]) -> Result<Vec<(String, ParamType)>> {
-    coll.iter()
-        .map(|e| Ok(("unused".to_string(), e.try_into()?)))
-        .collect()
+fn convert_into_param_types(coll: &[Type]) -> Result<Vec<ParamType>> {
+    coll.iter().map(ParamType::try_from).collect()
 }
 
 fn try_struct(the_type: &Type) -> Result<Option<ParamType>> {
     let result = if has_struct_format(&the_type.type_field) {
         let generics = param_types(&the_type.generic_params)?;
 
-        let fields = named_param_types(&the_type.components)?;
-        Some(ParamType::Struct {
-            name: "not_used".to_string(),
-            fields,
-            generics,
-        })
+        let fields = convert_into_param_types(&the_type.components)?;
+        Some(ParamType::Struct { fields, generics })
     } else {
         None
     };
@@ -369,7 +358,7 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
             ));
         }
 
-        let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
+        let vec_elem_type = convert_into_param_types(&the_type.generic_params)?.remove(0);
 
         return Ok(Some(ParamType::Vector(Box::new(vec_elem_type))));
     }
@@ -382,14 +371,10 @@ fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
     let result = if field.starts_with("enum ") {
         let generics = param_types(&the_type.generic_params)?;
 
-        let components = named_param_types(&the_type.components)?;
+        let components = convert_into_param_types(&the_type.components)?;
         let variants = EnumVariants::new(components)?;
 
-        Some(ParamType::Enum {
-            name: "".to_string(),
-            variants,
-            generics,
-        })
+        Some(ParamType::Enum { variants, generics })
     } else {
         None
     };
@@ -460,12 +445,6 @@ mod tests {
     const WIDTH_OF_U32: usize = 1;
     const WIDTH_OF_BOOL: usize = 1;
 
-    // The same function from fuels-core cannot
-    // be used here because of a circular dependency
-    fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
-        zip(std::iter::repeat("unused".to_string()), types).collect()
-    }
-
     #[test]
     fn array_size_dependent_on_num_of_elements() {
         const NUM_ELEMENTS: usize = 11;
@@ -490,19 +469,15 @@ mod tests {
 
     #[test]
     fn structs_are_just_all_elements_combined() {
+        let types = vec![ParamType::U32, ParamType::U32];
         let inner_struct = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![ParamType::U32, ParamType::U32]),
+            fields: types,
             generics: vec![],
         };
 
+        let types = vec![ParamType::B256, ParamType::Bool, inner_struct];
         let a_struct = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![
-                ParamType::B256,
-                ParamType::Bool,
-                inner_struct,
-            ]),
+            fields: types,
             generics: vec![],
         };
 
@@ -515,17 +490,14 @@ mod tests {
 
     #[test]
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<()> {
+        let types = vec![ParamType::B256];
         let inner_struct = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![ParamType::B256]),
+            fields: types,
             generics: vec![],
         };
+        let types = vec![ParamType::U32, inner_struct];
         let param = ParamType::Enum {
-            name: "".to_string(),
-            variants: EnumVariants::new(generate_unused_field_names(vec![
-                ParamType::U32,
-                inner_struct,
-            ]))?,
+            variants: EnumVariants::new(types)?,
             generics: vec![],
         };
 
@@ -767,11 +739,11 @@ mod tests {
         let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
+        let types = vec![ParamType::U8];
         assert_eq!(
             result,
             ParamType::Struct {
-                name: "not_used".to_string(),
-                fields: generate_unused_field_names(vec![ParamType::U8]),
+                fields: types,
                 generics: vec![ParamType::U8]
             }
         );
@@ -826,11 +798,11 @@ mod tests {
         let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
+        let types = vec![ParamType::U8];
         assert_eq!(
             result,
             ParamType::Enum {
-                name: "".to_string(),
-                variants: EnumVariants::new(generate_unused_field_names(vec![ParamType::U8]))?,
+                variants: EnumVariants::new(types)?,
                 generics: vec![ParamType::U8]
             }
         );
@@ -1211,55 +1183,48 @@ mod tests {
 
         // then
         let expected_param_type = {
+            let types = vec![ParamType::String(2)];
+            let types1 = vec![ParamType::Struct {
+                fields: types,
+                generics: vec![ParamType::String(2)],
+            }];
             let pass_the_generic_on = ParamType::Struct {
-                name: "not_used".to_string(),
-                fields: generate_unused_field_names(vec![ParamType::Struct {
-                    name: "not_used".to_string(),
-                    fields: generate_unused_field_names(vec![ParamType::String(2)]),
-                    generics: vec![ParamType::String(2)],
-                }]),
+                fields: types1,
                 generics: vec![ParamType::String(2)],
             };
+            let types = vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)];
             let struct_w_array_generic = ParamType::Struct {
-                name: "not_used".to_string(),
-                fields: generate_unused_field_names(vec![ParamType::Array(
-                    Box::from(pass_the_generic_on.clone()),
-                    2,
-                )]),
+                fields: types,
                 generics: vec![pass_the_generic_on],
             };
+            let types = vec![ParamType::Tuple(vec![
+                struct_w_array_generic.clone(),
+                struct_w_array_generic.clone(),
+            ])];
             let struct_w_tuple_generic = ParamType::Struct {
-                name: "not_used".to_string(),
-                fields: generate_unused_field_names(vec![ParamType::Tuple(vec![
-                    struct_w_array_generic.clone(),
-                    struct_w_array_generic.clone(),
-                ])]),
+                fields: types,
                 generics: vec![struct_w_array_generic],
             };
 
-            ParamType::Struct {
-                name: "not_used".to_string(),
-                fields: generate_unused_field_names(vec![
-                    ParamType::Tuple(vec![
-                        ParamType::Array(Box::from(ParamType::B256), 2),
-                        ParamType::String(2),
-                    ]),
-                    ParamType::Vector(Box::from(ParamType::Tuple(vec![
-                        ParamType::Array(
-                            Box::from(ParamType::Enum {
-                                name: "".to_string(),
-                                variants: EnumVariants::new(generate_unused_field_names(vec![
-                                    ParamType::U64,
-                                    struct_w_tuple_generic.clone(),
-                                ]))
-                                .unwrap(),
-                                generics: vec![struct_w_tuple_generic],
-                            }),
-                            1,
-                        ),
-                        ParamType::U32,
-                    ]))),
+            let types = vec![ParamType::U64, struct_w_tuple_generic.clone()];
+            let types1 = vec![
+                ParamType::Tuple(vec![
+                    ParamType::Array(Box::from(ParamType::B256), 2),
+                    ParamType::String(2),
                 ]),
+                ParamType::Vector(Box::from(ParamType::Tuple(vec![
+                    ParamType::Array(
+                        Box::from(ParamType::Enum {
+                            variants: EnumVariants::new(types).unwrap(),
+                            generics: vec![struct_w_tuple_generic],
+                        }),
+                        1,
+                    ),
+                    ParamType::U32,
+                ]))),
+            ];
+            ParamType::Struct {
+                fields: types1,
                 generics: vec![ParamType::String(2), ParamType::B256],
             }
         };
@@ -1288,15 +1253,8 @@ mod tests {
     #[test]
     fn contains_nested_vectors_complex_types() -> Result<()> {
         let base_vector = ParamType::Vector(Box::from(ParamType::U8));
-        let tuples_no_nested_vec = vec![
-            ("Bim".to_string(), ParamType::U16),
-            ("Bam".to_string(), ParamType::Bool),
-        ];
-        let tuples_with_nested_vec = vec![
-            ("Zim".to_string(), ParamType::U64),
-            ("Zam".to_string(), ParamType::U32),
-            ("Boum".to_string(), base_vector.clone()),
-        ];
+        let tuples_no_nested_vec = vec![ParamType::U16, ParamType::Bool];
+        let tuples_with_nested_vec = vec![ParamType::U64, ParamType::U32, base_vector.clone()];
         let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
         let param_types_nested_vec = vec![ParamType::Unit, ParamType::Byte, base_vector.clone()];
 
@@ -1310,38 +1268,32 @@ mod tests {
         assert!(ParamType::Tuple(param_types_nested_vec.clone()).contains_nested_vectors());
 
         assert!(!ParamType::Struct {
-            name: "StructName".to_string(),
             generics: param_types_no_nested_vec.clone(),
             fields: tuples_no_nested_vec.clone(),
         }
         .contains_nested_vectors());
         assert!(ParamType::Struct {
-            name: "StructName".to_string(),
             generics: param_types_nested_vec.clone(),
             fields: tuples_no_nested_vec.clone()
         }
         .contains_nested_vectors());
         assert!(ParamType::Struct {
-            name: "StructName".to_string(),
             generics: param_types_no_nested_vec.clone(),
             fields: tuples_with_nested_vec.clone()
         }
         .contains_nested_vectors());
 
         assert!(!ParamType::Enum {
-            name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_vec.clone())?,
             generics: param_types_no_nested_vec.clone()
         }
         .contains_nested_vectors());
         assert!(ParamType::Enum {
-            name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_with_nested_vec)?,
             generics: param_types_no_nested_vec
         }
         .contains_nested_vectors());
         assert!(ParamType::Enum {
-            name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_vec)?,
             generics: param_types_nested_vec
         }
