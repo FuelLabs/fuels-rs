@@ -7,8 +7,7 @@ use fuel_tx::{
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 
-use fuels_core::offsets::call_script_data_offset;
-use fuels_signers::{provider::Provider, Signer, WalletUnlocked, Account};
+use fuels_signers::{provider::Provider, Account};
 use fuels_types::input::Input;
 use fuels_types::offsets::call_script_data_offset;
 use fuels_types::transaction::ScriptTransaction;
