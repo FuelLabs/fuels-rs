@@ -51,6 +51,12 @@ impl ABIDecoder {
     }
 
     fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        if param_type.contains_nested_vectors() {
+            return Err(error!(
+                InvalidData,
+                "Type {param_type:?} contains nested vectors, this is not supported."
+            ));
+        }
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -60,18 +66,24 @@ impl ABIDecoder {
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::Byte => Self::decode_byte(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::String(length) => Self::decode_string(bytes, *length),
             ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
             ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
-            ParamType::RawSlice => Self::decode_raw_slice(bytes),
         }
     }
 
-    fn decode_vector(_param_type: &ParamType, _bytes: &[u8]) -> Result<DecodeResult> {
-        unimplemented!("Cannot decode Vectors until we get support from the compiler.")
+    fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        let num_of_elements = calculate_num_of_elements(param_type, bytes)?;
+        let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
+
+        Ok(DecodeResult {
+            token: Token::Vector(tokens),
+            bytes_read,
+        })
     }
 
     fn decode_tuple(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
@@ -93,7 +105,10 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_multiple(param_types: &[ParamType], bytes: &[u8]) -> Result<(Vec<Token>, usize)> {
+    fn decode_multiple<'a>(
+        param_types: impl IntoIterator<Item = &'a ParamType>,
+        bytes: &[u8],
+    ) -> Result<(Vec<Token>, usize)> {
         let mut results = vec![];
 
         let mut bytes_read = 0;
@@ -117,17 +132,9 @@ impl ABIDecoder {
     }
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
-        // A raw slice is actually an array of u64.
-        let u64_size = std::mem::size_of::<u64>();
-        if bytes.len() % u64_size != 0 {
-            return Err(error!(
-                InvalidData,
-                "The bytes provided do not correspond to a raw slice with u64 numbers, got: {:?}",
-                bytes
-            ));
-        }
-        let u64_length = bytes.len() / u64_size;
-        let (tokens, bytes_read) = Self::decode_multiple(&vec![ParamType::U64; u64_length], bytes)?;
+        let num_of_elements = calculate_num_of_elements(&ParamType::U64, bytes)?;
+        let (tokens, bytes_read) =
+            Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
         let elements = tokens
             .into_iter()
             .map(u64::from_token)
@@ -323,6 +330,17 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     } else {
         Ok(&slice[num_bytes..])
     }
+}
+
+fn calculate_num_of_elements(param_type: &ParamType, bytes: &[u8]) -> Result<usize> {
+    let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
+    if bytes.len() % memory_size != 0 {
+        return Err(error!(
+            InvalidData,
+            "The bytes provided do not correspond to a Vec<{:?}> got: {:?}", param_type, bytes
+        ));
+    }
+    Ok(bytes.len() / memory_size)
 }
 
 #[cfg(test)]

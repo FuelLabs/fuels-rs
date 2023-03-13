@@ -4,6 +4,7 @@ use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, B512},
 };
+use fuels_types::SizedAsciiString;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -1675,5 +1676,132 @@ async fn test_b512() -> Result<()> {
         assert!(contract_methods.b512_as_input(b512).call().await?.value);
     }
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_base_type_in_vec_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "VectorOutputContract",
+            abi = "packages/fuels/tests/types/vector_output"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    let response = contract_methods.u8_in_vec(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+
+    let response = contract_methods.u16_in_vec(11).call().await?;
+    assert_eq!(response.value, (0..11).collect::<Vec<_>>());
+
+    let response = contract_methods.u32_in_vec(12).call().await?;
+    assert_eq!(response.value, (0..12).collect::<Vec<_>>());
+
+    let response = contract_methods.u64_in_vec(13).call().await?;
+    assert_eq!(response.value, (0..13).collect::<Vec<_>>());
+
+    let response = contract_methods.bool_in_vec().call().await?;
+    assert_eq!(response.value, [true, false, true, false].to_vec());
+
+    Ok(())
+}
+#[tokio::test]
+async fn test_composite_types_in_vec_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "VectorOutputContract",
+            abi = "packages/fuels/tests/types/vector_output"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let expected: Vec<[u64; 4]> = vec![[1, 1, 1, 1], [2, 2, 2, 2], [3, 3, 3, 3], [4, 4, 4, 4]];
+        let response = contract_methods.array_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+    {
+        let expected: Vec<Pasta> = vec![
+            Pasta::Tortelini(Bimbam {
+                bim: 1111,
+                bam: 2222_u32,
+            }),
+            Pasta::Rigatoni(1987),
+            Pasta::Spaghetti(true),
+        ];
+
+        let response = contract_methods.enum_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<Bimbam> = vec![
+            Bimbam {
+                bim: 1111,
+                bam: 2222_u32,
+            },
+            Bimbam {
+                bim: 3333,
+                bam: 4444_u32,
+            },
+            Bimbam {
+                bim: 5555,
+                bam: 6666_u32,
+            },
+        ];
+        let response = contract_methods.struct_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<(u64, u32)> = vec![(1111, 2222_u32), (3333, 4444_u32), (5555, 6666_u32)];
+        let response = contract_methods.tuple_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+
+    {
+        let expected: Vec<SizedAsciiString<4>> =
+            vec!["hell".try_into()?, "ello".try_into()?, "lloh".try_into()?];
+        let response = contract_methods.str_in_vec().call().await?.value;
+        assert_eq!(response, expected);
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_nested_vector_methods_fail() -> Result<()> {
+    // This is just an E2E test of the method `ParamType::contains_nested_vectors`, hence it's
+    // not exhaustive, but its unit tests are.
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "VectorOutputContract",
+            abi = "packages/fuels/tests/types/vector_output"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    contract_methods
+        .vec_inside_type()
+        .call()
+        .await
+        .expect_err("Should fail because nested vectors are not supported");
     Ok(())
 }
