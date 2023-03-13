@@ -218,8 +218,7 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
             &quot;../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
             wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -227,7 +226,10 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
-        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        let call_params = CallParameters::default()
+            .set_amount(deposit_amount)
+            .set_asset_id(base_asset_id);
+
         contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)?
@@ -239,7 +241,10 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
-        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        let call_params = CallParameters::default()
+            .set_amount(lp_token_balance)
+            .set_asset_id(lp_asset_id);
+
         contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)?

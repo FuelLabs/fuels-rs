@@ -173,7 +173,7 @@ impl TestContract for Contract {
     }
 }
 </code></pre>
-<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_str_4</code> method which accepts the same types as defined in sway. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
+<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same types as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
@@ -193,13 +193,10 @@ impl TestContract for Contract {
         .set_STRUCT(new_struct.clone())
         .set_ENUM(new_enum.clone());
 
-    let contract_id = Contract::deploy_with_parameters(
+    let contract_id = Contract::deploy(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
         &amp;wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-        configurables.into(),
-        Salt::default(),
+        DeployConfiguration::default().set_configurables(configurables),
     )
     .await?;
 

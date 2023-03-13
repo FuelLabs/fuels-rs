@@ -157,11 +157,9 @@
 </code></pre>
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
 <p>The method for passing transaction parameters is the same as <a href="../calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
-<pre><code class="language-rust ignore">    let parameters = TxParameters {
-        gas_price: 1,
-        gas_limit: 10000,
-        ..Default::default()
-    };
+<pre><code class="language-rust ignore">    let parameters = TxParameters::default()
+        .set_gas_price(1)
+        .set_gas_limit(10_000);
     let result = instance.main(a, b).tx_params(parameters).call().await?;
 </code></pre>
 <h2 id="logs"><a class="header" href="#logs">Logs</a></h2>
@@ -246,7 +244,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
         .set_ENUM(new_enum.clone());
 
     let response = instance
-        .with_configurables(configurables.into())
+        .with_configurables(configurables)
         .main()
         .call()
         .await?;

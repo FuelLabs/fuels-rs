@@ -144,29 +144,23 @@
 <li>Gas limit;</li>
 <li>Maturity.</li>
 </ol>
-<p>You can configure these parameters by creating an instance of <code>TxParameters</code>:</p>
-<pre><code class="language-rust ignore">pub struct TxParameters {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
-}
-</code></pre>
-<p>and passing it to a chain method called <code>tx_params</code>:</p>
+<p>You can configure these parameters by creating an instance of <code>TxParameters</code> and passing it to a chain method called <code>tx_params</code>:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+        let my_tx_parameters = TxParameters::default()
+            .set_gas_price(1)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .tx_params(my_tx_parameters) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
 </code></pre>
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
-<pre><code class="language-rust ignore">pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
-pub const DEFAULT_GAS_PRICE: u64 = 0;
+<pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
+pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>

@@ -906,7 +906,7 @@ impl MyContract for Contract {
     pub mod contract_a_mod {
         struct SomeCustomStruct{/*...*/};
         // other custom types used in the contract
-        
+
         struct ContractA {/*...*/};
         impl ContractA {/*...*/};
         // ...
@@ -1165,12 +1165,8 @@ pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
 <p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="getting-started/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="getting-started/../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="getting-started/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
 <h3 id="the-deploy-functions"><a class="header" href="#the-deploy-functions">The deploy functions</a></h3>
-<p>There are two intended ways to deploy a contract</p>
-<ul>
-<li><code>deploy</code></li>
-<li><code>deploy_with_parameters</code></li>
-</ul>
-<p>If you are only interested in a single instance of your contract, then use <code>deploy</code></p>
+<p>The <code>Contract::deploy</code> function is used to deploy a contract binary to the blockhain. To configure the deployment you can use the <code>DeployConfiguration</code> struct.</p>
+<p>If you are only interested in a single instance of your contract, use the default configuration: <code>DeployConfiguration::default()</code></p>
 <pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
         // This means an instance of `MyContract` will have access to all
         // your contract's methods that are running on-chain!
@@ -1183,19 +1179,13 @@ pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
         // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 
-        // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let gas_price = 0;
-        let gas_limit = 1_000_000;
-        let maturity = 0;
-
         // This will deploy your contract binary onto the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
             &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::new(Some(gas_price), Some(gas_limit), Some(maturity)),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -1221,8 +1211,11 @@ pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
 
         assert_eq!(52, response.value);
 </code></pre>
-<p>Alternatively, if you want multiple instances of the same contract then use <code>deploy_with_parameters</code> and set the salt parameter.</p>
-<pre><code class="language-rust ignore">        use fuels::prelude::*;
+<p>Alternatively, you can use <code>DeployConfiguration</code> to configure the deployment. You can, for example, deploy multiple instances of the same contract, change the storage or <code>tx_parameters</code> or update the binary using <code>configurables</code>.</p>
+<pre><code class="language-rust ignore">        use fuels::{
+            prelude::*,
+            tx::{Bytes32, StorageSlot},
+        };
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
         abigen!(Contract(
@@ -1235,23 +1228,35 @@ pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
         let contract_id_1 = Contract::deploy(
             &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
         println!(&quot;Contract deployed @ {contract_id_1}&quot;);
 
+        // Optional: Configure deployment parameters or use `TxParameters::default()`
+        let tx_parameters = TxParameters::default()
+            .set_gas_price(0)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
+
+        // Optional: Configure storage
+        let key = Bytes32::from([1u8; 32]);
+        let value = Bytes32::from([2u8; 32]);
+        let storage_slot = StorageSlot::new(key, value);
+        let storage_configuration =
+            StorageConfiguration::default().set_manual_storage(vec![storage_slot]);
+
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
-        let contract_id_2 = Contract::deploy_with_parameters(
+        let contract_id_2 = Contract::deploy(
             &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
             &amp;wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-            Configurables::default(),
-            Salt::from(salt),
+            DeployConfiguration::default()
+                .set_storage_configuration(storage_configuration)
+                .set_salt(salt)
+                .set_tx_parameters(tx_parameters),
         )
         .await?;
 
@@ -1259,6 +1264,9 @@ pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
 
         assert_ne!(contract_id_1, contract_id_2);
 </code></pre>
+<blockquote>
+<p>Note: The next section will give more information on how <code>configurables</code> can be used.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h1>
 <p>In Sway, you can define <code>configurable</code> constants which can be changed during the contract deployment in the SDK. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">contract;
@@ -1295,7 +1303,7 @@ impl TestContract for Contract {
     }
 }
 </code></pre>
-<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_str_4</code> method which accepts the same types as defined in sway. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
+<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same types as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
@@ -1315,13 +1323,10 @@ impl TestContract for Contract {
         .set_STRUCT(new_struct.clone())
         .set_ENUM(new_enum.clone());
 
-    let contract_id = Contract::deploy_with_parameters(
+    let contract_id = Contract::deploy(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
         &amp;wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-        configurables.into(),
-        Salt::default(),
+        DeployConfiguration::default().set_configurables(configurables),
     )
     .await?;
 
@@ -1449,29 +1454,23 @@ half-word   byte   op                raw           notes
 <li>Gas limit;</li>
 <li>Maturity.</li>
 </ol>
-<p>You can configure these parameters by creating an instance of <code>TxParameters</code>:</p>
-<pre><code class="language-rust ignore">pub struct TxParameters {
-    pub gas_price: u64,
-    pub gas_limit: u64,
-    pub maturity: u64,
-}
-</code></pre>
-<p>and passing it to a chain method called <code>tx_params</code>:</p>
+<p>You can configure these parameters by creating an instance of <code>TxParameters</code> and passing it to a chain method called <code>tx_params</code>:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+        let my_tx_parameters = TxParameters::default()
+            .set_gas_price(1)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .tx_params(my_tx_parameters) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
 </code></pre>
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
-<pre><code class="language-rust ignore">pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
-pub const DEFAULT_GAS_PRICE: u64 = 0;
+<pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
+pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_MATURITY: u64 = 0;
 </code></pre>
 <p>This way:</p>
@@ -1507,7 +1506,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::new(Some(1_000_000), None, None);
+        let call_params = CallParameters::default().set_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -1519,7 +1518,7 @@ pub const DEFAULT_MATURITY: u64 = 0;
 <p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
-        .call_params(CallParameters::new(Some(100), None, None))
+        .call_params(CallParameters::default().set_amount(100))
         .expect_err(&quot;Should return call params error.&quot;);
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
@@ -1538,14 +1537,13 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .call_params(CallParameters::default())?
             .call()
             .await?;
-
 </code></pre>
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
-<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 4300 to specify that the
-        // contract call transaction may consume up to 10000 gas, while the actual call may only use 4300
-        // gas
-        let tx_params = TxParameters::new(None, Some(10000), None);
-        let call_params = CallParameters::new(None, None, Some(4300));
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+        // only use 4300 gas
+        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -1819,11 +1817,9 @@ let is_error = response.is_err();
 </code></pre>
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
 <p>The method for passing transaction parameters is the same as <a href="getting-started/../calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
-<pre><code class="language-rust ignore">    let parameters = TxParameters {
-        gas_price: 1,
-        gas_limit: 10000,
-        ..Default::default()
-    };
+<pre><code class="language-rust ignore">    let parameters = TxParameters::default()
+        .set_gas_price(1)
+        .set_gas_limit(10_000);
     let result = instance.main(a, b).tx_params(parameters).call().await?;
 </code></pre>
 <h2 id="logs-1"><a class="header" href="#logs-1">Logs</a></h2>
@@ -1908,7 +1904,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
         .set_ENUM(new_enum.clone());
 
     let response = instance
-        .with_configurables(configurables.into())
+        .with_configurables(configurables)
         .main()
         .call()
         .await?;
@@ -2830,8 +2826,7 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
             &quot;../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
             wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -2839,7 +2834,10 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
-        let call_params = CallParameters::new(Some(deposit_amount), Some(base_asset_id), None);
+        let call_params = CallParameters::default()
+            .set_amount(deposit_amount)
+            .set_asset_id(base_asset_id);
+
         contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)?
@@ -2851,7 +2849,10 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
-        let call_params = CallParameters::new(Some(lp_token_balance), Some(lp_asset_id), None);
+        let call_params = CallParameters::default()
+            .set_amount(lp_token_balance)
+            .set_asset_id(lp_asset_id);
+
         contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)?
