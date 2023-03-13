@@ -14,9 +14,8 @@ use fuels_types::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     param_types::ParamType,
-    parameters::TxParameters,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
 };
 
 use crate::contract::ContractCall;
@@ -34,9 +33,9 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls(
+pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: &TxParameters,
+    tx_parameters: TxParameters,
     wallet: &WalletUnlocked,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
@@ -45,7 +44,7 @@ pub async fn build_tx_from_contract_calls(
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);
+        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
 
     let script = get_instructions(calls, call_param_offsets);
 
@@ -61,7 +60,7 @@ pub async fn build_tx_from_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
+    let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters)
         .with_script(script)
         .with_script_data(script_data);
 
@@ -100,7 +99,12 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
-        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
+        .map(|call| {
+            (
+                call.call_parameters.asset_id(),
+                call.call_parameters.amount(),
+            )
+        })
         .collect::<Vec<_>>();
 
     let custom_assets = calls
@@ -177,12 +181,12 @@ pub(crate) fn build_script_data_from_contract_calls(
         };
         param_offsets.push(call_param_offsets);
 
-        script_data.extend(call.call_parameters.asset_id.to_vec());
+        script_data.extend(call.call_parameters.asset_id().iter());
 
-        script_data.extend(call.call_parameters.amount.to_be_bytes());
+        script_data.extend(call.call_parameters.amount().to_be_bytes());
 
         // If gas_forwarded is not set, use the transaction gas limit
-        let gas_forwarded = call.call_parameters.gas_forwarded.unwrap_or(gas_limit);
+        let gas_forwarded = call.call_parameters.gas_forwarded().unwrap_or(gas_limit);
         script_data.extend(gas_forwarded.to_be_bytes());
 
         script_data.extend(call.contract_id.hash().as_ref());
@@ -472,12 +476,12 @@ mod test {
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         param_types::ParamType,
-        parameters::CallParameters,
         Token,
     };
     use rand::Rng;
 
     use super::*;
+    use crate::contract::CallParameters;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
@@ -536,11 +540,7 @@ mod test {
                 contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
                 encoded_args: args[i].clone(),
-                call_parameters: CallParameters::new(
-                    Some(i as u64),
-                    Some(asset_ids[i]),
-                    Some(i as u64),
-                ),
+                call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 message_outputs: None,
@@ -880,7 +880,11 @@ mod test {
             (asset_id_1, 300),
             (asset_id_2, 400),
         ]
-        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|(asset_id, amount)| {
+            CallParameters::default()
+                .set_amount(amount)
+                .set_asset_id(asset_id)
+        })
         .map(|call_parameters| {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });

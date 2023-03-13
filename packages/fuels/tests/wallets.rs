@@ -242,11 +242,7 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
     let gas_limit = 500_000;
     let maturity = 0;
 
-    let tx_params = TxParameters {
-        gas_price,
-        gas_limit,
-        maturity,
-    };
+    let tx_params = TxParameters::new(gas_price, gas_limit, maturity);
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;

@@ -1,17 +1,9 @@
-use std::{
-    collections::{HashMap, HashSet},
-    fmt::Debug,
-    fs,
-    marker::PhantomData,
-    panic,
-    path::Path,
-    str::FromStr,
-};
+use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
 use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot, Transaction as FuelTransaction,
+    StorageSlot,
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{
@@ -24,11 +16,11 @@ use fuels_signers::{
 };
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
+    constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
-    parameters::{CallParameters, StorageConfiguration, TxParameters},
     traits::{Parameterize, Tokenizable},
-    transaction::{CreateTransaction, ScriptTransaction, Transaction},
+    transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
     Selector, Token,
 };
 use itertools::Itertools;
@@ -40,6 +32,60 @@ use crate::{
     Configurables,
 };
 
+#[derive(Debug)]
+pub struct CallParameters {
+    amount: u64,
+    asset_id: AssetId,
+    gas_forwarded: Option<u64>,
+}
+
+impl CallParameters {
+    pub fn new(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
+        Self {
+            amount,
+            asset_id,
+            gas_forwarded: Some(gas_forwarded),
+        }
+    }
+
+    pub fn set_amount(mut self, amount: u64) -> Self {
+        self.amount = amount;
+        self
+    }
+
+    pub fn amount(&self) -> u64 {
+        self.amount
+    }
+
+    pub fn set_asset_id(mut self, asset_id: AssetId) -> Self {
+        self.asset_id = asset_id;
+        self
+    }
+
+    pub fn asset_id(&self) -> AssetId {
+        self.asset_id
+    }
+
+    pub fn set_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
+        self.gas_forwarded = Some(gas_forwarded);
+        self
+    }
+
+    pub fn gas_forwarded(&self) -> Option<u64> {
+        self.gas_forwarded
+    }
+}
+
+impl Default for CallParameters {
+    fn default() -> Self {
+        Self {
+            amount: DEFAULT_CALL_PARAMS_AMOUNT,
+            asset_id: BASE_ASSET_ID,
+            gas_forwarded: None,
+        }
+    }
+}
+
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
@@ -50,12 +96,83 @@ pub trait SettableContract {
     fn log_decoder(&self) -> LogDecoder;
 }
 
-/// A compiled representation of a contract.
+/// A compiled representation of a contract
 #[derive(Debug, Clone, Default)]
 pub struct CompiledContract {
-    pub raw: Vec<u8>,
-    pub salt: Salt,
-    pub storage_slots: Vec<StorageSlot>,
+    binary: Vec<u8>,
+    salt: Salt,
+    storage_slots: Vec<StorageSlot>,
+}
+
+/// Configuration for contract storage
+#[derive(Debug, Clone, Default)]
+pub struct StorageConfiguration {
+    storage_path: String,
+    manual_storage: Vec<StorageSlot>,
+}
+
+impl StorageConfiguration {
+    pub fn new(storage_path: String, manual_storage: Vec<StorageSlot>) -> Self {
+        Self {
+            storage_path,
+            manual_storage,
+        }
+    }
+
+    pub fn set_storage_path(mut self, storage_path: String) -> Self {
+        self.storage_path = storage_path;
+        self
+    }
+
+    pub fn set_manual_storage(mut self, manual_storage: Vec<StorageSlot>) -> Self {
+        self.manual_storage = manual_storage;
+        self
+    }
+}
+
+/// Configuration for contract deployment
+#[derive(Debug, Clone, Default)]
+pub struct DeployConfiguration {
+    tx_parameters: TxParameters,
+    storage: StorageConfiguration,
+    configurables: Configurables,
+    salt: Salt,
+}
+
+impl DeployConfiguration {
+    pub fn new(
+        tx_parameters: TxParameters,
+        storage: StorageConfiguration,
+        configurables: impl Into<Configurables>,
+        salt: impl Into<Salt>,
+    ) -> Self {
+        Self {
+            tx_parameters,
+            storage,
+            configurables: configurables.into(),
+            salt: salt.into(),
+        }
+    }
+
+    pub fn set_tx_parameters(mut self, tx_parameters: TxParameters) -> Self {
+        self.tx_parameters = tx_parameters;
+        self
+    }
+
+    pub fn set_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
+        self.storage = storage;
+        self
+    }
+
+    pub fn set_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
+        self.configurables = configurables.into();
+        self
+    }
+
+    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
+        self.salt = salt.into();
+        self
+    }
 }
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
@@ -78,7 +195,7 @@ impl Contract {
     pub fn compute_contract_id_and_state_root(
         compiled_contract: &CompiledContract,
     ) -> (ContractId, Bytes32) {
-        let fuel_contract = FuelContract::from(compiled_contract.raw.clone());
+        let fuel_contract = FuelContract::from(compiled_contract.binary.as_slice());
         let root = fuel_contract.root();
         let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
 
@@ -120,7 +237,7 @@ impl Contract {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
+        let compute_custom_input_offset = Self::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
@@ -171,62 +288,24 @@ impl Contract {
     pub async fn deploy(
         binary_filepath: &str,
         wallet: &WalletUnlocked,
-        params: TxParameters,
-        storage_configuration: StorageConfiguration,
+        configuration: DeployConfiguration,
     ) -> Result<Bech32ContractId> {
-        let mut compiled_contract =
-            Contract::load_contract(binary_filepath, &storage_configuration.storage_path)?;
+        let tx_parameters = configuration.tx_parameters;
+        let compiled_contract = Self::load_contract(binary_filepath, configuration)?;
 
-        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
-
-        Self::deploy_loaded(&(compiled_contract), wallet, params).await
-    }
-
-    /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_parameters(
-        binary_filepath: &str,
-        wallet: &WalletUnlocked,
-        params: TxParameters,
-        storage_configuration: StorageConfiguration,
-        configurables: Configurables,
-        salt: Salt,
-    ) -> Result<Bech32ContractId> {
-        let mut compiled_contract = Contract::load_contract_with_parameters(
-            binary_filepath,
-            &storage_configuration.storage_path,
-            salt,
-        )?;
-
-        configurables.update_constants_in(&mut compiled_contract.raw);
-
-        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
-
-        Self::deploy_loaded(&(compiled_contract), wallet, params).await
-    }
-
-    fn merge_storage_vectors(
-        storage_configuration: &StorageConfiguration,
-        compiled_contract: &mut CompiledContract,
-    ) {
-        match &storage_configuration.manual_storage_vec {
-            Some(storage) if !storage.is_empty() => {
-                compiled_contract.storage_slots =
-                    Self::merge_storage_slots(storage, &compiled_contract.storage_slots);
-            }
-            _ => {}
-        }
+        Self::deploy_loaded(compiled_contract, wallet, tx_parameters).await
     }
 
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
-    pub async fn deploy_loaded(
-        compiled_contract: &CompiledContract,
+    async fn deploy_loaded(
+        compiled_contract: CompiledContract,
         wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
         let (mut tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, params).await?;
+            Self::contract_deployment_transaction(compiled_contract, params);
 
         // The first witness is the bytecode we're deploying.
         // The signature will be appended at position 1 of
@@ -246,115 +325,97 @@ impl Contract {
         Ok(contract_id)
     }
 
-    pub fn load_contract(
+    fn load_contract(
         binary_filepath: &str,
-        storage_path: &Option<String>,
+        configuration: DeployConfiguration,
     ) -> Result<CompiledContract> {
-        Self::load_contract_with_parameters(binary_filepath, storage_path, Salt::from([0u8; 32]))
-    }
+        Self::validate_path_and_extension(binary_filepath, "bin")?;
 
-    pub fn load_contract_with_parameters(
-        binary_filepath: &str,
-        storage_path: &Option<String>,
-        salt: Salt,
-    ) -> Result<CompiledContract> {
-        let extension = Path::new(binary_filepath)
-            .extension()
-            .expect("Could not extract extension from file path");
-        if extension != "bin" {
-            return Err(error!(
-                InvalidData,
-                "The file extension '{}' is not recognized. Did you mean '.bin'?",
-                extension
-                    .to_str()
-                    .expect("Could not convert extension to &str")
-            ));
-        }
+        let mut binary = fs::read(binary_filepath)
+            .map_err(|_| error!(InvalidData, "failed to read binary: '{binary_filepath}'"))?;
 
-        let bin = std::fs::read(binary_filepath).map_err(|_| {
-            error!(
-                InvalidData,
-                "Failed to read binary file with path '{}'", &binary_filepath
-            )
-        })?;
+        configuration.configurables.update_constants_in(&mut binary);
 
-        let storage = match storage_path {
-            Some(path) if Path::new(&path).exists() => Self::get_storage_vec(path),
-            Some(path) if !Path::new(&path).exists() => {
-                return Err(Error::InvalidData(path.to_owned()));
-            }
-            _ => {
-                vec![]
-            }
-        };
+        let storage_slots = Self::get_storage_slots(configuration.storage)?;
 
         Ok(CompiledContract {
-            raw: bin,
-            salt,
-            storage_slots: storage,
+            binary,
+            salt: configuration.salt,
+            storage_slots,
         })
     }
 
-    fn merge_storage_slots(
-        manual_storage: &[StorageSlot],
-        contract_storage: &[StorageSlot],
-    ) -> Vec<StorageSlot> {
-        let mut return_storage: Vec<StorageSlot> = manual_storage.to_owned();
-        let keys: HashSet<Bytes32> = manual_storage.iter().map(|slot| *slot.key()).collect();
+    fn validate_path_and_extension(file_path: &str, extension: &str) -> Result<()> {
+        let path = Path::new(file_path);
 
-        contract_storage.iter().for_each(|slot| {
-            if !keys.contains(slot.key()) {
-                return_storage.push(slot.clone())
-            }
-        });
+        if !path.exists() {
+            return Err(error!(InvalidData, "file '{file_path}' does not exist"));
+        }
 
-        return_storage
-    }
+        let path_extension = path
+            .extension()
+            .ok_or_else(|| error!(InvalidData, "could not extract extension from: {file_path}"))?;
 
-    /// Crafts a transaction used to deploy a contract
-    pub async fn contract_deployment_transaction(
-        compiled_contract: &CompiledContract,
-        params: TxParameters,
-    ) -> Result<(CreateTransaction, Bech32ContractId)> {
-        let bytecode_witness_index = 0;
-        let storage_slots: Vec<StorageSlot> = compiled_contract.storage_slots.clone();
-        let witnesses = vec![compiled_contract.raw.clone().into()];
-
-        let (contract_id, state_root) = Self::compute_contract_id_and_state_root(compiled_contract);
-
-        let outputs = vec![Output::contract_created(contract_id, state_root)];
-
-        let tx = FuelTransaction::create(
-            params.gas_price,
-            params.gas_limit,
-            params.maturity,
-            bytecode_witness_index,
-            compiled_contract.salt,
-            storage_slots,
-            vec![],
-            outputs,
-            witnesses,
-        );
-
-        Ok((tx.into(), contract_id.into()))
-    }
-
-    fn get_storage_vec(storage_path: &str) -> Vec<StorageSlot> {
-        let mut return_storage: Vec<StorageSlot> = vec![];
-
-        let storage_json_string = fs::read_to_string(storage_path).expect("Unable to read file");
-
-        let storage: serde_json::Value = serde_json::from_str(storage_json_string.as_str())
-            .expect("JSON was not well-formatted");
-
-        for slot in storage.as_array().unwrap() {
-            return_storage.push(StorageSlot::new(
-                Bytes32::from_str(slot["key"].as_str().unwrap()).unwrap(),
-                Bytes32::from_str(slot["value"].as_str().unwrap()).unwrap(),
+        if extension != path_extension {
+            return Err(error!(
+                InvalidData,
+                "expected `{file_path}` to have '.{extension}' extension"
             ));
         }
 
-        return_storage
+        Ok(())
+    }
+
+    /// Crafts a transaction used to deploy a contract
+    fn contract_deployment_transaction(
+        compiled_contract: CompiledContract,
+        params: TxParameters,
+    ) -> (CreateTransaction, Bech32ContractId) {
+        let (contract_id, state_root) =
+            Self::compute_contract_id_and_state_root(&compiled_contract);
+
+        let bytecode_witness_index = 0;
+        let outputs = vec![Output::contract_created(contract_id, state_root)];
+        let witnesses = vec![compiled_contract.binary.into()];
+
+        let tx = CreateTransaction::build_contract_deployment_tx(
+            bytecode_witness_index,
+            outputs,
+            witnesses,
+            compiled_contract.salt,
+            compiled_contract.storage_slots,
+            params,
+        );
+
+        (tx, contract_id.into())
+    }
+
+    fn get_storage_slots(configuration: StorageConfiguration) -> Result<Vec<StorageSlot>> {
+        let StorageConfiguration {
+            storage_path,
+            manual_storage,
+        } = configuration;
+
+        if storage_path.is_empty() {
+            return Ok(manual_storage);
+        }
+
+        Self::validate_path_and_extension(&storage_path, "json")?;
+
+        let storage_json_string = fs::read_to_string(&storage_path).map_err(|_| {
+            error!(
+                InvalidData,
+                "failed to read storage configuration from: '{storage_path}'"
+            )
+        })?;
+
+        let storage_slots: Vec<StorageSlot> = serde_json::from_str(&storage_json_string)?;
+
+        Ok(manual_storage
+            .into_iter()
+            .chain(storage_slots.into_iter())
+            .unique()
+            .collect())
     }
 }
 
@@ -714,7 +775,7 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
-            &self.tx_parameters,
+            self.tx_parameters,
             &self.wallet,
         )
         .await
@@ -860,7 +921,7 @@ impl MultiContractCallHandler {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.wallet).await
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.wallet).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -997,46 +1058,5 @@ impl MultiContractCallHandler {
         );
 
         Ok(response)
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use fuels_test_helpers::launch_provider_and_get_wallet;
-
-    use super::*;
-
-    #[tokio::test]
-    #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
-    async fn deploy_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_wallet().await;
-
-        // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy(
-            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
-        .await
-        .unwrap();
-    }
-
-    #[tokio::test]
-    #[should_panic(expected = "The file extension 'json' is not recognized. Did you mean '.bin'?")]
-    async fn deploy_with_salt_panics_on_non_binary_file() {
-        let wallet = launch_provider_and_get_wallet().await;
-
-        // Should panic as we are passing in a JSON instead of BIN
-        Contract::deploy_with_parameters(
-            "tests/types/contract_output_test/out/debug/contract_output_test-abi.json",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-            Configurables::default(),
-            Salt::default(),
-        )
-        .await
-        .unwrap();
     }
 }

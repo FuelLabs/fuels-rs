@@ -6,15 +6,59 @@ use fuel_tx::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
     Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
-    FormatValidityChecks, Input, Output, Script, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
+    FormatValidityChecks, Input, Output, Salt, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Witness,
 };
 
 use crate::{
-    constants::{BASE_ASSET_ID, WORD_SIZE},
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY, WORD_SIZE},
     errors::Error,
-    parameters::TxParameters,
 };
+
+#[derive(Debug, Copy, Clone)]
+pub struct TxParameters {
+    gas_price: u64,
+    gas_limit: u64,
+    maturity: u64,
+}
+
+macro_rules! impl_setter_getter {
+    ($setter_name: ident, $field: ident) => {
+        pub fn $setter_name(mut self, $field: u64) -> Self {
+            self.$field = $field;
+            self
+        }
+
+        pub fn $field(&self) -> u64 {
+            self.$field
+        }
+    };
+}
+
+impl TxParameters {
+    pub fn new(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
+        Self {
+            gas_price,
+            gas_limit,
+            maturity,
+        }
+    }
+
+    impl_setter_getter!(set_gas_price, gas_price);
+    impl_setter_getter!(set_gas_limit, gas_limit);
+    impl_setter_getter!(set_maturity, maturity);
+}
+
+impl Default for TxParameters {
+    fn default() -> Self {
+        Self {
+            gas_price: DEFAULT_GAS_PRICE,
+            gas_limit: DEFAULT_GAS_LIMIT,
+            // By default, transaction is immediately valid
+            maturity: DEFAULT_MATURITY,
+        }
+    }
+}
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
@@ -26,39 +70,22 @@ pub trait Transaction: Into<FuelTransaction> {
     ) -> Result<(), Error>;
 
     fn id(&self) -> Bytes32;
-
     fn maturity(&self) -> u64;
-
     fn with_maturity(self, maturity: u64) -> Self;
-
     fn gas_price(&self) -> u64;
-
     fn with_gas_price(self, gas_price: u64) -> Self;
-
     fn gas_limit(&self) -> u64;
-
     fn with_gas_limit(self, gas_price: u64) -> Self;
-
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
-
     fn metered_bytes_size(&self) -> usize;
-
     fn inputs(&self) -> &Vec<Input>;
-
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
-
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
-
     fn outputs(&self) -> &Vec<Output>;
-
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
-
     fn with_outputs(self, output: Vec<Output>) -> Self;
-
     fn witnesses(&self) -> &Vec<Witness>;
-
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-
     fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
 }
 
@@ -319,6 +346,30 @@ impl ScriptTransaction {
             inputs,
             outputs,
             vec![],
+        )
+        .into()
+    }
+}
+
+impl CreateTransaction {
+    pub fn build_contract_deployment_tx(
+        bytecode_witness_index: u8,
+        outputs: Vec<Output>,
+        witnesses: Vec<Witness>,
+        salt: Salt,
+        storage_slots: Vec<StorageSlot>,
+        params: TxParameters,
+    ) -> Self {
+        FuelTransaction::create(
+            params.gas_price,
+            params.gas_limit,
+            params.maturity,
+            bytecode_witness_index,
+            salt,
+            storage_slots,
+            vec![],
+            outputs,
+            witnesses,
         )
         .into()
     }
