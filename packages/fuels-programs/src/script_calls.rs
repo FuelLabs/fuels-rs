@@ -7,9 +7,8 @@ use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
-    parameters::TxParameters,
     traits::{Parameterize, Tokenizable},
-    transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
 };
 use itertools::chain;
 
