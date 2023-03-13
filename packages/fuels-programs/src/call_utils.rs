@@ -14,7 +14,6 @@ use fuels_types::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     param_types::ParamType,
-    parameters::TxParameters,
     resource::Resource,
     transaction::{ScriptTransaction, Transaction, TxParameters},
 };
