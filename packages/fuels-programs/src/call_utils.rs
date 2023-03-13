@@ -277,7 +277,7 @@ pub(crate) fn get_single_call_instructions(
             // vector, so use a 2 offset to store the length in 0x16, which is a free register.
             op::lw(0x16, RegId::RET, 2),
             // The in-memory size of the type is (in-memory size of the inner type) * length
-            op::muli(0x16, 0x16, inner_type_byte_size),
+            op::muli(0x16, 0x16, inner_type_byte_size as u16),
             op::retd(0x15, 0x16),
         ]);
     }

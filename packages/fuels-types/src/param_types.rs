@@ -70,8 +70,7 @@ impl ParamType {
 
     pub fn calculate_num_of_elements(&self, bytes: &[u8]) -> Result<usize> {
         let memory_size = match self {
-            ParamType::Bytes => Ok(std::mem::size_of::<u8>()),
-            ParamType::Vector(param_type) => Ok(param_type.compute_encoding_width() * WORD_SIZE),
+            ParamType::Bytes | ParamType::Vector(..) => Ok(self.heap_inner_element_size().unwrap()),
             ParamType::RawSlice => Ok(ParamType::U64.compute_encoding_width() * WORD_SIZE),
             _ => Err(error!(
                 InvalidData,
@@ -127,13 +126,15 @@ impl ParamType {
     pub fn is_vm_heap_type(&self) -> bool {
         matches!(self, ParamType::Vector(..)) || matches!(self, ParamType::Bytes)
     }
-    pub fn heap_inner_element_size(&self) -> Option<u16> {
+
+    /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
+    pub fn heap_inner_element_size(&self) -> Option<usize> {
         match &self {
             ParamType::Vector(inner_param_type) => {
-                Some((inner_param_type.compute_encoding_width() * WORD_SIZE) as u16)
+                Some(inner_param_type.compute_encoding_width() * WORD_SIZE)
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes => Some(std::mem::size_of::<u8>() as u16),
+            ParamType::Bytes => Some(std::mem::size_of::<u8>()),
             _ => None,
         }
     }
@@ -174,6 +175,7 @@ impl ParamType {
             ),
         }
     }
+
     /// For when you need to convert a ABI JSON's TypeApplication into a ParamType.
     ///
     /// # Arguments
