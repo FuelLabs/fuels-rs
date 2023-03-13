@@ -3,10 +3,9 @@ use std::fmt::{Display, Formatter};
 use fuel_abi_types::utils::{
     extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-use lazy_static::lazy_static;
+
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use regex::Regex;
 
 use crate::{
     error::{error, Result},
@@ -26,16 +25,6 @@ pub struct ResolvedType {
 impl ResolvedType {
     pub fn is_unit(&self) -> bool {
         self.type_name.to_string() == "()"
-    }
-    // Used to prevent returning vectors until we get
-    // the compiler support for it.
-    #[must_use]
-    pub fn uses_vectors(&self) -> bool {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"\bVec\b").unwrap();
-        }
-        RE.is_match(&self.type_name.to_string())
-            || self.generic_params.iter().any(ResolvedType::uses_vectors)
     }
 }
 

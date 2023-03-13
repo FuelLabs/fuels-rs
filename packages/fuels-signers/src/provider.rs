@@ -174,23 +174,6 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    /// # Examples
-    ///
-    /// ## Sending a transaction
-    ///
-    /// ```
-    /// use fuels::prelude::*;
-    /// async fn foo() -> std::result::Result<(), Box<dyn std::error::Error>> {
-    ///   // Setup local test node
-    ///   let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
-    ///   let tx = ScriptTransaction::default();
-    ///
-    ///   let receipts = provider.send_transaction(&tx).await?;
-    ///   dbg!(receipts);
-    ///
-    ///   Ok(())
-    /// }
-    /// ```
     pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
         let tolerance = 0.0;
         let TransactionCost {
@@ -270,23 +253,6 @@ impl Provider {
     }
 
     /// Connects to an existing node at the given address.
-    /// # Examples
-    ///
-    /// ## Connect to a node
-    /// ```
-    /// async fn connect_to_fuel_node() {
-    ///     use fuels::prelude::*;
-    ///
-    ///     // This is the address of a running node.
-    ///     let server_address = "127.0.0.1:4000";
-    ///
-    ///     // Create the provider using the client.
-    ///     let provider = Provider::connect(server_address).await.unwrap();
-    ///
-    ///     // Create the wallet.
-    ///     let _wallet = WalletUnlocked::new_random(Some(provider));
-    /// }
-    /// ```
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = FuelClient::new(url).map_err(|err| error!(InfrastructureError, "{err}"))?;
         Ok(Provider::new(client))
