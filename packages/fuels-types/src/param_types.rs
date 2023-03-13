@@ -99,7 +99,7 @@ impl ParamType {
     fn any_nested_vectors<'a>(param_types: impl IntoIterator<Item = &'a ParamType>) -> bool {
         param_types
             .into_iter()
-            .any(|param_type| param_type.is_vector() || param_type.contains_nested_vectors())
+            .any(|param_type| param_type.uses_vectors())
     }
 
     pub fn is_vector(&self) -> bool {
