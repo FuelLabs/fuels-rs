@@ -72,5 +72,6 @@ members = [
   'tests/types/tuples',
   'tests/types/two_structs',
   'tests/types/type_inside_enum',
+  'tests/types/vector_output',
   'tests/types/vectors',
 ]
