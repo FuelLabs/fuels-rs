@@ -1,4 +1,7 @@
-use std::path::{Path, PathBuf};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, bail, Error};
 use itertools::{chain, Itertools};
@@ -191,7 +194,39 @@ pub fn extract_starts_and_ends(
     Ok((begins, ends))
 }
 
-pub fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
+pub fn parse_md_files(text_w_files: String, path: &str) -> HashSet<PathBuf> {
+    let regex = Regex::new(r"\((.*\.md)\)").expect("could not construct regex");
+
+    text_w_files
+        .lines()
+        .filter_map(|line| regex.captures(line))
+        .map(|capture| {
+            PathBuf::from(path)
+                .join(&capture[1])
+                .canonicalize()
+                .expect("could not canonicalize md path")
+        })
+        .collect()
+}
+
+pub fn validate_md_files(
+    md_files_summary: HashSet<PathBuf>,
+    md_files_in_src: String,
+) -> Vec<Error> {
+    md_files_in_src
+        .lines()
+        .filter_map(|file| {
+            let file = PathBuf::from(file)
+                .canonicalize()
+                .expect("could not canonicalize md path");
+
+            (!md_files_summary.contains(&file))
+                .then(|| anyhow!("file `{}` not in SUMMARY.md", file.to_str().unwrap()))
+        })
+        .collect()
+}
+
+pub fn search_for_pattern(pattern: &str, location: &str) -> anyhow::Result<String> {
     let grep_project = std::process::Command::new("grep")
         .arg("-H") // print filename
         .arg("-n") // print line-number
@@ -199,13 +234,28 @@ pub fn search_for_patterns_in_project(pattern: &str) -> anyhow::Result<String> {
         .arg("--binary-files=without-match")
         .arg("--exclude-dir=check-docs")
         .arg(pattern)
-        .arg(".")
+        .arg(location)
         .output()
         .expect("failed grep command");
 
     if !grep_project.status.success() {
-        bail!("Failed running grep command for searching {}", pattern);
+        bail!("Failed running `grep` command for pattern '{}'", pattern);
     }
 
     Ok(String::from_utf8(grep_project.stdout)?)
+}
+
+pub fn find_files(pattern: &str, location: &str, exclude: &str) -> anyhow::Result<String> {
+    let find = std::process::Command::new("find")
+        .args([
+            location, "-type", "f", "-name", pattern, "!", "-name", exclude,
+        ])
+        .output()
+        .expect("Program `find` not in PATH");
+
+    if !find.status.success() {
+        bail!("Failed running `find` command for pattern {}", pattern);
+    }
+
+    Ok(String::from_utf8(find.stdout)?)
 }
