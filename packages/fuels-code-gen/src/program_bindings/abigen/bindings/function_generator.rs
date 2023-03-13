@@ -2,10 +2,10 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
-    error::{error, Result},
+    error::Result,
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication},
-        resolved_type::{ResolvedType, TypeResolver},
+        resolved_type::TypeResolver,
         utils::{param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
