@@ -18,7 +18,6 @@
   - [Checking balances and coins](./wallets/checking-balances-and-coins.md)
   - [Setting up test wallets](./wallets/test-wallets.md)
   - [Signing](./wallets/signing.md)
-  - [Transferring assets](./wallets/transferring-assets.md)
 - [Generating bindings with `abigen!`](./getting-started/abigen.md)
   - [The JSON ABI file](abigen/the-json-abi-file.md)
   - [The `abigen!` macro](abigen/the-abigen-macro.md)
