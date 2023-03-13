@@ -208,14 +208,6 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_byte(bytes: &[u8]) -> Result<DecodeResult> {
-        let bytes_array: [u8; 1] = <[u8; 1]>::try_from(peek(bytes, 1)?)?;
-        Ok(DecodeResult {
-            token: Token::Byte(u8::from_be_bytes(bytes_array)),
-            bytes_read: 1,
-        })
-    }
-
     fn decode_u8(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::U8(peek_u8(bytes)?),

@@ -1332,7 +1332,7 @@ mod tests {
             ("Boum".to_string(), base_vector.clone()),
         ];
         let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Byte, base_vector.clone()];
+        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Bool, base_vector.clone()];
 
         assert!(!base_vector.contains_nested_heap_types());
         assert!(ParamType::Vector(Box::from(base_vector.clone())).contains_nested_heap_types());
@@ -1396,7 +1396,7 @@ mod tests {
             ("Boum".to_string(), base_bytes.clone()),
         ];
         let param_types_no_nested_bytes = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_bytes = vec![ParamType::Unit, ParamType::Byte, base_bytes.clone()];
+        let param_types_nested_bytes = vec![ParamType::Unit, ParamType::Bool, base_bytes.clone()];
 
         assert!(!base_bytes.contains_nested_heap_types());
         assert!(ParamType::Vector(Box::from(base_bytes.clone())).contains_nested_heap_types());

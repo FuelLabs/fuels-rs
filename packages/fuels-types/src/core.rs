@@ -16,11 +16,7 @@ mod raw_slice;
 mod sized_ascii_string;
 
 pub use crate::core::{
-    bits::*,
-    byte::{Byte, Bytes},
-    native::*,
-    raw_slice::RawSlice,
-    sized_ascii_string::*,
+    bits::*, bytes::Bytes, native::*, raw_slice::RawSlice, sized_ascii_string::*,
 };
 
 pub type ByteArray = [u8; 8];
