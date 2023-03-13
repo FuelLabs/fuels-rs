@@ -11,7 +11,7 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constatnts,
-            logs::logs_lookup_instantiation_code,
+            logs::logs_printers_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
@@ -28,7 +28,7 @@ pub(crate) fn contract_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let log_type_lookup = logs_lookup_instantiation_code(
+    let log_printers = logs_printers_instantiation_code(
         Some(quote! {contract_id.clone().into()}),
         &abi.logged_types,
         shared_types,
@@ -54,7 +54,7 @@ pub(crate) fn contract_bindings(
 
         impl #name {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, wallet: ::fuels::signers::wallet::WalletUnlocked) -> Self {
-                let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
+                let log_decoder = ::fuels::programs::logs::LogDecoder { log_printers: #log_printers };
                 Self { contract_id, wallet, log_decoder }
             }
 

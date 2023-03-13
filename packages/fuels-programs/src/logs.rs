@@ -1,6 +1,7 @@
 use std::{
+    any::TypeId,
     collections::{HashMap, HashSet},
-    fmt::Debug,
+    fmt::{Debug, Formatter},
     iter::FilterMap,
 };
 
@@ -9,12 +10,25 @@ use fuel_abi_types::error_codes::{
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::{traits::DecodableLog, try_from_bytes};
+use fuels_core::try_from_bytes;
 use fuels_types::{
     errors::{Error, Result},
-    param_types::ParamType,
     traits::{Parameterize, Tokenizable},
 };
+
+#[derive(Clone)]
+pub struct PrettifyLog {
+    pub printer: fn(&[u8]) -> Result<String>,
+    pub type_id: TypeId,
+}
+
+impl Debug for PrettifyLog {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrettifyLog")
+            .field("type_id", &self.type_id)
+            .finish()
+    }
+}
 
 /// Holds a unique log ID
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
@@ -24,7 +38,7 @@ pub struct LogId(ContractId, u64);
 #[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
-    pub type_lookup: HashMap<LogId, ParamType>,
+    pub log_printers: HashMap<LogId, PrettifyLog>,
 }
 
 impl LogDecoder {
@@ -34,26 +48,26 @@ impl LogDecoder {
             .iter()
             .extract_log_id_and_data()
             .filter_map(|(log_id, data)| {
-                self.type_lookup
+                self.log_printers
                     .get(&log_id)
-                    .map(|param_type| param_type.decode_log(&data))
+                    .map(|prettify_log| (prettify_log.printer)(data.as_slice()))
             })
             .collect()
     }
 
     /// Get decoded logs with specific type from the given receipts.
     /// Note that this method returns the actual type and not a `String` representation.
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>> {
-        let target_param_type = T::param_type();
+        let target_id = TypeId::of::<T>();
 
         let target_ids: HashSet<LogId> = self
-            .type_lookup
+            .log_printers
             .iter()
-            .filter_map(|(log_id, param_type)| {
-                (*param_type == target_param_type).then_some(log_id.clone())
+            .filter_map(|(log_id, prettify_log)| {
+                (prettify_log.type_id == target_id).then_some(log_id.clone())
             })
             .collect();
 
@@ -69,7 +83,8 @@ impl LogDecoder {
     }
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
-        self.type_lookup.extend(log_decoder.type_lookup.into_iter());
+        self.log_printers
+            .extend(log_decoder.log_printers.into_iter());
     }
 }
 
@@ -134,12 +149,12 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> St
 }
 
 pub fn log_type_lookup(
-    id_param_pairs: &[(u64, ParamType)],
+    id_prettify_log_pairs: Vec<(u64, PrettifyLog)>,
     contract_id: Option<ContractId>,
-) -> HashMap<LogId, ParamType> {
+) -> HashMap<LogId, PrettifyLog> {
     let contract_id = contract_id.unwrap_or_else(ContractId::zeroed);
-    id_param_pairs
-        .iter()
-        .map(|(id, param_type)| (LogId(contract_id, *id), param_type.to_owned()))
+    id_prettify_log_pairs
+        .into_iter()
+        .map(|(id, prettify_log)| (LogId(contract_id, id), prettify_log))
         .collect()
 }

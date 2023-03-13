@@ -7,7 +7,6 @@ use fuel_abi_types::utils::{
     extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
     has_tuple_format,
 };
-
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 

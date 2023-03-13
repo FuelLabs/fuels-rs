@@ -10,7 +10,7 @@ use crate::{
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constatnts,
-            logs::logs_lookup_instantiation_code,
+            logs::logs_printers_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
@@ -29,7 +29,8 @@ pub(crate) fn script_bindings(
 
     let main_function = expand_fn(&abi, shared_types)?;
 
-    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types, shared_types);
+    let log_printers_lookup =
+        logs_printers_instantiation_code(None, &abi.logged_types, shared_types);
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code = generate_code_for_configurable_constatnts(
@@ -53,7 +54,7 @@ pub(crate) fn script_bindings(
                 Self {
                     wallet,
                     binary,
-                    log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
+                    log_decoder: ::fuels::programs::logs::LogDecoder {log_printers: #log_printers_lookup}
                 }
             }
 

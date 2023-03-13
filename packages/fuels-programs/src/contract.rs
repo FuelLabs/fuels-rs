@@ -834,7 +834,7 @@ impl MultiContractCallHandler {
             tx_parameters: TxParameters::default(),
             wallet,
             log_decoder: LogDecoder {
-                type_lookup: HashMap::new(),
+                log_printers: Default::default(),
             },
         }
     }
