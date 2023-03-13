@@ -2,17 +2,15 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::{AssetId, Bytes32, ContractId, Output, Receipt, TxPointer, UtxoId, Witness};
-use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
+use fuel_tx::{AssetId, Witness};
+use fuels_types::transaction_builders::TransactionBuilder;
 use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId, FUEL_BECH32_HRP},
+    bech32::{Bech32Address, FUEL_BECH32_HRP},
     coin::Coin,
     constants::BASE_ASSET_ID,
-    error,
-    errors::{Error, Result},
+    errors::Result,
     input::Input,
     message::Message as InputMessage,
-    parameters::TxParameters,
     resource::Resource,
     transaction::Transaction,
     transaction_response::TransactionResponse,
@@ -20,11 +18,12 @@ use fuels_types::{
 use rand::{CryptoRng, Rng};
 use std::{fmt, ops, path::Path};
 
-use crate::{accounts_utils::extract_message_id, AccountError, AccountResult};
+use crate::accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee};
 use crate::{
     provider::{Provider, ResourceFilter},
     Account, Signer,
 };
+use crate::{AccountError, AccountResult};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -58,6 +57,7 @@ pub struct Wallet {
 /// ```
 /// use fuel_crypto::Message;
 /// use fuels::prelude::*;
+/// use fuels_signers::{Signer, WalletUnlocked};
 ///
 /// async fn foo() -> Result<()> {
 ///   // Setup local test node
@@ -115,39 +115,6 @@ impl Wallet {
             .provider()?
             .get_transactions_by_owner(&self.address, request)
             .await?)
-    }
-
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
-    pub async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-        witness_index: u8,
-    ) -> Result<Vec<Input>> {
-        Ok(self
-            .get_spendable_resources(asset_id, amount)
-            .await?
-            .into_iter()
-            .map(|resource| Input::resource_signed(resource, witness_index))
-            .collect::<Vec<Input>>())
-    }
-
-    /// Returns a vector containing the output coin and change output given an asset and amount
-    pub fn get_asset_outputs_for_amount(
-        &self,
-        to: &Bech32Address,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Vec<Output> {
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change((&self.address).into(), 0, asset_id),
-        ]
     }
 
     /// Gets all unspent coins of asset `asset_id` owned by the wallet.
@@ -304,82 +271,6 @@ impl WalletUnlocked {
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
         Ok(Self::new_from_private_key(secret_key, provider))
     }
-
-    /// Add base asset inputs to the transaction to cover the estimated fee.
-    /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected resources may exceed
-    /// the required amount to avoid dust. Therefore we require it as an argument.
-    ///
-    /// Requires contract inputs to be at the start of the transactions inputs vec
-    /// so that their indexes are retained
-    pub async fn add_fee_resources<Tx>(
-        &self,
-        tb: &mut impl TransactionBuilder<Tx>,
-        previous_base_amount: u64,
-        witness_index: u8,
-    ) -> Result<()> {
-        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
-
-        let transaction_fee = tb
-            .fee_checked_from_tx(&consensus_parameters)
-            .expect("Error calculating TransactionFee");
-
-        let (base_asset_inputs, remaining_inputs): (Vec<_>, Vec<_>) =
-            tb.inputs().iter().cloned().partition(|input| {
-                matches!(input, Input::ResourceSigned { resource, .. }  if resource.asset_id() == BASE_ASSET_ID)
-            });
-
-        let base_inputs_sum: u64 = base_asset_inputs
-            .iter()
-            .map(|input| input.amount().unwrap())
-            .sum();
-
-        // either the inputs were setup incorrectly, or the passed previous_base_amount is wrong
-        if base_inputs_sum < previous_base_amount {
-            return Err(AccountError::LowAmount(error!(
-                AccountError,
-                "The provided base asset amount is less than the present input coins"
-            ))
-            .into());
-        }
-
-        let mut new_base_amount = transaction_fee.total() + previous_base_amount;
-        // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
-        // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).
-        // Here we enforce a minimum amount on the base asset to avoid this
-        let is_consuming_utxos = tb
-            .inputs()
-            .iter()
-            .any(|input| !matches!(input, Input::Contract { .. }));
-        const MIN_AMOUNT: u64 = 1;
-        if !is_consuming_utxos && new_base_amount == 0 {
-            new_base_amount = MIN_AMOUNT;
-        }
-
-        let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
-            .await?;
-
-        let adjusted_inputs: Vec<_> = remaining_inputs
-            .into_iter()
-            .chain(new_base_inputs.into_iter())
-            .collect();
-
-        *tb.inputs_mut() = adjusted_inputs;
-
-        let is_base_change_present = tb.outputs().iter().any(|output| {
-            matches!(output, Output::Change { asset_id, .. } if asset_id == &BASE_ASSET_ID)
-        });
-        // add a change output for the base asset if it doesn't exist and there are base inputs
-        if !is_base_change_present && new_base_amount != 0 {
-            tb.outputs_mut().push(Output::change(
-                self.address.clone().into(),
-                0,
-                BASE_ASSET_ID,
-            ));
-        }
-        Ok(())
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
@@ -396,148 +287,48 @@ impl Account for WalletUnlocked {
         self.wallet.set_provider(provider)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
+    async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        witness_index: Option<u8>,
+    ) -> Result<Vec<Input>> {
+        Ok(self
+            .get_spendable_resources(asset_id, amount)
+            .await?
+            .into_iter()
+            .map(|resource| Input::resource_signed(resource, witness_index.unwrap_or_default()))
+            .collect::<Vec<Input>>())
+    }
+
+    async fn add_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
-        witness_index: u8,
+        witness_index: Option<u8>,
     ) -> Result<Tx> {
-        self.add_fee_resources(&mut tb, previous_base_amount, witness_index)
+        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+        tb = tb.set_consensus_parameters(consensus_parameters);
+
+        let new_base_amount =
+            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
+
+        let new_base_inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
             .await?;
+
+        adjust_inputs(&mut tb, new_base_inputs);
+        adjust_outputs(&mut tb, self.address(), new_base_amount);
+
         let mut tx = tb.build()?;
+
         self.sign_transaction(&mut tx).await?;
+
         Ok(tx)
-    }
-
-    /// Transfer funds from this wallet to another `Address`.
-    /// Fails if amount for asset ID is larger than address's spendable coins.
-    /// Returns the transaction ID that was sent and the list of receipts.
-    async fn transfer(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-        asset_id: AssetId,
-        tx_parameters: Option<TxParameters>,
-    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, 0)
-            .await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-
-        let tb = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            tx_parameters.unwrap_or_default(),
-        );
-
-        // if we are not transferring the base asset, previous base amount is 0
-        let tx = if asset_id == AssetId::default() {
-            self.pay_fee_resources(tb, amount, 0).await?
-        } else {
-            self.pay_fee_resources(tb, 0, 0).await?
-        };
-
-        let tx_id = tx.id().to_string();
-        let receipts = self.provider()?.send_transaction(&tx).await?;
-
-        Ok((tx_id, receipts))
-    }
-
-    /// Unconditionally transfers `balance` of type `asset_id` to
-    /// the contract at `to`.
-    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
-    /// Returns the corresponding transaction ID and the list of receipts.
-    ///
-    /// CAUTION !!!
-    ///
-    /// This will transfer coins to a contract, possibly leading
-    /// to the PERMANENT LOSS OF COINS if not used with care.
-    async fn force_transfer_to_contract(
-        &self,
-        to: &Bech32ContractId,
-        balance: u64,
-        asset_id: AssetId,
-        tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
-        let zeroes = Bytes32::zeroed();
-        let plain_contract_id: ContractId = to.into();
-
-        let mut inputs = vec![Input::contract(
-            UtxoId::new(zeroes, 0),
-            zeroes,
-            zeroes,
-            TxPointer::default(),
-            plain_contract_id,
-        )];
-        inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, 0)
-                .await?,
-        );
-
-        let outputs = vec![
-            Output::contract(0, zeroes, zeroes),
-            Output::change((&self.address).into(), 0, asset_id),
-        ];
-
-        // Build transaction and sign it
-        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
-            plain_contract_id,
-            balance,
-            asset_id,
-            inputs,
-            outputs,
-            tx_parameters,
-        );
-        // if we are not transferring the base asset, previous base amount is 0
-        let base_amount = if asset_id == AssetId::default() {
-            balance
-        } else {
-            0
-        };
-        let tx = self.pay_fee_resources(tb, base_amount, 0).await?;
-
-        let tx_id = tx.id();
-        let receipts = self.provider()?.send_transaction(&tx).await?;
-
-        Ok((tx_id.to_string(), receipts))
-    }
-
-    /// Withdraws an amount of the base asset to
-    /// an address on the base chain.
-    /// Returns the transaction ID, message ID and the list of receipts.
-    async fn withdraw_to_base_layer(
-        &self,
-        to: &Bech32Address,
-        amount: u64,
-        tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
-        let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, 0)
-            .await?;
-
-        let tb = ScriptTransactionBuilder::prepare_message_to_output(
-            to.into(),
-            amount,
-            inputs,
-            tx_parameters,
-        );
-
-        let tx = self.pay_fee_resources(tb, amount, 0).await?;
-
-        let tx_id = tx.id().to_string();
-        let receipts = self.provider()?.send_transaction(&tx).await?;
-
-        let message_id = extract_message_id(&receipts)
-            .expect("MessageId could not be retrieved from tx receipts.");
-
-        Ok((tx_id, message_id.to_string(), receipts))
-    }
-
-    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input> {
-        spendable_resources
-            .into_iter()
-            .map(|resource| Input::resource_signed(resource, 0))
-            .collect::<Vec<_>>()
     }
 }
 

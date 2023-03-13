@@ -900,10 +900,10 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, 0)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
         .await?;
     inputs.extend(predicate_inputs);
 

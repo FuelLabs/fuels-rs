@@ -3,7 +3,7 @@ use std::iter::repeat;
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
 use fuels_signers::Account;
-use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
+use fuels_types::transaction_builders::ScriptTransactionBuilder;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -136,10 +136,8 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .pop()
         .unwrap();
 
-    let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
-    wallet.add_fee_resources(&mut tb, 0, 0).await?;
-    let tx = tb.build()?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+    let tx = wallet.add_fee_resources(tb, 0, None).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -169,15 +167,13 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let base_amount = 30;
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
-    let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
-    wallet.add_fee_resources(&mut tb, base_amount, 0).await?;
-    let tx = tb.build()?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+    let tx = wallet.add_fee_resources(tb, base_amount, None).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(

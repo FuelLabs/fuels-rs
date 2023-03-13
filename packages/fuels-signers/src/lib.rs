@@ -1,5 +1,3 @@
-extern crate core;
-
 use std::collections::HashMap;
 
 use async_trait::async_trait;
@@ -7,17 +5,19 @@ use eth_keystore::KeystoreError;
 use provider::ResourceFilter;
 use thiserror::Error;
 
+use crate::accounts_utils::extract_message_id;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::Receipt;
-use fuel_types::AssetId;
+use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::bech32::Bech32ContractId;
+use fuels_types::constants::BASE_ASSET_ID;
 use fuels_types::errors::{Error, Result};
 use fuels_types::input::Input;
 use fuels_types::parameters::TxParameters;
 use fuels_types::resource::Resource;
-use fuels_types::transaction_builders::TransactionBuilder;
+use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 use fuels_types::{bech32::Bech32Address, transaction::Transaction};
 pub use wallet::{Wallet, WalletUnlocked};
 
@@ -111,37 +111,171 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .map_err(Into::into)
     }
 
-    async fn pay_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
+    async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+        witness_index: Option<u8>,
+    ) -> Result<Vec<Input>>;
+
+    /// Returns a vector containing the output coin and change output given an asset and amount
+    fn get_asset_outputs_for_amount(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Vec<Output> {
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change(self.address().into(), 0, asset_id),
+        ]
+    }
+
+    async fn add_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
         &self,
         tb: Tb,
         previous_base_amount: u64,
-        witness_index: u8,
+        witness_index: Option<u8>,
     ) -> Result<Tx>;
 
+    /// Transfer funds from this wallet to another `Address`.
+    /// Fails if amount for asset ID is larger than address's spendable coins.
+    /// Returns the transaction ID that was sent and the list of receipts.
     async fn transfer(
         &self,
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
         tx_parameters: Option<TxParameters>,
-    ) -> Result<(String, Vec<Receipt>)>;
+    ) -> Result<(String, Vec<Receipt>)> {
+        let inputs = self
+            .get_asset_inputs_for_amount(asset_id, amount, None)
+            .await?;
 
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+
+        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            tx_parameters.unwrap_or_default(),
+        )
+        .set_consensus_parameters(consensus_parameters);
+
+        // if we are not transferring the base asset, previous base amount is 0
+        let tx = if asset_id == AssetId::default() {
+            self.add_fee_resources(tx_builder, amount, None).await?
+        } else {
+            self.add_fee_resources(tx_builder, 0, None).await?
+        };
+
+        let receipts = self.provider()?.send_transaction(&tx).await?;
+
+        Ok((tx.id().to_string(), receipts))
+    }
+
+    /// Unconditionally transfers `balance` of type `asset_id` to
+    /// the contract at `to`.
+    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
+    /// Returns the corresponding transaction ID and the list of receipts.
+    ///
+    /// CAUTION !!!
+    ///
+    /// This will transfer coins to a contract, possibly leading
+    /// to the PERMANENT LOSS OF COINS if not used with care.
     async fn force_transfer_to_contract(
         &self,
         to: &Bech32ContractId,
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>)>;
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+        let zeroes = Bytes32::zeroed();
+        let plain_contract_id: ContractId = to.into();
 
+        let mut inputs = vec![Input::contract(
+            UtxoId::new(zeroes, 0),
+            zeroes,
+            zeroes,
+            TxPointer::default(),
+            plain_contract_id,
+        )];
+
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, None)
+                .await?,
+        );
+
+        let outputs = vec![
+            Output::contract(0, zeroes, zeroes),
+            Output::change(self.address().into(), 0, asset_id),
+        ];
+
+        // Build transaction and sign it
+        let params = self.provider()?.consensus_parameters().await?;
+
+        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
+            plain_contract_id,
+            balance,
+            asset_id,
+            inputs,
+            outputs,
+            tx_parameters,
+        )
+        .set_consensus_parameters(params);
+
+        // if we are not transferring the base asset, previous base amount is 0
+        let base_amount = if asset_id == AssetId::default() {
+            balance
+        } else {
+            0
+        };
+
+        let tx = self.add_fee_resources(tb, base_amount, None).await?;
+
+        let tx_id = tx.id();
+        let receipts = self.provider()?.send_transaction(&tx).await?;
+
+        Ok((tx_id.to_string(), receipts))
+    }
+
+    /// Withdraws an amount of the base asset to
+    /// an address on the base chain.
+    /// Returns the transaction ID, message ID and the list of receipts.
     async fn withdraw_to_base_layer(
         &self,
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> Result<(String, String, Vec<Receipt>)>;
+    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
+        let inputs = self
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+            .await?;
 
-    fn convert_to_signed_resources(&self, spendable_resources: Vec<Resource>) -> Vec<Input>;
+        let tb = ScriptTransactionBuilder::prepare_message_to_output(
+            to.into(),
+            amount,
+            inputs,
+            tx_parameters,
+        );
+
+        let tx = self.add_fee_resources(tb, amount, None).await?;
+
+        let tx_id = tx.id().to_string();
+        let receipts = self.provider()?.send_transaction(&tx).await?;
+
+        let message_id = extract_message_id(&receipts)
+            .expect("MessageId could not be retrieved from tx receipts.");
+
+        Ok((tx_id, message_id.to_string(), receipts))
+    }
 }
 
 #[cfg(test)]

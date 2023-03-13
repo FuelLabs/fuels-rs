@@ -177,7 +177,7 @@ where
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         // TODO: previous_base_amount
-        let tx = self.account.pay_fee_resources(tb, 0, 0).await?;
+        let tx = self.account.add_fee_resources(tb, 0, None).await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

@@ -13,10 +13,9 @@ use fuels_types::transaction::ScriptTransaction;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::{
     bech32::Bech32Address,
-    constants::{BASE_ASSET_ID, WORD_SIZE},
+    constants::WORD_SIZE,
     errors::{Error, Result},
     parameters::TxParameters,
-    resource::Resource,
     transaction::Transaction,
 };
 use itertools::{chain, Itertools};
@@ -57,15 +56,17 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
-    let mut spendable_resources = vec![];
+    let mut asset_inputs = vec![];
 
     // Find the spendable resources required for those calls
     for (asset_id, amount) in &required_asset_amounts {
-        let resources = account.get_spendable_resources(*asset_id, *amount).await?;
-        spendable_resources.extend(resources);
+        let resources = account
+            .get_asset_inputs_for_amount(*asset_id, *amount, None)
+            .await?;
+        asset_inputs.extend(resources);
     }
 
-    let (inputs, outputs) = get_transaction_inputs_outputs(calls, spendable_resources, account);
+    let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, *tx_parameters)
         .set_script(script)
@@ -75,8 +76,8 @@ pub async fn build_tx_from_contract_calls<T: Account>(
         .iter()
         .find(|(asset_id, _)| *asset_id == AssetId::default());
     let tx = match base_asset_amount {
-        Some((_, base_amount)) => account.pay_fee_resources(tb, *base_amount, 0).await?,
-        None => account.pay_fee_resources(tb, 0, 0).await?,
+        Some((_, base_amount)) => account.add_fee_resources(tb, *base_amount, None).await?,
+        None => account.add_fee_resources(tb, 0, None).await?,
     };
 
     Ok(tx)
@@ -251,18 +252,14 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
 /// and created ([`Output`]s) by the transaction
 pub(crate) fn get_transaction_inputs_outputs<T: Account>(
     calls: &[ContractCall],
-    spendable_resources: Vec<Resource>,
+    asset_inputs: Vec<Input>,
     account: &T,
 ) -> (Vec<Input>, Vec<Output>) {
-    let asset_ids = extract_unique_asset_ids(&spendable_resources);
+    let asset_ids = extract_unique_asset_ids(&asset_inputs);
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
-    let inputs = chain!(
-        generate_contract_inputs(contract_ids),
-        account.convert_to_signed_resources(spendable_resources),
-    )
-    .collect();
+    let inputs = chain!(generate_contract_inputs(contract_ids), asset_inputs).collect();
 
     // Note the contract_outputs need to come first since the
     // contract_inputs are referencing them via `output_index`. The node
@@ -301,12 +298,14 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect::<Vec<_>>()
 }
 
-fn extract_unique_asset_ids(spendable_coins: &[Resource]) -> HashSet<AssetId> {
-    spendable_coins
+fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
+    asset_inputs
         .iter()
-        .map(|resource| match resource {
-            Resource::Coin(coin) => coin.asset_id,
-            Resource::Message(_) => BASE_ASSET_ID,
+        .filter_map(|input| match input {
+            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
+                Some(resource.asset_id())
+            }
+            _ => None,
         })
         .collect()
 }
@@ -407,6 +406,7 @@ mod test {
 
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_signers::WalletUnlocked;
+    use fuels_types::resource::Resource;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
@@ -672,7 +672,7 @@ mod test {
         let coins = asset_ids
             .into_iter()
             .map(|asset_id| {
-                Resource::Coin(Coin {
+                let coin = Resource::Coin(Coin {
                     amount: 100,
                     block_created: 0,
                     asset_id,
@@ -680,7 +680,8 @@ mod test {
                     maturity: 0,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
-                })
+                });
+                Input::resource_signed(coin, 0)
             })
             .collect();
         let call = ContractCall::new_with_random_id();
@@ -703,49 +704,6 @@ mod test {
             .collect();
 
         assert_eq!(change_outputs, expected_change_outputs);
-    }
-
-    #[test]
-    fn spendable_coins_added_to_input() {
-        // given
-        let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
-
-        let generate_spendable_resources = || {
-            asset_ids
-                .into_iter()
-                .enumerate()
-                .map(|(index, asset_id)| {
-                    Resource::Coin(Coin {
-                        amount: (index * 10) as u64,
-                        block_created: 1,
-                        asset_id,
-                        utxo_id: Default::default(),
-                        maturity: 0,
-                        owner: Default::default(),
-                        status: CoinStatus::Unspent,
-                    })
-                })
-                .collect::<Vec<_>>()
-        };
-
-        let call = ContractCall::new_with_random_id();
-
-        let wallet = WalletUnlocked::new_random(None);
-
-        // when
-        let (inputs, _) =
-            get_transaction_inputs_outputs(&[call], generate_spendable_resources(), &wallet);
-
-        // then
-        let inputs_as_signed_coins: HashSet<Input> =
-            inputs[1..].iter().cloned().collect::<HashSet<Input>>();
-
-        let expected_inputs = generate_spendable_resources()
-            .into_iter()
-            .map(|resource| Input::resource_signed(resource, 0))
-            .collect::<HashSet<_>>();
-
-        assert_eq!(expected_inputs, inputs_as_signed_coins);
     }
 
     #[test]

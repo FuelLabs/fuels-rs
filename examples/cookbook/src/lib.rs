@@ -152,7 +152,9 @@ mod tests {
                 continue;
             }
 
-            let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
+            let input = wallet_1
+                .get_asset_inputs_for_amount(id, amount, None)
+                .await?;
             inputs.extend(input);
 
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);

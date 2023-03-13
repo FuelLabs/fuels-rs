@@ -230,7 +230,7 @@ impl<T: Account + Clone> Contract<T> {
             Self::contract_deployment_transaction(compiled_contract, params).await?;
 
         let tx = account
-            .pay_fee_resources(tb, 0, 1)
+            .add_fee_resources(tb, 0, Some(1))
             .await
             .map_err(|err| ProviderError(format!("{err}")))?;
 
