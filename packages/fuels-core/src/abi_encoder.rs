@@ -690,7 +690,7 @@ mod tests {
         }
          */
 
-        let types = vec![
+        let fields = vec![
             ParamType::Enum {
                 variants: deeper_enum_variants.clone(),
                 generics: vec![],
@@ -698,7 +698,7 @@ mod tests {
             ParamType::Bool,
         ];
         let struct_a_type = ParamType::Struct {
-            fields: types,
+            fields,
             generics: vec![],
         };
 

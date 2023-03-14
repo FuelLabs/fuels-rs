@@ -154,27 +154,29 @@ mod tests {
 
     #[test]
     fn ultimate_test() {
-        let types = vec![ParamType::String(2)];
-        let types1 = vec![ParamType::Struct {
-            fields: types,
+        let fields = vec![ParamType::Struct {
+            fields: vec![ParamType::String(2)],
             generics: vec![ParamType::String(2)],
         }];
         let struct_a = ParamType::Struct {
-            fields: types1,
+            fields,
             generics: vec![ParamType::String(2)],
         };
-        let types = vec![ParamType::Array(Box::new(struct_a.clone()), 2)];
+
+        let fields = vec![ParamType::Array(Box::new(struct_a.clone()), 2)];
         let struct_b = ParamType::Struct {
-            fields: types,
+            fields,
             generics: vec![struct_a],
         };
-        let types = vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])];
+
+        let fields = vec![ParamType::Tuple(vec![struct_b.clone(), struct_b.clone()])];
         let struct_c = ParamType::Struct {
-            fields: types,
+            fields,
             generics: vec![struct_b],
         };
+
         let types = vec![ParamType::U64, struct_c.clone()];
-        let types1 = vec![
+        let fields = vec![
             ParamType::Tuple(vec![
                 ParamType::Array(Box::new(ParamType::B256), 2),
                 ParamType::String(2),
@@ -190,8 +192,9 @@ mod tests {
                 ParamType::U32,
             ]),
         ];
+
         let inputs = [ParamType::Struct {
-            fields: types1,
+            fields,
             generics: vec![ParamType::String(2), ParamType::B256],
         }];
 

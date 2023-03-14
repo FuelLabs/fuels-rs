@@ -30,7 +30,7 @@ impl LogFormatter {
         }
     }
 
-    pub fn supports_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
+    pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
     }
 
@@ -67,7 +67,7 @@ impl LogDecoder {
             .filter_map(|(log_id, data)| {
                 self.log_formatters
                     .get(&log_id)
-                    .map(|prettify_log| (prettify_log.formatter)(data.as_slice()))
+                    .map(|log_formatter| log_formatter.format(&data))
             })
             .collect()
     }
@@ -78,13 +78,11 @@ impl LogDecoder {
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>> {
-        let target_id = TypeId::of::<T>();
-
         let target_ids: HashSet<LogId> = self
             .log_formatters
             .iter()
-            .filter_map(|(log_id, prettify_log)| {
-                (prettify_log.type_id == target_id).then_some(log_id.clone())
+            .filter_map(|(log_id, log_formatter)| {
+                log_formatter.can_handle_type::<T>().then(|| log_id.clone())
             })
             .collect();
 

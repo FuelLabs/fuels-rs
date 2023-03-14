@@ -1,6 +1,7 @@
 use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
+
 use fuels_types::{
     constants::WORD_SIZE,
     enum_variants::EnumVariants,
@@ -452,9 +453,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
         ];
-        let types = vec![ParamType::U8, ParamType::Bool];
         let param_type = ParamType::Struct {
-            fields: types,
+            fields: vec![ParamType::U8, ParamType::Bool],
             generics: vec![],
         };
 
@@ -507,7 +507,7 @@ mod tests {
         let types = vec![ParamType::B256, ParamType::U32];
         let inner_enum_types = EnumVariants::new(types)?;
 
-        let types = vec![
+        let fields = vec![
             ParamType::Enum {
                 variants: inner_enum_types.clone(),
                 generics: vec![],
@@ -515,7 +515,7 @@ mod tests {
             ParamType::U32,
         ];
         let struct_type = ParamType::Struct {
-            fields: types,
+            fields,
             generics: vec![],
         };
 
@@ -556,19 +556,18 @@ mod tests {
         //     b: u8[2],
         // }
 
-        let types = vec![
-            ParamType::Bool,
-            ParamType::Array(Box::new(ParamType::U8), 2),
-        ];
-        let types1 = vec![
+        let fields = vec![
             ParamType::U16,
             ParamType::Struct {
-                fields: types,
+                fields: vec![
+                    ParamType::Bool,
+                    ParamType::Array(Box::new(ParamType::U8), 2),
+                ],
                 generics: vec![],
             },
         ];
         let nested_struct = ParamType::Struct {
-            fields: types1,
+            fields,
             generics: vec![],
         };
 
@@ -606,19 +605,18 @@ mod tests {
         // fn: long_function(Foo,u8[2],b256,str[23])
 
         // Parameters
-        let types = vec![
-            ParamType::Bool,
-            ParamType::Array(Box::new(ParamType::U8), 2),
-        ];
-        let types1 = vec![
+        let fields = vec![
             ParamType::U16,
             ParamType::Struct {
-                fields: types,
+                fields: vec![
+                    ParamType::Bool,
+                    ParamType::Array(Box::new(ParamType::U8), 2),
+                ],
                 generics: vec![],
             },
         ];
         let nested_struct = ParamType::Struct {
-            fields: types1,
+            fields,
             generics: vec![],
         };
 
@@ -676,9 +674,8 @@ mod tests {
         let data = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
         ];
-        let types = vec![ParamType::Unit, ParamType::U64];
         let struct_type = ParamType::Struct {
-            fields: types,
+            fields: vec![ParamType::Unit, ParamType::U64],
             generics: vec![],
         };
 
