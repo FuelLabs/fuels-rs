@@ -1,7 +1,7 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::{Bits256, Byte, RawSlice, SizedAsciiString, StringToken, Token},
+    core::{Bits256, RawSlice, SizedAsciiString, StringToken, Token},
     errors::{error, Error, Result},
     param_types::ParamType,
     traits::Parameterize,
@@ -41,25 +41,6 @@ impl Tokenizable for Bits256 {
 
     fn into_token(self) -> Token {
         Token::B256(self.0)
-    }
-}
-
-impl Tokenizable for Byte {
-    fn from_token(token: Token) -> Result<Self>
-    where
-        Self: Sized,
-    {
-        match token {
-            Token::Byte(value) => Ok(Byte(value)),
-            _ => Err(error!(
-                InvalidData,
-                "Byte::from_token failed! Can only handle Token::Byte, got {token:?}"
-            )),
-        }
-    }
-
-    fn into_token(self) -> Token {
-        Token::Byte(self.0)
     }
 }
 

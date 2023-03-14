@@ -1,24 +1,66 @@
 use std::fmt::Debug;
 
 use fuel_tx::{
-    Bytes32, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput, Output, Script,
-    StorageSlot, Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
+    field::{
+        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+    },
+    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
+    FormatValidityChecks, Input, Output, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, UniqueIdentifier, Witness,
 };
 
-use fuel_types::Salt;
+use crate::{
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY, WORD_SIZE},
+    errors::Error,
+};
 
-use fuel_tx::field::GasLimit;
-use fuel_tx::field::GasPrice;
-use fuel_tx::field::Inputs;
-use fuel_tx::field::Outputs;
-use fuel_tx::field::Salt as FieldSalt;
-use fuel_tx::field::Script as FieldScript;
-use fuel_tx::field::ScriptData;
-use fuel_tx::field::Witnesses;
-use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Maturity, StorageSlots};
-use fuel_tx::Chargeable;
+#[derive(Debug, Copy, Clone)]
+pub struct TxParameters {
+    gas_price: u64,
+    gas_limit: u64,
+    maturity: u64,
+}
 
-use crate::{errors::Error, parameters::TxParameters};
+macro_rules! impl_setter_getter {
+    ($setter_name: ident, $field: ident) => {
+        pub fn $setter_name(mut self, $field: u64) -> Self {
+            self.$field = $field;
+            self
+        }
+
+        pub fn $field(&self) -> u64 {
+            self.$field
+        }
+    };
+}
+
+impl TxParameters {
+    pub fn new(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
+        Self {
+            gas_price,
+            gas_limit,
+            maturity,
+        }
+    }
+
+    impl_setter_getter!(set_gas_price, gas_price);
+    impl_setter_getter!(set_gas_limit, gas_limit);
+    impl_setter_getter!(set_maturity, maturity);
+}
+
+impl Default for TxParameters {
+    fn default() -> Self {
+        Self {
+            gas_price: DEFAULT_GAS_PRICE,
+            gas_limit: DEFAULT_GAS_LIMIT,
+            // By default, transaction is immediately valid
+            maturity: DEFAULT_MATURITY,
+        }
+    }
+}
+use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+
+use crate::{parameters::TxParameters};
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;

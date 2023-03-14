@@ -12,6 +12,7 @@ use fuels_types::{
     input::Input,
     message::Message as InputMessage,
     resource::Resource,
+    transaction::TxParameters,
     transaction::Transaction,
     transaction_response::TransactionResponse,
 };

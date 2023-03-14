@@ -10,9 +10,8 @@ use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
-    parameters::TxParameters,
     traits::{Parameterize, Tokenizable},
-    transaction::Transaction,
+    transaction::{ScriptTransaction, Transaction, TxParameters},
 };
 use itertools::chain;
 
