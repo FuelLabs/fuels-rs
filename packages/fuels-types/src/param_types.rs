@@ -80,8 +80,8 @@ impl ParamType {
             ParamType::Enum {
                 generics, variants, ..
             } => {
-                let variants_types = variants.param_types();
-                Self::any_nested_vectors(chain!(generics, &variants_types))
+                let variants_types = variants.variants();
+                Self::any_nested_vectors(chain!(generics, variants_types))
             }
             ParamType::Struct {
                 fields, generics, ..
@@ -466,15 +466,13 @@ mod tests {
 
     #[test]
     fn structs_are_just_all_elements_combined() {
-        let types = vec![ParamType::U32, ParamType::U32];
         let inner_struct = ParamType::Struct {
-            fields: types,
+            fields: vec![ParamType::U32, ParamType::U32],
             generics: vec![],
         };
 
-        let types = vec![ParamType::B256, ParamType::Bool, inner_struct];
         let a_struct = ParamType::Struct {
-            fields: types,
+            fields: vec![ParamType::B256, ParamType::Bool, inner_struct],
             generics: vec![],
         };
 

@@ -98,8 +98,7 @@ impl LogDecoder {
     }
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
-        self.log_formatters
-            .extend(log_decoder.log_formatters.into_iter());
+        self.log_formatters.extend(log_decoder.log_formatters);
     }
 }
 
@@ -164,12 +163,12 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> St
 }
 
 pub fn log_type_lookup(
-    id_prettify_log_pairs: Vec<(u64, LogFormatter)>,
+    log_id_log_formatter_pairs: Vec<(u64, LogFormatter)>,
     contract_id: Option<ContractId>,
 ) -> HashMap<LogId, LogFormatter> {
     let contract_id = contract_id.unwrap_or_else(ContractId::zeroed);
-    id_prettify_log_pairs
+    log_id_log_formatter_pairs
         .into_iter()
-        .map(|(id, prettify_log)| (LogId(contract_id, id), prettify_log))
+        .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))
         .collect()
 }

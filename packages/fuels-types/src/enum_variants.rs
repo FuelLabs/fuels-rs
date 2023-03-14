@@ -18,12 +18,8 @@ impl EnumVariants {
         }
     }
 
-    pub fn variants(&self) -> &Vec<ParamType> {
+    pub fn variants(&self) -> &[ParamType] {
         &self.variants
-    }
-
-    pub fn param_types(&self) -> Vec<ParamType> {
-        self.variants.clone()
     }
 
     pub fn select_variant(&self, discriminant: u8) -> Result<&ParamType> {
@@ -47,7 +43,7 @@ impl EnumVariants {
         if self.only_units_inside() {
             return ENUM_DISCRIMINANT_WORD_WIDTH;
         }
-        self.param_types()
+        self.variants()
             .iter()
             .map(|p| p.compute_encoding_width())
             .max()
