@@ -3,7 +3,7 @@ use std::{slice, str::FromStr};
 use fuels::{
     core::abi_encoder::ABIEncoder,
     prelude::*,
-    types::{traits::Tokenizable, Bits256, Byte, EvmAddress},
+    types::{traits::Tokenizable, Bits256, EvmAddress},
 };
 use sha2::{Digest, Sha256};
 
@@ -252,65 +252,6 @@ async fn compile_bindings_bool_array_input() {
         "000000000c228226000000000000000100000000000000000000000000000001",
         encoded
     );
-}
-
-#[tokio::test]
-async fn compile_bindings_byte_input() {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-            "types": [
-              {
-                "typeId": 0,
-                "type": "()",
-                "components": [],
-                "typeParameters": null
-              },
-              {
-                "typeId": 1,
-                "type": "byte",
-                "components": null,
-                "typeParameters": null
-              }
-            ],
-            "functions": [
-              {
-                "inputs": [
-                  {
-                    "name": "arg",
-                    "type": 1,
-                    "typeArguments": null
-                  }
-                ],
-                "name": "takes_byte",
-                "output": {
-                  "name": "",
-                  "type": 0,
-                  "typeArguments": null
-                }
-              }
-            ]
-          }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let call_handler = contract_instance.methods().takes_byte(Byte(10u8));
-
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
-    let encoded = format!(
-        "{}{}",
-        hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(encoded_args)
-    );
-
-    assert_eq!("00000000a4bd3861000000000000000a", encoded);
 }
 
 #[tokio::test]

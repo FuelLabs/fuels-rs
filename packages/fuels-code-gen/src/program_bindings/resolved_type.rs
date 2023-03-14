@@ -7,10 +7,9 @@ use fuel_abi_types::utils::{
     extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
     has_tuple_format,
 };
-use lazy_static::lazy_static;
+
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
-use regex::Regex;
 
 use crate::{
     error::{error, Result},
@@ -32,16 +31,6 @@ pub struct ResolvedType {
 impl ResolvedType {
     pub fn is_unit(&self) -> bool {
         self.type_name.to_string() == "()"
-    }
-    // Used to prevent returning vectors until we get
-    // the compiler support for it.
-    #[must_use]
-    pub fn uses_vectors(&self) -> bool {
-        lazy_static! {
-            static ref RE: Regex = Regex::new(r"\bVec\b").unwrap();
-        }
-        RE.is_match(&self.type_name.to_string())
-            || self.generic_params.iter().any(ResolvedType::uses_vectors)
     }
 }
 
@@ -88,7 +77,6 @@ pub(crate) fn resolve_type(
 
     [
         to_simple_type,
-        to_byte,
         to_bits256,
         to_generic,
         to_array,
@@ -206,22 +194,6 @@ fn to_simple_type(
             })
         }
         _ => None,
-    }
-}
-
-fn to_byte(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    if type_field == "byte" {
-        Some(ResolvedType {
-            type_name: quote! {::fuels::types::Byte},
-            generic_params: vec![],
-        })
-    } else {
-        None
     }
 }
 
@@ -350,11 +322,6 @@ mod tests {
     #[test]
     fn test_resolve_bool() -> Result<()> {
         test_resolve_primitive_type("bool", "bool")
-    }
-
-    #[test]
-    fn test_resolve_byte() -> Result<()> {
-        test_resolve_primitive_type("byte", ":: fuels :: types :: Byte")
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use itertools::{chain, Itertools};
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
@@ -5,17 +6,17 @@ use fuel_tx::{
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
+
 use fuels_core::offsets::call_script_data_offset;
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
     bech32::Bech32Address,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
-    parameters::TxParameters,
+    param_types::ParamType,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
 };
-use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 
@@ -32,22 +33,18 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls(
+pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: &TxParameters,
+    tx_parameters: TxParameters,
     wallet: &WalletUnlocked,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = wallet.get_provider()?.consensus_parameters().await?;
 
-    // Calculate instructions length for call instructions
-    // Use placeholder for call param offsets, we only care about the length
-    let calls_instructions_len =
-        get_single_call_instructions(&CallOpcodeParamsOffset::default()).len() * calls.len();
-
+    let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit);
+        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
 
     let script = get_instructions(calls, call_param_offsets);
 
@@ -63,7 +60,7 @@ pub async fn build_tx_from_contract_calls(
     let (inputs, outputs) =
         get_transaction_inputs_outputs(calls, wallet.address(), spendable_resources);
 
-    let mut tx = ScriptTransaction::new(inputs, outputs, *tx_parameters)
+    let mut tx = ScriptTransaction::new(inputs, outputs, tx_parameters)
         .with_script(script)
         .with_script_data(script_data);
 
@@ -79,11 +76,35 @@ pub async fn build_tx_from_contract_calls(
     Ok(tx)
 }
 
+/// Compute the length of the calling scripts for the two types of contract calls.
+/// Use placeholder for `call_param_offsets` and `output_param_type`, because the length of the
+/// calling script doesn't depend on the underlying type, just on whether or not the contract call
+/// output is a vector.
+fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
+    let n_vectors_calls = calls.iter().filter(|c| c.output_param.is_vector()).count();
+
+    let calls_instructions_len_no_vectors =
+        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
+            * (calls.len() - n_vectors_calls);
+    let calls_instructions_len_vectors = get_single_call_instructions(
+        &CallOpcodeParamsOffset::default(),
+        &ParamType::Vector(Box::from(ParamType::U64)),
+    )
+    .len()
+        * n_vectors_calls;
+    calls_instructions_len_no_vectors + calls_instructions_len_vectors
+}
+
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
 pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
-        .map(|call| (call.call_parameters.asset_id, call.call_parameters.amount))
+        .map(|call| {
+            (
+                call.call_parameters.asset_id(),
+                call.call_parameters.amount(),
+            )
+        })
         .collect::<Vec<_>>();
 
     let custom_assets = calls
@@ -124,16 +145,12 @@ pub(crate) fn get_instructions(
     calls: &[ContractCall],
     offsets: Vec<CallOpcodeParamsOffset>,
 ) -> Vec<u8> {
-    let num_calls = calls.len();
-
-    let mut instructions = vec![];
-    for (_, call_offsets) in (0..num_calls).zip(offsets.iter()) {
-        instructions.extend(get_single_call_instructions(call_offsets));
-    }
-
-    instructions.extend(op::ret(RegId::ONE).to_bytes());
-
-    instructions
+    calls
+        .iter()
+        .zip(&offsets)
+        .flat_map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
+        .chain(op::ret(RegId::ONE).to_bytes().into_iter())
+        .collect()
 }
 
 /// Returns script data, consisting of the following items in the given order:
@@ -164,12 +181,12 @@ pub(crate) fn build_script_data_from_contract_calls(
         };
         param_offsets.push(call_param_offsets);
 
-        script_data.extend(call.call_parameters.asset_id.to_vec());
+        script_data.extend(call.call_parameters.asset_id().iter());
 
-        script_data.extend(call.call_parameters.amount.to_be_bytes());
+        script_data.extend(call.call_parameters.amount().to_be_bytes());
 
         // If gas_forwarded is not set, use the transaction gas limit
-        let gas_forwarded = call.call_parameters.gas_forwarded.unwrap_or(gas_limit);
+        let gas_forwarded = call.call_parameters.gas_forwarded().unwrap_or(gas_limit);
         script_data.extend(gas_forwarded.to_be_bytes());
 
         script_data.extend(call.contract_id.hash().as_ref());
@@ -213,7 +230,10 @@ pub(crate) fn build_script_data_from_contract_calls(
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
-pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> Vec<u8> {
+pub(crate) fn get_single_call_instructions(
+    offsets: &CallOpcodeParamsOffset,
+    output_param_type: &ParamType,
+) -> Vec<u8> {
     let call_data_offset = offsets
         .call_data_offset
         .try_into()
@@ -230,7 +250,8 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
         .asset_id_offset
         .try_into()
         .expect("asset_id_offset out of range");
-    let instructions = [
+
+    let mut instructions = [
         op::movi(0x10, call_data_offset),
         op::movi(0x11, gas_forwarded_offset),
         op::lw(0x11, 0x11, 0),
@@ -238,7 +259,29 @@ pub(crate) fn get_single_call_instructions(offsets: &CallOpcodeParamsOffset) -> 
         op::lw(0x12, 0x12, 0),
         op::movi(0x13, asset_id_offset),
         op::call(0x10, 0x12, 0x13, 0x11),
-    ];
+    ]
+    .to_vec();
+    // The instructions are different if you want to return data that was on the heap
+    if let ParamType::Vector(inner_param_type) = output_param_type {
+        let inner_type_byte_size: u16 =
+            (inner_param_type.compute_encoding_width() * WORD_SIZE) as u16;
+        instructions.extend([
+            // The RET register contains the pointer address of the `CALL` return (a stack
+            // address).
+            // The RETL register contains the length of the `CALL` return (=24 because the vec
+            // struct takes 3 WORDs). We don't actually need it unless the vec struct encoding
+            // changes in the compiler.
+            // Load the word located at the address contained in RET, it's a word that
+            // translates to a heap address. 0x15 is a free register.
+            op::lw(0x15, RegId::RET, 0),
+            // We know a vector struct has its third byte contain the length of the vector, so
+            // use a 2 offset to store the vector length in 0x16, which is a free register.
+            op::lw(0x16, RegId::RET, 2),
+            // The in-memory size of the vector is (in-memory size of the inner type) * length
+            op::muli(0x16, 0x16, inner_type_byte_size),
+            op::retd(0x15, 0x16),
+        ]);
+    }
 
     #[allow(clippy::iter_cloned_collect)]
     instructions.into_iter().collect::<Vec<u8>>()
@@ -433,12 +476,12 @@ mod test {
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         param_types::ParamType,
-        parameters::CallParameters,
         Token,
     };
     use rand::Rng;
 
     use super::*;
+    use crate::contract::CallParameters;
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
@@ -497,11 +540,7 @@ mod test {
                 contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
                 encoded_args: args[i].clone(),
-                call_parameters: CallParameters::new(
-                    Some(i as u64),
-                    Some(asset_ids[i]),
-                    Some(i as u64),
-                ),
+                call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
                 message_outputs: None,
@@ -841,7 +880,11 @@ mod test {
             (asset_id_1, 300),
             (asset_id_2, 400),
         ]
-        .map(|(asset_id, amount)| CallParameters::new(Some(amount), Some(asset_id), None))
+        .map(|(asset_id, amount)| {
+            CallParameters::default()
+                .set_amount(amount)
+                .set_asset_id(asset_id)
+        })
         .map(|call_parameters| {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });

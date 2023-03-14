@@ -4,10 +4,10 @@ use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
-    error::{error, Result},
+    error::Result,
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        resolved_type::resolve_type,
         utils::{param_type_calls, Component},
     },
     utils::safe_ident,
@@ -26,8 +26,9 @@ impl FunctionGenerator {
     pub fn new(fun: &FullABIFunction, shared_types: &HashSet<FullTypeDeclaration>) -> Result<Self> {
         let args = function_arguments(fun.inputs(), shared_types)?;
 
-        let output_type = resolve_fn_output_type(fun, shared_types)?;
-
+        // We are not checking that the ABI contains non-SDK supported types so that the user can
+        // still interact with an ABI even if some methods will fail at runtime.
+        let output_type = resolve_type(fun.output(), shared_types)?;
         Ok(Self {
             name: fun.name().to_string(),
             args,
@@ -81,21 +82,6 @@ fn function_arguments(
         .iter()
         .map(|input| Component::new(input, true, shared_types))
         .collect::<Result<_>>()
-}
-
-fn resolve_fn_output_type(
-    function: &FullABIFunction,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType> {
-    let output_type = resolve_type(function.output(), shared_types)?;
-    if output_type.uses_vectors() {
-        Err(error!(
-            "function '{}' contains a vector in its return type. This currently isn't supported.",
-            function.name()
-        ))
-    } else {
-        Ok(output_type)
-    }
 }
 
 impl From<&FunctionGenerator> for TokenStream {

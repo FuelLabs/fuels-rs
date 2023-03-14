@@ -42,19 +42,13 @@ mod tests {
         // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 
-        // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let gas_price = 0;
-        let gas_limit = 1_000_000;
-        let maturity = 0;
-
         // This will deploy your contract binary onto the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::new(Some(gas_price), Some(gas_limit), Some(maturity)),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -129,8 +123,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -151,9 +144,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn deploy_with_parameters() -> Result<()> {
+    async fn deploy_with_parameters() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: deploy_with_parameters
-        use fuels::prelude::*;
+        use fuels::{
+            prelude::*,
+            tx::{Bytes32, StorageSlot},
+        };
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
         // ANCHOR: abigen_example
@@ -168,23 +164,35 @@ mod tests {
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
         println!("Contract deployed @ {contract_id_1}");
 
+        // Optional: Configure deployment parameters or use `TxParameters::default()`
+        let tx_parameters = TxParameters::default()
+            .set_gas_price(0)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
+
+        // Optional: Configure storage
+        let key = Bytes32::from([1u8; 32]);
+        let value = Bytes32::from([2u8; 32]);
+        let storage_slot = StorageSlot::new(key, value);
+        let storage_configuration =
+            StorageConfiguration::default().set_manual_storage(vec![storage_slot]);
+
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
-        let contract_id_2 = Contract::deploy_with_parameters(
+        let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-            Configurables::default(),
-            Salt::from(salt),
+            DeployConfiguration::default()
+                .set_storage_configuration(storage_configuration)
+                .set_salt(salt)
+                .set_tx_parameters(tx_parameters),
         )
         .await?;
 
@@ -207,14 +215,10 @@ mod tests {
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 
-        let salt = [0; 32].into();
-        let contract_id_1 = Contract::deploy_with_parameters(
+        let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[0],
-            TxParameters::default(),
-            StorageConfiguration::default(),
-            Configurables::default(),
-            salt,
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -224,20 +228,17 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None))
+            .tx_params(TxParameters::default().set_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
         assert_eq!(42, response.value);
 
-        let salt = [1; 32].into();
-        let contract_id_2 = Contract::deploy_with_parameters(
+        let salt = [1; 32];
+        let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallets[1],
-            TxParameters::default(),
-            StorageConfiguration::default(),
-            Configurables::default(),
-            salt,
+            DeployConfiguration::default().set_salt(salt),
         )
         .await?;
 
@@ -247,7 +248,7 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::new(None, Some(1_000_000), None))
+            .tx_params(TxParameters::default().set_gas_limit(1_000_000))
             .call() // Perform the network call
             .await?;
 
@@ -268,24 +269,24 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+        let my_tx_parameters = TxParameters::default()
+            .set_gas_price(1)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
+            .tx_params(my_tx_parameters) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
-
-        // ANCHOR_END: tx_parameters
+                     // ANCHOR_END: tx_parameters
 
         // ANCHOR: tx_parameters_default
         let response = contract_methods
@@ -295,14 +296,6 @@ mod tests {
             .await?;
 
         // ANCHOR_END: tx_parameters_default
-        // In order: gas_price, gas_limit, and maturity
-        let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
-
-        let response = contract_methods
-            .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_params) // Chain the tx params setting method.
-            .call() // Perform the contract call.
-            .await?; // This is an async call, `.await` for it.
 
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
@@ -311,7 +304,7 @@ mod tests {
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::new(Some(1_000_000), None, None);
+        let call_params = CallParameters::default().set_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -320,13 +313,13 @@ mod tests {
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
+
         // ANCHOR: call_parameters_default
         let response = contract_methods
             .initialize_counter(42)
             .call_params(CallParameters::default())?
             .call()
             .await?;
-
         // ANCHOR_END: call_parameters_default
         Ok(())
     }
@@ -345,8 +338,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
         .bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
@@ -383,8 +375,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
         .bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
@@ -426,8 +417,7 @@ mod tests {
         let called_contract_id: ContractId = Contract::deploy(
             "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?
         .into();
@@ -435,8 +425,7 @@ mod tests {
         let caller_contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -498,11 +487,9 @@ mod tests {
             ));
             let wallet = launch_provider_and_get_wallet().await;
             let contract_id = Contract::deploy(
-                "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test\
-        .bin",
+                "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
                 &wallet,
-                TxParameters::default(),
-                StorageConfiguration::default(),
+                DeployConfiguration::default(),
             )
             .await?;
             let contract_methods = TestContract::new(contract_id, wallet).methods();
@@ -581,19 +568,18 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
-        // Set the transaction `gas_limit` to 10000 and `gas_forwarded` to 4300 to specify that the
-        // contract call transaction may consume up to 10000 gas, while the actual call may only use 4300
-        // gas
-        let tx_params = TxParameters::new(None, Some(10000), None);
-        let call_params = CallParameters::new(None, None, Some(4300));
+        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+        // only use 4300 gas
+        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -620,8 +606,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -669,8 +654,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 
@@ -714,8 +698,7 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet_1,
-            TxParameters::default(),
-            StorageConfiguration::default(),
+            DeployConfiguration::default(),
         )
         .await?;
 

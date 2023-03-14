@@ -23,11 +23,8 @@ pub(crate) fn generate_setup_contract_test_code(
     } = commands;
 
     let project_lookup = generate_project_lookup(&generate_contract)?;
-
     let abigen_code = abigen_code(&project_lookup);
-
     let wallet_code = wallet_initialization_code(initialize_wallets);
-
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
 
     Ok(quote! {
@@ -122,15 +119,16 @@ fn contract_deploying_code(
 
             quote! {
                 let #contract_instance_name = #contract_struct_name::new(
-                    Contract::deploy_with_parameters(
+                    Contract::deploy(
                         #bin_path,
                         &#wallet_name,
-                        TxParameters::default(),
-                        StorageConfiguration::with_storage_path(Some(
-                            #storage_path.to_string(),
-                        )),
-                        Configurables::default(),
-                        Salt::from([#(#salt),*]),
+                        DeployConfiguration::default()
+                            .set_storage_configuration(
+                                StorageConfiguration::default().set_storage_path(
+                                    #storage_path.to_string()
+                                )
+                            )
+                            .set_salt([#(#salt),*])
                     )
                     .await
                     .expect("Failed to deploy the contract"),

@@ -27,7 +27,6 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::U32 => "u32".to_owned(),
         ParamType::U64 => "u64".to_owned(),
         ParamType::Bool => "bool".to_owned(),
-        ParamType::Byte => "byte".to_owned(),
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
         ParamType::String(len) => {
@@ -98,7 +97,6 @@ mod tests {
             (ParamType::U32, "u32"),
             (ParamType::U64, "u64"),
             (ParamType::Bool, "bool"),
-            (ParamType::Byte, "byte"),
             (ParamType::B256, "b256"),
             (ParamType::Unit, "()"),
             (ParamType::String(15), "str[15]"),
