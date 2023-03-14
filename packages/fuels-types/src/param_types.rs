@@ -474,9 +474,9 @@ mod tests {
 
     #[test]
     fn enums_are_as_big_as_their_biggest_variant_plus_a_word() -> Result<()> {
-        let types = vec![ParamType::B256];
+        let fields = vec![ParamType::B256];
         let inner_struct = ParamType::Struct {
-            fields: types,
+            fields,
             generics: vec![],
         };
         let types = vec![ParamType::U32, inner_struct];
@@ -722,11 +722,10 @@ mod tests {
         let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
-        let types = vec![ParamType::U8];
         assert_eq!(
             result,
             ParamType::Struct {
-                fields: types,
+                fields: vec![ParamType::U8],
                 generics: vec![ParamType::U8]
             }
         );
@@ -781,11 +780,10 @@ mod tests {
         let result = ParamType::try_from_type_application(&type_application, &type_lookup)?;
 
         // then
-        let types = vec![ParamType::U8];
         assert_eq!(
             result,
             ParamType::Enum {
-                variants: EnumVariants::new(types)?,
+                variants: EnumVariants::new(vec![ParamType::U8])?,
                 generics: vec![ParamType::U8]
             }
         );
@@ -1166,31 +1164,32 @@ mod tests {
 
         // then
         let expected_param_type = {
-            let types = vec![ParamType::String(2)];
-            let types1 = vec![ParamType::Struct {
-                fields: types,
+            let fields = vec![ParamType::Struct {
+                fields: vec![ParamType::String(2)],
                 generics: vec![ParamType::String(2)],
             }];
             let pass_the_generic_on = ParamType::Struct {
-                fields: types1,
+                fields,
                 generics: vec![ParamType::String(2)],
             };
-            let types = vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)];
+
+            let fields = vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)];
             let struct_w_array_generic = ParamType::Struct {
-                fields: types,
+                fields,
                 generics: vec![pass_the_generic_on],
             };
-            let types = vec![ParamType::Tuple(vec![
+
+            let fields = vec![ParamType::Tuple(vec![
                 struct_w_array_generic.clone(),
                 struct_w_array_generic.clone(),
             ])];
             let struct_w_tuple_generic = ParamType::Struct {
-                fields: types,
+                fields,
                 generics: vec![struct_w_array_generic],
             };
 
             let types = vec![ParamType::U64, struct_w_tuple_generic.clone()];
-            let types1 = vec![
+            let fields = vec![
                 ParamType::Tuple(vec![
                     ParamType::Array(Box::from(ParamType::B256), 2),
                     ParamType::String(2),
@@ -1207,7 +1206,7 @@ mod tests {
                 ]))),
             ];
             ParamType::Struct {
-                fields: types1,
+                fields,
                 generics: vec![ParamType::String(2), ParamType::B256],
             }
         };
