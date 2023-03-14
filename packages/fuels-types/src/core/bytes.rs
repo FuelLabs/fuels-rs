@@ -1,12 +1,4 @@
 #[derive(Debug, PartialEq, Clone, Eq)]
-pub struct Byte(pub u8);
-impl From<Byte> for u8 {
-    fn from(byte: Byte) -> u8 {
-        byte.0
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Bytes(pub Vec<u8>);
 
 impl From<Bytes> for Vec<u8> {
