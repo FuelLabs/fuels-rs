@@ -139,7 +139,6 @@ mod tests {
         Ok(())
     }
 
-    #[ignore]
     #[tokio::test]
     async fn test_wallet_config_multiple_assets(
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
