@@ -1,7 +1,7 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::{Bits256, Byte, RawSlice, SizedAsciiString},
+    core::{Bits256, RawSlice, SizedAsciiString},
     enum_variants::EnumVariants,
     param_types::ParamType,
 };
@@ -21,12 +21,6 @@ impl Parameterize for Bits256 {
 impl Parameterize for RawSlice {
     fn param_type() -> ParamType {
         ParamType::RawSlice
-    }
-}
-
-impl Parameterize for Byte {
-    fn param_type() -> ParamType {
-        ParamType::Byte
     }
 }
 

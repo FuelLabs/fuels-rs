@@ -4,7 +4,7 @@ pub mod contract;
 pub mod logs;
 pub mod script_calls;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct Configurables {
     offsets_with_data: Vec<(u64, Vec<u8>)>,
 }

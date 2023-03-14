@@ -66,7 +66,10 @@ pub mod prelude {
         fuel_node::*,
         macros::{abigen, setup_contract_test},
         programs::{
-            contract::{Contract, MultiContractCallHandler, SettableContract},
+            contract::{
+                CallParameters, Contract, DeployConfiguration, MultiContractCallHandler,
+                SettableContract, StorageConfiguration,
+            },
             logs::{LogDecoder, LogId},
             Configurables,
         },
@@ -77,7 +80,6 @@ pub mod prelude {
             bech32::{Bech32Address, Bech32ContractId},
             constants::*,
             errors::{Error, Result},
-            parameters::*,
             transaction::*,
             Address, AssetId, ContractId, RawSlice,
         },

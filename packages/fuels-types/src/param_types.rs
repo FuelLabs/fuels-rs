@@ -25,7 +25,6 @@ pub enum ParamType {
     U32,
     U64,
     Bool,
-    Byte,
     B256,
     // The Unit ParamType is used for unit variants in Enums. The corresponding type field is `()`,
     // similar to Rust.
@@ -118,8 +117,7 @@ impl ParamType {
             | ParamType::U16
             | ParamType::U32
             | ParamType::U64
-            | ParamType::Bool
-            | ParamType::Byte => 1,
+            | ParamType::Bool => 1,
             ParamType::Vector(_) => 3,
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
@@ -422,7 +420,6 @@ fn try_array(the_type: &Type) -> Result<Option<ParamType>> {
 
 fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
     let result = match the_type.type_field.as_str() {
-        "byte" => Some(ParamType::Byte),
         "bool" => Some(ParamType::Bool),
         "u8" => Some(ParamType::U8),
         "u16" => Some(ParamType::U16),
@@ -550,7 +547,6 @@ mod tests {
         assert_eq!(parse_param_type("u32")?, ParamType::U32);
         assert_eq!(parse_param_type("u64")?, ParamType::U64);
         assert_eq!(parse_param_type("bool")?, ParamType::Bool);
-        assert_eq!(parse_param_type("byte")?, ParamType::Byte);
         assert_eq!(parse_param_type("b256")?, ParamType::B256);
         assert_eq!(parse_param_type("()")?, ParamType::Unit);
         assert_eq!(parse_param_type("str[21]")?, ParamType::String(21));
@@ -1243,7 +1239,6 @@ mod tests {
         assert!(!ParamType::U32.contains_nested_vectors());
         assert!(!ParamType::U64.contains_nested_vectors());
         assert!(!ParamType::Bool.contains_nested_vectors());
-        assert!(!ParamType::Byte.contains_nested_vectors());
         assert!(!ParamType::B256.contains_nested_vectors());
         assert!(!ParamType::String(10).contains_nested_vectors());
         assert!(!ParamType::RawSlice.contains_nested_vectors());
@@ -1256,7 +1251,7 @@ mod tests {
         let tuples_no_nested_vec = vec![ParamType::U16, ParamType::Bool];
         let tuples_with_nested_vec = vec![ParamType::U64, ParamType::U32, base_vector.clone()];
         let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Byte, base_vector.clone()];
+        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Bool, base_vector.clone()];
 
         assert!(!base_vector.contains_nested_vectors());
         assert!(ParamType::Vector(Box::from(base_vector.clone())).contains_nested_vectors());

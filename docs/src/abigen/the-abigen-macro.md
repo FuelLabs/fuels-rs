@@ -7,9 +7,9 @@ ProgramType(name="MyProgramType", abi="my_program-abi.json")...
 where:
 
 - `ProgramType` is one of: `Contract`, `Script` or `Predicate`,
-  
+
 - `name` is the name that will be given to the generated bindings,
-  
+
 - `abi` is either a path to the json abi file or its actual contents.
 
 ---
@@ -26,7 +26,7 @@ pub mod abigen_bindings {
     pub mod contract_a_mod {
         struct SomeCustomStruct{/*...*/};
         // other custom types used in the contract
-        
+
         struct ContractA {/*...*/};
         impl ContractA {/*...*/};
         // ...
