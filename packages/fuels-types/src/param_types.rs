@@ -2,10 +2,7 @@ use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
     program_abi::{TypeApplication, TypeDeclaration},
-    utils::{
-        extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
-        has_tuple_format,
-    },
+    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use itertools::chain;
 use strum_macros::EnumString;
@@ -350,29 +347,21 @@ fn has_struct_format(field: &str) -> bool {
 }
 
 fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
-    let type_field = &the_type.type_field;
-    if has_struct_format(type_field)
-        && extract_custom_type_name(type_field).ok_or_else(|| {
-            error!(
-                InvalidType,
-                "Could not extract struct name from type_field {type_field}"
-            )
-        })? == "Vec"
-    {
-        if the_type.generic_params.len() != 1 {
-            return Err(error!(
-                InvalidType,
-                "Vec must have exactly one generic argument for its type. Found: {:?}",
-                the_type.generic_params
-            ));
-        }
-
-        let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
-
-        return Ok(Some(ParamType::Vector(Box::new(vec_elem_type))));
+    if !["struct std::vec::Vec", "struct Vec"].contains(&the_type.type_field.as_str()) {
+        return Ok(None);
     }
 
-    Ok(None)
+    if the_type.generic_params.len() != 1 {
+        return Err(error!(
+            InvalidType,
+            "Vec must have exactly one generic argument for its type. Found: {:?}",
+            the_type.generic_params
+        ));
+    }
+
+    let (_, vec_elem_type) = named_param_types(&the_type.generic_params)?.remove(0);
+
+    Ok(Some(ParamType::Vector(Box::new(vec_elem_type))))
 }
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
@@ -642,7 +631,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 3,
-                type_field: "struct RawVec".to_string(),
+                type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "ptr".to_string(),
@@ -659,7 +648,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 4,
-                type_field: "struct Vec".to_string(),
+                type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "buf".to_string(),
@@ -1100,7 +1089,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 19,
-                type_field: "struct RawVec".to_string(),
+                type_field: "struct std::vec::RawVec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "ptr".to_string(),
@@ -1147,7 +1136,7 @@ mod tests {
             },
             TypeDeclaration {
                 type_id: 23,
-                type_field: "struct Vec".to_string(),
+                type_field: "struct std::vec::Vec".to_string(),
                 components: Some(vec![
                     TypeApplication {
                         name: "buf".to_string(),
@@ -1343,5 +1332,35 @@ mod tests {
         .contains_nested_vectors());
 
         Ok(())
+    }
+    #[test]
+    fn try_vector_is_type_path_backward_compatible() {
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+        let the_type = given_vec_type_w_path("Vec");
+
+        let param_type = try_vector(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
+    }
+
+    #[test]
+    fn try_vector_correctly_resolves_param_type() {
+        let the_type = given_vec_type_w_path("std::vec::Vec");
+
+        let param_type = try_vector(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
+    }
+
+    fn given_vec_type_w_path(path: &str) -> Type {
+        Type {
+            type_field: format!("struct {path}"),
+            generic_params: vec![Type {
+                type_field: "u8".to_string(),
+                generic_params: vec![],
+                components: vec![],
+            }],
+            components: vec![],
+        }
     }
 }

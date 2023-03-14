@@ -79,9 +79,8 @@ fn resolve_arg(arg: &ParamType) -> String {
 mod tests {
     use fuels_types::enum_variants::EnumVariants;
 
-    use crate::utils::generate_unused_field_names;
-
     use super::*;
+    use crate::utils::generate_unused_field_names;
 
     #[test]
     fn handles_primitive_types() {

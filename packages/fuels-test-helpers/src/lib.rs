@@ -209,9 +209,11 @@ pub async fn setup_test_client(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
+
+    use fuels_types::bech32::FUEL_BECH32_HRP;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
