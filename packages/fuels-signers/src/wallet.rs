@@ -12,7 +12,7 @@ use fuels_types::{
     input::Input,
     message::Message as InputMessage,
     resource::Resource,
-    transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction::Transaction,
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
