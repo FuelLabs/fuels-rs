@@ -13,8 +13,7 @@ async fn contract_uses_default_configurables() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
         &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
@@ -92,13 +91,10 @@ async fn contract_configurables() -> Result<()> {
         .set_STRUCT(new_struct.clone())
         .set_ENUM(new_enum.clone());
 
-    let contract_id = Contract::deploy_with_parameters(
+    let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
         &wallet,
-        TxParameters::default(),
-        StorageConfiguration::default(),
-        configurables.into(),
-        Salt::default(),
+        DeployConfiguration::default().set_configurables(configurables),
     )
     .await?;
 
@@ -147,7 +143,7 @@ async fn script_configurables() -> Result<()> {
         .set_ENUM(new_enum.clone());
 
     let response = instance
-        .with_configurables(configurables.into())
+        .with_configurables(configurables)
         .main()
         .call()
         .await?;

@@ -5,8 +5,8 @@ pub const ENUM_DISCRIMINANT_WORD_WIDTH: usize = 1;
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 
 // ANCHOR: default_tx_parameters
-pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_GAS_PRICE: u64 = 0;
+pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_MATURITY: u64 = 0;
 // ANCHOR_END: default_tx_parameters
 

@@ -57,7 +57,10 @@ pub(crate) fn script_bindings(
                 }
             }
 
-            pub fn with_configurables(mut self, configurables: ::fuels::programs::Configurables) -> Self {
+            pub fn with_configurables(mut self, configurables: impl Into<::fuels::programs::Configurables>)
+                -> Self
+            {
+                let configurables: ::fuels::programs::Configurables = configurables.into();
                 configurables.update_constants_in(&mut self.binary);
                 self
             }
