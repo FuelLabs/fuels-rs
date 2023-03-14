@@ -1274,7 +1274,6 @@ mod tests {
         assert!(!ParamType::U32.contains_nested_vectors());
         assert!(!ParamType::U64.contains_nested_vectors());
         assert!(!ParamType::Bool.contains_nested_vectors());
-        assert!(!ParamType::Byte.contains_nested_vectors());
         assert!(!ParamType::B256.contains_nested_vectors());
         assert!(!ParamType::String(10).contains_nested_vectors());
         assert!(!ParamType::RawSlice.contains_nested_vectors());
@@ -1294,7 +1293,7 @@ mod tests {
             ("Boum".to_string(), base_vector.clone()),
         ];
         let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Byte, base_vector.clone()];
+        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Bool, base_vector.clone()];
 
         assert!(!base_vector.contains_nested_vectors());
         assert!(ParamType::Vector(Box::from(base_vector.clone())).contains_nested_vectors());
