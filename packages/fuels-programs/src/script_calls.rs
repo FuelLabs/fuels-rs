@@ -11,7 +11,7 @@ use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
     traits::{Parameterize, Tokenizable},
-    transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction::{Transaction, TxParameters},
 };
 use itertools::chain;
 

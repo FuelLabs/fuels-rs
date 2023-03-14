@@ -21,7 +21,7 @@ use fuels_types::{
     errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
-    transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
     Selector, Token,
 };
 use itertools::Itertools;
@@ -238,7 +238,7 @@ impl<T: Account + Clone> Contract<T> {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Self::<T>::should_compute_custom_input_offset(args);
+        let compute_custom_input_offset = Contract::<T>::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
@@ -291,30 +291,7 @@ impl<T: Account + Clone> Contract<T> {
         configuration: DeployConfiguration,
     ) -> Result<Bech32ContractId> {
         let tx_parameters = configuration.tx_parameters;
-        let mut compiled_contract =
-            Contract::<T>::load_contract(binary_filepath, configuration)?;
-
-        Self::merge_storage_vectors(&storage_configuration, &mut compiled_contract);
-
-        Self::deploy_loaded(compiled_contract, wallet, tx_parameters).await
-    }
-
-    /// Loads a compiled contract with salt and deploys it to a running node
-    pub async fn deploy_with_parameters(
-        binary_filepath: &str,
-        wallet: &T,
-        params: TxParameters,
-        storage_configuration: StorageConfiguration,
-        configurables: Configurables,
-        salt: Salt,
-    ) -> Result<Bech32ContractId> {
-        let mut compiled_contract = Contract::<T>::load_contract_with_parameters(
-            binary_filepath,
-            &storage_configuration.storage_path,
-            salt,
-        )?;
-
-        configurables.update_constants_in(&mut compiled_contract.raw);
+        let compiled_contract = Self::load_contract(binary_filepath, configuration)?;
 
         Self::deploy_loaded(compiled_contract, wallet, tx_parameters).await
     }
@@ -327,8 +304,7 @@ impl<T: Account + Clone> Contract<T> {
         account: &T,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (tb, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, params);
+        let (tb, contract_id) = Self::contract_deployment_transaction(compiled_contract, params)?;
 
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
@@ -394,7 +370,7 @@ impl<T: Account + Clone> Contract<T> {
     fn contract_deployment_transaction(
         compiled_contract: CompiledContract,
         params: TxParameters,
-    ) -> (CreateTransactionBuilder, Bech32ContractId) {
+    ) -> Result<(CreateTransactionBuilder, Bech32ContractId)> {
         let (contract_id, state_root) =
             Self::compute_contract_id_and_state_root(&compiled_contract);
         let bytecode_witness_index = 0;
@@ -405,7 +381,7 @@ impl<T: Account + Clone> Contract<T> {
             .set_tx_params(params)
             .set_bytecode_witness_index(bytecode_witness_index)
             .set_salt(compiled_contract.salt)
-            .set_storage_slots(storage_slots)
+            .set_storage_slots(compiled_contract.storage_slots)
             .set_outputs(outputs)
             .set_witnesses(witnesses);
 
@@ -947,7 +923,7 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
+        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.account).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

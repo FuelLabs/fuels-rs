@@ -6,9 +6,8 @@ use crate::errors::{Error, Result};
 use crate::input::Input;
 use crate::message::Message;
 use crate::offsets;
-use crate::parameters::TxParameters;
 use crate::resource::Resource;
-use crate::transaction::{CreateTransaction, ScriptTransaction};
+use crate::transaction::{CreateTransaction, ScriptTransaction, TxParameters};
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
     ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
@@ -102,9 +101,9 @@ macro_rules! impl_tx_trait {
             }
 
             fn set_tx_params(self, tx_params: TxParameters) -> Self {
-                self.set_gas_limit(tx_params.gas_limit)
-                    .set_gas_price(tx_params.gas_price)
-                    .set_maturity(tx_params.maturity)
+                self.set_gas_limit(tx_params.gas_limit())
+                    .set_gas_price(tx_params.gas_price())
+                    .set_maturity(tx_params.maturity())
             }
 
             fn set_inputs(mut self, inputs: Vec<Input>) -> Self {

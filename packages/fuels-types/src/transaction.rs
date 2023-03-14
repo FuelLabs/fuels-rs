@@ -4,13 +4,13 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Address, AssetId, Bytes32, Chargeable, ConsensusParameters, ContractId, Create,
-    FormatValidityChecks, Input, Output, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
 
 use crate::{
-    constants::{BASE_ASSET_ID, DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY, WORD_SIZE},
+    constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
     errors::Error,
 };
 
@@ -59,8 +59,6 @@ impl Default for TxParameters {
     }
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
-
-use crate::{parameters::TxParameters};
 
 pub trait Transaction: Into<FuelTransaction> {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
@@ -213,7 +211,7 @@ impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 
 impl CreateTransaction {
-    pub fn salt(&self) -> &Salt {
+    pub fn salt(&self) -> &FuelSalt {
         self.tx.salt()
     }
 

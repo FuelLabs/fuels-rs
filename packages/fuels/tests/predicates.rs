@@ -543,13 +543,12 @@ async fn pay_with_predicate() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-    let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
+    let tx_params = TxParameters::new(1000000, 10000, 0);
 
     assert_eq!(
         *predicate
@@ -610,13 +609,14 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-    let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
+    let tx_params = TxParameters::default()
+        .set_gas_price(100000)
+        .set_gas_limit(10000);
     //
     assert_eq!(
         *predicate
@@ -627,7 +627,9 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         192
     );
 
-    let _call_params = CallParameters::new(Some(100), None, None);
+    let _call_params = CallParameters::default()
+        .set_amount(100)
+        .set_asset_id(AssetId::default());
 
     let response = contract_instance_connected
         .methods()
@@ -643,7 +645,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
             .await?
             .get(format!("{:#?}", AssetId::default()).as_str())
             .unwrap(),
-        186
+        190
     );
 
     Ok(())
@@ -711,13 +713,12 @@ async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-    let tx_params = TxParameters::new(Some(1000000), Some(10000), None);
+    let tx_params = TxParameters::new(1000000, 10000, 0);
     //
     assert_eq!(
         *predicate
@@ -728,7 +729,7 @@ async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
         360
     );
 
-    let _call_params = CallParameters::new(Some(100), None, None);
+    let _call_params = CallParameters::new(100, AssetId::default(), 0);
 
     let response = contract_instance_connected
         .methods()
@@ -774,8 +775,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
@@ -963,14 +963,13 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let my_tx_params = TxParameters::default().set_gas_limit(1_000_000);
 
     let response = contract_methods
         .initialize_counter(42) // Our contract method.
@@ -984,7 +983,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         .call()
         .await?;
 
-    let my_tx_params = TxParameters::new(None, Some(1_000_000), None);
+    let my_tx_params = TxParameters::default().set_gas_limit(1_000_000);
 
     let response = contract_methods
         .initialize_counter(42) // Our contract method.
@@ -996,7 +995,9 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     let tx_params = TxParameters::default();
 
-    let call_params = CallParameters::new(Some(1_000_000), None, None);
+    let call_params = CallParameters::default()
+        .set_amount(1_000_000)
+        .set_asset_id(AssetId::default());
 
     let response = contract_methods
         .get_msg_amount() // Our contract method.
@@ -1049,14 +1050,15 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         &predicate,
-        TxParameters::default(),
-        StorageConfiguration::default(),
+        DeployConfiguration::default(),
     )
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let call_params = CallParameters::new(Some(1_000_000), Some(AssetId::from([1u8; 32])), None);
+    let call_params = CallParameters::default()
+        .set_amount(1_000_000)
+        .set_asset_id(AssetId::from([1u8; 32]));
 
     let response = contract_methods
         .get_msg_amount() // Our contract method.

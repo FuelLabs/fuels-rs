@@ -17,7 +17,6 @@ use fuels_types::{
     constants::WORD_SIZE,
     errors::{Error, Result},
     param_types::ParamType,
-    resource::Resource,
     transaction::{ScriptTransaction, Transaction, TxParameters},
 };
 
