@@ -193,13 +193,22 @@ pub use my_predicate_mod::{/*..*/};
 pub use shared_types::{/*..*/};
 </code></pre>
 <p>Each <code>ProgramType</code> gets its own <code>mod</code> based on the <code>name</code> given in the <code>abigen!</code>. Inside the respective mods, the custom types used by that program are generated, and the bindings through which the actual calls can be made.</p>
-<p>One extra <code>mod</code> called <code>shared_types</code> is generated if <code>abigen!</code> detects that the given programs share types. Instead of each <code>mod</code> regenerating the type for itself, the type is lifted out into the <code>shared_types</code> module, generated only once, and then shared between all programs that use it.</p>
+<p>One extra <code>mod</code> called <code>shared_types</code> is generated if <code>abigen!</code> detects that the given programs share types. Instead of each <code>mod</code> regenerating the type for itself, the type is lifted out into the <code>shared_types</code> module, generated only once, and then shared between all program bindings that use it. Reexports are added to each mod so that even if a type is deemed shared, you can still access it as though each <code>mod</code> had generated the type for itself (i.e. <code>my_contract_mod::SharedType</code>).</p>
 <p>A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.</p>
 <p>Finally, <code>pub use</code> statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a <code>pub use</code> statement. If you find rustc can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing <code>abigen_bindings::whatever_contract_mod::TheType</code>.</p>
 <blockquote>
 <p><strong>Note:</strong>
 It is <strong>highly</strong> encouraged that you generate all your bindings in one <code>abigen!</code> call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling <code>abigen!</code> multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the <code>abigen!</code> calls into different modules to resolve the collision.</p>
 </blockquote>
+<h3 id="type-paths"><a class="header" href="#type-paths">Type paths</a></h3>
+<p>Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main <code>mod</code> of your program bindings, i.e. a type in a contract binding <code>MyContract</code> imported from a library <code>some_library</code> would be generated under <code>abigen_bindings::my_contract_mod::SomeLibraryType</code>.</p>
+<p>This can cause problems if you happen to have two types with the same name in different libraries of your program.</p>
+<p>This behavior can be changed to include the library path by compiling your Sway project with the following:</p>
+<pre><code>forc build --json-abi-with-callpaths
+</code></pre>
+<p>Now the type from the previous example will be generated under <code>abigen_bindings::my_contract_mod::some_library::SomeLibraryType</code>.</p>
+<p>This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one <code>abigen!</code> call. You'll then need to fully qualify the access to it.</p>
+<p>Including type paths will eventually become the default and the flag will be removed.</p>
 <h2 id="using-the-bindings"><a class="header" href="#using-the-bindings">Using the bindings</a></h2>
 <p>Let's look at a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
 <pre><code class="language-json ignore">{
@@ -309,12 +318,18 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
         pub struct MyContractName {
             contract_id: Bech32ContractId,
             wallet: WalletUnlocked,
+            log_decoder: LogDecoder,
         }
+
         impl MyContractName {
             pub fn new(contract_id: Bech32ContractId, wallet: WalletUnlocked) -&gt; Self {
+                let log_decoder = LogDecoder {
+                    type_lookup: logs::log_type_lookup(&amp;[], Some(contract_id.clone().into())),
+                };
                 Self {
                     contract_id,
                     wallet,
+                    log_decoder,
                 }
             }
             pub fn contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
@@ -323,15 +338,16 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
             pub fn wallet(&amp;self) -&gt; WalletUnlocked {
                 self.wallet.clone()
             }
-            pub fn with_wallet(&amp;self, mut wallet: WalletUnlocked) -&gt; Result&lt;Self, Error&gt; {
+            pub fn with_wallet(&amp;self, mut wallet: WalletUnlocked) -&gt; Result&lt;Self&gt; {
                 let provider = self.wallet.get_provider()?;
                 wallet.set_provider(provider.clone());
                 Ok(Self {
                     contract_id: self.contract_id.clone(),
                     wallet,
+                    log_decoder: self.log_decoder.clone(),
                 })
             }
-            pub async fn get_balances(&amp;self) -&gt; Result&lt;HashMap&lt;String, u64&gt;, Error&gt; {
+            pub async fn get_balances(&amp;self) -&gt; Result&lt;HashMap&lt;String, u64&gt;&gt; {
                 self.wallet
                     .get_provider()?
                     .get_contract_balances(&amp;self.contract_id)
@@ -342,32 +358,31 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                 MyContractNameMethods {
                     contract_id: self.contract_id.clone(),
                     wallet: self.wallet.clone(),
-                    logs_map: get_logs_hashmap(&amp;[], Some(self.contract_id.clone())),
+                    log_decoder: self.log_decoder.clone(),
                 }
             }
         }
+
         pub struct MyContractNameMethods {
             contract_id: Bech32ContractId,
             wallet: WalletUnlocked,
-            logs_map: HashMap&lt;(Bech32ContractId, u64), ParamType&gt;,
+            log_decoder: LogDecoder,
         }
+
         impl MyContractNameMethods {
             #[doc = &quot;Calls the contract's `initialize_counter` function&quot;]
             pub fn initialize_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;u64&gt; {
                 let provider = self.wallet.get_provider().expect(&quot;Provider not set up&quot;);
-                let log_decoder = LogDecoder {
-                    logs_map: self.logs_map.clone(),
-                };
                 Contract::method_hash(
                     provider,
                     self.contract_id.clone(),
                     &amp;self.wallet,
-                    resolve_fn_selector(
+                    function_selector::resolve_fn_selector(
                         &quot;initialize_counter&quot;,
-                        &amp;[&lt;u64 as Parameterize&gt;::param_type()],
+                        &amp;[u64::param_type()],
                     ),
-                    &amp;[Tokenizable::into_token(value)],
-                    log_decoder,
+                    &amp;[value.into_token()],
+                    self.log_decoder.clone(),
                     false,
                 )
                 .expect(&quot;method not found (this should never happen)&quot;)
@@ -375,27 +390,52 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
             #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
             pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;u64&gt; {
                 let provider = self.wallet.get_provider().expect(&quot;Provider not set up&quot;);
-                let log_decoder = LogDecoder {
-                    logs_map: self.logs_map.clone(),
-                };
                 Contract::method_hash(
                     provider,
                     self.contract_id.clone(),
                     &amp;self.wallet,
-                    resolve_fn_selector(
+                    function_selector::resolve_fn_selector(
                         &quot;increment_counter&quot;,
-                        &amp;[&lt;u64 as Parameterize&gt;::param_type()],
+                        &amp;[u64::param_type()],
                     ),
-                    &amp;[Tokenizable::into_token(value)],
-                    log_decoder,
+                    &amp;[value.into_token()],
+                    self.log_decoder.clone(),
                     false,
                 )
                 .expect(&quot;method not found (this should never happen)&quot;)
             }
         }
+
+        impl SettableContract for MyContractName {
+            fn id(&amp;self) -&gt; Bech32ContractId {
+                self.contract_id.clone()
+            }
+            fn log_decoder(&amp;self) -&gt; LogDecoder {
+                self.log_decoder.clone()
+            }
+        }
+
+        #[derive(Clone, Debug, Default)]
+        pub struct MyContractNameConfigurables {
+            offsets_with_data: Vec&lt;(u64, Vec&lt;u8&gt;)&gt;,
+        }
+
+        impl MyContractNameConfigurables {
+            pub fn new() -&gt; Self {
+                Default::default()
+            }
+        }
+
+        impl From&lt;MyContractNameConfigurables&gt; for Configurables {
+            fn from(config: MyContractNameConfigurables) -&gt; Self {
+                Configurables::new(config.offsets_with_data)
+            }
+        }
     }
 }
+
 pub use abigen_bindings::my_contract_name_mod::MyContractName;
+pub use abigen_bindings::my_contract_name_mod::MyContractNameConfigurables;
 pub use abigen_bindings::my_contract_name_mod::MyContractNameMethods;
 </code></pre>
 <blockquote>
