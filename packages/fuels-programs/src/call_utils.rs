@@ -1,4 +1,3 @@
-use itertools::{chain, Itertools};
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
@@ -6,7 +5,6 @@ use fuel_tx::{
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-
 use fuels_core::offsets::call_script_data_offset;
 use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
 use fuels_types::{
@@ -17,6 +15,7 @@ use fuels_types::{
     resource::Resource,
     transaction::{ScriptTransaction, Transaction, TxParameters},
 };
+use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 

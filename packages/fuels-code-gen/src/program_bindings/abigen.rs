@@ -42,9 +42,9 @@ impl Abigen {
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
 
         let code = if no_std {
-            Self::wasm_paths_hotfix(generated_code.code)
+            Self::wasm_paths_hotfix(&generated_code.code())
         } else {
-            generated_code.code
+            generated_code.code()
         };
 
         Ok(quote! {
@@ -52,7 +52,7 @@ impl Abigen {
             #use_statements
         })
     }
-    fn wasm_paths_hotfix(code: TokenStream) -> TokenStream {
+    fn wasm_paths_hotfix(code: &TokenStream) -> TokenStream {
         [
             (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
             (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
@@ -78,15 +78,14 @@ impl Abigen {
         no_std: bool,
         parsed_targets: Vec<ParsedAbigenTarget>,
     ) -> Result<GeneratedCode> {
-        let all_custom_types = Self::extract_custom_types(&parsed_targets);
-        let shared_types = Self::filter_shared_types(all_custom_types);
+        let custom_types = Self::filter_custom_types(&parsed_targets);
+        let shared_types = Self::filter_shared_types(custom_types);
 
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
-        Ok(shared_types
-            .append(bindings)
-            .wrap_in_mod(&ident("abigen_bindings")))
+        let mod_name = ident("abigen_bindings");
+        Ok(shared_types.merge(bindings).wrap_in_mod(mod_name))
     }
 
     fn generate_all_bindings(
@@ -98,7 +97,7 @@ impl Abigen {
             .into_iter()
             .map(|target| Self::generate_binding(target, no_std, shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-                acc.append(generated_code)
+                acc.merge(generated_code)
             })
     }
 
@@ -109,13 +108,10 @@ impl Abigen {
     ) -> Result<GeneratedCode> {
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
-        let types = generate_types(target.source.types.clone(), shared_types, no_std)?;
-        let bindings = generate_bindings(target, no_std, shared_types)?;
+        let types = generate_types(&target.source.types, shared_types, no_std)?;
+        let bindings = generate_bindings(target, no_std)?;
 
-        Ok(limited_std_prelude(no_std)
-            .append(types)
-            .append(bindings)
-            .wrap_in_mod(&mod_name))
+        Ok(types.merge(bindings).wrap_in_mod(mod_name))
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
@@ -129,24 +125,23 @@ impl Abigen {
         shared_types: HashSet<FullTypeDeclaration>,
         no_std: bool,
     ) -> Result<GeneratedCode> {
-        let types = generate_types(shared_types, &HashSet::default(), no_std)?;
+        let types = generate_types(&shared_types, &HashSet::default(), no_std)?;
 
         if types.is_empty() {
             Ok(Default::default())
         } else {
-            Ok(limited_std_prelude(no_std)
-                .append(types)
-                .wrap_in_mod(&ident("shared_types")))
+            let mod_name = ident("shared_types");
+            Ok(types.wrap_in_mod(mod_name))
         }
     }
 
-    fn extract_custom_types(
+    fn filter_custom_types(
         all_types: &[ParsedAbigenTarget],
     ) -> impl Iterator<Item = &FullTypeDeclaration> {
         all_types
             .iter()
             .flat_map(|target| &target.source.types)
-            .filter(|ttype| ttype.is_enum_type() || ttype.is_struct_type())
+            .filter(|ttype| ttype.is_custom_type())
     }
 
     /// A type is considered "shared" if it appears at least twice in
@@ -160,33 +155,6 @@ impl Abigen {
         all_custom_types: impl IntoIterator<Item = &'a FullTypeDeclaration>,
     ) -> HashSet<FullTypeDeclaration> {
         all_custom_types.into_iter().duplicates().cloned().collect()
-    }
-}
-
-fn limited_std_prelude(no_std: bool) -> GeneratedCode {
-    let lib = if no_std {
-        quote! {::alloc}
-    } else {
-        quote! {::std}
-    };
-
-    let code = quote! {
-            use ::core::{
-                clone::Clone,
-                convert::{Into, TryFrom, From},
-                iter::IntoIterator,
-                iter::Iterator,
-                marker::Sized,
-                panic,
-            };
-
-            use #lib::{string::ToString, format, vec};
-
-    };
-
-    GeneratedCode {
-        code,
-        ..Default::default()
     }
 }
 

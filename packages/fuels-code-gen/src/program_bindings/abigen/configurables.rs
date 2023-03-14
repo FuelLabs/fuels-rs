@@ -1,13 +1,11 @@
-use std::collections::HashSet;
-
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullConfigurable, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        abi_types::FullConfigurable,
+        resolved_type::{ResolvedType, TypeResolver},
     },
     utils::safe_ident,
 };
@@ -20,26 +18,23 @@ pub(crate) struct ResolvedConfigurable {
 }
 
 impl ResolvedConfigurable {
-    pub fn new(
-        configurable: &FullConfigurable,
-        shared_types: &HashSet<FullTypeDeclaration>,
-    ) -> Result<ResolvedConfigurable> {
+    pub fn new(configurable: &FullConfigurable) -> Result<ResolvedConfigurable> {
+        let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
             name: safe_ident(&format!("set_{}", configurable.name)),
-            ttype: resolve_type(&configurable.application, shared_types)?,
+            ttype: TypeResolver::default().resolve(type_application)?,
             offset: configurable.offset,
         })
     }
 }
 
-pub(crate) fn generate_code_for_configurable_constatnts(
+pub(crate) fn generate_code_for_configurable_constants(
     configurable_struct_name: &Ident,
     configurables: &[FullConfigurable],
-    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> Result<TokenStream> {
     let resolved_configurables = configurables
         .iter()
-        .map(|c| ResolvedConfigurable::new(c, shared_types))
+        .map(ResolvedConfigurable::new)
         .collect::<Result<Vec<_>>>()?;
 
     let struct_decl = generate_struct_decl(configurable_struct_name);

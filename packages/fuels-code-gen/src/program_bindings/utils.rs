@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::HashMap;
 
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
@@ -7,8 +7,8 @@ use quote::{quote, ToTokens};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        resolved_type::{resolve_type, ResolvedType},
+        abi_types::FullTypeApplication,
+        resolved_type::{ResolvedType, TypeResolver},
     },
     utils::{safe_ident, TypePath},
 };
@@ -25,7 +25,7 @@ impl Component {
     pub fn new(
         component: &FullTypeApplication,
         snake_case: bool,
-        shared_types: &HashSet<FullTypeDeclaration>,
+        mod_of_component: TypePath,
     ) -> Result<Component> {
         let field_name = if snake_case {
             component.name.to_snake_case()
@@ -35,7 +35,7 @@ impl Component {
 
         Ok(Component {
             field_name: safe_ident(&field_name),
-            field_type: resolve_type(component, shared_types)?,
+            field_type: TypeResolver::new(mod_of_component).resolve(component)?,
         })
     }
 }
@@ -71,12 +71,13 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
         let type_application = type_application_named("WasNotSnakeCased");
 
-        let sut = Component::new(&type_application, true, &Default::default())?;
+        let sut = Component::new(&type_application, true, TypePath::default())?;
 
         assert_eq!(sut.field_name, "was_not_snake_cased");
 
@@ -88,7 +89,7 @@ mod tests {
         {
             let type_application = type_application_named("if");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(&type_application, false, TypePath::default())?;
 
             assert_eq!(sut.field_name, "if_");
         }
@@ -96,7 +97,7 @@ mod tests {
         {
             let type_application = type_application_named("let");
 
-            let sut = Component::new(&type_application, false, &Default::default())?;
+            let sut = Component::new(&type_application, false, TypePath::default())?;
 
             assert_eq!(sut.field_name, "let_");
         }
@@ -117,21 +118,38 @@ mod tests {
     }
 }
 
-pub(crate) fn get_sdk_provided_types() -> Vec<TypePath> {
+pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
     [
-        "::fuels::types::ContractId",
-        "::fuels::types::AssetId",
-        "::fuels::types::Address",
-        "::fuels::types::Identity",
-        "::fuels::types::EvmAddress",
-        "::fuels::types::B512",
-        "::fuels::types::RawSlice",
-        "::std::vec::Vec",
-        "::core::result::Result",
-        "::core::option::Option",
+        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
+        ("std::address::Address", "::fuels::types::Address"),
+        ("std::identity::Identity", "::fuels::types::Identity"),
+        (
+            "std::vm::evm::evm_address::EvmAddress",
+            "::fuels::types::EvmAddress",
+        ),
+        ("std::b512::B512", "::fuels::types::B512"),
+        ("std::vec::Vec", "::std::vec::Vec"),
+        ("std::result::Result", "::core::result::Result"),
+        ("std::option::Option", "::core::option::Option"),
     ]
-    .map(|type_path_str| {
-        TypePath::new(type_path_str).expect("known at compile time to be correctly formed")
+    .into_iter()
+    .map(|(original_type_path, provided_type_path)| {
+        let msg = "known at compile time to be correctly formed";
+        (
+            TypePath::new(original_type_path).expect(msg),
+            TypePath::new(provided_type_path).expect(msg),
+        )
     })
-    .to_vec()
+    .flat_map(|(original_type_path, provided_type_path)| {
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+        let backward_compat_mapping = original_type_path
+            .ident()
+            .expect("The original type path must have at least one part")
+            .into();
+        [
+            (backward_compat_mapping, provided_type_path.clone()),
+            (original_type_path, provided_type_path),
+        ]
+    })
+    .collect()
 }
