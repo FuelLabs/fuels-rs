@@ -10,12 +10,9 @@ Below is how you can deploy your contracts using the SDK. For more details about
 
 ### The deploy functions
 
-There are two intended ways to deploy a contract
+The `Contract::deploy` function is used to deploy a contract binary to the blockhain. To configure the deployment you can use the `DeployConfiguration` struct.
 
-- `deploy`
-- `deploy_with_parameters`
-
-If you are only interested in a single instance of your contract, then use `deploy`
+If you are only interested in a single instance of your contract, use the default configuration: `DeployConfiguration::default()`
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:deploy_contract}}
@@ -27,8 +24,10 @@ You can then use the contract methods very simply:
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
 ```
 
-Alternatively, if you want multiple instances of the same contract then use `deploy_with_parameters` and set the salt parameter.
+Alternatively, you can use `DeployConfiguration` to configure the deployment. You can, for example, deploy multiple instances of the same contract, change the storage or `tx_parameters` or update the binary using `configurables`.
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}
 ```
+
+> Note: The next section will give more information on how `configurables` can be used.
