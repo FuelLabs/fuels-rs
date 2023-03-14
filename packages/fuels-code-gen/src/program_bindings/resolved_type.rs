@@ -69,7 +69,6 @@ impl TypeResolver {
     pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
         let resolvers = [
             Self::to_simple_type,
-            Self::to_byte,
             Self::to_bits256,
             Self::to_generic,
             Self::to_array,
@@ -183,17 +182,6 @@ impl TypeResolver {
                 }))
             }
             _ => Ok(None),
-        }
-    }
-
-    fn to_byte(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
-        if type_application.type_decl.type_field == "byte" {
-            Ok(Some(ResolvedType {
-                type_name: quote! {::fuels::types::Byte},
-                generic_params: vec![],
-            }))
-        } else {
-            Ok(None)
         }
     }
 
@@ -313,11 +301,6 @@ mod tests {
     #[test]
     fn test_resolve_bool() -> Result<()> {
         test_resolve_primitive_type("bool", "bool")
-    }
-
-    #[test]
-    fn test_resolve_byte() -> Result<()> {
-        test_resolve_primitive_type("byte", ":: fuels :: types :: Byte")
     }
 
     #[test]

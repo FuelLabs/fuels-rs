@@ -112,7 +112,6 @@ impl ABIEncoder {
             Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
             Token::U32(arg_u32) => vec![Self::encode_u32(*arg_u32)],
             Token::U64(arg_u64) => vec![Self::encode_u64(*arg_u64)],
-            Token::Byte(arg_byte) => vec![Self::encode_byte(*arg_byte)],
             Token::Bool(arg_bool) => vec![Self::encode_bool(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
@@ -156,10 +155,6 @@ impl ABIEncoder {
 
     fn encode_bool(arg_bool: bool) -> Data {
         Data::Inline(pad_u8(u8::from(arg_bool)).to_vec())
-    }
-
-    fn encode_byte(arg_byte: u8) -> Data {
-        Data::Inline(pad_u8(arg_byte).to_vec())
     }
 
     fn encode_u64(arg_u64: u64) -> Data {
@@ -410,40 +405,6 @@ mod tests {
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
-        Ok(())
-    }
-
-    #[test]
-    fn encode_function_with_byte_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"byte"}],
-        //         "name":"takes_one_byte",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "takes_one_byte(byte)";
-        let arg = Token::Byte(u8::MAX);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2e, 0xe3, 0xce, 0x1f];
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
