@@ -22,7 +22,7 @@ where
     T::from_token(token)
 }
 
-pub fn decode_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
+pub fn format_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
     Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
 }
 

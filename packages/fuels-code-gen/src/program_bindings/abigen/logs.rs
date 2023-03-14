@@ -8,13 +8,13 @@ use crate::program_bindings::{
     resolved_type::resolve_type,
 };
 
-pub(crate) fn logs_printers_instantiation_code(
+pub(crate) fn log_formatters_instantiation_code(
     contract_id: Option<TokenStream>,
     logged_types: &[FullLoggedType],
     shared_types: &HashSet<FullTypeDeclaration>,
 ) -> TokenStream {
     let resolved_logs = resolve_logs(logged_types, shared_types);
-    let log_id_param_type_pairs = generate_log_id_prettify_logs_pairs(&resolved_logs);
+    let log_id_param_type_pairs = generate_log_id_log_formatter_pairs(&resolved_logs);
     let contract_id = contract_id
         .map(|id| quote! { ::core::option::Option::Some(#id) })
         .unwrap_or_else(|| quote! {::core::option::Option::None});
@@ -24,7 +24,7 @@ pub(crate) fn logs_printers_instantiation_code(
 #[derive(Debug)]
 struct ResolvedLog {
     log_id: u64,
-    prettify_log_struct: TokenStream,
+    log_formatter: TokenStream,
 }
 
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs
@@ -38,30 +38,25 @@ fn resolve_logs(
             let resolved_type =
                 resolve_type(&l.application, shared_types).expect("Failed to resolve log type");
 
-            let prettify_log_struct = quote! {
-                ::fuels::programs::logs::PrettifyLog {
-                    printer: ::fuels::core::decode_log::<#resolved_type>,
-                    type_id: ::std::any::TypeId::of::<#resolved_type>()
-                }
-            };
-
             ResolvedLog {
                 log_id: l.log_id,
-                prettify_log_struct,
+                log_formatter: quote! {
+                    ::fuels::programs::logs::LogFormatter::new::<#resolved_type>()
+                },
             }
         })
         .collect()
 }
 
-fn generate_log_id_prettify_logs_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
+fn generate_log_id_log_formatter_pairs(resolved_logs: &[ResolvedLog]) -> Vec<TokenStream> {
     resolved_logs
         .iter()
         .map(|r| {
             let id = r.log_id;
-            let prettify_log_struct = &r.prettify_log_struct;
+            let log_formatter = &r.log_formatter;
 
             quote! {
-                (#id, #prettify_log_struct)
+                (#id, #log_formatter)
             }
         })
         .collect()
