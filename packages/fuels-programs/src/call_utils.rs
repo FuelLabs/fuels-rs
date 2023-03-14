@@ -1,4 +1,3 @@
-use itertools::{chain, Itertools};
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
@@ -6,12 +5,10 @@ use fuel_tx::{
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-
 use fuels_signers::{provider::Provider, Account};
 use fuels_types::input::Input;
 use fuels_types::offsets::call_script_data_offset;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
-
 use fuels_types::{
     bech32::Bech32Address,
     constants::WORD_SIZE,
@@ -19,6 +16,7 @@ use fuels_types::{
     param_types::ParamType,
     transaction::{ScriptTransaction, Transaction, TxParameters},
 };
+use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 

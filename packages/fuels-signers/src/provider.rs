@@ -29,6 +29,7 @@ use fuels_types::{
     transaction::Transaction,
     transaction_response::TransactionResponse,
 };
+use itertools::Itertools;
 use tai64::Tai64;
 use thiserror::Error;
 

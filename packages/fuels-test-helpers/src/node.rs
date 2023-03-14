@@ -281,10 +281,11 @@ pub async fn new_fuel_node(
 pub async fn server_health_check(client: &FuelClient) {
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
+    let between_attempts = Duration::from_millis(300);
 
     while attempts > 0 && !healthy {
         healthy = client.health().await.unwrap_or(false);
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        tokio::time::sleep(between_attempts).await;
         attempts -= 1;
     }
 

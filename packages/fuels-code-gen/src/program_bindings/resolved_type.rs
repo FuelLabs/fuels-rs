@@ -1,27 +1,20 @@
-use std::{
-    collections::HashSet,
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 use fuel_abi_types::utils::{
-    extract_array_len, extract_custom_type_name, extract_generic_name, extract_str_len,
-    has_tuple_format,
+    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
 };
-
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
     error::{error, Result},
-    program_bindings::{
-        abi_types::{FullTypeApplication, FullTypeDeclaration},
-        utils::get_sdk_provided_types,
-    },
-    utils::{ident, safe_ident, TypePath},
+    program_bindings::{abi_types::FullTypeApplication, utils::sdk_provided_custom_types_lookup},
+    utils::{safe_ident, TypePath},
 };
 
-// Represents a type alongside its generic parameters. Can be converted into a
-// `TokenStream` via `.into()`.
+/// Represents a Rust type alongside its generic parameters. For when you want to reference an ABI
+/// type in Rust code since [`ResolvedType`] can be converted into a [`TokenStream`] via
+/// `resolved_type.to_token_stream()`.
 #[derive(Debug, Clone)]
 pub struct ResolvedType {
     pub type_name: TokenStream,
@@ -49,212 +42,196 @@ impl ToTokens for ResolvedType {
         tokens.extend(tokenized_type)
     }
 }
+
 impl Display for ResolvedType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.to_token_stream())
     }
 }
 
-/// Given a type, will recursively proceed to resolve it until it results in a
-/// `ResolvedType` which can be then be converted into a `TokenStream`. As such
-/// it can be used whenever you need the Rust type of the given
-/// `FullTypeApplication`.
-pub(crate) fn resolve_type(
-    type_application: &FullTypeApplication,
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Result<ResolvedType> {
-    let recursively_resolve = |type_applications: &Vec<FullTypeApplication>| {
+/// Used to resolve [`FullTypeApplication`]s into [`ResolvedType`]s
+pub(crate) struct TypeResolver {
+    /// The mod in which the produced [`ResolvedType`]s are going to end up in.
+    current_mod: TypePath,
+}
+
+impl Default for TypeResolver {
+    fn default() -> Self {
+        TypeResolver::new(Default::default())
+    }
+}
+
+impl TypeResolver {
+    pub(crate) fn new(current_mod: TypePath) -> Self {
+        Self { current_mod }
+    }
+
+    pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
+        let resolvers = [
+            Self::to_simple_type,
+            Self::to_bits256,
+            Self::to_generic,
+            Self::to_array,
+            Self::to_sized_ascii_string,
+            Self::to_tuple,
+            Self::to_raw_slice,
+            Self::to_custom_type,
+        ];
+
+        for resolver in resolvers {
+            if let Some(resolved) = resolver(self, type_application)? {
+                return Ok(resolved);
+            }
+        }
+
+        let type_field = &type_application.type_decl.type_field;
+        Err(error!("Could not resolve '{type_field}' to any known type"))
+    }
+
+    fn resolve_multiple(
+        &self,
+        type_applications: &[FullTypeApplication],
+    ) -> Result<Vec<ResolvedType>> {
         type_applications
             .iter()
-            .map(|type_application| resolve_type(type_application, shared_types))
-            .collect::<Result<Vec<_>>>()
-            .expect("Failed to resolve types")
-    };
-
-    let base_type = &type_application.type_decl;
-
-    let type_field = base_type.type_field.as_str();
-
-    [
-        to_simple_type,
-        to_bits256,
-        to_generic,
-        to_array,
-        to_sized_ascii_string,
-        to_tuple,
-        to_raw_slice,
-        to_custom_type,
-    ]
-    .into_iter()
-    .find_map(|fun| {
-        let is_shared = shared_types.contains(base_type);
-        fun(
-            type_field,
-            move || recursively_resolve(&base_type.components),
-            move || recursively_resolve(&type_application.type_arguments),
-            is_shared,
-        )
-    })
-    .ok_or_else(|| error!("Could not resolve {type_field} to any known type"))
-}
-
-fn to_generic(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    let name = extract_generic_name(type_field)?;
-
-    let type_name = safe_ident(&name).into_token_stream();
-    Some(ResolvedType {
-        type_name,
-        generic_params: vec![],
-    })
-}
-
-fn to_array(
-    type_field: &str,
-    components_supplier: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    let len = extract_array_len(type_field)?;
-
-    let components = components_supplier();
-    let type_inside = match components.as_slice() {
-        [single_type] => Ok(single_type),
-        other => Err(error!(
-            "Array must have only one component! Actual components: {other:?}"
-        )),
+            .map(|type_application| self.resolve(type_application))
+            .collect()
     }
-    .unwrap();
 
-    Some(ResolvedType {
-        type_name: quote! { [#type_inside; #len] },
-        generic_params: vec![],
-    })
-}
+    fn to_generic(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let Some(name) = extract_generic_name(&type_application.type_decl.type_field) else {
+            return Ok(None);
+        };
 
-fn to_sized_ascii_string(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    let len = extract_str_len(type_field)?;
+        let type_name = safe_ident(&name).into_token_stream();
+        Ok(Some(ResolvedType {
+            type_name,
+            generic_params: vec![],
+        }))
+    }
 
-    let generic_params = vec![ResolvedType {
-        type_name: quote! {#len},
-        generic_params: vec![],
-    }];
+    fn to_array(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+        let Some(len) = extract_array_len(&type_decl.type_field) else {
+            return Ok(None);
+        };
 
-    Some(ResolvedType {
-        type_name: quote! { ::fuels::types::SizedAsciiString },
-        generic_params,
-    })
-}
+        let components = self.resolve_multiple(&type_decl.components)?;
+        let type_inside = match components.as_slice() {
+            [single_type] => single_type,
+            other => {
+                return Err(error!(
+                    "Array must have only one component! Actual components: {other:?}"
+                ));
+            }
+        };
 
-fn to_tuple(
-    type_field: &str,
-    components_supplier: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    if has_tuple_format(type_field) {
-        let inner_types = components_supplier();
+        Ok(Some(ResolvedType {
+            type_name: quote! { [#type_inside; #len] },
+            generic_params: vec![],
+        }))
+    }
+
+    fn to_sized_ascii_string(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        let Some(len) = extract_str_len(&type_application.type_decl.type_field) else {
+            return Ok(None);
+        };
+
+        let generic_params = vec![ResolvedType {
+            type_name: quote! {#len},
+            generic_params: vec![],
+        }];
+
+        Ok(Some(ResolvedType {
+            type_name: quote! { ::fuels::types::SizedAsciiString },
+            generic_params,
+        }))
+    }
+
+    fn to_tuple(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
+        if !has_tuple_format(&type_decl.type_field) {
+            return Ok(None);
+        }
+        let inner_types = self.resolve_multiple(&type_decl.components)?;
 
         // it is important to leave a trailing comma because a tuple with
         // one element is written as (element,) not (element) which is
         // resolved to just element
-        Some(ResolvedType {
+        Ok(Some(ResolvedType {
             type_name: quote! {(#(#inner_types,)*)},
             generic_params: vec![],
-        })
-    } else {
-        None
+        }))
     }
-}
 
-fn to_simple_type(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    match type_field {
-        "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
-            let type_name = type_field
-                .parse()
-                .expect("Couldn't resolve primitive type. Cannot happen!");
+    fn to_simple_type(&self, type_decl: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        let type_field = &type_decl.type_decl.type_field;
 
-            Some(ResolvedType {
-                type_name,
-                generic_params: vec![],
-            })
+        match type_field.as_str() {
+            "u8" | "u16" | "u32" | "u64" | "bool" | "()" => {
+                let type_name = type_field
+                    .parse()
+                    .expect("Couldn't resolve primitive type. Cannot happen!");
+
+                Ok(Some(ResolvedType {
+                    type_name,
+                    generic_params: vec![],
+                }))
+            }
+            _ => Ok(None),
         }
-        _ => None,
     }
-}
 
-fn to_bits256(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    if type_field == "b256" {
-        Some(ResolvedType {
+    fn to_bits256(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field != "b256" {
+            return Ok(None);
+        }
+
+        Ok(Some(ResolvedType {
             type_name: quote! {::fuels::types::Bits256},
             generic_params: vec![],
-        })
-    } else {
-        None
+        }))
     }
-}
 
-fn to_raw_slice(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: impl Fn() -> Vec<ResolvedType>,
-    _: bool,
-) -> Option<ResolvedType> {
-    if type_field == "raw untyped slice" {
+    fn to_raw_slice(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field != "raw untyped slice" {
+            return Ok(None);
+        }
+
         let type_name = quote! {::fuels::types::RawSlice};
-        Some(ResolvedType {
+        Ok(Some(ResolvedType {
             type_name,
             generic_params: vec![],
-        })
-    } else {
-        None
+        }))
     }
-}
 
-fn to_custom_type(
-    type_field: &str,
-    _: impl Fn() -> Vec<ResolvedType>,
-    type_arguments_supplier: impl Fn() -> Vec<ResolvedType>,
-    is_shared: bool,
-) -> Option<ResolvedType> {
-    let type_name = extract_custom_type_name(type_field)?;
+    fn to_custom_type(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        let type_decl = &type_application.type_decl;
 
-    let type_path = get_sdk_provided_types()
-        .into_iter()
-        .find(|provided_type| provided_type.type_name() == type_name)
-        .unwrap_or_else(|| {
-            let custom_type_name = ident(&type_name);
-            let path_str = if is_shared {
-                format!("super::shared_types::{custom_type_name}")
-            } else {
-                format!("self::{custom_type_name}")
-            };
-            TypePath::new(path_str).expect("Known to be well formed")
-        });
+        if !type_decl.is_custom_type() {
+            return Ok(None);
+        }
 
-    Some(ResolvedType {
-        type_name: type_path.into_token_stream(),
-        generic_params: type_arguments_supplier(),
-    })
+        let type_path = type_decl.custom_type_path()?;
+
+        let type_path = sdk_provided_custom_types_lookup()
+            .get(&type_path)
+            .cloned()
+            .unwrap_or_else(|| type_path.relative_path_from(&self.current_mod));
+
+        let generic_params = self.resolve_multiple(&type_application.type_arguments)?;
+
+        Ok(Some(ResolvedType {
+            type_name: type_path.into_token_stream(),
+            generic_params,
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -264,6 +241,7 @@ mod tests {
     use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
 
     use super::*;
+    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,
@@ -279,7 +257,8 @@ mod tests {
         };
 
         let application = FullTypeApplication::from_counterpart(&type_application, &types);
-        let resolved_type = resolve_type(&application, &HashSet::default())
+        let resolved_type = TypeResolver::default()
+            .resolve(&application)
             .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
 
@@ -364,7 +343,7 @@ mod tests {
             &[
                 TypeDeclaration {
                     type_id: 0,
-                    type_field: "struct Vec".to_string(),
+                    type_field: "struct std::vec::Vec".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             name: "buf".to_string(),
@@ -394,7 +373,7 @@ mod tests {
                 },
                 TypeDeclaration {
                     type_id: 3,
-                    type_field: "struct RawVec".to_string(),
+                    type_field: "struct std::vec::RawVec".to_string(),
                     components: Some(vec![
                         TypeApplication {
                             name: "ptr".to_string(),
@@ -554,16 +533,14 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
-        let provided_type_names = get_sdk_provided_types()
-            .into_iter()
-            .map(|type_path| (type_path.type_name().to_string(), type_path))
-            .collect::<HashMap<_, _>>();
+        for (type_path, expected_path) in sdk_provided_custom_types_lookup() {
+            // given
+            let type_application = given_fn_arg_of_custom_type(&type_path);
 
-        for (type_name, expected_path) in provided_type_names {
-            let resolved_type =
-                to_custom_type(&format!("struct {type_name}"), Vec::new, Vec::new, false)
-                    .expect("Should have succeeded.");
+            // when
+            let resolved_type = TypeResolver::default().resolve(&type_application).unwrap();
 
+            // then
             let expected_type_name = expected_path.into_token_stream();
             assert_eq!(
                 resolved_type.type_name.to_string(),
@@ -571,14 +548,16 @@ mod tests {
             );
         }
     }
-    #[test]
-    fn handles_shared_types() {
-        let resolved_type =
-            to_custom_type("struct SomeStruct", Vec::new, Vec::new, true).expect("should succeed");
 
-        assert_eq!(
-            resolved_type.type_name.to_string(),
-            "super :: shared_types :: SomeStruct"
-        )
+    fn given_fn_arg_of_custom_type(type_path: &TypePath) -> FullTypeApplication {
+        FullTypeApplication {
+            name: "some_arg".to_string(),
+            type_decl: FullTypeDeclaration {
+                type_field: format!("struct {type_path}"),
+                components: vec![],
+                type_parameters: vec![],
+            },
+            type_arguments: vec![],
+        }
     }
 }
