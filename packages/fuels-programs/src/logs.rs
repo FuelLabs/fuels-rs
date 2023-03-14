@@ -10,7 +10,7 @@ use fuel_abi_types::error_codes::{
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::{format_log, try_from_bytes};
+use fuels_core::try_from_bytes;
 use fuels_types::{
     errors::{Error, Result},
     traits::{Parameterize, Tokenizable},
@@ -25,9 +25,13 @@ pub struct LogFormatter {
 impl LogFormatter {
     pub fn new<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
         Self {
-            formatter: format_log::<T>,
+            formatter: Self::format_log::<T>,
             type_id: TypeId::of::<T>(),
         }
+    }
+
+    fn format_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
+        Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {

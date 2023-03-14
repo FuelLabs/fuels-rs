@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use fuels_types::{
     errors::Result,
     traits::{Parameterize, Tokenizable},
@@ -20,10 +18,6 @@ where
     let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
 
     T::from_token(token)
-}
-
-pub fn format_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
-    Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
 }
 
 #[cfg(test)]
