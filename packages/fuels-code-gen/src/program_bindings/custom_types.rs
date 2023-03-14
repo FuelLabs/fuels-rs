@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::utils::extract_custom_type_name;
 use itertools::Itertools;
+use quote::quote;
 
 use crate::{
     error::Result,
@@ -9,8 +9,9 @@ use crate::{
         abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
-        utils::get_sdk_provided_types,
+        utils::sdk_provided_custom_types_lookup,
     },
+    utils::TypePath,
 };
 
 mod enums;
@@ -28,49 +29,83 @@ mod utils;
 /// * `types`: Types you wish to generate Rust code for.
 /// * `shared_types`: Types that are shared between multiple
 ///                   contracts/scripts/predicates and thus generated elsewhere.
-pub(crate) fn generate_types<T: IntoIterator<Item = FullTypeDeclaration>>(
+pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>>(
     types: T,
     shared_types: &HashSet<FullTypeDeclaration>,
     no_std: bool,
 ) -> Result<GeneratedCode> {
-    HashSet::from_iter(types)
-        .difference(shared_types)
-        .filter(|ttype| !should_skip_codegen(&ttype.type_field))
-        .filter_map(|ttype| {
-            if ttype.is_struct_type() {
-                Some(expand_custom_struct(ttype, shared_types, no_std))
-            } else if ttype.is_enum_type() {
-                Some(expand_custom_enum(ttype, shared_types, no_std))
+    types
+        .into_iter()
+        .filter(|ttype| !should_skip_codegen(ttype))
+        .map(|ttype: &FullTypeDeclaration| {
+            if shared_types.contains(ttype) {
+                reexport_the_shared_type(ttype, no_std)
+            } else if ttype.is_struct_type() {
+                expand_custom_struct(ttype, no_std)
             } else {
-                None
+                expand_custom_enum(ttype, no_std)
             }
         })
         .fold_ok(GeneratedCode::default(), |acc, generated_code| {
-            acc.append(generated_code)
+            acc.merge(generated_code)
         })
+}
+
+/// Instead of generating bindings for `ttype` this fn will just generate a `pub use` pointing to
+/// the already generated equivalent shared type.
+fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
+    // e.g. some_libary::another_mod::SomeStruct
+    let type_path = ttype
+        .custom_type_path()
+        .expect("This must be a custom type due to the previous filter step");
+
+    let type_mod = type_path.parent();
+
+    let from_top_lvl_to_shared_types =
+        TypePath::new("super::shared_types").expect("This is known to be a valid TypePath");
+
+    let top_lvl_mod = TypePath::default();
+    let from_current_mod_to_top_level = top_lvl_mod.relative_path_from(&type_mod);
+
+    let path = from_current_mod_to_top_level
+        .append(from_top_lvl_to_shared_types)
+        .append(type_path);
+
+    // e.g. pub use super::super::super::shared_types::some_library::another_mod::SomeStruct;
+    let the_reexport = quote! {pub use #path;};
+
+    Ok(GeneratedCode::new(the_reexport, Default::default(), no_std).wrap_in_mod(type_mod))
 }
 
 // Checks whether the given type should not have code generated for it. This
 // is mainly because the corresponding type in Rust already exists --
 // e.g. the contract's Vec type is mapped to std::vec::Vec from the Rust
 // stdlib, ContractId is a custom type implemented by fuels-rs, etc.
-// Others like 'raw untyped ptr' or 'RawVec' are skipped because they are
+// Others like 'std::vec::RawVec' are skipped because they are
 // implementation details of the contract's Vec type and are not directly
 // used in the SDK.
-fn should_skip_codegen(type_field: &str) -> bool {
-    let name = extract_custom_type_name(type_field).unwrap_or_else(|| type_field.to_string());
+fn should_skip_codegen(type_decl: &FullTypeDeclaration) -> bool {
+    if !type_decl.is_custom_type() {
+        return true;
+    }
 
-    is_type_sdk_provided(&name) || is_type_unused(&name)
+    let type_path = type_decl.custom_type_path().unwrap();
+
+    is_type_sdk_provided(&type_path) || is_type_unused(&type_path)
 }
 
-fn is_type_sdk_provided(name: &str) -> bool {
-    get_sdk_provided_types()
-        .iter()
-        .any(|type_path| type_path.type_name() == name)
+fn is_type_sdk_provided(type_path: &TypePath) -> bool {
+    sdk_provided_custom_types_lookup().contains_key(type_path)
 }
 
-fn is_type_unused(name: &str) -> bool {
-    ["raw untyped ptr", "RawVec"].contains(&name)
+fn is_type_unused(type_path: &TypePath) -> bool {
+    let msg = "Known to be correct";
+    [
+        TypePath::new("std::vec::RawVec").expect(msg),
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+        TypePath::new("RawVec").expect(msg),
+    ]
+    .contains(type_path)
 }
 
 // Doing string -> TokenStream -> string isn't pretty but gives us the opportunity to
@@ -82,13 +117,12 @@ fn is_type_unused(name: &str) -> bool {
 // TODO(iqdecay): append extra `,` to last enum/struct field so it is aligned with rustfmt
 #[cfg(test)]
 mod tests {
-    use std::collections::{HashMap, HashSet};
+    use std::collections::HashMap;
 
     use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
     use super::*;
-    use crate::{program_bindings::abi_types::FullTypeApplication, utils::TypePath};
 
     #[test]
     fn test_expand_custom_enum() -> Result<()> {
@@ -131,12 +165,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -157,7 +186,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -171,12 +200,8 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )
-        .expect_err("Was able to construct an enum without variants");
+        expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)
+            .expect_err("Was able to construct an enum without variants");
 
         Ok(())
     }
@@ -226,12 +251,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -252,7 +272,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -295,12 +315,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -320,7 +335,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -376,12 +391,7 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_enum(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual = expand_custom_enum(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[allow(clippy::enum_variant_names)]
@@ -401,7 +411,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -458,12 +468,8 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -484,7 +490,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
@@ -499,12 +505,8 @@ mod tests {
         };
         let types = [(0, p.clone())].into_iter().collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -521,7 +523,7 @@ mod tests {
             pub struct SomeEmptyStruct < > {}
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
@@ -568,12 +570,8 @@ mod tests {
         .into_iter()
         .collect::<HashMap<_, _>>();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(&p, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(&p, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -593,7 +591,7 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
         Ok(())
     }
 
@@ -677,12 +675,8 @@ mod tests {
 
         let s1 = types.get(&3).unwrap();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(s1, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s1, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -702,16 +696,12 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         let s2 = types.get(&4).unwrap();
 
-        let actual = expand_custom_struct(
-            &FullTypeDeclaration::from_counterpart(s2, &types),
-            &HashSet::default(),
-            false,
-        )?
-        .code;
+        let actual =
+            expand_custom_struct(&FullTypeDeclaration::from_counterpart(s2, &types), false)?;
 
         let expected = quote! {
             #[derive(
@@ -731,41 +721,43 @@ mod tests {
             }
         };
 
-        assert_eq!(actual.to_string(), expected.to_string());
+        assert_eq!(actual.code().to_string(), expected.to_string());
 
         Ok(())
     }
 
     #[test]
-    fn will_skip_shared_types() {
+    fn shared_types_are_just_reexported() {
         // given
-        let types = ["struct SomeStruct", "enum SomeEnum"].map(given_a_custom_type);
-        let shared_types = HashSet::from_iter(types.iter().take(1).cloned());
+        let type_decl = FullTypeDeclaration {
+            type_field: "struct some_shared_lib::SharedStruct".to_string(),
+            components: vec![],
+            type_parameters: vec![],
+        };
+        let shared_types = HashSet::from([type_decl.clone()]);
 
         // when
-        let generated_code =
-            generate_types(types, &shared_types, false).expect("Should have succeeded.");
+        let generated_code = generate_types(&[type_decl], &shared_types, false).unwrap();
 
         // then
-        assert_eq!(
-            generated_code.usable_types,
-            HashSet::from([TypePath::new("SomeEnum").expect("Hand crafted, should not fail")])
-        );
-    }
+        let expected_code = quote! {
+            #[allow(clippy::too_many_arguments)]
+            #[no_implicit_prelude]
+            pub mod some_shared_lib {
+                use ::core::{
+                    clone::Clone,
+                    convert::{Into, TryFrom, From},
+                    iter::IntoIterator,
+                    iter::Iterator,
+                    marker::Sized,
+                    panic,
+                };
 
-    fn given_a_custom_type(type_field: &str) -> FullTypeDeclaration {
-        FullTypeDeclaration {
-            type_field: type_field.to_string(),
-            components: vec![FullTypeApplication {
-                name: "a".to_string(),
-                type_decl: FullTypeDeclaration {
-                    type_field: "u8".to_string(),
-                    components: vec![],
-                    type_parameters: vec![],
-                },
-                type_arguments: vec![],
-            }],
-            type_parameters: vec![],
-        }
+                use ::std::{string::ToString, format, vec};
+                pub use super::super::shared_types::some_shared_lib::SharedStruct;
+            }
+        };
+
+        assert_eq!(generated_code.code().to_string(), expected_code.to_string());
     }
 }

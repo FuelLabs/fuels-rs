@@ -1,19 +1,13 @@
-use std::collections::HashSet;
-
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::program_bindings::{
-    abi_types::{FullLoggedType, FullTypeDeclaration},
-    resolved_type::resolve_type,
-};
+use crate::program_bindings::{abi_types::FullLoggedType, resolved_type::TypeResolver};
 
 pub(crate) fn log_formatters_instantiation_code(
     contract_id: Option<TokenStream>,
     logged_types: &[FullLoggedType],
-    shared_types: &HashSet<FullTypeDeclaration>,
 ) -> TokenStream {
-    let resolved_logs = resolve_logs(logged_types, shared_types);
+    let resolved_logs = resolve_logs(logged_types);
     let log_id_param_type_pairs = generate_log_id_log_formatter_pairs(&resolved_logs);
     let contract_id = contract_id
         .map(|id| quote! { ::core::option::Option::Some(#id) })
@@ -28,15 +22,13 @@ struct ResolvedLog {
 }
 
 /// Reads the parsed logged types from the ABI and creates ResolvedLogs
-fn resolve_logs(
-    logged_types: &[FullLoggedType],
-    shared_types: &HashSet<FullTypeDeclaration>,
-) -> Vec<ResolvedLog> {
+fn resolve_logs(logged_types: &[FullLoggedType]) -> Vec<ResolvedLog> {
     logged_types
         .iter()
         .map(|l| {
-            let resolved_type =
-                resolve_type(&l.application, shared_types).expect("Failed to resolve log type");
+            let resolved_type = TypeResolver::default()
+                .resolve(&l.application)
+                .expect("Failed to resolve log type");
 
             ResolvedLog {
                 log_id: l.log_id,

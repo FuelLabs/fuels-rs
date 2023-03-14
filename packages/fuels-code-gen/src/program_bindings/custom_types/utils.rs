@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use fuel_abi_types::utils::extract_generic_name;
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -7,7 +5,7 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{abi_types::FullTypeDeclaration, utils::Component},
-    utils::ident,
+    utils::{ident, TypePath},
 };
 
 /// Transforms components from inside the given `FullTypeDeclaration` into a vector
@@ -15,12 +13,12 @@ use crate::{
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
-    shared_types: &HashSet<FullTypeDeclaration>,
+    mod_name: &TypePath,
 ) -> Result<Vec<Component>> {
     type_decl
         .components
         .iter()
-        .map(|component| Component::new(component, snake_case, shared_types))
+        .map(|component| Component::new(component, snake_case, mod_name.clone()))
         .collect()
 }
 

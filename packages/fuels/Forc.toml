@@ -4,6 +4,7 @@ members = [
   'tests/bindings/sharing_types/contract_b',
   'tests/bindings/sharing_types/shared_lib',
   'tests/bindings/simple_contract',
+  'tests/bindings/type_paths',
   'tests/contracts/asserts',
   'tests/contracts/auth_testing_abi',
   'tests/contracts/auth_testing_contract',

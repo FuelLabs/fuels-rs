@@ -1,7 +1,6 @@
 use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
-
 use fuels_types::{
     constants::WORD_SIZE,
     enum_variants::EnumVariants,
