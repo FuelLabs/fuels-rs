@@ -95,8 +95,7 @@ impl ParamType {
 
     fn uses_heap_types(&self) -> bool {
         match &self {
-            ParamType::Vector(..) => true,
-            ParamType::Bytes => true,
+            ParamType::Vector(..) | ParamType::Bytes => true,
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
             ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
             ParamType::Enum {
