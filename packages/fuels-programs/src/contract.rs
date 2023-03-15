@@ -899,9 +899,9 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call<D: Tokenizable>(
+    pub fn add_call<D: Tokenizable, Z: Account>(
         &mut self,
-        call_handler: ContractCallHandler<T, D>,
+        call_handler: ContractCallHandler<Z, D>,
     ) -> &mut Self {
         self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);

@@ -1,9 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
+    use fuels::{types::{
         errors::{error, Error, Result},
-        Bits256,
-    };
+        Bits256, unresolved_bytes::UnresolvedBytes,
+    }, accounts::predicate::Predicate};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -636,6 +636,47 @@ mod tests {
 
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[allow(unused_variables)]
+    async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
+        use fuels::prelude::*;
+
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
+
+        let wallet = launch_provider_and_get_wallet().await;
+
+        let contract_id = Contract::deploy(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            &wallet,
+            DeployConfiguration::default(),
+        )
+        .await?;
+
+        let contract_methods_wallet = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+
+        let predicate = Predicate {
+            address: Bech32Address::default(),
+            code: vec![],
+            data: UnresolvedBytes::default(),
+            provider: Some(wallet.provider()?.clone()),
+        };
+        let contract_methods_predicate = MyContract::new(contract_id, predicate).methods();
+
+        let call_handler_1 = contract_methods_wallet.initialize_counter(42);
+        let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
 
         Ok(())
     }
