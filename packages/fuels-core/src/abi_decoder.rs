@@ -82,9 +82,9 @@ impl ABIDecoder {
             bytes_read: bytes.len(),
         })
     }
+
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements =
-            ParamType::Vector(Box::from(param_type.clone())).calculate_num_of_elements(bytes)?;
+        let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
 
         Ok(DecodeResult {
@@ -139,7 +139,9 @@ impl ABIDecoder {
     }
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = ParamType::RawSlice.calculate_num_of_elements(bytes)?;
+        let raw_slice_element = ParamType::U64;
+        let num_of_elements =
+            ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
         let (tokens, bytes_read) =
             Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
         let elements = tokens

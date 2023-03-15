@@ -68,23 +68,21 @@ impl ParamType {
         }
     }
 
-    pub fn calculate_num_of_elements(&self, bytes: &[u8]) -> Result<usize> {
-        let memory_size = match self {
-            ParamType::Bytes | ParamType::Vector(..) => Ok(self.heap_inner_element_size().unwrap()),
-            ParamType::RawSlice => Ok(ParamType::U64.compute_encoding_width() * WORD_SIZE),
-            _ => Err(error!(
-                InvalidData,
-                "Method `calculate_num_of_elements` called on an incompatible type: {self:?}"
-            )),
-        }
-        .unwrap();
-        if bytes.len() % memory_size != 0 {
+    /// Given a [ParamType], return the number of elements of that [ParamType] that can fit in
+    /// `available_bytes`: it is the length of the corresponding heap type.
+    pub fn calculate_num_of_elements(
+        param_type: &ParamType,
+        available_bytes: usize,
+    ) -> Result<usize> {
+        let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
+        let remainder = available_bytes % memory_size;
+        if remainder != 0 {
             return Err(error!(
                 InvalidData,
-                "The bytes provided do not correspond to a {:?} got: {:?}", self, bytes
+                "{remainder} extra bytes detected while decoding heap type"
             ));
         }
-        Ok(bytes.len() / memory_size)
+        Ok(available_bytes / memory_size)
     }
 
     pub fn contains_nested_heap_types(&self) -> bool {
@@ -1304,7 +1302,7 @@ mod tests {
     }
 
     #[test]
-    fn contains_no_nested_heap_types_false_on_simple_types() -> Result<()> {
+    fn contains_nested_heap_types_false_on_simple_types() -> Result<()> {
         // Simple types cannot have nested heap types
         assert!(!ParamType::Unit.contains_nested_heap_types());
         assert!(!ParamType::U8.contains_nested_heap_types());
@@ -1320,7 +1318,7 @@ mod tests {
     }
 
     #[test]
-    fn test_complex_types_for_nested_heap_types() -> Result<()> {
+    fn test_complex_types_for_nested_heap_types_containing_vectors() -> Result<()> {
         let base_vector = ParamType::Vector(Box::from(ParamType::U8));
         let tuples_no_nested_vec = vec![
             ("Bim".to_string(), ParamType::U16),
@@ -1334,57 +1332,54 @@ mod tests {
         let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
         let param_types_nested_vec = vec![ParamType::Unit, ParamType::Bool, base_vector.clone()];
 
-        assert!(!base_vector.contains_nested_heap_types());
-        assert!(ParamType::Vector(Box::from(base_vector.clone())).contains_nested_heap_types());
+        let is_nested = |param_type: ParamType| assert!(param_type.contains_nested_heap_types());
+        let not_nested = |param_type: ParamType| assert!(!param_type.contains_nested_heap_types());
 
-        assert!(!ParamType::Array(Box::from(ParamType::U8), 10).contains_nested_heap_types());
-        assert!(ParamType::Array(Box::from(base_vector), 10).contains_nested_heap_types());
+        not_nested(base_vector.clone());
+        is_nested(ParamType::Vector(Box::from(base_vector.clone())));
 
-        assert!(!ParamType::Tuple(param_types_no_nested_vec.clone()).contains_nested_heap_types());
-        assert!(ParamType::Tuple(param_types_nested_vec.clone()).contains_nested_heap_types());
+        not_nested(ParamType::Array(Box::from(ParamType::U8), 10));
+        is_nested(ParamType::Array(Box::from(base_vector), 10));
 
-        assert!(!ParamType::Struct {
+        not_nested(ParamType::Tuple(param_types_no_nested_vec.clone()));
+        is_nested(ParamType::Tuple(param_types_nested_vec.clone()));
+
+        not_nested(ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_no_nested_vec.clone(),
             fields: tuples_no_nested_vec.clone(),
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Struct {
+        });
+        is_nested(ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_nested_vec.clone(),
-            fields: tuples_no_nested_vec.clone()
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Struct {
+            fields: tuples_no_nested_vec.clone(),
+        });
+        is_nested(ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_no_nested_vec.clone(),
-            fields: tuples_with_nested_vec.clone()
-        }
-        .contains_nested_heap_types());
+            fields: tuples_with_nested_vec.clone(),
+        });
 
-        assert!(!ParamType::Enum {
+        not_nested(ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_vec.clone())?,
-            generics: param_types_no_nested_vec.clone()
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Enum {
+            generics: param_types_no_nested_vec.clone(),
+        });
+        is_nested(ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_with_nested_vec)?,
-            generics: param_types_no_nested_vec
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Enum {
+            generics: param_types_no_nested_vec,
+        });
+        is_nested(ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_vec)?,
-            generics: param_types_nested_vec
-        }
-        .contains_nested_heap_types());
+            generics: param_types_nested_vec,
+        });
         Ok(())
     }
 
     #[test]
-    fn contains_no_nested_heap_type_nested_bytes_complex_types() -> Result<()> {
+    fn test_complex_types_for_nested_heap_types_containing_bytes() -> Result<()> {
         let base_bytes = ParamType::Bytes;
         let tuples_no_nested_bytes = vec![
             ("Bim".to_string(), ParamType::U16),
