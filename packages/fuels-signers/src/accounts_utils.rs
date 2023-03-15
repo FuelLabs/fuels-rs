@@ -62,7 +62,7 @@ pub fn adjust_outputs(
                                         if asset_id == & BASE_ASSET_ID)
     });
 
-    if !is_base_change_present || new_base_amount == 0 {
+    if !is_base_change_present && new_base_amount != 0 {
         tb.outputs_mut()
             .push(Output::change(address.into(), 0, BASE_ASSET_ID));
     }
