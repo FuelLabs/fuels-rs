@@ -18,8 +18,7 @@ use fuels_types::{
     errors::{error, Error, Result},
     message::Message as InputMessage,
     resource::Resource,
-    transaction::TxParameters,
-    transaction::{ScriptTransaction, Transaction},
+    transaction::{ScriptTransaction, Transaction, TxParameters},
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
