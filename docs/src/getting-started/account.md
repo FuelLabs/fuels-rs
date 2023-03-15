@@ -1,6 +1,6 @@
 # Account
 
-The Account trait defines methods that enable implementing types to query their balance, retrieve spendable resources, or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
+The Account trait provides a common interface to query balances, retrieve spendable resources, or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
 
 The Account trait is implemented by the following types:
 
