@@ -39,7 +39,7 @@ pub(crate) fn contract_bindings(
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
-        pub struct #name<T> {
+        pub struct #name<T: ::fuels::accounts::Account + ::std::clone::Clone> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
@@ -84,7 +84,7 @@ pub(crate) fn contract_bindings(
         }
 
         // Implement struct that holds the contract methods
-        pub struct #methods_name<T> {
+        pub struct #methods_name<T: ::fuels::accounts::Account + ::std::clone::Clone> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
@@ -94,7 +94,7 @@ pub(crate) fn contract_bindings(
             #contract_functions
         }
 
-        impl<T: ::fuels::accounts::Account>
+        impl<T: ::fuels::accounts::Account + ::std::clone::Clone>
             ::fuels::programs::contract::SettableContract for #name<T>
         {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
