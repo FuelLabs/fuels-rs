@@ -199,7 +199,7 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_transfer() -> fuels_types::errors::Result<()> {
+async fn test_transfer() -> Result<()> {
     // Create the actual wallets/signers
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None).lock();
@@ -218,7 +218,12 @@ async fn test_transfer() -> fuels_types::errors::Result<()> {
 
     // Transfer 1 from wallet 1 to wallet 2
     let _receipts = wallet_1
-        .transfer(wallet_2.address(), 1, Default::default(), None)
+        .transfer(
+            wallet_2.address(),
+            1,
+            Default::default(),
+            TxParameters::default(),
+        )
         .await
         .unwrap();
 
@@ -230,7 +235,7 @@ async fn test_transfer() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
+async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
@@ -244,12 +249,7 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let (tx_id, _receipts) = wallet_1
-        .transfer(
-            wallet_2.address(),
-            SEND_AMOUNT,
-            BASE_ASSET_ID,
-            Some(tx_params),
-        )
+        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_params)
         .await?;
 
     // Assert that the transaction was properly configured.
@@ -280,14 +280,19 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
+async fn transfer_coins_with_change() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
     // Transfer 2 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 2;
     let _receipts = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, None)
+        .transfer(
+            wallet_2.address(),
+            SEND_AMOUNT,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
         .await?;
 
     let wallet_1_final_coins = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
@@ -305,7 +310,7 @@ async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn test_wallet_get_coins() -> fuels_types::errors::Result<()> {
+async fn test_wallet_get_coins() -> Result<()> {
     const AMOUNT: u64 = 1000;
     const NUM_COINS: u64 = 3;
     let mut wallet = WalletUnlocked::new_random(None);
@@ -340,13 +345,18 @@ async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
 }
 
 #[tokio::test]
-async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
+async fn transfer_more_than_owned() -> Result<()> {
     const AMOUNT: u64 = 1000000;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
     // Transferring more than balance should fail.
     let response = wallet_1
-        .transfer(wallet_2.address(), AMOUNT * 2, Default::default(), None)
+        .transfer(
+            wallet_2.address(),
+            AMOUNT * 2,
+            Default::default(),
+            TxParameters::default(),
+        )
         .await;
 
     assert!(response.is_err());
@@ -356,7 +366,7 @@ async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn transfer_coins_of_non_base_asset() -> fuels_types::errors::Result<()> {
+async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None).lock();
@@ -375,7 +385,12 @@ async fn transfer_coins_of_non_base_asset() -> fuels_types::errors::Result<()> {
 
     const SEND_AMOUNT: u64 = 200;
     let _receipts = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, asset_id, None)
+        .transfer(
+            wallet_2.address(),
+            SEND_AMOUNT,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     let wallet_1_balance = wallet_1.get_asset_balance(&asset_id).await?;

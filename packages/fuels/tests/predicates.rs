@@ -116,7 +116,12 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     wallet
-        .transfer(predicate.address(), total_balance, asset_id, None)
+        .transfer(
+            predicate.address(),
+            total_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     //     The predicate has received the funds
@@ -145,7 +150,12 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -184,7 +194,12 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -225,7 +240,12 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -264,7 +284,12 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -307,7 +332,12 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -346,7 +376,12 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -386,7 +421,12 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -455,7 +495,12 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -496,7 +541,12 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     predicate
-        .transfer(receiver.address(), predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds

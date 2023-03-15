@@ -152,7 +152,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: Option<TxParameters>,
+        tx_parameters: TxParameters,
     ) -> Result<(String, Vec<Receipt>)> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, None)
@@ -162,12 +162,8 @@ pub trait Account: std::fmt::Debug + Send + Sync {
 
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            tx_parameters.unwrap_or_default(),
-        )
-        .set_consensus_parameters(consensus_parameters);
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
+            .set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         let tx = if asset_id == AssetId::default() {

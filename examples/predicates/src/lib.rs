@@ -84,7 +84,12 @@ mod tests {
         let amount_to_predicate = 512;
 
         wallet
-            .transfer(predicate.address(), amount_to_predicate, asset_id, None)
+            .transfer(
+                predicate.address(),
+                amount_to_predicate,
+                asset_id,
+                TxParameters::default(),
+            )
             .await?;
 
         let predicate_balance = provider
@@ -95,7 +100,12 @@ mod tests {
 
         // ANCHOR: predicate_spend
         predicate
-            .transfer(receiver.address(), amount_to_predicate, asset_id, None)
+            .transfer(
+                receiver.address(),
+                amount_to_predicate,
+                asset_id,
+                TxParameters::default(),
+            )
             .await?;
 
         let receiver_balance_after = provider
@@ -149,7 +159,7 @@ mod tests {
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
         first_wallet
-            .transfer(predicate.address(), 500, asset_id, None)
+            .transfer(predicate.address(), 500, asset_id, TxParameters::default())
             .await?;
 
         // Check predicate balance.
@@ -168,7 +178,12 @@ mod tests {
         let amount_to_unlock = 500;
 
         predicate
-            .transfer(second_wallet.address(), amount_to_unlock, asset_id, None)
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                asset_id,
+                TxParameters::default(),
+            )
             .await?;
 
         // Predicate balance is zero.
