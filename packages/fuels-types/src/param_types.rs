@@ -1398,52 +1398,59 @@ mod tests {
         let param_types_no_nested_bytes = vec![ParamType::U64, ParamType::U32];
         let param_types_nested_bytes = vec![ParamType::Unit, ParamType::Bool, base_bytes.clone()];
 
-        assert!(!base_bytes.contains_nested_heap_types());
-        assert!(ParamType::Vector(Box::from(base_bytes.clone())).contains_nested_heap_types());
+        let is_nested = |param_type: ParamType| assert!(param_type.contains_nested_heap_types());
+        let not_nested = |param_type: ParamType| assert!(!param_type.contains_nested_heap_types());
 
-        assert!(!ParamType::Array(Box::from(ParamType::U8), 10).contains_nested_heap_types());
-        assert!(ParamType::Array(Box::from(base_bytes), 10).contains_nested_heap_types());
+        not_nested(base_bytes.clone());
+        is_nested(ParamType::Vector(Box::from(base_bytes.clone())));
 
-        assert!(!ParamType::Tuple(param_types_no_nested_bytes.clone()).contains_nested_heap_types());
-        assert!(ParamType::Tuple(param_types_nested_bytes.clone()).contains_nested_heap_types());
+        not_nested(ParamType::Array(Box::from(ParamType::U8), 10));
+        is_nested(ParamType::Array(Box::from(base_bytes), 10));
 
-        assert!(!ParamType::Struct {
+        not_nested(ParamType::Tuple(param_types_no_nested_bytes.clone()));
+        is_nested(ParamType::Tuple(param_types_nested_bytes.clone()));
+
+        let not_nested_struct = ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_no_nested_bytes.clone(),
             fields: tuples_no_nested_bytes.clone(),
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Struct {
+        };
+        not_nested(not_nested_struct);
+
+        let nested_struct = ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_nested_bytes.clone(),
-            fields: tuples_no_nested_bytes.clone()
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Struct {
+            fields: tuples_no_nested_bytes.clone(),
+        };
+        is_nested(nested_struct);
+
+        let nested_struct = ParamType::Struct {
             name: "StructName".to_string(),
             generics: param_types_no_nested_bytes.clone(),
-            fields: tuples_with_nested_bytes.clone()
-        }
-        .contains_nested_heap_types());
+            fields: tuples_with_nested_bytes.clone(),
+        };
+        is_nested(nested_struct);
 
-        assert!(!ParamType::Enum {
+        let not_nested_enum = ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_bytes.clone())?,
-            generics: param_types_no_nested_bytes.clone()
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Enum {
+            generics: param_types_no_nested_bytes.clone(),
+        };
+        not_nested(not_nested_enum);
+
+        let nested_enum = ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_with_nested_bytes)?,
-            generics: param_types_no_nested_bytes
-        }
-        .contains_nested_heap_types());
-        assert!(ParamType::Enum {
+            generics: param_types_no_nested_bytes,
+        };
+        is_nested(nested_enum);
+
+        let nested_enum = ParamType::Enum {
             name: "EnumName".to_string(),
             variants: EnumVariants::new(tuples_no_nested_bytes)?,
-            generics: param_types_nested_bytes
-        }
-        .contains_nested_heap_types());
+            generics: param_types_nested_bytes,
+        };
+        is_nested(nested_enum);
         Ok(())
     }
 }
