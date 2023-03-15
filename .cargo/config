@@ -1,0 +1,3 @@
+# Remove once https://github.com/FuelLabs/fuels-rs/issues/887 is unblocked
+[registries.crates-io]
+protocol = "sparse"
