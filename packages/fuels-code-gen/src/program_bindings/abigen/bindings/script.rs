@@ -34,7 +34,7 @@ pub(crate) fn script_bindings(
 
     let code = quote! {
         #[derive(Debug)]
-        pub struct #name<T>{
+        pub struct #name<T: ::fuels::accounts::Account + ::std::clone::Clone>{
             account: T,
             binary: ::std::vec::Vec<u8>,
             log_decoder: ::fuels::programs::logs::LogDecoder
@@ -50,6 +50,13 @@ pub(crate) fn script_bindings(
                     binary,
                     log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
+            }
+
+            pub fn with_account<U: ::fuels::accounts::Account + ::std::clone::Clone>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+                let provider = ::fuels::accounts::Account::provider(&self.account)?;
+                account.set_provider(provider.clone());
+
+               ::core::result::Result::Ok(#name { account, binary: self.binary.clone(), log_decoder: self.log_decoder.clone()})
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::programs::Configurables>)

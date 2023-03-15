@@ -45,9 +45,9 @@ pub(crate) fn predicate_bindings(
             pub fn new(code: ::std::vec::Vec<u8>) -> Self {
                 let address: ::fuels::types::Address = (*::fuels::tx::Contract::root_from_code(&code)).into();
                 Self {
-                    address: address.clone().into(),
+                    address: address.into(),
                     code,
-                    data: ::fuels::types::unresolved_bytes::UnresolvedBytes::default(),
+                    data: ::std::default::Default::default(),
                     provider: ::std::option::Option::None
                 }
             }
