@@ -1,7 +1,9 @@
-use fuels_types::unresolved_bytes::{Data, UnresolvedBytes};
 use fuels_types::{
-    constants::WORD_SIZE, errors::Result, pad_string, pad_u16, pad_u32, pad_u8, EnumSelector,
-    StringToken, Token,
+    constants::WORD_SIZE,
+    errors::Result,
+    pad_string, pad_u16, pad_u32, pad_u8,
+    unresolved_bytes::{Data, UnresolvedBytes},
+    EnumSelector, StringToken, Token,
 };
 use itertools::Itertools;
 

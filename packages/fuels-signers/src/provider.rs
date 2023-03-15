@@ -1,7 +1,4 @@
-use fuel_types::MessageId;
-use itertools::Itertools;
-use std::fmt::Debug;
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
@@ -14,6 +11,7 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, UtxoId};
+use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -29,6 +27,7 @@ use fuels_types::{
     transaction::Transaction,
     transaction_response::TransactionResponse,
 };
+use itertools::Itertools;
 use tai64::Tai64;
 use thiserror::Error;
 

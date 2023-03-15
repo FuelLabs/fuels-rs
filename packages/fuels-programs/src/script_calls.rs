@@ -3,15 +3,15 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_signers::provider::Provider;
-use fuels_types::input::Input;
-use fuels_types::offsets::base_offset_script;
-use fuels_types::transaction_builders::ScriptTransactionBuilder;
-use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
+    input::Input,
+    offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     transaction::{Transaction, TxParameters},
+    transaction_builders::ScriptTransactionBuilder,
+    unresolved_bytes::UnresolvedBytes,
 };
 use itertools::chain;
 

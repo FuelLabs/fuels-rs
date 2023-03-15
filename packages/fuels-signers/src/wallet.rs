@@ -1,9 +1,10 @@
+use std::{fmt, ops, path::Path};
+
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Witness};
-use fuels_types::transaction_builders::TransactionBuilder;
 use fuels_types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     coin::Coin,
@@ -13,17 +14,16 @@ use fuels_types::{
     message::Message as InputMessage,
     resource::Resource,
     transaction::Transaction,
+    transaction_builders::TransactionBuilder,
     transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
-use std::{fmt, ops, path::Path};
 
-use crate::accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee};
 use crate::{
+    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::{Provider, ResourceFilter},
-    Account, Signer,
+    Account, AccountError, AccountResult, Signer,
 };
-use crate::{AccountError, AccountResult};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 

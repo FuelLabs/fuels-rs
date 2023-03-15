@@ -1,11 +1,11 @@
 #![cfg(feature = "std")]
 
-use fuel_tx::{TxPointer, UtxoId};
-use fuel_types::{Bytes32, ContractId};
 use std::hash::Hash;
 
-use crate::resource::Resource;
-use crate::unresolved_bytes::UnresolvedBytes;
+use fuel_tx::{TxPointer, UtxoId};
+use fuel_types::{Bytes32, ContractId};
+
+use crate::{resource::Resource, unresolved_bytes::UnresolvedBytes};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input {

@@ -1,7 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
-    use fuels::{accounts::Account, prelude::Result};
+    use fuels::{
+        accounts::Account,
+        prelude::Result,
+        types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    };
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {

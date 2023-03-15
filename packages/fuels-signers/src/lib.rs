@@ -2,26 +2,25 @@ use std::collections::HashMap;
 
 use async_trait::async_trait;
 use eth_keystore::KeystoreError;
-use provider::ResourceFilter;
-use thiserror::Error;
-
-use crate::accounts_utils::extract_message_id;
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
-use fuels_types::bech32::Bech32ContractId;
-use fuels_types::constants::BASE_ASSET_ID;
-use fuels_types::errors::{Error, Result};
-use fuels_types::input::Input;
-use fuels_types::resource::Resource;
-use fuels_types::transaction::TxParameters;
-use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
-use fuels_types::{bech32::Bech32Address, transaction::Transaction};
+use fuels_types::{
+    bech32::{Bech32Address, Bech32ContractId},
+    constants::BASE_ASSET_ID,
+    errors::{Error, Result},
+    input::Input,
+    resource::Resource,
+    transaction::{Transaction, TxParameters},
+    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+};
+use provider::ResourceFilter;
+use thiserror::Error;
 pub use wallet::{Wallet, WalletUnlocked};
 
-use crate::provider::Provider;
+use crate::{accounts_utils::extract_message_id, provider::Provider};
 
 pub mod accounts_utils;
 pub mod predicate;

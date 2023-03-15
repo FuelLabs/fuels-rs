@@ -6,15 +6,15 @@ use fuel_tx::{
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_signers::{provider::Provider, Account};
-use fuels_types::input::Input;
-use fuels_types::offsets::call_script_data_offset;
-use fuels_types::transaction_builders::ScriptTransactionBuilder;
 use fuels_types::{
     bech32::Bech32Address,
     constants::WORD_SIZE,
     errors::{Error, Result},
+    input::Input,
+    offsets::call_script_data_offset,
     param_types::ParamType,
     transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction_builders::ScriptTransactionBuilder,
 };
 use itertools::{chain, Itertools};
 
@@ -446,11 +446,11 @@ mod test {
 
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_signers::WalletUnlocked;
-    use fuels_types::resource::Resource;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         param_types::ParamType,
+        resource::Resource,
         Token,
     };
     use rand::Rng;

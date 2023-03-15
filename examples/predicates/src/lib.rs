@@ -1,8 +1,10 @@
 #[cfg(test)]
 mod tests {
-    use fuels::accounts::predicate::Predicate;
-    use fuels::accounts::Account;
-    use fuels::{prelude::*, types::B512};
+    use fuels::{
+        accounts::{predicate::Predicate, Account},
+        prelude::*,
+        types::B512,
+    };
 
     #[tokio::test]
     async fn predicate_example() -> Result<()> {

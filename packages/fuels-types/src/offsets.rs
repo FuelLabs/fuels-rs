@@ -1,9 +1,9 @@
 use fuel_asm::Instruction;
-use fuel_tx::field::Salt;
-use fuel_tx::Bytes32;
-use fuel_tx::{field::Script, ConsensusParameters, InputRepr};
-use fuel_types::bytes::padded_len_usize;
-use fuel_types::ContractId;
+use fuel_tx::{
+    field::{Salt, Script},
+    Bytes32, ConsensusParameters, InputRepr,
+};
+use fuel_types::{bytes::padded_len_usize, ContractId};
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.

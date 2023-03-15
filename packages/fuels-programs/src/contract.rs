@@ -6,22 +6,20 @@ use fuel_tx::{
     StorageSlot,
 };
 use fuel_vm::fuel_asm::PanicReason;
-
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
 use fuels_signers::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_types::errors::Error::ProviderError;
-use fuels_types::transaction_builders::{CreateTransactionBuilder, TransactionBuilder};
-use fuels_types::unresolved_bytes::UnresolvedBytes;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
-    errors::{error, Error, Result},
+    errors::{error, Error, Error::ProviderError, Result},
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+    unresolved_bytes::UnresolvedBytes,
     Selector, Token,
 };
 use itertools::Itertools;

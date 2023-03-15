@@ -4,8 +4,7 @@ use fuels::{
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
-use fuels_signers::predicate::Predicate;
-use fuels_signers::Account;
+use fuels_signers::{predicate::Predicate, Account};
 use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
 async fn assert_address_balance(

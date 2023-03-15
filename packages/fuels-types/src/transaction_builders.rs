@@ -1,20 +1,22 @@
 #![cfg(feature = "std")]
 
-use crate::coin::Coin;
-use crate::constants::{BASE_ASSET_ID, WORD_SIZE};
-use crate::errors::{Error, Result};
-use crate::input::Input;
-use crate::message::Message;
-use crate::offsets;
-use crate::resource::Resource;
-use crate::transaction::{CreateTransaction, ScriptTransaction, TxParameters};
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
     ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
 };
-use fuel_types::bytes::padded_len_usize;
-use fuel_types::{Address, AssetId, Bytes32, ContractId, Salt};
+use fuel_types::{bytes::padded_len_usize, Address, AssetId, Bytes32, ContractId, Salt};
+
+use crate::{
+    coin::Coin,
+    constants::{BASE_ASSET_ID, WORD_SIZE},
+    errors::{Error, Result},
+    input::Input,
+    message::Message,
+    offsets,
+    resource::Resource,
+    transaction::{CreateTransaction, ScriptTransaction, TxParameters},
+};
 
 pub trait TransactionBuilder<T> {
     fn build(self) -> Result<T>;

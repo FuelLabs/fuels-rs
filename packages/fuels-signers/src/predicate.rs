@@ -1,18 +1,17 @@
 use std::fmt::Debug;
 
 use fuel_types::AssetId;
+use fuels_types::{
+    bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
+    transaction::Transaction, transaction_builders::TransactionBuilder,
+    unresolved_bytes::UnresolvedBytes,
+};
 
-use fuels_types::bech32::Bech32Address;
-use fuels_types::constants::BASE_ASSET_ID;
-use fuels_types::errors::Result;
-use fuels_types::input::Input;
-use fuels_types::transaction::Transaction;
-use fuels_types::transaction_builders::TransactionBuilder;
-use fuels_types::unresolved_bytes::UnresolvedBytes;
-
-use crate::accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee};
-use crate::provider::Provider;
-use crate::{Account, AccountError, AccountResult};
+use crate::{
+    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
+    provider::Provider,
+    Account, AccountError, AccountResult,
+};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
