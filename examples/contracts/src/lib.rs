@@ -1,9 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{types::{
-        errors::{error, Error, Result},
-        Bits256, unresolved_bytes::UnresolvedBytes,
-    }, accounts::predicate::Predicate};
+    use fuels::{
+        accounts::predicate::Predicate,
+        types::{
+            errors::{error, Error, Result},
+            unresolved_bytes::UnresolvedBytes,
+            Bits256,
+        },
+    };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -659,7 +663,8 @@ mod tests {
         )
         .await?;
 
-        let contract_methods_wallet = MyContract::new(contract_id.clone(), wallet.clone()).methods();
+        let contract_methods_wallet =
+            MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let predicate = Predicate {
             address: Bech32Address::default(),
