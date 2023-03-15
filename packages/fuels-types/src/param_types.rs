@@ -124,7 +124,7 @@ impl ParamType {
     }
 
     pub fn is_vm_heap_type(&self) -> bool {
-        matches!(self, ParamType::Vector(..)) || matches!(self, ParamType::Bytes)
+        matches!(self, ParamType::Vector(..) | ParamType::Bytes)
     }
 
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
@@ -1320,7 +1320,7 @@ mod tests {
     }
 
     #[test]
-    fn contains_nested_heap_type_nested_vector_complex_type() -> Result<()> {
+    fn test_complex_types_for_nested_heap_types() -> Result<()> {
         let base_vector = ParamType::Vector(Box::from(ParamType::U8));
         let tuples_no_nested_vec = vec![
             ("Bim".to_string(), ParamType::U16),

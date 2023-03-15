@@ -277,7 +277,7 @@ pub(crate) fn get_single_call_instructions(
             // Load the word located at the address contained in RET, it's a word that
             // translates to a heap address. 0x15 is a free register.
             op::lw(0x15, RegId::RET, 0),
-            // We know a Vec/Bytes struct has its third byte contain the length of the underlying
+            // We know a Vec/Bytes struct has its third WORD contain the length of the underlying
             // vector, so use a 2 offset to store the length in 0x16, which is a free register.
             op::lw(0x16, RegId::RET, 2),
             // The in-memory size of the type is (in-memory size of the inner type) * length
