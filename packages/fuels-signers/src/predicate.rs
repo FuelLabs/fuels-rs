@@ -3,8 +3,7 @@ use std::fmt::Debug;
 use fuel_types::AssetId;
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
-    transaction::Transaction, transaction_builders::TransactionBuilder,
-    unresolved_bytes::UnresolvedBytes,
+    transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
 };
 
 use crate::{
@@ -74,12 +73,12 @@ impl Account for Predicate {
     ///
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    async fn add_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    async fn add_fee_resources<Tb: TransactionBuilder>(
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
         _witness_index: Option<u8>,
-    ) -> Result<Tx> {
+    ) -> Result<Tb::TxType> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
 
         tb = tb.set_consensus_parameters(consensus_parameters);

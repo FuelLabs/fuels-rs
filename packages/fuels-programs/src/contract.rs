@@ -178,19 +178,9 @@ impl DeployConfiguration {
 /// compiling, deploying, and running transactions against a contract.
 /// The contract has a wallet attribute, used to pay for transactions and sign them.
 /// It allows doing calls without passing a wallet/signer each time.
-pub struct Contract<T> {
-    pub compiled_contract: CompiledContract,
-    pub account: T,
-}
+pub struct Contract;
 
-impl<T: Account + Clone> Contract<T> {
-    pub fn new(compiled_contract: CompiledContract, account: T) -> Self {
-        Self {
-            compiled_contract,
-            account,
-        }
-    }
-
+impl Contract {
     pub fn compute_contract_id_and_state_root(
         compiled_contract: &CompiledContract,
     ) -> (ContractId, Bytes32) {
@@ -222,7 +212,7 @@ impl<T: Account + Clone> Contract<T> {
     /// For more details see `code_gen` in `fuels-core`.
     ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Parameterize + Debug>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account + Clone>(
         provider: &Provider,
         contract_id: Bech32ContractId,
         account: &T,
@@ -236,7 +226,7 @@ impl<T: Account + Clone> Contract<T> {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Contract::<T>::should_compute_custom_input_offset(args);
+        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
@@ -285,13 +275,13 @@ impl<T: Account + Clone> Contract<T> {
     /// Loads a compiled contract and deploys it to a running node
     pub async fn deploy(
         binary_filepath: &str,
-        wallet: &T,
+        account: &impl Account,
         configuration: DeployConfiguration,
     ) -> Result<Bech32ContractId> {
         let tx_parameters = configuration.tx_parameters;
         let compiled_contract = Self::load_contract(binary_filepath, configuration)?;
 
-        Self::deploy_loaded(compiled_contract, wallet, tx_parameters).await
+        Self::deploy_loaded(compiled_contract, account, tx_parameters).await
     }
 
     /// Deploys a compiled contract to a running node
@@ -299,10 +289,10 @@ impl<T: Account + Clone> Contract<T> {
     /// wallet will also receive the change.
     async fn deploy_loaded(
         compiled_contract: CompiledContract,
-        account: &T,
+        account: &impl Account,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (tb, contract_id) = Self::contract_deployment_transaction(compiled_contract, params)?;
+        let (tb, contract_id) = Self::contract_deployment_transaction(compiled_contract, params);
 
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
@@ -368,7 +358,7 @@ impl<T: Account + Clone> Contract<T> {
     fn contract_deployment_transaction(
         compiled_contract: CompiledContract,
         params: TxParameters,
-    ) -> Result<(CreateTransactionBuilder, Bech32ContractId)> {
+    ) -> (CreateTransactionBuilder, Bech32ContractId) {
         let (contract_id, state_root) =
             Self::compute_contract_id_and_state_root(&compiled_contract);
         let bytecode_witness_index = 0;
@@ -383,7 +373,7 @@ impl<T: Account + Clone> Contract<T> {
             .set_outputs(outputs)
             .set_witnesses(witnesses);
 
-        Ok((tb, contract_id.into()))
+        (tb, contract_id.into())
     }
 
     fn get_storage_slots(configuration: StorageConfiguration) -> Result<Vec<StorageSlot>> {
@@ -624,7 +614,7 @@ fn extract_vec_data<'a>(
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
-pub struct ContractCallHandler<T, D> {
+pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub account: T,
@@ -633,7 +623,7 @@ pub struct ContractCallHandler<T, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T, D> ContractCallHandler<T, D>
+impl<T: Account, D> ContractCallHandler<T, D>
 where
     T: fuels_signers::Account,
     D: Tokenizable + Debug,
@@ -772,7 +762,7 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
-            &self.tx_parameters,
+            self.tx_parameters,
             &self.account,
         )
         .await
@@ -878,14 +868,14 @@ where
 #[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
-pub struct MultiContractCallHandler<T> {
+pub struct MultiContractCallHandler<T: Account> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
     pub account: T,
 }
 
-impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
+impl<T: Account> MultiContractCallHandler<T> {
     pub fn new(account: T) -> Self {
         Self {
             contract_calls: vec![],
@@ -921,7 +911,7 @@ impl<T: fuels_signers::Account> MultiContractCallHandler<T> {
             panic!("No calls added. Have you used '.add_calls()'?");
         }
 
-        build_tx_from_contract_calls(&self.contract_calls, &self.tx_parameters, &self.account).await
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

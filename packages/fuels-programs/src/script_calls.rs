@@ -2,7 +2,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_signers::provider::Provider;
+use fuels_signers::{provider::Provider, Account};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -54,7 +54,7 @@ impl ScriptCall {
 #[derive(Debug)]
 #[must_use = "script calls do nothing unless you `call` them"]
 /// Helper that handles submitting a script call to a client and formatting the response
-pub struct ScriptCallHandler<T, D> {
+pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
     pub account: T,
@@ -63,7 +63,7 @@ pub struct ScriptCallHandler<T, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: fuels_signers::Account + Clone, D> ScriptCallHandler<T, D>
+impl<T: Account + Clone, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
 {
@@ -175,7 +175,6 @@ where
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
-        // TODO: previous_base_amount
         let tx = self.account.add_fee_resources(tb, 0, None).await?;
 
         tx.check_without_signatures(

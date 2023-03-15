@@ -151,7 +151,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let is_payable = abi_fun.is_payable();
     let body = quote! {
             let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
-            ::fuels::programs::contract::Contract::<T>::method_hash(
+            ::fuels::programs::contract::Contract::method_hash(
                 &provider,
                 self.contract_id.clone(),
                 &self.account,
@@ -337,7 +337,7 @@ mod tests {
                 s_2: self::MyStruct2
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
                 let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
-                ::fuels::programs::contract::Contract::<T>::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.account,
@@ -401,7 +401,7 @@ mod tests {
             #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
                 let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
-                ::fuels::programs::contract::Contract::<T>::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.account,
@@ -513,7 +513,7 @@ mod tests {
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
                 let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
-                ::fuels::programs::contract::Contract::<T>::method_hash(
+                ::fuels::programs::contract::Contract::method_hash(
                     &provider,
                     self.contract_id.clone(),
                     &self.account,

@@ -136,12 +136,12 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         ]
     }
 
-    async fn add_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    async fn add_fee_resources<Tb: TransactionBuilder + Send>(
         &self,
         tb: Tb,
         previous_base_amount: u64,
         witness_index: Option<u8>,
-    ) -> Result<Tx>;
+    ) -> Result<Tb::TxType>;
 
     /// Transfer funds from this wallet to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.

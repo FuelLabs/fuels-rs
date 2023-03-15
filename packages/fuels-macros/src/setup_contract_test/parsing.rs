@@ -23,6 +23,7 @@ trait MacroCommand {
         }
     }
 }
+
 pub(crate) struct InitializeWallet {
     pub(crate) span: Span,
     pub(crate) names: Vec<LitStr>,

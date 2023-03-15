@@ -33,10 +33,10 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls<T: Account>(
+pub async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: &TxParameters,
-    account: &T,
+    tx_parameters: TxParameters,
+    account: &impl Account,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.provider()?.consensus_parameters().await?;
 
@@ -62,7 +62,7 @@ pub async fn build_tx_from_contract_calls<T: Account>(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, *tx_parameters)
+    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
         .set_script(script)
         .set_script_data(script_data.clone());
 
@@ -290,10 +290,10 @@ pub(crate) fn get_single_call_instructions(
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
 /// and created ([`Output`]s) by the transaction
-pub(crate) fn get_transaction_inputs_outputs<T: Account>(
+pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     asset_inputs: Vec<Input>,
-    account: &T,
+    account: &impl Account,
 ) -> (Vec<Input>, Vec<Output>) {
     let asset_ids = extract_unique_asset_ids(&asset_inputs);
     let contract_ids = extract_unique_contract_ids(calls);

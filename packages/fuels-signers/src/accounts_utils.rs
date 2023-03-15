@@ -6,14 +6,11 @@ use fuels_types::{
 };
 
 pub fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
-    receipts
-        .iter()
-        .find(|r| matches!(r, Receipt::MessageOut { .. }))
-        .and_then(|m| m.message_id())
+    receipts.iter().find_map(|m| m.message_id())
 }
 
-pub fn calculate_base_amount_with_fee<Tx, Tb: TransactionBuilder<Tx>>(
-    tb: &Tb,
+pub fn calculate_base_amount_with_fee(
+    tb: &impl TransactionBuilder,
     consensus_params: &ConsensusParameters,
     previous_base_amount: u64,
 ) -> u64 {
@@ -36,22 +33,27 @@ pub fn calculate_base_amount_with_fee<Tx, Tb: TransactionBuilder<Tx>>(
     }
     new_base_amount
 }
-pub fn adjust_inputs<Tx, Tb: TransactionBuilder<Tx>>(tb: &mut Tb, new_base_inputs: Vec<Input>) {
-    let (_, remaining_inputs): (Vec<_>, Vec<_>) = tb.inputs().iter().cloned().partition(|input| {
-        matches!(input , Input::ResourceSigned { resource , .. } if resource.asset_id() == BASE_ASSET_ID) ||
-            matches!(input , Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
-    });
 
-    let adjusted_inputs: ::std::vec::Vec<_> = remaining_inputs
-        .into_iter()
-        .chain(new_base_inputs.into_iter())
+pub fn adjust_inputs(
+    tb: &mut impl TransactionBuilder,
+    new_base_inputs: impl IntoIterator<Item = Input>,
+) {
+    let adjusted_inputs = tb
+        .inputs()
+        .iter()
+        .filter(|input| {
+            !matches!(input , Input::ResourceSigned { resource , .. }
+                | Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
+        })
+        .cloned()
+        .chain(new_base_inputs)
         .collect();
 
     *tb.inputs_mut() = adjusted_inputs
 }
 
-pub fn adjust_outputs<Tx, Tb: TransactionBuilder<Tx>>(
-    tb: &mut Tb,
+pub fn adjust_outputs(
+    tb: &mut impl TransactionBuilder,
     address: &Bech32Address,
     new_base_amount: u64,
 ) {
@@ -60,7 +62,7 @@ pub fn adjust_outputs<Tx, Tb: TransactionBuilder<Tx>>(
                                         if asset_id == & BASE_ASSET_ID)
     });
 
-    if !is_base_change_present && new_base_amount != 0 {
+    if is_base_change_present || new_base_amount == 0 {
         tb.outputs_mut()
             .push(Output::change(address.into(), 0, BASE_ASSET_ID));
     }

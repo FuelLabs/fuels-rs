@@ -269,12 +269,12 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    async fn add_fee_resources<Tx: Transaction + Send, Tb: TransactionBuilder<Tx> + Send>(
+    async fn add_fee_resources<Tb: TransactionBuilder>(
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
         witness_index: Option<u8>,
-    ) -> Result<Tx> {
+    ) -> Result<Tb::TxType> {
         let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
         tb = tb.set_consensus_parameters(consensus_parameters);
 

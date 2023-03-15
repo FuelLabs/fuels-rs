@@ -15,11 +15,13 @@ use crate::{
     message::Message,
     offsets,
     resource::Resource,
-    transaction::{CreateTransaction, ScriptTransaction, TxParameters},
+    transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
 };
 
-pub trait TransactionBuilder<T> {
-    fn build(self) -> Result<T>;
+pub trait TransactionBuilder: Send {
+    type TxType: Transaction + Send;
+
+    fn build(self) -> Result<Self::TxType>;
 
     fn is_using_predicates(&self) -> bool;
 
@@ -49,7 +51,8 @@ pub trait TransactionBuilder<T> {
 
 macro_rules! impl_tx_trait {
     ($ty: ident, $tx_ty: ident) => {
-        impl TransactionBuilder<$tx_ty> for $ty {
+        impl TransactionBuilder for $ty {
+            type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
                 let base_offset = if self.is_using_predicates() {
                     let params = self

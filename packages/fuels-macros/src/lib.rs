@@ -76,6 +76,7 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 #[proc_macro]
 pub fn setup_contract_test(input: TokenStream) -> TokenStream {
     let test_contract_commands = parse_macro_input!(input as TestContractCommands);
+
     generate_setup_contract_test_code(test_contract_commands)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
