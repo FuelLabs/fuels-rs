@@ -136,7 +136,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         ]
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder + Send>(
+    async fn add_fee_resources<Tb: TransactionBuilder>(
         &self,
         tb: Tb,
         previous_base_amount: u64,
