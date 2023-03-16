@@ -86,9 +86,9 @@ impl Wallet {
         Ok(self.provider()?.get_coins(&self.address, asset_id).await?)
     }
 
-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
     pub async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
@@ -290,13 +290,13 @@ impl Account for WalletUnlocked {
 
         let mut tx = tb.build()?;
 
-        self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(&mut tx)?;
 
         Ok(tx)
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
     type Error = AccountError;
@@ -309,10 +309,7 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(
-        &self,
-        tx: &mut Tx,
-    ) -> AccountResult<Signature> {
+    fn sign_transaction(&self, tx: &mut impl Transaction) -> AccountResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because

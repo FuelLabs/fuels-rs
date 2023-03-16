@@ -8,8 +8,9 @@ use fuel_tx::{Input, MessageId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum MessageStatus {
+    #[default]
     Unspent,
     Spent,
 }

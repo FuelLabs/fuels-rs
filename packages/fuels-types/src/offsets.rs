@@ -14,6 +14,9 @@ pub fn base_offset_script(consensus_parameters: &ConsensusParameters) -> usize {
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.
 pub fn base_offset_create(consensus_parameters: &ConsensusParameters) -> usize {
+    // The easiest way to get the offset of `fuel_tx::Create` is to get the offset of the last field
+    // of `Create` -- i.e. `salt` and skip it by adding its length.
+    // This should be updated if `fuel_tx::Create` ever adds more fields after `salt`.
     consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
 }
 
@@ -46,14 +49,12 @@ pub fn message_predicate_data_offset(message_data_len: usize, code_len: usize) -
 }
 
 pub fn coin_signed_data_offset() -> usize {
-    // temporary solution
     InputRepr::Coin
         .coin_predicate_offset()
         .expect("should have coin offset")
 }
 
 pub fn message_signed_data_offset(message_data_len: usize) -> usize {
-    // temporary solution
     InputRepr::Message
         .data_offset()
         .expect("should have data offset")
@@ -61,5 +62,9 @@ pub fn message_signed_data_offset(message_data_len: usize) -> usize {
 }
 
 pub fn contract_input_offset() -> usize {
+    // The easiest way to get the contract input offset is to get the offset of the last field of
+    // `InputRepr::Contract` -- i.e. the `contract_id` and then add its len to skip the last field.
+    // Care should be taken to update this should `InputRepr::Contract` ever get another field after
+    // this last one.
     InputRepr::Contract.contract_id_offset().unwrap() + ContractId::LEN
 }

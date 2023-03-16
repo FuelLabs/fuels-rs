@@ -41,9 +41,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Transaction + Send>(
+    fn sign_transaction(
         &self,
-        message: &mut Tx,
+        message: &mut impl Transaction,
     ) -> std::result::Result<Signature, Self::Error>;
 }
 
@@ -136,14 +136,14 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         ]
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder + Send>(
+    async fn add_fee_resources<Tb: TransactionBuilder>(
         &self,
         tb: Tb,
         previous_base_amount: u64,
         witness_index: Option<u8>,
     ) -> Result<Tb::TxType>;
 
-    /// Transfer funds from this wallet to another `Address`.
+    /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
     async fn transfer(
@@ -165,11 +165,15 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
-        let tx = if asset_id == AssetId::default() {
-            self.add_fee_resources(tx_builder, amount, None).await?
+        let previous_base_amount = if asset_id == AssetId::default() {
+            amount
         } else {
-            self.add_fee_resources(tx_builder, 0, None).await?
+            0
         };
+
+        let tx = self
+            .add_fee_resources(tx_builder, previous_base_amount, None)
+            .await?;
 
         let receipts = self.provider()?.send_transaction(&tx).await?;
 
@@ -178,7 +182,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
 
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
+    /// Fails if balance for `asset_id` is larger than this account's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!
@@ -360,7 +364,7 @@ mod tests {
         .into();
 
         // Sign the transaction.
-        let signature = wallet.sign_transaction(&mut tx).await?;
+        let signature = wallet.sign_transaction(&mut tx)?;
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be

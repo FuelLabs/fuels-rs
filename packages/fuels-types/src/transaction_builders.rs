@@ -19,11 +19,9 @@ use crate::{
 };
 
 pub trait TransactionBuilder: Send {
-    type TxType: Transaction + Send;
+    type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
-
-    fn is_using_predicates(&self) -> bool;
 
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
@@ -50,7 +48,7 @@ pub trait TransactionBuilder: Send {
 }
 
 macro_rules! impl_tx_trait {
-    ($ty: ident, $tx_ty: ident) => {
+    ($ty: ty, $tx_ty: ty) => {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
@@ -64,12 +62,6 @@ macro_rules! impl_tx_trait {
                 };
 
                 Ok(self.convert_to_fuel_tx(base_offset))
-            }
-
-            fn is_using_predicates(&self) -> bool {
-                self.inputs
-                    .iter()
-                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
@@ -156,6 +148,14 @@ macro_rules! impl_tx_trait {
 
             fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
                 &mut self.witnesses
+            }
+        }
+
+        impl $ty {
+            fn is_using_predicates(&self) -> bool {
+                self.inputs()
+                    .iter()
+                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
         }
     };
@@ -367,28 +367,30 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
         .iter()
         .map(|input| match input {
             Input::ResourcePredicate {
-                resource,
+                resource: Resource::Coin(coin),
                 code,
                 data,
-            } => match resource {
-                Resource::Coin(coin) => {
-                    new_offset += offsets::coin_predicate_data_offset(code.len());
+            } => {
+                new_offset += offsets::coin_predicate_data_offset(code.len());
 
-                    let data = data.clone().resolve(new_offset as u64);
-                    new_offset += data.len();
+                let data = data.clone().resolve(new_offset as u64);
+                new_offset += data.len();
 
-                    create_coin_predicate(coin.clone(), coin.asset_id, code.clone(), data)
-                }
-                Resource::Message(message) => {
-                    new_offset +=
-                        offsets::message_predicate_data_offset(message.data.len(), code.len());
+                create_coin_predicate(coin.clone(), coin.asset_id, code.clone(), data)
+            }
+            Input::ResourcePredicate {
+                resource: Resource::Message(message),
+                code,
+                data,
+            } => {
+                new_offset +=
+                    offsets::message_predicate_data_offset(message.data.len(), code.len());
 
-                    let data = data.clone().resolve(new_offset as u64);
-                    new_offset += data.len();
+                let data = data.clone().resolve(new_offset as u64);
+                new_offset += data.len();
 
-                    create_message_predicate(message.clone(), code.clone(), data)
-                }
-            },
+                create_message_predicate(message.clone(), code.clone(), data)
+            }
             Input::ResourceSigned {
                 resource,
                 witness_index,
