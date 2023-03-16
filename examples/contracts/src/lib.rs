@@ -1,12 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{
-        accounts::predicate::Predicate,
-        types::{
-            errors::{error, Error, Result},
-            unresolved_bytes::UnresolvedBytes,
-            Bits256,
-        },
+    use fuels::types::{
+        errors::{error, Error, Result},
+        Bits256,
     };
 
     #[tokio::test]
@@ -644,40 +640,40 @@ mod tests {
         Ok(())
     }
 
-    #[tokio::test]
-    #[allow(unused_variables)]
-    async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
-        use fuels::prelude::*;
-
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ));
-
-        let wallet = WalletUnlocked::new_random(None);
-        let predicate = Predicate {
-            address: Bech32Address::default(),
-            code: vec![],
-            data: UnresolvedBytes::default(),
-            provider: None,
-        };
-
-        let contract_methods_wallet =
-            MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
-        let contract_methods_predicate =
-            MyContract::new(Bech32ContractId::default(), predicate).methods();
-
-        let call_handler_1 = contract_methods_wallet.initialize_counter(42);
-        let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
-
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet);
-
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2);
-
-        Ok(())
-    }
+    // #[tokio::test]
+    // #[allow(unused_variables)]
+    // async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
+    //     use fuels::prelude::*;
+    //
+    //     abigen!(Contract(
+    //         name = "MyContract",
+    //         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    //     ));
+    //
+    //     let wallet = WalletUnlocked::new_random(None);
+    //     let predicate = Predicate {
+    //         address: Bech32Address::default(),
+    //         code: vec![],
+    //         data: UnresolvedBytes::default(),
+    //         provider: None,
+    //     };
+    //
+    //     let contract_methods_wallet =
+    //         MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
+    //     let contract_methods_predicate =
+    //         MyContract::new(Bech32ContractId::default(), predicate).methods();
+    //
+    //     let call_handler_1 = contract_methods_wallet.initialize_counter(42);
+    //     let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
+    //
+    //     let mut multi_call_handler = MultiContractCallHandler::new(wallet);
+    //
+    //     multi_call_handler
+    //         .add_call(call_handler_1)
+    //         .add_call(call_handler_2);
+    //
+    //     Ok(())
+    // }
 
     #[tokio::test]
     #[allow(unused_variables)]

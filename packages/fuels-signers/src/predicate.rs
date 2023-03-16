@@ -1,6 +1,9 @@
+use fuel_tx::Contract;
+use std::borrow::Borrow;
 use std::fmt::Debug;
+use std::fs;
 
-use fuel_types::AssetId;
+use fuel_types::{Address, AssetId};
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
     transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
@@ -14,7 +17,7 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
-    pub address: Bech32Address,
+    address: Bech32Address,
     pub code: Vec<u8>,
     pub data: UnresolvedBytes,
     pub provider: Option<Provider>,
@@ -31,8 +34,25 @@ impl Predicate {
         self.provider = Some(provider)
     }
 
-    pub fn address(&self) -> &Bech32Address {
-        &self.address
+    pub fn address(&self) -> Bech32Address {
+        let address: Address = (*Contract::root_from_code(&self.code)).into();
+        address.into()
+    }
+
+    pub fn load_from(file_path: &str) -> Result<Self> {
+        let code = fs::read(file_path)?;
+        let address: Address = (*Contract::root_from_code(&code)).into();
+        Ok(Self {
+            address: address.into(),
+            code,
+            data: Default::default(),
+            provider: None,
+        })
+    }
+
+    pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
+        self.data = data;
+        self
     }
 }
 
@@ -91,7 +111,7 @@ impl Account for Predicate {
             .await?;
 
         adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address(), new_base_amount);
+        adjust_outputs(&mut tb, self.address().borrow(), new_base_amount);
 
         let tx = tb.build()?;
 

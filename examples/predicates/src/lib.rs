@@ -73,11 +73,13 @@ mod tests {
         // ANCHOR_END: predicate_signatures
 
         // ANCHOR: predicate_load
-        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));
+        abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));
 
-        let mut predicate: Predicate = MyPredicate::load_from(
-            "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
-        )?.set_data(signatures).get_predicate();
+        let predicate_data = MyPredicateEncoder::encode_data(signatures);
+
+        let mut predicate: Predicate =
+            Predicate::load_from("../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin")?
+                .with_data(predicate_data);
 
         predicate.set_provider(provider.clone());
         // ANCHOR_END: predicate_load
@@ -87,7 +89,7 @@ mod tests {
 
         wallet
             .transfer(
-                predicate.address(),
+                &predicate.address(),
                 amount_to_predicate,
                 asset_id,
                 TxParameters::default(),
@@ -95,7 +97,7 @@ mod tests {
             .await?;
 
         let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+            .get_asset_balance(&predicate.address(), asset_id)
             .await?;
         assert_eq!(predicate_balance, amount_to_predicate);
         // ANCHOR_END: predicate_receive
@@ -119,7 +121,7 @@ mod tests {
         );
 
         let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+            .get_asset_balance(&predicate.address(), asset_id)
             .await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
@@ -145,15 +147,16 @@ mod tests {
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        abigen!(Predicate(name="MyPredicateHandler", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
-
-        let predicate_handler = MyPredicateHandler::load_from(
-            "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
-        )?;
+        abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: set_predicate_data
-        let mut predicate = predicate_handler.set_data(4096, 4096).get_predicate();
+        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+
+        let mut predicate: Predicate = Predicate::load_from(
+            "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
+        )?
+        .with_data(predicate_data);
 
         predicate.set_provider(first_wallet.provider()?.clone());
         // ANCHOR_END: set_predicate_data
@@ -161,13 +164,13 @@ mod tests {
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
         first_wallet
-            .transfer(predicate.address(), 500, asset_id, TxParameters::default())
+            .transfer(&predicate.address(), 500, asset_id, TxParameters::default())
             .await?;
 
         // Check predicate balance.
         let balance = first_wallet
             .provider()?
-            .get_asset_balance(predicate.address(), asset_id)
+            .get_asset_balance(&predicate.address(), asset_id)
             .await?;
 
         assert_eq!(balance, 500);
@@ -191,7 +194,7 @@ mod tests {
         // Predicate balance is zero.
         let balance = first_wallet
             .provider()?
-            .get_asset_balance(predicate.address(), AssetId::default())
+            .get_asset_balance(&predicate.address(), AssetId::default())
             .await?;
 
         assert_eq!(balance, 0);

@@ -18,6 +18,7 @@ pub(crate) struct FunctionGenerator {
     output_type: TokenStream,
     body: TokenStream,
     doc: Option<String>,
+    self_as_parameter: bool,
 }
 
 impl FunctionGenerator {
@@ -33,6 +34,7 @@ impl FunctionGenerator {
             output_type: output_type.to_token_stream(),
             body: Default::default(),
             doc: None,
+            self_as_parameter: true,
         })
     }
 
@@ -40,6 +42,12 @@ impl FunctionGenerator {
         self.name = name;
         self
     }
+
+    pub fn set_self_as_parameter(&mut self, self_as_parameter: bool) -> &mut Self {
+        self.self_as_parameter = self_as_parameter;
+        self
+    }
+
     pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
         self.body = body;
         self
@@ -106,9 +114,15 @@ impl From<&FunctionGenerator> for TokenStream {
         let output_type = fun.output_type();
         let body = &fun.body;
 
+        let params = if fun.self_as_parameter {
+            quote! { &self #(,#arg_declarations)* }
+        } else {
+            quote! { #(#arg_declarations,)* }
+        };
+
         quote! {
             #doc
-            pub fn #name(&self #(,#arg_declarations)*) -> #output_type {
+            pub fn #name(#params) -> #output_type {
                 #body
             }
         }
