@@ -654,30 +654,23 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id = Contract::deploy(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            DeployConfiguration::default(),
-        )
-        .await?;
-
-        let contract_methods_wallet =
-            MyContract::new(contract_id.clone(), wallet.clone()).methods();
-
+        let wallet = WalletUnlocked::new_random(None);
         let predicate = Predicate {
             address: Bech32Address::default(),
             code: vec![],
             data: UnresolvedBytes::default(),
-            provider: Some(wallet.provider()?.clone()),
+            provider: None,
         };
-        let contract_methods_predicate = MyContract::new(contract_id, predicate).methods();
+
+        let contract_methods_wallet =
+            MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
+        let contract_methods_predicate =
+            MyContract::new(Bech32ContractId::default(), predicate).methods();
 
         let call_handler_1 = contract_methods_wallet.initialize_counter(42);
         let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet);
 
         multi_call_handler
             .add_call(call_handler_1)
