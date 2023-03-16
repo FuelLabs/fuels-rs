@@ -20,13 +20,7 @@ pub struct Predicate {
     pub provider: Option<Provider>,
 }
 
-type PredicateResult<T> = std::result::Result<T, AccountError>;
-
 impl Predicate {
-    pub fn provider(&self) -> PredicateResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::NoProvider)
-    }
-
     pub fn set_provider(&mut self, provider: Provider) {
         self.provider = Some(provider)
     }

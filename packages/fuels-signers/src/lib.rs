@@ -143,7 +143,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
         witness_index: Option<u8>,
     ) -> Result<Tb::TxType>;
 
-    /// Transfer funds from this wallet to another `Address`.
+    /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
     /// Returns the transaction ID that was sent and the list of receipts.
     async fn transfer(
@@ -165,11 +165,15 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .set_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
-        let tx = if asset_id == AssetId::default() {
-            self.add_fee_resources(tx_builder, amount, None).await?
+        let previous_base_amount = if asset_id == AssetId::default() {
+            amount
         } else {
-            self.add_fee_resources(tx_builder, 0, None).await?
+            0
         };
+
+        let tx = self
+            .add_fee_resources(tx_builder, previous_base_amount, None)
+            .await?;
 
         let receipts = self.provider()?.send_transaction(&tx).await?;
 
@@ -178,7 +182,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
 
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
-    /// Fails if balance for `asset_id` is larger than this wallet's spendable balance.
+    /// Fails if balance for `asset_id` is larger than this account's spendable balance.
     /// Returns the corresponding transaction ID and the list of receipts.
     ///
     /// CAUTION !!!

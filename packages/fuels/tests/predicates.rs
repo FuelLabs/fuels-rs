@@ -123,7 +123,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         )
         .await?;
 
-    //     The predicate has received the funds
+    // The predicate has received the funds
     assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
     Ok(())
 }
@@ -768,7 +768,7 @@ async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
     let tx_params = TxParameters::new(1000000, 10000, 0);
-    //
+
     assert_eq!(
         *predicate
             .get_balances()

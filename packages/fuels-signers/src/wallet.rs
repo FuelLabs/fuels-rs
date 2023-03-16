@@ -86,9 +86,9 @@ impl Wallet {
         Ok(self.provider()?.get_coins(&self.address, asset_id).await?)
     }
 
-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
     pub async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
@@ -296,7 +296,7 @@ impl Account for WalletUnlocked {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(? Send))]
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
     type Error = AccountError;

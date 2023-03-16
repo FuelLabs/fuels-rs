@@ -623,9 +623,9 @@ pub struct ContractCallHandler<T: Account, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: Account, D> ContractCallHandler<T, D>
+impl<T, D> ContractCallHandler<T, D>
 where
-    T: fuels_signers::Account,
+    T: Account,
     D: Tokenizable + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
@@ -889,9 +889,9 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Adds a contract call to be bundled in the transaction
     /// Note that this is a builder method
-    pub fn add_call<D: Tokenizable, Z: Account>(
+    pub fn add_call(
         &mut self,
-        call_handler: ContractCallHandler<Z, D>,
+        call_handler: ContractCallHandler<impl Account, impl Tokenizable>,
     ) -> &mut Self {
         self.log_decoder.merge(call_handler.log_decoder);
         self.contract_calls.push(call_handler.contract_call);
