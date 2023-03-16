@@ -53,9 +53,7 @@ pub mod abigen_bindings {
         impl<T: Account + Clone> MyContractMethods<T> {
             #[doc = "Calls the contract's `initialize_counter` function"]
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                let provider = Account::provider(&self.account).expect("Provider not set up");
                 Contract::<T>::method_hash(
-                    provider,
                     self.contract_id.clone(),
                     &self.account,
                     function_selector::resolve_fn_selector(
@@ -70,9 +68,7 @@ pub mod abigen_bindings {
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                let provider = Account::provider(&self.account).expect("Provider not set up");
                 Contract::<T>::method_hash(
-                    provider,
                     self.contract_id.clone(),
                     &self.account,
                     function_selector::resolve_fn_selector(

@@ -150,9 +150,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
     let is_payable = abi_fun.is_payable();
     let body = quote! {
-            let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
             ::fuels::programs::contract::Contract::method_hash(
-                &provider,
                 self.contract_id.clone(),
                 &self.account,
                 #fn_selector,
@@ -336,9 +334,7 @@ mod tests {
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
-                let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
-                    &provider,
                     self.contract_id.clone(),
                     &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(
@@ -400,9 +396,7 @@ mod tests {
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
-                let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
-                    &provider,
                     self.contract_id.clone(),
                     &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(
@@ -512,9 +506,7 @@ mod tests {
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
-                let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up");
                 ::fuels::programs::contract::Contract::method_hash(
-                    &provider,
                     self.contract_id.clone(),
                     &self.account,
                     ::fuels::core::function_selector::resolve_fn_selector(

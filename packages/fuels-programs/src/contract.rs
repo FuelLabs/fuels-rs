@@ -7,10 +7,7 @@ use fuel_tx::{
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
-use fuels_signers::{
-    provider::{Provider, TransactionCost},
-    Account,
-};
+use fuels_signers::{provider::TransactionCost, Account};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -213,7 +210,6 @@ impl Contract {
     ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account + Clone>(
-        provider: &Provider,
         contract_id: Bech32ContractId,
         account: &T,
         signature: Selector,
@@ -247,7 +243,6 @@ impl Contract {
             contract_call,
             tx_parameters,
             account: account.clone(),
-            provider: provider.clone(),
             datatype: PhantomData,
             log_decoder,
         })
@@ -618,7 +613,6 @@ pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
     pub account: T,
-    pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
@@ -786,11 +780,12 @@ where
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
+        let provider = self.account.provider()?;
 
         let receipts = if simulate {
-            simulate_and_check_success(&self.provider, &tx).await?
+            simulate_and_check_success(provider, &tx).await?
         } else {
-            self.provider.send_transaction(&tx).await?
+            provider.send_transaction(&tx).await?
         };
 
         self.get_response(receipts)
@@ -841,9 +836,9 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
+        let provider = self.account.provider()?;
 
-        let transaction_cost = self
-            .provider
+        let transaction_cost = provider
             .estimate_transaction_cost(&script, tolerance)
             .await?;
 
