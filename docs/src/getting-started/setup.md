@@ -67,7 +67,7 @@ cargo test -- --nocapture
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "0.32"
+fuels = "0.38"
 ```
 
 > **Note** We're using version `0.32` of the SDK, which is the latest version at the time of this writing.
@@ -82,7 +82,7 @@ use fuels::prelude::*;
 
 Another way to experience the SDK is to look at the source code. The `packages/fuels/tests/` folder is full of integration tests that go through almost all aspects of the SDK.
 
-> **Note** Before running the tests, we need to build all the Sway test projects. The file `packages/fuels/Forc.toml` contains a `[workspace], which members are the paths to all integration tests. 
+> **Note** Before running the tests, we need to build all the Sway test projects. The file `packages/fuels/Forc.toml` contains a `[workspace], which members are the paths to all integration tests.
 > To build these tests, run the following command:
 
 ```
