@@ -60,7 +60,7 @@ impl Default for TxParameters {
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
-pub trait Transaction: Into<FuelTransaction> {
+pub trait Transaction: Into<FuelTransaction> + Send {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
     fn check_without_signatures(

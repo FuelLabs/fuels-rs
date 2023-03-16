@@ -290,7 +290,7 @@ impl Account for WalletUnlocked {
 
         let mut tx = tb.build()?;
 
-        self.sign_transaction(&mut tx).await?;
+        self.sign_transaction(&mut tx)?;
 
         Ok(tx)
     }
@@ -309,10 +309,7 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    async fn sign_transaction<Tx: Transaction + Send>(
-        &self,
-        tx: &mut Tx,
-    ) -> AccountResult<Signature> {
+    fn sign_transaction(&self, tx: &mut impl Transaction) -> AccountResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because

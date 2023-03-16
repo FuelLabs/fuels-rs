@@ -174,7 +174,7 @@ mod tests {
         let mut tx =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
                 .build()?;
-        wallet_1.sign_transaction(&mut tx).await?;
+        wallet_1.sign_transaction(&mut tx)?;
 
         let _receipts = provider.send_transaction(&tx).await?;
 

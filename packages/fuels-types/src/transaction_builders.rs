@@ -19,7 +19,7 @@ use crate::{
 };
 
 pub trait TransactionBuilder: Send {
-    type TxType: Transaction + Send;
+    type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
 

@@ -41,9 +41,9 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    async fn sign_transaction<Tx: Transaction + Send>(
+    fn sign_transaction(
         &self,
-        message: &mut Tx,
+        message: &mut impl Transaction,
     ) -> std::result::Result<Signature, Self::Error>;
 }
 
@@ -360,7 +360,7 @@ mod tests {
         .into();
 
         // Sign the transaction.
-        let signature = wallet.sign_transaction(&mut tx).await?;
+        let signature = wallet.sign_transaction(&mut tx)?;
         let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
 
         // Check if signature is what we expect it to be

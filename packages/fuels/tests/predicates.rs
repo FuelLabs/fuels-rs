@@ -962,7 +962,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
         .set_consensus_parameters(params)
         .build()?;
-    wallet.sign_transaction(&mut tx).await?;
+    wallet.sign_transaction(&mut tx)?;
 
     provider.send_transaction(&tx).await?;
 
