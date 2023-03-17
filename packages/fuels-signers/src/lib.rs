@@ -82,7 +82,7 @@ type AccountResult<T> = std::result::Result<T, AccountError>;
 pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync {
     fn address(&self) -> &Bech32Address;
 
-    fn provider(&self) -> AccountResult<&Provider>;
+    fn try_provider(&self) -> AccountResult<&Provider>;
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self;
 
@@ -91,21 +91,24 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync {
         request: PaginationRequest<String>,
     ) -> Result<PaginatedResult<TransactionResponse, String>> {
         Ok(self
-            .provider()?
+            .try_provider()?
             .get_transactions_by_owner(self.address(), request)
             .await?)
     }
 
     /// Gets all unspent coins of asset `asset_id` owned by the account.
     async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
-        Ok(self.provider()?.get_coins(self.address(), asset_id).await?)
+        Ok(self
+            .try_provider()?
+            .get_coins(self.address(), asset_id)
+            .await?)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
     /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
     /// of the UTXOs.
     async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
-        self.provider()?
+        self.try_provider()?
             .get_asset_balance(self.address(), *asset_id)
             .await
             .map_err(Into::into)
@@ -113,14 +116,14 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync {
 
     /// Gets all unspent messages owned by the account.
     async fn get_messages(&self) -> Result<Vec<Message>> {
-        Ok(self.provider()?.get_messages(self.address()).await?)
+        Ok(self.try_provider()?.get_messages(self.address()).await?)
     }
 
     /// Get all the spendable balances of all assets for the account. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.provider()?
+        self.try_provider()?
             .get_balances(self.address())
             .await
             .map_err(Into::into)
@@ -140,7 +143,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync {
             amount,
             ..Default::default()
         };
-        self.provider()?
+        self.try_provider()?
             .get_spendable_resources(filter)
             .await
             .map_err(Into::into)
@@ -198,7 +201,11 @@ pub trait Account: ViewOnlyAccount {
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+        let consensus_parameters = self
+            .try_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -214,7 +221,7 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
 
-        let receipts = self.provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -257,7 +264,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.provider()?.consensus_parameters().await?;
+        let params = self.try_provider()?.consensus_parameters().await?;
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -279,7 +286,7 @@ pub trait Account: ViewOnlyAccount {
         let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
         let tx_id = tx.id();
-        let receipts = self.provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -307,7 +314,7 @@ pub trait Account: ViewOnlyAccount {
         let tx = self.add_fee_resources(tb, amount, None).await?;
 
         let tx_id = tx.id().to_string();
-        let receipts = self.provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

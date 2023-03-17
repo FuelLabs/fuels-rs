@@ -72,7 +72,7 @@ impl ViewOnlyAccount for Predicate {
         self.address()
     }
 
-    fn provider(&self) -> AccountResult<&Provider> {
+    fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
     }
 
@@ -112,7 +112,11 @@ impl Account for Predicate {
         previous_base_amount: u64,
         _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+        let consensus_parameters = self
+            .try_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
 
         tb = tb.set_consensus_parameters(consensus_parameters);
 

@@ -295,7 +295,7 @@ impl Contract {
             .map_err(|err| ProviderError(format!("{err}")))?;
 
         let provider = account
-            .provider()
+            .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
 
@@ -780,7 +780,7 @@ where
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        let provider = self.account.provider()?;
+        let provider = self.account.try_provider()?;
 
         let receipts = if simulate {
             simulate_and_check_success(provider, &tx).await?
@@ -836,7 +836,7 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
-        let provider = self.account.provider()?;
+        let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
             .estimate_transaction_cost(&script, tolerance)
@@ -931,7 +931,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         &self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.provider()?;
+        let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
@@ -945,7 +945,7 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Simulates a call without needing to resolve the generic for the return type
     async fn simulate_without_decode(&self) -> Result<()> {
-        let provider = self.account.provider()?;
+        let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
         simulate_and_check_success(provider, &tx).await?;
@@ -1014,7 +1014,7 @@ impl<T: Account> MultiContractCallHandler<T> {
 
         let transaction_cost = self
             .account
-            .provider()?
+            .try_provider()?
             .estimate_transaction_cost(&script, tolerance)
             .await?;
 

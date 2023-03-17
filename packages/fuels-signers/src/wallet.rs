@@ -60,7 +60,7 @@ pub struct Wallet {
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Bech32Address,
-    pub provider: Option<Provider>,
+    provider: Option<Provider>,
 }
 
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
@@ -76,6 +76,10 @@ impl Wallet {
     /// Construct a Wallet from its given public address.
     pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
         Self { address, provider }
+    }
+
+    pub fn provider(&self) -> Option<&Provider> {
+        self.provider.as_ref()
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
@@ -104,7 +108,7 @@ impl ViewOnlyAccount for Wallet {
         self.address()
     }
 
-    fn provider(&self) -> AccountResult<&Provider> {
+    fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
     }
 
@@ -223,8 +227,8 @@ impl ViewOnlyAccount for WalletUnlocked {
         self.wallet.address()
     }
 
-    fn provider(&self) -> AccountResult<&Provider> {
-        self.wallet.provider()
+    fn try_provider(&self) -> AccountResult<&Provider> {
+        self.provider.as_ref().ok_or(AccountError::no_provider())
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
@@ -259,7 +263,11 @@ impl Account for WalletUnlocked {
         previous_base_amount: u64,
         witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self.provider()?.chain_info().await?.consensus_parameters;
+        let consensus_parameters = self
+            .try_provider()?
+            .chain_info()
+            .await?
+            .consensus_parameters;
         tb = tb.set_consensus_parameters(consensus_parameters);
 
         let new_base_amount =

@@ -38,7 +38,7 @@ pub async fn build_tx_from_contract_calls(
     tx_parameters: TxParameters,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.provider()?.consensus_parameters().await?;
+    let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
 
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);

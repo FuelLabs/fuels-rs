@@ -182,7 +182,7 @@ mod tests {
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'
         let contract_balances = wallet
-            .provider()?
+            .try_provider()?
             .get_contract_balances(&contract_id)
             .await?;
         assert!(contract_balances.is_empty());
@@ -196,7 +196,7 @@ mod tests {
 
         // Check that the contract now has 1 coin
         let contract_balances = wallet
-            .provider()?
+            .try_provider()?
             .get_contract_balances(&contract_id)
             .await?;
         assert_eq!(contract_balances.len(), 1);
@@ -358,7 +358,7 @@ mod tests {
 
         // Retrieve a message proof from the provider
         let proof = wallet
-            .provider()?
+            .try_provider()?
             .get_message_proof(&tx_id, &msg_id)
             .await?
             .expect("Failed to retrieve message proof.");

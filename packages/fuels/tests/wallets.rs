@@ -253,7 +253,7 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // Assert that the transaction was properly configured.
     let res = wallet_1
-        .provider()?
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();

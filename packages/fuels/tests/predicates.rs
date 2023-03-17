@@ -834,7 +834,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     .await?;
 
     let contract_balances = predicate
-        .provider()?
+        .try_provider()?
         .get_contract_balances(&contract_id)
         .await?;
     assert!(contract_balances.is_empty());
@@ -850,7 +850,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         .await?;
 
     let contract_balances = predicate
-        .provider()?
+        .try_provider()?
         .get_contract_balances(&contract_id)
         .await?;
     assert_eq!(contract_balances.len(), 1);
@@ -900,7 +900,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .await?;
 
     let proof = predicate
-        .provider()?
+        .try_provider()?
         .get_message_proof(&tx_id, &msg_id)
         .await?
         .expect("Failed to retrieve message proof.");

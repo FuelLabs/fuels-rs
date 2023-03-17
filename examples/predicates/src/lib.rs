@@ -158,7 +158,7 @@ mod tests {
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_data(predicate_data)
-            .with_provider(first_wallet.provider()?.clone());
+            .with_provider(first_wallet.try_provider()?.clone());
         // ANCHOR_END: with_predicate_data
 
         // ANCHOR: predicate_data_lock_amount
@@ -169,7 +169,7 @@ mod tests {
 
         // Check predicate balance.
         let balance = first_wallet
-            .provider()?
+            .try_provider()?
             .get_asset_balance(predicate.address(), asset_id)
             .await?;
 
@@ -193,7 +193,7 @@ mod tests {
 
         // Predicate balance is zero.
         let balance = first_wallet
-            .provider()?
+            .try_provider()?
             .get_asset_balance(predicate.address(), AssetId::default())
             .await?;
 
