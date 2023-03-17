@@ -10,7 +10,7 @@ use fuels_types::{
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::Provider,
-    Account, AccountError, AccountResult,
+    Account, AccountError, AccountResult, ViewOnlyAccount,
 };
 
 #[derive(Debug, Clone)]
@@ -67,20 +67,22 @@ impl Predicate {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for Predicate {
+impl ViewOnlyAccount for Predicate {
     fn address(&self) -> &Bech32Address {
         self.address()
     }
 
     fn provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::NoProvider)
+        self.provider.as_ref().ok_or(AccountError::no_provider())
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
         (self as &mut Predicate).set_predicate(provider)
     }
+}
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl Account for Predicate {
     async fn get_asset_inputs_for_amount(
         &self,
         asset_id: AssetId,

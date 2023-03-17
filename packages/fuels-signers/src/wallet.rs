@@ -2,32 +2,51 @@ use std::{fmt, ops, path::Path};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
-use fuel_core_client::client::{PaginatedResult, PaginationRequest};
+use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Witness};
 use fuels_types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
-    coin::Coin,
     constants::BASE_ASSET_ID,
-    errors::Result,
+    errors::{Error, Result},
     input::Input,
-    message::Message as InputMessage,
-    resource::Resource,
     transaction::Transaction,
     transaction_builders::TransactionBuilder,
-    transaction_response::TransactionResponse,
 };
 use rand::{CryptoRng, Rng};
+use thiserror::Error;
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::{Provider, ResourceFilter},
-    Account, AccountError, AccountResult, Signer,
+    provider::Provider,
+    Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
-type WalletResult<T> = std::result::Result<T, AccountError>;
+#[derive(Error, Debug)]
+/// Error thrown by the Wallet module
+pub enum WalletError {
+    /// Error propagated from the hex crate.
+    #[error(transparent)]
+    Hex(#[from] hex::FromHexError),
+    /// Error propagated by parsing of a slice
+    #[error("Failed to parse slice")]
+    Parsing(#[from] std::array::TryFromSliceError),
+    /// Keystore error
+    #[error(transparent)]
+    KeystoreError(#[from] KeystoreError),
+    #[error(transparent)]
+    FuelCrypto(#[from] fuel_crypto::Error),
+}
+
+impl From<WalletError> for Error {
+    fn from(e: WalletError) -> Self {
+        Error::WalletError(e.to_string())
+    }
+}
+
+type WalletResult<T> = std::result::Result<T, WalletError>;
 
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
@@ -41,7 +60,7 @@ pub struct Wallet {
     /// The wallet's address. The wallet's address is derived
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Bech32Address,
-    pub(crate) provider: Option<Provider>,
+    pub provider: Option<Provider>,
 }
 
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
@@ -59,10 +78,6 @@ impl Wallet {
         Self { address, provider }
     }
 
-    pub fn provider(&self) -> WalletResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::NoProvider)
-    }
-
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.provider = Some(provider);
         self
@@ -70,55 +85,6 @@ impl Wallet {
 
     pub fn address(&self) -> &Bech32Address {
         &self.address
-    }
-
-    pub async fn get_transactions(
-        &self,
-        request: PaginationRequest<String>,
-    ) -> Result<PaginatedResult<TransactionResponse, String>> {
-        Ok(self
-            .provider()?
-            .get_transactions_by_owner(&self.address, request)
-            .await?)
-    }
-
-    /// Gets all unspent coins of asset `asset_id` owned by the wallet.
-    pub async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
-        Ok(self.provider()?.get_coins(&self.address, asset_id).await?)
-    }
-
-    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the wallet
-    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    pub async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Resource>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-        self.provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-    }
-
-    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
-    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
-    /// of the UTXOs.
-    pub async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
-        self.provider()?
-            .get_asset_balance(&self.address, *asset_id)
-            .await
-            .map_err(Into::into)
-    }
-
-    pub async fn get_messages(&self) -> Result<Vec<InputMessage>> {
-        Ok(self.provider()?.get_messages(&self.address).await?)
     }
 
     /// Unlock the wallet with the given `private_key`.
@@ -130,6 +96,20 @@ impl Wallet {
             wallet: self,
             private_key,
         }
+    }
+}
+
+impl ViewOnlyAccount for Wallet {
+    fn address(&self) -> &Bech32Address {
+        self.address()
+    }
+
+    fn provider(&self) -> AccountResult<&Provider> {
+        self.provider.as_ref().ok_or(AccountError::no_provider())
+    }
+
+    fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
+        self.set_provider(provider)
     }
 }
 
@@ -238,21 +218,23 @@ impl WalletUnlocked {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
-impl Account for WalletUnlocked {
+impl ViewOnlyAccount for WalletUnlocked {
     fn address(&self) -> &Bech32Address {
-        &self.address
+        self.wallet.address()
     }
 
     fn provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::NoProvider)
+        self.wallet.provider()
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.wallet.set_provider(provider);
         self
     }
+}
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl Account for WalletUnlocked {
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
     /// in the transaction's list of witnesses. In the validation process, the node will
@@ -301,17 +283,17 @@ impl Account for WalletUnlocked {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    type Error = AccountError;
+    type Error = WalletError;
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
         &self,
         message: S,
-    ) -> AccountResult<Signature> {
+    ) -> WalletResult<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
         Ok(sig)
     }
 
-    fn sign_transaction(&self, tx: &mut impl Transaction) -> AccountResult<Signature> {
+    fn sign_transaction(&self, tx: &mut impl Transaction) -> WalletResult<Signature> {
         let id = tx.id();
 
         // Safety: `Message::from_bytes_unchecked` is unsafe because

@@ -21,6 +21,8 @@ pub enum Error {
     InfrastructureError(String),
     #[error("Account error: {0}")]
     AccountError(String),
+    #[error("Wallet error: {0}")]
+    WalletError(String),
     #[error("Provider error: {0}")]
     ProviderError(String),
     #[error("Validation error: {0}")]

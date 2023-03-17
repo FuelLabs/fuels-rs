@@ -2,7 +2,6 @@ use std::iter::repeat;
 
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
-use fuels_signers::Account;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 
 #[tokio::test]

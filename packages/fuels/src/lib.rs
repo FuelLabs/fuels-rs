@@ -64,7 +64,8 @@ pub mod prelude {
     //! ```
     pub use super::{
         accounts::{
-            provider::*, wallet::generate_mnemonic_phrase, Account, Signer, Wallet, WalletUnlocked,
+            provider::*, wallet::generate_mnemonic_phrase, Account, Signer, ViewOnlyAccount,
+            Wallet, WalletUnlocked,
         },
         fuel_node::*,
         macros::{abigen, setup_contract_test},

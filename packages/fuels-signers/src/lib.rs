@@ -1,7 +1,7 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
-use eth_keystore::KeystoreError;
+use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
@@ -9,15 +9,17 @@ use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
+    coin::Coin,
     constants::BASE_ASSET_ID,
     errors::{Error, Result},
     input::Input,
+    message::Message,
     resource::Resource,
     transaction::{Transaction, TxParameters},
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    transaction_response::TransactionResponse,
 };
 use provider::ResourceFilter;
-use thiserror::Error;
 pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::{accounts_utils::extract_message_id, provider::Provider};
@@ -47,41 +49,72 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 }
 
-#[derive(Error, Debug)]
-/// Error thrown by the Wallet module
-pub enum AccountError {
-    /// Error propagated from the hex crate.
-    #[error(transparent)]
-    Hex(#[from] hex::FromHexError),
-    /// Error propagated by parsing of a slice
-    #[error("Failed to parse slice")]
-    Parsing(#[from] std::array::TryFromSliceError),
-    #[error("No provider was setup: make sure to set_provider in your wallet!")]
-    NoProvider,
-    /// Keystore error
-    #[error(transparent)]
-    KeystoreError(#[from] KeystoreError),
-    #[error(transparent)]
-    FuelCrypto(#[from] fuel_crypto::Error),
-    #[error(transparent)]
-    LowAmount(#[from] fuels_types::errors::Error),
+#[derive(Debug)]
+pub struct AccountError(String);
+
+impl AccountError {
+    pub fn no_provider() -> Self {
+        Self("No provider was setup: make sure to set_provider in your account!".to_string())
+    }
+}
+
+impl Display for AccountError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl std::error::Error for AccountError {
+    fn description(&self) -> &str {
+        &self.0
+    }
 }
 
 impl From<AccountError> for Error {
     fn from(e: AccountError) -> Self {
-        Error::AccountError(e.to_string())
+        Error::AccountError(e.0)
     }
 }
 
 type AccountResult<T> = std::result::Result<T, AccountError>;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Account: std::fmt::Debug + Send + Sync {
+pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync {
     fn address(&self) -> &Bech32Address;
 
     fn provider(&self) -> AccountResult<&Provider>;
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self;
+
+    async fn get_transactions(
+        &self,
+        request: PaginationRequest<String>,
+    ) -> Result<PaginatedResult<TransactionResponse, String>> {
+        Ok(self
+            .provider()?
+            .get_transactions_by_owner(self.address(), request)
+            .await?)
+    }
+
+    /// Gets all unspent coins of asset `asset_id` owned by the account.
+    async fn get_coins(&self, asset_id: AssetId) -> Result<Vec<Coin>> {
+        Ok(self.provider()?.get_coins(self.address(), asset_id).await?)
+    }
+
+    /// Get the balance of all spendable coins `asset_id` for address `address`. This is different
+    /// from getting coins because we are just returning a number (the sum of UTXOs amount) instead
+    /// of the UTXOs.
+    async fn get_asset_balance(&self, asset_id: &AssetId) -> Result<u64> {
+        self.provider()?
+            .get_asset_balance(self.address(), *asset_id)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Gets all unspent messages owned by the account.
+    async fn get_messages(&self) -> Result<Vec<Message>> {
+        Ok(self.provider()?.get_messages(self.address()).await?)
+    }
 
     /// Get all the spendable balances of all assets for the account. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
@@ -93,6 +126,9 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .map_err(Into::into)
     }
 
+    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
     async fn get_spendable_resources(
         &self,
         asset_id: AssetId,
@@ -109,7 +145,10 @@ pub trait Account: std::fmt::Debug + Send + Sync {
             .await
             .map_err(Into::into)
     }
+}
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait Account: ViewOnlyAccount {
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
     /// in the transaction's list of witnesses. In the validation process, the node will
