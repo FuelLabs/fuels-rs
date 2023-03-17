@@ -1008,13 +1008,11 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     let num_coins = 1;
     let num_messages = 1;
-    let amount = 1_000_000_000;
+    let amount = 1000;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
-
-    let balance = predicate.get_balances().await?;
 
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -1025,50 +1023,72 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::default().set_gas_limit(1_000_000);
-
-    let response = contract_methods
-        .initialize_counter(42) // Our contract method.
-        .tx_params(my_tx_params) // Chain the tx params setting method.
-        .call() // Perform the contract call.
-        .await?; // This is an async call, `.await` for it.
-
-    let response = contract_methods
-        .initialize_counter(42)
-        .tx_params(TxParameters::default())
-        .call()
-        .await?;
-
-    let my_tx_params = TxParameters::default().set_gas_limit(1_000_000);
-
-    let response = contract_methods
-        .initialize_counter(42) // Our contract method.
-        .tx_params(my_tx_params) // Chain the tx params setting method.
-        .call() // Perform the contract call.
-        .await?; // This is an async call, `.await` for it.
-
-    let contract_methods = MyContract::new(contract_id, predicate.clone()).methods();
-
-    let tx_params = TxParameters::default();
+    let my_tx_params = TxParameters::default().set_gas_price(100);
 
     let call_params = CallParameters::default()
-        .set_amount(1_000_000)
+        .set_amount(100)
         .set_asset_id(AssetId::default());
 
-    let response = contract_methods
-        .get_msg_amount() // Our contract method.
-        .tx_params(tx_params) // Chain the tx params setting method.
-        .call_params(call_params)? // Chain the call params setting method.
-        .call() // Perform the contract call.
-        .await?;
+    {
+        let response = contract_methods
+            .initialize_counter(42)
+            .tx_params(my_tx_params)
+            .call()
+            .await?;
 
-    // Todo ContractCall add,   asset transfer append_custom_asset
+        assert_eq!(
+            predicate
+                .get_asset_balance(&AssetId::default())
+                .await?,
+            1999
+        );
+    }
+    {
+        let response = contract_methods
+            .get_msg_amount()
+            .call_params(call_params.clone())?
+            .call()
+            .await?;
 
-    let response = contract_methods
-        .initialize_counter(42)
-        .call_params(CallParameters::default())?
-        .call()
-        .await?;
+        assert_eq!(
+            predicate
+                .get_asset_balance(&AssetId::default())
+                .await?,
+            1899
+        );
+    }
+    {
+        let response = contract_methods
+            .get_msg_amount()
+            .tx_params(my_tx_params)
+            .call_params(call_params)?
+            .call()
+            .await?;
+
+        assert_eq!(
+            predicate
+                .get_asset_balance(&AssetId::default())
+                .await?,
+            1798
+        );
+    }
+    {
+        let custom_asset = AssetId::from([1u8; 32]);
+
+        let call_params = CallParameters::default()
+            .set_amount(100)
+            .set_asset_id(custom_asset);
+
+        let response = contract_methods
+            .get_msg_amount()
+            .call_params(call_params)?
+            .add_custom_asset(custom_asset, 100, Some(Bech32Address::default()))
+            .call()
+            .await?;
+
+        assert_eq!(predicate.get_asset_balance(&custom_asset).await?, 800);
+
+    }
 
     Ok(())
 }

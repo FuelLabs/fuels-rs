@@ -28,7 +28,7 @@ use crate::{
     Configurables,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct CallParameters {
     amount: u64,
     asset_id: AssetId,
