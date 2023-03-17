@@ -115,7 +115,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 
     wallet
         .transfer(
-            &predicate.address(),
+            predicate.address(),
             total_balance,
             asset_id,
             TxParameters::default(),
@@ -123,7 +123,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         .await?;
 
     // The predicate has received the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, total_balance).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
     Ok(())
 }
 #[tokio::test]
@@ -143,7 +143,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -157,7 +157,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -188,7 +188,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -202,7 +202,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -234,7 +234,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     let num_messages = 8;
     let amount = 100_000;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -248,7 +248,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -278,7 +278,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -292,7 +292,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -326,7 +326,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -340,7 +340,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -372,7 +372,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -386,7 +386,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -418,7 +418,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -432,7 +432,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -492,7 +492,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -506,7 +506,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -539,7 +539,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -553,7 +553,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
         .await?;
 
     // The predicate has spent the funds
-    assert_address_balance(&predicate.address(), &provider, asset_id, 0).await;
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
     // Funds were transferred
     assert_address_balance(
@@ -590,7 +590,7 @@ async fn pay_with_predicate() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -657,7 +657,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let num_messages = 8;
     let amount = 16;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -761,7 +761,7 @@ async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
     let num_messages = 8;
     let amount = 30;
     let (provider, _, _, _, _) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -824,7 +824,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let num_messages = 8;
     let amount = 300;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -887,7 +887,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let num_messages = 8;
     let amount = 300;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -937,7 +937,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let wallet_balance = (wallet_num_coins + wallet_num_messages) * wallet_amount;
 
     let (mut coins, mut messages, asset_id) = get_test_coins_and_messages(
-        &predicate.address(),
+        predicate.address(),
         predicate_num_coins,
         predicate_num_messages,
         predicate_amount,
@@ -975,7 +975,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     provider.send_transaction(&tx).await?;
 
     assert_address_balance(
-        &predicate.address(),
+        predicate.address(),
         &provider,
         asset_id,
         predicate_balance + wallet_balance,
@@ -1012,7 +1012,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let num_messages = 1;
     let amount = 1_000_000_000;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 
@@ -1102,7 +1102,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let num_messages = 1;
     let amount = 1_000_000_000;
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
-        setup_predicate_test(&predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
     predicate.set_provider(provider.clone());
 

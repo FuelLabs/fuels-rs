@@ -97,7 +97,7 @@ mod tests {
             .await?;
 
         let predicate_balance = provider
-            .get_asset_balance(&predicate.address(), asset_id)
+            .get_asset_balance(predicate.address(), asset_id)
             .await?;
         assert_eq!(predicate_balance, amount_to_predicate);
         // ANCHOR_END: predicate_receive
@@ -121,7 +121,7 @@ mod tests {
         );
 
         let predicate_balance = provider
-            .get_asset_balance(&predicate.address(), asset_id)
+            .get_asset_balance(predicate.address(), asset_id)
             .await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
@@ -164,13 +164,13 @@ mod tests {
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
         first_wallet
-            .transfer(&predicate.address(), 500, asset_id, TxParameters::default())
+            .transfer(predicate.address(), 500, asset_id, TxParameters::default())
             .await?;
 
         // Check predicate balance.
         let balance = first_wallet
             .provider()?
-            .get_asset_balance(&predicate.address(), asset_id)
+            .get_asset_balance(predicate.address(), asset_id)
             .await?;
 
         assert_eq!(balance, 500);
@@ -194,7 +194,7 @@ mod tests {
         // Predicate balance is zero.
         let balance = first_wallet
             .provider()?
-            .get_asset_balance(&predicate.address(), AssetId::default())
+            .get_asset_balance(predicate.address(), AssetId::default())
             .await?;
 
         assert_eq!(balance, 0);

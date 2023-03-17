@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use fuels::accounts::predicate::Predicate;
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
+    use fuels::{
+        accounts::predicate::Predicate,
+        types::{
+            errors::{error, Error, Result},
+            Bits256,
+        },
     };
 
     #[tokio::test]
