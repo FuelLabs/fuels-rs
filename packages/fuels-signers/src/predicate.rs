@@ -1,8 +1,6 @@
-use fuel_tx::Contract;
-use std::borrow::Borrow;
-use std::fmt::Debug;
-use std::fs;
+use std::{borrow::Borrow, fmt::Debug, fs};
 
+use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
@@ -18,34 +16,53 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct Predicate {
     address: Bech32Address,
-    pub code: Vec<u8>,
+    code: Vec<u8>,
     pub data: UnresolvedBytes,
     pub provider: Option<Provider>,
 }
 
 impl Predicate {
-    pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = Some(provider)
+    pub fn address(&self) -> &Bech32Address {
+        &self.address
     }
 
-    pub fn address(&self) -> Bech32Address {
-        let address: Address = (*Contract::root_from_code(&self.code)).into();
+    pub fn set_predicate(&mut self, provider: Provider) -> &mut Self {
+        self.provider = Some(provider);
+        self
+    }
+
+    pub fn from_code(code: Vec<u8>) -> Self {
+        Self {
+            address: Self::calculate_address(&code),
+            code,
+            data: Default::default(),
+            provider: None,
+        }
+    }
+
+    fn calculate_address(code: &[u8]) -> Bech32Address {
+        let address: Address = (*Contract::root_from_code(code)).into();
         address.into()
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
-        let address: Address = (*Contract::root_from_code(&code)).into();
-        Ok(Self {
-            address: address.into(),
-            code,
-            data: Default::default(),
-            provider: None,
-        })
+        Ok(Self::from_code(code))
     }
 
     pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
         self.data = data;
+        self
+    }
+
+    pub fn with_code(mut self, code: Vec<u8>) -> Self {
+        self.address = Self::calculate_address(&code);
+        self.code = code;
+        self
+    }
+
+    pub fn with_provider(mut self, provider: Provider) -> Predicate {
+        self.set_provider(provider);
         self
     }
 }
@@ -53,15 +70,15 @@ impl Predicate {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for Predicate {
     fn address(&self) -> &Bech32Address {
-        &self.address
+        self.address()
     }
 
     fn provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
-    fn set_provider(&mut self, provider: Provider) {
-        self.set_provider(provider)
+    fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        (self as &mut Predicate).set_predicate(provider)
     }
 
     async fn get_asset_inputs_for_amount(

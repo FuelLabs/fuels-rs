@@ -48,7 +48,9 @@ mod tests {
 
         [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
             .iter_mut()
-            .for_each(|wallet| wallet.set_provider(provider.clone()));
+            .for_each(|wallet| {
+                wallet.set_provider(provider.clone());
+            });
         // ANCHOR_END: predicate_coins
 
         // ANCHOR: predicate_signatures
@@ -77,11 +79,9 @@ mod tests {
 
         let predicate_data = MyPredicateEncoder::encode_data(signatures);
 
-        let mut predicate: Predicate =
+        let predicate: Predicate =
             Predicate::load_from("../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin")?
-                .with_data(predicate_data);
-
-        predicate.set_provider(provider.clone());
+                .with_data(predicate_data).with_provider(provider.clone());
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
@@ -89,7 +89,7 @@ mod tests {
 
         wallet
             .transfer(
-                &predicate.address(),
+                predicate.address(),
                 amount_to_predicate,
                 asset_id,
                 TxParameters::default(),

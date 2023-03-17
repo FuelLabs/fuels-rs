@@ -80,9 +80,9 @@ pub async fn launch_custom_provider_and_get_wallets(
 
     let (provider, _) = setup_test_provider(all_coins, vec![], provider_config, chain_config).await;
 
-    wallets
-        .iter_mut()
-        .for_each(|wallet| wallet.set_provider(provider.clone()));
+    for wallet in &mut wallets {
+        wallet.set_provider(provider.clone());
+    }
 
     wallets
 }

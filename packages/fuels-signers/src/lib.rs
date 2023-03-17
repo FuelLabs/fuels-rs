@@ -81,7 +81,7 @@ pub trait Account: std::fmt::Debug + Send + Sync {
 
     fn provider(&self) -> AccountResult<&Provider>;
 
-    fn set_provider(&mut self, provider: Provider);
+    fn set_provider(&mut self, provider: Provider) -> &mut Self;
 
     /// Get all the spendable balances of all assets for the account. This is different from getting
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs

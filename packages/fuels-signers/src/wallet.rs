@@ -63,8 +63,9 @@ impl Wallet {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
-    pub fn set_provider(&mut self, provider: Provider) {
-        self.provider = Some(provider)
+    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.provider = Some(provider);
+        self
     }
 
     pub fn address(&self) -> &Bech32Address {
@@ -142,7 +143,7 @@ impl WalletUnlocked {
     // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
     // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
     // private key doesn't match the inner wallet's public key).
-    pub fn set_provider(&mut self, provider: Provider) {
+    pub fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
         self.wallet.set_provider(provider)
     }
 
@@ -247,8 +248,9 @@ impl Account for WalletUnlocked {
         self.provider.as_ref().ok_or(AccountError::NoProvider)
     }
 
-    fn set_provider(&mut self, provider: Provider) {
-        self.wallet.set_provider(provider)
+    fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.wallet.set_provider(provider);
+        self
     }
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
