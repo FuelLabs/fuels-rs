@@ -53,7 +53,7 @@ pub(crate) fn script_bindings(
             }
 
             pub fn with_account<U: ::fuels::accounts::Account + ::std::clone::Clone>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
-                let provider = ::fuels::accounts::Account::provider(&self.account)?;
+                let provider = ::fuels::accounts::ViewOnlyAccount::provider(&self.account)?;
                 account.set_provider(provider.clone());
 
                ::core::result::Result::Ok(#name { account, binary: self.binary.clone(), log_decoder: self.log_decoder.clone()})
@@ -89,7 +89,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
-            let provider = ::fuels::accounts::Account::provider(&self.account).expect("Provider not set up")
+            let provider = ::fuels::accounts::ViewOnlyAccount::provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
                 self.binary.clone(),

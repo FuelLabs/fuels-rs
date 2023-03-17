@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{accounts::Account, prelude::Result};
+    use fuels::prelude::*;
 
     #[tokio::test]
     async fn create_random_wallet() {
