@@ -308,7 +308,7 @@ impl Contract {
         Ok(contract_id)
     }
 
-    fn load_contract(
+    pub fn load_contract(
         binary_filepath: &str,
         configuration: DeployConfiguration,
     ) -> Result<CompiledContract> {
