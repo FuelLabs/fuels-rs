@@ -1037,9 +1037,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .await?;
 
         assert_eq!(
-            predicate
-                .get_asset_balance(&AssetId::default())
-                .await?,
+            predicate.get_asset_balance(&AssetId::default()).await?,
             1999
         );
     }
@@ -1051,9 +1049,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .await?;
 
         assert_eq!(
-            predicate
-                .get_asset_balance(&AssetId::default())
-                .await?,
+            predicate.get_asset_balance(&AssetId::default()).await?,
             1899
         );
     }
@@ -1066,9 +1062,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .await?;
 
         assert_eq!(
-            predicate
-                .get_asset_balance(&AssetId::default())
-                .await?,
+            predicate.get_asset_balance(&AssetId::default()).await?,
             1798
         );
     }
@@ -1087,7 +1081,6 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .await?;
 
         assert_eq!(predicate.get_asset_balance(&custom_asset).await?, 800);
-
     }
 
     Ok(())
