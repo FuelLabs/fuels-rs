@@ -5,7 +5,7 @@
 You can pass a Rust `std::vec::Vec` into your contract method transparently. The following code calls a Sway contract method which accepts a `Vec<SomeStruct<u32>>`.
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types.rs:passing_in_vec}}
+{{#include ../../../packages/fuels/tests/contract_types.rs:passing_in_vec}}
 ```
 
 You can use a vector just like you would use any other type -- e.g. a `[Vec<u32>; 2]` or a `SomeStruct<Vec<Bits256>>` etc.
