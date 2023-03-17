@@ -26,7 +26,7 @@ impl Predicate {
         &self.address
     }
 
-    pub fn set_predicate(&mut self, provider: Provider) -> &mut Self {
+    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.provider = Some(provider);
         self
     }
@@ -77,7 +77,7 @@ impl ViewOnlyAccount for Predicate {
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        (self as &mut Predicate).set_predicate(provider)
+        (self as &mut Predicate).set_provider(provider)
     }
 }
 
