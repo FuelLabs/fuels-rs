@@ -143,13 +143,12 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
     let instance = MyScript::new(wallet, bin_path);
 
-    let a = 2u64;
-    let b = 4u32;
+    let a = 4u64;
+    let b = 2u32;
 
     let result = instance.main(a, b).call().await?;
 
-    assert_eq!(result.value, "hello");
-
+    assert_eq!(result.value, "heyoo");
     Ok(())
 }
 
