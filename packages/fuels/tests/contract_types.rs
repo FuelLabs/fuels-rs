@@ -1801,7 +1801,7 @@ async fn test_nested_vector_methods_fail() -> Result<()> {
         .vec_inside_type()
         .call()
         .await
-        .expect_err("Should fail because nested vectors_script are not supported");
+        .expect_err("Should fail because nested vectors are not supported");
     Ok(())
 }
 
