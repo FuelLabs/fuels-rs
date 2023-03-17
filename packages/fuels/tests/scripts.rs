@@ -136,20 +136,18 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
 
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/script_types/vector/out/debug/vector-abi.json"
+        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
     ));
 
-    let bin_path = "../fuels/tests/script_types/vector/out/debug/vector.bin";
+    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
     let instance = MyScript::new(wallet, bin_path);
 
-    let a = 2u32;
-    let b = 4u64;
-    let u64_vec: Vec<u64> = vec![1024, 2048, 4096];
+    let a = 4u64;
+    let b = 2u32;
 
-    let result = instance.main(a, b, u64_vec.clone()).call().await?;
+    let result = instance.main(a, b).call().await?;
 
-    assert_eq!(result.value, u64_vec[2]);
-
+    assert_eq!(result.value, "heyoo");
     Ok(())
 }
 
