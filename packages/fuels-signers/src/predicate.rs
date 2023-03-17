@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, fmt::Debug, fs};
+use std::{fmt::Debug, fs};
 
 use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
@@ -122,7 +122,7 @@ impl Account for Predicate {
             .await?;
 
         adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address().borrow(), new_base_amount);
+        adjust_outputs(&mut tb, self.address(), new_base_amount);
 
         let tx = tb.build()?;
 

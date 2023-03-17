@@ -134,10 +134,8 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(32768);
-
-    let mut predicate: Predicate =
-        Predicate::load_from("tests/predicates/predicate_u64/out/debug/predicate_u64.bin")?
-            .with_data(predicate_data);
+    let code_path = "tests/predicates/predicate_u64/out/debug/predicate_u64.bin";
+    let mut predicate: Predicate = Predicate::load_from(code_path)?.with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;

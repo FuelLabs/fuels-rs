@@ -17,7 +17,7 @@ First, we set up the wallets, node, and a predicate handler instance:
 Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `set_data`, and it is accessed through the predicate handler instance as shown below:
 
 ```rust,ignore
-{{#include ../../../examples/predicates/src/lib.rs:set_predicate_data}}
+{{#include ../../../examples/predicates/src/lib.rs:with_predicate_data}}
 ```
 
 Next, we lock some assets in this predicate using the first wallet:

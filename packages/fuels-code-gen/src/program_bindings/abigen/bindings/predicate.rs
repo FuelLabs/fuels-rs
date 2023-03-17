@@ -23,7 +23,7 @@ pub(crate) fn predicate_bindings(
     let encode_function = expand_fn(&abi)?;
 
     let code = quote! {
-        pub struct #name ();
+        pub struct #name;
 
         impl #name {
            #encode_function
@@ -43,8 +43,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
 
     let body = quote! {
-        let data = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data");
-        data
+        ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data")
     };
 
     generator

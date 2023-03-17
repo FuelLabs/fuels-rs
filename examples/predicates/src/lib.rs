@@ -78,10 +78,11 @@ mod tests {
         abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));
 
         let predicate_data = MyPredicateEncoder::encode_data(signatures);
+        let code_path = "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin";
 
-        let predicate: Predicate =
-            Predicate::load_from("../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin")?
-                .with_data(predicate_data).with_provider(provider.clone());
+        let predicate: Predicate = Predicate::load_from(code_path)?
+            .with_data(predicate_data)
+            .with_provider(provider.clone());
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
@@ -150,16 +151,15 @@ mod tests {
         abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
         // ANCHOR_END: predicate_data_setup
 
-        // ANCHOR: set_predicate_data
+        // ANCHOR: with_predicate_data
         let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+        let code_path =
+            "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin";
 
-        let mut predicate: Predicate = Predicate::load_from(
-            "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
-        )?
-        .with_data(predicate_data);
-
-        predicate.set_provider(first_wallet.provider()?.clone());
-        // ANCHOR_END: set_predicate_data
+        let predicate: Predicate = Predicate::load_from(code_path)?
+            .with_data(predicate_data)
+            .with_provider(first_wallet.provider()?.clone());
+        // ANCHOR_END: with_predicate_data
 
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
