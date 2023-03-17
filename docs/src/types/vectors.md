@@ -12,4 +12,21 @@ You can use a vector just like you would use any other type -- e.g. a `[Vec<u32>
 
 ## Returning vectors
 
-This is currently not supported. If you try returning a type that is or contains a vector you will get a compile time error.
+Returning vectors from contract methods is supported transparently, with the caveat that you cannot have them nested inside another type.
+
+Which means you can return for instance:
+```rust,ignore
+Vec<u32>
+Vec<SomeStruct>
+Vec<Bits256>
+```
+
+but not return this kind of struct:
+```rust,ignore
+InvalidStruct {
+    bim: Vec<u32>,
+    bam: u64
+}
+```
+
+** >Note: you can still interact with contracts containing methods that return such structs, just not interact with the methods themselves ** 
