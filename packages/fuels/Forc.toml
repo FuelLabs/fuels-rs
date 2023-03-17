@@ -67,7 +67,7 @@ members = [
   'tests/script_types/option_result',
   'tests/script_types/raw_slice_script',
   'tests/script_types/tuple',
-  'tests/script_types/vectors_script',
+  'tests/script_types/vector_arguments',
   'tests/scripts/basic_script',
   'tests/scripts/script_asserts',
   'tests/scripts/script_configurables',

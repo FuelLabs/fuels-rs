@@ -94,10 +94,10 @@ async fn main_function_tuple_types() -> Result<()> {
 async fn main_function_vector_arguments() -> Result<()> {
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/script_types/vectors_script/out/debug/vectors_script-abi.json"
+        abi = "packages/fuels/tests/script_types/vector_arguments/out/debug/vector_arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/script_types/vectors_script/out/debug/vectors_script.bin";
+    let bin_path = "../fuels/tests/script_types/vector_arguments/out/debug/vector_arguments.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let u32_vec = vec![0, 1, 2];
