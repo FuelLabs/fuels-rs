@@ -12,7 +12,7 @@ You can use a vector just like you would use any other type -- e.g. a `[Vec<u32>
 
 ## Returning vectors
 
-Returning vectors from contract methods is supported transparently, with the caveat that you cannot have them nested inside another type.
+Returning vectors from contract methods is supported transparently, with the caveat that you cannot have them nested inside another type. This limitation is temporary.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/types.rs:returning_vec}}
