@@ -230,9 +230,9 @@ mod tests {
 
         let response = contract_instance_1
             .methods()
-            .initialize_counter(42) // Build the ABI call
+            .initialize_counter(42)
             .tx_params(TxParameters::default().set_gas_limit(1_000_000))
-            .call() // Perform the network call
+            .call()
             .await?;
 
         assert_eq!(42, response.value);
@@ -252,7 +252,7 @@ mod tests {
             .methods()
             .initialize_counter(42) // Build the ABI call
             .tx_params(TxParameters::default().set_gas_limit(1_000_000))
-            .call() // Perform the network call
+            .call()
             .await?;
 
         assert_eq!(42, response.value);

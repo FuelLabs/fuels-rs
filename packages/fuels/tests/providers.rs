@@ -43,8 +43,8 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     let response = contract_instance_connected
         .methods()
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .initialize_counter(42)
+        .call()
         .await?;
     assert_eq!(42, response.value);
 
@@ -486,7 +486,7 @@ async fn test_gas_errors() -> Result<()> {
     assert!(gas_used > gas_limit);
 
     let response = contract_instace_call
-        .call() // Perform the network call
+        .call()
         .await
         .expect_err("should error");
 
@@ -616,9 +616,9 @@ async fn testnet_hello_world() -> Result<()> {
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
     let response = contract_methods
-        .initialize_counter(42) // Build the ABI call
+        .initialize_counter(42)
         .tx_params(tx_params)
-        .call() // Perform the network call
+        .call()
         .await?;
 
     assert_eq!(42, response.value);

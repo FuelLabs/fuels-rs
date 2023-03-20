@@ -17,13 +17,21 @@ use crate::{
 pub struct Predicate {
     address: Bech32Address,
     code: Vec<u8>,
-    pub data: UnresolvedBytes,
-    pub provider: Option<Provider>,
+    data: UnresolvedBytes,
+    provider: Option<Provider>,
 }
 
 impl Predicate {
     pub fn address(&self) -> &Bech32Address {
         &self.address
+    }
+
+    pub fn data(&self) -> &UnresolvedBytes {
+        &self.data
+    }
+
+    pub fn provider(&self) -> Option<&Provider> {
+        self.provider.as_ref()
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {

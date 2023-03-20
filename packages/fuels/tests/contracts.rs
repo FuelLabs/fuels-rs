@@ -223,13 +223,13 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
     let estimated_transaction_cost = contract_instance
         .methods()
-        .initialize_counter(42) // Build the ABI call
+        .initialize_counter(42)
         .tx_params(
             TxParameters::default()
                 .set_gas_price(gas_price)
                 .set_gas_limit(gas_limit),
         )
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance))
         .await?;
 
     assert_eq!(
@@ -264,14 +264,14 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     let tolerance = 0.0;
     let contract_methods = contract_instance.methods();
     let estimated_gas_used = contract_methods
-        .initialize_counter(42) // Build the ABI call
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .initialize_counter(42)
+        .estimate_transaction_cost(Some(tolerance))
         .await?
         .gas_used;
 
     let gas_used = contract_methods
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .initialize_counter(42)
+        .call()
         .await?
         .gas_used;
 
@@ -306,7 +306,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<()> {
 
     let tolerance = 0.0;
     let estimated_gas_used = multi_call_handler
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance))
         .await?
         .gas_used;
 

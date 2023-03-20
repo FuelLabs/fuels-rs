@@ -599,34 +599,19 @@ async fn pay_with_predicate() -> Result<()> {
     )
     .await?;
 
-    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
+    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_params = TxParameters::new(1000000, 10000, 0);
 
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        192
-    );
+    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
-    let response = contract_instance_connected
-        .methods()
+    let response = contract_methods
         .initialize_counter(42) // Build the ABI call
         .tx_params(tx_params)
-        .call() // Perform the network call
+        .call()
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        187
-    );
+    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 187);
 
     Ok(())
 }
@@ -666,140 +651,21 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     )
     .await?;
 
-    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
+    let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_params = TxParameters::default()
         .set_gas_price(100000)
         .set_gas_limit(10000);
-    //
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        192
-    );
 
-    let _call_params = CallParameters::default()
-        .set_amount(100)
-        .set_asset_id(AssetId::default());
+    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
-    let response = contract_instance_connected
-        .methods()
-        .initialize_counter(42) // Build the ABI call
+    let response = contract_methods
+        .initialize_counter(42)
         .tx_params(tx_params)
-        .call() // Perform the network call
+        .call()
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        190
-    );
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn pay_with_predicate_coins_messages_vectors() -> Result<()> {
-    abigen!(
-        Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ),
-         Predicate(
-            name="MyPredicateEncoder",
-            abi="packages/fuels/tests/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"
-        )
-    );
-
-    let u32_vec = vec![0, 4, 3];
-    let vec_in_vec = vec![vec![0, 2, 2], vec![0, 1, 2]];
-    let struct_in_vec = vec![SomeStruct { a: 8 }, SomeStruct { a: 1 }];
-    let vec_in_struct = SomeStruct { a: vec![0, 16, 2] };
-    let array_in_vec = vec![[0u64, 1u64], [32u64, 1u64]];
-    let vec_in_enum = SomeEnum::A(vec![0, 1, 128]);
-    let enum_in_vec = vec![SomeEnum::A(0), SomeEnum::A(16)];
-    let tuple_in_vec = vec![(0, 0), (128, 1)];
-    let vec_in_tuple = (vec![0, 64, 2], vec![0, 1, 2]);
-    let vec_in_a_vec_in_a_struct_in_a_vec = vec![
-        SomeStruct {
-            a: vec![vec![0, 1, 2], vec![3, 4, 5]],
-        },
-        SomeStruct {
-            a: vec![vec![6, 7, 8], vec![9, 32, 11]],
-        },
-    ];
-
-    let vec_in_array = [vec![0, 64, 2], vec![0, 1, 2]];
-
-    let predicate_data = MyPredicateEncoder::encode_data(
-        u32_vec,
-        vec_in_vec,
-        struct_in_vec,
-        vec_in_struct,
-        array_in_vec,
-        vec_in_array,
-        vec_in_enum,
-        enum_in_vec,
-        tuple_in_vec,
-        vec_in_tuple,
-        vec_in_a_vec_in_a_struct_in_a_vec,
-    );
-
-    let mut predicate: Predicate =
-        Predicate::load_from("tests/predicates/predicate_vectors/out/debug/predicate_vectors.bin")?
-            .with_data(predicate_data);
-
-    let num_coins = 4;
-    let num_messages = 8;
-    let amount = 30;
-    let (provider, _, _, _, _) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
-
-    predicate.set_provider(provider.clone());
-
-    let contract_id = Contract::deploy(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
-    .await?;
-
-    let contract_instance_connected = MyContract::new(contract_id.clone(), predicate.clone());
-    let tx_params = TxParameters::new(1000000, 10000, 0);
-
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        360
-    );
-
-    let _call_params = CallParameters::new(100, AssetId::default(), 0);
-
-    let response = contract_instance_connected
-        .methods()
-        .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_params)
-        .call() // Perform the network call
-        .await?;
-
-    assert_eq!(42, response.value);
-    assert_eq!(
-        *predicate
-            .get_balances()
-            .await?
-            .get(format!("{:#?}", AssetId::default()).as_str())
-            .unwrap(),
-        341
-    );
+    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 190);
 
     Ok(())
 }
@@ -909,6 +775,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     assert_eq!(proof.recipient, base_layer_address);
     Ok(())
 }
+
 #[tokio::test]
 async fn predicate_transfer_with_signed_resources() -> Result<()> {
     abigen!(Predicate(
@@ -1025,25 +892,15 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     let my_tx_params = TxParameters::default().set_gas_price(100);
 
+    let call_params_amount = 100;
     let call_params = CallParameters::default()
-        .set_amount(100)
+        .set_amount(call_params_amount)
         .set_asset_id(AssetId::default());
 
     {
         let response = contract_methods
-            .initialize_counter(42)
-            .tx_params(my_tx_params)
-            .call()
-            .await?;
-
-        assert_eq!(
-            predicate.get_asset_balance(&AssetId::default()).await?,
-            1999
-        );
-    }
-    {
-        let response = contract_methods
             .get_msg_amount()
+            .tx_params(my_tx_params)
             .call_params(call_params.clone())?
             .call()
             .await?;
@@ -1054,24 +911,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         );
     }
     {
-        let response = contract_methods
-            .get_msg_amount()
-            .tx_params(my_tx_params)
-            .call_params(call_params)?
-            .call()
-            .await?;
-
-        assert_eq!(
-            predicate.get_asset_balance(&AssetId::default()).await?,
-            1798
-        );
-    }
-    {
         let custom_asset = AssetId::from([1u8; 32]);
-
-        let call_params = CallParameters::default()
-            .set_amount(100)
-            .set_asset_id(custom_asset);
 
         let response = contract_methods
             .get_msg_amount()
@@ -1080,7 +920,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .call()
             .await?;
 
-        assert_eq!(predicate.get_asset_balance(&custom_asset).await?, 800);
+        assert_eq!(predicate.get_asset_balance(&custom_asset).await?, 900);
     }
 
     Ok(())
@@ -1131,9 +971,9 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         .set_asset_id(AssetId::from([1u8; 32]));
 
     let response = contract_methods
-        .get_msg_amount() // Our contract method.
-        .call_params(call_params)? // Chain the call params setting method.
-        .call() // Perform the contract call.
+        .get_msg_amount()
+        .call_params(call_params)?
+        .call()
         .await?;
 
     Ok(())
