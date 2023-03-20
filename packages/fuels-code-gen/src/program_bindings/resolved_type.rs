@@ -74,6 +74,7 @@ impl TypeResolver {
             Self::to_array,
             Self::to_sized_ascii_string,
             Self::to_tuple,
+            Self::to_bytes,
             Self::to_raw_slice,
             Self::to_custom_type,
         ];
@@ -108,6 +109,18 @@ impl TypeResolver {
             type_name,
             generic_params: vec![],
         }))
+    }
+
+    fn to_bytes(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
+        if &type_application.type_decl.type_field == "struct Bytes" {
+            let type_name = quote! {::fuels::types::Bytes};
+            Ok(Some(ResolvedType {
+                type_name,
+                generic_params: vec![],
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn to_array(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {

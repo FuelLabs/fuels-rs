@@ -71,7 +71,8 @@ fn resolve_arg(arg: &ParamType) -> String {
             let inner = resolve_arg(el_type);
             format!("s<{inner}>(s<{inner}>(rawptr,u64),u64)")
         }
-        ParamType::RawSlice => unimplemented!("Raw slices are not supported as arguments"),
+        ParamType::RawSlice => unimplemented!("`RawSlice` type is not supported as arguments"),
+        ParamType::Bytes => unimplemented!("`Bytes` type is not supported as arguments"),
     }
 }
 
