@@ -48,10 +48,13 @@ mod tests {
         // ANCHOR_END: predicate_coins
 
         // ANCHOR: predicate_load
-        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));
+        abigen!(Predicate(
+            name = "MyPredicate",
+            abi = "packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json"
+        ));
 
         let predicate = MyPredicate::load_from(
-            "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
+            "../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin",
         )?;
         // ANCHOR_END: predicate_load
 
@@ -130,10 +133,10 @@ mod tests {
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json"));
+        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
 
         let predicate = MyPredicate::load_from(
-            "../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin",
+            "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin",
         )?;
         // ANCHOR_END: predicate_data_setup
 

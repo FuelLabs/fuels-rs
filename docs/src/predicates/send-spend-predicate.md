@@ -4,7 +4,7 @@ This is a more involved example where the predicate accepts three signatures and
 
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/predicate_signatures/src/main.sw}}
+{{#include ../../../packages/fuels/tests/predicates/signatures/src/main.sw}}
 ```
 
 

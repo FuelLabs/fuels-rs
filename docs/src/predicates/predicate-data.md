@@ -3,7 +3,7 @@
 Let's consider the following predicate example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/predicate_basic/src/main.sw}}
+{{#include ../../../packages/fuels/tests/predicates/basic_predicate/src/main.sw}}
 ```
 
 Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `encode_data`, and it is accessed through the predicate instance as shown below:
