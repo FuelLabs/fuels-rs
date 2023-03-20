@@ -1,6 +1,6 @@
 pub mod abigen_bindings {
     pub mod my_contract_mod {
-        pub struct MyContract<T> {
+        pub struct MyContract<T: Account> {
             contract_id: Bech32ContractId,
             account: T,
             log_decoder: LogDecoder,
@@ -22,20 +22,20 @@ pub mod abigen_bindings {
             pub fn account(&self) -> T {
                 self.account.clone()
             }
-            pub fn with_account(&self, mut account: T) -> Result<Self> {
-                let provider = Account::provider(&self.account)?;
+            pub fn with_account<U: Account>(&self, mut account: U) -> Result<MyContract<U>> {
+                let provider = ViewOnlyAccount::try_provider(&self.account)?;
                 account.set_provider(provider.clone());
-                Ok(Self {
+                Ok(MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
                 })
             }
             pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-                Account::provider(&self.account)?
+                ViewOnlyAccount::try_provider(&self.account)?
                     .get_contract_balances(&self.contract_id)
                     .await
-                    .map_err(::std::convert::Into::into)
+                    .map_err(Into::into)
             }
             pub fn methods(&self) -> MyContractMethods<T> {
                 MyContractMethods {
@@ -45,7 +45,7 @@ pub mod abigen_bindings {
                 }
             }
         }
-        pub struct MyContractMethods<T> {
+        pub struct MyContractMethods<T: Account> {
             contract_id: Bech32ContractId,
             account: T,
             log_decoder: LogDecoder,
@@ -53,7 +53,7 @@ pub mod abigen_bindings {
         impl<T: Account> MyContractMethods<T> {
             #[doc = "Calls the contract's `initialize_counter` function"]
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                Contract::<T>::method_hash(
+                Contract::method_hash(
                     self.contract_id.clone(),
                     &self.account,
                     function_selector::resolve_fn_selector(
@@ -68,7 +68,7 @@ pub mod abigen_bindings {
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                Contract::<T>::method_hash(
+                Contract::method_hash(
                     self.contract_id.clone(),
                     &self.account,
                     function_selector::resolve_fn_selector(
