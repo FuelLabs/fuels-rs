@@ -1,8 +1,10 @@
 # Account
 
-The Account trait provides a common interface to query balances, retrieve spendable resources, or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
+The ViewOnlyAccount trait provides a common interface to query balances. 
 
-The Account trait is implemented by the following types:
+The Account trait, in addition to the above, also provides a common interface to retrieve spendable resources or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
+
+The Account traits are implemented by the following types:
 
 - [Wallet](../getting-started/managing-wallets.md)
 - [Predicate](../getting-started/predicates.md)
