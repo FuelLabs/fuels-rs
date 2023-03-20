@@ -8,13 +8,13 @@ Let's consider the following predicate example:
 
 We will look at a complete example of using the SDK to send and receive funds from a predicate.
 
-First, we set up the wallets, node, and a predicate handler instance:
+First, we set up the wallets, node, and a predicate encoder instance:
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_setup}}
 ```
 
-Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `set_data`, and it is accessed through the predicate handler instance as shown below:
+Similarly to contracts and scripts, the `abigen!` generates a function that will conveniently encode all the arguments of the main function for us. This function is called `encode_data`, and it is accessed through the predicate encoder instance as shown below:
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:with_predicate_data}}
