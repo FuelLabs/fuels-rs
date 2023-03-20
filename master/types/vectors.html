@@ -145,7 +145,11 @@
 </code></pre>
 <p>You can use a vector just like you would use any other type -- e.g. a <code>[Vec&lt;u32&gt;; 2]</code> or a <code>SomeStruct&lt;Vec&lt;Bits256&gt;&gt;</code> etc.</p>
 <h2 id="returning-vectors"><a class="header" href="#returning-vectors">Returning vectors</a></h2>
-<p>This is currently not supported. If you try returning a type that is or contains a vector you will get a compile time error.</p>
+<p>Returning vectors from contract methods is supported transparently, with the caveat that you cannot have them nested inside another type. This limitation is temporary.</p>
+<pre><code class="language-rust ignore">    let response = contract_methods.u8_in_vec(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::&lt;Vec&lt;_&gt;&gt;());
+</code></pre>
+<p>** &gt;Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves **</p>
 
                     </main>
 

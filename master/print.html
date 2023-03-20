@@ -2497,7 +2497,11 @@ impl MyContract for Contract {
 </code></pre>
 <p>You can use a vector just like you would use any other type -- e.g. a <code>[Vec&lt;u32&gt;; 2]</code> or a <code>SomeStruct&lt;Vec&lt;Bits256&gt;&gt;</code> etc.</p>
 <h2 id="returning-vectors"><a class="header" href="#returning-vectors">Returning vectors</a></h2>
-<p>This is currently not supported. If you try returning a type that is or contains a vector you will get a compile time error.</p>
+<p>Returning vectors from contract methods is supported transparently, with the caveat that you cannot have them nested inside another type. This limitation is temporary.</p>
+<pre><code class="language-rust ignore">    let response = contract_methods.u8_in_vec(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::&lt;Vec&lt;_&gt;&gt;());
+</code></pre>
+<p>** &gt;Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves **</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h1>
 <p>For a more in-depth look at the APIs provided by the Fuel Rust SDK, head over to the <a href="https://docs.rs/fuels/latest/fuels/">official documentation</a>. In the actual Rust docs, you can see the most up-to-date information about the API, which is synced with the code as it changes.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-testing"><a class="header" href="#fuels-rs-testing"><code>fuels-rs</code> Testing</a></h1>
