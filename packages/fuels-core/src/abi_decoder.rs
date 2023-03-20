@@ -51,10 +51,10 @@ impl ABIDecoder {
     }
 
     fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        if param_type.contains_nested_vectors() {
+        if param_type.contains_nested_heap_types() {
             return Err(error!(
                 InvalidData,
-                "Type {param_type:?} contains nested vectors, this is not supported."
+                "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
             ));
         }
         match param_type {
@@ -72,11 +72,19 @@ impl ABIDecoder {
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
+            ParamType::Bytes => Self::decode_bytes(bytes),
         }
     }
 
+    fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
+        Ok(DecodeResult {
+            token: Token::Bytes(bytes.to_vec()),
+            bytes_read: bytes.len(),
+        })
+    }
+
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(param_type, bytes)?;
+        let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
 
         Ok(DecodeResult {
@@ -131,7 +139,9 @@ impl ABIDecoder {
     }
 
     fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
-        let num_of_elements = calculate_num_of_elements(&ParamType::U64, bytes)?;
+        let raw_slice_element = ParamType::U64;
+        let num_of_elements =
+            ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
         let (tokens, bytes_read) =
             Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
         let elements = tokens
@@ -322,17 +332,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     } else {
         Ok(&slice[num_bytes..])
     }
-}
-
-fn calculate_num_of_elements(param_type: &ParamType, bytes: &[u8]) -> Result<usize> {
-    let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
-    if bytes.len() % memory_size != 0 {
-        return Err(error!(
-            InvalidData,
-            "The bytes provided do not correspond to a Vec<{:?}> got: {:?}", param_type, bytes
-        ));
-    }
-    Ok(bytes.len() / memory_size)
 }
 
 #[cfg(test)]

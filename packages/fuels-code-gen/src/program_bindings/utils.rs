@@ -131,6 +131,7 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ("std::vec::Vec", "::std::vec::Vec"),
         ("std::result::Result", "::core::result::Result"),
         ("std::option::Option", "::core::option::Option"),
+        ("std::bytes::Bytes", "::fuels::types::Bytes"),
     ]
     .into_iter()
     .map(|(original_type_path, provided_type_path)| {

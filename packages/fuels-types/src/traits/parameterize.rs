@@ -6,6 +6,7 @@ use crate::{
     core::{Bits256, RawSlice, SizedAsciiString},
     enum_variants::EnumVariants,
     param_types::ParamType,
+    Bytes,
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
@@ -35,6 +36,12 @@ impl<const SIZE: usize, T: Parameterize> Parameterize for [T; SIZE] {
 impl<T: Parameterize> Parameterize for Vec<T> {
     fn param_type() -> ParamType {
         ParamType::Vector(Box::new(T::param_type()))
+    }
+}
+
+impl Parameterize for Bytes {
+    fn param_type() -> ParamType {
+        ParamType::Bytes
     }
 }
 
