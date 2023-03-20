@@ -1694,8 +1694,10 @@ async fn test_base_type_in_vec_output() -> Result<()> {
     );
     let contract_methods = contract_instance.methods();
 
+    // ANCHOR: returning_vec
     let response = contract_methods.u8_in_vec(10).call().await?;
     assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+    // ANCHOR_END: returning_vec
 
     let response = contract_methods.u16_in_vec(11).call().await?;
     assert_eq!(response.value, (0..11).collect::<Vec<_>>());
