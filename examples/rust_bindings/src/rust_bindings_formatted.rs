@@ -5,7 +5,7 @@ pub mod abigen_bindings {
             account: T,
             log_decoder: LogDecoder,
         }
-        impl<T: Account + Clone> MyContract<T> {
+        impl<T: Account> MyContract<T> {
             pub fn new(contract_id: Bech32ContractId, account: T) -> Self {
                 let log_decoder = LogDecoder {
                     type_lookup: logs::log_type_lookup(&[], Some(contract_id.clone().into())),
@@ -50,7 +50,7 @@ pub mod abigen_bindings {
             account: T,
             log_decoder: LogDecoder,
         }
-        impl<T: Account + Clone> MyContractMethods<T> {
+        impl<T: Account> MyContractMethods<T> {
             #[doc = "Calls the contract's `initialize_counter` function"]
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
                 Contract::<T>::method_hash(

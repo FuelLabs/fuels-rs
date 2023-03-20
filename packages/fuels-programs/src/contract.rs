@@ -209,7 +209,7 @@ impl Contract {
     /// For more details see `code_gen` in `fuels-core`.
     ///
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account + Clone>(
+    pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         contract_id: Bech32ContractId,
         account: &T,
         signature: Selector,

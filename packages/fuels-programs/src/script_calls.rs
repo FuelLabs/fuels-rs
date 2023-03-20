@@ -63,7 +63,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub log_decoder: LogDecoder,
 }
 
-impl<T: Account + Clone, D> ScriptCallHandler<T, D>
+impl<T: Account, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
 {

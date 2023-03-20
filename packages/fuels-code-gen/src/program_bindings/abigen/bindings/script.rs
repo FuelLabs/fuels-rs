@@ -34,13 +34,13 @@ pub(crate) fn script_bindings(
 
     let code = quote! {
         #[derive(Debug)]
-        pub struct #name<T: ::fuels::accounts::Account + ::std::clone::Clone>{
+        pub struct #name<T: ::fuels::accounts::Account>{
             account: T,
             binary: ::std::vec::Vec<u8>,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #name<T>
+        impl<T: ::fuels::accounts::Account> #name<T>
         {
             pub fn new(account: T, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)
@@ -52,7 +52,7 @@ pub(crate) fn script_bindings(
                 }
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account + ::std::clone::Clone>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
                 let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?;
                 account.set_provider(provider.clone());
 

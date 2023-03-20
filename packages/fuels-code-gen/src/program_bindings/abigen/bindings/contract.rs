@@ -39,13 +39,13 @@ pub(crate) fn contract_bindings(
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
-        pub struct #name<T: ::fuels::accounts::Account + ::std::clone::Clone> {
+        pub struct #name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #name<T>
+        impl<T: ::fuels::accounts::Account> #name<T>
         {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
                 let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
@@ -60,7 +60,7 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account + ::std::clone::Clone>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
                 let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?;
                 account.set_provider(provider.clone());
 
@@ -84,17 +84,17 @@ pub(crate) fn contract_bindings(
         }
 
         // Implement struct that holds the contract methods
-        pub struct #methods_name<T: ::fuels::accounts::Account + ::std::clone::Clone> {
+        pub struct #methods_name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl<T: ::fuels::accounts::Account + ::std::clone::Clone> #methods_name<T> {
+        impl<T: ::fuels::accounts::Account> #methods_name<T> {
             #contract_functions
         }
 
-        impl<T: ::fuels::accounts::Account + ::std::clone::Clone>
+        impl<T: ::fuels::accounts::Account>
             ::fuels::programs::contract::SettableContract for #name<T>
         {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
