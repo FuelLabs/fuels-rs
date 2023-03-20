@@ -122,7 +122,14 @@ impl ABIEncoder {
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
             Token::Unit => vec![Self::encode_unit()],
             Token::RawSlice(_) => {
-                unimplemented!("Encoding a raw_slice is currently not supported by the Fuel spec.")
+                unimplemented!(
+                    "Encoding a `RawSlice` type is currently not supported by the Fuel spec."
+                )
+            }
+            Token::Bytes(_) => {
+                unimplemented!(
+                    "Encoding a `Bytes` type is currently not supported by the Fuel spec."
+                )
             }
         };
 
