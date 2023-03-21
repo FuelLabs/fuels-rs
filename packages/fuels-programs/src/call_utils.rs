@@ -1,19 +1,19 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_tx::{
-    AssetId, Bytes32, ContractId, Output, Receipt, ScriptExecutionResult, TxPointer, UtxoId,
+    AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId,
 };
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-use fuels_signers::{provider::Provider, Account};
+use fuels_signers::Account;
 use fuels_types::{
     bech32::Bech32Address,
     constants::WORD_SIZE,
-    errors::{Error, Result},
+    errors::Result,
     input::Input,
     offsets::call_script_data_offset,
     param_types::ParamType,
-    transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction::{ScriptTransaction, TxParameters},
     transaction_builders::ScriptTransactionBuilder,
 };
 use itertools::{chain, Itertools};
@@ -68,11 +68,12 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let base_asset_amount = required_asset_amounts
         .iter()
-        .find(|(asset_id, _)| *asset_id == AssetId::default());
-    let tx = match base_asset_amount {
-        Some((_, base_amount)) => account.add_fee_resources(tb, *base_amount, None).await?,
-        None => account.add_fee_resources(tb, 0, None).await?,
-    };
+        .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
+        .unwrap_or_default();
+
+    let tx = account
+        .add_fee_resources(tb, base_asset_amount, None)
+        .await?;
 
     Ok(tx)
 }
@@ -411,36 +412,6 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
                 .chain(iter::once((&call.contract_id).into()))
         })
         .collect()
-}
-
-/// Execute the transaction in a simulated manner, not modifying blockchain state
-pub async fn simulate_and_check_success<T: Transaction + Clone>(
-    provider: &Provider,
-    tx: &T,
-) -> Result<Vec<Receipt>> {
-    let receipts = provider.dry_run(tx).await?;
-    has_script_succeeded(&receipts)?;
-
-    Ok(receipts)
-}
-
-fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
-    receipts
-        .iter()
-        .find_map(|receipt| match receipt {
-            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
-                Some(format!("{result:?}"))
-            }
-            _ => None,
-        })
-        .map(|error_message| {
-            Err(Error::RevertTransactionError {
-                reason: error_message,
-                revert_id: 0,
-                receipts: receipts.to_owned(),
-            })
-        })
-        .unwrap_or(Ok(()))
 }
 
 #[cfg(test)]

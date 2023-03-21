@@ -10,7 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, UtxoId};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, UtxoId, ScriptExecutionResult};
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
@@ -268,6 +268,35 @@ impl Provider {
 
     pub async fn node_info(&self) -> ProviderResult<NodeInfo> {
         Ok(self.client.node_info().await?.into())
+    }
+
+    pub async fn checked_dry_run<T: Transaction + Clone>(
+        &self,
+        tx: &T,
+    ) -> Result<Vec<Receipt>> {
+        let receipts = self.dry_run(tx).await?;
+        Self::has_script_succeeded(&receipts)?;
+
+        Ok(receipts)
+    }
+
+    fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
+        receipts
+            .iter()
+            .find_map(|receipt| match receipt {
+                Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                    Some(format!("{result:?}"))
+                }
+                _ => None,
+            })
+            .map(|error_message| {
+                Err(Error::RevertTransactionError {
+                    reason: error_message,
+                    revert_id: 0,
+                    receipts: receipts.to_owned(),
+                })
+            })
+            .unwrap_or(Ok(()))
     }
 
     pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {

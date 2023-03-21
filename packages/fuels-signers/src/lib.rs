@@ -64,8 +64,7 @@ impl Display for AccountError {
     }
 }
 
-impl std::error::Error for AccountError {
-}
+impl std::error::Error for AccountError {}
 
 impl From<AccountError> for Error {
     fn from(e: AccountError) -> Self {

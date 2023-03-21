@@ -11,7 +11,7 @@ use fuels_signers::{provider::TransactionCost, Account};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
-    errors::{error, Error, Error::ProviderError, Result},
+    errors::{error, Error, Result},
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
@@ -23,7 +23,7 @@ use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{build_tx_from_contract_calls, simulate_and_check_success},
+    call_utils::build_tx_from_contract_calls,
     logs::{map_revert_error, LogDecoder},
     Configurables,
 };
@@ -211,7 +211,7 @@ impl Contract {
     /// Note that this needs a wallet because the contract instance needs a wallet for the calls
     pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         contract_id: Bech32ContractId,
-        account: &T,
+        account: T,
         signature: Selector,
         args: &[Token],
         log_decoder: LogDecoder,
@@ -242,7 +242,7 @@ impl Contract {
         Ok(ContractCallHandler {
             contract_call,
             tx_parameters,
-            account: account.clone(),
+            account,
             datatype: PhantomData,
             log_decoder,
         })
@@ -292,7 +292,7 @@ impl Contract {
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
-            .map_err(|err| ProviderError(format!("{err}")))?;
+            .map_err(|err| error!(ProviderError, "{err}"))?;
 
         let provider = account
             .try_provider()
@@ -783,7 +783,7 @@ where
         let provider = self.account.try_provider()?;
 
         let receipts = if simulate {
-            simulate_and_check_success(provider, &tx).await?
+            provider.checked_dry_run(&tx).await?
         } else {
             provider.send_transaction(&tx).await?
         };
@@ -935,7 +935,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
 
         let receipts = if simulate {
-            simulate_and_check_success(provider, &tx).await?
+            provider.checked_dry_run(&tx).await?
         } else {
             provider.send_transaction(&tx).await?
         };
@@ -948,7 +948,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        simulate_and_check_success(provider, &tx).await?;
+        provider.checked_dry_run(&tx).await?;
 
         Ok(())
     }

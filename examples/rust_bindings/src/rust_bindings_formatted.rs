@@ -55,7 +55,7 @@ pub mod abigen_bindings {
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
                 Contract::method_hash(
                     self.contract_id.clone(),
-                    &self.account,
+                    self.account,
                     function_selector::resolve_fn_selector(
                         "initialize_counter",
                         &[<u64 as Parameterize>::param_type()],
@@ -70,7 +70,7 @@ pub mod abigen_bindings {
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
                 Contract::method_hash(
                     self.contract_id.clone(),
-                    &self.account,
+                    self.account,
                     function_selector::resolve_fn_selector(
                         "increment_counter",
                         &[<u64 as Parameterize>::param_type()],
