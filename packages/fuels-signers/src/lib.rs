@@ -65,9 +65,6 @@ impl Display for AccountError {
 }
 
 impl std::error::Error for AccountError {
-    fn description(&self) -> &str {
-        &self.0
-    }
 }
 
 impl From<AccountError> for Error {
