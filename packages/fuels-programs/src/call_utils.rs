@@ -33,7 +33,7 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
-pub async fn build_tx_from_contract_calls(
+pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
     tx_parameters: TxParameters,
     account: &impl Account,
