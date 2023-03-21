@@ -18,7 +18,7 @@ Next, let's add some coins, start a provider and connect it with the wallets.
 {{#include ../../../examples/predicates/src/lib.rs:predicate_coins}}
 ```
 
-Now we can use the predicate abigen, which will create a predicate encoder instance for us. To spend the funds that are now locked in the predicate, we have to provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.
+Now we can use the predicate abigen to create a predicate encoder instance for us. To spend the funds now locked in the predicate, we must provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_load}}
