@@ -40,7 +40,6 @@
   - [Estimating cost](./calling-contracts/cost-estimation.md)
 - [Running scripts](./getting-started/running-scripts.md)
 - [Predicates](./getting-started/predicates.md)
-  - [Predicate data](./predicates/predicate-data.md)
   - [Signatures example](./predicates/send-spend-predicate.md)
 - [Types](./types/index.md)
   - [Bytes32](./types/bytes32.md)

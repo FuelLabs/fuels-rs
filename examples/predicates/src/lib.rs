@@ -97,8 +97,8 @@ mod tests {
             )
             .await?;
 
-        let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+        let predicate_balance = predicate
+            .get_asset_balance(&asset_id)
             .await?;
         assert_eq!(predicate_balance, amount_to_predicate);
         // ANCHOR_END: predicate_receive
@@ -113,16 +113,16 @@ mod tests {
             )
             .await?;
 
-        let receiver_balance_after = provider
-            .get_asset_balance(receiver.address(), asset_id)
+        let receiver_balance_after = receiver
+            .get_asset_balance(&asset_id)
             .await?;
         assert_eq!(
             initial_balance + amount_to_predicate,
             receiver_balance_after
         );
 
-        let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
+        let predicate_balance = predicate
+            .get_asset_balance(&asset_id)
             .await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
@@ -168,18 +168,14 @@ mod tests {
             .await?;
 
         // Check predicate balance.
-        let balance = first_wallet
-            .try_provider()?
-            .get_asset_balance(predicate.address(), asset_id)
-            .await?;
+        let balance = predicate
+        .get_asset_balance(&AssetId::default())
+        .await?;
 
         assert_eq!(balance, 500);
         // ANCHOR_END: predicate_data_lock_amount
 
         // ANCHOR: predicate_data_unlock
-        // We use the Predicate's `encode_data()` to encode the data we want to
-        // send to the predicate. This is a builder pattern and the function
-        // returns a new predicate.
         let amount_to_unlock = 500;
 
         predicate
@@ -192,9 +188,8 @@ mod tests {
             .await?;
 
         // Predicate balance is zero.
-        let balance = first_wallet
-            .try_provider()?
-            .get_asset_balance(predicate.address(), AssetId::default())
+        let balance = predicate
+            .get_asset_balance(&AssetId::default())
             .await?;
 
         assert_eq!(balance, 0);
