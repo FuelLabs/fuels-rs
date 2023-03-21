@@ -222,7 +222,7 @@ impl Contract {
         let tx_parameters = TxParameters::default();
         let call_parameters = CallParameters::default();
 
-        let compute_custom_input_offset = Contract::should_compute_custom_input_offset(args);
+        let compute_custom_input_offset = Self::should_compute_custom_input_offset(args);
 
         let unresolved_bytes = ABIEncoder::encode(args)?;
         let contract_call = ContractCall {
