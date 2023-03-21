@@ -97,9 +97,7 @@ mod tests {
             )
             .await?;
 
-        let predicate_balance = predicate
-            .get_asset_balance(&asset_id)
-            .await?;
+        let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
         assert_eq!(predicate_balance, amount_to_predicate);
         // ANCHOR_END: predicate_receive
 
@@ -113,17 +111,13 @@ mod tests {
             )
             .await?;
 
-        let receiver_balance_after = receiver
-            .get_asset_balance(&asset_id)
-            .await?;
+        let receiver_balance_after = receiver.get_asset_balance(&asset_id).await?;
         assert_eq!(
             initial_balance + amount_to_predicate,
             receiver_balance_after
         );
 
-        let predicate_balance = predicate
-            .get_asset_balance(&asset_id)
-            .await?;
+        let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
 
@@ -168,9 +162,7 @@ mod tests {
             .await?;
 
         // Check predicate balance.
-        let balance = predicate
-        .get_asset_balance(&AssetId::default())
-        .await?;
+        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
 
         assert_eq!(balance, 500);
         // ANCHOR_END: predicate_data_lock_amount
@@ -188,9 +180,7 @@ mod tests {
             .await?;
 
         // Predicate balance is zero.
-        let balance = predicate
-            .get_asset_balance(&AssetId::default())
-            .await?;
+        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
 
         assert_eq!(balance, 0);
 

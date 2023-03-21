@@ -10,7 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, UtxoId, ScriptExecutionResult};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
@@ -270,10 +270,7 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction + Clone>(
-        &self,
-        tx: &T,
-    ) -> Result<Vec<Receipt>> {
+    pub async fn checked_dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
         let receipts = self.dry_run(tx).await?;
         Self::has_script_succeeded(&receipts)?;
 
@@ -284,7 +281,9 @@ impl Provider {
         receipts
             .iter()
             .find_map(|receipt| match receipt {
-                Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                Receipt::ScriptResult { result, .. }
+                    if *result != ScriptExecutionResult::Success =>
+                {
                     Some(format!("{result:?}"))
                 }
                 _ => None,
