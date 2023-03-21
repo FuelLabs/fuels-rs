@@ -53,7 +53,6 @@ mod tests {
             });
         // ANCHOR_END: predicate_coins
 
-        // ANCHOR: predicate_signatures
         let data_to_sign = [0; 32];
         let signature1: B512 = wallet
             .sign_message(data_to_sign)
@@ -72,7 +71,6 @@ mod tests {
             .try_into()?;
 
         let signatures = [signature1, signature2, signature3];
-        // ANCHOR_END: predicate_signatures
 
         // ANCHOR: predicate_load
         abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json"));

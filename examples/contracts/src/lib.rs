@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        accounts::predicate::Predicate,
         types::{
             errors::{error, Error, Result},
             Bits256,
