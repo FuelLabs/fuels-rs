@@ -63,10 +63,12 @@ impl Predicate {
         self
     }
 
-    pub fn with_code(mut self, code: Vec<u8>) -> Self {
-        self.address = Self::calculate_address(&code);
-        self.code = code;
-        self
+    pub fn with_code(self, code: Vec<u8>) -> Self {
+        Self {
+            data: self.data,
+            provider: self.provider,
+            ..Self::from_code(code)
+        }
     }
 
     pub fn with_provider(mut self, provider: Provider) -> Predicate {
