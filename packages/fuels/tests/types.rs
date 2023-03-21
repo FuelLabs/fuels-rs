@@ -1784,7 +1784,7 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
 
 #[tokio::test]
 async fn test_nested_vector_methods_fail() -> Result<()> {
-    // This is just an E2E test of the method `ParamType::contains_nested_vectors`, hence it's
+    // This is just an E2E test of the method `ParamType::contains_nested_heap_types`, hence it's
     // not exhaustive, but its unit tests are.
     setup_contract_test!(
         Wallets("wallet"),
@@ -1804,5 +1804,25 @@ async fn test_nested_vector_methods_fail() -> Result<()> {
         .call()
         .await
         .expect_err("Should fail because nested vectors are not supported");
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_bytes_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "BytesOutputContract",
+            abi = "packages/fuels/tests/types/bytes"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "BytesOutputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.return_bytes(10).call().await?;
+    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
     Ok(())
 }

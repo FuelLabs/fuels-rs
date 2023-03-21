@@ -55,6 +55,7 @@ members = [
   'tests/scripts/script_with_arguments',
   'tests/storage/contract_storage_test',
   'tests/types/b512',
+  'tests/types/bytes',
   'tests/types/call_empty_return',
   'tests/types/complex_types_contract',
   'tests/types/contract_output_test',

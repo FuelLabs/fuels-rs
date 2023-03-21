@@ -546,7 +546,7 @@ pub fn get_decoded_output(
         None => null_contract_id,
     };
     let encoded_value = match output_param.get_return_location() {
-        ReturnLocation::ReturnData if output_param.is_vector() => {
+        ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
             // If the output of the function is a vector, then there are 2 consecutive ReturnData
             // receipts. The first one is the one that returns the pointer to the vec struct in the
             // VM memory, the second one contains the actual vector bytes (that the previous receipt
