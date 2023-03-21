@@ -1,6 +1,6 @@
 # Interacting with the blockchain
 
-Once you have set up a provider, you're ready to interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the [official provider API documentation](https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html).
+Once you set up a provider, you can interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the [official provider API documentation](https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html).
 
 - [Interacting with the blockchain](#interacting-with-the-blockchain)
   - [Set up](#set-up)
