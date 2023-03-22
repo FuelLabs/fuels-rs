@@ -336,7 +336,7 @@ mod tests {
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
                 ::fuels::programs::contract::Contract::method_hash(
                     self.contract_id.clone(),
-                    self.account,
+                    self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "some_abi_funct",
                         &[
@@ -398,7 +398,7 @@ mod tests {
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
                 ::fuels::programs::contract::Contract::method_hash(
                     self.contract_id.clone(),
-                    self.account,
+                    self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "HelloWorld",
                         &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
@@ -508,7 +508,7 @@ mod tests {
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
                 ::fuels::programs::contract::Contract::method_hash(
                     self.contract_id.clone(),
-                    self.account,
+                    self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
                         "hello_world",
                         &[<self::SomeWeirdFrenchCuisine as ::fuels::types::traits::Parameterize>::param_type()]
