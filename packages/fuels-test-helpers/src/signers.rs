@@ -3,7 +3,7 @@ use std::{mem::size_of, net::SocketAddr};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
-use fuels_signers::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount, WalletUnlocked};
+use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount, WalletUnlocked};
 use fuels_types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -16,7 +16,7 @@ use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_provider_and_get_wallet;
-/// use fuels_signers::Signer;
+/// use fuels_accounts::Signer;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
 ///   let wallet = launch_provider_and_get_wallet().await;
@@ -37,7 +37,7 @@ pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_custom_provider_and_get_wallets;
-/// use fuels_signers::Signer;
+/// use fuels_accounts::Signer;
 /// use fuels_test_helpers::WalletsConfig;
 ///
 /// async fn multiple_wallets() -> Result<(), Box<dyn std::error::Error>> {
@@ -110,7 +110,7 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use fuels_signers::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
     use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
     use rand::Fill;
 

@@ -17,7 +17,7 @@ fuel-core-types = { workspace = true, default-features = false }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
 fuel-vm = { workspace = true }
-fuels-signers = { workspace = true, optional = true }
+fuels-accounts = { workspace = true, optional = true }
 fuels-types = { workspace = true }
 futures = "0.3.26"
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
@@ -31,9 +31,9 @@ tokio = { version = "1.15", default-features = false }
 which = { version = "4.3", default-features = false }
 
 [features]
-default = ["fuels-signers", "std"]
+default = ["fuels-accounts", "std"]
 std = [
-    "fuels-signers?/std",
+    "fuels-accounts?/std",
     "fuels-types/std",
 ]
 fuel-core-lib = ["fuel-core"]

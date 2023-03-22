@@ -9,7 +9,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
-use fuels_signers::Account;
+use fuels_accounts::Account;
 use fuels_types::resource::Resource;
 
 #[tokio::test]

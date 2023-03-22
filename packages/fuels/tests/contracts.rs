@@ -2,7 +2,7 @@
 use std::future::Future;
 
 use fuels::prelude::*;
-use fuels_signers::{predicate::Predicate, Account};
+use fuels_accounts::{predicate::Predicate, Account};
 use fuels_types::Bits256;
 
 #[tokio::test]

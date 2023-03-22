@@ -24,7 +24,7 @@ pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuels-accounts")]
 pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
@@ -33,7 +33,7 @@ pub use wallets_config::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
-#[cfg(feature = "fuels-signers")]
+#[cfg(feature = "fuels-accounts")]
 mod signers;
 mod utils;
 mod wallets_config;

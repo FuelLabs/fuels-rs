@@ -6,8 +6,8 @@ use fuel_tx::{
     StorageSlot,
 };
 use fuel_vm::fuel_asm::PanicReason;
+use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
-use fuels_signers::{provider::TransactionCost, Account};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},

@@ -16,7 +16,7 @@ fuel-abi-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true }
 fuel-vm = { workspace = true }
-fuels-signers = { workspace = true }
+fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
 futures = "0.3.21"
@@ -37,6 +37,6 @@ tokio = "1.12"
 default = ["std"]
 std = [
     "fuels-core/std",
-    "fuels-signers/std",
+    "fuels-accounts/std",
     "fuels-types/std",
 ]

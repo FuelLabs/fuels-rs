@@ -3,7 +3,7 @@ use std::{collections::HashSet, iter, vec};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
-use fuels_signers::Account;
+use fuels_accounts::Account;
 use fuels_types::{
     bech32::Bech32Address,
     constants::WORD_SIZE,
@@ -416,8 +416,8 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 mod test {
     use std::slice;
 
+    use fuels_accounts::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_signers::WalletUnlocked;
     use fuels_types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},

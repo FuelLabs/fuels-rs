@@ -33,7 +33,7 @@ pub mod core {
 }
 
 pub mod accounts {
-    pub use fuels_signers::*;
+    pub use fuels_accounts::*;
 }
 
 pub mod types {
