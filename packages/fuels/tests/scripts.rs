@@ -339,3 +339,24 @@ async fn test_script_signing() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn main_function_bytes_arguments() -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "packages/fuels/tests/scripts/script_bytes/out/debug/script_bytes-abi.json"
+    ));
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/scripts/script_bytes/out/debug/script_bytes.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bytes = Bytes(vec![40, 41, 42]);
+    let wrapper = Wrapper {
+        inner: vec![bytes.clone(), bytes.clone()],
+        inner_enum: SomeEnum::Second(bytes),
+    };
+
+    instance.main(10, wrapper).call().await?;
+
+    Ok(())
+}

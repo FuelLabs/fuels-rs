@@ -263,6 +263,7 @@ impl Contract {
                         | Token::Tuple(_)
                         | Token::Array(_)
                         | Token::Vector(_)
+                        | Token::Bytes(_)
                 )
             })
     }

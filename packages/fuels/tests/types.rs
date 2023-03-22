@@ -1817,8 +1817,45 @@ async fn test_bytes_output() -> Result<()> {
             wallet = "wallet"
         ),
     );
+
     let contract_methods = contract_instance.methods();
     let response = contract_methods.return_bytes(10).call().await?;
+
     assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_bytes_as_input() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "BytesInputContract",
+            abi = "packages/fuels/tests/types/bytes"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "BytesInputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let bytes = Bytes(vec![40, 41, 42]);
+
+        contract_methods.accept_bytes(bytes).call().await?;
+    }
+    {
+        let bytes = Bytes(vec![40, 41, 42]);
+        let wrapper = Wrapper {
+            inner: vec![bytes.clone(), bytes.clone()],
+            inner_enum: SomeEnum::Second(bytes),
+        };
+
+        contract_methods.accept_nested_bytes(wrapper).call().await?;
+    }
+
     Ok(())
 }

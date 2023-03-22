@@ -46,11 +46,7 @@ impl ABIEncoder {
                     "Encoding a `RawSlice` type is currently not supported by the Fuel spec."
                 )
             }
-            Token::Bytes(_) => {
-                unimplemented!(
-                    "Encoding a `Bytes` type is currently not supported by the Fuel spec."
-                )
-            }
+            Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
         };
 
         Ok(encoded_token)
@@ -137,6 +133,23 @@ impl ABIEncoder {
             Data::Dynamic(encoded_data),
             Self::encode_u64(cap),
             Self::encode_u64(len),
+        ])
+    }
+
+    fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
+        // Bytes are packed so we need to make sure that the address of the next
+        // argument is WORD_SIZE divisible
+        let len = data.len();
+        let new_size = len + (WORD_SIZE - (len % WORD_SIZE));
+        data.resize(new_size, 0);
+
+        let cap = data.len() as u64;
+        let encoded_data = vec![Data::Inline(data)];
+
+        Ok(vec![
+            Data::Dynamic(encoded_data),
+            Self::encode_u64(cap),
+            Self::encode_u64(len as u64),
         ])
     }
 }
@@ -1025,6 +1038,7 @@ mod tests {
 
         Ok(())
     }
+
     #[test]
     fn a_vec_in_a_vec() -> Result<()> {
         // arrange
@@ -1052,6 +1066,28 @@ mod tests {
         let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
 
         assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_bytes() -> Result<()> {
+        // arrange
+        let token = Token::Bytes(vec![1, 2, 3]);
+        let offset = 40;
+
+        // act
+        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+
+        // assert
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
+        let cap = [0, 0, 0, 0, 0, 0, 0, 8];
+        let len = [0, 0, 0, 0, 0, 0, 0, 3];
+        let data = [1, 2, 3, 0, 0, 0, 0, 0];
+
+        let expected_encoded_bytes = [ptr, cap, len, data].concat();
+
+        assert_eq!(expected_encoded_bytes, encoded_bytes);
 
         Ok(())
     }
