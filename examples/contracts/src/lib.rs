@@ -227,9 +227,9 @@ mod tests {
 
         let response = contract_instance_1
             .methods()
-            .initialize_counter(42) // Build the ABI call
+            .initialize_counter(42)
             .tx_params(TxParameters::default().set_gas_limit(1_000_000))
-            .call() // Perform the network call
+            .call()
             .await?;
 
         assert_eq!(42, response.value);
@@ -249,7 +249,7 @@ mod tests {
             .methods()
             .initialize_counter(42) // Build the ABI call
             .tx_params(TxParameters::default().set_gas_limit(1_000_000))
-            .call() // Perform the network call
+            .call()
             .await?;
 
         assert_eq!(42, response.value);
@@ -266,6 +266,7 @@ mod tests {
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
+
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             &wallet,
@@ -708,7 +709,7 @@ mod tests {
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            .with_wallet(wallet_2)? // Connect wallet_2
+            .with_account(wallet_2)? // Connect wallet_2
             .methods() // Get contract methods
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.

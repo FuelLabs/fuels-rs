@@ -8,7 +8,11 @@ use fuels::{
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
+    abigen!(
+        Contract(
+            name="MyContract",
+            abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
+        ));
 
     let wallet = launch_provider_and_get_wallet().await;
 

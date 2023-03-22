@@ -11,14 +11,18 @@ pub mod constants;
 mod core;
 pub mod enum_variants;
 pub mod errors;
+pub mod input;
 pub mod message;
 pub mod message_proof;
 pub mod node_info;
+pub mod offsets;
 pub mod param_types;
 pub mod resource;
 pub mod traits;
 pub mod transaction;
+pub mod transaction_builders;
 pub mod transaction_response;
+pub mod unresolved_bytes;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
 

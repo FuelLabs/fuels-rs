@@ -6,9 +6,9 @@ use fuel_tx::{AssetId, UtxoId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone)]
-
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum CoinStatus {
+    #[default]
     Unspent,
     Spent,
 }
@@ -22,7 +22,7 @@ impl From<ClientCoinStatus> for CoinStatus {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Coin {
     pub amount: u64,
     pub block_created: u64,

@@ -10,15 +10,16 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-vm = { workspace = true }
-fuel-tx = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true, default-features = false }
-fuel-core-types = { workspace = true, default-features = false }
 fuel-core-client = { workspace = true, default-features = false }
+fuel-core-types = { workspace = true, default-features = false }
+fuel-tx = { workspace = true }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
-fuels-signers = { workspace = true, optional = true }
+fuel-vm = { workspace = true }
+fuels-accounts = { workspace = true, optional = true }
 fuels-types = { workspace = true }
+futures = "0.3.26"
 hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
 portpicker = { version = "0.1.1" }
 rand = { version = "0.8.4", default-features = false }
@@ -27,13 +28,12 @@ serde_json = { version = "1.0", features = ["raw_value"] }
 serde_with = { version = "1.11", features = ["serde_json"] }
 tempfile = { version = "3.0.1", default-features = false }
 tokio = { version = "1.15", default-features = false }
-futures = "0.3.26"
 which = { version = "4.3", default-features = false }
 
 [features]
-default = ["fuels-signers", "std"]
+default = ["fuels-accounts", "std"]
 std = [
-    "fuels-signers?/std",
+    "fuels-accounts?/std",
     "fuels-types/std",
 ]
 fuel-core-lib = ["fuel-core"]
