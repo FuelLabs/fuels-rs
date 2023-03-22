@@ -16,7 +16,7 @@ An account implements the following methods for transferring assets:
 - `force_transfer_to_contract`
 - `withdraw_to_base_layer`
 
-The following examples are provided for a `Wallet` account. A `Predicate` account would work similarly but requires you to set its predicate data before attempting to spend resources owned by it.
+The following examples are provided for a `Wallet` account. A `Predicate` account would work similarly, but you might need to set its predicate data before attempting to spend resources owned by it.
 
 With `wallet.transfer` you can initiate a transaction to transfer an asset from your account to a target address.
 
