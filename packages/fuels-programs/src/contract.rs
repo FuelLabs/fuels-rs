@@ -96,14 +96,6 @@ pub trait SettableContract {
     fn log_decoder(&self) -> LogDecoder;
 }
 
-/// A compiled representation of a contract
-#[derive(Debug, Clone, Default)]
-pub struct CompiledContract {
-    binary: Vec<u8>,
-    salt: Salt,
-    storage_slots: Vec<StorageSlot>,
-}
-
 /// Configuration for contract storage
 #[derive(Debug, Clone, Default)]
 pub struct StorageConfiguration {
@@ -180,26 +172,45 @@ impl DeployConfiguration {
 /// The contract has a wallet attribute, used to pay for transactions and sign them.
 /// It allows doing calls without passing a wallet/signer each time.
 pub struct Contract {
-    pub compiled_contract: CompiledContract,
-    pub wallet: WalletUnlocked,
+    binary: Vec<u8>,
+    salt: Salt,
+    storage_slots: Vec<StorageSlot>,
+    contract_id: ContractId,
+    state_root: Bytes32,
 }
 
 impl Contract {
-    pub fn new(compiled_contract: CompiledContract, wallet: WalletUnlocked) -> Self {
+    pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
+        let (contract_id, state_root) =
+            Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
+
         Self {
-            compiled_contract,
-            wallet,
+            binary,
+            salt,
+            storage_slots,
+            contract_id,
+            state_root,
         }
     }
 
-    pub fn compute_contract_id_and_state_root(
-        compiled_contract: &CompiledContract,
-    ) -> (ContractId, Bytes32) {
-        let fuel_contract = FuelContract::from(compiled_contract.binary.as_slice());
-        let root = fuel_contract.root();
-        let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
+    pub fn contract_id(&self) -> ContractId {
+        self.contract_id
+    }
 
-        let contract_id = fuel_contract.id(&compiled_contract.salt, &root, &state_root);
+    pub fn state_root(&self) -> Bytes32 {
+        self.state_root
+    }
+
+    fn compute_contract_id_and_state_root(
+        binary: &[u8],
+        salt: &Salt,
+        storage_slots: &[StorageSlot],
+    ) -> (ContractId, Bytes32) {
+        let fuel_contract = FuelContract::from(binary);
+        let root = fuel_contract.root();
+        let state_root = FuelContract::initial_state_root(storage_slots.iter());
+
+        let contract_id = fuel_contract.id(salt, &root, &state_root);
 
         (contract_id, state_root)
     }
@@ -289,22 +300,27 @@ impl Contract {
         wallet: &WalletUnlocked,
         configuration: DeployConfiguration,
     ) -> Result<Bech32ContractId> {
-        let tx_parameters = configuration.tx_parameters;
-        let compiled_contract = Self::load_contract(binary_filepath, configuration)?;
+        let DeployConfiguration {
+            tx_parameters,
+            storage,
+            configurables,
+            salt,
+        } = configuration;
 
-        Self::deploy_loaded(compiled_contract, wallet, tx_parameters).await
+        let contract = Self::load_contract(binary_filepath, storage, configurables, salt)?;
+
+        contract.deploy_loaded(wallet, tx_parameters).await
     }
 
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
     /// wallet will also receive the change.
     async fn deploy_loaded(
-        compiled_contract: CompiledContract,
+        self,
         wallet: &WalletUnlocked,
         params: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (mut tx, contract_id) =
-            Self::contract_deployment_transaction(compiled_contract, params);
+        let (mut tx, contract_id) = self.contract_deployment_transaction(params);
 
         // The first witness is the bytecode we're deploying.
         // The signature will be appended at position 1 of
@@ -326,21 +342,28 @@ impl Contract {
 
     pub fn load_contract(
         binary_filepath: &str,
-        configuration: DeployConfiguration,
-    ) -> Result<CompiledContract> {
+        storage: StorageConfiguration,
+        configurables: Configurables,
+        salt: Salt,
+    ) -> Result<Self> {
         Self::validate_path_and_extension(binary_filepath, "bin")?;
 
         let mut binary = fs::read(binary_filepath)
             .map_err(|_| error!(InvalidData, "failed to read binary: '{binary_filepath}'"))?;
 
-        configuration.configurables.update_constants_in(&mut binary);
+        configurables.update_constants_in(&mut binary);
 
-        let storage_slots = Self::get_storage_slots(configuration.storage)?;
+        let storage_slots = Self::get_storage_slots(storage)?;
 
-        Ok(CompiledContract {
+        let (contract_id, state_root) =
+            Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
+
+        Ok(Self {
             binary,
-            salt: configuration.salt,
+            salt,
             storage_slots,
+            contract_id,
+            state_root,
         })
     }
 
@@ -367,26 +390,23 @@ impl Contract {
 
     /// Crafts a transaction used to deploy a contract
     fn contract_deployment_transaction(
-        compiled_contract: CompiledContract,
+        self,
         params: TxParameters,
     ) -> (CreateTransaction, Bech32ContractId) {
-        let (contract_id, state_root) =
-            Self::compute_contract_id_and_state_root(&compiled_contract);
-
         let bytecode_witness_index = 0;
-        let outputs = vec![Output::contract_created(contract_id, state_root)];
-        let witnesses = vec![compiled_contract.binary.into()];
+        let outputs = vec![Output::contract_created(self.contract_id, self.state_root)];
+        let witnesses = vec![self.binary.into()];
 
         let tx = CreateTransaction::build_contract_deployment_tx(
             bytecode_witness_index,
             outputs,
             witnesses,
-            compiled_contract.salt,
-            compiled_contract.storage_slots,
+            self.salt,
+            self.storage_slots,
             params,
         );
 
-        (tx, contract_id.into())
+        (tx, self.contract_id.into())
     }
 
     fn get_storage_slots(configuration: StorageConfiguration) -> Result<Vec<StorageSlot>> {
