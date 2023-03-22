@@ -2,6 +2,7 @@ use std::iter::repeat;
 
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
+use fuels_types::transaction_builders::ScriptTransactionBuilder;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -133,9 +134,9 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .await
         .pop()
         .unwrap();
-    let mut tx = ScriptTransaction::new(vec![], vec![], TxParameters::default());
 
-    wallet.add_fee_resources(&mut tx, 0, 0).await?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+    let tx = wallet.add_fee_resources(tb, 0, None).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -165,13 +166,13 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let base_amount = 30;
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, 0)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
-    let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
 
-    wallet.add_fee_resources(&mut tx, base_amount, 0).await?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+    let tx = wallet.add_fee_resources(tb, base_amount, None).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -197,7 +198,7 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_transfer() -> fuels_types::errors::Result<()> {
+async fn test_transfer() -> Result<()> {
     // Create the actual wallets/signers
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None).lock();
@@ -233,7 +234,7 @@ async fn test_transfer() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
+async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
@@ -252,7 +253,7 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
 
     // Assert that the transaction was properly configured.
     let res = wallet_1
-        .get_provider()?
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
@@ -278,7 +279,7 @@ async fn send_transfer_transactions() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
+async fn transfer_coins_with_change() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
@@ -308,7 +309,7 @@ async fn transfer_coins_with_change() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn test_wallet_get_coins() -> fuels_types::errors::Result<()> {
+async fn test_wallet_get_coins() -> Result<()> {
     const AMOUNT: u64 = 1000;
     const NUM_COINS: u64 = 3;
     let mut wallet = WalletUnlocked::new_random(None);
@@ -343,7 +344,7 @@ async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
 }
 
 #[tokio::test]
-async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
+async fn transfer_more_than_owned() -> Result<()> {
     const AMOUNT: u64 = 1000000;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
 
@@ -364,7 +365,7 @@ async fn transfer_more_than_owned() -> fuels_types::errors::Result<()> {
 }
 
 #[tokio::test]
-async fn transfer_coins_of_non_base_asset() -> fuels_types::errors::Result<()> {
+async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None).lock();

@@ -18,8 +18,7 @@ async fn test_transaction_script_workflow() -> Result<()> {
     let call_handler = contract_instance.methods().initialize_counter(42);
 
     let tx = call_handler.build_tx().await?;
-
-    let provider = wallet.get_provider()?;
+    let provider = wallet.try_provider()?;
     let receipts = provider.send_transaction(&tx).await?;
 
     let response = call_handler.get_response(receipts)?;
@@ -52,7 +51,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let provider = &wallet.get_provider()?;
+    let provider = wallet.try_provider()?;
     let tx = multi_call_handler.build_tx().await?;
     let receipts = provider.send_transaction(&tx).await?;
     let (counter, array) = multi_call_handler

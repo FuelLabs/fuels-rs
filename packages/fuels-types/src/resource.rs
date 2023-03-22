@@ -1,10 +1,11 @@
 #![cfg(feature = "std")]
 
 use fuel_core_client::client::schema::resource::Resource as ClientResource;
+use fuel_tx::AssetId;
 
-use crate::{coin::Coin, message::Message};
+use crate::{coin::Coin, constants::BASE_ASSET_ID, message::Message};
 
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Resource {
     Coin(Coin),
     Message(Message),
@@ -30,6 +31,13 @@ impl Resource {
         match self {
             Resource::Coin(coin) => coin.amount,
             Resource::Message(message) => message.amount,
+        }
+    }
+
+    pub fn asset_id(&self) -> AssetId {
+        match self {
+            Resource::Coin(coin) => coin.asset_id,
+            Resource::Message(_) => BASE_ASSET_ID,
         }
     }
 }

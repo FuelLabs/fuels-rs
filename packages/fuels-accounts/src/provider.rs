@@ -1,4 +1,4 @@
-use std::{collections::HashMap, io};
+use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Duration, Utc};
 #[cfg(feature = "fuel-core")]
@@ -10,7 +10,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Input, Receipt, TxPointer, UtxoId};
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
@@ -270,6 +270,34 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
+    pub async fn checked_dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+        let receipts = self.dry_run(tx).await?;
+        Self::has_script_succeeded(&receipts)?;
+
+        Ok(receipts)
+    }
+
+    fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
+        receipts
+            .iter()
+            .find_map(|receipt| match receipt {
+                Receipt::ScriptResult { result, .. }
+                    if *result != ScriptExecutionResult::Success =>
+                {
+                    Some(format!("{result:?}"))
+                }
+                _ => None,
+            })
+            .map(|error_message| {
+                Err(Error::RevertTransactionError {
+                    reason: error_message,
+                    revert_id: 0,
+                    receipts: receipts.to_owned(),
+                })
+            })
+            .unwrap_or(Ok(()))
+    }
+
     pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
         let receipts = self.client.dry_run(&tx.clone().into()).await?;
 
@@ -349,51 +377,6 @@ impl Provider {
             .try_collect()?;
 
         Ok(res)
-    }
-
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// `ResourceFilter`. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
-    pub async fn get_asset_inputs(
-        &self,
-        filter: ResourceFilter,
-        witness_index: u8,
-    ) -> Result<Vec<Input>> {
-        let asset_id = filter.asset_id;
-        Ok(self
-            .get_spendable_resources(filter)
-            .await?
-            .iter()
-            .map(|resource| match resource {
-                Resource::Coin(coin) => self.create_coin_input(coin, asset_id, witness_index),
-                Resource::Message(message) => self.create_message_input(message, witness_index),
-            })
-            .collect::<Vec<Input>>())
-    }
-
-    fn create_coin_input(&self, coin: &Coin, asset_id: AssetId, witness_index: u8) -> Input {
-        Input::coin_signed(
-            coin.utxo_id,
-            coin.owner.clone().into(),
-            coin.amount,
-            asset_id,
-            TxPointer::default(),
-            witness_index,
-            0,
-        )
-    }
-
-    fn create_message_input(&self, message: &Message, witness_index: u8) -> Input {
-        Input::message_signed(
-            message.message_id(),
-            message.sender.clone().into(),
-            message.recipient.clone().into(),
-            message.amount,
-            message.nonce,
-            witness_index,
-            message.data.clone(),
-        )
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different

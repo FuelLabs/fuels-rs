@@ -3,6 +3,7 @@ use fuels::{
     tx::AssetId,
     types::{coin::Coin, message::Message},
 };
+use fuels_accounts::{predicate::Predicate, Account};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -80,11 +81,13 @@ async fn setup_predicate_test(
 #[tokio::test]
 async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from("tests/types/predicates/u64/out/debug/u64.bin")?;
+    let predicate_data = MyPredicateEncoder::encode_data(32768);
+    let code_path = "tests/types/predicates/u64/out/debug/u64.bin";
+    let mut predicate: Predicate = Predicate::load_from(code_path)?.with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -92,19 +95,15 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data(32767)
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(32768)
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -125,11 +124,19 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_address() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi = "packages/fuels/tests/types/predicates/address/out/debug/address-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from("tests/types/predicates/address/out/debug/address.bin")?;
+    let addr: Address = "0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a"
+        .parse()
+        .unwrap();
+
+    let predicate_data = MyPredicateEncoder::encode_data(addr);
+
+    let mut predicate: Predicate =
+        Predicate::load_from("tests/types/predicates/address/out/debug/address.bin")?
+            .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -137,27 +144,15 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    let wrong_addr: Address = "0x7f86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a"
-        .parse()
-        .unwrap();
-
-    // Run predicate with wrong data
-    predicate
-        .encode_data(wrong_addr)
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
-
-    let addr: Address = "0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a"
-        .parse()
-        .unwrap();
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(addr)
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -174,15 +169,18 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
 
     Ok(())
 }
-
 #[tokio::test]
 async fn spend_predicate_coins_messages_enums() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi = "packages/fuels/tests/types/predicates/enums/out/debug/enums-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from("tests/types/predicates/enums/out/debug/enums.bin")?;
+    let predicate_data = MyPredicateEncoder::encode_data(TestEnum::A(32), AnotherTestEnum::B(32));
+
+    let mut predicate: Predicate =
+        Predicate::load_from("tests/types/predicates/enums/out/debug/enums.bin")?
+            .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -190,19 +188,15 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data(TestEnum::A(32), AnotherTestEnum::A(32))
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(TestEnum::A(32), AnotherTestEnum::B(32))
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -223,11 +217,21 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_structs() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi = "packages/fuels/tests/types/predicates/structs/out/debug/structs-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from("tests/types/predicates/structs/out/debug/structs.bin")?;
+    let predicate_data = MyPredicateEncoder::encode_data(
+        TestStruct { value: 192 },
+        AnotherTestStruct {
+            value: 64,
+            number: 128,
+        },
+    );
+
+    let mut predicate: Predicate =
+        Predicate::load_from("tests/types/predicates/structs/out/debug/structs.bin")?
+            .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -235,31 +239,15 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data(
-            TestStruct { value: 191 },
-            AnotherTestStruct {
-                value: 63,
-                number: 127,
-            },
-        )
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(
-            TestStruct { value: 192 },
-            AnotherTestStruct {
-                value: 64,
-                number: 128,
-            },
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
         )
-        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -280,13 +268,17 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi = "packages/fuels/tests/types/predicates/predicate_tuples/out/debug/predicate_tuples-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from(
+    let predicate_data =
+        MyPredicateEncoder::encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128);
+
+    let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_tuples/out/debug/predicate_tuples.bin",
-    )?;
+    )?
+    .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -294,19 +286,15 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data((15, TestStruct { value: 31 }, TestEnum::Value(63)), 127)
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128)
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -327,14 +315,17 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_vector() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicate",
+        name = "MyPredicateEncoder",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate = MyPredicate::load_from(
+    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+
+    let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
-    )?;
+    )?
+    .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -342,19 +333,15 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data(2, 4, vec![2, 4, 43])
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(2, 4, vec![2, 4, 42])
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds
@@ -374,24 +361,13 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_vectors() -> Result<()> {
-    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
-
-    let predicate = MyPredicate::load_from(
-        "tests/types/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
-    )?;
-
-    let num_coins = 4;
-    let num_messages = 8;
-    let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+    abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
 
     let u32_vec = vec![0, 4, 3];
     let vec_in_vec = vec![vec![0, 2, 2], vec![0, 1, 2]];
     let struct_in_vec = vec![SomeStruct { a: 8 }, SomeStruct { a: 1 }];
     let vec_in_struct = SomeStruct { a: vec![0, 16, 2] };
     let array_in_vec = vec![[0u64, 1u64], [32u64, 1u64]];
-    let vec_in_array = [vec![0, 63, 3], vec![0, 1, 2]];
     let vec_in_enum = SomeEnum::A(vec![0, 1, 128]);
     let enum_in_vec = vec![SomeEnum::A(0), SomeEnum::A(16)];
     let tuple_in_vec = vec![(0, 0), (128, 1)];
@@ -405,45 +381,42 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         },
     ];
 
-    // Run predicate with wrong data
-    predicate
-        .encode_data(
-            u32_vec.clone(),
-            vec_in_vec.clone(),
-            struct_in_vec.clone(),
-            vec_in_struct.clone(),
-            array_in_vec.clone(),
-            vec_in_array,
-            vec_in_enum.clone(),
-            enum_in_vec.clone(),
-            tuple_in_vec.clone(),
-            vec_in_tuple.clone(),
-            vec_in_a_vec_in_a_struct_in_a_vec.clone(),
-        )
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
-
     let vec_in_array = [vec![0, 64, 2], vec![0, 1, 2]];
 
+    let predicate_data = MyPredicateEncoder::encode_data(
+        u32_vec,
+        vec_in_vec,
+        struct_in_vec,
+        vec_in_struct,
+        array_in_vec,
+        vec_in_array,
+        vec_in_enum,
+        enum_in_vec,
+        tuple_in_vec,
+        vec_in_tuple,
+        vec_in_a_vec_in_a_struct_in_a_vec,
+    );
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/types/predicates/predicate_vectors/out/debug/predicate_vectors.bin",
+    )?
+    .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
     predicate
-        .encode_data(
-            u32_vec,
-            vec_in_vec,
-            struct_in_vec,
-            vec_in_struct,
-            array_in_vec,
-            vec_in_array,
-            vec_in_enum,
-            enum_in_vec,
-            tuple_in_vec,
-            vec_in_tuple,
-            vec_in_a_vec_in_a_struct_in_a_vec,
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
         )
-        .spend(&receiver, predicate_balance, asset_id, None)
         .await?;
 
     // The predicate has spent the funds
@@ -463,11 +436,18 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_generics() -> Result<()> {
-    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
+    abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
 
-    let predicate = MyPredicate::load_from(
+    let generic_struct = GenericStruct { value: 64u8 };
+    let generic_struct2 = GenericStruct { value: 64u16 };
+    let generic_enum = GenericEnum::Generic(generic_struct2);
+
+    let predicate_data = MyPredicateEncoder::encode_data(generic_struct, generic_enum);
+
+    let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_generics/out/debug/predicate_generics.bin",
-    )?;
+    )?
+    .with_data(predicate_data);
 
     let num_coins = 4;
     let num_messages = 8;
@@ -475,26 +455,15 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    let generic_struct = GenericStruct { value: 64 };
-    let generic_enum = GenericEnum::AnotherGeneric(64);
-
-    // Run predicate with wrong data
-    predicate
-        .encode_data(generic_struct, generic_enum)
-        .spend(&receiver, predicate_balance, asset_id, None)
-        .await
-        .expect_err("Should error");
-
-    // No funds were transferred
-    assert_address_balance(receiver.address(), &provider, asset_id, receiver_balance).await;
-
-    let generic_struct = GenericStruct { value: 64u8 };
-    let generic_struct2 = GenericStruct { value: 64u16 };
-    let generic_enum = GenericEnum::Generic(generic_struct2);
+    predicate.set_provider(provider.clone());
 
     predicate
-        .encode_data(generic_struct, generic_enum)
-        .spend(&receiver, predicate_balance, asset_id, None)
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
         .await?;
 
     // The predicate has spent the funds

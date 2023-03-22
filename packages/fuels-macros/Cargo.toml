@@ -13,17 +13,17 @@ description = "Fuel Rust SDK marcros to generate types from ABI."
 proc-macro = true
 
 [dependencies]
-fuel-abi-types = "0.2.0"
-lazy_static = "1.4.0"
-regex = "1.7.1"
 Inflector = "0.11"
+fuel-abi-types = "0.2.0"
+fuels-code-gen = { workspace = true }
+itertools = "0.10.5"
+lazy_static = "1.4.0"
 proc-macro2 = "1.0"
 quote = "1.0"
 rand = "0.8"
-syn = { version = "1.0.107", features = ["extra-traits"] }
-itertools = "0.10.5"
+regex = "1.7.1"
 serde_json = "1.0.91"
-fuels-code-gen = { workspace = true }
+syn = { version = "1.0.107", features = ["extra-traits"] }
 
 [dev-dependencies]
 trybuild = "1.0.73"
