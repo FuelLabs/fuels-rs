@@ -52,11 +52,7 @@ async fn call_with_empty_return() -> Result<()> {
         ),
     );
 
-    let _response = contract_instance
-        .methods()
-        .store_value(42) // Build the ABI call
-        .call() // Perform the network call
-        .await?;
+    let _response = contract_instance.methods().store_value(42).call().await?;
     Ok(())
 }
 
@@ -124,8 +120,8 @@ async fn call_with_structs() -> Result<()> {
     let contract_methods = MyContract::new(contract_id, wallet).methods();
 
     let response = contract_methods
-        .initialize_counter(counter_config) // Build the ABI call
-        .call() // Perform the network call
+        .initialize_counter(counter_config)
+        .call()
         .await?;
 
     assert_eq!(42, response.value);

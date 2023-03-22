@@ -34,21 +34,29 @@ pub(crate) fn script_bindings(
 
     let code = quote! {
         #[derive(Debug)]
-        pub struct #name{
-            wallet: ::fuels::signers::wallet::WalletUnlocked,
+        pub struct #name<T: ::fuels::accounts::Account>{
+            account: T,
             binary: ::std::vec::Vec<u8>,
             log_decoder: ::fuels::programs::logs::LogDecoder
         }
 
-        impl #name {
-            pub fn new(wallet: ::fuels::signers::wallet::WalletUnlocked, binary_filepath: &str) -> Self {
+        impl<T: ::fuels::accounts::Account> #name<T>
+        {
+            pub fn new(account: T, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)
                                             .expect("Could not read from binary filepath");
                 Self {
-                    wallet,
+                    account,
                     binary,
                     log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
                 }
+            }
+
+            pub fn with_account<U: ::fuels::accounts::Account>(self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+                let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?;
+                account.set_provider(provider.clone());
+
+               ::core::result::Result::Ok(#name { account, binary: self.binary, log_decoder: self.log_decoder})
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::programs::Configurables>)
@@ -81,12 +89,12 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
-            let provider = self.wallet.get_provider().expect("Provider not set up").clone();
-
+            let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
+                .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
                 self.binary.clone(),
                 encoded_args,
-                self.wallet.clone(),
+                self.account.clone(),
                 provider,
                 self.log_decoder.clone()
             )
@@ -96,7 +104,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
 
     generator
         .set_output_type(
-            quote! {::fuels::programs::script_calls::ScriptCallHandler<#original_output_type> },
+            quote! {::fuels::programs::script_calls::ScriptCallHandler<T, #original_output_type> },
         )
         .set_doc("Run the script's `main` function with the provided arguments".to_string())
         .set_body(body);

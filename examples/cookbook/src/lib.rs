@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Result;
+    use fuels::{
+        prelude::Result,
+        types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    };
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -156,7 +159,9 @@ mod tests {
                 continue;
             }
 
-            let input = wallet_1.get_asset_inputs_for_amount(id, amount, 0).await?;
+            let input = wallet_1
+                .get_asset_inputs_for_amount(id, amount, None)
+                .await?;
             inputs.extend(input);
 
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
@@ -165,8 +170,10 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx = ScriptTransaction::new(inputs, outputs, TxParameters::default());
-        wallet_1.sign_transaction(&mut tx).await?;
+        let mut tx =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
+                .build()?;
+        wallet_1.sign_transaction(&mut tx)?;
 
         let _receipts = provider.send_transaction(&tx).await?;
 
