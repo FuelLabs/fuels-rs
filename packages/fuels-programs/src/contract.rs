@@ -355,16 +355,7 @@ impl Contract {
 
         let storage_slots = Self::get_storage_slots(storage)?;
 
-        let (contract_id, state_root) =
-            Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
-
-        Ok(Self {
-            binary,
-            salt,
-            storage_slots,
-            contract_id,
-            state_root,
-        })
+        Ok(Self::new(binary, salt, storage_slots))
     }
 
     fn validate_path_and_extension(file_path: &str, extension: &str) -> Result<()> {
