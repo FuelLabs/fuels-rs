@@ -3,12 +3,13 @@ use std::{iter, str::FromStr, vec};
 use chrono::{Duration, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
+    accounts::fuel_crypto::SecretKey,
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    signers::fuel_crypto::SecretKey,
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
+use fuels_accounts::Account;
 use fuels_types::resource::Resource;
 
 #[tokio::test]
@@ -42,8 +43,8 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     let response = contract_instance_connected
         .methods()
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .initialize_counter(42)
+        .call()
         .await?;
     assert_eq!(42, response.value);
 
@@ -201,7 +202,7 @@ async fn can_increase_block_height() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.try_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
@@ -222,7 +223,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.try_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0);
 
@@ -289,7 +290,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
     let wallet = &wallets[0];
-    let provider = wallet.get_provider()?;
+    let provider = wallet.try_provider()?;
 
     let deploy_w_maturity = |maturity| {
         Contract::deploy(
@@ -485,7 +486,7 @@ async fn test_gas_errors() -> Result<()> {
     assert!(gas_used > gas_limit);
 
     let response = contract_instace_call
-        .call() // Perform the network call
+        .call()
         .await
         .expect_err("should error");
 
@@ -615,9 +616,9 @@ async fn testnet_hello_world() -> Result<()> {
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
     let response = contract_methods
-        .initialize_counter(42) // Build the ABI call
+        .initialize_counter(42)
         .tx_params(tx_params)
-        .call() // Perform the network call
+        .call()
         .await?;
 
     assert_eq!(42, response.value);
@@ -646,7 +647,7 @@ async fn test_parse_block_time() -> Result<()> {
         .await?;
 
     let tx_response = wallet
-        .get_provider()
+        .try_provider()
         .unwrap()
         .get_transaction_by_id(tx_id.as_str())
         .await?
@@ -654,7 +655,7 @@ async fn test_parse_block_time() -> Result<()> {
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .get_provider()
+        .try_provider()
         .unwrap()
         .block(tx_response.block_id.unwrap().to_string().as_str())
         .await?

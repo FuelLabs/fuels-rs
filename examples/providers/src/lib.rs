@@ -8,7 +8,7 @@ mod tests {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
 
-        use fuels::{prelude::*, signers::fuel_crypto::SecretKey};
+        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
         let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();

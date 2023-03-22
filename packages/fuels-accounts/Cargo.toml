@@ -1,5 +1,5 @@
 [package]
-name = "fuels-signers"
+name = "fuels-accounts"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -7,7 +7,7 @@ homepage = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 rust-version = { workspace = true }
-description = "Fuel Rust SDK signers."
+description = "Fuel Rust SDK accounts."
 
 [dependencies]
 async-trait = { version = "0.1.50", default-features = false }
@@ -16,11 +16,11 @@ chrono = "0.4.2"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
 fuel-core = { workspace = true, default-features = false, optional = true }
-fuel-tx = { workspace = true }
-fuel-vm = { workspace = true }
-fuel-crypto = { workspace = true, features = ["random"] }
 fuel-core-client = { workspace = true, default-features = false }
+fuel-crypto = { workspace = true, features = ["random"] }
+fuel-tx = { workspace = true }
 fuel-types = { workspace = true, default-features = false, features = ["random"] }
+fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
@@ -28,9 +28,9 @@ itertools = "0.10"
 rand = { version = "0.8.4", default-features = false }
 serde = { version = "1.0.124", default-features = true, features = ["derive"] }
 sha2 = { version = "0.9.8", default-features = false }
+tai64 = { version = "4.0", features = ["serde"] }
 thiserror = { version = "1.0.30", default-features = false }
 tokio = { version = "1.10.1", features = ["full"] }
-tai64 = { version = "4.0", features = ["serde"] }
 
 [dev-dependencies]
 hex = { version = "0.4.3", default-features = false, features = ["std"] }

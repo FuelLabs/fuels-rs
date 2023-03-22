@@ -10,14 +10,15 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
+async-trait = { version = "0.1.50", default-features = false }
 bytes = { version = "1.0.1", features = ["serde"] }
-fuel-vm = { workspace = true }
-fuel-types = { workspace = true }
-fuel-tx = { workspace = true }
-fuels-core = { workspace = true }
-fuels-signers = { workspace = true }
-fuels-types = { workspace = true }
 fuel-abi-types = { workspace = true }
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true }
+fuel-vm = { workspace = true }
+fuels-accounts = { workspace = true }
+fuels-core = { workspace = true }
+fuels-types = { workspace = true }
 futures = "0.3.21"
 hex = { version = "0.4.3", default-features = false, features = ["std"] }
 itertools = "0.10.3"
@@ -36,6 +37,6 @@ tokio = "1.12"
 default = ["std"]
 std = [
     "fuels-core/std",
-    "fuels-signers/std",
+    "fuels-accounts/std",
     "fuels-types/std",
 ]

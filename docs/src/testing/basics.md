@@ -40,8 +40,8 @@ Using `{}` will print the value, and using `{:?}` will print the value plus its 
 Using `{:?}` will also allow you to print values that do not have the `Display` trait implemented but do have the `Debug` trait. Alternatively you can use the `dbg!` macro to print these types of variables.
 
 ```rust, ignore
-println!("WALLET 1 PROVIDER {:?}", wallet_1.get_provider().unwrap());
-dbg!("WALLET 1 PROVIDER {}", wallet_1.get_provider().unwrap());
+println!("WALLET 1 PROVIDER {:?}", wallet_1.provider().unwrap());
+dbg!("WALLET 1 PROVIDER {}", wallet_1.provider().unwrap());
 ```
 
 To print more complex types that don't have it already, you can implement your own formatted display method with the `fmt` module from the Rust standard library.

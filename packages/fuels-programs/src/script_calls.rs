@@ -1,20 +1,23 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Input, Output, Receipt};
+use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_core::{abi_encoder::UnresolvedBytes, offsets::base_offset};
-use fuels_signers::{provider::Provider, Signer, WalletUnlocked};
+use fuels_accounts::{provider::Provider, Account};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
+    input::Input,
+    offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
-    transaction::{ScriptTransaction, Transaction, TxParameters},
+    transaction::{Transaction, TxParameters},
+    transaction_builders::ScriptTransactionBuilder,
+    unresolved_bytes::UnresolvedBytes,
 };
 use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs, simulate_and_check_success},
+    call_utils::{generate_contract_inputs, generate_contract_outputs},
     contract::{get_decoded_output, SettableContract},
     logs::{map_revert_error, LogDecoder},
 };
@@ -51,23 +54,23 @@ impl ScriptCall {
 #[derive(Debug)]
 #[must_use = "script calls do nothing unless you `call` them"]
 /// Helper that handles submitting a script call to a client and formatting the response
-pub struct ScriptCallHandler<D> {
+pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
-    pub wallet: WalletUnlocked,
+    pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
 
-impl<D> ScriptCallHandler<D>
+impl<T: Account, D> ScriptCallHandler<T, D>
 where
     D: Parameterize + Tokenizable + Debug,
 {
     pub fn new(
         script_binary: Vec<u8>,
         encoded_args: UnresolvedBytes,
-        wallet: WalletUnlocked,
+        account: T,
         provider: Provider,
         log_decoder: LogDecoder,
     ) -> Self {
@@ -81,7 +84,7 @@ where
         Self {
             script_call,
             tx_parameters: TxParameters::default(),
-            wallet,
+            account,
             provider,
             datatype: PhantomData,
             log_decoder,
@@ -126,13 +129,13 @@ where
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
-        let script_offset = base_offset(&consensus_parameters)
+        let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
 
-    async fn build_tx(&self) -> Result<ScriptTransaction> {
+    async fn prepare_builder(&self) -> Result<ScriptTransactionBuilder> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -157,14 +160,11 @@ where
         )
         .collect();
 
-        let mut tx = ScriptTransaction::new(inputs, outputs, self.tx_parameters)
-            .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?);
+        let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
+            .set_script(self.script_call.script_binary.clone())
+            .set_script_data(self.compute_script_data().await?);
 
-        self.wallet.add_fee_resources(&mut tx, 0, 0).await?;
-        self.wallet.sign_transaction(&mut tx).await?;
-
-        Ok(tx)
+        Ok(tb)
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -174,7 +174,8 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
-        let tx = self.build_tx().await?;
+        let tb = self.prepare_builder().await?;
+        let tx = self.account.add_fee_resources(tb, 0, None).await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
@@ -182,11 +183,10 @@ where
         )?;
 
         let receipts = if simulate {
-            simulate_and_check_success(&self.provider, &tx).await?
+            self.provider.checked_dry_run(&tx).await?
         } else {
             self.provider.send_transaction(&tx).await?
         };
-
         self.get_response(receipts)
     }
 
