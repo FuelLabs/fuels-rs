@@ -8,7 +8,14 @@ use fuel_tx::{Input, MessageId};
 
 use crate::bech32::Bech32Address;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum MessageStatus {
+    #[default]
+    Unspent,
+    Spent,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Message {
     pub amount: u64,
     pub sender: Bech32Address,
@@ -17,12 +24,6 @@ pub struct Message {
     pub data: Vec<u8>,
     pub da_height: u64,
     pub status: MessageStatus,
-}
-
-#[derive(Debug, Clone)]
-pub enum MessageStatus {
-    Unspent,
-    Spent,
 }
 
 impl Message {

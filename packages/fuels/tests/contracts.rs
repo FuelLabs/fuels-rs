@@ -2,6 +2,7 @@
 use std::future::Future;
 
 use fuels::prelude::*;
+use fuels_accounts::{predicate::Predicate, Account};
 use fuels_types::Bits256;
 
 #[tokio::test]
@@ -222,13 +223,13 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
     let estimated_transaction_cost = contract_instance
         .methods()
-        .initialize_counter(42) // Build the ABI call
+        .initialize_counter(42)
         .tx_params(
             TxParameters::default()
                 .set_gas_price(gas_price)
                 .set_gas_limit(gas_limit),
         )
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance))
         .await?;
 
     assert_eq!(
@@ -263,14 +264,14 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     let tolerance = 0.0;
     let contract_methods = contract_instance.methods();
     let estimated_gas_used = contract_methods
-        .initialize_counter(42) // Build the ABI call
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .initialize_counter(42)
+        .estimate_transaction_cost(Some(tolerance))
         .await?
         .gas_used;
 
     let gas_used = contract_methods
-        .initialize_counter(42) // Build the ABI call
-        .call() // Perform the network call
+        .initialize_counter(42)
+        .call()
         .await?
         .gas_used;
 
@@ -305,7 +306,7 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<()> {
 
     let tolerance = 0.0;
     let estimated_gas_used = multi_call_handler
-        .estimate_transaction_cost(Some(tolerance)) // Perform the network call
+        .estimate_transaction_cost(Some(tolerance))
         .await?
         .gas_used;
 
@@ -523,7 +524,7 @@ async fn test_wallet_getter() -> Result<()> {
         ),
     );
 
-    assert_eq!(contract_instance.wallet().address(), wallet.address());
+    assert_eq!(contract_instance.account().address(), wallet.address());
     //`contract_id()` is tested in
     // async fn test_contract_calling_contract() -> Result<()> {
     Ok(())
@@ -568,7 +569,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        .with_wallet(wallet_2.clone())?
+        .with_account(wallet_2.clone())?
         .methods()
         .initialize_counter(42)
         .tx_params(tx_params)
@@ -772,6 +773,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 async fn test_contract_instance_get_balances() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
+
     let random_asset_id = &asset_ids[1];
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider.clone());
@@ -1165,6 +1167,36 @@ async fn test_payable_annotation() -> Result<()> {
         .await?;
 
     assert_eq!(response.value, 42);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[allow(unused_variables)]
+async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
+    use fuels::prelude::*;
+
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    ));
+
+    let wallet = WalletUnlocked::new_random(None);
+    let predicate = Predicate::from_code(vec![]);
+
+    let contract_methods_wallet =
+        MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
+    let contract_methods_predicate =
+        MyContract::new(Bech32ContractId::default(), predicate).methods();
+
+    let call_handler_1 = contract_methods_wallet.initialize_counter(42);
+    let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet);
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
 
     Ok(())
 }
