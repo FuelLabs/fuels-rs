@@ -336,7 +336,7 @@ mod tests {
         };
 
         let (client, bound_addr) =
-            setup_test_client(vec![], vec![], Some(config), None, None).await;
+            setup_test_client(vec![], vec![], Some(config.clone()), None, None).await;
         let node_info = client
             .node_info()
             .await
