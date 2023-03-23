@@ -26,7 +26,7 @@ use tokio::{process::Command, sync::oneshot};
 
 use crate::utils::{into_coin_configs, into_message_configs};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
     pub utxo_validation: bool,
