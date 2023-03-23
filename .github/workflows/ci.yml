@@ -123,7 +123,7 @@ jobs:
           RUST_VERSION="${{ env.RUST_VERSION }}"
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
-  
+
   # Ensure workspace is publishable
   publish-crates-check:
     runs-on: ubuntu-latest
@@ -157,6 +157,9 @@ jobs:
         include:
           - cargo_command: fmt
             args: --all --verbose -- --check
+          - cargo_command: clippy
+            args: --all-targets
+            download_sway_artifacts: sway-examples
           - cargo_command: clippy
             args: --all-targets --all-features
             download_sway_artifacts: sway-examples-w-type-paths
