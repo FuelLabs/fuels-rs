@@ -1859,3 +1859,36 @@ async fn test_bytes_as_input() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_raw_slice() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_contract_test!(
+        Abigen(
+            name = "RawSliceContract",
+            abi = "packages/fuels/tests/contracts/contract_raw_slice"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "RawSliceContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    {
+        for length in 0..=10 {
+            let response = contract_methods.return_raw_slice(length).call().await?;
+            assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+        }
+    }
+    {
+        contract_methods
+            .accept_raw_slice(RawSlice(vec![40, 41, 42]))
+            .call()
+            .await?;
+    }
+
+    Ok(())
+}

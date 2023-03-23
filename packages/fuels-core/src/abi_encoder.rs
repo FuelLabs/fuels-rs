@@ -1,3 +1,6 @@
+use itertools::Itertools;
+
+use fuels_types::traits::Tokenizable;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::Result,
@@ -5,7 +8,6 @@ use fuels_types::{
     unresolved_bytes::{Data, UnresolvedBytes},
     EnumSelector, StringToken, Token,
 };
-use itertools::Itertools;
 
 pub struct ABIEncoder;
 
@@ -41,11 +43,7 @@ impl ABIEncoder {
             Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
             Token::Unit => vec![Self::encode_unit()],
-            Token::RawSlice(_) => {
-                unimplemented!(
-                    "Encoding a `RawSlice` type is currently not supported by the Fuel spec."
-                )
-            }
+            Token::RawSlice(data) => Self::encode_raw_slice(data)?,
             Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
         };
 
@@ -136,6 +134,15 @@ impl ABIEncoder {
         ])
     }
 
+    fn encode_raw_slice(data: &[u64]) -> Result<Vec<Data>> {
+        let encoded_data = data
+            .iter()
+            .map(|&word| Self::encode_u64(word))
+            .collect::<Vec<_>>();
+        let len = Self::encode_u64((data.len() * WORD_SIZE) as u64);
+        Ok(vec![Data::Dynamic(encoded_data), len])
+    }
+
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
         // Bytes are packed so we need to make sure that the address of the next
         // argument is WORD_SIZE divisible
@@ -158,12 +165,14 @@ impl ABIEncoder {
 mod tests {
     use std::slice;
 
-    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
-    use super::*;
+    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
+
     use crate::utils::{first_four_bytes_of_sha256_hash, generate_unused_field_names};
+
+    use super::*;
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;

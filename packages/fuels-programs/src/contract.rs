@@ -264,6 +264,7 @@ impl Contract {
                         | Token::Array(_)
                         | Token::Vector(_)
                         | Token::Bytes(_)
+                        | Token::RawSlice(_)
                 )
             })
     }
