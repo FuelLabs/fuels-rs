@@ -1033,7 +1033,7 @@ async fn test_script_require_from_contract() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
     abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
-            Script(name = "log_script", abi = "packages/fuels/tests/scripts/script_require_from_contract/out/debug/script_require_from_contract-abi.json"));
+            Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
 
     let contract_id: ContractId = Contract::deploy(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
@@ -1046,7 +1046,7 @@ async fn test_script_require_from_contract() -> Result<()> {
     let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
 
     let bin_path =
-        "../fuels/tests/scripts/script_require_from_contract/out/debug/script_require_from_contract.bin";
+        "../fuels/tests/scripts/require_from_contract/out/debug/require_from_contract.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let error = instance
