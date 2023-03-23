@@ -3,7 +3,7 @@
 This is a more involved example where the predicate accepts three signatures and matches them to three predefined public keys. The `ec_recover_address` function is used to recover the public key from the signatures. If two of the three extracted public keys match the predefined public keys, the funds can be spent. Note that the signature order has to match the order of the predefined public keys.
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/predicate_signatures/src/main.sw}}
+{{#include ../../../packages/fuels/tests/predicates/signatures/src/main.sw}}
 ```
 
 Let's use the SDK to interact with the predicate. First, let's create three wallets with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver wallet, which we will use to spend the predicate funds.
