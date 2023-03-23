@@ -7,7 +7,7 @@ Predicates, in Sway, are programs that return a Boolean value and do not have an
 Let's consider the following predicate example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/predicate_basic/src/main.sw}}
+{{#include ../../../packages/fuels/tests/predicates/basic_predicate/src/main.sw}}
 ```
 
 We will look at a complete example of using the SDK to send and receive funds from a predicate.
