@@ -36,6 +36,7 @@ members = [
   'tests/predicates/predicate_bytes',
   'tests/predicates/predicate_enums',
   'tests/predicates/predicate_generics',
+  'tests/predicates/predicate_raw_slice',
   'tests/predicates/predicate_signatures',
   'tests/predicates/predicate_structs',
   'tests/predicates/predicate_tuple',

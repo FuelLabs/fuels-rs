@@ -1,7 +1,19 @@
 contract;
+
+enum SomeEnum<T> {
+    First: bool,
+    Second: T,
+}
+
+struct Wrapper<T> {
+    inner: T,
+    inner_enum: SomeEnum<raw_slice>,
+}
+
 abi RawSliceContract {
     fn return_raw_slice(length: u64) -> raw_slice;
     fn accept_raw_slice(slice: raw_slice);
+    fn accept_nested_raw_slice(wrapper: Wrapper<Vec<raw_slice>>);
 }
 
 fn validate_raw_slice(input: raw_slice) {
@@ -22,7 +34,25 @@ impl RawSliceContract for Contract {
         }
         vec.as_raw_slice()
     }
-    fn accept_raw_slice(slice: raw_slice){
+
+    fn accept_raw_slice(slice: raw_slice) {
         validate_raw_slice(slice);
+    }
+
+    fn accept_nested_raw_slice(wrapper: Wrapper<Vec<raw_slice>>) {
+        if let SomeEnum::Second(enum_raw_slice) = wrapper.inner_enum
+        {
+            validate_raw_slice(enum_raw_slice);
+        } else {
+            require(false, "enum was not of variant Second");
+        }
+
+        require(wrapper.inner.len() == 2, "vec should have two elements");
+
+        let bytes = wrapper.inner.get(0).unwrap();
+        validate_raw_slice(bytes);
+
+        let bytes = wrapper.inner.get(1).unwrap();
+        validate_raw_slice(bytes);
     }
 }

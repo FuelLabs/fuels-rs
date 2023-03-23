@@ -1,6 +1,3 @@
-use itertools::Itertools;
-
-use fuels_types::traits::Tokenizable;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::Result,
@@ -8,6 +5,7 @@ use fuels_types::{
     unresolved_bytes::{Data, UnresolvedBytes},
     EnumSelector, StringToken, Token,
 };
+use itertools::Itertools;
 
 pub struct ABIEncoder;
 
@@ -139,7 +137,10 @@ impl ABIEncoder {
             .iter()
             .map(|&word| Self::encode_u64(word))
             .collect::<Vec<_>>();
-        let len = Self::encode_u64((data.len() * WORD_SIZE) as u64);
+
+        let num_bytes = data.len() * WORD_SIZE;
+
+        let len = Self::encode_u64(num_bytes as u64);
         Ok(vec![Data::Dynamic(encoded_data), len])
     }
 
@@ -165,14 +166,12 @@ impl ABIEncoder {
 mod tests {
     use std::slice;
 
+    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
-    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
-
-    use crate::utils::{first_four_bytes_of_sha256_hash, generate_unused_field_names};
-
     use super::*;
+    use crate::utils::{first_four_bytes_of_sha256_hash, generate_unused_field_names};
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
@@ -1095,6 +1094,32 @@ mod tests {
         let data = [1, 2, 3, 0, 0, 0, 0, 0];
 
         let expected_encoded_bytes = [ptr, cap, len, data].concat();
+
+        assert_eq!(expected_encoded_bytes, encoded_bytes);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_raw_slices() -> Result<()> {
+        // arrange
+        let token = Token::RawSlice(vec![1, 2, 3]);
+        let offset = 40;
+
+        // act
+        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+
+        // assert
+        let ptr = vec![0, 0, 0, 0, 0, 0, 0, 56];
+        let len = vec![0, 0, 0, 0, 0, 0, 0, 24];
+        let data = [
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 2],
+            [0, 0, 0, 0, 0, 0, 0, 3],
+        ]
+        .concat();
+
+        let expected_encoded_bytes = [ptr, len, data].concat();
 
         assert_eq!(expected_encoded_bytes, encoded_bytes);
 

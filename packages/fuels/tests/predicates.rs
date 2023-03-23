@@ -1029,3 +1029,55 @@ async fn spend_predicate_coins_messages_bytes() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn spend_predicate_coins_messages_raw_slices() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicateEncoder",
+        abi = "packages/fuels/tests/predicates/predicate_raw_slice/out/debug/predicate_raw_slice-abi.json"
+    ));
+
+    let raw_slice = RawSlice(vec![40, 41, 42]);
+    let wrapper = Wrapper {
+        inner: vec![raw_slice.clone(), raw_slice.clone()],
+        inner_enum: SomeEnum::Second(raw_slice),
+    };
+
+    let predicate_data = MyPredicateEncoder::encode_data(wrapper);
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/predicates/predicate_raw_slice/out/debug/predicate_raw_slice.bin",
+    )?
+    .with_data(predicate_data);
+
+    let num_coins = 5;
+    let num_messages = 9;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance,
+    )
+    .await;
+
+    Ok(())
+}

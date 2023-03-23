@@ -1889,6 +1889,18 @@ async fn test_contract_raw_slice() -> Result<()> {
             .call()
             .await?;
     }
+    {
+        let raw_slice = RawSlice(vec![40, 41, 42]);
+        let wrapper = Wrapper {
+            inner: vec![raw_slice.clone(), raw_slice.clone()],
+            inner_enum: SomeEnum::Second(raw_slice),
+        };
+
+        contract_methods
+            .accept_nested_raw_slice(wrapper)
+            .call()
+            .await?;
+    }
 
     Ok(())
 }

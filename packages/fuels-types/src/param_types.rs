@@ -151,7 +151,8 @@ impl ParamType {
             | ParamType::U32
             | ParamType::U64
             | ParamType::Bool => 1,
-            ParamType::Vector(_) | ParamType::Bytes=> 3,
+            ParamType::RawSlice => 2,
+            ParamType::Vector(_) | ParamType::Bytes => 3,
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
@@ -160,10 +161,6 @@ impl ParamType {
             }
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
-            // The ParamType::RawSlice is basically a wrapper around a U8 vector
-            ParamType::RawSlice => unimplemented!(
-                "Raw slices are not supported as inputs, so needing the encoding width of a RawSlice should not happen."
-            ),
         }
     }
 
@@ -335,6 +332,7 @@ impl TryFrom<&Type> for ParamType {
             try_tuple,
             try_vector,
             try_bytes,
+            try_raw_slice,
             try_enum,
             try_struct,
         ]
@@ -403,6 +401,10 @@ fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
     }
 
     Ok(Some(ParamType::Bytes))
+}
+
+fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok((the_type.type_field == "raw untyped slice").then_some(ParamType::RawSlice))
 }
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
@@ -1479,6 +1481,19 @@ mod tests {
         let param_type = try_bytes(&the_type).unwrap().unwrap();
 
         assert_eq!(param_type, ParamType::Bytes);
+    }
+
+    #[test]
+    fn try_raw_slice_correctly_resolves_param_type() {
+        let the_type = Type {
+            type_field: "raw untyped slice".to_string(),
+            generic_params: vec![],
+            components: vec![],
+        };
+
+        let param_type = try_raw_slice(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::RawSlice);
     }
 
     fn given_type_with_path(path: &str) -> Type {
