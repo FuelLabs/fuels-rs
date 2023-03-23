@@ -25,10 +25,8 @@ pub(crate) fn contract_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let log_formatters = log_formatters_instantiation_code(
-        Some(quote! {contract_id.clone().into()}),
-        &abi.logged_types,
-    );
+    let log_formatters =
+        log_formatters_instantiation_code(quote! {contract_id.clone().into()}, &abi.logged_types);
 
     let methods_name = ident(&format!("{name}Methods"));
 

@@ -4,15 +4,12 @@ use quote::quote;
 use crate::program_bindings::{abi_types::FullLoggedType, resolved_type::TypeResolver};
 
 pub(crate) fn log_formatters_instantiation_code(
-    contract_id: Option<TokenStream>,
+    contract_id: TokenStream,
     logged_types: &[FullLoggedType],
 ) -> TokenStream {
     let resolved_logs = resolve_logs(logged_types);
-    let log_id_param_type_pairs = generate_log_id_log_formatter_pairs(&resolved_logs);
-    let contract_id = contract_id
-        .map(|id| quote! { ::core::option::Option::Some(#id) })
-        .unwrap_or_else(|| quote! {::core::option::Option::None});
-    quote! {::fuels::programs::logs::log_type_lookup(vec![#(#log_id_param_type_pairs),*], #contract_id)}
+    let log_id_log_formatter_pairs = generate_log_id_log_formatter_pairs(&resolved_logs);
+    quote! {::fuels::programs::logs::log_formatters_lookup(vec![#(#log_id_log_formatter_pairs),*], #contract_id)}
 }
 
 #[derive(Debug)]

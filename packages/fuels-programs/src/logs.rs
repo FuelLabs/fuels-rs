@@ -166,11 +166,10 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> St
         .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
 }
 
-pub fn log_type_lookup(
+pub fn log_formatters_lookup(
     log_id_log_formatter_pairs: Vec<(u64, LogFormatter)>,
-    contract_id: Option<ContractId>,
+    contract_id: ContractId,
 ) -> HashMap<LogId, LogFormatter> {
-    let contract_id = contract_id.unwrap_or_else(ContractId::zeroed);
     log_id_log_formatter_pairs
         .into_iter()
         .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))

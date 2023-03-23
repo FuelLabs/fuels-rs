@@ -26,7 +26,10 @@ pub(crate) fn script_bindings(
 
     let main_function = expand_fn(&abi)?;
 
-    let log_formatters_lookup = log_formatters_instantiation_code(None, &abi.logged_types);
+    let log_formatters_lookup = log_formatters_instantiation_code(
+        quote! {::fuels::types::ContractId::zeroed()},
+        &abi.logged_types,
+    );
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
