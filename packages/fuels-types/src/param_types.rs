@@ -96,7 +96,7 @@ impl ParamType {
             ParamType::Enum {
                 generics, variants, ..
             } => {
-                let variants_types = variants.variants();
+                let variants_types = variants.param_types();
                 Self::any_nested_heap_types(chain!(generics, variants_types))
             }
             ParamType::Struct {

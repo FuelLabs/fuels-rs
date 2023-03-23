@@ -6,36 +6,36 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct EnumVariants {
-    variants: Vec<ParamType>,
+    param_types: Vec<ParamType>,
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<ParamType>) -> Result<EnumVariants> {
-        if !variants.is_empty() {
-            Ok(EnumVariants { variants })
+    pub fn new(param_types: Vec<ParamType>) -> Result<EnumVariants> {
+        if !param_types.is_empty() {
+            Ok(EnumVariants { param_types })
         } else {
             Err(error!(InvalidData, "Enum variants can not be empty!"))
         }
     }
 
-    pub fn variants(&self) -> &[ParamType] {
-        &self.variants
+    pub fn param_types(&self) -> &[ParamType] {
+        &self.param_types
     }
 
-    pub fn select_variant(&self, discriminant: u8) -> Result<&ParamType> {
-        self.variants.get(discriminant as usize).ok_or_else(|| {
+    pub fn param_type_of_variant(&self, discriminant: u8) -> Result<&ParamType> {
+        self.param_types.get(discriminant as usize).ok_or_else(|| {
             error!(
                 InvalidData,
                 "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
-                self.variants()
+                self.param_types()
             )
         })
     }
 
     pub fn only_units_inside(&self) -> bool {
-        self.variants
+        self.param_types
             .iter()
-            .all(|variant| *variant == ParamType::Unit)
+            .all(|param_type| *param_type == ParamType::Unit)
     }
 
     /// Calculates how many WORDs are needed to encode an enum.
@@ -43,7 +43,7 @@ impl EnumVariants {
         if self.only_units_inside() {
             return ENUM_DISCRIMINANT_WORD_WIDTH;
         }
-        self.variants()
+        self.param_types()
             .iter()
             .map(|p| p.compute_encoding_width())
             .max()

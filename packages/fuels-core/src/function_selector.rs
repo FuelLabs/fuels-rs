@@ -54,7 +54,7 @@ fn resolve_arg(arg: &ParamType) -> String {
             ..
         } => {
             let gen_params = resolve_args(generics);
-            let field_params = resolve_args(fields.variants());
+            let field_params = resolve_args(fields.param_types());
             let gen_params = if !gen_params.is_empty() {
                 format!("<{gen_params}>")
             } else {

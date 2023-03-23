@@ -237,7 +237,7 @@ impl ABIDecoder {
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
-        let selected_variant = variants.select_variant(discriminant)?;
+        let selected_variant = variants.param_type_of_variant(discriminant)?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
