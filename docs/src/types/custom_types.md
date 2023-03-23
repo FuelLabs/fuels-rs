@@ -14,7 +14,7 @@ struct CounterConfig {
 After using the `abigen!` macro, `CounterConfig` will be accessible in your Rust file! Here's an example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types.rs:struct_generation}}
+{{#include ../../../packages/fuels/tests/types_contracts.rs:struct_generation}}
 ```
 
 You can freely use your custom types (structs or enums) within this scope. That also means passing custom types to functions and receiving custom types from function calls.
@@ -24,7 +24,7 @@ You can freely use your custom types (structs or enums) within this scope. That 
 Suppose you wish to decode raw bytes into a type used in your contract and the `abigen!` generated this type, then you can use `try_into`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types.rs:manual_decode}}
+{{#include ../../../packages/fuels/tests/types_contracts.rs:manual_decode}}
 ```
 
 Otherwise, for native types such as `u8`, `u32`,...,`ContractId` and others, you must use `::fuels::core::try_from_bytes`:
@@ -68,5 +68,5 @@ impl MyContract for Contract {
 Your Rust code would look like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types.rs:generic}}
+{{#include ../../../packages/fuels/tests/types_contracts.rs:generic}}
 ```
