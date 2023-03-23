@@ -1,3 +1,4 @@
+use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::Result,
@@ -145,11 +146,9 @@ impl ABIEncoder {
     }
 
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
-        // Bytes are packed so we need to make sure that the address of the next
-        // argument is WORD_SIZE divisible
         let len = data.len();
-        let new_size = len + (WORD_SIZE - (len % WORD_SIZE));
-        data.resize(new_size, 0);
+
+        Self::zeropad_to_word_alignment(&mut data);
 
         let cap = data.len() as u64;
         let encoded_data = vec![Data::Inline(data)];
@@ -159,6 +158,11 @@ impl ABIEncoder {
             Self::encode_u64(cap),
             Self::encode_u64(len as u64),
         ])
+    }
+
+    fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
+        let padded_length = padded_len_usize(data.len());
+        data.resize(padded_length, 0);
     }
 }
 
