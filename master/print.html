@@ -911,8 +911,8 @@ impl MyContract for Contract {
 <pre><code class="language-rust ignore">        abigen!(
             Contract(name=&quot;ContractA&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json&quot;),
             Contract(name=&quot;ContractB&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json&quot;),
-            Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json&quot;),
-            Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json&quot;),
+            Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json&quot;),
+            Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;),
         );
 </code></pre>
 <h2 id="how-does-the-generated-code-look"><a class="header" href="#how-does-the-generated-code-look">How does the generated code look?</a></h2>
@@ -1843,10 +1843,12 @@ let is_error = response.is_err();
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
 <p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="getting-started/../abigen/the-abigen-macro.html">previously</a>.</p>
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
-    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments-abi.json&quot;));
+    abigen!(Script(
+        name = &quot;MyScript&quot;,
+        abi = &quot;packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json&quot;
+    ));
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path =
-        &quot;../fuels/tests/scripts/script_with_arguments/out/debug/script_with_arguments.bin&quot;;
+    let bin_path = &quot;../fuels/tests/scripts/arguments/out/debug/arguments.bin&quot;;
     let instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -1979,14 +1981,14 @@ fn main(a: u32, b: u64) -&gt; bool {
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];
 
-        abigen!(Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic-abi.json&quot;));
+        abigen!(Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
 
 Once we've compiled our predicate with `forc build`, we can create a `Predicate` instance via `Predicate::load_from`. The resulting data from `encode_data` can then be set on the loaded predicate.
 
 ```rust,ignore
         let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
         let code_path =
-            &quot;../../packages/fuels/tests/predicates/predicate_basic/out/debug/predicate_basic.bin&quot;;
+            &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_data(predicate_data)
@@ -2098,10 +2100,13 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             });
 </code></pre>
 <p>Now we can use the predicate abigen to create a predicate encoder instance for us. To spend the funds now locked in the predicate, we must provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.</p>
-<pre><code class="language-rust ignore">        abigen!(Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures-abi.json&quot;));
+<pre><code class="language-rust ignore">        abigen!(Predicate(
+            name = &quot;MyPredicateEncoder&quot;,
+            abi = &quot;packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json&quot;
+        ));
 
         let predicate_data = MyPredicateEncoder::encode_data(signatures);
-        let code_path = &quot;../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin&quot;;
+        let code_path = &quot;../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_data(predicate_data)
@@ -2302,7 +2307,8 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 }
 </code></pre>
 <p>After using the <code>abigen!</code> macro, <code>CounterConfig</code> will be accessible in your Rust file! Here's an example:</p>
-<pre><code class="language-rust ignore">    abigen!(Contract(name=&quot;MyContract&quot;, abi=&quot;packages/fuels/tests/types/complex_types_contract/out/debug/complex_types_contract-abi.json&quot;));
+<pre><code class="language-rust ignore">    abigen!(Contract(name=&quot;MyContract&quot;,
+                     abi=&quot;packages/fuels/tests/types/contracts/complex_types_contract/out/debug/complex_types_contract-abi.json&quot;));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.
