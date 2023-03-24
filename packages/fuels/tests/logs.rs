@@ -7,13 +7,13 @@ use fuels::{
 };
 
 #[tokio::test]
-async fn test_parse_logged_varibles() -> Result<()> {
+async fn test_parse_logged_variables() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -48,10 +48,10 @@ async fn test_parse_logged_varibles() -> Result<()> {
 async fn test_parse_logs_values() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -82,10 +82,10 @@ async fn test_parse_logs_values() -> Result<()> {
 async fn test_parse_logs_custom_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -120,10 +120,10 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 async fn test_parse_logs_generic_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -172,10 +172,10 @@ async fn test_parse_logs_generic_types() -> Result<()> {
 async fn test_get_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -226,10 +226,10 @@ async fn test_get_logs() -> Result<()> {
 async fn test_get_logs_with_no_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -253,10 +253,10 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
 async fn test_multi_call_log_single_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -303,10 +303,10 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
 async fn test_multi_call_log_multiple_contracts() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/logs/contract_logs"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -357,12 +357,14 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "MyContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
-        ),
-        Abigen(
-            name = "ContractCaller",
-            abi = "packages/fuels/tests/logs/contract_with_contract_logs"
+            Contract(
+                name = "MyContract",
+                abi = "packages/fuels/tests/logs/contract_logs"
+            ),
+            Contract(
+                name = "ContractCaller",
+                abi = "packages/fuels/tests/logs/contract_with_contract_logs"
+            )
         ),
         Deploy(
             name = "contract_caller_instance",
@@ -434,10 +436,10 @@ fn assert_revert_containing_msg(msg: &str, error: Error) {
 async fn test_require_log() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "RequireContract",
             abi = "packages/fuels/tests/contracts/require"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
@@ -490,10 +492,10 @@ async fn test_require_log() -> Result<()> {
 async fn test_multi_call_require_log_single_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "RequireContract",
             abi = "packages/fuels/tests/contracts/require"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
@@ -547,10 +549,10 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
 async fn test_multi_call_require_log_multi_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "RequireContract",
             abi = "packages/fuels/tests/contracts/require"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "RequireContract",
@@ -677,12 +679,14 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "MyContract",
-            abi = "packages/fuels/tests/logs/contract_logs",
-        ),
-        Abigen(
-            name = "ContractCaller",
-            abi = "packages/fuels/tests/logs/contract_with_contract_logs",
+            Contract(
+                name = "MyContract",
+                abi = "packages/fuels/tests/logs/contract_logs",
+            ),
+            Contract(
+                name = "ContractCaller",
+                abi = "packages/fuels/tests/logs/contract_with_contract_logs",
+            )
         ),
         Deploy(
             name = "contract_caller_instance",
@@ -930,12 +934,14 @@ async fn test_contract_require_from_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/lib_contract",
-        ),
-        Abigen(
-            name = "ContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller",
+            Contract(
+                name = "MyContract",
+                abi = "packages/fuels/tests/contracts/lib_contract",
+            ),
+            Contract(
+                name = "ContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller",
+            )
         ),
         Deploy(
             name = "contract_caller_instance",
@@ -972,16 +978,18 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/lib_contract",
-        ),
-        Abigen(
-            name = "ContractLogs",
-            abi = "packages/fuels/tests/logs/contract_logs",
-        ),
-        Abigen(
-            name = "ContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller",
+            Contract(
+                name = "MyContract",
+                abi = "packages/fuels/tests/contracts/lib_contract",
+            ),
+            Contract(
+                name = "ContractLogs",
+                abi = "packages/fuels/tests/logs/contract_logs",
+            ),
+            Contract(
+                name = "ContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller",
+            )
         ),
         Deploy(
             name = "contract_instance",
@@ -1070,10 +1078,10 @@ fn assert_assert_eq_containing_msg<T: Debug>(left: T, right: T, error: Error) {
 async fn test_contract_asserts_log() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "LogContract",
             abi = "packages/fuels/tests/contracts/asserts"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "LogContract",
@@ -1220,10 +1228,10 @@ async fn test_script_asserts_log() -> Result<()> {
 async fn contract_token_ops_error_messages() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/token_ops"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",

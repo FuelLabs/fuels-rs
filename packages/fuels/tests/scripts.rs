@@ -4,10 +4,10 @@ use fuels::prelude::*;
 async fn test_transaction_script_workflow() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -30,10 +30,10 @@ async fn test_transaction_script_workflow() -> Result<()> {
 async fn test_multi_call_script_workflow() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",

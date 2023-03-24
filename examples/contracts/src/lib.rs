@@ -86,10 +86,10 @@ mod tests {
         // ANCHOR: deploy_contract_setup_macro_short
         setup_contract_test!(
             Wallets("wallet"),
-            Abigen(
+            Abigen(Contract(
                 name = "TestContract",
                 abi = "packages/fuels/tests/contracts/contract_test"
-            ),
+            )),
             Deploy(
                 name = "contract_instance",
                 contract = "TestContract",
@@ -725,10 +725,10 @@ mod tests {
 
         setup_contract_test!(
             Wallets("wallet"),
-            Abigen(
+            Abigen(Contract(
                 name = "MyContract",
                 abi = "packages/fuels/tests/contracts/contract_test"
-            ),
+            )),
             Deploy(
                 name = "contract_instance",
                 contract = "MyContract",

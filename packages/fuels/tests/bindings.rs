@@ -19,10 +19,10 @@ async fn compile_bindings_from_contract_file() {
     // The generated bindings can be accessed through `SimpleContract`.
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "SimpleContract",
             abi = "packages/fuels/tests/bindings/simple_contract"
-        ),
+        )),
         Deploy(
             name = "simple_contract_instance",
             contract = "SimpleContract",
@@ -757,12 +757,14 @@ async fn shared_types() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "ContractA",
-            abi = "packages/fuels/tests/bindings/sharing_types/contract_a"
-        ),
-        Abigen(
-            name = "ContractB",
-            abi = "packages/fuels/tests/bindings/sharing_types/contract_b"
+            Contract(
+                name = "ContractA",
+                abi = "packages/fuels/tests/bindings/sharing_types/contract_a"
+            ),
+            Contract(
+                name = "ContractB",
+                abi = "packages/fuels/tests/bindings/sharing_types/contract_b"
+            ),
         ),
         Deploy(
             name = "contract_a",
@@ -873,10 +875,10 @@ async fn shared_types() -> Result<()> {
 async fn type_paths_respected() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "ContractA",
             abi = "packages/fuels/tests/bindings/type_paths"
-        ),
+        )),
         Deploy(
             name = "contract_a_instance",
             contract = "ContractA",

@@ -1,3 +1,3 @@
-pub(crate) use parsing::MacroAbigenTargets;
+pub(crate) use parsing::{MacroAbigenTarget, MacroAbigenTargets};
 
 mod parsing;

@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use fuels_code_gen::ProgramType;
 use itertools::{chain, Itertools};
 use proc_macro2::Span;
 use syn::{
@@ -7,7 +8,10 @@ use syn::{
     Error, LitStr, Result as ParseResult,
 };
 
-use crate::parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues};
+use crate::{
+    abigen::MacroAbigenTarget,
+    parse_utils::{Command, ErrorsExt, UniqueLitStrs, UniqueNameValues},
+};
 
 trait MacroCommand {
     fn expected_name() -> &'static str;
@@ -51,30 +55,33 @@ impl TryFrom<Command> for InitializeWallet {
 }
 
 #[derive(Debug)]
-pub(crate) struct GenerateContract {
-    pub(crate) name: LitStr,
-    pub(crate) abi: LitStr,
+pub(crate) struct AbigenCommand {
+    pub(crate) span: Span,
+    pub(crate) targets: Vec<MacroAbigenTarget>,
 }
 
-impl MacroCommand for GenerateContract {
+impl MacroCommand for AbigenCommand {
     fn expected_name() -> &'static str {
         "Abigen"
     }
 }
 
-impl TryFrom<Command> for GenerateContract {
+impl TryFrom<Command> for AbigenCommand {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
         Self::validate_command_name(&command)?;
 
-        let name_values = UniqueNameValues::new(command.contents)?;
-        name_values.validate_has_no_other_names(&["name", "abi"])?;
+        let targets = command
+            .contents
+            .into_iter()
+            .map(|meta| Command::new(meta).and_then(MacroAbigenTarget::new))
+            .collect::<Result<Vec<_>, _>>()?;
 
-        let name = name_values.get_as_lit_str("name")?.clone();
-        let abi = name_values.get_as_lit_str("abi")?.clone();
-
-        Ok(Self { name, abi })
+        Ok(Self {
+            span: command.name.span(),
+            targets,
+        })
     }
 }
 
@@ -114,13 +121,13 @@ fn parse_test_contract_commands(
     input: ParseStream,
 ) -> syn::Result<(
     Vec<InitializeWallet>,
-    Vec<GenerateContract>,
+    Vec<AbigenCommand>,
     Vec<DeployContract>,
 )> {
     let commands = Command::parse_multiple(input)?;
 
     let mut init_wallets: Vec<syn::Result<InitializeWallet>> = vec![];
-    let mut gen_contracts: Vec<syn::Result<GenerateContract>> = vec![];
+    let mut gen_contracts: Vec<syn::Result<AbigenCommand>> = vec![];
     let mut deploy_contracts: Vec<syn::Result<DeployContract>> = vec![];
 
     let mut errors = vec![];
@@ -129,7 +136,7 @@ fn parse_test_contract_commands(
         let command_name = &command.name;
         if command_name == InitializeWallet::expected_name() {
             init_wallets.push(command.try_into());
-        } else if command_name == GenerateContract::expected_name() {
+        } else if command_name == AbigenCommand::expected_name() {
             gen_contracts.push(command.try_into());
         } else if command_name == DeployContract::expected_name() {
             deploy_contracts.push(command.try_into());
@@ -156,45 +163,64 @@ fn parse_test_contract_commands(
 // bindings generation and contract deployment.
 pub(crate) struct TestContractCommands {
     pub(crate) initialize_wallets: Option<InitializeWallet>,
-    pub(crate) generate_contract: Vec<GenerateContract>,
+    pub(crate) generate_bindings: AbigenCommand,
     pub(crate) deploy_contract: Vec<DeployContract>,
 }
 
 impl Parse for TestContractCommands {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         let span = input.span();
-
         let (mut initialize_wallets, generate_contract, deploy_contract) =
             parse_test_contract_commands(input)?;
 
-        Self::validate_all_contracts_are_known(
-            span,
-            generate_contract.as_slice(),
-            deploy_contract.as_slice(),
-        )?;
+        let abigen_commands = Self::extract_the_abigen_command(span, generate_contract)?;
+
+        Self::validate_all_contracts_are_known(&abigen_commands, deploy_contract.as_slice())?;
 
         Self::validate_zero_or_one_wallet_command_present(initialize_wallets.as_slice())?;
 
         Ok(Self {
             initialize_wallets: initialize_wallets.pop(),
-            generate_contract,
+            generate_bindings: abigen_commands,
             deploy_contract,
         })
     }
 }
 
 impl TestContractCommands {
-    fn contracts_to_generate(commands: &[GenerateContract]) -> HashSet<&LitStr> {
-        commands.iter().map(|c| &c.name).collect()
+    fn contracts_to_generate(commands: &AbigenCommand) -> HashSet<&LitStr> {
+        commands
+            .targets
+            .iter()
+            .filter_map(|target| match target.program_type {
+                ProgramType::Contract => Some(&target.name),
+                _ => None,
+            })
+            .collect()
     }
 
     fn contracts_to_deploy(commands: &[DeployContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.contract).collect()
     }
 
+    fn extract_the_abigen_command(
+        parent_span: Span,
+        mut commands: Vec<AbigenCommand>,
+    ) -> Result<AbigenCommand, Error> {
+        if commands.len() != 1 {
+            let err = commands
+                .iter()
+                .map(|command| Error::new(command.span, "Only one `Abigen` command allowed"))
+                .combine_errors()
+                .unwrap_or_else(|| Error::new(parent_span, "Add an `Abigen(..)` command!"));
+
+            Err(err)
+        } else {
+            Ok(commands.pop().unwrap())
+        }
+    }
     fn validate_all_contracts_are_known(
-        span: Span,
-        generate_contracts: &[GenerateContract],
+        generate_contracts: &AbigenCommand,
         deploy_contracts: &[DeployContract],
     ) -> syn::Result<()> {
         Self::contracts_to_deploy(deploy_contracts)
@@ -203,9 +229,9 @@ impl TestContractCommands {
                 [
                     Error::new_spanned(unknown_contract, "Contract is unknown"),
                     Error::new(
-                        span,
+                        generate_contracts.span,
                         format!(
-                            "Consider adding: Abigen(name=\"{}\", abi=...)",
+                            "Consider adding: Contract(name=\"{}\", abi=...)",
                             unknown_contract.value()
                         ),
                     ),

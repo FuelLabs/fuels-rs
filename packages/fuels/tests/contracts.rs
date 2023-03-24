@@ -9,10 +9,10 @@ use fuels_types::Bits256;
 async fn test_multiple_args() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -41,12 +41,14 @@ async fn test_contract_calling_contract() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "LibContract",
-            abi = "packages/fuels/tests/contracts/lib_contract"
-        ),
-        Abigen(
-            name = "LibContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            Contract(
+                name = "LibContract",
+                abi = "packages/fuels/tests/contracts/lib_contract"
+            ),
+            Contract(
+                name = "LibContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            ),
         ),
         Deploy(
             name = "lib_contract_instance",
@@ -110,10 +112,10 @@ async fn test_contract_calling_contract() -> Result<()> {
 async fn test_reverting_transaction() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "RevertContract",
             abi = "packages/fuels/tests/contracts/revert_transaction_error"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "RevertContract",
@@ -138,10 +140,10 @@ async fn test_reverting_transaction() -> Result<()> {
 async fn test_multiple_read_calls() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "MultiReadContract",
             abi = "packages/fuels/tests/contracts/multiple_read_calls"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "MultiReadContract",
@@ -169,10 +171,10 @@ async fn test_multiple_read_calls() -> Result<()> {
 async fn test_multi_call() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -201,10 +203,10 @@ async fn test_multi_call() -> Result<()> {
 async fn test_contract_call_fee_estimation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -250,10 +252,10 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -280,13 +282,13 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
-async fn mutl_call_has_same_estimated_and_used_gas() -> Result<()> {
+async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -320,10 +322,10 @@ async fn mutl_call_has_same_estimated_and_used_gas() -> Result<()> {
 async fn contract_method_call_respects_maturity() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "BlockHeightContract",
             abi = "packages/fuels/tests/contracts/transaction_block_height"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "BlockHeightContract",
@@ -348,10 +350,10 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
 async fn test_auth_msg_sender_from_sdk() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "AuthContract",
             abi = "packages/fuels/tests/contracts/auth_testing_contract"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "AuthContract",
@@ -374,10 +376,10 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
 async fn test_large_return_data() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/large_return_data"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -431,10 +433,10 @@ async fn test_large_return_data() -> Result<()> {
 async fn can_handle_function_called_new() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -454,12 +456,14 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "LibContract",
-            abi = "packages/fuels/tests/contracts/lib_contract"
-        ),
-        Abigen(
-            name = "LibContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            Contract(
+                name = "LibContract",
+                abi = "packages/fuels/tests/contracts/lib_contract"
+            ),
+            Contract(
+                name = "LibContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            ),
         ),
         Deploy(
             name = "lib_contract_instance",
@@ -513,10 +517,10 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
 async fn test_wallet_getter() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -540,10 +544,10 @@ async fn test_connect_wallet() -> Result<()> {
     let wallet_2 = wallets.pop().unwrap();
 
     setup_contract_test!(
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -779,10 +783,10 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     setup_contract_test!(
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -827,10 +831,10 @@ async fn contract_call_futures_implement_send() -> Result<()> {
 
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -854,12 +858,14 @@ async fn test_contract_set_estimation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "LibContract",
-            abi = "packages/fuels/tests/contracts/lib_contract"
-        ),
-        Abigen(
-            name = "LibContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            Contract(
+                name = "LibContract",
+                abi = "packages/fuels/tests/contracts/lib_contract"
+            ),
+            Contract(
+                name = "LibContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            ),
         ),
         Deploy(
             name = "lib_contract_instance",
@@ -905,16 +911,18 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
-            name = "LibContract",
-            abi = "packages/fuels/tests/contracts/lib_contract"
-        ),
-        Abigen(
-            name = "LibContractCaller",
-            abi = "packages/fuels/tests/contracts/lib_contract_caller"
-        ),
-        Abigen(
-            name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            Contract(
+                name = "LibContract",
+                abi = "packages/fuels/tests/contracts/lib_contract"
+            ),
+            Contract(
+                name = "LibContractCaller",
+                abi = "packages/fuels/tests/contracts/lib_contract_caller"
+            ),
+            Contract(
+                name = "TestContract",
+                abi = "packages/fuels/tests/contracts/contract_test"
+            ),
         ),
         Deploy(
             name = "lib_contract_instance",
@@ -984,10 +992,10 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     setup_contract_test!(
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -1034,10 +1042,10 @@ async fn test_add_custom_assets() -> Result<()> {
     let wallet_2 = wallets.pop().unwrap();
 
     setup_contract_test!(
-        Abigen(
+        Abigen(Contract(
             name = "MyContract",
             abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "MyContract",
@@ -1074,10 +1082,10 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn test_contract_raw_slice() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_contract_test!(
-        Abigen(
+        Abigen(Contract(
             name = "RawSliceContract",
             abi = "packages/fuels/tests/types/contracts/raw_slice"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "RawSliceContract",
@@ -1126,10 +1134,10 @@ async fn test_deploy_error_messages() {
 async fn test_payable_annotation() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/payable_annotation"
-        ),
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",

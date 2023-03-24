@@ -10,7 +10,7 @@ use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use crate::setup_contract_test::parsing::{
-    DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
+    AbigenCommand, DeployContract, InitializeWallet, TestContractCommands,
 };
 
 pub(crate) fn generate_setup_contract_test_code(
@@ -18,11 +18,11 @@ pub(crate) fn generate_setup_contract_test_code(
 ) -> syn::Result<TokenStream> {
     let TestContractCommands {
         initialize_wallets,
-        generate_contract,
+        generate_bindings,
         deploy_contract,
     } = commands;
 
-    let project_lookup = generate_project_lookup(&generate_contract)?;
+    let project_lookup = generate_project_lookup(&generate_bindings)?;
     let abigen_code = abigen_code(&project_lookup);
     let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
@@ -34,8 +34,9 @@ pub(crate) fn generate_setup_contract_test_code(
     })
 }
 
-fn generate_project_lookup(commands: &[GenerateContract]) -> syn::Result<HashMap<String, Project>> {
+fn generate_project_lookup(commands: &AbigenCommand) -> syn::Result<HashMap<String, Project>> {
     let pairs = commands
+        .targets
         .iter()
         .map(|command| -> syn::Result<_> {
             let project = Project::new(&command.abi)?;
