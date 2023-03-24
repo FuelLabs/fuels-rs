@@ -3,6 +3,8 @@ extern crate core;
 
 use std::net::SocketAddr;
 
+#[cfg(feature = "fuels-accounts")]
+pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
 #[cfg(feature = "fuel-core-lib")]
@@ -24,8 +26,6 @@ pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
-#[cfg(feature = "fuels-signers")]
-pub use signers::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
@@ -33,8 +33,8 @@ pub use wallets_config::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
-#[cfg(feature = "fuels-signers")]
-mod signers;
+#[cfg(feature = "fuels-accounts")]
+mod accounts;
 mod utils;
 mod wallets_config;
 

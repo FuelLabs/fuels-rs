@@ -19,6 +19,8 @@ pub enum Error {
     InstantiationError(String),
     #[error("Infrastructure error: {0}")]
     InfrastructureError(String),
+    #[error("Account error: {0}")]
+    AccountError(String),
     #[error("Wallet error: {0}")]
     WalletError(String),
     #[error("Provider error: {0}")]
@@ -33,6 +35,8 @@ pub enum Error {
         revert_id: u64,
         receipts: Vec<Receipt>,
     },
+    #[error("Transaction is using predicates. Provide consensus parameters by using .set_consensus_parameters().")]
+    TransactionBuildError,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

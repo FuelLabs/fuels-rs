@@ -18,7 +18,7 @@ For the sake of simplicity, we avoid transferring the base asset so we don't hav
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_inout}}
 ```
 
-All that is left is to build the transaction with the helper `build_transfer_transaction()`, have `wallet_1` sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:
+All that is left is to build the transaction via `ScriptTransactionBuilder`, have `wallet_1` sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_transaction}}
