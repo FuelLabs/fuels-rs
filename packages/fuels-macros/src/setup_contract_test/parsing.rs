@@ -173,15 +173,15 @@ impl Parse for TestContractCommands {
         let (mut initialize_wallets, generate_contract, deploy_contract) =
             parse_test_contract_commands(input)?;
 
-        let abigen_commands = Self::extract_the_abigen_command(span, generate_contract)?;
+        let abigen_command = Self::extract_the_abigen_command(span, generate_contract)?;
 
-        Self::validate_all_contracts_are_known(&abigen_commands, deploy_contract.as_slice())?;
+        Self::validate_all_contracts_are_known(&abigen_command, deploy_contract.as_slice())?;
 
         Self::validate_zero_or_one_wallet_command_present(initialize_wallets.as_slice())?;
 
         Ok(Self {
             initialize_wallets: initialize_wallets.pop(),
-            generate_bindings: abigen_commands,
+            generate_bindings: abigen_command,
             deploy_contract,
         })
     }
