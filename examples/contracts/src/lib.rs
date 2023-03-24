@@ -709,7 +709,7 @@ mod tests {
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            .with_account(wallet_2)? // Connect wallet_2
+            .with_account(wallet_2, None)? // Connect wallet_2
             .methods() // Get contract methods
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.

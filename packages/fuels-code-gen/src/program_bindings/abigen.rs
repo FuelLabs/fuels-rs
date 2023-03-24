@@ -174,4 +174,19 @@ mod tests {
 
         assert_eq!(shared_types, HashSet::from([types[0].clone()]))
     }
+
+    #[test]
+    fn testis() {
+        let stream = Abigen::generate(vec![AbigenTarget {
+            name: "MyContract".to_string(),
+            abi: "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json".to_string(),
+            program_type: ProgramType::Contract,
+        }], false).unwrap().to_string();
+
+        std::fs::write(
+            "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContract.rs",
+            stream,
+        )
+        .unwrap();
+    }
 }
