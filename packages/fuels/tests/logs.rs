@@ -8,7 +8,7 @@ use fuels::{
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -46,7 +46,7 @@ async fn test_parse_logged_variables() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_values() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -80,7 +80,7 @@ async fn test_parse_logs_values() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_custom_types() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -118,7 +118,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 
 #[tokio::test]
 async fn test_parse_logs_generic_types() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -170,7 +170,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_logs() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -224,7 +224,7 @@ async fn test_get_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_logs_with_no_logs() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -251,7 +251,7 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_log_single_contract() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -301,7 +301,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_log_multiple_contracts() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -354,7 +354,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -434,7 +434,7 @@ fn assert_revert_containing_msg(msg: &str, error: Error) {
 
 #[tokio::test]
 async fn test_require_log() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
@@ -490,7 +490,7 @@ async fn test_require_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_require_log_single_contract() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
@@ -547,7 +547,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_require_log_multi_contract() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
@@ -676,7 +676,7 @@ async fn test_script_get_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_with_contract_logs() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -931,7 +931,7 @@ async fn test_script_require_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_require_from_contract() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -975,7 +975,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_contract_require_from_contract() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -1076,7 +1076,7 @@ fn assert_assert_eq_containing_msg<T: Debug>(left: T, right: T, error: Error) {
 
 #[tokio::test]
 async fn test_contract_asserts_log() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
@@ -1226,7 +1226,7 @@ async fn test_script_asserts_log() -> Result<()> {
 
 #[tokio::test]
 async fn contract_token_ops_error_messages() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",

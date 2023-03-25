@@ -149,7 +149,7 @@ impl TryFrom<Command> for LoadScript {
     }
 }
 
-fn parse_test_contract_commands(
+fn parse_test_program_commands(
     input: ParseStream,
 ) -> syn::Result<(
     Vec<InitializeWallet>,
@@ -196,21 +196,21 @@ fn parse_test_contract_commands(
     Ok((init_wallets, gen_contracts, deploy_contracts, load_scripts))
 }
 
-// Contains the result of parsing the input to the `setup_contract_test` macro.
+// Contains the result of parsing the input to the `setup_program_test` macro.
 // Contents represent the users wishes with regards to wallet initialization,
 // bindings generation and contract deployment.
-pub(crate) struct TestContractCommands {
+pub(crate) struct TestProgramCommands {
     pub(crate) initialize_wallets: Option<InitializeWallet>,
     pub(crate) generate_bindings: AbigenCommand,
     pub(crate) deploy_contract: Vec<DeployContract>,
     pub(crate) load_scripts: Vec<LoadScript>,
 }
 
-impl Parse for TestContractCommands {
+impl Parse for TestProgramCommands {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         let span = input.span();
         let (mut initialize_wallets, generate_contract, deploy_contract, load_scripts) =
-            parse_test_contract_commands(input)?;
+            parse_test_program_commands(input)?;
 
         let abigen_command = Self::extract_the_abigen_command(span, generate_contract)?;
 
@@ -228,7 +228,7 @@ impl Parse for TestContractCommands {
     }
 }
 
-impl TestContractCommands {
+impl TestProgramCommands {
     fn names_of_program_bindings(
         commands: &AbigenCommand,
         program_type: ProgramType,

@@ -119,7 +119,7 @@ async fn test_input_message() -> Result<()> {
     let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
 
-    setup_contract_test!(
+    setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
@@ -316,7 +316,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -352,7 +352,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
@@ -459,7 +459,7 @@ async fn test_gas_errors() -> Result<()> {
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
-    setup_contract_test!(
+    setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
             abi = "packages/fuels/tests/contracts/contract_test"
@@ -509,7 +509,7 @@ async fn test_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -551,7 +551,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",

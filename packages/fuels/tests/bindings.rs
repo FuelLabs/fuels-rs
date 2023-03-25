@@ -17,7 +17,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "SimpleContract",
@@ -754,7 +754,7 @@ async fn compile_bindings_enum_input() {
 
 #[tokio::test]
 async fn shared_types() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -873,7 +873,7 @@ async fn shared_types() -> Result<()> {
 #[cfg(feature = "test-type-paths")]
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "ContractA",

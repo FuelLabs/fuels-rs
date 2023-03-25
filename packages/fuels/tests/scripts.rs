@@ -2,7 +2,7 @@ use fuels::prelude::*;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -28,7 +28,7 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -89,7 +89,7 @@ async fn main_function_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn test_basic_script_with_tx_parameters2() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",

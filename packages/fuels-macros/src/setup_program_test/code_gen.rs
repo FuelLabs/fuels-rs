@@ -9,16 +9,15 @@ use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
-use crate::setup_contract_test::parsing::{
-    AbigenCommand, DeployContract, InitializeWallet, TestContractCommands,
+use super::parsing::LoadScript;
+use crate::setup_program_test::parsing::{
+    AbigenCommand, DeployContract, InitializeWallet, TestProgramCommands,
 };
 
-use super::parsing::LoadScript;
-
-pub(crate) fn generate_setup_contract_test_code(
-    commands: TestContractCommands,
+pub(crate) fn generate_setup_program_test_code(
+    commands: TestProgramCommands,
 ) -> syn::Result<TokenStream> {
-    let TestContractCommands {
+    let TestProgramCommands {
         initialize_wallets,
         generate_bindings,
         deploy_contract,

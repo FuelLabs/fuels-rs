@@ -68,7 +68,7 @@ pub mod prelude {
             Wallet, WalletUnlocked,
         },
         fuel_node::*,
-        macros::{abigen, setup_contract_test},
+        macros::{abigen, setup_program_test},
         programs::{
             contract::{
                 CallParameters, Contract, DeployConfiguration, MultiContractCallHandler,
