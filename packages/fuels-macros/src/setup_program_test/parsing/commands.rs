@@ -1,10 +1,8 @@
 pub(crate) use abigen::AbigenCommand;
 pub(crate) use deploy_contract::DeployContract;
-use fuels_code_gen::ProgramType;
 pub(crate) use initialize_wallet::InitializeWallet;
 pub(crate) use load_script::LoadScript;
-use proc_macro2::Span;
-use syn::{Error, LitStr};
+use syn::Error;
 
 use crate::parse_utils::Command;
 
