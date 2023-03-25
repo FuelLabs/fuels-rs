@@ -805,16 +805,20 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_get_logs_with_type() -> Result<()> {
-    abigen!(Script(
-        name = "log_script",
-        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
-    ));
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "log_script",
+            abi = "packages/fuels/tests/logs/script_logs"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "log_script",
+            wallet = "wallet"
+        )
+    );
 
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
-
-    let response = instance.main().call().await?;
+    let response = script_instance.main().call().await?;
 
     let l = [1u8, 2u8, 3u8];
     let expected_bits256 = Bits256([
@@ -878,17 +882,21 @@ async fn test_script_get_logs_with_type() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_require_log() -> Result<()> {
-    abigen!(Script(
-        name = "log_script",
-        abi = "packages/fuels/tests/scripts/script_require/out/debug/script_require-abi.json"
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/script_require/out/debug/script_require.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "log_script",
+            abi = "packages/fuels/tests/scripts/script_require"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "log_script",
+            wallet = "wallet"
+        )
+    );
 
     {
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::RequirePrimitive)
             .call()
             .await
@@ -897,7 +905,7 @@ async fn test_script_require_log() -> Result<()> {
         assert_revert_containing_msg("42", error);
     }
     {
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::RequireString)
             .call()
             .await
@@ -906,8 +914,7 @@ async fn test_script_require_log() -> Result<()> {
         assert_revert_containing_msg("fuel", error);
     }
     {
-        let instance = log_script::new(wallet.clone(), bin_path);
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::RequireCustomGeneric)
             .call()
             .await
@@ -916,8 +923,7 @@ async fn test_script_require_log() -> Result<()> {
         assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
     }
     {
-        let instance = log_script::new(wallet.clone(), bin_path);
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::RequireWithAdditionalLogs)
             .call()
             .await
@@ -1150,20 +1156,24 @@ async fn test_contract_asserts_log() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_asserts_log() -> Result<()> {
-    abigen!(Script(
-        name = "log_script",
-        abi = "packages/fuels/tests/scripts/script_asserts/out/debug/script_asserts-abi.json"
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/script_asserts/out/debug/script_asserts.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "log_script",
+            abi = "packages/fuels/tests/scripts/script_asserts"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "log_script",
+            wallet = "wallet"
+        )
+    );
 
     {
         let a = 32;
         let b = 64;
 
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::AssertPrimitive((a, b)))
             .call()
             .await
@@ -1175,7 +1185,7 @@ async fn test_script_asserts_log() -> Result<()> {
         let a = 32;
         let b = 64;
 
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::AssertEqPrimitive((a, b)))
             .call()
             .await
@@ -1194,7 +1204,7 @@ async fn test_script_asserts_log() -> Result<()> {
             field_2: 32,
         };
 
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::AssertEqStruct((
                 test_struct.clone(),
                 test_struct2.clone(),
@@ -1209,7 +1219,7 @@ async fn test_script_asserts_log() -> Result<()> {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
 
-        let error = instance
+        let error = script_instance
             .main(MatchEnum::AssertEqEnum((
                 test_enum.clone(),
                 test_enum2.clone(),
