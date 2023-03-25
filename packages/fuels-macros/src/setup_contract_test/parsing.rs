@@ -117,18 +117,52 @@ impl TryFrom<Command> for DeployContract {
     }
 }
 
+pub(crate) struct LoadScript {
+    pub name: String,
+    pub script: LitStr,
+    pub wallet: String,
+}
+
+impl MacroCommand for LoadScript {
+    fn expected_name() -> &'static str {
+        "LoadScript"
+    }
+}
+
+impl TryFrom<Command> for LoadScript {
+    type Error = Error;
+
+    fn try_from(command: Command) -> Result<Self, Self::Error> {
+        Self::validate_command_name(&command)?;
+        let name_values = UniqueNameValues::new(command.contents)?;
+        name_values.validate_has_no_other_names(&["name", "script", "wallet"])?;
+
+        let name = name_values.get_as_lit_str("name")?.value();
+        let script = name_values.get_as_lit_str("script")?.clone();
+        let wallet = name_values.get_as_lit_str("wallet")?.value();
+
+        Ok(Self {
+            name,
+            script,
+            wallet,
+        })
+    }
+}
+
 fn parse_test_contract_commands(
     input: ParseStream,
 ) -> syn::Result<(
     Vec<InitializeWallet>,
     Vec<AbigenCommand>,
     Vec<DeployContract>,
+    Vec<LoadScript>,
 )> {
     let commands = Command::parse_multiple(input)?;
 
     let mut init_wallets: Vec<syn::Result<InitializeWallet>> = vec![];
     let mut gen_contracts: Vec<syn::Result<AbigenCommand>> = vec![];
     let mut deploy_contracts: Vec<syn::Result<DeployContract>> = vec![];
+    let mut load_scripts: Vec<syn::Result<LoadScript>> = vec![];
 
     let mut errors = vec![];
 
@@ -140,10 +174,12 @@ fn parse_test_contract_commands(
             gen_contracts.push(command.try_into());
         } else if command_name == DeployContract::expected_name() {
             deploy_contracts.push(command.try_into());
+        } else if command_name == LoadScript::expected_name() {
+            load_scripts.push(command.try_into());
         } else {
             errors.push(Error::new_spanned(
                 command.name,
-                "Unsupported command. Expected: 'Wallets', 'Abigen' or 'Deploy'",
+                "Unsupported command. Expected: 'Wallets', 'Abigen', 'Deploy' or 'LoadScript'",
             ))
         }
     }
@@ -152,10 +188,12 @@ fn parse_test_contract_commands(
     let (gen_contracts, gen_errs): (Vec<_>, Vec<_>) = gen_contracts.into_iter().partition_result();
     let (deploy_contracts, deploy_errs): (Vec<_>, Vec<_>) =
         deploy_contracts.into_iter().partition_result();
+    let (load_scripts, load_script_errs): (Vec<_>, Vec<_>) =
+        load_scripts.into_iter().partition_result();
 
-    chain!(errors, wallet_errs, gen_errs, deploy_errs).validate_no_errors()?;
+    chain!(errors, wallet_errs, gen_errs, deploy_errs, load_script_errs).validate_no_errors()?;
 
-    Ok((init_wallets, gen_contracts, deploy_contracts))
+    Ok((init_wallets, gen_contracts, deploy_contracts, load_scripts))
 }
 
 // Contains the result of parsing the input to the `setup_contract_test` macro.
@@ -165,17 +203,19 @@ pub(crate) struct TestContractCommands {
     pub(crate) initialize_wallets: Option<InitializeWallet>,
     pub(crate) generate_bindings: AbigenCommand,
     pub(crate) deploy_contract: Vec<DeployContract>,
+    pub(crate) load_scripts: Vec<LoadScript>,
 }
 
 impl Parse for TestContractCommands {
     fn parse(input: ParseStream) -> ParseResult<Self> {
         let span = input.span();
-        let (mut initialize_wallets, generate_contract, deploy_contract) =
+        let (mut initialize_wallets, generate_contract, deploy_contract, load_scripts) =
             parse_test_contract_commands(input)?;
 
         let abigen_command = Self::extract_the_abigen_command(span, generate_contract)?;
 
         Self::validate_all_contracts_are_known(&abigen_command, deploy_contract.as_slice())?;
+        Self::validate_all_scripts_are_known(&abigen_command, load_scripts.as_slice())?;
 
         Self::validate_zero_or_one_wallet_command_present(initialize_wallets.as_slice())?;
 
@@ -183,24 +223,29 @@ impl Parse for TestContractCommands {
             initialize_wallets: initialize_wallets.pop(),
             generate_bindings: abigen_command,
             deploy_contract,
+            load_scripts,
         })
     }
 }
 
 impl TestContractCommands {
-    fn contracts_to_generate(commands: &AbigenCommand) -> HashSet<&LitStr> {
+    fn names_of_program_bindings(
+        commands: &AbigenCommand,
+        program_type: ProgramType,
+    ) -> HashSet<&LitStr> {
         commands
             .targets
             .iter()
-            .filter_map(|target| match target.program_type {
-                ProgramType::Contract => Some(&target.name),
-                _ => None,
-            })
+            .filter_map(|target| (target.program_type == program_type).then_some(&target.name))
             .collect()
     }
 
     fn contracts_to_deploy(commands: &[DeployContract]) -> HashSet<&LitStr> {
         commands.iter().map(|c| &c.contract).collect()
+    }
+
+    fn scripts_to_load(commands: &[LoadScript]) -> HashSet<&LitStr> {
+        commands.iter().map(|c| &c.script).collect()
     }
 
     fn extract_the_abigen_command(
@@ -219,19 +264,47 @@ impl TestContractCommands {
             Ok(commands.pop().unwrap())
         }
     }
+
     fn validate_all_contracts_are_known(
-        generate_contracts: &AbigenCommand,
+        abigen_command: &AbigenCommand,
         deploy_contracts: &[DeployContract],
     ) -> syn::Result<()> {
         Self::contracts_to_deploy(deploy_contracts)
-            .difference(&Self::contracts_to_generate(generate_contracts))
+            .difference(&Self::names_of_program_bindings(
+                abigen_command,
+                ProgramType::Contract,
+            ))
             .flat_map(|unknown_contract| {
                 [
                     Error::new_spanned(unknown_contract, "Contract is unknown"),
                     Error::new(
-                        generate_contracts.span,
+                        abigen_command.span,
                         format!(
                             "Consider adding: Contract(name=\"{}\", abi=...)",
+                            unknown_contract.value()
+                        ),
+                    ),
+                ]
+            })
+            .validate_no_errors()
+    }
+
+    fn validate_all_scripts_are_known(
+        abigen_command: &AbigenCommand,
+        load_scripts: &[LoadScript],
+    ) -> syn::Result<()> {
+        Self::scripts_to_load(load_scripts)
+            .difference(&Self::names_of_program_bindings(
+                abigen_command,
+                ProgramType::Script,
+            ))
+            .flat_map(|unknown_contract| {
+                [
+                    Error::new_spanned(unknown_contract, "Script is unknown"),
+                    Error::new(
+                        abigen_command.span,
+                        format!(
+                            "Consider adding: Script(name=\"{}\", abi=...)",
                             unknown_contract.value()
                         ),
                     ),

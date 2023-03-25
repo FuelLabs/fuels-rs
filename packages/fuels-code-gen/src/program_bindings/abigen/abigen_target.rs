@@ -37,7 +37,7 @@ fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI> {
     FullProgramABI::from_json_abi(&json_abi_str)
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProgramType {
     Script,
     Contract,
