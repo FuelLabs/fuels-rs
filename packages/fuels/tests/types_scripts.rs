@@ -6,7 +6,7 @@ async fn main_function_generic_arguments() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/types/scripts/script_generics"
+            project = "packages/fuels/tests/types/scripts/script_generics"
         )),
         LoadScript(
             name = "script_instance",
@@ -44,7 +44,7 @@ async fn main_function_option_result() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/types/scripts/options_results"
+            project = "packages/fuels/tests/types/scripts/options_results"
         )),
         LoadScript(
             name = "script_instance",
@@ -69,7 +69,7 @@ async fn main_function_tuple_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/types/scripts/script_tuples"
+            project = "packages/fuels/tests/types/scripts/script_tuples"
         )),
         LoadScript(
             name = "script_instance",
@@ -116,7 +116,7 @@ async fn main_function_vector_arguments() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/types/scripts/script_vectors"
+            project = "packages/fuels/tests/types/scripts/script_vectors"
         )),
         LoadScript(
             name = "script_instance",
@@ -173,7 +173,7 @@ async fn test_script_raw_slice() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "BimBamScript",
-            abi = "packages/fuels/tests/types/scripts/script_raw_slice",
+            project = "packages/fuels/tests/types/scripts/script_raw_slice",
         )),
         LoadScript(
             name = "script_instance",

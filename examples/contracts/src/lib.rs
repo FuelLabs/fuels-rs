@@ -88,7 +88,7 @@ mod tests {
             Wallets("wallet"),
             Abigen(Contract(
                 name = "TestContract",
-                abi = "packages/fuels/tests/contracts/contract_test"
+                project = "packages/fuels/tests/contracts/contract_test"
             )),
             Deploy(
                 name = "contract_instance",
@@ -727,7 +727,7 @@ mod tests {
             Wallets("wallet"),
             Abigen(Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/contracts/contract_test"
+                project = "packages/fuels/tests/contracts/contract_test"
             )),
             Deploy(
                 name = "contract_instance",

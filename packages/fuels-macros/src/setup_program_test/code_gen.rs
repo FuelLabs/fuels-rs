@@ -9,9 +9,8 @@ use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
-use super::parsing::LoadScript;
 use crate::setup_program_test::parsing::{
-    AbigenCommand, DeployContract, InitializeWallet, TestProgramCommands,
+    AbigenCommand, DeployContract, InitializeWallet, LoadScript, TestProgramCommands,
 };
 
 pub(crate) fn generate_setup_program_test_code(
@@ -28,13 +27,13 @@ pub(crate) fn generate_setup_program_test_code(
     let abigen_code = abigen_code(&project_lookup);
     let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
-    let script_load_code = script_loading_code(&load_scripts, &project_lookup);
+    let script_code = script_loading_code(&load_scripts, &project_lookup);
 
     Ok(quote! {
        #abigen_code
        #wallet_code
        #deploy_code
-       #script_load_code
+       #script_code
     })
 }
 
@@ -43,7 +42,7 @@ fn generate_project_lookup(commands: &AbigenCommand) -> syn::Result<HashMap<Stri
         .targets
         .iter()
         .map(|command| -> syn::Result<_> {
-            let project = Project::new(command.program_type, &command.abi)?;
+            let project = Project::new(command.program_type, &command.project)?;
             Ok((command.name.value(), project))
         })
         .collect::<Result<Vec<_>, _>>()?;

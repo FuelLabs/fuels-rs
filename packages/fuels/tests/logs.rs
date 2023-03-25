@@ -12,7 +12,7 @@ async fn test_parse_logged_variables() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -50,7 +50,7 @@ async fn test_parse_logs_values() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -84,7 +84,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -122,7 +122,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -174,7 +174,7 @@ async fn test_get_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -228,7 +228,7 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -255,7 +255,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -305,7 +305,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -359,11 +359,11 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/logs/contract_logs"
+                project = "packages/fuels/tests/logs/contract_logs"
             ),
             Contract(
                 name = "ContractCaller",
-                abi = "packages/fuels/tests/logs/contract_with_contract_logs"
+                project = "packages/fuels/tests/logs/contract_with_contract_logs"
             )
         ),
         Deploy(
@@ -438,7 +438,7 @@ async fn test_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            abi = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -494,7 +494,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            abi = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -551,7 +551,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            abi = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -681,11 +681,11 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/logs/contract_logs",
+                project = "packages/fuels/tests/logs/contract_logs",
             ),
             Contract(
                 name = "ContractCaller",
-                abi = "packages/fuels/tests/logs/contract_with_contract_logs",
+                project = "packages/fuels/tests/logs/contract_with_contract_logs",
             )
         ),
         Deploy(
@@ -809,7 +809,7 @@ async fn test_script_get_logs_with_type() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            abi = "packages/fuels/tests/logs/script_logs"
+            project = "packages/fuels/tests/logs/script_logs"
         )),
         LoadScript(
             name = "script_instance",
@@ -886,7 +886,7 @@ async fn test_script_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            abi = "packages/fuels/tests/scripts/script_require"
+            project = "packages/fuels/tests/scripts/script_require"
         )),
         LoadScript(
             name = "script_instance",
@@ -942,11 +942,11 @@ async fn test_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/contracts/lib_contract",
+                project = "packages/fuels/tests/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractCaller",
-                abi = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "packages/fuels/tests/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -986,15 +986,15 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/contracts/lib_contract",
+                project = "packages/fuels/tests/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractLogs",
-                abi = "packages/fuels/tests/logs/contract_logs",
+                project = "packages/fuels/tests/logs/contract_logs",
             ),
             Contract(
                 name = "ContractCaller",
-                abi = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "packages/fuels/tests/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -1086,7 +1086,7 @@ async fn test_contract_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            abi = "packages/fuels/tests/contracts/asserts"
+            project = "packages/fuels/tests/contracts/asserts"
         )),
         Deploy(
             name = "contract_instance",
@@ -1160,7 +1160,7 @@ async fn test_script_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            abi = "packages/fuels/tests/scripts/script_asserts"
+            project = "packages/fuels/tests/scripts/script_asserts"
         )),
         LoadScript(
             name = "script_instance",
@@ -1240,7 +1240,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/token_ops"
+            project = "packages/fuels/tests/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",

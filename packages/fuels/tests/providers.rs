@@ -122,7 +122,7 @@ async fn test_input_message() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -320,7 +320,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -356,7 +356,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
-            abi = "packages/fuels/tests/contracts/token_ops"
+            project = "packages/fuels/tests/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",
@@ -462,7 +462,7 @@ async fn test_gas_errors() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -513,7 +513,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -555,7 +555,7 @@ async fn test_get_gas_used() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",

@@ -48,7 +48,7 @@ async fn script_uses_default_configurables() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/scripts/script_configurables"
+            project = "packages/fuels/tests/scripts/script_configurables"
         )),
         LoadScript(
             name = "script_instance",

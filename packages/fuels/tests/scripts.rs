@@ -6,7 +6,7 @@ async fn test_transaction_script_workflow() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -32,7 +32,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -95,7 +95,7 @@ async fn test_basic_script_with_tx_parameters2() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -129,7 +129,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
-            abi = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -181,7 +181,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "MyScript",
-            abi = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -214,7 +214,7 @@ async fn test_script_signing() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "BimBamScript",
-            abi = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",

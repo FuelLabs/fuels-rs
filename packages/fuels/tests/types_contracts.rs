@@ -18,7 +18,7 @@ async fn test_methods_typeless_argument() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/empty_arguments"
+            project = "packages/fuels/tests/types/contracts/empty_arguments"
         )),
         Deploy(
             name = "contract_instance",
@@ -43,7 +43,7 @@ async fn call_with_empty_return() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/types/contracts/call_empty_return"
+            project = "packages/fuels/tests/types/contracts/call_empty_return"
         )),
         Deploy(
             name = "contract_instance",
@@ -102,7 +102,7 @@ async fn abigen_different_structs_same_arg_name() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/two_structs"
+            project = "packages/fuels/tests/types/contracts/two_structs"
         )),
         Deploy(
             name = "contract_instance",
@@ -131,7 +131,7 @@ async fn nested_structs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/nested_structs"
+            project = "packages/fuels/tests/types/contracts/nested_structs"
         )),
         Deploy(
             name = "contract_instance",
@@ -188,7 +188,7 @@ async fn calls_with_empty_struct() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/complex_types_contract"
+            project = "packages/fuels/tests/types/contracts/complex_types_contract"
         )),
         Deploy(
             name = "contract_instance",
@@ -251,7 +251,7 @@ async fn test_tuples() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/tuples"
+            project = "packages/fuels/tests/types/contracts/tuples"
         )),
         Deploy(
             name = "contract_instance",
@@ -325,7 +325,7 @@ async fn test_evm_address() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/evm_address"
+            project = "packages/fuels/tests/types/contracts/evm_address"
         )),
         Deploy(
             name = "contract_instance",
@@ -393,7 +393,7 @@ async fn test_array() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -420,7 +420,7 @@ async fn test_arrays_with_custom_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -462,7 +462,7 @@ async fn str_in_array() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/str_in_array"
+            project = "packages/fuels/tests/types/contracts/str_in_array"
         )),
         Deploy(
             name = "contract_instance",
@@ -502,7 +502,7 @@ async fn test_enum_inside_struct() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/enum_inside_struct"
+            project = "packages/fuels/tests/types/contracts/enum_inside_struct"
         )),
         Deploy(
             name = "contract_instance",
@@ -544,7 +544,7 @@ async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/native_types"
+            project = "packages/fuels/tests/types/contracts/native_types"
         )),
         Deploy(
             name = "contract_instance",
@@ -581,7 +581,7 @@ async fn enum_coding_w_variable_width_variants() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/enum_encoding"
+            project = "packages/fuels/tests/types/contracts/enum_encoding"
         )),
         Deploy(
             name = "contract_instance",
@@ -622,7 +622,7 @@ async fn enum_coding_w_unit_enums() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/enum_encoding"
+            project = "packages/fuels/tests/types/contracts/enum_encoding"
         )),
         Deploy(
             name = "contract_instance",
@@ -661,7 +661,7 @@ async fn enum_as_input() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/enum_as_input"
+            project = "packages/fuels/tests/types/contracts/enum_as_input"
         )),
         Deploy(
             name = "contract_instance",
@@ -734,7 +734,7 @@ async fn type_inside_enum() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/type_inside_enum"
+            project = "packages/fuels/tests/types/contracts/type_inside_enum"
         )),
         Deploy(
             name = "contract_instance",
@@ -1076,7 +1076,7 @@ async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/options"
+            project = "packages/fuels/tests/types/contracts/options"
         )),
         Deploy(
             name = "contract_instance",
@@ -1128,7 +1128,7 @@ async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/options"
+            project = "packages/fuels/tests/types/contracts/options"
         )),
         Deploy(
             name = "contract_instance",
@@ -1182,7 +1182,7 @@ async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/results"
+            project = "packages/fuels/tests/types/contracts/results"
         )),
         Deploy(
             name = "contract_instance",
@@ -1234,7 +1234,7 @@ async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/results"
+            project = "packages/fuels/tests/types/contracts/results"
         )),
         Deploy(
             name = "contract_instance",
@@ -1269,7 +1269,7 @@ async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Err
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/identity"
+            project = "packages/fuels/tests/types/contracts/identity"
         )),
         Deploy(
             name = "contract_instance",
@@ -1314,7 +1314,7 @@ async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Err
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/identity"
+            project = "packages/fuels/tests/types/contracts/identity"
         )),
         Deploy(
             name = "contract_instance",
@@ -1362,7 +1362,7 @@ async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error:
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/identity"
+            project = "packages/fuels/tests/types/contracts/identity"
         )),
         Deploy(
             name = "contract_instance",
@@ -1407,7 +1407,7 @@ async fn generics_test() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/generics"
+            project = "packages/fuels/tests/types/contracts/generics"
         )),
         Deploy(
             name = "contract_instance",
@@ -1517,7 +1517,7 @@ async fn test_vector() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/vectors"
+            project = "packages/fuels/tests/types/contracts/vectors"
         )),
         Deploy(
             name = "contract_instance",
@@ -1604,7 +1604,7 @@ async fn test_b512() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TypesContract",
-            abi = "packages/fuels/tests/types/contracts/b512"
+            project = "packages/fuels/tests/types/contracts/b512"
         )),
         Deploy(
             name = "contract_instance",
@@ -1644,7 +1644,7 @@ async fn test_base_type_in_vec_output() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "VectorOutputContract",
-            abi = "packages/fuels/tests/types/contracts/vector_output"
+            project = "packages/fuels/tests/types/contracts/vector_output"
         )),
         Deploy(
             name = "contract_instance",
@@ -1679,7 +1679,7 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "VectorOutputContract",
-            abi = "packages/fuels/tests/types/contracts/vector_output"
+            project = "packages/fuels/tests/types/contracts/vector_output"
         )),
         Deploy(
             name = "contract_instance",
@@ -1750,7 +1750,7 @@ async fn test_nested_vector_methods_fail() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "VectorOutputContract",
-            abi = "packages/fuels/tests/types/contracts/vector_output"
+            project = "packages/fuels/tests/types/contracts/vector_output"
         )),
         Deploy(
             name = "contract_instance",
@@ -1773,7 +1773,7 @@ async fn test_contract_raw_slice() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "RawSliceContract",
-            abi = "packages/fuels/tests/types/contracts/raw_slice"
+            project = "packages/fuels/tests/types/contracts/raw_slice"
         )),
         Deploy(
             name = "contract_instance",
@@ -1798,7 +1798,7 @@ async fn test_bytes_output() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "BytesOutputContract",
-            abi = "packages/fuels/tests/types/contracts/bytes"
+            project = "packages/fuels/tests/types/contracts/bytes"
         )),
         Deploy(
             name = "contract_instance",
