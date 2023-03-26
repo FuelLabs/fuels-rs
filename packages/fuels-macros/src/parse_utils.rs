@@ -110,12 +110,6 @@ impl Members {
         self.names.iter()
     }
 
-    pub(crate) fn names_as_strings(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        self.names().map(|ident| {
-            let name = ident.to_string();
-            quote! {#name.to_string()}
-        })
-    }
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
         let fuels_types_path = self.fuels_types_path.to_token_stream();
         self.types.iter().map(move |ty| {
