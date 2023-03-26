@@ -7,7 +7,7 @@ use fuels::{
 };
 
 #[tokio::test]
-async fn test_parse_logged_varibles() -> Result<()> {
+async fn test_parse_logged_variables() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(

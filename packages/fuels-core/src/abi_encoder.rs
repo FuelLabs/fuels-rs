@@ -107,7 +107,7 @@ impl ABIEncoder {
 
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
-            let (_, variant_param_type) = variants.select_variant(*discriminant)?;
+            let variant_param_type = variants.param_type_of_variant(*discriminant)?;
             let padding_amount = variants.compute_padding_amount(variant_param_type);
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
@@ -150,7 +150,7 @@ mod tests {
     use sha2::{Digest, Sha256};
 
     use super::*;
-    use crate::utils::{first_four_bytes_of_sha256_hash, generate_unused_field_names};
+    use crate::utils::first_four_bytes_of_sha256_hash;
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
@@ -537,10 +537,8 @@ mod tests {
         //     x: u32,
         //     y: bool,
         // }
-        let params = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::U32,
-            ParamType::Bool,
-        ]))?;
+        let types = vec![ParamType::U32, ParamType::Bool];
+        let params = EnumVariants::new(types)?;
 
         // An `EnumSelector` indicating that we've chosen the first Enum variant,
         // whose value is 42 of the type ParamType::U32 and that the Enum could
@@ -573,10 +571,8 @@ mod tests {
         // Our enum has two variants: B256, and U64. So the enum will set aside
         // 256b of space or 4 WORDS because that is the space needed to fit the
         // largest variant(B256).
-        let enum_variants = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::B256,
-            ParamType::U64,
-        ]))?;
+        let types = vec![ParamType::B256, ParamType::U64];
+        let enum_variants = EnumVariants::new(types)?;
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
         let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector)))?.resolve(0);
@@ -604,10 +600,8 @@ mod tests {
             v2: str[10]
         }
          */
-        let deeper_enum_variants = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::Bool,
-            ParamType::String(10),
-        ]))?;
+        let types = vec![ParamType::Bool, ParamType::String(10)];
+        let deeper_enum_variants = EnumVariants::new(types)?;
         let deeper_enum_token = Token::String(StringToken::new("0123456789".into(), 10));
 
         let str_enc = vec![
@@ -623,16 +617,15 @@ mod tests {
         }
          */
 
+        let fields = vec![
+            ParamType::Enum {
+                variants: deeper_enum_variants.clone(),
+                generics: vec![],
+            },
+            ParamType::Bool,
+        ];
         let struct_a_type = ParamType::Struct {
-            name: "".to_string(),
-            fields: generate_unused_field_names(vec![
-                ParamType::Enum {
-                    name: "".to_string(),
-                    variants: deeper_enum_variants.clone(),
-                    generics: vec![],
-                },
-                ParamType::Bool,
-            ]),
+            fields,
             generics: vec![],
         };
 
@@ -650,11 +643,8 @@ mod tests {
         }
         */
 
-        let top_level_enum_variants = EnumVariants::new(generate_unused_field_names(vec![
-            struct_a_type,
-            ParamType::Bool,
-            ParamType::U64,
-        ]))?;
+        let types = vec![struct_a_type, ParamType::Bool, ParamType::U64];
+        let top_level_enum_variants = EnumVariants::new(types)?;
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
         let top_lvl_discriminant_enc = vec![0x0; 8];
@@ -820,14 +810,8 @@ mod tests {
     fn enums_with_only_unit_variants_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 1];
 
-        let enum_selector = Box::new((
-            1,
-            Token::Unit,
-            EnumVariants::new(generate_unused_field_names(vec![
-                ParamType::Unit,
-                ParamType::Unit,
-            ]))?,
-        ));
+        let types = vec![ParamType::Unit, ParamType::Unit];
+        let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
         let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
 
@@ -852,14 +836,8 @@ mod tests {
         let padding = vec![0; 32];
         let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
 
-        let enum_selector = Box::new((
-            1,
-            Token::Unit,
-            EnumVariants::new(generate_unused_field_names(vec![
-                ParamType::B256,
-                ParamType::Unit,
-            ]))?,
-        ));
+        let types = vec![ParamType::B256, ParamType::Unit];
+        let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
         let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
 
@@ -926,10 +904,8 @@ mod tests {
     fn a_vec_in_an_enum() -> Result<()> {
         // arrange
         let offset = 40;
-        let variants = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::B256,
-            ParamType::Vector(Box::new(ParamType::U64)),
-        ]))?;
+        let types = vec![ParamType::B256, ParamType::Vector(Box::new(ParamType::U64))];
+        let variants = EnumVariants::new(types)?;
         let selector = (1, Token::Vector(vec![Token::U64(5)]), variants);
         let token = Token::Enum(Box::new(selector));
 
@@ -967,10 +943,8 @@ mod tests {
     fn an_enum_in_a_vec() -> Result<()> {
         // arrange
         let offset = 40;
-        let variants = EnumVariants::new(generate_unused_field_names(vec![
-            ParamType::B256,
-            ParamType::U8,
-        ]))?;
+        let types = vec![ParamType::B256, ParamType::U8];
+        let variants = EnumVariants::new(types)?;
         let selector = (1, Token::U8(8), variants);
         let enum_token = Token::Enum(Box::new(selector));
 
