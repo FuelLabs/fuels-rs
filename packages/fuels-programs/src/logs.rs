@@ -1,6 +1,7 @@
 use std::{
+    any::TypeId,
     collections::{HashMap, HashSet},
-    fmt::Debug,
+    fmt::{Debug, Formatter},
     iter::FilterMap,
 };
 
@@ -9,12 +10,46 @@ use fuel_abi_types::error_codes::{
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::{traits::DecodableLog, try_from_bytes};
+use fuels_core::try_from_bytes;
 use fuels_types::{
     errors::{Error, Result},
-    param_types::ParamType,
     traits::{Parameterize, Tokenizable},
 };
+
+#[derive(Clone)]
+pub struct LogFormatter {
+    formatter: fn(&[u8]) -> Result<String>,
+    type_id: TypeId,
+}
+
+impl LogFormatter {
+    pub fn new<T: Tokenizable + Parameterize + Debug + 'static>() -> Self {
+        Self {
+            formatter: Self::format_log::<T>,
+            type_id: TypeId::of::<T>(),
+        }
+    }
+
+    fn format_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
+        Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
+    }
+
+    pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
+        TypeId::of::<T>() == self.type_id
+    }
+
+    pub fn format(&self, bytes: &[u8]) -> Result<String> {
+        (self.formatter)(bytes)
+    }
+}
+
+impl Debug for LogFormatter {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LogFormatter")
+            .field("type_id", &self.type_id)
+            .finish()
+    }
+}
 
 /// Holds a unique log ID
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
@@ -24,7 +59,7 @@ pub struct LogId(ContractId, u64);
 #[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
-    pub type_lookup: HashMap<LogId, ParamType>,
+    pub log_formatters: HashMap<LogId, LogFormatter>,
 }
 
 impl LogDecoder {
@@ -34,26 +69,24 @@ impl LogDecoder {
             .iter()
             .extract_log_id_and_data()
             .filter_map(|(log_id, data)| {
-                self.type_lookup
+                self.log_formatters
                     .get(&log_id)
-                    .map(|param_type| param_type.decode_log(&data))
+                    .map(|log_formatter| log_formatter.format(&data))
             })
             .collect()
     }
 
     /// Get decoded logs with specific type from the given receipts.
     /// Note that this method returns the actual type and not a `String` representation.
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>> {
-        let target_param_type = T::param_type();
-
         let target_ids: HashSet<LogId> = self
-            .type_lookup
+            .log_formatters
             .iter()
-            .filter_map(|(log_id, param_type)| {
-                (*param_type == target_param_type).then_some(log_id.clone())
+            .filter_map(|(log_id, log_formatter)| {
+                log_formatter.can_handle_type::<T>().then(|| log_id.clone())
             })
             .collect();
 
@@ -69,7 +102,7 @@ impl LogDecoder {
     }
 
     pub fn merge(&mut self, log_decoder: LogDecoder) {
-        self.type_lookup.extend(log_decoder.type_lookup.into_iter());
+        self.log_formatters.extend(log_decoder.log_formatters);
     }
 }
 
@@ -133,13 +166,12 @@ fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> St
         .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
 }
 
-pub fn log_type_lookup(
-    id_param_pairs: &[(u64, ParamType)],
-    contract_id: Option<ContractId>,
-) -> HashMap<LogId, ParamType> {
-    let contract_id = contract_id.unwrap_or_else(ContractId::zeroed);
-    id_param_pairs
-        .iter()
-        .map(|(id, param_type)| (LogId(contract_id, *id), param_type.to_owned()))
+pub fn log_formatters_lookup(
+    log_id_log_formatter_pairs: Vec<(u64, LogFormatter)>,
+    contract_id: ContractId,
+) -> HashMap<LogId, LogFormatter> {
+    log_id_log_formatter_pairs
+        .into_iter()
+        .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))
         .collect()
 }

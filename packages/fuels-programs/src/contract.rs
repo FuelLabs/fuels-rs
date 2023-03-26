@@ -879,7 +879,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             tx_parameters: TxParameters::default(),
             account,
             log_decoder: LogDecoder {
-                type_lookup: HashMap::new(),
+                log_formatters: Default::default(),
             },
         }
     }

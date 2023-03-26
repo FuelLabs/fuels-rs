@@ -8,7 +8,7 @@ pub mod abigen_bindings {
         impl<T: Account> MyContract<T> {
             pub fn new(contract_id: Bech32ContractId, account: T) -> Self {
                 let log_decoder = LogDecoder {
-                    type_lookup: logs::log_type_lookup(&[], Some(contract_id.clone().into())),
+                    type_lookup: logs::log_type_lookup(&[], contract_id.clone().into()),
                 };
                 Self {
                     contract_id,
