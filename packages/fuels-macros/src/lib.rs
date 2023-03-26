@@ -1,6 +1,8 @@
-use fuels_code_gen::Abigen;
 use proc_macro::TokenStream;
+
 use syn::{parse_macro_input, DeriveInput};
+
+use fuels_code_gen::Abigen;
 
 use crate::{
     abigen::MacroAbigenTargets,
@@ -51,27 +53,34 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 ///
 /// More details can be found in the [`Fuel Rust SDK Book`](https://fuellabs.github.io/fuels-rs/latest)
 ///```text
-///setup_program_test!(
-///    Wallets("wallet"),
-///    Abigen(
-///        name = "FooContract",
-///        abi = "packages/fuels/tests/contracts/foo_contract"
-///    ),
-///    Abigen(
-///        name = "FooCallerContract",
-///        abi = "packages/fuels/tests/contracts/foo_caller_contract"
-///    ),
-///    Deploy(
-///        name = "foo_contract_instance",
-///        contract = "FooContract",
-///        wallet = "wallet"
-///    ),
-///    Deploy(
-///        name = "foo_caller_contract_instance",
-///        contract = "FooCallerContract",
-///        wallet = "my_own_wallet"
-///    ),
-///);
+/// setup_program_test!(
+///         Wallets("wallet"),
+///         Abigen(
+///             Contract(
+///                 name = "LibContract",
+///                 project = "packages/fuels/tests/contracts/lib_contract"
+///             ),
+///             Contract(
+///                 name = "LibContractCaller",
+///                 project = "packages/fuels/tests/contracts/lib_contract_caller"
+///             ),
+///         ),
+///         Deploy(
+///             name = "lib_contract_instance",
+///             contract = "LibContract",
+///             wallet = "wallet"
+///         ),
+///         Deploy(
+///             name = "contract_caller_instance",
+///             contract = "LibContractCaller",
+///             wallet = "wallet"
+///         ),
+///         Deploy(
+///             name = "contract_caller_instance2",
+///             contract = "LibContractCaller",
+///             wallet = "wallet"
+///         ),
+///     );
 ///```
 #[proc_macro]
 pub fn setup_program_test(input: TokenStream) -> TokenStream {

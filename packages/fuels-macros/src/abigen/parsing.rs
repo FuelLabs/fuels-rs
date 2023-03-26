@@ -1,9 +1,8 @@
+use fuels_code_gen::{AbigenTarget, ProgramType};
 use syn::{
     parse::{Parse, ParseStream},
     Result,
 };
-
-use fuels_code_gen::{AbigenTarget, ProgramType};
 
 use crate::parse_utils::{Command, UniqueNameValues};
 
@@ -32,7 +31,6 @@ pub(crate) struct MacroAbigenTarget {
     pub(crate) program_type: ProgramType,
 }
 
-#[derive(Debug)]
 pub(crate) struct MacroAbigenTargets {
     targets: Vec<MacroAbigenTarget>,
 }
@@ -42,7 +40,7 @@ impl Parse for MacroAbigenTargets {
         let targets = Command::parse_multiple(input)?
             .into_iter()
             .map(MacroAbigenTarget::new)
-            .collect::<Result<Vec<_>>>()?;
+            .collect::<Result<_>>()?;
 
         Ok(Self { targets })
     }
