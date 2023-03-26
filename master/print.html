@@ -1076,7 +1076,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
         impl&lt;T: Account&gt; MyContract&lt;T&gt; {
             pub fn new(contract_id: Bech32ContractId, account: T) -&gt; Self {
                 let log_decoder = LogDecoder {
-                    type_lookup: logs::log_type_lookup(&amp;[], Some(contract_id.clone().into())),
+                    type_lookup: logs::log_type_lookup(&amp;[], contract_id.clone().into()),
                 };
                 Self {
                     contract_id,
