@@ -8,7 +8,6 @@ use crate::abi_decoder::ABIDecoder;
 pub mod abi_decoder;
 pub mod abi_encoder;
 pub mod function_selector;
-pub mod traits;
 pub mod utils;
 
 pub fn try_from_bytes<T>(bytes: &[u8]) -> Result<T>

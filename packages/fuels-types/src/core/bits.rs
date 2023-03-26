@@ -127,8 +127,7 @@ mod tests {
         assert_eq!(
             EvmAddress::param_type(),
             ParamType::Struct {
-                name: "EvmAddress".to_string(),
-                fields: vec![("value".to_string(), ParamType::B256)],
+                fields: vec![ParamType::B256],
                 generics: vec![]
             }
         );
