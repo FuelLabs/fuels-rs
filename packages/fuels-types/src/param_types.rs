@@ -151,9 +151,10 @@ impl ParamType {
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
-            ParamType::Struct { fields, .. } => {
-                fields.iter().map(|param_type| param_type.compute_encoding_width()).sum()
-            }
+            ParamType::Struct { fields, .. } => fields
+                .iter()
+                .map(|param_type| param_type.compute_encoding_width())
+                .sum(),
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
         }
