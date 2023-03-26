@@ -349,7 +349,10 @@ impl CreateTransactionBuilder {
         self
     }
 
-    pub fn set_storage_slots(mut self, storage_slots: Vec<StorageSlot>) -> Self {
+    pub fn set_storage_slots(mut self, mut storage_slots: Vec<StorageSlot>) -> Self {
+        // Storage slots have to be sorted otherwise we'd get a `TransactionCreateStorageSlotOrder`
+        // error.
+        storage_slots.sort();
         self.storage_slots = storage_slots;
         self
     }
@@ -481,4 +484,26 @@ pub fn create_message_predicate(
         code,
         predicate_data,
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn storage_slots_are_sorted_when_set() {
+        let unsorted_storage_slots = [2, 1].map(given_a_storage_slot).to_vec();
+        let sorted_storage_slots = [1, 2].map(given_a_storage_slot).to_vec();
+
+        let builder = CreateTransactionBuilder::default().set_storage_slots(unsorted_storage_slots);
+
+        assert_eq!(builder.storage_slots, sorted_storage_slots);
+    }
+
+    fn given_a_storage_slot(key: u8) -> StorageSlot {
+        let mut bytes_32 = Bytes32::zeroed();
+        bytes_32[0] = key;
+
+        StorageSlot::new(bytes_32, Default::default())
+    }
 }
