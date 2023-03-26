@@ -1,8 +1,9 @@
-use fuels_code_gen::{AbigenTarget, ProgramType};
 use syn::{
     parse::{Parse, ParseStream},
-    LitStr, Result,
+    Result,
 };
+
+use fuels_code_gen::{AbigenTarget, ProgramType};
 
 use crate::parse_utils::{Command, UniqueNameValues};
 
@@ -15,8 +16,8 @@ impl From<MacroAbigenTargets> for Vec<AbigenTarget> {
 impl From<MacroAbigenTarget> for AbigenTarget {
     fn from(macro_target: MacroAbigenTarget) -> Self {
         AbigenTarget {
-            name: macro_target.name.value(),
-            abi: macro_target.abi.value(),
+            name: macro_target.name,
+            abi: macro_target.abi,
             program_type: macro_target.program_type,
         }
     }
@@ -26,8 +27,8 @@ impl From<MacroAbigenTarget> for AbigenTarget {
 // we cannot implement Parse for the latter.
 #[derive(Debug)]
 pub(crate) struct MacroAbigenTarget {
-    pub(crate) name: LitStr,
-    pub(crate) abi: LitStr,
+    pub(crate) name: String,
+    pub(crate) abi: String,
     pub(crate) program_type: ProgramType,
 }
 
@@ -54,8 +55,8 @@ impl MacroAbigenTarget {
         let name_values = UniqueNameValues::new(command.contents)?;
         name_values.validate_has_no_other_names(&["name", "abi"])?;
 
-        let name = name_values.get_as_lit_str("name")?.clone();
-        let abi = name_values.get_as_lit_str("abi")?.clone();
+        let name = name_values.get_as_lit_str("name")?.value();
+        let abi = name_values.get_as_lit_str("abi")?.value();
 
         Ok(Self {
             name,
