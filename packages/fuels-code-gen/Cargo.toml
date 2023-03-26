@@ -18,6 +18,4 @@ proc-macro2 = "1.0.50"
 quote = "1.0.23"
 regex = "1.7.1"
 serde_json = "1.0.91"
-strum_macros = "0.24.3"
-strum = "0.24.1"
 syn = { version = "1.0.107" }
