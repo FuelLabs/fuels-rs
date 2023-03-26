@@ -1,20 +1,7 @@
-use std::collections::HashSet;
-
-use itertools::Itertools;
-use proc_macro2::Span;
-use syn::parse::{Parse, ParseStream};
-use syn::{Error, LitStr, Result};
-
-use fuels_code_gen::ProgramType;
-
-use crate::parse_utils::{Command, ErrorsExt};
-use crate::setup_program_test::parsing::{
-    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-};
-
 macro_rules! command_parser {
     ($($command_name: ident -> $command_struct: ty),+ $(,)?) => {
         #[derive(Default)]
+        #[allow(non_snake_case)]
         pub(crate) struct CommandParser {
             $(pub(crate) $command_name: Vec<$command_struct>),*
         }

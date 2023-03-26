@@ -1,5 +1,0 @@
-error: Add an `Abigen(..)` command!
- --> tests/ui/setup_contract_test/abigen_command_is_missing.rs:3:22
-  |
-3 | setup_contract_test!(Deploy(
-  |                      ^^^^^^

@@ -1,20 +1,19 @@
-use itertools::Itertools;
-use proc_macro2::Ident;
-use strum::VariantNames;
-use strum_macros::{AsRefStr, EnumDiscriminants, EnumString, EnumVariantNames};
-use syn::parse::{Parse, ParseStream};
-use syn::{parse, Error, Result};
-
-use crate::setup_program_test::parsing::command_parser::command_parser;
 pub(crate) use abigen::AbigenCommand;
 pub(crate) use deploy_contract::DeployContractCommand;
-use fuels_code_gen::error;
 pub(crate) use initialize_wallet::InitializeWalletCommand;
+use itertools::Itertools;
 pub(crate) use load_script::LoadScriptCommand;
+use syn::{
+    parse::{Parse, ParseStream},
+    Result,
+};
 
-use crate::setup_program_test::parsing::validations::{
-    extract_the_abigen_command, validate_all_contracts_are_known, validate_all_scripts_are_known,
-    validate_zero_or_one_wallet_command_present,
+use crate::setup_program_test::parsing::{
+    command_parser::command_parser,
+    validations::{
+        extract_the_abigen_command, validate_all_contracts_are_known,
+        validate_all_scripts_are_known, validate_zero_or_one_wallet_command_present,
+    },
 };
 
 mod abigen;

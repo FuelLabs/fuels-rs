@@ -1,13 +1,14 @@
 use std::collections::HashSet;
 
+use fuels_code_gen::ProgramType;
 use proc_macro2::Span;
 use syn::{Error, LitStr, Result};
 
-use fuels_code_gen::ProgramType;
-
-use crate::parse_utils::ErrorsExt;
-use crate::setup_program_test::parsing::{
-    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+use crate::{
+    parse_utils::ErrorsExt,
+    setup_program_test::parsing::{
+        AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+    },
 };
 
 pub(crate) fn extract_the_abigen_command(
@@ -43,7 +44,7 @@ pub(crate) fn validate_all_contracts_are_known(
                 Error::new(
                     abigen_command.span,
                     format!(
-                        "Consider adding: Contract(name=\"{}\", abi=...)",
+                        "Consider adding: Contract(name=\"{}\", project=...)",
                         unknown_contract.value()
                     ),
                 ),
@@ -67,7 +68,7 @@ pub(crate) fn validate_all_scripts_are_known(
                 Error::new(
                     abigen_command.span,
                     format!(
-                        "Consider adding: Script(name=\"{}\", abi=...)",
+                        "Consider adding: Script(name=\"{}\", project=...)",
                         unknown_contract.value()
                     ),
                 ),
