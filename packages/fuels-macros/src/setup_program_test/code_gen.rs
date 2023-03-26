@@ -10,7 +10,8 @@ use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
-    AbigenCommand, DeployContract, InitializeWallet, LoadScript, TestProgramCommands,
+    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+    TestProgramCommands,
 };
 
 pub(crate) fn generate_setup_program_test_code(
@@ -66,7 +67,7 @@ fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<Abi
         .collect()
 }
 
-fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenStream {
+fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) -> TokenStream {
     let command = if let Some(command) = maybe_command {
         command
     } else {
@@ -92,7 +93,7 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenS
     }
 }
 
-fn extract_wallet_names(command: &InitializeWallet) -> Vec<Ident> {
+fn extract_wallet_names(command: &InitializeWalletCommand) -> Vec<Ident> {
     command
         .names
         .iter()
@@ -101,7 +102,7 @@ fn extract_wallet_names(command: &InitializeWallet) -> Vec<Ident> {
 }
 
 fn contract_deploying_code(
-    commands: &[DeployContract],
+    commands: &[DeployContractCommand],
     project_lookup: &HashMap<String, Project>,
 ) -> TokenStream {
     commands
@@ -148,7 +149,7 @@ fn contract_deploying_code(
 }
 
 fn script_loading_code(
-    commands: &[LoadScript],
+    commands: &[LoadScriptCommand],
     project_lookup: &HashMap<String, Project>,
 ) -> TokenStream {
     commands

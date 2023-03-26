@@ -3,28 +3,18 @@ use std::convert::TryFrom;
 use proc_macro2::Span;
 use syn::{Error, LitStr};
 
-use crate::{
-    parse_utils::{Command, UniqueLitStrs},
-    setup_program_test::parsing::commands::MacroCommand,
-};
+use crate::parse_utils::{Command, UniqueLitStrs};
 
-pub struct InitializeWallet {
+#[derive(Debug, Clone)]
+pub struct InitializeWalletCommand {
     pub span: Span,
     pub names: Vec<LitStr>,
 }
 
-impl MacroCommand for InitializeWallet {
-    fn expected_name() -> &'static str {
-        "Wallets"
-    }
-}
-
-impl TryFrom<Command> for InitializeWallet {
+impl TryFrom<Command> for InitializeWalletCommand {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        Self::validate_command_name(&command)?;
-
         let wallets = UniqueLitStrs::new(command.contents)?;
 
         Ok(Self {

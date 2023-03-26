@@ -24,6 +24,8 @@ rand = "0.8"
 regex = "1.7.1"
 serde_json = "1.0.91"
 syn = { version = "1.0.107", features = ["extra-traits"] }
+strum_macros = "0.24.3"
+strum = "0.24.1"
 
 [dev-dependencies]
 trybuild = "1.0.73"

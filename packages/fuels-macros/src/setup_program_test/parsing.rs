@@ -1,5 +1,8 @@
-pub(crate) use commands::{AbigenCommand, DeployContract, InitializeWallet, LoadScript};
-pub(crate) use everything::TestProgramCommands;
+pub(crate) use commands::{
+    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+    TestProgramCommands,
+};
 
+mod command_parser;
 mod commands;
-mod everything;
+mod validations;

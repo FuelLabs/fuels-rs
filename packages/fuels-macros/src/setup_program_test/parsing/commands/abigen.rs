@@ -4,12 +4,9 @@ use fuels_code_gen::ProgramType;
 use proc_macro2::Span;
 use syn::{Error, LitStr};
 
-use crate::{
-    parse_utils::{Command, UniqueNameValues},
-    setup_program_test::parsing::commands::MacroCommand,
-};
+use crate::parse_utils::{Command, UniqueNameValues};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct TargetInfo {
     pub(crate) name: LitStr,
     pub(crate) project: LitStr,
@@ -36,24 +33,16 @@ impl TryFrom<Command> for TargetInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(crate) struct AbigenCommand {
     pub(crate) span: Span,
     pub(crate) targets: Vec<TargetInfo>,
-}
-
-impl MacroCommand for AbigenCommand {
-    fn expected_name() -> &'static str {
-        "Abigen"
-    }
 }
 
 impl TryFrom<Command> for AbigenCommand {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        Self::validate_command_name(&command)?;
-
         let targets = command
             .contents
             .into_iter()
