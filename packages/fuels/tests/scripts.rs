@@ -90,40 +90,6 @@ async fn main_function_arguments() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_basic_script_with_tx_parameters2() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        ),
-    );
-
-    let a = 1000u64;
-    let b = 2000u32;
-    let result = script_instance.main(a, b).call().await?;
-    assert_eq!(result.value, "hello");
-    // ANCHOR: script_with_tx_params
-    let parameters = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(10_000);
-    let result = script_instance
-        .main(a, b)
-        .tx_params(parameters)
-        .call()
-        .await?;
-    // ANCHOR_END: script_with_tx_params
-    assert_eq!(result.value, "hello");
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_basic_script_with_tx_parameters() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
