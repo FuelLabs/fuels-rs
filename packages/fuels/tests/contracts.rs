@@ -1076,7 +1076,7 @@ async fn test_contract_raw_slice() -> Result<()> {
     setup_contract_test!(
         Abigen(
             name = "RawSliceContract",
-            abi = "packages/fuels/tests/contracts/contract_raw_slice"
+            abi = "packages/fuels/tests/types/contracts/raw_slice"
         ),
         Deploy(
             name = "contract_instance",

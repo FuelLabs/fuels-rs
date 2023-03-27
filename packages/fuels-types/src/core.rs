@@ -6,7 +6,6 @@ use strum_macros::EnumString;
 use crate::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
-    param_types::ParamType,
 };
 
 mod bits;
@@ -132,12 +131,4 @@ pub fn pad_string(s: &str) -> Vec<u8> {
     padded.extend_from_slice(&vec![0; pad]);
 
     padded
-}
-
-pub fn unzip_param_types(param_types: &[(String, ParamType)]) -> Vec<ParamType> {
-    param_types
-        .iter()
-        .map(|(_, param_type)| param_type)
-        .cloned()
-        .collect()
 }

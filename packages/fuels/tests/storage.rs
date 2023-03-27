@@ -8,11 +8,10 @@ use fuels::{
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<()> {
-    abigen!(
-        Contract(
-            name="MyContract",
-            abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-        ));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -23,7 +22,7 @@ async fn test_storage_initialization() -> Result<()> {
     let storage_configuration = StorageConfiguration::default().set_manual_storage(storage_vec);
 
     let contract_id = Contract::deploy(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
+        "tests/contracts/storage/out/debug/storage.bin",
         &wallet,
         DeployConfiguration::default().set_storage_configuration(storage_configuration),
     )
@@ -44,16 +43,18 @@ async fn test_storage_initialization() -> Result<()> {
 
 #[tokio::test]
 async fn test_init_storage_automatically() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let storage_configuration = StorageConfiguration::default().set_storage_path(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slots.json"
-            .to_string(),
+        "tests/contracts/storage/out/debug/storage-storage_slots.json".to_string(),
     );
 
     let contract_id = Contract::deploy(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
+        "tests/contracts/storage/out/debug/storage.bin",
         &wallet,
         DeployConfiguration::default().set_storage_configuration(storage_configuration),
     )
@@ -86,16 +87,18 @@ async fn test_init_storage_automatically() -> Result<()> {
 
 #[tokio::test]
 async fn test_init_storage_automatically_bad_json_path() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"));
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
     let storage_configuration = StorageConfiguration::default().set_storage_path(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
-            .to_string(),
+        "tests/contracts/storage/out/debug/storage-storage_slts.json".to_string(),
     );
 
     let response = Contract::deploy(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
+        "tests/contracts/storage/out/debug/storage.bin",
         &wallet,
         DeployConfiguration::default().set_storage_configuration(storage_configuration),
     )

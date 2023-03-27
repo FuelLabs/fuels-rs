@@ -45,7 +45,7 @@ impl<D> FuelCallResponse<D> {
         self.log_decoder.get_logs(&self.receipts)
     }
 
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize>(&self) -> Result<Vec<T>> {
+    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(&self) -> Result<Vec<T>> {
         self.log_decoder.get_logs_with_type::<T>(&self.receipts)
     }
 }
