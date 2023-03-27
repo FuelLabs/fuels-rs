@@ -34,8 +34,9 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -82,8 +83,9 @@ async fn test_network_error() -> Result<()> {
 
     let response = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await;
 
@@ -170,8 +172,9 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -295,9 +298,9 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let deploy_w_maturity = |maturity| {
         Contract::deploy(
             "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
+            LoadConfiguration::default(),
             wallet,
-            DeployConfiguration::default()
-                .set_tx_parameters(TxParameters::default().set_maturity(maturity)),
+            TxParameters::default().set_maturity(maturity),
         )
     };
 
@@ -608,8 +611,9 @@ async fn testnet_hello_world() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default().set_tx_parameters(tx_params),
+        tx_params,
     )
     .await?;
 

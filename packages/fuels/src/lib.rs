@@ -71,7 +71,7 @@ pub mod prelude {
         macros::{abigen, setup_contract_test},
         programs::{
             contract::{
-                CallParameters, Contract, DeployConfiguration, MultiContractCallHandler,
+                CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId},

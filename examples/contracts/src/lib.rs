@@ -47,8 +47,9 @@ mod tests {
         let contract_id = Contract::deploy(
             // This path is relative to the current crate (examples/contracts)
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -122,8 +123,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -161,11 +163,11 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await;
 
-        let contract_id_1 = Contract::deploy(
+        let contract_id_1 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            DeployConfiguration::default(),
-        )
+            LoadConfiguration::default(),
+        )?
+        .deploy_loaded(&wallet, TxParameters::default())
         .await?;
 
         println!("Contract deployed @ {contract_id_1}");
@@ -180,19 +182,18 @@ mod tests {
         let key = Bytes32::from([1u8; 32]);
         let value = Bytes32::from([2u8; 32]);
         let storage_slot = StorageSlot::new(key, value);
-        let storage_configuration =
-            StorageConfiguration::default().set_manual_storage(vec![storage_slot]);
+        let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
 
         let rng = &mut StdRng::seed_from_u64(2322u64);
         let salt: [u8; 32] = rng.gen();
 
         let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            DeployConfiguration::default()
+            LoadConfiguration::default()
                 .set_storage_configuration(storage_configuration)
-                .set_salt(salt)
-                .set_tx_parameters(tx_parameters),
+                .set_salt(salt),
+            &wallet,
+            tx_parameters,
         )
         .await?;
 
@@ -217,8 +218,9 @@ mod tests {
 
         let contract_id_1 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallets[0],
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -237,8 +239,9 @@ mod tests {
         let salt = [1; 32];
         let contract_id_2 = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default().set_salt(salt),
             &wallets[1],
-            DeployConfiguration::default().set_salt(salt),
+            TxParameters::default(),
         )
         .await?;
 
@@ -269,8 +272,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
@@ -338,8 +342,9 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
         .bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
         println!("Contract deployed @ {contract_id}");
@@ -375,8 +380,9 @@ mod tests {
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
         .bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
@@ -417,16 +423,18 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await;
         let called_contract_id: ContractId = Contract::deploy(
             "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?
         .into();
 
         let caller_contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -489,8 +497,9 @@ mod tests {
             let wallet = launch_provider_and_get_wallet().await;
             let contract_id = Contract::deploy(
                 "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+                LoadConfiguration::default(),
                 &wallet,
-                DeployConfiguration::default(),
+                TxParameters::default(),
             )
             .await?;
             let contract_methods = TestContract::new(contract_id, wallet).methods();
@@ -568,8 +577,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -606,8 +616,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -654,8 +665,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -698,8 +710,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet_1,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 
@@ -751,3 +764,4 @@ mod tests {
         Ok(())
     }
 }
+

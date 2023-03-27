@@ -174,8 +174,9 @@ mod tests {
 
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
             &wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 

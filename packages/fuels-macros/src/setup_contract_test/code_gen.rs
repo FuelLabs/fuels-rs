@@ -121,14 +121,15 @@ fn contract_deploying_code(
                 let #contract_instance_name = #contract_struct_name::new(
                     Contract::deploy(
                         #bin_path,
-                        &#wallet_name,
-                        DeployConfiguration::default()
+                        LoadConfiguration::default()
                             .set_storage_configuration(
-                                StorageConfiguration::default().set_storage_path(
-                                    #storage_path.to_string()
-                                )
+                                StorageConfiguration::load_from(
+                                    #storage_path
+                                ).expect("Failed to load storage slots from path"),
                             )
-                            .set_salt([#(#salt),*])
+                            .set_salt([#(#salt),*]),
+                        &#wallet_name,
+                        TxParameters::default()
                     )
                     .await
                     .expect("Failed to deploy the contract"),

@@ -591,8 +591,9 @@ async fn setup_output_variable_estimation_test(
 
     let contract_id = Contract::deploy(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
+        LoadConfiguration::default(),
         &wallets[0],
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -1103,9 +1104,14 @@ async fn test_deploy_error_messages() {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
         let expected = format!("Invalid data: file '{binary_path}' does not exist");
 
-        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-            .await
-            .expect_err("Should have failed");
+        let response = Contract::deploy(
+            binary_path,
+            LoadConfiguration::default(),
+            &wallet,
+            TxParameters::default(),
+        )
+        .await
+        .expect_err("Should have failed");
 
         assert_eq!(response.to_string(), expected);
     }
@@ -1114,9 +1120,14 @@ async fn test_deploy_error_messages() {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let expected = format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
 
-        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-            .await
-            .expect_err("Should have failed");
+        let response = Contract::deploy(
+            binary_path,
+            LoadConfiguration::default(),
+            &wallet,
+            TxParameters::default(),
+        )
+        .await
+        .expect_err("Should have failed");
 
         assert_eq!(response.to_string(), expected);
     }

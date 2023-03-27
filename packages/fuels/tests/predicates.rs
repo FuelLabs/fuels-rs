@@ -196,8 +196,9 @@ async fn pay_with_predicate() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &predicate,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -249,8 +250,9 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &predicate,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -298,8 +300,9 @@ async fn predicate_contract_transfer() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &predicate,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -490,8 +493,9 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &predicate,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
     println!("Contract deployed @ {contract_id}");
@@ -567,8 +571,9 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
         &predicate,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 

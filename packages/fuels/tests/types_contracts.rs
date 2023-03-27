@@ -76,8 +76,9 @@ async fn call_with_structs() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/types/contracts/complex_types_contract/out/debug/complex_types_contract.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 

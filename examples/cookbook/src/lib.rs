@@ -42,8 +42,9 @@ mod tests {
         // ANCHOR: liquidity_deploy
         let contract_id = Contract::deploy(
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
+            LoadConfiguration::default(),
             wallet,
-            DeployConfiguration::default(),
+            TxParameters::default(),
         )
         .await?;
 

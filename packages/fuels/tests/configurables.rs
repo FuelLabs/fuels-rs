@@ -12,8 +12,9 @@ async fn contract_uses_default_configurables() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
+        LoadConfiguration::default(),
         &wallet,
-        DeployConfiguration::default(),
+        TxParameters::default(),
     )
     .await?;
 
@@ -93,8 +94,9 @@ async fn contract_configurables() -> Result<()> {
 
     let contract_id = Contract::deploy(
         "tests/contracts/configurables/out/debug/configurables.bin",
+        LoadConfiguration::default().set_configurables(configurables),
         &wallet,
-        DeployConfiguration::default().set_configurables(configurables),
+        TxParameters::default(),
     )
     .await?;
 
