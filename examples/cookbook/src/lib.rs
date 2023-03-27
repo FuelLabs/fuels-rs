@@ -46,7 +46,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
             configuration,
         )?
-        .deploy_loaded(wallet, tx_parameters)
+        .deploy(wallet, tx_parameters)
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();

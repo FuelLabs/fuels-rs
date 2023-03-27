@@ -16,7 +16,7 @@ async fn contract_uses_default_configurables() -> Result<()> {
         "tests/contracts/configurables/out/debug/configurables.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -99,7 +99,7 @@ async fn contract_configurables() -> Result<()> {
         "tests/contracts/configurables/out/debug/configurables.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());

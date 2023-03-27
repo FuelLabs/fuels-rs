@@ -128,7 +128,7 @@ fn contract_deploying_code(
 
                     let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
 
-                    let contract_id = loaded_contract.deploy_loaded(&#wallet_name, TxParameters::default()).await.expect("Failed to deploy the contract");
+                    let contract_id = loaded_contract.deploy(&#wallet_name, TxParameters::default()).await.expect("Failed to deploy the contract");
                     #contract_struct_name::new(contract_id, #wallet_name.clone())
                 };
             }

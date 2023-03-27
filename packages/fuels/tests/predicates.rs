@@ -200,7 +200,7 @@ async fn pay_with_predicate() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&predicate, tx_parameters)
+    .deploy(&predicate, tx_parameters)
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -255,7 +255,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&predicate, tx_parameters)
+    .deploy(&predicate, tx_parameters)
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -306,7 +306,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&predicate, tx_parameters)
+    .deploy(&predicate, tx_parameters)
     .await?;
 
     let contract_balances = predicate
@@ -500,7 +500,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&predicate, tx_parameters)
+    .deploy(&predicate, tx_parameters)
     .await?;
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -579,7 +579,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&predicate, tx_parameters)
+    .deploy(&predicate, tx_parameters)
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();

@@ -596,7 +596,7 @@ async fn setup_output_variable_estimation_test(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
         configuration,
     )?
-    .deploy_loaded(account, tx_parameters)
+    .deploy(account, tx_parameters)
     .await?;
 
     let mint_asset_id = AssetId::from(*contract_id.hash());

@@ -382,7 +382,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 
@@ -699,7 +699,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 
@@ -746,7 +746,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 
@@ -956,7 +956,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 
@@ -1009,7 +1009,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 
@@ -1051,7 +1051,7 @@ async fn test_script_require_from_contract() -> Result<()> {
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?
     .into();
 

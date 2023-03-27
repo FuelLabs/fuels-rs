@@ -178,7 +178,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             configuration,
         )?
-        .deploy_loaded(&wallet, tx_parameters)
+        .deploy(&wallet, tx_parameters)
         .await?;
 
         // ANCHOR: wallet_contract_transfer

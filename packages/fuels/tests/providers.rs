@@ -38,7 +38,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
@@ -88,7 +88,7 @@ async fn test_network_error() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await;
 
     assert!(matches!(response, Err(Error::ProviderError(_))));
@@ -178,7 +178,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_parameters)
+    .deploy(&wallet, tx_parameters)
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -305,7 +305,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
             configuration,
         )
-        .map(|loaded_contract| loaded_contract.deploy_loaded(wallet, tx_parameters))
+        .map(|loaded_contract| loaded_contract.deploy(wallet, tx_parameters))
     };
 
     let err = deploy_w_maturity(1)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
@@ -618,7 +618,7 @@ async fn testnet_hello_world() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         configuration,
     )?
-    .deploy_loaded(&wallet, tx_params)
+    .deploy(&wallet, tx_params)
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();

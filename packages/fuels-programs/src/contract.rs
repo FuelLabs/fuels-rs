@@ -221,7 +221,7 @@ impl Contract {
     /// Deploys a compiled contract to a running node
     /// To deploy a contract, you need an account with enough assets to pay for deployment.
     /// This account will also receive the change.
-    pub async fn deploy_loaded(
+    pub async fn deploy(
         self,
         account: &impl Account,
         params: TxParameters,
