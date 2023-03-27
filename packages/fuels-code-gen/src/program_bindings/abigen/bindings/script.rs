@@ -56,9 +56,6 @@ pub(crate) fn script_bindings(
             }
 
             pub fn with_account<U: ::fuels::accounts::Account>(self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
-                let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?;
-                account.set_provider(provider.clone());
-
                ::core::result::Result::Ok(#name { account, binary: self.binary, log_decoder: self.log_decoder})
             }
 
