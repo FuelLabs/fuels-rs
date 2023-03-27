@@ -23,8 +23,6 @@ pub mod abigen_bindings {
                 self.account.clone()
             }
             pub fn with_account<U: Account>(&self, mut account: U) -> Result<MyContract<U>> {
-                let provider = ViewOnlyAccount::try_provider(&self.account)?;
-                account.set_provider(provider.clone());
                 Ok(MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
