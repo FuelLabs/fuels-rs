@@ -8,7 +8,7 @@ use crate::{
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constants,
-            logs::logs_lookup_instantiation_code,
+            logs::log_formatters_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
@@ -26,7 +26,10 @@ pub(crate) fn script_bindings(
 
     let main_function = expand_fn(&abi)?;
 
-    let log_type_lookup = logs_lookup_instantiation_code(None, &abi.logged_types);
+    let log_formatters_lookup = log_formatters_instantiation_code(
+        quote! {::fuels::types::ContractId::zeroed()},
+        &abi.logged_types,
+    );
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
     let constant_configuration_code =
@@ -48,7 +51,7 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
-                    log_decoder: ::fuels::programs::logs::LogDecoder {type_lookup: #log_type_lookup}
+                    log_decoder: ::fuels::programs::logs::LogDecoder {log_formatters: #log_formatters_lookup}
                 }
             }
 

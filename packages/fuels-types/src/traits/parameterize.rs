@@ -1,5 +1,3 @@
-use std::iter::zip;
-
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
@@ -48,8 +46,7 @@ impl Parameterize for Bytes {
 impl Parameterize for Address {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            name: "Address".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
+            fields: vec![ParamType::B256],
             generics: vec![],
         }
     }
@@ -58,8 +55,7 @@ impl Parameterize for Address {
 impl Parameterize for ContractId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            name: "ContractId".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
+            fields: vec![ParamType::B256],
             generics: vec![],
         }
     }
@@ -68,8 +64,7 @@ impl Parameterize for ContractId {
 impl Parameterize for AssetId {
     fn param_type() -> ParamType {
         ParamType::Struct {
-            name: "AssetId".to_string(),
-            fields: vec![("0".to_string(), ParamType::B256)],
+            fields: vec![ParamType::B256],
             generics: vec![],
         }
     }
@@ -116,14 +111,10 @@ where
     T: Parameterize,
 {
     fn param_type() -> ParamType {
-        let param_types = vec![
-            ("None".to_string(), ParamType::Unit),
-            ("Some".to_string(), T::param_type()),
-        ];
+        let param_types = vec![ParamType::Unit, T::param_type()];
         let variants = EnumVariants::new(param_types)
             .expect("should never happen as we provided valid Option param types");
         ParamType::Enum {
-            name: "Option".to_string(),
             variants,
             generics: vec![T::param_type()],
         }
@@ -137,15 +128,9 @@ where
 {
     fn param_type() -> ParamType {
         let param_types = vec![T::param_type(), E::param_type()];
-        let variant_param_types = zip(
-            vec!["Ok".to_string(), "Err".to_string()],
-            param_types.clone(),
-        )
-        .collect();
-        let variants = EnumVariants::new(variant_param_types)
+        let variants = EnumVariants::new(param_types.clone())
             .expect("should never happen as we provided valid Result param types");
         ParamType::Enum {
-            name: "Result".to_string(),
             variants,
             generics: param_types,
         }

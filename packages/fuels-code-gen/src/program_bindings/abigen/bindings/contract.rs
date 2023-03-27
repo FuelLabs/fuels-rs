@@ -9,7 +9,7 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constants,
-            logs::logs_lookup_instantiation_code,
+            logs::log_formatters_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
@@ -25,10 +25,8 @@ pub(crate) fn contract_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let log_type_lookup = logs_lookup_instantiation_code(
-        Some(quote! {contract_id.clone().into()}),
-        &abi.logged_types,
-    );
+    let log_formatters =
+        log_formatters_instantiation_code(quote! {contract_id.clone().into()}, &abi.logged_types);
 
     let methods_name = ident(&format!("{name}Methods"));
 
@@ -48,7 +46,7 @@ pub(crate) fn contract_bindings(
         impl<T: ::fuels::accounts::Account> #name<T>
         {
             pub fn new(contract_id: ::fuels::types::bech32::Bech32ContractId, account: T) -> Self {
-                let log_decoder = ::fuels::programs::logs::LogDecoder { type_lookup: #log_type_lookup };
+                let log_decoder = ::fuels::programs::logs::LogDecoder { log_formatters: #log_formatters };
                 Self { contract_id, account, log_decoder }
             }
 
