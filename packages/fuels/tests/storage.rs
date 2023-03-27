@@ -21,14 +21,11 @@ async fn test_storage_initialization() -> Result<()> {
     let storage_vec = vec![storage_slot.clone()];
     let storage_configuration = StorageConfiguration::from(storage_vec);
 
-    let configuration =
-        LoadConfiguration::default().set_storage_configuration(storage_configuration);
-    let tx_parameters = TxParameters::default();
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        configuration,
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
     )?
-    .deploy(&wallet, tx_parameters)
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -56,14 +53,11 @@ async fn test_init_storage_automatically() -> Result<()> {
         "tests/contracts/storage/out/debug/storage-storage_slots.json",
     )?;
 
-    let configuration =
-        LoadConfiguration::default().set_storage_configuration(storage_configuration);
-    let tx_parameters = TxParameters::default();
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        configuration,
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
     )?
-    .deploy(&wallet, tx_parameters)
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let key1 =

@@ -40,13 +40,11 @@ mod tests {
         // ANCHOR_END: liquidity_wallet
 
         // ANCHOR: liquidity_deploy
-        let configuration = LoadConfiguration::default();
-        let tx_parameters = TxParameters::default();
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
-            configuration,
+            LoadConfiguration::default(),
         )?
-        .deploy(wallet, tx_parameters)
+        .deploy(wallet, TxParameters::default())
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
