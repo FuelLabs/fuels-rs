@@ -173,6 +173,7 @@ impl LoadConfiguration {
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
+#[derive(Debug)]
 pub struct Contract {
     binary: Vec<u8>,
     salt: Salt,
@@ -215,18 +216,6 @@ impl Contract {
         let contract_id = fuel_contract.id(salt, &root, &state_root);
 
         (contract_id, state_root)
-    }
-
-    /// Loads a compiled contract and deploys it to a running node
-    pub async fn deploy(
-        binary_filepath: &str,
-        configuration: LoadConfiguration,
-        account: &impl Account,
-        tx_parameters: TxParameters,
-    ) -> Result<Bech32ContractId> {
-        Self::load_from(binary_filepath, configuration)?
-            .deploy_loaded(account, tx_parameters)
-            .await
     }
 
     /// Deploys a compiled contract to a running node

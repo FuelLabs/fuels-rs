@@ -10,12 +10,13 @@ async fn contract_uses_default_configurables() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy(
+    let configuration = LoadConfiguration::default();
+    let tx_parameters = TxParameters::default();
+    let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/debug/configurables.bin",
-        LoadConfiguration::default(),
-        &wallet,
-        TxParameters::default(),
-    )
+        configuration,
+    )?
+    .deploy_loaded(&wallet, tx_parameters)
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -92,12 +93,13 @@ async fn contract_configurables() -> Result<()> {
         .set_STRUCT(new_struct.clone())
         .set_ENUM(new_enum.clone());
 
-    let contract_id = Contract::deploy(
+    let configuration = LoadConfiguration::default().set_configurables(configurables);
+    let tx_parameters = TxParameters::default();
+    let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/debug/configurables.bin",
-        LoadConfiguration::default().set_configurables(configurables),
-        &wallet,
-        TxParameters::default(),
-    )
+        configuration,
+    )?
+    .deploy_loaded(&wallet, tx_parameters)
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());

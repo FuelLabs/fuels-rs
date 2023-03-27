@@ -589,12 +589,14 @@ async fn setup_output_variable_estimation_test(
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
 
-    let contract_id = Contract::deploy(
+    let configuration = LoadConfiguration::default();
+    let account = &wallets[0];
+    let tx_parameters = TxParameters::default();
+    let contract_id = Contract::load_from(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
-        LoadConfiguration::default(),
-        &wallets[0],
-        TxParameters::default(),
-    )
+        configuration,
+    )?
+    .deploy_loaded(account, tx_parameters)
     .await?;
 
     let mint_asset_id = AssetId::from(*contract_id.hash());
@@ -1097,21 +1099,15 @@ async fn test_contract_raw_slice() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() {
-    let wallet = launch_provider_and_get_wallet().await;
+async fn test_deploy_error_messages() -> Result<()> {
     {
         let binary_path =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
         let expected = format!("Invalid data: file '{binary_path}' does not exist");
 
-        let response = Contract::deploy(
-            binary_path,
-            LoadConfiguration::default(),
-            &wallet,
-            TxParameters::default(),
-        )
-        .await
-        .expect_err("Should have failed");
+        let configuration = LoadConfiguration::default();
+        let response =
+            Contract::load_from(binary_path, configuration).expect_err("Should have failed");
 
         assert_eq!(response.to_string(), expected);
     }
@@ -1120,17 +1116,13 @@ async fn test_deploy_error_messages() {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let expected = format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
 
-        let response = Contract::deploy(
-            binary_path,
-            LoadConfiguration::default(),
-            &wallet,
-            TxParameters::default(),
-        )
-        .await
-        .expect_err("Should have failed");
+        let configuration = LoadConfiguration::default();
+        let response =
+            Contract::load_from(binary_path, configuration).expect_err("Should have failed");
 
         assert_eq!(response.to_string(), expected);
     }
+    Ok(())
 }
 
 #[tokio::test]

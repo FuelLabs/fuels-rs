@@ -172,12 +172,13 @@ mod tests {
             .pop()
             .unwrap();
 
-        let contract_id = Contract::deploy(
+        let configuration = LoadConfiguration::default();
+        let tx_parameters = TxParameters::default();
+        let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            LoadConfiguration::default(),
-            &wallet,
-            TxParameters::default(),
-        )
+            configuration,
+        )?
+        .deploy_loaded(&wallet, tx_parameters)
         .await?;
 
         // ANCHOR: wallet_contract_transfer
