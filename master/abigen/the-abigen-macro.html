@@ -338,8 +338,6 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                 self.account.clone()
             }
             pub fn with_account&lt;U: Account&gt;(&amp;self, mut account: U) -&gt; Result&lt;MyContract&lt;U&gt;&gt; {
-                let provider = ViewOnlyAccount::try_provider(&amp;self.account)?;
-                account.set_provider(provider.clone());
                 Ok(MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
