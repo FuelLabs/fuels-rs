@@ -396,7 +396,7 @@ impl Contract {
 
         Ok(manual_storage
             .into_iter()
-            .chain(storage_slots.into_iter())
+            .chain(storage_slots)
             .unique()
             .collect())
     }
