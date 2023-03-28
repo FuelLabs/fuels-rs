@@ -30,6 +30,9 @@ tokio = "1.15.0"
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts"]
+# The crates enabled via `dep:` below are not currently wasm compatible, as
+# such they are only available if `std` is enabled. The `dep:` syntax was
+# used so that we don't get a new feature flag for every optional dependency.
 std = [
     "dep:fuel-core-client",
     "dep:fuels-accounts",
