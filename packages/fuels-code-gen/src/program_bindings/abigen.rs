@@ -54,12 +54,6 @@ impl Abigen {
     }
     fn wasm_paths_hotfix(code: &TokenStream) -> TokenStream {
         [
-            (r#"::\s*fuels\s*::\s*core"#, "::fuels_core"),
-            (r#"::\s*fuels\s*::\s*macros"#, "::fuels_macros"),
-            (r#"::\s*fuels\s*::\s*programs"#, "::fuels_programs"),
-            (r#"::\s*fuels\s*::\s*accounts"#, "::fuels_accounts"),
-            (r#"::\s*fuels\s*::\s*tx"#, "::fuel_tx"),
-            (r#"::\s*fuels\s*::\s*types"#, "::fuels_types"),
             (r#"::\s*std\s*::\s*string"#, "::alloc::string"),
             (r#"::\s*std\s*::\s*format"#, "::alloc::format"),
             (r#"::\s*std\s*::\s*vec"#, "::alloc::vec"),

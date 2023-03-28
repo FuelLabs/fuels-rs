@@ -11,13 +11,13 @@ description = "Fuel Rust SDK."
 
 [dependencies]
 fuel-core = { workspace = true, default-features = false, optional = true }
-fuel-core-client = { workspace = true, default-features = false }
+fuel-core-client = { workspace = true, default-features = false, optional = true }
 fuel-tx = { workspace = true }
-fuels-accounts = { workspace = true }
+fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
-fuels-programs = { workspace = true }
-fuels-test-helpers = { workspace = true }
+fuels-programs = { workspace = true, optional = true }
+fuels-test-helpers = { workspace = true, optional = true }
 fuels-types = { workspace = true }
 
 [dev-dependencies]
@@ -29,14 +29,21 @@ sha2 = "0.9.5"
 tokio = "1.15.0"
 
 [features]
-default = ["std", "fuels-test-helpers/fuels-accounts"]
+default = ["std", "fuels-test-helpers?/fuels-accounts"]
+# The crates enabled via `dep:` below are not currently wasm compatible, as
+# such they are only available if `std` is enabled. The `dep:` syntax was
+# used so that we don't get a new feature flag for every optional dependency.
 std = [
-    "fuels-programs/std",
+    "dep:fuel-core-client",
+    "dep:fuels-accounts",
+    "dep:fuels-programs",
+    "dep:fuels-test-helpers",
+    "fuels-programs?/std",
     "fuels-core/std",
-    "fuels-accounts/std",
-    "fuels-test-helpers/std",
+    "fuels-accounts?/std",
+    "fuels-test-helpers?/std",
     "fuels-types/std",
 ]
 # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
 test-type-paths = []
-fuel-core-lib = ["fuels-test-helpers/fuel-core-lib", "dep:fuel-core"]
+fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
