@@ -181,8 +181,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub enum MatchaTea<> {
                 LongIsland(u64),
                 MoscowMule(bool)
@@ -267,8 +265,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub enum Amsterdam<> {
                 Infrastructure(self::Building),
                 Service(u32)
@@ -331,8 +327,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub enum SomeEnum < > {
                 SomeArr([u64; 7usize])
             }
@@ -407,8 +401,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub enum EnumLevel3<> {
                 El2(self::EnumLevel2)
             }
@@ -484,8 +476,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub struct Cocktail < > {
                 pub long_island: bool,
                 pub cosmopolitan: u64,
@@ -521,8 +511,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub struct SomeEmptyStruct < > {}
         };
 
@@ -586,8 +574,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub struct Cocktail < > {
                 pub long_island: self::Shaker,
                 pub mojito: u32
@@ -691,8 +677,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub struct MyStruct1 < > {
                 pub x: u64,
                 pub y: ::fuels::types::Bits256
@@ -716,8 +700,6 @@ mod tests {
                 ::fuels::macros::Tokenizable,
                 ::fuels::macros::TryFrom
             )]
-            #[FuelsTypesPath("::fuels::types")]
-            #[FuelsCorePath("::fuels::core")]
             pub struct MyStruct2 < > {
                 pub x: bool,
                 pub y: self::MyStruct1
