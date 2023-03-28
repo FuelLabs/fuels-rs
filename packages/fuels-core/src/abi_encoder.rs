@@ -148,7 +148,7 @@ impl ABIEncoder {
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
         let len = data.len();
 
-        Self::zeropad_to_word_alignment(&mut data);
+        zeropad_to_word_alignment(&mut data);
 
         let cap = data.len() as u64;
         let encoded_data = vec![Data::Inline(data)];
@@ -159,11 +159,11 @@ impl ABIEncoder {
             Self::encode_u64(len as u64),
         ])
     }
+}
 
-    fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
-        let padded_length = padded_len_usize(data.len());
-        data.resize(padded_length, 0);
-    }
+fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
+    let padded_length = padded_len_usize(data.len());
+    data.resize(padded_length, 0);
 }
 
 #[cfg(test)]
