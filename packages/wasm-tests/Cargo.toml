@@ -7,11 +7,11 @@ publish = false
 [lib]
 crate-type = ['cdylib']
 
-[dependencies]
-fuels-core = { workspace = true }
-fuels-macros = { workspace = true }
-fuels-types = { workspace = true }
-getrandom = { version = "0.2", features = ["js"] }
-
 [dev-dependencies]
+# `fuels` itentionally not specified through `workspace=true`. In
+# the workspace cargo.toml `fuels` has default features enabled (so
+# that our examples don't inherit `fuels` with disabled features).
+# Cargo wouldn't respect any attempts here to disable them again.
+fuels = { path = "../fuels", default-features = false }
+getrandom = { version = "0.2", features = ["js"] }
 wasm-bindgen-test = "0.3.34"
