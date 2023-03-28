@@ -16,6 +16,7 @@ pub mod tx {
     pub use fuel_tx::*;
 }
 
+#[cfg(feature = "std")]
 pub mod client {
     pub use fuel_core_client::client::*;
 }
@@ -24,6 +25,7 @@ pub mod macros {
     pub use fuels_macros::*;
 }
 
+#[cfg(feature = "std")]
 pub mod programs {
     pub use fuels_programs::*;
 }
@@ -32,6 +34,7 @@ pub mod core {
     pub use fuels_core::*;
 }
 
+#[cfg(feature = "std")]
 pub mod accounts {
     pub use fuels_accounts::*;
 }
@@ -40,10 +43,12 @@ pub mod types {
     pub use fuels_types::*;
 }
 
+#[cfg(feature = "std")]
 pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
+#[cfg(feature = "std")]
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
     pub use fuel_core::service::{Config, FuelService};
@@ -62,13 +67,13 @@ pub mod prelude {
     //! # #![allow(unused_imports)]
     //! use fuels::prelude::*;
     //! ```
+    #[cfg(feature = "std")]
     pub use super::{
         accounts::{
             provider::*, wallet::generate_mnemonic_phrase, Account, Signer, ViewOnlyAccount,
             Wallet, WalletUnlocked,
         },
         fuel_node::*,
-        macros::{abigen, setup_contract_test},
         programs::{
             contract::{
                 CallParameters, Contract, DeployConfiguration, MultiContractCallHandler,
@@ -78,6 +83,9 @@ pub mod prelude {
             Configurables,
         },
         test_helpers::*,
+    };
+    pub use super::{
+        macros::{abigen, setup_contract_test},
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
