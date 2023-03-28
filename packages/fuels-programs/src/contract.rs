@@ -15,7 +15,7 @@ use fuels_types::{
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
-    transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+    transaction_builders::CreateTransactionBuilder,
     unresolved_bytes::UnresolvedBytes,
     Selector, Token,
 };
@@ -224,9 +224,17 @@ impl Contract {
     pub async fn deploy(
         self,
         account: &impl Account,
-        params: TxParameters,
+        tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (tb, contract_id) = self.contract_deployment_transaction(params);
+        let tb = CreateTransactionBuilder::prepare_contract_deployment(
+            self.binary,
+            self.contract_id,
+            self.state_root,
+            self.salt,
+            self.storage_slots,
+            tx_parameters,
+        );
+
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
@@ -243,7 +251,7 @@ impl Contract {
         )?;
         provider.send_transaction(&tx).await?;
 
-        Ok(contract_id)
+        Ok(self.contract_id.into())
     }
 
     pub fn load_from(binary_filepath: &str, configuration: LoadConfiguration) -> Result<Self> {
@@ -259,26 +267,6 @@ impl Contract {
             configuration.salt,
             configuration.storage.slots,
         ))
-    }
-
-    /// Crafts a transaction used to deploy a contract
-    fn contract_deployment_transaction(
-        self,
-        params: TxParameters,
-    ) -> (CreateTransactionBuilder, Bech32ContractId) {
-        let bytecode_witness_index = 0;
-        let outputs = vec![Output::contract_created(self.contract_id, self.state_root)];
-        let witnesses = vec![self.binary.into()];
-
-        let tb = CreateTransactionBuilder::default()
-            .set_tx_params(params)
-            .set_bytecode_witness_index(bytecode_witness_index)
-            .set_salt(self.salt)
-            .set_storage_slots(self.storage_slots)
-            .set_outputs(outputs)
-            .set_witnesses(witnesses);
-
-        (tb, self.contract_id.into())
     }
 }
 
