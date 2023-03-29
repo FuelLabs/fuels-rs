@@ -20,7 +20,7 @@ use crate::{
     call_utils::{generate_contract_inputs, generate_contract_outputs},
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
-    ReceiptDecoder,
+    ReceiptParser,
 };
 
 #[derive(Debug)]
@@ -211,9 +211,9 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let mut receipt_decoder = ReceiptDecoder::new(&receipts);
+        let mut receipt_decoder = ReceiptParser::new(&receipts);
 
-        let token = receipt_decoder.try_decode_output(None, &D::param_type())?;
+        let token = receipt_decoder.try_parse_output(None, &D::param_type())?;
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,

@@ -33,11 +33,11 @@ impl Configurables {
     }
 }
 
-pub struct ReceiptDecoder {
+pub struct ReceiptParser {
     receipts: Vec<Receipt>,
 }
 
-impl ReceiptDecoder {
+impl ReceiptParser {
     pub fn new(receipts: &[Receipt]) -> Self {
         let relevant_receipts: Vec<Receipt> = receipts
             .iter()
@@ -53,8 +53,8 @@ impl ReceiptDecoder {
     }
 
     /// Based on receipts returned by a script transaction, the contract ID (in the case of a contract call),
-    /// and the output param, decode the values and return them.
-    pub fn try_decode_output(
+    /// and the output param, parse the values and return them as Token.
+    pub fn try_parse_output(
         &mut self,
         contract_id: Option<&Bech32ContractId>,
         output_param: &ParamType,
@@ -79,11 +79,11 @@ impl ReceiptDecoder {
             let decoded_value = ABIDecoder::decode_single(output_param, &value)?;
             Ok(decoded_value)
         } else {
-            Err(Self::decoding_error(output_param))
+            Err(Self::parsing_error(output_param))
         }
     }
 
-    fn decoding_error(output_param: &ParamType) -> Error {
+    fn parsing_error(output_param: &ParamType) -> Error {
         error!(
             InvalidData,
             "ReceiptDecoder: failed to find matching receipts entry for {:?}", output_param
@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn receipt_decoder_filters_receipts() -> Result<()> {
+    async fn receipt_parser_filters_receipts() -> Result<()> {
         let mut receipts = vec![
             Receipt::Call {
                 id: Default::default(),
@@ -274,80 +274,80 @@ mod tests {
         let relevant_receipts = get_relevant_receipts();
         receipts.extend(relevant_receipts.clone());
 
-        let decoder = ReceiptDecoder::new(&receipts);
+        let parser = ReceiptParser::new(&receipts);
 
-        assert_eq!(decoder.receipts, relevant_receipts);
+        assert_eq!(parser.receipts, relevant_receipts);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn receipt_decoder_empty_receipts() -> Result<()> {
+    async fn receipt_parser_empty_receipts() -> Result<()> {
         let receipts = [];
-        let mut decoder = ReceiptDecoder::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts);
         let output_param = ParamType::Unit;
 
-        let error = decoder
-            .try_decode_output(Default::default(), &output_param)
+        let error = parser
+            .try_parse_output(Default::default(), &output_param)
             .expect_err("should error");
 
-        let expected_error = ReceiptDecoder::decoding_error(&output_param);
+        let expected_error = ReceiptParser::parsing_error(&output_param);
         assert_eq!(error.to_string(), expected_error.to_string());
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn receipt_decoder_extract_return_data() -> Result<()> {
+    async fn receipt_parser_extract_return_data() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_data_receipt(target_contract(), ENCODED_DATA));
-        let mut decoder = ReceiptDecoder::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = decoder
+        let encoded_data = parser
             .extract_return_data(target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_DATA);
-        assert_eq!(decoder.receipts, expected_receipts);
+        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn receipt_decoder_extract_return() -> Result<()> {
+    async fn receipt_parser_extract_return() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_receipt(target_contract(), ENCODED_VAL));
-        let mut decoder = ReceiptDecoder::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = decoder
+        let encoded_data = parser
             .extract_return(target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_VAL.to_be_bytes().to_vec());
-        assert_eq!(decoder.receipts, expected_receipts);
+        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn receipt_decoder_extract_return_data_heap() -> Result<()> {
+    async fn receipt_parser_extract_return_data_heap() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_data_receipt(target_contract(), &[9, 9, 9]));
         receipts.push(get_return_data_receipt(Default::default(), ENCODED_DATA));
-        let mut decoder = ReceiptDecoder::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = decoder
+        let encoded_data = parser
             .extract_return_data_heap(target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_DATA);
-        assert_eq!(decoder.receipts, expected_receipts);
+        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
