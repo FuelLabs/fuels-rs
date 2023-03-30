@@ -170,11 +170,15 @@ impl ReceiptParser {
 #[cfg(test)]
 mod tests {
     use fuel_tx::ScriptExecutionResult;
+    use fuels_types::traits::{Parameterize, Tokenizable};
 
     use super::*;
 
-    const ENCODED_VAL: u64 = 225;
-    const ENCODED_DATA: &[u8; 3] = &[8, 8, 3];
+    const RECEIPT_VAL: u64 = 225;
+    const RECEIPT_DATA: &[u8; 24] = &[
+        0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 3,
+    ];
+    const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
 
     fn target_contract() -> ContractId {
         ContractId::from([1u8; 32])
@@ -282,16 +286,17 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_extract_return_data() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
+        let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
-        receipts.push(get_return_data_receipt(target_contract(), ENCODED_DATA));
+        receipts.push(get_return_data_receipt(contract_id, RECEIPT_DATA));
         let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = parser
-            .extract_return_data(&target_contract())
-            .expect("This should return data");
+        let token = parser
+            .parse(Some(&contract_id.into()), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
 
-        assert_eq!(encoded_data, ENCODED_DATA);
+        assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
         assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
@@ -300,16 +305,17 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_extract_return() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
+        let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
-        receipts.push(get_return_receipt(target_contract(), ENCODED_VAL));
+        receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
         let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = parser
-            .extract_return(&target_contract())
-            .expect("This should return data");
+        let token = parser
+            .parse(Some(&contract_id.into()), &u64::param_type())
+            .expect("parsing should succeed");
 
-        assert_eq!(encoded_data, ENCODED_VAL.to_be_bytes().to_vec());
+        assert_eq!(u64::from_token(token)?, RECEIPT_VAL);
         assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
@@ -318,17 +324,18 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_extract_return_data_heap() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
+        let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_data_receipt(target_contract(), &[9, 9, 9]));
-        receipts.push(get_return_data_receipt(Default::default(), ENCODED_DATA));
+        receipts.push(get_return_data_receipt(Default::default(), RECEIPT_DATA));
         let mut parser = ReceiptParser::new(&receipts);
 
-        let encoded_data = parser
-            .extract_return_data_heap(&target_contract())
-            .expect("This should return data");
+        let token = parser
+            .parse(Some(&contract_id.into()), &<Vec<u8>>::param_type())
+            .expect("parsing should succeed");
 
-        assert_eq!(encoded_data, ENCODED_DATA);
+        assert_eq!(&<Vec<u8>>::from_token(token)?, DECODED_DATA);
         assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
