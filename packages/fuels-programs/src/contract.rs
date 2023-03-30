@@ -756,7 +756,7 @@ where
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts);
 
-        let token = receipt_parser.try_parse_output(
+        let token = receipt_parser.parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -938,8 +938,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let mut final_tokens = vec![];
 
         for call in self.contract_calls.iter() {
-            let decoded =
-                receipt_parser.try_parse_output(Some(&call.contract_id), &call.output_param)?;
+            let decoded = receipt_parser.parse(Some(&call.contract_id), &call.output_param)?;
 
             final_tokens.push(decoded.clone());
         }

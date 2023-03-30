@@ -54,86 +54,71 @@ impl ReceiptParser {
 
     /// Based on receipts returned by a script transaction, the contract ID (in the case of a contract call),
     /// and the output param, parse the values and return them as Token.
-    pub fn try_parse_output(
+    pub fn parse(
         &mut self,
         contract_id: Option<&Bech32ContractId>,
         output_param: &ParamType,
     ) -> Result<Token> {
-        let null_contract_id = ContractId::new([0u8; 32]);
-        let contract_id: ContractId = match contract_id {
-            Some(contract_id) => contract_id.into(),
+        let contract_id = contract_id.map(Into::into).unwrap_or_else(|| {
             // During a script execution, the script's contract id is the **null** contract id
-            None => null_contract_id,
+            ContractId::new([0u8; 32])
+        });
+
+        let Some(data) = self.extract_raw_data(output_param, &contract_id) else {
+            return Err(Self::missing_receipts_error(output_param))
         };
 
-        let encoded_value = match output_param.get_return_location() {
-            ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
-                self.extract_return_data_heap(contract_id)
-            }
-            ReturnLocation::ReturnData => self.extract_return_data(contract_id),
-            ReturnLocation::Return => self.extract_return(contract_id),
-        };
-
-        if let Some(value) = encoded_value {
-            //self.receipts.remove(index);
-            let decoded_value = ABIDecoder::decode_single(output_param, &value)?;
-            Ok(decoded_value)
-        } else {
-            Err(Self::parsing_error(output_param))
-        }
+        ABIDecoder::decode_single(output_param, &data)
     }
 
-    fn parsing_error(output_param: &ParamType) -> Error {
+    fn missing_receipts_error(output_param: &ParamType) -> Error {
         error!(
             InvalidData,
             "ReceiptDecoder: failed to find matching receipts entry for {output_param:?}"
         )
     }
 
-    fn extract_return_data(&mut self, contract_id: ContractId) -> Option<Vec<u8>> {
-        let (index, data) = self.receipts.iter().enumerate().find_map(|(i, receipt)| {
-            if matches!(receipt,
-                    Receipt::ReturnData { id, .. } if *id == contract_id)
-            {
-                Some((
-                    i,
-                    receipt
-                        .data()
-                        .expect("ReturnData should have data")
-                        .to_vec(),
-                ))
-            } else {
-                None
+    fn extract_raw_data(
+        &mut self,
+        output_param: &ParamType,
+        contract_id: &ContractId,
+    ) -> Option<Vec<u8>> {
+        match output_param.get_return_location() {
+            ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
+                self.extract_return_data_heap(contract_id)
             }
-        })?;
-
-        self.receipts.remove(index);
-        Some(data)
+            ReturnLocation::ReturnData => self.extract_return_data(contract_id),
+            ReturnLocation::Return => self.extract_return(contract_id),
+        }
     }
 
-    fn extract_return(&mut self, contract_id: ContractId) -> Option<Vec<u8>> {
-        let (index, data) = self.receipts.iter().enumerate().find_map(|(i, receipt)| {
-            if matches!(receipt,
-                    Receipt::Return { id, ..} if *id == contract_id)
-            {
-                Some((
-                    i,
-                    receipt
-                        .val()
-                        .expect("Return should have val")
-                        .to_be_bytes()
-                        .to_vec(),
-                ))
-            } else {
-                None
+    fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
+        for (index, receipt) in self.receipts.iter_mut().enumerate() {
+            if let Receipt::ReturnData { id, data, .. } = receipt {
+                if id == contract_id {
+                    let data = std::mem::take(data);
+                    self.receipts.remove(index);
+                    return Some(data);
+                }
             }
-        })?;
-
-        self.receipts.remove(index);
-        Some(data)
+        }
+        None
     }
 
-    fn extract_return_data_heap(&mut self, contract_id: ContractId) -> Option<Vec<u8>> {
+    fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
+        for (index, receipt) in self.receipts.iter_mut().enumerate() {
+            if let Receipt::Return { id, val, .. } = receipt {
+                if *id == *contract_id {
+                    let data = val.to_be_bytes().to_vec();
+                    self.receipts.remove(index);
+                    return Some(data);
+                }
+            }
+        }
+        None
+    }
+
+    fn extract_return_data_heap(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         // If the output of the function is a vector, then there are 2 consecutive ReturnData
         // receipts. The first one is the one that returns the pointer to the vec struct in the
         // VM memory, the second one contains the actual vector bytes (that the previous receipt
@@ -142,25 +127,22 @@ impl ReceiptParser {
         // contract_id. There are no receipts in between the two ReturnData receipts because of
         // the way the scripts are built (the calling script adds a RETD just after the CALL
         // opcode, see `get_single_call_instructions`).
-        if let Some((i, vector_data)) = self.receipts.iter().enumerate().tuple_windows().find_map(
-            |((i, current_receipt), (_, next_receipt))| {
-                let vec_data = Self::extract_vec_data(current_receipt, next_receipt, contract_id)?;
-                Some((i, vec_data.clone()))
-            },
-        ) {
-            self.receipts.remove(i);
-            // the index has adjusted due to the previous removal
-            self.receipts.remove(i);
-            Some(vector_data)
-        } else {
-            None
+        for (index, (current_receipt, next_receipt)) in
+            self.receipts.iter().tuple_windows().enumerate()
+        {
+            if let Some(data) = Self::extract_vec_data(current_receipt, next_receipt, contract_id) {
+                let data = data.clone();
+                self.receipts.drain(index..=index + 1);
+                return Some(data);
+            }
         }
+        None
     }
 
     fn extract_vec_data<'a>(
         current_receipt: &Receipt,
         next_receipt: &'a Receipt,
-        contract_id: ContractId,
+        contract_id: &ContractId,
     ) -> Option<&'a Vec<u8>> {
         match (current_receipt, next_receipt) {
             (
@@ -174,7 +156,7 @@ impl ReceiptParser {
                     data: vec_data,
                     ..
                 },
-            ) if *first_id == contract_id
+            ) if *first_id == *contract_id
                 && !first_data.is_empty()
                 && *second_id == ContractId::zeroed() =>
             {
@@ -288,10 +270,10 @@ mod tests {
         let output_param = ParamType::Unit;
 
         let error = parser
-            .try_parse_output(Default::default(), &output_param)
+            .parse(Default::default(), &output_param)
             .expect_err("should error");
 
-        let expected_error = ReceiptParser::parsing_error(&output_param);
+        let expected_error = ReceiptParser::missing_receipts_error(&output_param);
         assert_eq!(error.to_string(), expected_error.to_string());
 
         Ok(())
@@ -306,7 +288,7 @@ mod tests {
         let mut parser = ReceiptParser::new(&receipts);
 
         let encoded_data = parser
-            .extract_return_data(target_contract())
+            .extract_return_data(&target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_DATA);
@@ -324,7 +306,7 @@ mod tests {
         let mut parser = ReceiptParser::new(&receipts);
 
         let encoded_data = parser
-            .extract_return(target_contract())
+            .extract_return(&target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_VAL.to_be_bytes().to_vec());
@@ -343,7 +325,7 @@ mod tests {
         let mut parser = ReceiptParser::new(&receipts);
 
         let encoded_data = parser
-            .extract_return_data_heap(target_contract())
+            .extract_return_data_heap(&target_contract())
             .expect("This should return data");
 
         assert_eq!(encoded_data, ENCODED_DATA);
