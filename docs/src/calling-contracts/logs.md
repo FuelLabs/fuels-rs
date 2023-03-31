@@ -14,7 +14,7 @@ You can access the logged values in Rust by calling `logs_with_type::<T>` from a
 {{#include ../../../packages/fuels/tests/logs.rs:produce_logs}}
 ```
 
-You can also get a vector of all the logged values as strings using `get_logs()`:
+You can use the `get_logs()` function to retrieve a `LogResult` struct containing a `succeeded` field with a vector of successfully decoded logs, and a `failed` field with a vector of Errors indicating any LogId that could not be decoded.
 
 ```rust, ignore
 {{#include ../../../packages/fuels/tests/logs.rs:get_logs}}
