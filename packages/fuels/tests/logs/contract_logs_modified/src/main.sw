@@ -3,12 +3,6 @@ contract;
 use std::logging::log;
 use contract_logs::ContractLogs;
 
-struct TestStruct {
-    field_1: bool,
-    field_2: b256,
-    field_3: u64,
-}
-
 enum TestEnum {
     VariantOne: (),
     VariantTwo: (),
@@ -42,7 +36,6 @@ impl ContractLogs for Contract {
         log(8u8);
     }
 
-    // ANCHOR: produce_logs
     fn produce_logs_variables() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
@@ -54,19 +47,12 @@ impl ContractLogs for Contract {
         log(e);
         log(l);
     }
-    // ANCHOR_END: produce_logs
     fn produce_logs_custom_types() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
 
-        let test_struct = TestStruct {
-            field_1: true,
-            field_2: u,
-            field_3: f,
-        };
         let test_enum = TestEnum::VariantTwo;
 
-        log(test_struct);
         log(test_enum);
     }
 
@@ -87,7 +73,6 @@ impl ContractLogs for Contract {
             field_2: 64,
         };
 
-        log(test_struct);
         log(test_enum);
         log(test_struct_nested);
         log(test_deeply_nested_generic);
@@ -98,16 +83,8 @@ impl ContractLogs for Contract {
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
         let e: str[4] = "Fuel";
         let l: [u8; 3] = [1u8, 2u8, 3u8];
-        let test_struct = TestStruct {
-            field_1: true,
-            field_2: u,
-            field_3: f,
-        };
+
         let test_enum = TestEnum::VariantTwo;
-        let test_generic_struct = StructWithGeneric {
-            field_1: test_struct,
-            field_2: 64,
-        };
 
         log(64);
         log(32u32);
@@ -117,22 +94,10 @@ impl ContractLogs for Contract {
         log(u);
         log(e);
         log(l);
-        log(test_struct);
         log(test_enum);
-        log(test_generic_struct);
     }
 
     fn produce_logs_bad_abi() {
-        let f: u64 = 64;
-        let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
-
-        let test_struct = TestStruct {
-            field_1: true,
-            field_2: u,
-            field_3: f,
-        };
-
         log(123);
-        log(test_struct);
     }
 }

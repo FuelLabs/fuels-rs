@@ -186,7 +186,7 @@ async fn test_get_logs() -> Result<()> {
     // ANCHOR: get_logs
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = response.get_logs()?;
+    let logs = response.get_logs();
     // ANCHOR_END: get_logs
 
     let expected_bits256 = Bits256([
@@ -217,7 +217,7 @@ async fn test_get_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.succeeded, expected_logs);
 
     Ok(())
 }
@@ -242,9 +242,9 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
         .initialize_counter(42)
         .call()
         .await?
-        .get_logs()?;
+        .get_logs();
 
-    assert!(logs.is_empty());
+    assert!(logs.succeeded.is_empty());
 
     Ok(())
 }
@@ -292,9 +292,9 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.succeeded, expected_logs);
 
     Ok(())
 }
@@ -345,9 +345,9 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.succeeded, expected_logs);
 
     Ok(())
 }
@@ -413,9 +413,9 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         format!("{:?}", 8),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.succeeded, expected_logs);
 
     Ok(())
 }
@@ -621,7 +621,7 @@ async fn test_script_get_logs() -> Result<()> {
 
     let response = instance.main().call().await?;
 
-    let logs = response.get_logs()?;
+    let logs = response.get_logs();
     let log_u64 = response.get_logs_with_type::<u64>()?;
     // ANCHOR_END: script_logs
 
@@ -667,7 +667,7 @@ async fn test_script_get_logs() -> Result<()> {
         format!("{expected_deeply_nested_struct:?}"),
     ];
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.succeeded, expected_logs);
 
     Ok(())
 }
@@ -714,9 +714,9 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         .set_contracts(&[&contract_instance])
         .call()
         .await?
-        .get_logs()?;
+        .get_logs();
 
-    assert_eq!(expected_logs, logs);
+    assert_eq!(expected_logs, logs.succeeded);
 
     Ok(())
 }
@@ -791,9 +791,9 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         assert_eq!(num_contract_logs, expected_num_contract_logs);
     }
     {
-        let logs = response.get_logs()?;
+        let logs = response.get_logs();
 
-        assert_eq!(logs, expected_script_logs);
+        assert_eq!(logs.succeeded, expected_script_logs);
     }
 
     Ok(())
@@ -1256,6 +1256,37 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         assert_revert_containing_msg("failed transfer to address", error);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_log_results() -> Result<()> {
+    abigen!(
+        Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/logs/contract_logs_test_oth/out/debug/contract_logs_test_oth-abi.json"
+        )
+    );
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::deploy(
+        "../../packages/fuels/tests/logs/contract_logs_test_one/out/debug/contract_logs_test_one.bin",
+        &wallet,
+        DeployConfiguration::default(),
+    )
+        .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_logs_bad_abi().call().await?;
+
+    let log = response.get_logs();
+    dbg!(log);
+    // let log_test_struct = response.get_logs_with_type::<VariantTwo>()?;
+    // dbg!(log_test_struct);
 
     Ok(())
 }

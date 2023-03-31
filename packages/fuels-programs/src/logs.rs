@@ -12,9 +12,11 @@ use fuel_abi_types::error_codes::{
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::try_from_bytes;
 use fuels_types::{
+    error,
     errors::{Error, Result},
     traits::{Parameterize, Tokenizable},
 };
+use itertools::Itertools;
 
 #[derive(Clone)]
 pub struct LogFormatter {
@@ -62,18 +64,29 @@ pub struct LogDecoder {
     pub log_formatters: HashMap<LogId, LogFormatter>,
 }
 
+#[derive(Debug)]
+pub struct LogResult {
+    pub succeeded: Vec<String>,
+    pub failed: Vec<Error>,
+}
+
+impl LogResult {}
+
 impl LogDecoder {
     /// Get all decoded logs from the given receipts as `String`
-    pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
-        receipts
+    pub fn get_logs(&self, receipts: &[Receipt]) -> LogResult {
+        let (succeeded, failed) = receipts
             .iter()
             .extract_log_id_and_data()
-            .filter_map(|(log_id, data)| {
+            .map(|(log_id, data)| {
                 self.log_formatters
                     .get(&log_id)
-                    .map(|log_formatter| log_formatter.format(&data))
+                    .ok_or_else(|| error!(InvalidData, "Dont know how to decode this id"))
+                    .and_then(|log_formatter| log_formatter.format(&data))
             })
-            .collect()
+            .partition_result();
+
+        LogResult { succeeded, failed }
     }
 
     /// Get decoded logs with specific type from the given receipts.
@@ -144,26 +157,23 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
 }
 
 fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .get_logs(receipts)
-        .ok()
-        .and_then(|logs| logs.last().cloned())
+    //TODO: expand error message with reason why decoding failed
+    let log_result = log_decoder.get_logs(receipts);
+
+    log_result
+        .succeeded
+        .last()
+        .cloned()
         .unwrap_or_else(|| "failed to decode log from require revert".to_string())
 }
 
 fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .get_logs(receipts)
-        .ok()
-        .and_then(|logs| {
-            if let [.., lhs, rhs] = logs.as_slice() {
-                return Some(format!(
-                    "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
-                ));
-            }
-            None
-        })
-        .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
+    let log_result = log_decoder.get_logs(receipts);
+    return if let [.., lhs, rhs] = log_result.succeeded.as_slice() {
+        format!("assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`")
+    } else {
+        "failed to decode logs from assert_eq revert".to_string()
+    };
 }
 
 pub fn log_formatters_lookup(
@@ -174,4 +184,9 @@ pub fn log_formatters_lookup(
         .into_iter()
         .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))
         .collect()
+}
+
+#[tokio::test]
+async fn test_logger() -> Result<()> {
+    Ok(())
 }
