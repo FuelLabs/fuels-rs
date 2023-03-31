@@ -20,6 +20,7 @@
   <component name="ChangeListManager">
     <list default="true" id="e6b7d0dd-39d1-4b06-b120-c20683a391fc" name="Changes" comment="Expand `with_provider` function with `Option&lt;Provider&gt;`">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/fuels-programs/src/logs.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels-programs/src/logs.rs" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -435,7 +436,7 @@
       <workItem from="1680170973957" duration="2428000" />
       <workItem from="1680189466800" duration="15021000" />
       <workItem from="1680223032576" duration="433000" />
-      <workItem from="1680224016595" duration="2052000" />
+      <workItem from="1680224016595" duration="2383000" />
     </task>
     <task id="LOCAL-00001" summary="add PrepareFuelCall struct">
       <created>1672795101569</created>
