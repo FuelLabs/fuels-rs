@@ -19,19 +19,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e6b7d0dd-39d1-4b06-b120-c20683a391fc" name="Changes" comment="Expand `with_provider` function with `Option&lt;Provider&gt;`">
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_modified/Forc.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_modified/src/main.sw" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_test_one/Forc.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_test_one/src/main.sw" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_test_oth/Forc.toml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_test_oth/src/main.sw" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels-programs/src/call_response.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels-programs/src/call_response.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels-programs/src/lib.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels-programs/src/lib.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels-programs/src/logs.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels-programs/src/logs.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/Forc.toml" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/Forc.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs/src/main.sw" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs/src/main.sw" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_abi/src/main.sw" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_abi/src/main.sw" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -81,36 +69,36 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Git.Branch.Popup.ShowAllRemotes&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;com.jetbrains.cidr.cpp.cmake.workspace.CMakeCacheInvalidator.marker&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;Salka1988/log__result&quot;,
-    &quot;last.edited.regexp&quot;: &quot;&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/logs&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;org.rust.cargo.project.model.PROJECT_DISCOVERY&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/examples/rust_bindings/src/rust_bindings_formatted.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels-macros/tests/ui/abigen/missing_abi_attribute.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels-macros/tests/ui/abigen/missing_name_attr.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContract.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContractTest.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyPredicateTest.rs&quot;: &quot;true&quot;,
-    &quot;org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/myPredicate.rs&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Git.Branch.Popup.ShowAllRemotes": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "com.jetbrains.cidr.cpp.cmake.workspace.CMakeCacheInvalidator.marker": "true",
+    "git-widget-placeholder": "Salka1988/log__result",
+    "last.edited.regexp": "",
+    "last_opened_file_path": "/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/logs",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "org.rust.cargo.project.model.PROJECT_DISCOVERY": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/examples/rust_bindings/src/rust_bindings_formatted.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels-macros/tests/ui/abigen/missing_abi_attribute.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels-macros/tests/ui/abigen/missing_name_attr.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContract.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyContractTest.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/MyPredicateTest.rs": "true",
+    "org.rust.disableDetachedFileInspection/home/salka1988/Documents/Git/fuels-rs/packages/fuels/tests/myPredicate.rs": "true",
+    "settings.editor.selected.configurable": "language.rust.cargo.check",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/packages/fuels/tests/logs" />
@@ -293,7 +281,6 @@
   </component>
   <component name="RustProjectSettings">
     <option name="externalLinter" value="Clippy" />
-    <option name="runExternalLinterOnTheFly" value="true" />
     <option name="toolchainHomeDirectory" value="$USER_HOME$/.cargo/bin" />
     <option name="version" value="2" />
   </component>
@@ -448,7 +435,7 @@
       <workItem from="1680170973957" duration="2428000" />
       <workItem from="1680189466800" duration="15021000" />
       <workItem from="1680223032576" duration="433000" />
-      <workItem from="1680224016595" duration="1045000" />
+      <workItem from="1680224016595" duration="2052000" />
     </task>
     <task id="LOCAL-00001" summary="add PrepareFuelCall struct">
       <created>1672795101569</created>

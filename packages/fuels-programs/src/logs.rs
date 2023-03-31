@@ -81,7 +81,9 @@ impl LogDecoder {
             .map(|(log_id, data)| {
                 self.log_formatters
                     .get(&log_id)
-                    .ok_or_else(|| error!(InvalidData, "Dont know how to decode this id"))
+                    .ok_or_else(|| {
+                        error!(InvalidData, "Dont know how to decode this id: {:?}", log_id)
+                    })
                     .and_then(|log_formatter| log_formatter.format(&data))
             })
             .partition_result();
