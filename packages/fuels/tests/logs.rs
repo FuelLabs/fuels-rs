@@ -1090,7 +1090,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
         assert_revert_containing_msg("assertion failed", error);
     }
     {
@@ -1102,7 +1101,7 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
+        dbg!(&error);
         assert_assert_eq_containing_msg(a, b, error);
     }
     {
@@ -1121,7 +1120,7 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
+        dbg!(&error);
         assert_assert_eq_containing_msg(test_struct, test_struct2, error);
     }
     {
@@ -1284,6 +1283,7 @@ async fn test_log_results() -> Result<()> {
     let response = contract_methods.produce_logs_bad_abi().call().await?;
 
     let log = response.get_logs();
+
     dbg!(log);
     // let log_test_struct = response.get_logs_with_type::<VariantTwo>()?;
     // dbg!(log_test_struct);

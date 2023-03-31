@@ -82,7 +82,7 @@ impl LogDecoder {
                 self.log_formatters
                     .get(&log_id)
                     .ok_or_else(|| {
-                        error!(InvalidData, "Dont know how to decode this id: {:?}", log_id)
+                        error!(InvalidData, "failed to decode this log id: {:?}", log_id)
                     })
                     .and_then(|log_formatter| log_formatter.format(&data))
             })
@@ -159,22 +159,26 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
 }
 
 fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    //TODO: expand error message with reason why decoding failed
     let log_result = log_decoder.get_logs(receipts);
 
-    log_result
-        .succeeded
-        .last()
-        .cloned()
-        .unwrap_or_else(|| "failed to decode log from require revert".to_string())
+    log_result.succeeded.last().cloned().unwrap_or_else(|| {
+        format!(
+            "failed to decode log from require revert: {:?}",
+            log_result.failed.last()
+        )
+    })
 }
 
 fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
     let log_result = log_decoder.get_logs(receipts);
+
     return if let [.., lhs, rhs] = log_result.succeeded.as_slice() {
         format!("assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`")
     } else {
-        "failed to decode logs from assert_eq revert".to_string()
+        format!(
+            "failed to decode logs from assert_eq revert: {:?}",
+            log_result.failed.last()
+        )
     };
 }
 
@@ -186,9 +190,4 @@ pub fn log_formatters_lookup(
         .into_iter()
         .map(|(id, log_formatter)| (LogId(contract_id, id), log_formatter))
         .collect()
-}
-
-#[tokio::test]
-async fn test_logger() -> Result<()> {
-    Ok(())
 }
