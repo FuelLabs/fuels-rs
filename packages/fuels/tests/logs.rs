@@ -1261,21 +1261,19 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
 #[tokio::test]
 async fn test_log_results() -> Result<()> {
-    abigen!(
-        Contract(
+    abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/logs/contract_logs_test_oth/out/debug/contract_logs_test_oth-abi.json"
-        )
-    );
+        abi = "packages/fuels/tests/logs/contract_logs_two/out/debug/contract_logs_two-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/logs/contract_logs_test_one/out/debug/contract_logs_test_one.bin",
+        "../../packages/fuels/tests/logs/contract_logs_one/out/debug/contract_logs_one.bin",
         &wallet,
         DeployConfiguration::default(),
     )
-        .await?;
+    .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
