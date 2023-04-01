@@ -1277,16 +1277,20 @@ async fn test_log_results() -> Result<()> {
     )
         .await?;
 
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_bad_abi().call().await?;
 
     let log = response.get_logs();
 
-    dbg!(log);
-    // let log_test_struct = response.get_logs_with_type::<VariantTwo>()?;
-    // dbg!(log_test_struct);
+    let expected_err = format!(
+        "Invalid data: failed to decode this log id: LogId({:?}, 1)",
+        contract_id.hash
+    );
+
+    assert_eq!(log.succeeded.last().unwrap(), "123");
+    assert_eq!(log.failed.last().unwrap().to_string(), expected_err);
 
     Ok(())
 }
