@@ -196,14 +196,6 @@ impl Contract {
         }
     }
 
-    pub fn contract_id(&self) -> ContractId {
-        self.contract_id
-    }
-
-    pub fn state_root(&self) -> Bytes32 {
-        self.state_root
-    }
-
     fn compute_contract_id_and_state_root(
         binary: &[u8],
         salt: &Salt,
@@ -216,6 +208,18 @@ impl Contract {
         let contract_id = fuel_contract.id(salt, &root, &state_root);
 
         (contract_id, state_root)
+    }
+
+    pub fn with_salt(self, salt: Salt) -> Self {
+        Self::new(self.binary, salt, self.storage_slots)
+    }
+
+    pub fn contract_id(&self) -> ContractId {
+        self.contract_id
+    }
+
+    pub fn state_root(&self) -> Bytes32 {
+        self.state_root
     }
 
     /// Deploys a compiled contract to a running node
