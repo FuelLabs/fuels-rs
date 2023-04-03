@@ -59,14 +59,14 @@ impl ReceiptParser {
         contract_id: Option<&Bech32ContractId>,
         output_param: &ParamType,
     ) -> Result<Token> {
-        let contract_id = contract_id.map(Into::into).unwrap_or_else(|| {
+        let contract_id = contract_id
+            .map(Into::into)
             // During a script execution, the script's contract id is the **null** contract id
-            ContractId::new([0u8; 32])
-        });
+            .unwrap_or_else(ContractId::zeroed);
 
-        let Some(data) = self.extract_raw_data(output_param, &contract_id) else {
-            return Err(Self::missing_receipts_error(output_param))
-        };
+        let data = self
+            .extract_raw_data(output_param, &contract_id)
+            .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
         ABIDecoder::decode_single(output_param, &data)
     }
@@ -270,10 +270,9 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_empty_receipts() -> Result<()> {
         let receipts = [];
-        let mut parser = ReceiptParser::new(&receipts);
         let output_param = ParamType::Unit;
 
-        let error = parser
+        let error = ReceiptParser::new(&receipts)
             .parse(Default::default(), &output_param)
             .expect_err("should error");
 

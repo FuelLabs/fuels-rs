@@ -754,9 +754,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts);
-
-        let token = receipt_parser.parse(
+        let token = ReceiptParser::new(&receipts).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
