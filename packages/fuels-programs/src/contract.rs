@@ -25,7 +25,8 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::build_tx_from_contract_calls,
     logs::{map_revert_error, LogDecoder},
-    Configurables, ReceiptParser,
+    receipt_parser::ReceiptParser,
+    Configurables,
 };
 
 #[derive(Debug, Clone)]
@@ -933,13 +934,12 @@ impl<T: Account> MultiContractCallHandler<T> {
         receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts);
-        let mut final_tokens = vec![];
 
-        for call in self.contract_calls.iter() {
-            let decoded = receipt_parser.parse(Some(&call.contract_id), &call.output_param)?;
-
-            final_tokens.push(decoded.clone());
-        }
+        let final_tokens = self
+            .contract_calls
+            .iter()
+            .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
         let response = FuelCallResponse::<D>::new(
