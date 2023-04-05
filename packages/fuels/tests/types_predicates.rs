@@ -518,10 +518,8 @@ async fn spend_predicate_coins_messages_bytes() -> Result<()> {
         )
         .await?;
 
-    // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
-    // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
