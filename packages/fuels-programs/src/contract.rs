@@ -767,7 +767,7 @@ where
 /// quote! {
 ///     #doc
 ///     pub fn #name(&self #input) -> #result {
-///         Contract::method_hash(#tokenized_signature, #arg)
+///         contract::method_hash(#tokenized_signature, #arg)
 ///     }
 /// }
 /// ```
