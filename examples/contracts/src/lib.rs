@@ -30,15 +30,6 @@ mod tests {
         use fuels::prelude::*;
 
         // ANCHOR: deploy_contract
-        // This will generate your contract's methods onto `MyContract`.
-        // This means an instance of `MyContract` will have access to all
-        // your contract's methods that are running on-chain!
-        abigen!(Contract(
-            name = "MyContract",
-            // This path is relative to the workspace (repository) root
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ));
-
         // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -53,27 +44,6 @@ mod tests {
 
         println!("Contract deployed @ {contract_id}");
         // ANCHOR_END: deploy_contract
-
-        // ANCHOR: use_deployed_contract
-        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id, wallet);
-
-        let response = contract_instance
-            .methods()
-            .initialize_counter(42) // Build the ABI call
-            .call() // Perform the network call
-            .await?;
-
-        assert_eq!(42, response.value);
-
-        let response = contract_instance
-            .methods()
-            .increment_counter(10)
-            .call()
-            .await?;
-
-        assert_eq!(52, response.value);
-        // ANCHOR_END: use_deployed_contract
 
         Ok(())
     }
@@ -144,19 +114,11 @@ mod tests {
 
     #[tokio::test]
     async fn deploy_with_parameters() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        // ANCHOR: deploy_with_parameters
         use fuels::{
             prelude::*,
             tx::{Bytes32, StorageSlot},
         };
         use rand::prelude::{Rng, SeedableRng, StdRng};
-
-        // ANCHOR: abigen_example
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-        ));
-        // ANCHOR_END: abigen_example
 
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -169,24 +131,25 @@ mod tests {
 
         println!("Contract deployed @ {contract_id_1}");
 
-        // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let tx_parameters = TxParameters::default()
-            .set_gas_price(0)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
+        // ANCHOR: deploy_with_parameters
+        // Optional: Add `Salt`
+        let rng = &mut StdRng::seed_from_u64(2322u64);
+        let salt: [u8; 32] = rng.gen();
 
         // Optional: Configure storage
         let key = Bytes32::from([1u8; 32]);
         let value = Bytes32::from([2u8; 32]);
         let storage_slot = StorageSlot::new(key, value);
         let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
-
-        let rng = &mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
-
         let configuration = LoadConfiguration::default()
             .set_storage_configuration(storage_configuration)
             .set_salt(salt);
+
+        // Optional: Configure deployment parameters
+        let tx_parameters = TxParameters::default()
+            .set_gas_price(0)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
 
         let contract_id_2 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -196,9 +159,41 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {contract_id_2}");
+        // ANCHOR_END: deploy_with_parameters
 
         assert_ne!(contract_id_1, contract_id_2);
-        // ANCHOR_END: deploy_with_parameters
+
+        // ANCHOR: use_deployed_contract
+        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        // ANCHOR: abigen_example
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
+        // ANCHOR_END: abigen_example
+
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
+
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42) // Build the ABI call
+            .call() // Perform the network call
+            .await?;
+
+        assert_eq!(42, response.value);
+
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
+
+        assert_eq!(52, response.value);
+        // ANCHOR_END: use_deployed_contract
+
         Ok(())
     }
 
