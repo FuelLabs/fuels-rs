@@ -11,11 +11,11 @@ description = "Fuel Rust SDK test helpers."
 
 [dependencies]
 fuel-core = { workspace = true, default-features = false, optional = true }
-fuel-core-chain-config = { workspace = true, default-features = false }
-fuel-core-client = { workspace = true, default-features = false }
-fuel-core-types = { workspace = true, default-features = false }
+fuel-core-chain-config = { workspace = true }
+fuel-core-client = { workspace = true }
+fuel-core-types = { workspace = true }
 fuel-tx = { workspace = true }
-fuel-types = { workspace = true, default-features = false, features = ["random"] }
+fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-accounts = { workspace = true, optional = true }
 fuels-types = { workspace = true }
