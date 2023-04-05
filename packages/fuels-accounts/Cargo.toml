@@ -16,10 +16,10 @@ chrono = "0.4.2"
 elliptic-curve = { version = "0.11.6", default-features = false }
 eth-keystore = { version = "0.3.0" }
 fuel-core = { workspace = true, default-features = false, optional = true }
-fuel-core-client = { workspace = true, default-features = false }
+fuel-core-client = { workspace = true, features = ["default"] }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
-fuel-types = { workspace = true, default-features = false, features = ["random"] }
+fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
