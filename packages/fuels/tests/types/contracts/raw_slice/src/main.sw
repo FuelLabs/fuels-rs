@@ -24,6 +24,12 @@ fn validate_raw_slice(input: raw_slice) {
     require(vec.get(0).unwrap() == 40, "expected 1st slice entry to be 40");
 }
 
+fn validate_vec(vec: Vec<raw_slice>) {
+    require(vec.len() == 2, "vec should have two elements");
+    validate_raw_slice(vec.get(0).unwrap());
+    validate_raw_slice(vec.get(1).unwrap());
+}
+
 impl RawSliceContract for Contract {
     fn return_raw_slice(length: u64) -> raw_slice {
         let mut vec = Vec::new();
@@ -47,12 +53,6 @@ impl RawSliceContract for Contract {
             require(false, "enum was not of variant Second");
         }
 
-        require(wrapper.inner.len() == 2, "vec should have two elements");
-
-        let bytes = wrapper.inner.get(0).unwrap();
-        validate_raw_slice(bytes);
-
-        let bytes = wrapper.inner.get(1).unwrap();
-        validate_raw_slice(bytes);
+        validate_vec(wrapper.inner);
     }
 }

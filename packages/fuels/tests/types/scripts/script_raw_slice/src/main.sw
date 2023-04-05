@@ -18,6 +18,12 @@ fn validate_raw_slice(input: raw_slice) {
     require(vec.get(0).unwrap() == 40, "expected 1st slice entry to be 40");
 }
 
+fn validate_vec(vec: Vec<raw_slice>) {
+    require(vec.len() == 2, "vec should have two elements");
+    validate_raw_slice(vec.get(0).unwrap());
+    validate_raw_slice(vec.get(1).unwrap());
+}
+
 fn main(a: u64, wrapper: Wrapper<Vec<raw_slice>>) -> raw_slice {
     if let SomeEnum::Second(enum_raw_slice) = wrapper.inner_enum
     {
@@ -26,13 +32,7 @@ fn main(a: u64, wrapper: Wrapper<Vec<raw_slice>>) -> raw_slice {
         require(false, "enum was not of variant Second");
     }
 
-    require(wrapper.inner.len() == 2, "vec should have two elements");
-
-    let bytes = wrapper.inner.get(0).unwrap();
-    validate_raw_slice(bytes);
-
-    let bytes = wrapper.inner.get(1).unwrap();
-    validate_raw_slice(bytes);
+    validate_vec(wrapper.inner);
 
     let mut rtn: Vec<u64> = Vec::new();
     rtn.push(1);
