@@ -1071,26 +1071,25 @@ async fn test_add_custom_assets() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() {
+async fn contract_load_error_messages() {
     {
-        let binary_path =
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected = format!("Invalid data: file '{binary_path}' does not exist");
+        let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let expected_error = format!("Invalid data: file '{binary_path}' does not exist");
 
-        let response = Contract::load_from(binary_path, LoadConfiguration::default())
+        let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
 
-        assert_eq!(response.to_string(), expected);
+        assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path =
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
-        let expected = format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
+        let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let expected_error =
+            format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
 
-        let response = Contract::load_from(binary_path, LoadConfiguration::default())
+        let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
 
-        assert_eq!(response.to_string(), expected);
+        assert_eq!(error.to_string(), expected_error);
     }
 }
 
@@ -1144,7 +1143,6 @@ async fn test_payable_annotation() -> Result<()> {
 }
 
 #[tokio::test]
-#[allow(unused_variables)]
 async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     use fuels::prelude::*;
 

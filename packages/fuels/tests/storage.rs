@@ -86,13 +86,22 @@ async fn test_init_storage_automatically() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_init_storage_automatically_bad_json_path() -> Result<()> {
-    let error = StorageConfiguration::load_from(
-        "tests/contracts/storage/out/debug/storage-storage_slts.json",
-    )
-    .expect_err("Should fail");
+async fn storage_load_error_messages() {
+    {
+        let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
+        let expected_error = format!("Invalid data: file '{json_path}' does not exist");
 
-    assert!(error.to_string().starts_with("Invalid data:"));
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
 
-    Ok(())
+        assert_eq!(error.to_string(), expected_error);
+    }
+    {
+        let json_path = "tests/contracts/storage/out/debug/storage.bin";
+        let expected_error =
+            format!("Invalid data: expected `{json_path}` to have '.json' extension");
+
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
+
+        assert_eq!(error.to_string(), expected_error);
+    }
 }
