@@ -1,3 +1,4 @@
+use fuel_types::bytes::padded_len_usize;
 use fuels_types::{
     constants::WORD_SIZE,
     errors::Result,
@@ -41,16 +42,8 @@ impl ABIEncoder {
             Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
             Token::Unit => vec![Self::encode_unit()],
-            Token::RawSlice(_) => {
-                unimplemented!(
-                    "Encoding a `RawSlice` type is currently not supported by the Fuel spec."
-                )
-            }
-            Token::Bytes(_) => {
-                unimplemented!(
-                    "Encoding a `Bytes` type is currently not supported by the Fuel spec."
-                )
-            }
+            Token::RawSlice(data) => Self::encode_raw_slice(data)?,
+            Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
         };
 
         Ok(encoded_token)
@@ -139,6 +132,38 @@ impl ABIEncoder {
             Self::encode_u64(len),
         ])
     }
+
+    fn encode_raw_slice(data: &[u64]) -> Result<Vec<Data>> {
+        let encoded_data = data
+            .iter()
+            .map(|&word| Self::encode_u64(word))
+            .collect::<Vec<_>>();
+
+        let num_bytes = data.len() * WORD_SIZE;
+
+        let len = Self::encode_u64(num_bytes as u64);
+        Ok(vec![Data::Dynamic(encoded_data), len])
+    }
+
+    fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
+        let len = data.len();
+
+        zeropad_to_word_alignment(&mut data);
+
+        let cap = data.len() as u64;
+        let encoded_data = vec![Data::Inline(data)];
+
+        Ok(vec![
+            Data::Dynamic(encoded_data),
+            Self::encode_u64(cap),
+            Self::encode_u64(len as u64),
+        ])
+    }
+}
+
+fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
+    let padded_length = padded_len_usize(data.len());
+    data.resize(padded_length, 0);
 }
 
 #[cfg(test)]
@@ -999,6 +1024,7 @@ mod tests {
 
         Ok(())
     }
+
     #[test]
     fn a_vec_in_a_vec() -> Result<()> {
         // arrange
@@ -1026,6 +1052,54 @@ mod tests {
         let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
 
         assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_bytes() -> Result<()> {
+        // arrange
+        let token = Token::Bytes(vec![1, 2, 3]);
+        let offset = 40;
+
+        // act
+        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+
+        // assert
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
+        let cap = [0, 0, 0, 0, 0, 0, 0, 8];
+        let len = [0, 0, 0, 0, 0, 0, 0, 3];
+        let data = [1, 2, 3, 0, 0, 0, 0, 0];
+
+        let expected_encoded_bytes = [ptr, cap, len, data].concat();
+
+        assert_eq!(expected_encoded_bytes, encoded_bytes);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_raw_slices() -> Result<()> {
+        // arrange
+        let token = Token::RawSlice(vec![1, 2, 3]);
+        let offset = 40;
+
+        // act
+        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+
+        // assert
+        let ptr = vec![0, 0, 0, 0, 0, 0, 0, 56];
+        let len = vec![0, 0, 0, 0, 0, 0, 0, 24];
+        let data = [
+            [0, 0, 0, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 2],
+            [0, 0, 0, 0, 0, 0, 0, 3],
+        ]
+        .concat();
+
+        let expected_encoded_bytes = [ptr, len, data].concat();
+
+        assert_eq!(expected_encoded_bytes, encoded_bytes);
 
         Ok(())
     }

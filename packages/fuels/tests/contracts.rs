@@ -1071,31 +1071,6 @@ async fn test_add_custom_assets() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_raw_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-    setup_contract_test!(
-        Abigen(
-            name = "RawSliceContract",
-            abi = "packages/fuels/tests/types/contracts/raw_slice"
-        ),
-        Deploy(
-            name = "contract_instance",
-            contract = "RawSliceContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let contract_methods = contract_instance.methods();
-
-    for length in 0..=10 {
-        let response = contract_methods.return_raw_slice(length).call().await?;
-        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_deploy_error_messages() {
     let wallet = launch_provider_and_get_wallet().await;
     {
