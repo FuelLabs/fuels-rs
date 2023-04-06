@@ -25,7 +25,7 @@ Additionally, you can set custom `TxParameters` when deploying the loaded contra
 {{#include ../../../examples/contracts/src/lib.rs:deploy_with_parameters}}
 ```
 
-After the contract was deployed, you can use the contract's methods like this:
+After the contract is deployed, you can use the contract's methods like this:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
