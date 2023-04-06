@@ -16,7 +16,6 @@ use fuels_types::{
     errors::{Error, Result},
     traits::{Parameterize, Tokenizable},
 };
-use itertools::Itertools;
 
 #[derive(Clone)]
 pub struct LogFormatter {
@@ -66,34 +65,55 @@ pub struct LogDecoder {
 
 #[derive(Debug)]
 pub struct LogResult {
-    pub succeeded: Vec<String>,
-    pub failed: Vec<Error>,
+    pub results: Vec<Result<String>>,
 }
 
-impl LogResult {}
+impl LogResult {
+    pub fn filter_succeeded(&self) -> Vec<&str> {
+        self.results
+            .iter()
+            .filter_map(|result| result.as_ref().ok())
+            .map(|result| result.as_str())
+            .collect()
+    }
+
+    pub fn filter_failed(&self) -> Vec<&Error> {
+        self.results
+            .iter()
+            .filter_map(|result| result.as_ref().err())
+            .collect()
+    }
+}
 
 impl LogDecoder {
     /// Get all decoded logs from the given receipts as `String`
-    pub fn get_logs(&self, receipts: &[Receipt]) -> LogResult {
-        let (succeeded, failed) = receipts
+    pub fn decode_logs(&self, receipts: &[Receipt]) -> LogResult {
+        let results = receipts
             .iter()
             .extract_log_id_and_data()
             .map(|(log_id, data)| {
                 self.log_formatters
                     .get(&log_id)
                     .ok_or_else(|| {
-                        error!(InvalidData, "failed to decode this log id: {:?}", log_id)
+                        error!(InvalidData,"missing log formatter for log_id: `{:?}`. Consider adding external contracts with `set_contracts()`", log_id)
                     })
                     .and_then(|log_formatter| log_formatter.format(&data))
-            })
-            .partition_result();
+            }).collect::<Vec<_>>();
 
-        LogResult { succeeded, failed }
+        LogResult { results }
+    }
+
+    pub fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
+        self.decode_logs(receipts)
+            .results
+            .into_iter()
+            .last()
+            .ok_or_else(|| error!(InvalidData, "empty log results"))?
     }
 
     /// Get decoded logs with specific type from the given receipts.
     /// Note that this method returns the actual type and not a `String` representation.
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(
+    pub fn decode_logs_with_type<T: Tokenizable + Parameterize + 'static>(
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>> {
@@ -159,27 +179,31 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
 }
 
 fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    let log_result = log_decoder.get_logs(receipts);
-
-    log_result.succeeded.last().cloned().unwrap_or_else(|| {
-        format!(
-            "failed to decode log from require revert: {:?}",
-            log_result.failed.last()
-        )
-    })
+    log_decoder
+        .decode_last_log(receipts)
+        .unwrap_or_else(|err| format!("failed to decode log from require revert: {}", err))
 }
 
 fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    let log_result = log_decoder.get_logs(receipts);
-
-    return if let [.., lhs, rhs] = log_result.succeeded.as_slice() {
-        format!("assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`")
-    } else {
-        format!(
-            "failed to decode logs from assert_eq revert: {:?}",
-            log_result.failed.last()
-        )
-    };
+    log_decoder
+        .decode_logs(receipts)
+        .results
+        .as_slice()
+        .windows(2)
+        .last()
+        .map(|window| match window {
+            [.., lhs, rhs] if lhs.is_err() || rhs.is_err() => format!(
+                "failed to decode logs from assert_eq revert: {}",
+                lhs.as_ref()
+                    .err()
+                    .unwrap_or_else(|| rhs.as_ref().err().unwrap())
+            ),
+            [.., Ok(l), Ok(r)] => {
+                format!("assertion failed: `(left == right)`\n left: `{l:?}`\n right: `{r:?}`")
+            }
+            _ => "failed to decode logs from assert_eq revert: empty log results".to_string(),
+        })
+        .unwrap()
 }
 
 pub fn log_formatters_lookup(

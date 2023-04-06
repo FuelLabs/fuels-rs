@@ -217,7 +217,7 @@ async fn test_get_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    assert_eq!(logs.succeeded, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -244,7 +244,7 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
         .await?
         .get_logs();
 
-    assert!(logs.succeeded.is_empty());
+    assert!(logs.filter_succeeded().is_empty());
 
     Ok(())
 }
@@ -294,7 +294,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
 
     let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs.succeeded, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -347,7 +347,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
 
     let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs.succeeded, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -415,7 +415,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 
     let logs = multi_call_handler.call::<((), ())>().await?.get_logs();
 
-    assert_eq!(logs.succeeded, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -667,7 +667,7 @@ async fn test_script_get_logs() -> Result<()> {
         format!("{expected_deeply_nested_struct:?}"),
     ];
 
-    assert_eq!(logs.succeeded, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -716,7 +716,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         .await?
         .get_logs();
 
-    assert_eq!(expected_logs, logs.succeeded);
+    assert_eq!(expected_logs, logs.filter_succeeded());
 
     Ok(())
 }
@@ -793,7 +793,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     {
         let logs = response.get_logs();
 
-        assert_eq!(logs.succeeded, expected_script_logs);
+        assert_eq!(logs.filter_succeeded(), expected_script_logs);
     }
 
     Ok(())
@@ -1101,7 +1101,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-        dbg!(&error);
         assert_assert_eq_containing_msg(a, b, error);
     }
     {
@@ -1120,7 +1119,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-        dbg!(&error);
         assert_assert_eq_containing_msg(test_struct, test_struct2, error);
     }
     {
@@ -1283,12 +1281,14 @@ async fn test_log_results() -> Result<()> {
     let log = response.get_logs();
 
     let expected_err = format!(
-        "Invalid data: failed to decode this log id: LogId({:?}, 1)",
+        "Invalid data: missing log formatter for log_id: `LogId({:?}, 1)`. Consider adding external contracts with `set_contracts()`",
         contract_id.hash
     );
 
-    assert_eq!(log.succeeded.last().unwrap(), "123");
-    assert_eq!(log.failed.last().unwrap().to_string(), expected_err);
+    let succeeded = log.filter_succeeded();
+    let failed = log.filter_failed();
+    assert_eq!(succeeded, vec!["123".to_string()]);
+    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
 
     Ok(())
 }
