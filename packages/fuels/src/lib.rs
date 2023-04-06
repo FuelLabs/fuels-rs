@@ -92,7 +92,7 @@ pub mod prelude {
             constants::*,
             errors::{Error, Result},
             transaction::*,
-            Address, AssetId, ContractId, RawSlice,
+            Address, AssetId, Bytes, ContractId, RawSlice,
         },
     };
 }

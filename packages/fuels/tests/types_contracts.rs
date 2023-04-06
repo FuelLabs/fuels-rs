@@ -1768,6 +1768,63 @@ async fn test_nested_vector_methods_fail() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_bytes_output() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "BytesOutputContract",
+            abi = "packages/fuels/tests/types/contracts/bytes"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "BytesOutputContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.return_bytes(10).call().await?;
+
+    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_bytes_as_input() -> Result<()> {
+    setup_contract_test!(
+        Wallets("wallet"),
+        Abigen(
+            name = "BytesInputContract",
+            abi = "packages/fuels/tests/types/contracts/bytes"
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "BytesInputContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let bytes = Bytes(vec![40, 41, 42]);
+
+        contract_methods.accept_bytes(bytes).call().await?;
+    }
+    {
+        let bytes = Bytes(vec![40, 41, 42]);
+        let wrapper = Wrapper {
+            inner: vec![bytes.clone(), bytes.clone()],
+            inner_enum: SomeEnum::Second(bytes),
+        };
+
+        contract_methods.accept_nested_bytes(wrapper).call().await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_contract_raw_slice() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_contract_test!(
@@ -1784,31 +1841,30 @@ async fn test_contract_raw_slice() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
-    for length in 0..=10 {
-        let response = contract_methods.return_raw_slice(length).call().await?;
-        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+    {
+        for length in 0..=10 {
+            let response = contract_methods.return_raw_slice(length).call().await?;
+            assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+        }
     }
+    {
+        contract_methods
+            .accept_raw_slice(RawSlice(vec![40, 41, 42]))
+            .call()
+            .await?;
+    }
+    {
+        let raw_slice = RawSlice(vec![40, 41, 42]);
+        let wrapper = Wrapper {
+            inner: vec![raw_slice.clone(), raw_slice.clone()],
+            inner_enum: SomeEnum::Second(raw_slice),
+        };
 
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_bytes_output() -> Result<()> {
-    setup_contract_test!(
-        Wallets("wallet"),
-        Abigen(
-            name = "BytesOutputContract",
-            abi = "packages/fuels/tests/types/contracts/bytes"
-        ),
-        Deploy(
-            name = "contract_instance",
-            contract = "BytesOutputContract",
-            wallet = "wallet"
-        ),
-    );
-    let contract_methods = contract_instance.methods();
-    let response = contract_methods.return_bytes(10).call().await?;
-    assert_eq!(response.value, (0..10).collect::<Vec<_>>());
+        contract_methods
+            .accept_nested_raw_slice(wrapper)
+            .call()
+            .await?;
+    }
 
     Ok(())
 }
