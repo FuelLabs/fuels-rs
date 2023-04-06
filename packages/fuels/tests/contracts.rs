@@ -1071,7 +1071,7 @@ async fn test_add_custom_assets() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() -> Result<()> {
+async fn test_deploy_error_messages() {
     {
         let binary_path =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
@@ -1092,7 +1092,6 @@ async fn test_deploy_error_messages() -> Result<()> {
 
         assert_eq!(response.to_string(), expected);
     }
-    Ok(())
 }
 
 #[tokio::test]
