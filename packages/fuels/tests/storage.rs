@@ -19,13 +19,13 @@ async fn test_storage_initialization() -> Result<()> {
     let value = Bytes32::from([2u8; 32]);
     let storage_slot = StorageSlot::new(key, value);
     let storage_vec = vec![storage_slot.clone()];
-    let storage_configuration = StorageConfiguration::default().set_manual_storage(storage_vec);
+    let storage_configuration = StorageConfiguration::from(storage_vec);
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        &wallet,
-        DeployConfiguration::default().set_storage_configuration(storage_configuration),
-    )
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -49,15 +49,15 @@ async fn test_init_storage_automatically() -> Result<()> {
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let storage_configuration = StorageConfiguration::default().set_storage_path(
-        "tests/contracts/storage/out/debug/storage-storage_slots.json".to_string(),
-    );
+    let storage_configuration = StorageConfiguration::load_from(
+        "tests/contracts/storage/out/debug/storage-storage_slots.json",
+    )?;
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        &wallet,
-        DeployConfiguration::default().set_storage_configuration(storage_configuration),
-    )
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let key1 =
@@ -86,26 +86,22 @@ async fn test_init_storage_automatically() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_init_storage_automatically_bad_json_path() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
-    ));
+async fn storage_load_error_messages() {
+    {
+        let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
+        let expected_error = format!("Invalid data: file '{json_path}' does not exist");
 
-    let wallet = launch_provider_and_get_wallet().await;
-    let storage_configuration = StorageConfiguration::default().set_storage_path(
-        "tests/contracts/storage/out/debug/storage-storage_slts.json".to_string(),
-    );
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
 
-    let response = Contract::deploy(
-        "tests/contracts/storage/out/debug/storage.bin",
-        &wallet,
-        DeployConfiguration::default().set_storage_configuration(storage_configuration),
-    )
-    .await
-    .expect_err("Should fail");
+        assert_eq!(error.to_string(), expected_error);
+    }
+    {
+        let json_path = "tests/contracts/storage/out/debug/storage.bin";
+        let expected_error =
+            format!("Invalid data: expected `{json_path}` to have '.json' extension");
 
-    let expected = "Invalid data:";
-    assert!(response.to_string().starts_with(expected));
-    Ok(())
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
+
+        assert_eq!(error.to_string(), expected_error);
+    }
 }

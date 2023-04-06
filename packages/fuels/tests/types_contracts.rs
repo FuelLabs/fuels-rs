@@ -74,11 +74,11 @@ async fn call_with_structs() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/types/contracts/complex_types_contract/out/debug/complex_types_contract.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();

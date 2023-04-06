@@ -589,11 +589,11 @@ async fn setup_output_variable_estimation_test(
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
-        &wallets[0],
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallets[0], TxParameters::default())
     .await?;
 
     let mint_asset_id = AssetId::from(*contract_id.hash());
@@ -1071,29 +1071,25 @@ async fn test_add_custom_assets() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_deploy_error_messages() {
-    let wallet = launch_provider_and_get_wallet().await;
+async fn contract_load_error_messages() {
     {
-        let binary_path =
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected = format!("Invalid data: file '{binary_path}' does not exist");
+        let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let expected_error = format!("Invalid data: file '{binary_path}' does not exist");
 
-        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-            .await
+        let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
 
-        assert_eq!(response.to_string(), expected);
+        assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path =
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
-        let expected = format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
+        let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let expected_error =
+            format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
 
-        let response = Contract::deploy(binary_path, &wallet, DeployConfiguration::default())
-            .await
+        let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
 
-        assert_eq!(response.to_string(), expected);
+        assert_eq!(error.to_string(), expected_error);
     }
 }
 
@@ -1147,7 +1143,6 @@ async fn test_payable_annotation() -> Result<()> {
 }
 
 #[tokio::test]
-#[allow(unused_variables)]
 async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     use fuels::prelude::*;
 

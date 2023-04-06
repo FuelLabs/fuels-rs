@@ -15,7 +15,7 @@ use fuels_types::{
     param_types::{ParamType, ReturnLocation},
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
-    transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+    transaction_builders::CreateTransactionBuilder,
     unresolved_bytes::UnresolvedBytes,
     Selector, Token,
 };
@@ -92,67 +92,67 @@ pub trait SettableContract {
     fn log_decoder(&self) -> LogDecoder;
 }
 
-/// A compiled representation of a contract
-#[derive(Debug, Clone, Default)]
-pub struct CompiledContract {
-    binary: Vec<u8>,
-    salt: Salt,
-    storage_slots: Vec<StorageSlot>,
-}
-
 /// Configuration for contract storage
 #[derive(Debug, Clone, Default)]
 pub struct StorageConfiguration {
-    storage_path: String,
-    manual_storage: Vec<StorageSlot>,
+    slots: Vec<StorageSlot>,
 }
 
 impl StorageConfiguration {
-    pub fn new(storage_path: String, manual_storage: Vec<StorageSlot>) -> Self {
+    pub fn from(storage_slots: impl IntoIterator<Item = StorageSlot>) -> Self {
         Self {
-            storage_path,
-            manual_storage,
+            slots: storage_slots.into_iter().unique().collect(),
         }
     }
 
-    pub fn set_storage_path(mut self, storage_path: String) -> Self {
-        self.storage_path = storage_path;
-        self
+    pub fn load_from(storage_path: &str) -> Result<Self> {
+        validate_path_and_extension(storage_path, "json")?;
+
+        let storage_json_string = fs::read_to_string(storage_path).map_err(|_| {
+            error!(
+                InvalidData,
+                "failed to read storage configuration from: '{storage_path}'"
+            )
+        })?;
+
+        Ok(Self {
+            slots: serde_json::from_str(&storage_json_string)?,
+        })
     }
 
-    pub fn set_manual_storage(mut self, manual_storage: Vec<StorageSlot>) -> Self {
-        self.manual_storage = manual_storage;
-        self
+    pub fn extend(&mut self, storage_slots: impl IntoIterator<Item = StorageSlot>) {
+        self.merge(Self::from(storage_slots))
+    }
+
+    pub fn merge(&mut self, storage_config: StorageConfiguration) {
+        let slots = std::mem::take(&mut self.slots);
+        self.slots = slots
+            .into_iter()
+            .chain(storage_config.slots)
+            .unique()
+            .collect();
     }
 }
 
 /// Configuration for contract deployment
 #[derive(Debug, Clone, Default)]
-pub struct DeployConfiguration {
-    tx_parameters: TxParameters,
+pub struct LoadConfiguration {
     storage: StorageConfiguration,
     configurables: Configurables,
     salt: Salt,
 }
 
-impl DeployConfiguration {
+impl LoadConfiguration {
     pub fn new(
-        tx_parameters: TxParameters,
         storage: StorageConfiguration,
         configurables: impl Into<Configurables>,
         salt: impl Into<Salt>,
     ) -> Self {
         Self {
-            tx_parameters,
             storage,
             configurables: configurables.into(),
             salt: salt.into(),
         }
-    }
-
-    pub fn set_tx_parameters(mut self, tx_parameters: TxParameters) -> Self {
-        self.tx_parameters = tx_parameters;
-        self
     }
 
     pub fn set_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
@@ -173,123 +173,71 @@ impl DeployConfiguration {
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
-/// The contract has a wallet attribute, used to pay for transactions and sign them.
-/// It allows doing calls without passing a wallet/signer each time.
-pub struct Contract;
+#[derive(Debug)]
+pub struct Contract {
+    binary: Vec<u8>,
+    salt: Salt,
+    storage_slots: Vec<StorageSlot>,
+    contract_id: ContractId,
+    state_root: Bytes32,
+}
 
 impl Contract {
-    pub fn compute_contract_id_and_state_root(
-        compiled_contract: &CompiledContract,
-    ) -> (ContractId, Bytes32) {
-        let fuel_contract = FuelContract::from(compiled_contract.binary.as_slice());
-        let root = fuel_contract.root();
-        let state_root = FuelContract::initial_state_root(compiled_contract.storage_slots.iter());
+    pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
+        let (contract_id, state_root) =
+            Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
 
-        let contract_id = fuel_contract.id(&compiled_contract.salt, &root, &state_root);
+        Self {
+            binary,
+            salt,
+            storage_slots,
+            contract_id,
+            state_root,
+        }
+    }
+
+    fn compute_contract_id_and_state_root(
+        binary: &[u8],
+        salt: &Salt,
+        storage_slots: &[StorageSlot],
+    ) -> (ContractId, Bytes32) {
+        let fuel_contract = FuelContract::from(binary);
+        let root = fuel_contract.root();
+        let state_root = FuelContract::initial_state_root(storage_slots.iter());
+
+        let contract_id = fuel_contract.id(salt, &root, &state_root);
 
         (contract_id, state_root)
     }
 
-    /// Creates an ABI call based on a function [selector](Selector) and
-    /// the encoding of its call arguments, which is a slice of [`Token`]s.
-    /// It returns a prepared [`ContractCall`] that can further be used to
-    /// make the actual transaction.
-    /// This method is the underlying implementation of the functions
-    /// generated from an ABI JSON spec, i.e, this is what's generated:
-    ///
-    /// ```ignore
-    /// quote! {
-    ///     #doc
-    ///     pub fn #name(&self #input) -> #result {
-    ///         Contract::method_hash(#tokenized_signature, #arg)
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// For more details see `code_gen` in `fuels-core`.
-    ///
-    /// Note that this needs a wallet because the contract instance needs a wallet for the calls
-    pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
-        contract_id: Bech32ContractId,
-        account: T,
-        signature: Selector,
-        args: &[Token],
-        log_decoder: LogDecoder,
-        is_payable: bool,
-    ) -> Result<ContractCallHandler<T, D>> {
-        let encoded_selector = signature;
-
-        let tx_parameters = TxParameters::default();
-        let call_parameters = CallParameters::default();
-
-        let compute_custom_input_offset = Self::should_compute_custom_input_offset(args);
-
-        let unresolved_bytes = ABIEncoder::encode(args)?;
-        let contract_call = ContractCall {
-            contract_id,
-            encoded_selector,
-            encoded_args: unresolved_bytes,
-            call_parameters,
-            compute_custom_input_offset,
-            variable_outputs: None,
-            message_outputs: None,
-            external_contracts: vec![],
-            output_param: D::param_type(),
-            is_payable,
-            custom_assets: Default::default(),
-        };
-
-        Ok(ContractCallHandler {
-            contract_call,
-            tx_parameters,
-            account,
-            datatype: PhantomData,
-            log_decoder,
-        })
+    pub fn with_salt(self, salt: Salt) -> Self {
+        Self::new(self.binary, salt, self.storage_slots)
     }
 
-    // If the data passed into the contract method is an integer or a
-    // boolean, then the data itself should be passed. Otherwise, it
-    // should simply pass a pointer to the data in memory.
-    fn should_compute_custom_input_offset(args: &[Token]) -> bool {
-        args.len() > 1
-            || args.iter().any(|t| {
-                matches!(
-                    t,
-                    Token::String(_)
-                        | Token::Struct(_)
-                        | Token::Enum(_)
-                        | Token::B256(_)
-                        | Token::Tuple(_)
-                        | Token::Array(_)
-                        | Token::Vector(_)
-                        | Token::Bytes(_)
-                        | Token::RawSlice(_)
-                )
-            })
+    pub fn contract_id(&self) -> ContractId {
+        self.contract_id
     }
 
-    /// Loads a compiled contract and deploys it to a running node
-    pub async fn deploy(
-        binary_filepath: &str,
-        account: &impl Account,
-        configuration: DeployConfiguration,
-    ) -> Result<Bech32ContractId> {
-        let tx_parameters = configuration.tx_parameters;
-        let compiled_contract = Self::load_contract(binary_filepath, configuration)?;
-
-        Self::deploy_loaded(compiled_contract, account, tx_parameters).await
+    pub fn state_root(&self) -> Bytes32 {
+        self.state_root
     }
 
     /// Deploys a compiled contract to a running node
-    /// To deploy a contract, you need a wallet with enough assets to pay for deployment. This
-    /// wallet will also receive the change.
-    async fn deploy_loaded(
-        compiled_contract: CompiledContract,
+    /// To deploy a contract, you need an account with enough assets to pay for deployment.
+    /// This account will also receive the change.
+    pub async fn deploy(
+        self,
         account: &impl Account,
-        params: TxParameters,
+        tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
-        let (tb, contract_id) = Self::contract_deployment_transaction(compiled_contract, params);
+        let tb = CreateTransactionBuilder::prepare_contract_deployment(
+            self.binary,
+            self.contract_id,
+            self.state_root,
+            self.salt,
+            self.storage_slots,
+            tx_parameters,
+        );
 
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
@@ -307,99 +255,44 @@ impl Contract {
         )?;
         provider.send_transaction(&tx).await?;
 
-        Ok(contract_id)
+        Ok(self.contract_id.into())
     }
 
-    pub fn load_contract(
-        binary_filepath: &str,
-        configuration: DeployConfiguration,
-    ) -> Result<CompiledContract> {
-        Self::validate_path_and_extension(binary_filepath, "bin")?;
+    pub fn load_from(binary_filepath: &str, configuration: LoadConfiguration) -> Result<Self> {
+        validate_path_and_extension(binary_filepath, "bin")?;
 
         let mut binary = fs::read(binary_filepath)
             .map_err(|_| error!(InvalidData, "failed to read binary: '{binary_filepath}'"))?;
 
         configuration.configurables.update_constants_in(&mut binary);
 
-        let storage_slots = Self::get_storage_slots(configuration.storage)?;
-
-        Ok(CompiledContract {
+        Ok(Self::new(
             binary,
-            salt: configuration.salt,
-            storage_slots,
-        })
+            configuration.salt,
+            configuration.storage.slots,
+        ))
+    }
+}
+
+fn validate_path_and_extension(file_path: &str, extension: &str) -> Result<()> {
+    let path = Path::new(file_path);
+
+    if !path.exists() {
+        return Err(error!(InvalidData, "file '{file_path}' does not exist"));
     }
 
-    fn validate_path_and_extension(file_path: &str, extension: &str) -> Result<()> {
-        let path = Path::new(file_path);
+    let path_extension = path
+        .extension()
+        .ok_or_else(|| error!(InvalidData, "could not extract extension from: {file_path}"))?;
 
-        if !path.exists() {
-            return Err(error!(InvalidData, "file '{file_path}' does not exist"));
-        }
-
-        let path_extension = path
-            .extension()
-            .ok_or_else(|| error!(InvalidData, "could not extract extension from: {file_path}"))?;
-
-        if extension != path_extension {
-            return Err(error!(
-                InvalidData,
-                "expected `{file_path}` to have '.{extension}' extension"
-            ));
-        }
-
-        Ok(())
+    if extension != path_extension {
+        return Err(error!(
+            InvalidData,
+            "expected `{file_path}` to have '.{extension}' extension"
+        ));
     }
 
-    /// Crafts a transaction used to deploy a contract
-    fn contract_deployment_transaction(
-        compiled_contract: CompiledContract,
-        params: TxParameters,
-    ) -> (CreateTransactionBuilder, Bech32ContractId) {
-        let (contract_id, state_root) =
-            Self::compute_contract_id_and_state_root(&compiled_contract);
-        let bytecode_witness_index = 0;
-        let outputs = vec![Output::contract_created(contract_id, state_root)];
-        let witnesses = vec![compiled_contract.binary.into()];
-
-        let tb = CreateTransactionBuilder::default()
-            .set_tx_params(params)
-            .set_bytecode_witness_index(bytecode_witness_index)
-            .set_salt(compiled_contract.salt)
-            .set_storage_slots(compiled_contract.storage_slots)
-            .set_outputs(outputs)
-            .set_witnesses(witnesses);
-
-        (tb, contract_id.into())
-    }
-
-    fn get_storage_slots(configuration: StorageConfiguration) -> Result<Vec<StorageSlot>> {
-        let StorageConfiguration {
-            storage_path,
-            manual_storage,
-        } = configuration;
-
-        if storage_path.is_empty() {
-            return Ok(manual_storage);
-        }
-
-        Self::validate_path_and_extension(&storage_path, "json")?;
-
-        let storage_json_string = fs::read_to_string(&storage_path).map_err(|_| {
-            error!(
-                InvalidData,
-                "failed to read storage configuration from: '{storage_path}'"
-            )
-        })?;
-
-        let storage_slots: Vec<StorageSlot> = serde_json::from_str(&storage_json_string)?;
-
-        Ok(manual_storage
-            .into_iter()
-            .chain(storage_slots)
-            .unique()
-            .collect())
-    }
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -662,7 +555,8 @@ where
     /// # Parameters
     /// - `asset_id`: The unique identifier of the asset being added.
     /// - `amount`: The amount of the asset being added.
-    /// - `address`: The optional wallet address that the output amount will be sent to. If not provided, the asset will be sent to the users wallet address.
+    /// - `address`: The optional account address that the output amount will be sent to.
+    ///              If not provided, the asset will be sent to the users account address.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
@@ -860,6 +754,85 @@ where
             self.log_decoder.clone(),
         ))
     }
+}
+
+/// Creates an ABI call based on a function [selector](Selector) and
+/// the encoding of its call arguments, which is a slice of [`Token`]s.
+/// It returns a prepared [`ContractCall`] that can further be used to
+/// make the actual transaction.
+/// This method is the underlying implementation of the functions
+/// generated from an ABI JSON spec, i.e, this is what's generated:
+///
+/// ```ignore
+/// quote! {
+///     #doc
+///     pub fn #name(&self #input) -> #result {
+///         contract::method_hash(#tokenized_signature, #arg)
+///     }
+/// }
+/// ```
+///
+/// For more details see `code_gen` in `fuels-core`.
+///
+/// Note that this needs an account because the contract instance needs an account for the calls
+pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
+    contract_id: Bech32ContractId,
+    account: T,
+    signature: Selector,
+    args: &[Token],
+    log_decoder: LogDecoder,
+    is_payable: bool,
+) -> Result<ContractCallHandler<T, D>> {
+    let encoded_selector = signature;
+
+    let tx_parameters = TxParameters::default();
+    let call_parameters = CallParameters::default();
+
+    let compute_custom_input_offset = should_compute_custom_input_offset(args);
+
+    let unresolved_bytes = ABIEncoder::encode(args)?;
+    let contract_call = ContractCall {
+        contract_id,
+        encoded_selector,
+        encoded_args: unresolved_bytes,
+        call_parameters,
+        compute_custom_input_offset,
+        variable_outputs: None,
+        message_outputs: None,
+        external_contracts: vec![],
+        output_param: D::param_type(),
+        is_payable,
+        custom_assets: Default::default(),
+    };
+
+    Ok(ContractCallHandler {
+        contract_call,
+        tx_parameters,
+        account,
+        datatype: PhantomData,
+        log_decoder,
+    })
+}
+
+// If the data passed into the contract method is an integer or a
+// boolean, then the data itself should be passed. Otherwise, it
+// should simply pass a pointer to the data in memory.
+fn should_compute_custom_input_offset(args: &[Token]) -> bool {
+    args.len() > 1
+        || args.iter().any(|t| {
+            matches!(
+                t,
+                Token::String(_)
+                    | Token::Struct(_)
+                    | Token::Enum(_)
+                    | Token::B256(_)
+                    | Token::Tuple(_)
+                    | Token::Array(_)
+                    | Token::Vector(_)
+                    | Token::Bytes(_)
+                    | Token::RawSlice(_)
+            )
+        })
 }
 
 #[derive(Debug)]

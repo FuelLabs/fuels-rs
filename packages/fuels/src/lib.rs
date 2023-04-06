@@ -76,7 +76,7 @@ pub mod prelude {
         fuel_node::*,
         programs::{
             contract::{
-                CallParameters, Contract, DeployConfiguration, MultiContractCallHandler,
+                CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId},

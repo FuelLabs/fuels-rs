@@ -118,22 +118,19 @@ fn contract_deploying_code(
             let storage_path = project.storage_path();
 
             quote! {
-                let #contract_instance_name = #contract_struct_name::new(
-                    Contract::deploy(
-                        #bin_path,
-                        &#wallet_name,
-                        DeployConfiguration::default()
-                            .set_storage_configuration(
-                                StorageConfiguration::default().set_storage_path(
-                                    #storage_path.to_string()
-                                )
-                            )
-                            .set_salt([#(#salt),*])
-                    )
-                    .await
-                    .expect("Failed to deploy the contract"),
-                    #wallet_name.clone(),
-                );
+                let #contract_instance_name = {
+                    let storage_config = StorageConfiguration::load_from(#storage_path)
+                                            .expect("Failed to load storage slots from path");
+                    let load_config =
+                        LoadConfiguration::default()
+                            .set_storage_configuration(storage_config)
+                            .set_salt([#(#salt),*]);
+
+                    let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
+
+                    let contract_id = loaded_contract.deploy(&#wallet_name, TxParameters::default()).await.expect("Failed to deploy the contract");
+                    #contract_struct_name::new(contract_id, #wallet_name.clone())
+                };
             }
         })
         .reduce(|mut all_code, code| {
