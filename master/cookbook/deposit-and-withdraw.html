@@ -215,11 +215,11 @@ impl LiquidityPool for Contract {
         let wallet = &amp;wallets[0];
 </code></pre>
 <p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
-<pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
+<pre><code class="language-rust ignore">        let contract_id = Contract::load_from(
             &quot;../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
-            wallet,
-            DeployConfiguration::default(),
-        )
+            LoadConfiguration::default(),
+        )?
+        .deploy(wallet, TxParameters::default())
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();

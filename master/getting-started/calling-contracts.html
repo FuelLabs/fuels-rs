@@ -146,8 +146,16 @@
 <li>Read and interpret returned values and logs.</li>
 </ol>
 <p>Here's an example. Suppose your Sway contract has two ABI methods called <code>initialize_counter(u64)</code> and <code>increment_counter(u64)</code>. Once you've deployed it the contract, you can call these methods like this:</p>
-<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id, wallet);
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
 
         let response = contract_instance
             .methods()

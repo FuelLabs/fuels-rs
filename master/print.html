@@ -1181,8 +1181,16 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever. The generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
 </blockquote>
 <p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
-<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id, wallet);
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
 
         let response = contract_instance
             .methods()
@@ -1205,36 +1213,71 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <h2 id="deploying-a-contract-binary"><a class="header" href="#deploying-a-contract-binary">Deploying a contract binary</a></h2>
 <p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="getting-started/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="getting-started/../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="getting-started/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
-<h3 id="the-deploy-functions"><a class="header" href="#the-deploy-functions">The deploy functions</a></h3>
-<p>The <code>Contract::deploy</code> function is used to deploy a contract binary to the blockhain. To configure the deployment you can use the <code>DeployConfiguration</code> struct.</p>
-<p>If you are only interested in a single instance of your contract, use the default configuration: <code>DeployConfiguration::default()</code></p>
+<p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
+<pre><code class="language-rust ignore">        // This helper will launch a local node and provide a test wallet linked to it
+        let wallet = launch_provider_and_get_wallet().await;
+
+        // This will load and deploy your contract binary to the chain so that its ID can
+        // be used to initialize the instance
+        let contract_id = Contract::load_from(
+            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
+            LoadConfiguration::default(),
+        )?
+        .deploy(&amp;wallet, TxParameters::default())
+        .await?;
+
+        println!(&quot;Contract deployed @ {contract_id}&quot;);
+</code></pre>
+<p>Alternatively, you can use <code>LoadConfiguration</code> to configure how the contract is loaded. <code>LoadConfiguration</code> let's you:</p>
+<ul>
+<li>Load the same contract binary with <code>Salt</code> to get a new <code>contract_id</code></li>
+<li>Change the contract's storage slots</li>
+<li>Update the contract's configurables
+<blockquote>
+<p>Note: The next section will give more information on how <code>configurables</code> can be used.</p>
+</blockquote>
+</li>
+</ul>
+<p>Additionally, you can set custom <code>TxParameters</code> when deploying the loaded contract.</p>
+<pre><code class="language-rust ignore">        // Optional: Add `Salt`
+        let rng = &amp;mut StdRng::seed_from_u64(2322u64);
+        let salt: [u8; 32] = rng.gen();
+
+        // Optional: Configure storage
+        let key = Bytes32::from([1u8; 32]);
+        let value = Bytes32::from([2u8; 32]);
+        let storage_slot = StorageSlot::new(key, value);
+        let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
+        let configuration = LoadConfiguration::default()
+            .set_storage_configuration(storage_configuration)
+            .set_salt(salt);
+
+        // Optional: Configure deployment parameters
+        let tx_parameters = TxParameters::default()
+            .set_gas_price(0)
+            .set_gas_limit(1_000_000)
+            .set_maturity(0);
+
+        let contract_id_2 = Contract::load_from(
+            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
+            configuration,
+        )?
+        .deploy(&amp;wallet, tx_parameters)
+        .await?;
+
+        println!(&quot;Contract deployed @ {contract_id_2}&quot;);
+</code></pre>
+<p>After the contract is deployed, you can use the contract's methods like this:</p>
 <pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
         // This means an instance of `MyContract` will have access to all
         // your contract's methods that are running on-chain!
         abigen!(Contract(
             name = &quot;MyContract&quot;,
-            // This path is relative to the workspace (repository) root
             abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
         ));
 
-        // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await;
-
-        // This will deploy your contract binary onto the chain so that its ID can
-        // be used to initialize the instance
-        let contract_id = Contract::deploy(
-            // This path is relative to the current crate (examples/contracts)
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
-            &amp;wallet,
-            DeployConfiguration::default(),
-        )
-        .await?;
-
-        println!(&quot;Contract deployed @ {contract_id}&quot;);
-</code></pre>
-<p>You can then use the contract methods very simply:</p>
-<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id, wallet);
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
 
         let response = contract_instance
             .methods()
@@ -1252,62 +1295,6 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 
         assert_eq!(52, response.value);
 </code></pre>
-<p>Alternatively, you can use <code>DeployConfiguration</code> to configure the deployment. You can, for example, deploy multiple instances of the same contract, change the storage or <code>tx_parameters</code> or update the binary using <code>configurables</code>.</p>
-<pre><code class="language-rust ignore">        use fuels::{
-            prelude::*,
-            tx::{Bytes32, StorageSlot},
-        };
-        use rand::prelude::{Rng, SeedableRng, StdRng};
-
-        abigen!(Contract(
-            name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
-        ));
-
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id_1 = Contract::deploy(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
-            &amp;wallet,
-            DeployConfiguration::default(),
-        )
-        .await?;
-
-        println!(&quot;Contract deployed @ {contract_id_1}&quot;);
-
-        // Optional: Configure deployment parameters or use `TxParameters::default()`
-        let tx_parameters = TxParameters::default()
-            .set_gas_price(0)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
-
-        // Optional: Configure storage
-        let key = Bytes32::from([1u8; 32]);
-        let value = Bytes32::from([2u8; 32]);
-        let storage_slot = StorageSlot::new(key, value);
-        let storage_configuration =
-            StorageConfiguration::default().set_manual_storage(vec![storage_slot]);
-
-        let rng = &amp;mut StdRng::seed_from_u64(2322u64);
-        let salt: [u8; 32] = rng.gen();
-
-        let contract_id_2 = Contract::deploy(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
-            &amp;wallet,
-            DeployConfiguration::default()
-                .set_storage_configuration(storage_configuration)
-                .set_salt(salt)
-                .set_tx_parameters(tx_parameters),
-        )
-        .await?;
-
-        println!(&quot;Contract deployed @ {contract_id_2}&quot;);
-
-        assert_ne!(contract_id_1, contract_id_2);
-</code></pre>
-<blockquote>
-<p>Note: The next section will give more information on how <code>configurables</code> can be used.</p>
-</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h1>
 <p>In Sway, you can define <code>configurable</code> constants which can be changed during the contract deployment in the SDK. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">contract;
@@ -1364,11 +1351,11 @@ impl TestContract for Contract {
         .set_STRUCT(new_struct.clone())
         .set_ENUM(new_enum.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
-        &amp;wallet,
-        DeployConfiguration::default().set_configurables(configurables),
-    )
+        LoadConfiguration::default().set_configurables(configurables),
+    )?
+    .deploy(&amp;wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -1451,8 +1438,16 @@ half-word   byte   op                raw           notes
 <li>Read and interpret returned values and logs.</li>
 </ol>
 <p>Here's an example. Suppose your Sway contract has two ABI methods called <code>initialize_counter(u64)</code> and <code>increment_counter(u64)</code>. Once you've deployed it the contract, you can call these methods like this:</p>
-<pre><code class="language-rust ignore">        // This is an instance of your contract which you can use to make calls to your functions
-        let contract_instance = MyContract::new(contract_id, wallet);
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
 
         let response = contract_instance
             .methods()
@@ -2852,11 +2847,11 @@ impl LiquidityPool for Contract {
         let wallet = &amp;wallets[0];
 </code></pre>
 <p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
-<pre><code class="language-rust ignore">        let contract_id = Contract::deploy(
+<pre><code class="language-rust ignore">        let contract_id = Contract::load_from(
             &quot;../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin&quot;,
-            wallet,
-            DeployConfiguration::default(),
-        )
+            LoadConfiguration::default(),
+        )?
+        .deploy(wallet, TxParameters::default())
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
