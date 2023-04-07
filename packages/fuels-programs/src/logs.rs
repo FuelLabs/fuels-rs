@@ -72,8 +72,7 @@ impl LogResult {
     pub fn filter_succeeded(&self) -> Vec<&str> {
         self.results
             .iter()
-            .filter_map(|result| result.as_ref().ok())
-            .map(|result| result.as_str())
+            .filter_map(|result| result.as_deref().ok())
             .collect()
     }
 
@@ -91,24 +90,49 @@ impl LogDecoder {
         let results = receipts
             .iter()
             .extract_log_id_and_data()
-            .map(|(log_id, data)| {
-                self.log_formatters
-                    .get(&log_id)
-                    .ok_or_else(|| {
-                        error!(InvalidData,"missing log formatter for log_id: `{:?}`. Consider adding external contracts with `set_contracts()`", log_id)
-                    })
-                    .and_then(|log_formatter| log_formatter.format(&data))
-            }).collect::<Vec<_>>();
+            .map(|(log_id, data)| self.format_log(&log_id, &data))
+            .collect();
 
         LogResult { results }
     }
 
+    fn format_log(&self, log_id: &LogId, data: &[u8]) -> Result<String> {
+        self.log_formatters
+            .get(log_id)
+            .ok_or_else(|| {
+                error!(InvalidData,"missing log formatter for log_id: `{:?}`. Consider adding external contracts with `set_contracts()`", log_id)
+            })
+            .and_then(|log_formatter| log_formatter.format(data))
+    }
+
     pub fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
-        self.decode_logs(receipts)
-            .results
-            .into_iter()
-            .last()
-            .ok_or_else(|| error!(InvalidData, "empty log results"))?
+        receipts
+            .iter()
+            .rev()
+            .extract_log_id_and_data()
+            .next()
+            .ok_or_else(|| error!(InvalidData, "nani"))
+            .and_then(|(log_id, data)| self.format_log(&log_id, &data))
+    }
+
+    pub fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
+        let res = receipts
+            .iter()
+            .rev()
+            .extract_log_id_and_data()
+            .map(|(log_id, data)| self.format_log(&log_id, &data))
+            .take(2)
+            .collect::<Result<Vec<_>>>();
+
+        match res.as_deref() {
+            Ok([rhs, lhs]) => Ok((lhs.to_string(), rhs.to_string())),
+            Ok(some_slice) => Err(error!(
+                InvalidData,
+                "expected to have two logs. Found {}",
+                some_slice.len()
+            )),
+            Err(_) => Err(res.expect_err("must be an error")),
+        }
     }
 
     /// Get decoded logs with specific type from the given receipts.
@@ -167,8 +191,19 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
     } = err
     {
         match revert_id {
-            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, receipts),
-            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, receipts),
+            FAILED_REQUIRE_SIGNAL => {
+                *reason = log_decoder.decode_last_log(receipts).unwrap_or_else(|err| {
+                    format!("failed to decode log from require revert: {}", err)
+                })
+            }
+            FAILED_ASSERT_EQ_SIGNAL => {
+                *reason = match log_decoder.decode_last_two_logs(receipts) {
+                    Ok((lhs, rhs)) => format!(
+                        "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
+                    ),
+                    Err(err) => format!("failed to decode log from assert_eq revert: {}", err),
+                };
+            }
             FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
             FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
             FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
@@ -176,34 +211,6 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
         }
     }
     err
-}
-
-fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .decode_last_log(receipts)
-        .unwrap_or_else(|err| format!("failed to decode log from require revert: {err}"))
-}
-
-fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .decode_logs(receipts)
-        .results
-        .as_slice()
-        .windows(2)
-        .last()
-        .map(|window| match window {
-            [.., lhs, rhs] if lhs.is_err() || rhs.is_err() => format!(
-                "failed to decode logs from assert_eq revert: {}",
-                lhs.as_ref()
-                    .err()
-                    .unwrap_or_else(|| rhs.as_ref().err().unwrap())
-            ),
-            [.., Ok(l), Ok(r)] => {
-                format!("assertion failed: `(left == right)`\n left: `{l:?}`\n right: `{r:?}`")
-            }
-            _ => "failed to decode logs from assert_eq revert: empty log results".to_string(),
-        })
-        .unwrap()
 }
 
 pub fn log_formatters_lookup(
