@@ -1266,11 +1266,11 @@ async fn test_log_results() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await;
 
-    let contract_id = Contract::deploy(
-        "../../packages/fuels/tests/logs/contract_logs_one/out/debug/contract_logs_one.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+    let contract_id = Contract::load_from(
+        "tests/logs/contract_logs_one/out/debug/contract_logs_one.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());

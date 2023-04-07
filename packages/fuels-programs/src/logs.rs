@@ -181,7 +181,7 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
 fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
     log_decoder
         .decode_last_log(receipts)
-        .unwrap_or_else(|err| format!("failed to decode log from require revert: {}", err))
+        .unwrap_or_else(|err| format!("failed to decode log from require revert: {err}"))
 }
 
 fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
