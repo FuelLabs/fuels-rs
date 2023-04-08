@@ -194,11 +194,11 @@ async fn pay_with_predicate() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -247,11 +247,11 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -296,11 +296,11 @@ async fn predicate_contract_transfer() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
     .await?;
 
     let contract_balances = predicate
@@ -488,11 +488,11 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
     .await?;
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -565,11 +565,11 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-        &predicate,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
