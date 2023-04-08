@@ -1261,13 +1261,13 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 async fn test_log_results() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/logs/contract_logs_two/out/debug/contract_logs_two-abi.json"
+        abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
     let contract_id = Contract::load_from(
-        "tests/logs/contract_logs_one/out/debug/contract_logs_one.bin",
+        "tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -1276,12 +1276,12 @@ async fn test_log_results() -> Result<()> {
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let contract_methods = contract_instance.methods();
-    let response = contract_methods.produce_logs_bad_abi().call().await?;
+    let response = contract_methods.produce_bad_logs().call().await?;
 
     let log = response.get_logs();
 
     let expected_err = format!(
-        "Invalid data: missing log formatter for log_id: `LogId({:?}, 1)`. Consider adding external contracts with `set_contracts()`",
+        "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`. Consider adding external contracts with `set_contracts()`",
         contract_id.hash
     );
 

@@ -193,7 +193,7 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
         match revert_id {
             FAILED_REQUIRE_SIGNAL => {
                 *reason = log_decoder.decode_last_log(receipts).unwrap_or_else(|err| {
-                    format!("failed to decode log from require revert: {}", err)
+                    format!("failed to decode log from require revert: {err}")
                 })
             }
             FAILED_ASSERT_EQ_SIGNAL => {
@@ -201,7 +201,7 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
                     Ok((lhs, rhs)) => format!(
                         "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                     ),
-                    Err(err) => format!("failed to decode log from assert_eq revert: {}", err),
+                    Err(err) => format!("failed to decode log from assert_eq revert: {err}"),
                 };
             }
             FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),

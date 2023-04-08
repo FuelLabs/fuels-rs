@@ -8,5 +8,5 @@ abi ContractLogs {
     fn produce_logs_custom_types();
     fn produce_logs_generic_types();
     fn produce_multiple_logs();
-    fn produce_logs_bad_abi();
+    fn produce_bad_logs();
 }

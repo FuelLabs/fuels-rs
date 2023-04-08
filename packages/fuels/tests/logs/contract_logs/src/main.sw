@@ -122,17 +122,13 @@ impl ContractLogs for Contract {
         log(test_generic_struct);
     }
 
-    fn produce_logs_bad_abi() {
-        let f: u64 = 64;
-        let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
-
-        let test_struct = TestStruct {
-            field_1: true,
-            field_2: u,
-            field_3: f,
-        };
+    fn produce_bad_logs() {
+       // produce a custom log with log id 128
+       // this log id will not be present in abi JSON
+        asm(r1: 0, r2: 128, r3: 0, r4: 0) {
+            log  r1 r2 r3 r4;
+        }
 
         log(123);
-        log(test_struct);
     }
 }
