@@ -85,7 +85,7 @@ impl LogResult {
 }
 
 impl LogDecoder {
-    /// Get all decoded logs from the given receipts as `String`
+    /// Get all logs results from the given receipts as `Result<String>`
     pub fn decode_logs(&self, receipts: &[Receipt]) -> LogResult {
         let results = receipts
             .iter()
@@ -105,17 +105,17 @@ impl LogDecoder {
             .and_then(|log_formatter| log_formatter.format(data))
     }
 
-    pub fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
+    fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
         receipts
             .iter()
             .rev()
             .extract_log_id_and_data()
             .next()
-            .ok_or_else(|| error!(InvalidData, "nani"))
+            .ok_or_else(|| error!(InvalidData, "No receipts found for decoding last log."))
             .and_then(|(log_id, data)| self.format_log(&log_id, &data))
     }
 
-    pub fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
+    fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
         let res = receipts
             .iter()
             .rev()
