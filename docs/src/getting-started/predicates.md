@@ -16,6 +16,7 @@ First, we set up the wallets, node, and a predicate encoder instance. The call t
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_setup}}
+```
 
 Once we've compiled our predicate with `forc build`, we can create a `Predicate` instance via `Predicate::load_from`. The resulting data from `encode_data` can then be set on the loaded predicate.
 
