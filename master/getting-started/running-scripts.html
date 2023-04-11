@@ -165,7 +165,7 @@
     let result = instance.main(a, b).tx_params(parameters).call().await?;
 </code></pre>
 <h2 id="logs"><a class="header" href="#logs">Logs</a></h2>
-<p>Script calls provide the same logging functions, <code>get_logs()</code> and <code>get_logs_with_type&lt;T&gt;()</code>, as contract calls. As a reminder, the workflow looks like this:</p>
+<p>Script calls provide the same logging functions, <code>decode_logs()</code> and <code>decode_logs_with_type&lt;T&gt;()</code>, as contract calls. As a reminder, the workflow looks like this:</p>
 <pre><code class="language-rust ignore">    abigen!(Script(
         name = &quot;log_script&quot;,
         abi = &quot;packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json&quot;
@@ -177,8 +177,8 @@
 
     let response = instance.main().call().await?;
 
-    let logs = response.get_logs()?;
-    let log_u64 = response.get_logs_with_type::&lt;u64&gt;()?;
+    let logs = response.decode_logs();
+    let log_u64 = response.decode_logs_with_type::&lt;u64&gt;()?;
 </code></pre>
 <h2 id="calling-contracts-from-scripts"><a class="header" href="#calling-contracts-from-scripts">Calling contracts from scripts</a></h2>
 <p>Scripts use the same interfaces for setting external contracts as <a href="../calling-contracts/other-contracts.html">contract methods</a>.</p>

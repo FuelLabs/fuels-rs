@@ -152,14 +152,14 @@
         log(l);
     }
 </code></pre>
-<p>You can access the logged values in Rust by calling <code>logs_with_type::&lt;T&gt;</code> from a <code>FuelCallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
+<p>You can access the logged values in Rust by calling <code>decode_logs_with_type::&lt;T&gt;</code> from a <code>FuelCallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
 <pre><code class="language-rust ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = response.get_logs_with_type::&lt;u64&gt;()?;
-    let log_bits256 = response.get_logs_with_type::&lt;Bits256&gt;()?;
-    let log_string = response.get_logs_with_type::&lt;SizedAsciiString&lt;4&gt;&gt;()?;
-    let log_array = response.get_logs_with_type::&lt;[u8; 3]&gt;()?;
+    let log_u64 = response.decode_logs_with_type::&lt;u64&gt;()?;
+    let log_bits256 = response.decode_logs_with_type::&lt;Bits256&gt;()?;
+    let log_string = response.decode_logs_with_type::&lt;SizedAsciiString&lt;4&gt;&gt;()?;
+    let log_array = response.decode_logs_with_type::&lt;[u8; 3]&gt;()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -171,12 +171,12 @@
     assert_eq!(log_string, vec![&quot;Fuel&quot;]);
     assert_eq!(log_array, vec![[1, 2, 3]]);
 </code></pre>
-<p>You can also get a vector of all the logged values as strings using <code>get_logs()</code>:</p>
+<p>You can use the <code>decode_logs()</code> function to retrieve a <code>LogResult</code> struct containing a <code>results</code> field that is a vector of <code>Result&lt;String&gt;</code> values representing the success or failure of decoding each log.</p>
 <pre><code class="language-rust  ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = response.get_logs()?;
+    let logs = response.decode_logs();
 </code></pre>
-<p>Due to possible performance hits, it is not recommended to use <code>get_logs()</code> outside of a debugging scenario.</p>
+<p>Due to possible performance hits, it is not recommended to use <code>decode_logs()</code> outside of a debugging scenario.</p>
 
                     </main>
 
