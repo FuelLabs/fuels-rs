@@ -31,9 +31,9 @@ pub(crate) fn extract_the_abigen_command(
 
 pub(crate) fn validate_all_contracts_are_known(
     abigen_command: &AbigenCommand,
-    deploy_contracts: &[DeployContractCommand],
+    deploy_commands: &[DeployContractCommand],
 ) -> Result<()> {
-    contracts_to_deploy(deploy_contracts)
+    contracts_to_deploy(deploy_commands)
         .difference(&names_of_program_bindings(
             abigen_command,
             ProgramType::Contract,
@@ -55,9 +55,9 @@ pub(crate) fn validate_all_contracts_are_known(
 
 pub(crate) fn validate_all_scripts_are_known(
     abigen_command: &AbigenCommand,
-    load_scripts: &[LoadScriptCommand],
+    load_commands: &[LoadScriptCommand],
 ) -> Result<()> {
-    scripts_to_load(load_scripts)
+    scripts_to_load(load_commands)
         .difference(&names_of_program_bindings(
             abigen_command,
             ProgramType::Script,

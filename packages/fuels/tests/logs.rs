@@ -378,11 +378,11 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         ),
     );
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 
@@ -695,11 +695,11 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         )
     );
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 
@@ -740,11 +740,11 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     )
     );
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 
@@ -956,11 +956,11 @@ async fn test_contract_require_from_contract() -> Result<()> {
         )
     );
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 
@@ -1009,11 +1009,11 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         ),
     );
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 
@@ -1049,11 +1049,11 @@ async fn test_script_require_from_contract() -> Result<()> {
     abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
             Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
 
-    let contract_id: ContractId = Contract::deploy(
+    let contract_id: ContractId = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?
     .into();
 

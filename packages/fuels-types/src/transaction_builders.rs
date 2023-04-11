@@ -361,6 +361,27 @@ impl CreateTransactionBuilder {
         self.salt = salt;
         self
     }
+
+    pub fn prepare_contract_deployment(
+        binary: Vec<u8>,
+        contract_id: ContractId,
+        state_root: Bytes32,
+        salt: Salt,
+        storage_slots: Vec<StorageSlot>,
+        params: TxParameters,
+    ) -> Self {
+        let bytecode_witness_index = 0;
+        let outputs = vec![Output::contract_created(contract_id, state_root)];
+        let witnesses = vec![binary.into()];
+
+        CreateTransactionBuilder::default()
+            .set_tx_params(params)
+            .set_bytecode_witness_index(bytecode_witness_index)
+            .set_salt(salt)
+            .set_storage_slots(storage_slots)
+            .set_outputs(outputs)
+            .set_witnesses(witnesses)
+    }
 }
 
 fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {

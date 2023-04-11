@@ -146,22 +146,17 @@ impl ParamType {
             | ParamType::U32
             | ParamType::U64
             | ParamType::Bool => 1,
-            ParamType::Vector(_) => 3,
+            ParamType::RawSlice => 2,
+            ParamType::Vector(_) | ParamType::Bytes => 3,
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
-            ParamType::Struct { fields, .. } => {
-                fields.iter().map(|param_type| param_type.compute_encoding_width()).sum()
-            }
+            ParamType::Struct { fields, .. } => fields
+                .iter()
+                .map(|param_type| param_type.compute_encoding_width())
+                .sum(),
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
             ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
-            // The ParamType::RawSlice is basically a wrapper around a U8 vector
-            ParamType::RawSlice => unimplemented!(
-                "Raw slices are not supported as inputs, so needing the encoding width of a RawSlice should not happen."
-            ),
-            ParamType::Bytes => unimplemented!(
-                "Bytes are not supported as inputs, so needing the encoding width of a Bytes should not happen."
-            ),
         }
     }
 
@@ -332,6 +327,8 @@ impl TryFrom<&Type> for ParamType {
             try_str,
             try_tuple,
             try_vector,
+            try_bytes,
+            try_raw_slice,
             try_enum,
             try_struct,
         ]
@@ -386,6 +383,18 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
     let vec_elem_type = convert_into_param_types(&the_type.generic_params)?.remove(0);
 
     Ok(Some(ParamType::Vector(Box::new(vec_elem_type))))
+}
+
+fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
+    if !["struct std::bytes::Bytes", "struct Bytes"].contains(&the_type.type_field.as_str()) {
+        return Ok(None);
+    }
+
+    Ok(Some(ParamType::Bytes))
+}
+
+fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok((the_type.type_field == "raw untyped slice").then_some(ParamType::RawSlice))
 }
 
 fn try_enum(the_type: &Type) -> Result<Option<ParamType>> {
@@ -1373,7 +1382,7 @@ mod tests {
     #[test]
     fn try_vector_is_type_path_backward_compatible() {
         // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let the_type = given_vec_type_w_path("Vec");
+        let the_type = given_generic_type_with_path("Vec");
 
         let param_type = try_vector(&the_type).unwrap().unwrap();
 
@@ -1382,14 +1391,54 @@ mod tests {
 
     #[test]
     fn try_vector_correctly_resolves_param_type() {
-        let the_type = given_vec_type_w_path("std::vec::Vec");
+        let the_type = given_generic_type_with_path("std::vec::Vec");
 
         let param_type = try_vector(&the_type).unwrap().unwrap();
 
         assert_eq!(param_type, ParamType::Vector(Box::new(ParamType::U8)));
     }
 
-    fn given_vec_type_w_path(path: &str) -> Type {
+    #[test]
+    fn try_bytes_is_type_path_backward_compatible() {
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+        let the_type = given_type_with_path("Bytes");
+
+        let param_type = try_bytes(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Bytes);
+    }
+
+    #[test]
+    fn try_bytes_correctly_resolves_param_type() {
+        let the_type = given_type_with_path("std::bytes::Bytes");
+
+        let param_type = try_bytes(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::Bytes);
+    }
+
+    #[test]
+    fn try_raw_slice_correctly_resolves_param_type() {
+        let the_type = Type {
+            type_field: "raw untyped slice".to_string(),
+            generic_params: vec![],
+            components: vec![],
+        };
+
+        let param_type = try_raw_slice(&the_type).unwrap().unwrap();
+
+        assert_eq!(param_type, ParamType::RawSlice);
+    }
+
+    fn given_type_with_path(path: &str) -> Type {
+        Type {
+            type_field: format!("struct {path}"),
+            generic_params: vec![],
+            components: vec![],
+        }
+    }
+
+    fn given_generic_type_with_path(path: &str) -> Type {
         Type {
             type_field: format!("struct {path}"),
             generic_params: vec![Type {
