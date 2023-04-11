@@ -4,7 +4,7 @@ use fuels_types::{
     traits::{Parameterize, Tokenizable},
 };
 
-use crate::logs::LogDecoder;
+use crate::logs::{LogDecoder, LogResult};
 
 /// [`FuelCallResponse`] is a struct that is returned by a call to the contract or script. Its value
 /// field holds the decoded typed value returned by the contract's method. The other field holds all
@@ -41,11 +41,11 @@ impl<D> FuelCallResponse<D> {
         }
     }
 
-    pub fn get_logs(&self) -> Result<Vec<String>> {
-        self.log_decoder.get_logs(&self.receipts)
+    pub fn decode_logs(&self) -> LogResult {
+        self.log_decoder.decode_logs(&self.receipts)
     }
 
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(&self) -> Result<Vec<T>> {
-        self.log_decoder.get_logs_with_type::<T>(&self.receipts)
+    pub fn decode_logs_with_type<T: Tokenizable + Parameterize + 'static>(&self) -> Result<Vec<T>> {
+        self.log_decoder.decode_logs_with_type::<T>(&self.receipts)
     }
 }
