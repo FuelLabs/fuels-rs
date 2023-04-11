@@ -19,14 +19,11 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="e6b7d0dd-39d1-4b06-b120-c20683a391fc" name="Changes" comment="Expand `with_provider` function with `Option&lt;Provider&gt;`">
-      <change beforePath="$PROJECT_DIR$/packages/fuels/Forc.toml" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/Forc.toml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/src/calling-contracts/logs.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/src/calling-contracts/logs.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/docs/src/getting-started/running-scripts.md" beforeDir="false" afterPath="$PROJECT_DIR$/docs/src/getting-started/running-scripts.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/packages/fuels-programs/src/call_response.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels-programs/src/call_response.rs" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs.rs" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs.rs" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs/src/main.sw" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs/src/main.sw" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_abi/src/main.sw" beforeDir="false" afterPath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_abi/src/main.sw" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_one/Forc.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_one/src/main.sw" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_two/Forc.toml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/packages/fuels/tests/logs/contract_logs_two/src/main.sw" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -72,6 +69,9 @@
     <option name="stateVersion" value="1" />
   </component>
   <component name="ProjectId" id="2IXn4bCY1x9jwd4koxtpuK4ygM4" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -128,10 +128,10 @@
     <configuration name="Expand fuels_types::transaction" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="expand --lib --color=always --theme=Dracula --tests transaction" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$/packages/fuels-types" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -145,10 +145,10 @@
     <configuration name="Test logs::test_log_results" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="test --package fuels-programs --lib logs::test_log_results -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -162,10 +162,10 @@
     <configuration name="Test pay_with_predicate" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --package fuels --test predicates pay_with_predicate -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -179,10 +179,10 @@
     <configuration name="Test pay_with_predicate_vector_data" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --package fuels --test predicates pay_with_predicate_vector_data -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -196,10 +196,10 @@
     <configuration name="Test program_bindings::abigen::tests::testis" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="test --package fuels-code-gen --lib program_bindings::abigen::tests::testis -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -213,10 +213,10 @@
     <configuration name="Test program_bindings::abigen::tests::tests::testis" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="test --package fuels-code-gen --lib program_bindings::abigen::tests::tests::testis -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -230,10 +230,10 @@
     <configuration name="Test spend_predicate_coins_messages_vector" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --package fuels --test predicates spend_predicate_coins_messages_vector -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -247,10 +247,10 @@
     <configuration name="Test test_basic_script_with_tx_parameters_predicat" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --package fuels --test predicates test_basic_script_with_tx_parameters_predicat -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -264,10 +264,10 @@
     <configuration name="Test test_log_results" type="CargoCommandRunConfiguration" factoryName="Cargo Command">
       <option name="command" value="test --package fuels --test logs test_log_results -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -281,10 +281,10 @@
     <configuration name="Test tests::contract_tx_and_call_params" type="CargoCommandRunConfiguration" factoryName="Cargo Command" temporary="true">
       <option name="command" value="test --package fuels-example-contracts --lib tests::contract_tx_and_call_params -- --exact" />
       <option name="workingDirectory" value="file://$PROJECT_DIR$" />
+      <option name="emulateTerminal" value="false" />
       <option name="channel" value="DEFAULT" />
       <option name="requiredFeatures" value="true" />
       <option name="allFeatures" value="false" />
-      <option name="emulateTerminal" value="false" />
       <option name="withSudo" value="false" />
       <option name="buildTarget" value="REMOTE" />
       <option name="backtrace" value="SHORT" />
@@ -500,6 +500,27 @@
     <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="Salka1988/expand_with_account" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
     <option name="RECENT_FILTERS">
       <map>
         <entry key="Branch">
@@ -547,27 +568,6 @@
                 </option>
               </RecentGroup>
             </list>
-          </value>
-        </entry>
-      </map>
-    </option>
-    <option name="TAB_STATES">
-      <map>
-        <entry key="MAIN">
-          <value>
-            <State>
-              <option name="FILTERS">
-                <map>
-                  <entry key="branch">
-                    <value>
-                      <list>
-                        <option value="Salka1988/expand_with_account" />
-                      </list>
-                    </value>
-                  </entry>
-                </map>
-              </option>
-            </State>
           </value>
         </entry>
       </map>
