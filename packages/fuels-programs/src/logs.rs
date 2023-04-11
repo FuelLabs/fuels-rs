@@ -12,6 +12,7 @@ use fuel_abi_types::error_codes::{
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::try_from_bytes;
 use fuels_types::{
+    error,
     errors::{Error, Result},
     traits::{Parameterize, Tokenizable},
 };
@@ -62,23 +63,81 @@ pub struct LogDecoder {
     pub log_formatters: HashMap<LogId, LogFormatter>,
 }
 
+#[derive(Debug)]
+pub struct LogResult {
+    pub results: Vec<Result<String>>,
+}
+
+impl LogResult {
+    pub fn filter_succeeded(&self) -> Vec<&str> {
+        self.results
+            .iter()
+            .filter_map(|result| result.as_deref().ok())
+            .collect()
+    }
+
+    pub fn filter_failed(&self) -> Vec<&Error> {
+        self.results
+            .iter()
+            .filter_map(|result| result.as_ref().err())
+            .collect()
+    }
+}
+
 impl LogDecoder {
-    /// Get all decoded logs from the given receipts as `String`
-    pub fn get_logs(&self, receipts: &[Receipt]) -> Result<Vec<String>> {
-        receipts
+    /// Get all logs results from the given receipts as `Result<String>`
+    pub fn decode_logs(&self, receipts: &[Receipt]) -> LogResult {
+        let results = receipts
             .iter()
             .extract_log_id_and_data()
-            .filter_map(|(log_id, data)| {
-                self.log_formatters
-                    .get(&log_id)
-                    .map(|log_formatter| log_formatter.format(&data))
+            .map(|(log_id, data)| self.format_log(&log_id, &data))
+            .collect();
+
+        LogResult { results }
+    }
+
+    fn format_log(&self, log_id: &LogId, data: &[u8]) -> Result<String> {
+        self.log_formatters
+            .get(log_id)
+            .ok_or_else(|| {
+                error!(InvalidData,"missing log formatter for log_id: `{:?}`. Consider adding external contracts with `set_contracts()`", log_id)
             })
-            .collect()
+            .and_then(|log_formatter| log_formatter.format(data))
+    }
+
+    fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
+        receipts
+            .iter()
+            .rev()
+            .extract_log_id_and_data()
+            .next()
+            .ok_or_else(|| error!(InvalidData, "No receipts found for decoding last log."))
+            .and_then(|(log_id, data)| self.format_log(&log_id, &data))
+    }
+
+    fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
+        let res = receipts
+            .iter()
+            .rev()
+            .extract_log_id_and_data()
+            .map(|(log_id, data)| self.format_log(&log_id, &data))
+            .take(2)
+            .collect::<Result<Vec<_>>>();
+
+        match res.as_deref() {
+            Ok([rhs, lhs]) => Ok((lhs.to_string(), rhs.to_string())),
+            Ok(some_slice) => Err(error!(
+                InvalidData,
+                "expected to have two logs. Found {}",
+                some_slice.len()
+            )),
+            Err(_) => Err(res.expect_err("must be an error")),
+        }
     }
 
     /// Get decoded logs with specific type from the given receipts.
     /// Note that this method returns the actual type and not a `String` representation.
-    pub fn get_logs_with_type<T: Tokenizable + Parameterize + 'static>(
+    pub fn decode_logs_with_type<T: Tokenizable + Parameterize + 'static>(
         &self,
         receipts: &[Receipt],
     ) -> Result<Vec<T>> {
@@ -132,8 +191,19 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
     } = err
     {
         match revert_id {
-            FAILED_REQUIRE_SIGNAL => *reason = decode_require_revert(log_decoder, receipts),
-            FAILED_ASSERT_EQ_SIGNAL => *reason = decode_assert_eq_revert(log_decoder, receipts),
+            FAILED_REQUIRE_SIGNAL => {
+                *reason = log_decoder.decode_last_log(receipts).unwrap_or_else(|err| {
+                    format!("failed to decode log from require revert: {err}")
+                })
+            }
+            FAILED_ASSERT_EQ_SIGNAL => {
+                *reason = match log_decoder.decode_last_two_logs(receipts) {
+                    Ok((lhs, rhs)) => format!(
+                        "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
+                    ),
+                    Err(err) => format!("failed to decode log from assert_eq revert: {err}"),
+                };
+            }
             FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
             FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
             FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
@@ -141,29 +211,6 @@ pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
         }
     }
     err
-}
-
-fn decode_require_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .get_logs(receipts)
-        .ok()
-        .and_then(|logs| logs.last().cloned())
-        .unwrap_or_else(|| "failed to decode log from require revert".to_string())
-}
-
-fn decode_assert_eq_revert(log_decoder: &LogDecoder, receipts: &[Receipt]) -> String {
-    log_decoder
-        .get_logs(receipts)
-        .ok()
-        .and_then(|logs| {
-            if let [.., lhs, rhs] = logs.as_slice() {
-                return Some(format!(
-                    "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
-                ));
-            }
-            None
-        })
-        .unwrap_or_else(|| "failed to decode logs from assert_eq revert".to_string())
 }
 
 pub fn log_formatters_lookup(

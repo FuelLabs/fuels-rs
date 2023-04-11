@@ -16,7 +16,7 @@ The method for passing transaction parameters is the same as [with contracts](..
 
 ## Logs
 
-Script calls provide the same logging functions, `get_logs()` and `get_logs_with_type<T>()`, as contract calls. As a reminder, the workflow looks like this:
+Script calls provide the same logging functions, `decode_logs()` and `decode_logs_with_type<T>()`, as contract calls. As a reminder, the workflow looks like this:
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/logs.rs:script_logs}}

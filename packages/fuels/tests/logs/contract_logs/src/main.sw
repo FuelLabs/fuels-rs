@@ -121,4 +121,14 @@ impl ContractLogs for Contract {
         log(test_enum);
         log(test_generic_struct);
     }
+
+    fn produce_bad_logs() {
+       // produce a custom log with log id 128
+       // this log id will not be present in abi JSON
+        asm(r1: 0, r2: 128, r3: 0, r4: 0) {
+            log  r1 r2 r3 r4;
+        }
+
+        log(123);
+    }
 }

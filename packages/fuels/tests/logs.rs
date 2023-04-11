@@ -25,10 +25,10 @@ async fn test_parse_logged_variables() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
-    let log_u64 = response.get_logs_with_type::<u64>()?;
-    let log_bits256 = response.get_logs_with_type::<Bits256>()?;
-    let log_string = response.get_logs_with_type::<SizedAsciiString<4>>()?;
-    let log_array = response.get_logs_with_type::<[u8; 3]>()?;
+    let log_u64 = response.decode_logs_with_type::<u64>()?;
+    let log_bits256 = response.decode_logs_with_type::<Bits256>()?;
+    let log_string = response.decode_logs_with_type::<SizedAsciiString<4>>()?;
+    let log_array = response.decode_logs_with_type::<[u8; 3]>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -62,12 +62,12 @@ async fn test_parse_logs_values() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_values().call().await?;
 
-    let log_u64 = response.get_logs_with_type::<u64>()?;
-    let log_u32 = response.get_logs_with_type::<u32>()?;
-    let log_u16 = response.get_logs_with_type::<u16>()?;
-    let log_u8 = response.get_logs_with_type::<u8>()?;
+    let log_u64 = response.decode_logs_with_type::<u64>()?;
+    let log_u32 = response.decode_logs_with_type::<u32>()?;
+    let log_u16 = response.decode_logs_with_type::<u16>()?;
+    let log_u8 = response.decode_logs_with_type::<u8>()?;
     // try to retrieve non existent log
-    let log_nonexistent = response.get_logs_with_type::<bool>()?;
+    let log_nonexistent = response.decode_logs_with_type::<bool>()?;
 
     assert_eq!(log_u64, vec![64]);
     assert_eq!(log_u32, vec![32]);
@@ -96,8 +96,8 @@ async fn test_parse_logs_custom_types() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_custom_types().call().await?;
 
-    let log_test_struct = response.get_logs_with_type::<TestStruct>()?;
-    let log_test_enum = response.get_logs_with_type::<TestEnum>()?;
+    let log_test_struct = response.decode_logs_with_type::<TestStruct>()?;
+    let log_test_enum = response.decode_logs_with_type::<TestEnum>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -134,11 +134,11 @@ async fn test_parse_logs_generic_types() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_generic_types().call().await?;
 
-    let log_struct = response.get_logs_with_type::<StructWithGeneric<[_; 3]>>()?;
-    let log_enum = response.get_logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
+    let log_struct = response.decode_logs_with_type::<StructWithGeneric<[_; 3]>>()?;
+    let log_enum = response.decode_logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
     let log_struct_nested =
-        response.get_logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>()?;
-    let log_struct_deeply_nested = response.get_logs_with_type::<StructDeeplyNestedGeneric<
+        response.decode_logs_with_type::<StructWithNestedGeneric<StructWithGeneric<[_; 3]>>>()?;
+    let log_struct_deeply_nested = response.decode_logs_with_type::<StructDeeplyNestedGeneric<
         StructWithNestedGeneric<StructWithGeneric<[_; 3]>>,
     >>()?;
 
@@ -169,7 +169,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_get_logs() -> Result<()> {
+async fn test_decode_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -183,11 +183,11 @@ async fn test_get_logs() -> Result<()> {
         ),
     );
 
-    // ANCHOR: get_logs
+    // ANCHOR: decode_logs
     let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_multiple_logs().call().await?;
-    let logs = response.get_logs()?;
-    // ANCHOR_END: get_logs
+    let logs = response.decode_logs();
+    // ANCHOR_END: decode_logs
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -217,13 +217,13 @@ async fn test_get_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_get_logs_with_no_logs() -> Result<()> {
+async fn test_decode_logs_with_no_logs() -> Result<()> {
     setup_contract_test!(
         Wallets("wallet"),
         Abigen(
@@ -242,9 +242,9 @@ async fn test_get_logs_with_no_logs() -> Result<()> {
         .initialize_counter(42)
         .call()
         .await?
-        .get_logs()?;
+        .decode_logs();
 
-    assert!(logs.is_empty());
+    assert!(logs.filter_succeeded().is_empty());
 
     Ok(())
 }
@@ -292,9 +292,9 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.decode_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -345,9 +345,9 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.decode_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -413,9 +413,9 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         format!("{:?}", 8),
     ];
 
-    let logs = multi_call_handler.call::<((), ())>().await?.get_logs()?;
+    let logs = multi_call_handler.call::<((), ())>().await?.decode_logs();
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -608,7 +608,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
 
 #[tokio::test]
 #[allow(unused_variables)]
-async fn test_script_get_logs() -> Result<()> {
+async fn test_script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "log_script",
@@ -621,8 +621,8 @@ async fn test_script_get_logs() -> Result<()> {
 
     let response = instance.main().call().await?;
 
-    let logs = response.get_logs()?;
-    let log_u64 = response.get_logs_with_type::<u64>()?;
+    let logs = response.decode_logs();
+    let log_u64 = response.decode_logs_with_type::<u64>()?;
     // ANCHOR_END: script_logs
 
     let l = [1u8, 2u8, 3u8];
@@ -667,7 +667,7 @@ async fn test_script_get_logs() -> Result<()> {
         format!("{expected_deeply_nested_struct:?}"),
     ];
 
-    assert_eq!(logs, expected_logs);
+    assert_eq!(logs.filter_succeeded(), expected_logs);
 
     Ok(())
 }
@@ -714,9 +714,9 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         .set_contracts(&[&contract_instance])
         .call()
         .await?
-        .get_logs()?;
+        .decode_logs();
 
-    assert_eq!(expected_logs, logs);
+    assert_eq!(expected_logs, logs.filter_succeeded());
 
     Ok(())
 }
@@ -791,16 +791,16 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         assert_eq!(num_contract_logs, expected_num_contract_logs);
     }
     {
-        let logs = response.get_logs()?;
+        let logs = response.decode_logs();
 
-        assert_eq!(logs, expected_script_logs);
+        assert_eq!(logs.filter_succeeded(), expected_script_logs);
     }
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_script_get_logs_with_type() -> Result<()> {
+async fn test_script_decode_logs_with_type() -> Result<()> {
     abigen!(Script(
         name = "log_script",
         abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
@@ -838,21 +838,21 @@ async fn test_script_get_logs_with_type() -> Result<()> {
         field_2: 64,
     };
 
-    let log_u64 = response.get_logs_with_type::<u64>()?;
-    let log_u32 = response.get_logs_with_type::<u32>()?;
-    let log_u16 = response.get_logs_with_type::<u16>()?;
-    let log_u8 = response.get_logs_with_type::<u8>()?;
-    let log_struct = response.get_logs_with_type::<TestStruct>()?;
-    let log_enum = response.get_logs_with_type::<TestEnum>()?;
-    let log_generic_struct = response.get_logs_with_type::<StructWithGeneric<TestStruct>>()?;
-    let log_generic_enum = response.get_logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
-    let log_nested_struct =
-        response.get_logs_with_type::<StructWithNestedGeneric<StructWithGeneric<TestStruct>>>()?;
-    let log_deeply_nested_struct = response.get_logs_with_type::<StructDeeplyNestedGeneric<
+    let log_u64 = response.decode_logs_with_type::<u64>()?;
+    let log_u32 = response.decode_logs_with_type::<u32>()?;
+    let log_u16 = response.decode_logs_with_type::<u16>()?;
+    let log_u8 = response.decode_logs_with_type::<u8>()?;
+    let log_struct = response.decode_logs_with_type::<TestStruct>()?;
+    let log_enum = response.decode_logs_with_type::<TestEnum>()?;
+    let log_generic_struct = response.decode_logs_with_type::<StructWithGeneric<TestStruct>>()?;
+    let log_generic_enum = response.decode_logs_with_type::<EnumWithGeneric<[_; 3]>>()?;
+    let log_nested_struct = response
+        .decode_logs_with_type::<StructWithNestedGeneric<StructWithGeneric<TestStruct>>>()?;
+    let log_deeply_nested_struct = response.decode_logs_with_type::<StructDeeplyNestedGeneric<
         StructWithNestedGeneric<StructWithGeneric<TestStruct>>,
     >>()?;
     // try to retrieve non existent log
-    let log_nonexistent = response.get_logs_with_type::<bool>()?;
+    let log_nonexistent = response.decode_logs_with_type::<bool>()?;
 
     assert_eq!(log_u64, vec![128, 64]);
     assert_eq!(log_u32, vec![32]);
@@ -1090,7 +1090,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
         assert_revert_containing_msg("assertion failed", error);
     }
     {
@@ -1102,7 +1101,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
         assert_assert_eq_containing_msg(a, b, error);
     }
     {
@@ -1121,7 +1119,6 @@ async fn test_contract_asserts_log() -> Result<()> {
             .call()
             .await
             .expect_err("should return a revert error");
-
         assert_assert_eq_containing_msg(test_struct, test_struct2, error);
     }
     {
@@ -1256,6 +1253,42 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
         assert_revert_containing_msg("failed transfer to address", error);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_log_results() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::load_from(
+        "tests/logs/contract_logs/out/debug/contract_logs.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_bad_logs().call().await?;
+
+    let log = response.decode_logs();
+
+    let expected_err = format!(
+        "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`. Consider adding external contracts with `set_contracts()`",
+        contract_id.hash
+    );
+
+    let succeeded = log.filter_succeeded();
+    let failed = log.filter_failed();
+    assert_eq!(succeeded, vec!["123".to_string()]);
+    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
 
     Ok(())
 }
