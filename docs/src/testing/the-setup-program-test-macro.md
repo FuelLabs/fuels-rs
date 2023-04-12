@@ -7,7 +7,7 @@ When deploying contracts with the `abigen!` macro, as shown in the previous sect
 - create multiple wallets
 - create specific assets, etc.
 
-However, it is often the case that we want to test only the contract methods and we want to deploy the contract with the default configuration parameters. The `setup_program_test!` macro can do exactly that.
+However, it is often the case that we want to quickly set up a test with default values and work directly with contract or script instances. The `setup_program_test!` can do exactly that.
 
 ---
 
@@ -36,7 +36,23 @@ Cardinality: 0 or 1.
 Abigen
 ---
 
-Example: `Abigen(Contract(name="MyContract", project="some_folder"))`
+Example:
+```rust,noplayground
+Abigen(
+    Contract(
+        name = "MyContract",
+        project = "some_folder"
+    ),
+    Script(
+        name = "MyScript",
+        project = "some_folder"
+    ),
+    Predicate(
+        name = "MyPredicate",
+        project = "some_folder"
+    ),
+)
+```
 
 Description: Generates the program bindings under the name `name`. `project`
 should point to root of the `forc` project.
