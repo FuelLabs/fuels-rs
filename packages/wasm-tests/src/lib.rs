@@ -2,123 +2,115 @@ extern crate alloc;
 
 #[cfg(test)]
 mod tests {
-    use fuels::{
-        core::abi_encoder::ABIEncoder,
-        macros::wasm_abigen,
-        types::{traits::Tokenizable, Bits256},
-    };
+    use fuels::{core::abi_encoder::ABIEncoder, macros::wasm_abigen, types::traits::Tokenizable};
     use wasm_bindgen_test::wasm_bindgen_test;
 
     wasm_abigen!(Contract(
         name = "no_name",
         abi = r#"
-    {
-        "types": [
-          {
-            "typeId": 0,
-            "type": "()",
-            "components": [],
-            "typeParameters": null
-          },
-          {
-            "typeId": 1,
-            "type": "b256",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 2,
-            "type": "bool",
-            "components": null,
-            "typeParameters": null
-          },
-          {
-            "typeId": 3,
-            "type": "struct AnotherEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "hash",
-                "type": 1,
-                "typeArguments": null
-              },
-              {
-                "name": "bar",
-                "type": 2,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 4,
-            "type": "struct SomeEvent",
-            "components": [
-              {
-                "name": "id",
-                "type": 5,
-                "typeArguments": null
-              },
-              {
-                "name": "account",
-                "type": 1,
-                "typeArguments": null
-              }
-            ],
-            "typeParameters": null
-          },
-          {
-            "typeId": 5,
-            "type": "u64",
-            "components": null,
-            "typeParameters": null
-          }
-        ],
-        "functions": [
-          {
-            "inputs": [
-              {
-                "name": "e1",
-                "type": 4,
-                "typeArguments": null
-              },
-              {
-                "name": "e2",
-                "type": 3,
-                "typeArguments": null
-              }
-            ],
-            "name": "takes_struct",
-            "output": {
-              "name": "",
-              "type": 0,
-              "typeArguments": null
-            }
-          }
-        ],
-        "loggedTypes": []
-      }
-    "#
+                {
+                  "types": [
+                    {
+                      "typeId": 0,
+                      "type": "()",
+                      "components": [],
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 1,
+                      "type": "bool",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 2,
+                      "type": "enum SomeEnum",
+                      "components": [
+                        {
+                          "name": "v1",
+                          "type": 0,
+                          "typeArguments": null
+                        },
+                        {
+                          "name": "v2",
+                          "type": 3,
+                          "typeArguments": null
+                        }
+                      ],
+                      "typeParameters": [
+                        3
+                      ]
+                    },
+                    {
+                      "typeId": 3,
+                      "type": "generic T",
+                      "components": null,
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 4,
+                      "type": "struct SomeStruct",
+                      "components": [
+                        {
+                          "name": "a",
+                          "type": 5,
+                          "typeArguments": null
+                        },
+                        {
+                          "name": "b",
+                          "type": 1,
+                          "typeArguments": null
+                        }
+                      ],
+                      "typeParameters": null
+                    },
+                    {
+                      "typeId": 5,
+                      "type": "u32",
+                      "components": null,
+                      "typeParameters": null
+                    }
+                  ],
+                  "functions": [
+                    {
+                      "inputs": [
+                        {
+                          "name": "arg",
+                          "type": 2,
+                          "typeArguments": [
+                            {
+                              "name": "",
+                              "type": 4,
+                              "typeArguments": null
+                            }
+                          ]
+                        }
+                      ],
+                      "name": "test_function",
+                      "output": {
+                        "name": "",
+                        "type": 0,
+                        "typeArguments": null
+                      },
+                      "attributes": null
+                    }
+                  ],
+                  "loggedTypes": [],
+                  "messagesTypes": [],
+                  "configurables": []
+        }"#
     ));
 
     #[wasm_bindgen_test]
     fn decoding_and_encoding() {
-        let original_event = AnotherEvent {
-            id: 2,
-            hash: Bits256([2; 32]),
-            bar: true,
-        };
+        let original = SomeEnum::v2(SomeStruct { a: 123, b: false });
 
-        let bytes = ABIEncoder::encode(&[original_event.clone().into_token()])
+        let bytes = ABIEncoder::encode(&[original.clone().into_token()])
             .unwrap()
             .resolve(0);
 
-        let reconstructed_event: AnotherEvent = bytes.try_into().unwrap();
+        let reconstructed = bytes.try_into().unwrap();
 
-        assert_eq!(original_event, reconstructed_event);
+        assert_eq!(original, reconstructed);
     }
 }
