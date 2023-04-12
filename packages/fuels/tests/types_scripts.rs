@@ -154,9 +154,35 @@ async fn test_script_raw_slice() -> Result<()> {
     let bin_path = "../fuels/tests/types/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
     let instance = BimBamScript::new(wallet.clone(), bin_path);
 
-    for length in 0..=10 {
-        let response = instance.main(length).call().await?;
-        assert_eq!(response.value, (0..length).collect::<Vec<_>>());
-    }
+    let raw_slice = RawSlice(vec![40, 41, 42]);
+    let wrapper = Wrapper {
+        inner: vec![raw_slice.clone(), raw_slice.clone()],
+        inner_enum: SomeEnum::Second(raw_slice),
+    };
+
+    let rtn = instance.main(10, wrapper).call().await?.value;
+    assert_eq!(rtn, RawSlice(vec![1, 2, 3]));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn main_function_bytes_arguments() -> Result<()> {
+    abigen!(Script(
+        name = "MyScript",
+        abi = "packages/fuels/tests/types/scripts/script_bytes/out/debug/script_bytes-abi.json"
+    ));
+    let wallet = launch_provider_and_get_wallet().await;
+    let bin_path = "../fuels/tests/types/scripts/script_bytes/out/debug/script_bytes.bin";
+    let instance = MyScript::new(wallet, bin_path);
+
+    let bytes = Bytes(vec![40, 41, 42]);
+    let wrapper = Wrapper {
+        inner: vec![bytes.clone(), bytes.clone()],
+        inner_enum: SomeEnum::Second(bytes),
+    };
+
+    instance.main(10, wrapper).call().await?;
+
     Ok(())
 }

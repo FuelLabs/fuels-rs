@@ -32,11 +32,11 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     wallet.set_provider(connected_provider);
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance_connected = MyContract::new(contract_id.clone(), wallet.clone());
@@ -80,11 +80,11 @@ async fn test_network_error() -> Result<()> {
     // Simulate an unreachable node
     service.stop_and_await().await.unwrap();
 
-    let response = Contract::deploy(
+    let response = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await;
 
     assert!(matches!(response, Err(Error::ProviderError(_))));
@@ -168,11 +168,11 @@ async fn test_input_message_pays_fee() -> Result<()> {
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        DeployConfiguration::default(),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -293,22 +293,23 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let provider = wallet.try_provider()?;
 
     let deploy_w_maturity = |maturity| {
-        Contract::deploy(
+        Contract::load_from(
             "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
-            wallet,
-            DeployConfiguration::default()
-                .set_tx_parameters(TxParameters::default().set_maturity(maturity)),
+            LoadConfiguration::default(),
         )
+        .map(|loaded_contract| {
+            loaded_contract.deploy(wallet, TxParameters::default().set_maturity(maturity))
+        })
     };
 
-    let err = deploy_w_maturity(1).await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    let err = deploy_w_maturity(1)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
         Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1)
+    deploy_w_maturity(1)?
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
     Ok(())
@@ -606,11 +607,11 @@ async fn testnet_hello_world() -> Result<()> {
 
     let tx_params = TxParameters::default().set_gas_price(1).set_gas_limit(2000);
 
-    let contract_id = Contract::deploy(
+    let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        &wallet,
-        DeployConfiguration::default().set_tx_parameters(tx_params),
-    )
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, tx_params)
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();

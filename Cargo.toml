@@ -34,7 +34,7 @@ homepage = "https://fuel.network/"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.68.0"
-version = "0.39.0"
+version = "0.40.0"
 
 [workspace.dependencies]
 fuel-asm = "0.26"
@@ -49,11 +49,11 @@ fuel-core-client = { version = "0.17", default-features = false }
 fuel-core-chain-config = { version = "0.17", default-features = false }
 fuel-core-types = { version = "0.17", default-features = false }
 fuel-vm = "0.26"
-fuels = { version = "0.39.0", path = "./packages/fuels" }
-fuels-code-gen = { version = "0.39.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.39.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.39.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.39.0", path = "./packages/fuels-programs", default-features = false }
-fuels-accounts = { version = "0.39.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-test-helpers = { version = "0.39.0", path = "./packages/fuels-test-helpers", default-features = false }
-fuels-types = { version = "0.39.0", path = "./packages/fuels-types", default-features = false }
+fuels = { version = "0.40.0", path = "./packages/fuels" }
+fuels-code-gen = { version = "0.40.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.40.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.40.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.40.0", path = "./packages/fuels-programs", default-features = false }
+fuels-accounts = { version = "0.40.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-test-helpers = { version = "0.40.0", path = "./packages/fuels-test-helpers", default-features = false }
+fuels-types = { version = "0.40.0", path = "./packages/fuels-types", default-features = false }

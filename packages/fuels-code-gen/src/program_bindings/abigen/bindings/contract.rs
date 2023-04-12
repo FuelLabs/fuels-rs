@@ -127,7 +127,7 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 /// declaration.
 ///
 /// The generated function prepares the necessary data and proceeds to call
-/// [::fuels_contract::contract::Contract::method_hash] for the actual call.
+/// [::fuels_contract::contract::method_hash] for the actual call.
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 
@@ -145,7 +145,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
     let is_payable = abi_fun.is_payable();
     let body = quote! {
-            ::fuels::programs::contract::Contract::method_hash(
+            ::fuels::programs::contract::method_hash(
                 self.contract_id.clone(),
                 self.account.clone(),
                 #fn_selector,
@@ -329,7 +329,7 @@ mod tests {
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
-                ::fuels::programs::contract::Contract::method_hash(
+                ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
@@ -391,7 +391,7 @@ mod tests {
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
             pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
-                ::fuels::programs::contract::Contract::method_hash(
+                ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
@@ -501,7 +501,7 @@ mod tests {
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
             ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
-                ::fuels::programs::contract::Contract::method_hash(
+                ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
                     ::fuels::core::function_selector::resolve_fn_selector(
