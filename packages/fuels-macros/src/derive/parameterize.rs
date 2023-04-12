@@ -96,7 +96,7 @@ fn parameterize_for_enum(
             fn param_type() -> #fuels_types_path::param_types::ParamType {
                 let variants = #std_lib::vec![#(#variant_param_types),*];
 
-                let variants = #fuels_types_path::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| #std_lib::panic!("{} has no variants which isn't allowed.", #enum_name_str));
+                let variants = #fuels_types_path::enum_variants::EnumVariants::new(variants).unwrap_or_else(|_| ::std::panic!("{} has no variants which isn't allowed.", #enum_name_str));
                 #fuels_types_path::param_types::ParamType::Enum {
                     variants,
                     generics: #std_lib::vec![#(#generic_param_types),*]
