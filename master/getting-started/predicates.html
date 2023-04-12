@@ -165,11 +165,9 @@ fn main(a: u32, b: u64) -&gt; bool {
         let second_wallet = &amp;wallets[1];
 
         abigen!(Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
-
-Once we've compiled our predicate with `forc build`, we can create a `Predicate` instance via `Predicate::load_from`. The resulting data from `encode_data` can then be set on the loaded predicate.
-
-```rust,ignore
-        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+</code></pre>
+<p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
+<pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
         let code_path =
             &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
