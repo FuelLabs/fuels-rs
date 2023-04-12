@@ -85,7 +85,7 @@ pub mod prelude {
         test_helpers::*,
     };
     pub use super::{
-        macros::{abigen, setup_contract_test},
+        macros::{abigen, setup_program_test},
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},

@@ -49,16 +49,16 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn setup_contract_test_example() -> Result<()> {
+    async fn setup_program_test_example() -> Result<()> {
         use fuels::prelude::*;
 
         // ANCHOR: deploy_contract_setup_macro_short
-        setup_contract_test!(
+        setup_program_test!(
             Wallets("wallet"),
-            Abigen(
+            Abigen(Contract(
                 name = "TestContract",
-                abi = "packages/fuels/tests/contracts/contract_test"
-            ),
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
             Deploy(
                 name = "contract_instance",
                 contract = "TestContract",
@@ -722,12 +722,12 @@ mod tests {
     async fn custom_assets_example() -> Result<()> {
         use fuels::prelude::*;
 
-        setup_contract_test!(
+        setup_program_test!(
             Wallets("wallet"),
-            Abigen(
+            Abigen(Contract(
                 name = "MyContract",
-                abi = "packages/fuels/tests/contracts/contract_test"
-            ),
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
             Deploy(
                 name = "contract_instance",
                 contract = "MyContract",

@@ -1,0 +1,5 @@
+error: Add an `Abigen(..)` command!
+ --> tests/ui/setup_program_test/abigen_command_is_missing.rs:3:21
+  |
+3 | setup_program_test!(Deploy(
+  |                     ^^^^^^

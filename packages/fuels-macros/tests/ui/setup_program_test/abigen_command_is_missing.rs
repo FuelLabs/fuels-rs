@@ -1,6 +1,6 @@
-use fuels_macros::setup_contract_test;
+use fuels_macros::setup_program_test;
 
-setup_contract_test!(Deploy(
+setup_program_test!(Deploy(
     name = "some_instance",
     contract = "SomeUnknownContract",
     wallet = "some_wallet"
