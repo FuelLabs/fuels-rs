@@ -10,7 +10,7 @@
 //! ```
 //!
 //! Examples on how you can use the types imported by the prelude can be found in
-//! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
+//! the [test suite](https://github.com/FuelLabs/fuels-rs/tree/master/packages/fuels/tests)
 
 pub mod tx {
     pub use fuel_tx::*;
