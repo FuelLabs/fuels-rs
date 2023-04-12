@@ -15,7 +15,7 @@ use fuels_types::{
     input::Input,
     message::Message,
     resource::Resource,
-    transaction::{Transaction, TxParameters},
+    transaction::{CachedTx, Transaction, TxParameters},
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
 };
@@ -159,6 +159,8 @@ pub trait Account: ViewOnlyAccount {
         witness_index: Option<u8>,
     ) -> Result<Vec<Input>>;
 
+    fn cache(&self, cached_tx: CachedTx);
+
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(
         &self,
@@ -168,6 +170,29 @@ pub trait Account: ViewOnlyAccount {
     ) -> Vec<Output> {
         vec![
             Output::coin(to.into(), amount, asset_id),
+            // Note that the change will be computed by the node.
+            // Here we only have to tell the node who will own the change and its asset ID.
+            Output::change(self.address().into(), 0, asset_id),
+        ]
+    }
+
+    fn get_asset_outputs_for_amount2(
+        &self,
+        to: &Bech32Address,
+        asset_id: AssetId,
+        amount: u64,
+        total_input_amount: u64,
+        max_fee: u64,
+    ) -> Vec<Output> {
+        let mut expected_amount = total_input_amount;
+        if asset_id == BASE_ASSET_ID {
+            expected_amount -= max_fee;
+        }
+        expected_amount -= amount;
+
+        vec![
+            Output::coin(to.into(), amount, asset_id),
+            Output::coin(self.address().into(), expected_amount, asset_id),
             // Note that the change will be computed by the node.
             // Here we only have to tell the node who will own the change and its asset ID.
             Output::change(self.address().into(), 0, asset_id),
@@ -195,7 +220,7 @@ pub trait Account: ViewOnlyAccount {
             .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
 
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        // let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let consensus_parameters = self
             .try_provider()?
@@ -203,19 +228,37 @@ pub trait Account: ViewOnlyAccount {
             .await?
             .consensus_parameters;
 
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters)
             .set_consensus_parameters(consensus_parameters);
 
+        // Instead of just using Output:change, calculate the output amount and set it as
+        // Output::coin, then add Output:change to collect the rest.
+        // This is done to enable optimistic spending of coin outputs
+        let max_fee = tx_builder
+            .fee_checked_from_tx(&consensus_parameters)
+            .unwrap()
+            .total();
+        let total_input_amount = tx_builder
+            .inputs
+            .iter()
+            .filter_map(|input| input.amount())
+            .sum();
+        let outputs =
+            self.get_asset_outputs_for_amount2(to, asset_id, amount, total_input_amount, max_fee);
+        let tx_builder = tx_builder.set_outputs(outputs);
+
         // if we are not transferring the base asset, previous base amount is 0
-        let previous_base_amount = if asset_id == AssetId::default() {
-            amount
-        } else {
-            0
+        let previous_base_amount = match asset_id {
+            BASE_ASSET_ID => amount,
+            _ => 0,
         };
 
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
+
+        let cached_tx = tx.compute_cached_tx(self.address());
+        self.cache(cached_tx);
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 

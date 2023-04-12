@@ -1,10 +1,16 @@
-use std::{fmt::Debug, fs};
+use std::{
+    collections::VecDeque,
+    fmt::Debug,
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
-    transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
+    transaction::CachedTx, transaction_builders::TransactionBuilder,
+    unresolved_bytes::UnresolvedBytes,
 };
 
 use crate::{
@@ -19,6 +25,7 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
+    tx_cache: Arc<Mutex<VecDeque<CachedTx>>>,
 }
 
 impl Predicate {
@@ -45,6 +52,7 @@ impl Predicate {
             code,
             data: Default::default(),
             provider: None,
+            tx_cache: Default::default(),
         }
     }
 
@@ -107,6 +115,10 @@ impl Account for Predicate {
                 Input::resource_predicate(resource, self.code.clone(), self.data.clone())
             })
             .collect::<Vec<Input>>())
+    }
+
+    fn cache(&self, item: CachedTx) {
+        self.tx_cache.lock().unwrap().push_back(item)
     }
 
     /// Add base asset inputs to the transaction to cover the estimated fee.

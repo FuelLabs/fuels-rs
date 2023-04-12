@@ -1,4 +1,9 @@
-use std::{fmt, ops, path::Path};
+use std::{
+    collections::VecDeque,
+    fmt, ops,
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
@@ -10,7 +15,8 @@ use fuels_types::{
     constants::BASE_ASSET_ID,
     errors::{Error, Result},
     input::Input,
-    transaction::Transaction,
+    resource::{Resource, ResourceId},
+    transaction::{CachedTx, Transaction},
     transaction_builders::TransactionBuilder,
 };
 use rand::{CryptoRng, Rng};
@@ -18,7 +24,7 @@ use thiserror::Error;
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
+    provider::{Provider, ResourceFilter},
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
@@ -70,6 +76,7 @@ pub struct Wallet {
 pub struct WalletUnlocked {
     wallet: Wallet,
     pub(crate) private_key: SecretKey,
+    tx_cache: Arc<Mutex<VecDeque<CachedTx>>>,
 }
 
 impl Wallet {
@@ -99,6 +106,7 @@ impl Wallet {
         WalletUnlocked {
             wallet: self,
             private_key,
+            tx_cache: Default::default(),
         }
     }
 }
@@ -118,6 +126,26 @@ impl ViewOnlyAccount for Wallet {
 }
 
 impl WalletUnlocked {
+    fn get_used_resource_ids(&self) -> Vec<ResourceId> {
+        self.tx_cache
+            .lock()
+            .unwrap()
+            .iter()
+            .flat_map(|item| &item.resource_ids_used)
+            .cloned()
+            .collect()
+    }
+
+    fn get_expected_resources(&self) -> Vec<Resource> {
+        self.tx_cache
+            .lock()
+            .unwrap()
+            .iter()
+            .flat_map(|item| &item.expected_resource)
+            .cloned()
+            .collect()
+    }
+
     /// Lock the wallet by `drop`ping the private key from memory.
     pub fn lock(self) -> Wallet {
         self.wallet
@@ -222,6 +250,7 @@ impl WalletUnlocked {
     }
 }
 
+#[async_trait]
 impl ViewOnlyAccount for WalletUnlocked {
     fn address(&self) -> &Bech32Address {
         self.wallet.address()
@@ -234,6 +263,42 @@ impl ViewOnlyAccount for WalletUnlocked {
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.wallet.set_provider(provider);
         self
+    }
+
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Resource>> {
+        let excluded_utxos = self
+            .get_used_resource_ids()
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                ResourceId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            excluded_utxos,
+            ..Default::default()
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+            .or_else(|_: Error| {
+                let resources = self.get_expected_resources();
+                if resources.is_empty() {
+                    return Err(Error::WalletError("You broke".to_string()));
+                }
+                Ok(resources)
+            })
     }
 }
 
@@ -255,6 +320,11 @@ impl Account for WalletUnlocked {
             .into_iter()
             .map(|resource| Input::resource_signed(resource, witness_index.unwrap_or_default()))
             .collect::<Vec<Input>>())
+    }
+
+    fn cache(&self, item: CachedTx) {
+        dbg!(&item);
+        self.tx_cache.lock().unwrap().push_back(item)
     }
 
     async fn add_fee_resources<Tb: TransactionBuilder>(

@@ -22,7 +22,7 @@ impl From<ClientCoinStatus> for CoinStatus {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub struct Coin {
     pub amount: u64,
     pub block_created: u64,
@@ -31,6 +31,23 @@ pub struct Coin {
     pub maturity: u64,
     pub owner: Bech32Address,
     pub status: CoinStatus,
+}
+
+impl Coin {
+    pub fn new_unspent(
+        amount: u64,
+        asset_id: AssetId,
+        utxo_id: UtxoId,
+        owner: Bech32Address,
+    ) -> Self {
+        Self {
+            amount,
+            asset_id,
+            utxo_id,
+            owner,
+            ..Default::default()
+        }
+    }
 }
 
 impl From<ClientCoin> for Coin {

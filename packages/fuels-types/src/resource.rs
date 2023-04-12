@@ -1,9 +1,15 @@
 #![cfg(feature = "std")]
 
 use fuel_core_client::client::schema::resource::Resource as ClientResource;
-use fuel_tx::AssetId;
+use fuel_tx::{AssetId, MessageId, UtxoId};
 
-use crate::{coin::Coin, constants::BASE_ASSET_ID, message::Message};
+use crate::{bech32::Bech32Address, coin::Coin, constants::BASE_ASSET_ID, message::Message};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum ResourceId {
+    UtxoId(UtxoId),
+    MessageId(MessageId),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Resource {
@@ -27,6 +33,13 @@ impl TryFrom<ClientResource> for Resource {
 }
 
 impl Resource {
+    pub fn id(&self) -> ResourceId {
+        match self {
+            Resource::Coin(coin) => ResourceId::UtxoId(coin.utxo_id),
+            Resource::Message(message) => ResourceId::MessageId(message.message_id()),
+        }
+    }
+
     pub fn amount(&self) -> u64 {
         match self {
             Resource::Coin(coin) => coin.amount,
@@ -38,6 +51,13 @@ impl Resource {
         match self {
             Resource::Coin(coin) => coin.asset_id,
             Resource::Message(_) => BASE_ASSET_ID,
+        }
+    }
+
+    pub fn owner(&self) -> &Bech32Address {
+        match self {
+            Resource::Coin(coin) => &coin.owner,
+            Resource::Message(message) => &message.recipient,
         }
     }
 }

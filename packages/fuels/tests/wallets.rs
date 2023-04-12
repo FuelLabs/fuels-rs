@@ -234,6 +234,44 @@ async fn test_transfer() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_rapid_transfer() -> Result<()> {
+    // Create the actual wallets/signers
+    let mut wallet_1 = WalletUnlocked::new_random(None);
+    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+
+    // Setup a coin for each wallet
+    let mut coins_1 = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, 1000);
+    let coins_2 = setup_single_asset_coins(wallet_2.address(), BASE_ASSET_ID, 1, 1000);
+    coins_1.extend(coins_2);
+
+    // Setup a provider and node with both set of coins
+    let provider_config = Config {
+        utxo_validation: true,
+        ..Config::local_node()
+    };
+    let (provider, _) = setup_test_provider(coins_1, vec![], Some(provider_config), None).await;
+
+    // Set provider for wallets
+    wallet_1.set_provider(provider.clone());
+    wallet_2.set_provider(provider);
+
+    wallet_1
+        .transfer(
+            wallet_2.address(),
+            1,
+            Default::default(),
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
+
+    let wallet_2_final_coins = wallet_2.get_coins(BASE_ASSET_ID).await.unwrap();
+
+    // Check that wallet two now has two coins
+    Ok(())
+}
+
+#[tokio::test]
 async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await;
@@ -388,7 +426,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             asset_id,
-            TxParameters::default(),
+            TxParameters::default().set_gas_price(1),
         )
         .await?;
 

@@ -1,17 +1,20 @@
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
+    Address, Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
+    Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
+    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, UtxoId, Witness,
 };
 
 use crate::{
+    bech32::Bech32Address,
+    coin::Coin,
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
     errors::Error,
+    resource::{Resource, ResourceId},
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -60,7 +63,16 @@ impl Default for TxParameters {
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
+#[derive(Clone, Debug)]
+pub struct CachedTx {
+    pub tx_id: Bytes32,
+    pub resource_ids_used: HashSet<ResourceId>,
+    pub expected_resource: HashSet<Resource>,
+}
+
 pub trait Transaction: Into<FuelTransaction> + Send {
+    fn compute_cached_tx(&self, address: &Bech32Address) -> CachedTx;
+
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
     fn check_without_signatures(
@@ -130,6 +142,60 @@ macro_rules! impl_tx_wrapper {
         }
 
         impl Transaction for $wrapper {
+            fn compute_cached_tx(&self, address: &Bech32Address) -> CachedTx {
+                let plain_address: Address = address.into();
+                let resource_ids_used = self
+                    .inputs()
+                    .iter()
+                    .filter_map(|input| match input {
+                        FuelInput::CoinSigned { utxo_id, owner, .. }
+                        | FuelInput::CoinPredicate { utxo_id, owner, .. }
+                            if (*owner == plain_address) =>
+                        {
+                            Some(ResourceId::UtxoId(utxo_id.clone()))
+                        }
+                        FuelInput::MessageSigned {
+                            message_id,
+                            recipient,
+                            ..
+                        }
+                        | FuelInput::MessagePredicate {
+                            message_id,
+                            recipient,
+                            ..
+                        } if (*recipient == plain_address) => {
+                            Some(ResourceId::MessageId(message_id.clone()))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+
+                let tx_id = self.id();
+                let expected_resource = self
+                    .outputs()
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, output)| match output {
+                        Output::Coin {
+                            to,
+                            amount,
+                            asset_id,
+                        } if (*to == plain_address) => {
+                            let utxo_id = UtxoId::new(tx_id, idx as u8);
+                            let coin = Coin::new_unspent(*amount, *asset_id, utxo_id, (*to).into());
+                            Some(Resource::Coin(coin))
+                        }
+                        _ => None,
+                    })
+                    .collect();
+
+                CachedTx {
+                    tx_id,
+                    resource_ids_used,
+                    expected_resource,
+                }
+            }
+
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
             }
