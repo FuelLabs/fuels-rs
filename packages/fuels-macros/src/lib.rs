@@ -50,36 +50,6 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// Used to reduce boilerplate in integration tests.
 ///
 /// More details can be found in the [`Fuel Rust SDK Book`](https://fuellabs.github.io/fuels-rs/latest)
-///```text
-/// setup_program_test!(
-///         Wallets("wallet"),
-///         Abigen(
-///             Contract(
-///                 name = "LibContract",
-///                 project = "packages/fuels/tests/contracts/lib_contract"
-///             ),
-///             Contract(
-///                 name = "LibContractCaller",
-///                 project = "packages/fuels/tests/contracts/lib_contract_caller"
-///             ),
-///         ),
-///         Deploy(
-///             name = "lib_contract_instance",
-///             contract = "LibContract",
-///             wallet = "wallet"
-///         ),
-///         Deploy(
-///             name = "contract_caller_instance",
-///             contract = "LibContractCaller",
-///             wallet = "wallet"
-///         ),
-///         Deploy(
-///             name = "contract_caller_instance2",
-///             contract = "LibContractCaller",
-///             wallet = "wallet"
-///         ),
-///     );
-///```
 #[proc_macro]
 pub fn setup_program_test(input: TokenStream) -> TokenStream {
     let test_program_commands = parse_macro_input!(input as TestProgramCommands);
