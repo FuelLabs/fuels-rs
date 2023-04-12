@@ -103,7 +103,7 @@ fn tokenizable_for_enum(
 
                 let variants = match <Self as #fuels_types_path::traits::Parameterize>::param_type() {
                     #fuels_types_path::param_types::ParamType::Enum{variants, ..} => variants,
-                    other => #std_lib::panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
+                    other => ::std::panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
                 };
 
                 #fuels_types_path::Token::Enum(#std_lib::boxed::Box::new((discriminant, token, variants)))
