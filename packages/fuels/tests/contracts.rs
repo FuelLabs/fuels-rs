@@ -202,12 +202,12 @@ async fn test_multi_call_beginner() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_pro() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
