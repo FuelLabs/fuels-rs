@@ -168,7 +168,7 @@ async fn test_multiple_read_calls() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_multi_call() -> Result<()> {
+async fn test_multi_call_beginner() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -183,8 +183,8 @@ async fn test_multi_call() -> Result<()> {
     );
 
     let contract_methods = contract_instance.methods();
-    let call_handler_1 = contract_methods.initialize_counter(42);
-    let call_handler_2 = contract_methods.get_array([42; 2]);
+    let call_handler_1 = contract_methods.get_single(7);
+    let call_handler_2 = contract_methods.get_single(42);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -192,10 +192,66 @@ async fn test_multi_call() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
+    let (val_1, val_2): (u64, u64) = multi_call_handler.call().await?.value;
 
-    assert_eq!(counter, 42);
-    assert_eq!(array, [42; 2]);
+    assert_eq!(val_1, 7);
+    assert_eq!(val_2, 42);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_multi_call_pro() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let my_type_1 = MyType { x: 1, y: 2 };
+    let my_type_2 = MyType { x: 3, y: 4 };
+
+    let contract_methods = contract_instance.methods();
+    let call_handler_1 = contract_methods.get_single(5);
+    let call_handler_2 = contract_methods.get_single(6);
+    let call_handler_3 = contract_methods.get_alt(my_type_1.clone());
+    let call_handler_4 = contract_methods.get_alt(my_type_2.clone());
+    let call_handler_5 = contract_methods.get_array([7; 2]);
+    let call_handler_6 = contract_methods.get_array([42; 2]);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2)
+        .add_call(call_handler_3)
+        .add_call(call_handler_4)
+        .add_call(call_handler_5)
+        .add_call(call_handler_6);
+
+    let (val_1, val_2, type_1, type_2, array_1, array_2): (
+        u64,
+        u64,
+        MyType,
+        MyType,
+        [u64; 2],
+        [u64; 2],
+    ) = multi_call_handler.call().await?.value;
+
+    assert_eq!(val_1, 5);
+    assert_eq!(val_2, 6);
+    assert_eq!(type_1, my_type_1);
+    assert_eq!(type_2, my_type_2);
+    assert_eq!(array_1, [7; 2]);
+    assert_eq!(array_2, [42; 2]);
+
     Ok(())
 }
 

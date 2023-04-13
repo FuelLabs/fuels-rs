@@ -18,8 +18,9 @@ use itertools::chain;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{generate_contract_inputs, generate_contract_outputs},
-    contract::{get_decoded_output, SettableContract},
+    contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
+    receipt_parser::ReceiptParser,
 };
 
 #[derive(Debug)]
@@ -210,7 +211,8 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = get_decoded_output(&receipts, None, &D::param_type())?;
+        let token = ReceiptParser::new(&receipts).parse(None, &D::param_type())?;
+
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
