@@ -17,12 +17,12 @@ pub fn null_contract_id() -> Bech32ContractId {
 async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "SimpleContract",
-            abi = "packages/fuels/tests/bindings/simple_contract"
-        ),
+            project = "packages/fuels/tests/bindings/simple_contract"
+        )),
         Deploy(
             name = "simple_contract_instance",
             contract = "SimpleContract",
@@ -754,15 +754,17 @@ async fn compile_bindings_enum_input() {
 
 #[tokio::test]
 async fn shared_types() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
         Abigen(
-            name = "ContractA",
-            abi = "packages/fuels/tests/bindings/sharing_types/contract_a"
-        ),
-        Abigen(
-            name = "ContractB",
-            abi = "packages/fuels/tests/bindings/sharing_types/contract_b"
+            Contract(
+                name = "ContractA",
+                project = "packages/fuels/tests/bindings/sharing_types/contract_a"
+            ),
+            Contract(
+                name = "ContractB",
+                project = "packages/fuels/tests/bindings/sharing_types/contract_b"
+            ),
         ),
         Deploy(
             name = "contract_a",
@@ -871,12 +873,12 @@ async fn shared_types() -> Result<()> {
 #[cfg(feature = "test-type-paths")]
 #[tokio::test]
 async fn type_paths_respected() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "ContractA",
-            abi = "packages/fuels/tests/bindings/type_paths"
-        ),
+            project = "packages/fuels/tests/bindings/type_paths"
+        )),
         Deploy(
             name = "contract_a_instance",
             contract = "ContractA",

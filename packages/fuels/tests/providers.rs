@@ -119,11 +119,11 @@ async fn test_input_message() -> Result<()> {
     let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
 
-    setup_contract_test!(
-        Abigen(
+    setup_program_test!(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -317,12 +317,12 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -353,12 +353,12 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
 #[tokio::test]
 async fn test_amount_and_asset_forwarding() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TokenContract",
-            abi = "packages/fuels/tests/contracts/token_ops"
-        ),
+            project = "packages/fuels/tests/contracts/token_ops"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TokenContract",
@@ -460,11 +460,11 @@ async fn test_gas_errors() -> Result<()> {
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
-    setup_contract_test!(
-        Abigen(
+    setup_program_test!(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -474,19 +474,19 @@ async fn test_gas_errors() -> Result<()> {
 
     // Test running out of gas. Gas price as `None` will be 0.
     let gas_limit = 100;
-    let contract_instace_call = contract_instance
+    let contract_instance_call = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
         .tx_params(TxParameters::default().set_gas_limit(gas_limit));
 
     //  Test that the call will use more gas than the gas limit
-    let gas_used = contract_instace_call
+    let gas_used = contract_instance_call
         .estimate_transaction_cost(None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);
 
-    let response = contract_instace_call
+    let response = contract_instance_call
         .call()
         .await
         .expect_err("should error");
@@ -510,12 +510,12 @@ async fn test_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_call_param_gas_errors() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -552,12 +552,12 @@ async fn test_call_param_gas_errors() -> Result<()> {
 
 #[tokio::test]
 async fn test_get_gas_used() -> Result<()> {
-    setup_contract_test!(
+    setup_program_test!(
         Wallets("wallet"),
-        Abigen(
+        Abigen(Contract(
             name = "TestContract",
-            abi = "packages/fuels/tests/contracts/contract_test"
-        ),
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",

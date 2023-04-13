@@ -1,4 +1,4 @@
-# The setup_contract_test! macro
+# The setup_program_test! macro
 
 When deploying contracts with the `abigen!` macro, as shown in the previous sections, the user can:
 
@@ -7,19 +7,20 @@ When deploying contracts with the `abigen!` macro, as shown in the previous sect
 - create multiple wallets
 - create specific assets, etc.
 
-However, it is often the case that we want to test only the contract methods and we want to deploy the contract with the default configuration parameters. The `setup_contract_test!` macro can do exactly that.
+However, it is often the case that we want to quickly set up a test with default values and work directly with contract or script instances. The `setup_program_test!` can do exactly that.
 
 ---
 
 Used to reduce boilerplate in integration tests. Accepts input in the form
 of `COMMAND(ARG...)...`
 
-`COMMAND` is either `Wallets`, `Abigen` or `Deploy`.
+`COMMAND` is either `Wallets`, `Abigen`, `LoadScript` or `Deploy`.
 
 `ARG` is either a:
 
 * name-value (e.g. `name="MyContract"`), or,
 * a literal (e.g. `"some_str_literal"`, `true`, `5`, ...)
+* a sub-command (e.g. `Abigen(Contract(name="MyContract", project="some_project"))`)
 
 Available `COMMAND`s:
 
@@ -35,10 +36,26 @@ Cardinality: 0 or 1.
 Abigen
 ---
 
-Example: `Abigen(name="MyContract", abi="some_folder")`
+Example:
+```rust,noplayground
+Abigen(
+    Contract(
+        name = "MyContract",
+        project = "some_folder"
+    ),
+    Script(
+        name = "MyScript",
+        project = "some_folder"
+    ),
+    Predicate(
+        name = "MyPredicate",
+        project = "some_folder"
+    ),
+)
+```
 
-Description: Generates the contract bindings under the name `name`. `abi`
-should point to the folder containing the `out` directory of the forc build.
+Description: Generates the program bindings under the name `name`. `project`
+should point to root of the `forc` project.
 
 Cardinality: 0 or N.
 
@@ -51,6 +68,16 @@ Description: Deploys the `contract` (with salt) using `wallet`. Will create a co
 
 Cardinality: 0 or N.
 
+LoadScript
+---
+
+Example: `LoadScript(name = "script_instance", script = "MyScript", wallet = "wallet")`
+
+Description: Creates a script instance of `script` under `name` using `wallet`.
+
+Cardinality: 0 or N.
+
+---
 
 The setup code that you have seen in previous sections gets reduced to:
 

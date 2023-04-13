@@ -57,7 +57,7 @@
 - [API Reference](./getting-started/api.md)
 - [Testing](./testing/index.md)
   - [Testing basics](./testing/basics.md)
-  - [The `setup_contract_test!` macro](testing/the-setup-contract-test-macro.md)
+  - [The `setup_program_test!` macro](testing/the-setup-program-test-macro.md)
   - [Tweaking the blockchain](./testing/chains.md)
 - [Cookbook](./cookbook/cookbook.md)
   - [Custom consensus parameters](./cookbook/custom-chain.md)
