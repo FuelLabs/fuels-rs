@@ -1,8 +1,7 @@
 use fuels_code_gen::{AbigenTarget, ProgramType};
-use proc_macro2::Ident;
 use syn::{
     parse::{Parse, ParseStream},
-    Error, Result as ParseResult,
+    Result,
 };
 
 use crate::parse_utils::{Command, UniqueNameValues};
@@ -25,10 +24,11 @@ impl From<MacroAbigenTarget> for AbigenTarget {
 
 // Although identical to `AbigenTarget` from fuels-core, due to the orphan rule
 // we cannot implement Parse for the latter.
-struct MacroAbigenTarget {
-    name: String,
-    abi: String,
-    program_type: ProgramType,
+#[derive(Debug)]
+pub(crate) struct MacroAbigenTarget {
+    pub(crate) name: String,
+    pub(crate) abi: String,
+    pub(crate) program_type: ProgramType,
 }
 
 pub(crate) struct MacroAbigenTargets {
@@ -36,19 +36,19 @@ pub(crate) struct MacroAbigenTargets {
 }
 
 impl Parse for MacroAbigenTargets {
-    fn parse(input: ParseStream) -> ParseResult<Self> {
+    fn parse(input: ParseStream) -> Result<Self> {
         let targets = Command::parse_multiple(input)?
             .into_iter()
             .map(MacroAbigenTarget::new)
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<_>>()?;
 
         Ok(Self { targets })
     }
 }
 
 impl MacroAbigenTarget {
-    pub fn new(command: Command) -> syn::Result<Self> {
-        let program_type = Self::parse_program_type(command.name)?;
+    pub fn new(command: Command) -> Result<Self> {
+        let program_type = command.name.try_into()?;
 
         let name_values = UniqueNameValues::new(command.contents)?;
         name_values.validate_has_no_other_names(&["name", "abi"])?;
@@ -61,17 +61,5 @@ impl MacroAbigenTarget {
             abi,
             program_type,
         })
-    }
-
-    fn parse_program_type(ident: Ident) -> ParseResult<ProgramType> {
-        match ident.to_string().as_ref() {
-            "Contract" => Ok(ProgramType::Contract),
-            "Script" => Ok(ProgramType::Script),
-            "Predicate" => Ok(ProgramType::Predicate),
-            _ => Err(Error::new_spanned(
-                ident,
-                "Unsupported program type. Expected: 'Contract', 'Script' or 'Predicate'",
-            )),
-        }
     }
 }

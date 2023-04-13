@@ -44,13 +44,20 @@ async fn contract_uses_default_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn script_uses_default_configurables() -> Result<()> {
-    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_configurables"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
 
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/script_configurables/out/debug/script_configurables.bin";
-    let instance = MyScript::new(wallet, bin_path);
-
-    let response = instance.main().call().await?;
+    let response = script_instance.main().call().await?;
 
     let expected_value = (
         8u8,

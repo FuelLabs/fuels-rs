@@ -8,13 +8,13 @@ use crate::{
         parameterize::generate_parameterize_impl, tokenizable::generate_tokenizable_impl,
         try_from::generate_try_from_impl,
     },
-    setup_contract_test::{generate_setup_contract_test_code, TestContractCommands},
+    setup_program_test::{generate_setup_program_test_code, TestProgramCommands},
 };
 
 mod abigen;
 mod derive;
 mod parse_utils;
-mod setup_contract_test;
+mod setup_program_test;
 mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
@@ -50,34 +50,11 @@ pub fn wasm_abigen(input: TokenStream) -> TokenStream {
 /// Used to reduce boilerplate in integration tests.
 ///
 /// More details can be found in the [`Fuel Rust SDK Book`](https://fuellabs.github.io/fuels-rs/latest)
-///```text
-///setup_contract_test!(
-///    Wallets("wallet"),
-///    Abigen(
-///        name = "FooContract",
-///        abi = "packages/fuels/tests/contracts/foo_contract"
-///    ),
-///    Abigen(
-///        name = "FooCallerContract",
-///        abi = "packages/fuels/tests/contracts/foo_caller_contract"
-///    ),
-///    Deploy(
-///        name = "foo_contract_instance",
-///        contract = "FooContract",
-///        wallet = "wallet"
-///    ),
-///    Deploy(
-///        name = "foo_caller_contract_instance",
-///        contract = "FooCallerContract",
-///        wallet = "my_own_wallet"
-///    ),
-///);
-///```
 #[proc_macro]
-pub fn setup_contract_test(input: TokenStream) -> TokenStream {
-    let test_contract_commands = parse_macro_input!(input as TestContractCommands);
+pub fn setup_program_test(input: TokenStream) -> TokenStream {
+    let test_program_commands = parse_macro_input!(input as TestProgramCommands);
 
-    generate_setup_contract_test_code(test_contract_commands)
+    generate_setup_program_test_code(test_program_commands)
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
