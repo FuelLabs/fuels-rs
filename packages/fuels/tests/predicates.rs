@@ -125,7 +125,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_basic() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
     ));
 
@@ -175,7 +175,7 @@ async fn pay_with_predicate() -> Result<()> {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
-            name = "MyPredicateEncoder",
+            name = "MyPredicate",
             abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
         )
     );
@@ -226,7 +226,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
@@ -276,7 +276,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 #[tokio::test]
 async fn predicate_contract_transfer() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
@@ -340,7 +340,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     use fuels::prelude::*;
 
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
@@ -384,7 +384,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 #[tokio::test]
 async fn predicate_transfer_with_signed_resources() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
@@ -467,7 +467,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
@@ -544,7 +544,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
@@ -583,6 +583,65 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         .call_params(call_params)?
         .call()
         .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_configurables() -> Result<()> {
+    // ANCHOR: predicate_configurables
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json"
+    ));
+
+    let new_struct = StructWithGeneric {
+        field_1: 32u8,
+        field_2: 64,
+    };
+    let new_enum = EnumWithGeneric::VariantTwo;
+
+    let configurables = MyPredicateConfigurables::new()
+        .set_STRUCT(new_struct.clone())
+        .set_ENUM(new_enum.clone());
+
+    let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin",
+    )?
+    .with_data(predicate_data)
+    .with_configurables(configurables);
+    // ANCHOR_END: predicate_configurables
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance,
+    )
+    .await;
 
     Ok(())
 }

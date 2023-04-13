@@ -2,6 +2,7 @@ use std::{fmt::Debug, fs};
 
 use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
+use fuels_core::Configurables;
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
     transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
@@ -74,6 +75,17 @@ impl Predicate {
     pub fn with_provider(mut self, provider: Provider) -> Predicate {
         self.set_provider(provider);
         self
+    }
+
+    pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
+        let configurables: Configurables = configurables.into();
+        configurables.update_constants_in(&mut self.code);
+
+        Self {
+            data: self.data,
+            provider: self.provider,
+            ..Self::from_code(self.code)
+        }
     }
 }
 
