@@ -180,12 +180,13 @@ pub struct Contract {
     salt: Salt,
     storage_slots: Vec<StorageSlot>,
     contract_id: ContractId,
+    code_root: Bytes32,
     state_root: Bytes32,
 }
 
 impl Contract {
     pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
-        let (contract_id, state_root) =
+        let (contract_id, code_root, state_root) =
             Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
 
         Self {
@@ -193,6 +194,7 @@ impl Contract {
             salt,
             storage_slots,
             contract_id,
+            code_root,
             state_root,
         }
     }
@@ -201,14 +203,14 @@ impl Contract {
         binary: &[u8],
         salt: &Salt,
         storage_slots: &[StorageSlot],
-    ) -> (ContractId, Bytes32) {
+    ) -> (ContractId, Bytes32, Bytes32) {
         let fuel_contract = FuelContract::from(binary);
-        let root = fuel_contract.root();
+        let code_root = fuel_contract.root();
         let state_root = FuelContract::initial_state_root(storage_slots.iter());
 
-        let contract_id = fuel_contract.id(salt, &root, &state_root);
+        let contract_id = fuel_contract.id(salt, &code_root, &state_root);
 
-        (contract_id, state_root)
+        (contract_id, code_root, state_root)
     }
 
     pub fn with_salt(self, salt: Salt) -> Self {
@@ -221,6 +223,10 @@ impl Contract {
 
     pub fn state_root(&self) -> Bytes32 {
         self.state_root
+    }
+
+    pub fn code_root(&self) -> Bytes32 {
+        self.code_root
     }
 
     /// Deploys a compiled contract to a running node
