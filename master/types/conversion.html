@@ -139,7 +139,7 @@
                     <main>
                         <h1 id="converting-native-types"><a class="header" href="#converting-native-types">Converting native types</a></h1>
 <p>You might want to convert between the native types (<code>Bytes32</code>, <code>Address</code>, <code>ContractId</code>, and <code>AssetId</code>). Because these types are wrappers on <code>[u8; 32]</code>, converting is a matter of dereferencing one and instantiating the other using the dereferenced value. Here's an example:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::{AssetId, ContractId};
+<pre><code class="language-rust ignore">        use fuels::types::{AssetId, ContractId};
 
         let contract_id = ContractId::new([1u8; 32]);
 

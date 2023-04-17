@@ -2182,7 +2182,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p>These are the main ways of creating an <code>Address</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
-        use fuels::tx::Address;
+        use fuels::types::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();
@@ -2206,7 +2206,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p>These are the main ways of creating a <code>ContractId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
-        use fuels::tx::ContractId;
+        use fuels::types::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();
@@ -2231,7 +2231,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p>These are the main ways of creating an <code>AssetId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
-        use fuels::tx::AssetId;
+        use fuels::types::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();
@@ -2252,7 +2252,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="converting-native-types"><a class="header" href="#converting-native-types">Converting native types</a></h1>
 <p>You might want to convert between the native types (<code>Bytes32</code>, <code>Address</code>, <code>ContractId</code>, and <code>AssetId</code>). Because these types are wrappers on <code>[u8; 32]</code>, converting is a matter of dereferencing one and instantiating the other using the dereferenced value. Here's an example:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::{AssetId, ContractId};
+<pre><code class="language-rust ignore">        use fuels::types::{AssetId, ContractId};
 
         let contract_id = ContractId::new([1u8; 32]);
 
@@ -2263,10 +2263,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bech32"><a class="header" href="#bech32">Bech32</a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract ids in the bech32 format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
 <p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>: </p>
-<pre><code class="language-rust ignore">        use fuels::{
-            prelude::Bech32Address,
-            tx::{Address, Bytes32},
-        };
+<pre><code class="language-rust ignore">        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
 
         // New from HRP string and a hash
         let hrp = &quot;fuel&quot;;

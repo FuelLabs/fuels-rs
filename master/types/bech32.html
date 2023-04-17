@@ -140,10 +140,7 @@
                         <h1 id="bech32"><a class="header" href="#bech32">Bech32</a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract ids in the bech32 format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
 <p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>: </p>
-<pre><code class="language-rust ignore">        use fuels::{
-            prelude::Bech32Address,
-            tx::{Address, Bytes32},
-        };
+<pre><code class="language-rust ignore">        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
 
         // New from HRP string and a hash
         let hrp = &quot;fuel&quot;;
