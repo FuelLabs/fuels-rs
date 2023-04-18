@@ -42,12 +42,12 @@ Then we can transfer assets owned by the predicate via the [Account](../getting-
 
 ## Configurable constants
 
-Same as contracts and scripts, you can define configurable constants in `predicates` which can be changed during the predicate execution. Here is an example how the constants are defined.
+Same as contracts and scripts, you can define configurable constants in `predicates`, which can be changed during the predicate execution. Here is an example of how the constants are defined.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/predicates/predicate_configurables/src/main.sw:predicate_configurables}}
 ```
-Each of the configurable constants will get a dedicated `set` method in the SDK. For example, the constant `U8` will get the `set_U8` method which accepts the same type as defined in sway. Below is an example where we chain several `set` methods and update the predicate with the new constants.
+Each configurable constant will get a dedicated `set` method in the SDK. For example, the constant `U8` will get the `set_U8` method which accepts the same type defined in sway. Below is an example where we chain several `set` methods and update the predicate with the new constants.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/predicates.rs:predicate_configurables}}
