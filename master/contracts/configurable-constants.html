@@ -173,7 +173,7 @@ impl TestContract for Contract {
     }
 }
 </code></pre>
-<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same types as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
+<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;

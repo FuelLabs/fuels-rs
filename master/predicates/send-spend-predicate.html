@@ -212,7 +212,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <p>Now we can use the predicate abigen to create a predicate encoder instance for us. To spend the funds now locked in the predicate, we must provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.</p>
 <pre><code class="language-rust ignore">        abigen!(Predicate(
-            name = &quot;MyPredicateEncoder&quot;,
+            name = &quot;MyPredicate&quot;,
             abi = &quot;packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json&quot;
         ));
 

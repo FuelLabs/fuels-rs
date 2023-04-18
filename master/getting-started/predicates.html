@@ -148,7 +148,14 @@ fn main(a: u32, b: u64) -&gt; bool {
 }
 </code></pre>
 <p>We will look at a complete example of using the SDK to send and receive funds from a predicate.</p>
-<p>First, we set up the wallets, node, and a predicate encoder instance. The call to the <code>abigen!</code> macro will generate all the types specified in the predicate plus a custom encoder with an <code>encode_data</code> function that will conveniently encode all the arguments of the main function for us.</p>
+<p>First, we set up the wallets and a node instance. The call to the <code>abigen!</code> macro will generate all the types specified in the predicate plus two custom stucts:</p>
+<ul>
+<li>an encoder with an <code>encode_data</code>  function that will conveniently encode all the arguments of the main function for us.</li>
+<li>a configurables struct which holds methods for setting all the configurables mentioned in the predicate</li>
+</ul>
+<blockquote>
+<p>Note: The <code>abigen!</code> macro will append <code>Encoder</code> and <code>Configurables</code> to the predicate's <code>name</code> field. Fox example, <code>name=&quot;MyPredicate&quot;</code> will result in two structs called <code>MyPredicateEncoder</code> and <code>MyPredicateConfigurables</code>.</p>
+</blockquote>
 <pre><code class="language-rust ignore">        let asset_id = AssetId::default();
         let wallets_config = WalletsConfig::new_multiple_assets(
             2,
@@ -164,7 +171,7 @@ fn main(a: u32, b: u64) -&gt; bool {
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];
 
-        abigen!(Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
+        abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
 </code></pre>
 <p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
 <pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
@@ -206,6 +213,61 @@ fn main(a: u32, b: u64) -&gt; bool {
         // Second wallet balance is updated.
         let balance = second_wallet.get_asset_balance(&amp;AssetId::default()).await?;
         assert_eq!(balance, 1500);
+</code></pre>
+<h2 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h2>
+<p>Same as contracts and scripts, you can define configurable constants in <code>predicates</code>, which can be changed during the predicate execution. Here is an example of how the constants are defined.</p>
+<pre><code class="language-rust ignore">enum EnumWithGeneric&lt;D&gt; {
+    VariantOne: D,
+    VariantTwo: (),
+}
+
+struct StructWithGeneric&lt;D&gt; {
+    field_1: D,
+    field_2: u64,
+}
+
+configurable {
+    U8: u8 = 8u8,
+    BOOL: bool = true,
+    STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
+        field_1: 8u8,
+        field_2: 16,
+    },
+    ENUM: EnumWithGeneric&lt;bool&gt; = EnumWithGeneric::VariantOne(true),
+}
+
+fn main(
+    u_8: u8,
+    switch: bool,
+    some_struct: StructWithGeneric&lt;u8&gt;,
+    some_enum: EnumWithGeneric&lt;bool&gt;,
+) -&gt; bool {
+    u_8 == U8 &amp;&amp; switch == BOOL &amp;&amp; some_struct == STRUCT &amp;&amp; some_enum == ENUM
+}
+</code></pre>
+<p>Each configurable constant will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>set_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>set</code> methods and update the predicate with the new constants.</p>
+<pre><code class="language-rust ignore">    abigen!(Predicate(
+        name = &quot;MyPredicate&quot;,
+        abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json&quot;
+    ));
+
+    let new_struct = StructWithGeneric {
+        field_1: 32u8,
+        field_2: 64,
+    };
+    let new_enum = EnumWithGeneric::VariantTwo;
+
+    let configurables = MyPredicateConfigurables::new()
+        .set_STRUCT(new_struct.clone())
+        .set_ENUM(new_enum.clone());
+
+    let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
+
+    let mut predicate: Predicate = Predicate::load_from(
+        &quot;tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin&quot;,
+    )?
+    .with_data(predicate_data)
+    .with_configurables(configurables);
 </code></pre>
 
                     </main>
