@@ -46,7 +46,7 @@ mod tests {
         // ANCHOR: address
         use std::str::FromStr;
 
-        use fuels::tx::Address;
+        use fuels::types::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();
@@ -70,10 +70,7 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<()> {
         // ANCHOR: bech32
-        use fuels::{
-            prelude::Bech32Address,
-            tx::{Address, Bytes32},
-        };
+        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
 
         // New from HRP string and a hash
         let hrp = "fuel";
@@ -107,7 +104,7 @@ mod tests {
         // ANCHOR: asset_id
         use std::str::FromStr;
 
-        use fuels::tx::AssetId;
+        use fuels::types::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();
@@ -133,7 +130,7 @@ mod tests {
         // ANCHOR: contract_id
         use std::str::FromStr;
 
-        use fuels::tx::ContractId;
+        use fuels::types::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();
@@ -159,7 +156,7 @@ mod tests {
     #[tokio::test]
     async fn type_conversion() -> Result<()> {
         // ANCHOR: type_conversion
-        use fuels::tx::{AssetId, ContractId};
+        use fuels::types::{AssetId, ContractId};
 
         let contract_id = ContractId::new([1u8; 32]);
 

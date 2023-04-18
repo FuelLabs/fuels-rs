@@ -1,7 +1,7 @@
 use fuel_tx::Output;
 use fuels::{
     prelude::*,
-    tx::AssetId,
+    types::AssetId,
     types::{coin::Coin, message::Message},
 };
 use fuels_accounts::{predicate::Predicate, Account};
