@@ -5,10 +5,13 @@ use crate::{
     error::Result,
     program_bindings::{
         abi_types::FullProgramABI,
-        abigen::bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+        abigen::{
+            bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
+            configurables::generate_code_for_configurable_constants,
+        },
         generated_code::GeneratedCode,
     },
-    utils::TypePath,
+    utils::{ident, TypePath},
 };
 
 pub(crate) fn predicate_bindings(
@@ -21,17 +24,26 @@ pub(crate) fn predicate_bindings(
     }
 
     let encode_function = expand_fn(&abi)?;
+    let encoder_struct_name = ident(&format!("{name}Encoder"));
+
+    let configuration_struct_name = ident(&format!("{name}Configurables"));
+    let constant_configuration_code =
+        generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
-        pub struct #name;
+        pub struct #encoder_struct_name;
 
-        impl #name {
+        impl #encoder_struct_name {
            #encode_function
         }
 
+        #constant_configuration_code
     };
     // All publicly available types generated above should be listed here.
-    let type_paths = [TypePath::new(name).expect("We know name is not empty.")].into();
+    let type_paths = [&encoder_struct_name, &configuration_struct_name]
+        .map(|type_name| TypePath::new(type_name).expect("We know the given types are not empty"))
+        .into_iter()
+        .collect();
 
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
