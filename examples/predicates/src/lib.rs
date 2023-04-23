@@ -74,7 +74,7 @@ mod tests {
 
         // ANCHOR: predicate_load
         abigen!(Predicate(
-            name = "MyPredicateEncoder",
+            name = "MyPredicate",
             abi = "packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json"
         ));
 
@@ -143,7 +143,7 @@ mod tests {
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
+        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: with_predicate_data

@@ -13,12 +13,12 @@
 //! the [test suite](https://github.com/FuelLabs/fuels-rs/tree/master/packages/fuels/tests)
 
 pub mod tx {
-    pub use fuel_tx::*;
+    pub use fuel_tx::{Bytes32, ConsensusParameters, Receipt, Salt, StorageSlot};
 }
 
 #[cfg(feature = "std")]
 pub mod client {
-    pub use fuel_core_client::client::*;
+    pub use fuel_core_client::client::{FuelClient, PageDirection, PaginationRequest};
 }
 
 pub mod macros {
@@ -80,7 +80,6 @@ pub mod prelude {
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId},
-            Configurables,
         },
         test_helpers::*,
     };

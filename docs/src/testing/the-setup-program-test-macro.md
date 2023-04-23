@@ -37,7 +37,7 @@ Abigen
 ---
 
 Example:
-```rust,noplayground
+```rust,ignore
 Abigen(
     Contract(
         name = "MyContract",
