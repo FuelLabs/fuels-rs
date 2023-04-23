@@ -27,6 +27,10 @@ impl Predicate {
         &self.address
     }
 
+    pub fn code(&self) -> &Vec<u8> {
+        &self.code
+    }
+
     pub fn data(&self) -> &UnresolvedBytes {
         &self.data
     }
