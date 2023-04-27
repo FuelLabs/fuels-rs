@@ -14,9 +14,9 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
 fuel-vm = { workspace = true }
 fuels-types = { workspace = true }
-hex = { version = "0.4.3", features = ["std"] }
-itertools = "0.10"
-sha2 = "0.9.5"
+hex = { workspace = true, features = ["std"] }
+itertools = { workspace = true }
+sha2 = { workspace = true }
 
 [features]
 default = ["std"]

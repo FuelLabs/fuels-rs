@@ -10,26 +10,25 @@ rust-version = { workspace = true }
 description = "Serializable type representation for working with the Fuel VM ABI."
 
 [dependencies]
-regex = "1.6.0"
-lazy_static = "1.4.0"
-bech32 = "0.9.0"
-chrono = "0.4.2"
-fuel-tx = { workspace = true }
-fuel-types = { workspace = true, features = ["default"] }
-fuel-asm = { workspace = true }
+bech32 = { workspace = true }
+chrono = { workspace = true }
 fuel-abi-types = { workspace = true }
+fuel-asm = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
-hex = { version = "0.4.3", features = ["std"] }
-proc-macro2 = "1.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = { version = "1.0.64", default-features = true }
-strum = "0.21"
-strum_macros = "0.21"
-itertools = "0.10.5"
-thiserror = { version = "1.0.26", default-features = false }
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true, features = ["default"] }
 fuels-macros = { workspace = true }
+hex = { workspace = true, features = ["std"] }
+itertools = { workspace = true }
+proc-macro2 = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
