@@ -7,7 +7,7 @@ pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
-use fuels_types::{
+use fuels_core::{
     bech32::{Bech32Address, Bech32ContractId},
     coin::Coin,
     constants::BASE_ASSET_ID,
@@ -327,7 +327,7 @@ mod tests {
     use fuel_tx::{
         Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_types::transaction::{ScriptTransaction, Transaction};
+    use fuels_core::transaction::{ScriptTransaction, Transaction};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;

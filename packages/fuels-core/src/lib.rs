@@ -1,9 +1,33 @@
-use fuels_types::{
+pub mod bech32;
+pub mod block;
+pub mod chain_info;
+pub mod coin;
+pub mod constants;
+mod core;
+pub mod enum_variants;
+pub mod errors;
+pub mod input;
+pub mod message;
+pub mod message_proof;
+pub mod node_info;
+pub mod offsets;
+pub mod param_types;
+pub mod resource;
+pub mod traits;
+pub mod transaction;
+pub mod transaction_builders;
+pub mod transaction_response;
+pub mod unresolved_bytes;
+
+pub use fuel_tx::{Address, AssetId, ContractId};
+
+pub use crate::core::*;
+
+use crate::{
+    abi_decoder::ABIDecoder,
     errors::Result,
     traits::{Parameterize, Tokenizable},
 };
-
-use crate::abi_decoder::ABIDecoder;
 
 pub mod abi_decoder;
 pub mod abi_encoder;
@@ -39,7 +63,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use fuels_types::{constants::WORD_SIZE, errors::Result, Address, AssetId, ContractId};
+    use crate::{constants::WORD_SIZE, errors::Result, Address, AssetId, ContractId};
 
     use crate::try_from_bytes;
 

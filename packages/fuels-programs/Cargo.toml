@@ -18,7 +18,6 @@ fuel-types = { workspace = true, features = ["default"] }
 fuel-vm = { workspace = true }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
-fuels-types = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }
 itertools = { workspace = true }
 proc-macro2 = { workspace = true }
@@ -37,5 +36,4 @@ default = ["std"]
 std = [
     "fuels-core/std",
     "fuels-accounts/std",
-    "fuels-types/std",
 ]

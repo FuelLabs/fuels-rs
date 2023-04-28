@@ -10,7 +10,7 @@ use fuels::{
     types::{block::Block, errors::error, message::Message},
 };
 use fuels_accounts::Account;
-use fuels_types::resource::Resource;
+use fuels_core::resource::Resource;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

@@ -13,7 +13,7 @@ use fuel_core_client::client::{
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
-use fuels_types::{
+use fuels_core::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
     chain_info::ChainInfo,

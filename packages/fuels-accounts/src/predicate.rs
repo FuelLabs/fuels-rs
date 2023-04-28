@@ -3,7 +3,7 @@ use std::{fmt::Debug, fs};
 use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
 use fuels_core::Configurables;
-use fuels_types::{
+use fuels_core::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
     transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
 };

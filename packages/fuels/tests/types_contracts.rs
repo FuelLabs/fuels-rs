@@ -4,7 +4,7 @@ use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, B512},
 };
-use fuels_types::SizedAsciiString;
+use fuels_core::SizedAsciiString;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

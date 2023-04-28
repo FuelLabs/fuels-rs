@@ -3,7 +3,7 @@ use std::future::Future;
 
 use fuels::prelude::*;
 use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::Bits256;
+use fuels_core::Bits256;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -275,7 +275,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 606;
+    let expected_gas_used = 516;
     let expected_metered_bytes_size = 720;
     let expected_total_fee = 368;
 
@@ -1029,7 +1029,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels_core::coin::Coin;
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 

@@ -3,7 +3,7 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{provider::Provider, Account};
-use fuels_types::{
+use fuels_core::{
     bech32::Bech32ContractId,
     errors::Result,
     input::Input,

@@ -10,11 +10,11 @@ use fuel_abi_types::error_codes::{
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::try_from_bytes;
-use fuels_types::{
+use fuels_core::{
     error,
     errors::{Error, Result},
     traits::{Parameterize, Tokenizable},
+    try_from_bytes,
 };
 
 #[derive(Clone)]

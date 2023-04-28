@@ -1,6 +1,6 @@
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_types::{
+use fuels_core::{
+    abi_decoder::ABIDecoder,
     bech32::Bech32ContractId,
     error,
     errors::{Error, Result},
@@ -146,7 +146,7 @@ impl ReceiptParser {
 #[cfg(test)]
 mod tests {
     use fuel_tx::ScriptExecutionResult;
-    use fuels_types::traits::{Parameterize, Tokenizable};
+    use fuels_core::traits::{Parameterize, Tokenizable};
 
     use super::*;
 

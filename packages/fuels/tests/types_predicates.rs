@@ -6,7 +6,7 @@ use fuels::{
     types::{coin::Coin, message::Message},
 };
 use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::unresolved_bytes::UnresolvedBytes;
+use fuels_core::unresolved_bytes::UnresolvedBytes;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,

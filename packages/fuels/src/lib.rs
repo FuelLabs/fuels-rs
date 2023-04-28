@@ -40,7 +40,7 @@ pub mod accounts {
 }
 
 pub mod types {
-    pub use fuels_types::*;
+    pub use fuels_core::*;
 }
 
 #[cfg(feature = "std")]

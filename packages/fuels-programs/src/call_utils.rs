@@ -4,7 +4,7 @@ use fuel_tx::{AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
-use fuels_types::{
+use fuels_core::{
     bech32::Bech32Address,
     constants::WORD_SIZE,
     errors::Result,
@@ -418,10 +418,9 @@ mod test {
 
     use fuels_accounts::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_types::{
+    use fuels_core::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
-        param_types::ParamType,
         resource::Resource,
         Token,
     };

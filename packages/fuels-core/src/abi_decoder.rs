@@ -1,15 +1,13 @@
 use std::{convert::TryInto, str};
 
-use fuel_types::bytes::padded_len_usize;
-use fuels_types::{
+use crate::{
     constants::WORD_SIZE,
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
     param_types::ParamType,
-    StringToken, Token,
+    StringToken, Token, Tokenizable,
 };
-
-use crate::Tokenizable;
+use fuel_types::bytes::padded_len_usize;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {
@@ -336,8 +334,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 #[cfg(test)]
 mod tests {
     use std::vec;
-
-    use fuels_types::{enum_variants::EnumVariants, errors::Error};
 
     use super::*;
 
@@ -720,3 +716,4 @@ mod tests {
         Ok(())
     }
 }
+

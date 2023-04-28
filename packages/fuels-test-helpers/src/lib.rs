@@ -15,7 +15,7 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::AssetId;
-use fuels_types::{
+use fuels_core::{
     bech32::Bech32Address,
     coin::{Coin, CoinStatus},
     constants::BASE_ASSET_ID,
@@ -211,7 +211,7 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_types::bech32::FUEL_BECH32_HRP;
+    use fuels_core::bech32::FUEL_BECH32_HRP;
 
     use super::*;
 

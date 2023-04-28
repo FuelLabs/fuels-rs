@@ -12,7 +12,7 @@ use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_tx::ConsensusParameters;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
-use fuels_types::{
+use fuels_core::{
     coin::Coin,
     errors::{error, Error},
     message::Message,

@@ -1,5 +1,5 @@
 use fuels::prelude::*;
-use fuels_types::SizedAsciiString;
+use fuels_core::SizedAsciiString;
 
 #[tokio::test]
 async fn contract_uses_default_configurables() -> Result<()> {

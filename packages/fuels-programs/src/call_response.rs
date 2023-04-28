@@ -1,5 +1,5 @@
 use fuel_tx::Receipt;
-use fuels_types::{
+use fuels_core::{
     errors::Result,
     traits::{Parameterize, Tokenizable},
 };

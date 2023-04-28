@@ -1,6 +1,6 @@
 use fuel_tx::{ConsensusParameters, Output, Receipt};
 use fuel_types::MessageId;
-use fuels_types::{
+use fuels_core::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, input::Input,
     transaction_builders::TransactionBuilder,
 };

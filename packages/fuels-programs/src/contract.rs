@@ -8,7 +8,7 @@ use fuel_tx::{
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{abi_encoder::ABIEncoder, Configurables};
-use fuels_types::{
+use fuels_core::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     errors::{error, Error, Result},

@@ -1,4 +1,4 @@
-use fuels_types::ByteArray;
+use crate::ByteArray;
 use sha2::{Digest, Sha256};
 
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.

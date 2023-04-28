@@ -5,7 +5,7 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Witness};
-use fuels_types::{
+use fuels_core::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     constants::BASE_ASSET_ID,
     errors::{Error, Result},
