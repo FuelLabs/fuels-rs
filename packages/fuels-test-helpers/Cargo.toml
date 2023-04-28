@@ -19,16 +19,16 @@ fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-accounts = { workspace = true, optional = true }
 fuels-types = { workspace = true }
-futures = "0.3.26"
-hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
-portpicker = { version = "0.1.1" }
-rand = { version = "0.8.4", default-features = false }
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = { version = "1.0", features = ["raw_value"] }
-serde_with = { version = "1.11", features = ["serde_json"] }
-tempfile = { version = "3.0.1", default-features = false }
-tokio = { version = "1.15", default-features = false }
-which = { version = "4.3", default-features = false }
+futures = { workspace = true }
+hex = { workspace = true, default-features = false, features = ["std", "serde"] }
+portpicker = { workspace = true }
+rand = { workspace = true, default-features = false }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+serde_with = { workspace = true }
+tempfile = { workspace = true, default-features = false }
+tokio = { workspace = true, default-features = false }
+which = { workspace = true, default-features = false }
 
 [features]
 default = ["fuels-accounts", "std"]

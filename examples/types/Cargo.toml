@@ -1,16 +1,15 @@
 [package]
 name = "fuels-example-types"
-version = "0.0.0"
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
 publish = false
-authors = ["Fuel Labs <contact@fuel.sh>"]
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+repository = { workspace = true }
 description = "Fuel Rust SDK types examples."
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dependencies]
+[dev-dependencies]
 fuels = { workspace = true }
-rand = "0.8"
-tokio = { version = "1.10", features = ["full"] }
+rand = { workspace = true }
+tokio = { workspace = true, features = ["full"] }

@@ -208,7 +208,7 @@ impl WalletUnlocked {
         R: Rng + CryptoRng + rand_core::CryptoRng,
         S: AsRef<[u8]>,
     {
-        let (secret, uuid) = eth_keystore::new(dir, rng, password)?;
+        let (secret, uuid) = eth_keystore::new(dir, rng, password, None)?;
 
         let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
 
@@ -231,6 +231,7 @@ impl WalletUnlocked {
             &mut rng,
             *self.private_key,
             password,
+            None,
         )?)
     }
 
