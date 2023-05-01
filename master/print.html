@@ -1326,7 +1326,7 @@ abi TestContract {
 }
 
 impl TestContract for Contract {
-    fn return_configurables(    ) -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
+    fn return_configurables() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
         (U8, BOOL, ARRAY, STR_4, STRUCT, ENUM)
     }
 }
