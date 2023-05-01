@@ -5,16 +5,16 @@ use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{ConsensusParameters, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     coin::Coin,
+    coin_type::CoinType,
     constants::BASE_ASSET_ID,
     errors::{Error, Result},
     input::Input,
     message::Message,
-    resource::Resource,
     transaction::{Transaction, TxParameters},
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
@@ -46,6 +46,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     fn sign_transaction(
         &self,
         message: &mut impl Transaction,
+        consensus_parameters: &ConsensusParameters,
     ) -> std::result::Result<Signature, Self::Error>;
 }
 
@@ -132,7 +133,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Resource>> {
+    ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id,
@@ -219,7 +220,7 @@ pub trait Account: ViewOnlyAccount {
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id().to_string(), receipts))
+        Ok((tx.id(&consensus_parameters).to_string(), receipts))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -281,7 +282,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
-        let tx_id = tx.id();
+        let tx_id = tx.id(&params);
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
@@ -296,6 +297,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
+        let params = self.try_provider()?.consensus_parameters().await?;
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;
@@ -309,7 +311,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, amount, None).await?;
 
-        let tx_id = tx.id().to_string();
+        let tx_id = tx.id(&params).to_string();
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
@@ -340,7 +342,10 @@ mod tests {
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
-        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
+        let secret = secret_seed
+            .as_slice()
+            .try_into()
+            .expect("The seed size is valid");
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -382,7 +387,7 @@ mod tests {
             AssetId::from([0u8; 32]),
             TxPointer::default(),
             0,
-            0,
+            0u32.into(),
         );
 
         let output_coin = Output::coin(
@@ -396,7 +401,7 @@ mod tests {
         let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
-            0,
+            0u32.into(),
             hex::decode("24400000")?,
             vec![],
             vec![input_coin],
@@ -406,8 +411,9 @@ mod tests {
         .into();
 
         // Sign the transaction.
-        let signature = wallet.sign_transaction(&mut tx)?;
-        let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
+        let param = Default::default();
+        let signature = wallet.sign_transaction(&mut tx, &param)?;
+        let message = Message::from_bytes(*tx.id(&param));
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511")?);

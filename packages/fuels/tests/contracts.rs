@@ -396,9 +396,9 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .tx_params(TxParameters::default().set_maturity(maturity))
     };
 
-    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1u32.into()).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3u32.into()).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
     Ok(())
 }
 
@@ -857,7 +857,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
 
     // Transfer an amount to the contract
     let amount = 8;
-    let _receipts = wallet
+    wallet
         .force_transfer_to_contract(
             contract_id,
             amount,

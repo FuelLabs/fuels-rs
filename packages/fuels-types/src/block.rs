@@ -3,16 +3,17 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::schema::block::{Block as ClientBlock, Header as ClientHeader};
 use fuel_tx::Bytes32;
+use fuel_types::BlockHeight;
 
 #[derive(Debug)]
 pub struct Header {
     pub id: Bytes32,
     pub da_height: u64,
     pub transactions_count: u64,
-    pub output_messages_count: u64,
+    pub message_receipt_count: u64,
     pub transactions_root: Bytes32,
-    pub output_messages_root: Bytes32,
-    pub height: u64,
+    pub message_receipt_root: Bytes32,
+    pub height: BlockHeight,
     pub prev_root: Bytes32,
     pub time: Option<DateTime<Utc>>,
     pub application_hash: Bytes32,
@@ -27,10 +28,10 @@ impl From<ClientHeader> for Header {
             id: client_header.id.0 .0,
             da_height: client_header.da_height.0,
             transactions_count: client_header.transactions_count.0,
-            output_messages_count: client_header.output_messages_count.0,
+            message_receipt_count: client_header.message_receipt_count.0,
             transactions_root: client_header.transactions_root.0 .0,
-            output_messages_root: client_header.output_messages_root.0 .0,
-            height: client_header.height.0,
+            message_receipt_root: client_header.message_receipt_root.0 .0,
+            height: client_header.height.0.into(),
             prev_root: client_header.prev_root.0 .0,
             time,
             application_hash: client_header.application_hash.0 .0,

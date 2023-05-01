@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::accounts::fuel_crypto::fuel_types::BlockHeight;
     use fuels::prelude::*;
 
     #[tokio::test]
@@ -190,7 +191,7 @@ mod tests {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        let (_tx_id, _receipts) = wallet
+        wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
@@ -359,7 +360,7 @@ mod tests {
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&tx_id, &msg_id)
+            .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(1)))
             .await?
             .expect("Failed to retrieve message proof.");
 

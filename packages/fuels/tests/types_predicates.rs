@@ -89,7 +89,7 @@ fn get_test_coins_and_messages(
                 &Bech32Address::default(),
                 address,
                 amount,
-                i,
+                i.into(),
                 [104, 97, 108, 51, 101].to_vec(),
             )
         })

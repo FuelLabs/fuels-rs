@@ -14,10 +14,11 @@ use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
-use fuel_types::AssetId;
+use fuel_types::{AssetId, Nonce};
+use fuels_types::coin::CoinStatus;
 use fuels_types::{
     bech32::Bech32Address,
-    coin::{Coin, CoinStatus},
+    coin::Coin,
     constants::BASE_ASSET_ID,
     message::{Message, MessageStatus},
 };
@@ -115,7 +116,7 @@ pub fn setup_single_message(
     sender: &Bech32Address,
     recipient: &Bech32Address,
     amount: u64,
-    nonce: u64,
+    nonce: Nonce,
     data: Vec<u8>,
 ) -> Message {
     Message {

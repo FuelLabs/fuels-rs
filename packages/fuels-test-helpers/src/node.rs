@@ -8,8 +8,8 @@ use std::{
 
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_core_client::client::FuelClient;
-use fuel_core_types::blockchain::primitives::BlockHeight;
 use fuel_tx::ConsensusParameters;
+use fuel_types::BlockHeight;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
 use fuels_types::{
@@ -147,7 +147,7 @@ impl SerializeAs<BlockHeight> for HexNumber {
     where
         S: Serializer,
     {
-        let number: u64 = (*value).into();
+        let number = u32::from(*value) as u64;
         HexNumber::serialize_as(&number, serializer)
     }
 }
@@ -158,7 +158,7 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
         D: Deserializer<'de>,
     {
         let number: u64 = HexNumber::deserialize_as(deserializer)?;
-        Ok(number.into())
+        Ok((number as u32).into())
     }
 }
 

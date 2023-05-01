@@ -1,29 +1,27 @@
 use std::{collections::HashMap, fmt::Debug, io};
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core")]
 use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
-    schema::{
-        balance::Balance, block::TimeParameters as FuelTimeParameters, contract::ContractBalance,
-    },
+    schema::{balance::Balance, contract::ContractBalance},
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
-use fuel_types::MessageId;
+use fuel_types::{BlockHeight, MessageId};
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     block::Block,
     chain_info::ChainInfo,
     coin::Coin,
+    coin_type::CoinType,
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     errors::{error, Error, Result},
     message::Message,
     message_proof::MessageProof,
     node_info::NodeInfo,
-    resource::Resource,
     transaction::Transaction,
     transaction_response::TransactionResponse,
 };
@@ -47,19 +45,10 @@ pub struct TransactionCost {
 pub struct TimeParameters {
     // The time to set on the first block
     pub start_time: DateTime<Utc>,
-    // The time interval between subsequent blocks
-    pub block_time_interval: Duration,
+    // The number of blocks to produce
+    pub blocks_to_produce: u64,
 }
 // ANCHOR_END: time_parameters
-
-impl From<TimeParameters> for FuelTimeParameters {
-    fn from(time: TimeParameters) -> Self {
-        Self {
-            start_time: Tai64::from_unix(time.start_time.timestamp()).0.into(),
-            block_time_interval: (time.block_time_interval.num_seconds() as u64).into(),
-        }
-    }
-}
 
 pub(crate) struct ResourceQueries {
     utxos: Vec<String>,
@@ -205,6 +194,10 @@ impl Provider {
         )?;
 
         let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
+        let receipts = receipts.ok_or(error!(
+            ProviderError,
+            "submitted transaction doesn't have receipts"
+        ))?;
         Self::if_failure_generate_error(&status, &receipts)?;
 
         Ok(receipts)
@@ -237,8 +230,11 @@ impl Provider {
     async fn submit_with_feedback(
         &self,
         tx: impl Transaction,
-    ) -> ProviderResult<(TransactionStatus, Vec<Receipt>)> {
-        let tx_id = tx.id().to_string();
+    ) -> ProviderResult<(TransactionStatus, Option<Vec<Receipt>>)> {
+        // TODO: Either return `tx_id` from `submit_and_await_commit` or
+        //  cache the `consensus_parameters` in the provider(`Self`).
+        let consensus_parameters = self.consensus_parameters().await?;
+        let tx_id = tx.id(&consensus_parameters).to_string();
         let status = self.client.submit_and_await_commit(&tx.into()).await?;
         let receipts = self.client.receipts(&tx_id).await?;
 
@@ -356,12 +352,12 @@ impl Provider {
     pub async fn get_spendable_resources(
         &self,
         filter: ResourceFilter,
-    ) -> ProviderResult<Vec<Resource>> {
+    ) -> ProviderResult<Vec<CoinType>> {
         let queries = filter.resource_queries();
 
         let res = self
             .client
-            .resources_to_spend(
+            .coins_to_spend(
                 &filter.owner(),
                 queries.spend_query(),
                 queries.exclusion_query(),
@@ -369,8 +365,8 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(|resource| {
-                resource
+            .map(|coin_type| {
+                coin_type
                     .try_into()
                     .map_err(ProviderError::ClientRequestError)
             })
@@ -509,7 +505,7 @@ impl Provider {
         })
     }
 
-    pub async fn latest_block_height(&self) -> ProviderResult<u64> {
+    pub async fn latest_block_height(&self) -> ProviderResult<BlockHeight> {
         Ok(self.chain_info().await?.latest_block.header.height)
     }
 
@@ -519,11 +515,13 @@ impl Provider {
 
     pub async fn produce_blocks(
         &self,
-        amount: u64,
-        time: Option<TimeParameters>,
-    ) -> io::Result<u64> {
-        let fuel_time: Option<FuelTimeParameters> = time.map(|t| t.into());
-        self.client.produce_blocks(amount, fuel_time).await
+        blocks_to_produce: u64,
+        start_time: Option<DateTime<Utc>>,
+    ) -> io::Result<BlockHeight> {
+        let start_time = start_time.map(|time| Tai64::from_unix(time.timestamp()).0);
+        self.client
+            .produce_blocks(blocks_to_produce, start_time)
+            .await
     }
 
     /// Get block by id.
@@ -629,10 +627,12 @@ impl Provider {
         &self,
         tx_id: &str,
         message_id: &str,
+        commit_block_id: Option<&str>,
+        commit_block_height: Option<BlockHeight>,
     ) -> ProviderResult<Option<MessageProof>> {
         let proof = self
             .client
-            .message_proof(tx_id, message_id)
+            .message_proof(tx_id, message_id, commit_block_id, commit_block_height)
             .await?
             .map(Into::into);
         Ok(proof)

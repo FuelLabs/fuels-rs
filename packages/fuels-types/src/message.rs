@@ -1,10 +1,10 @@
 #![cfg(feature = "std")]
 
 use fuel_core_chain_config::MessageConfig;
-use fuel_core_client::client::schema::message::{
-    Message as ClientMessage, MessageStatus as ClientMessageStatus,
-};
+use fuel_core_client::client::schema::coins::MessageCoin as ClientMessageCoin;
+use fuel_core_client::client::schema::message::Message as ClientMessage;
 use fuel_tx::{Input, MessageId};
+use fuel_types::Nonce;
 
 use crate::bech32::Bech32Address;
 
@@ -20,7 +20,7 @@ pub struct Message {
     pub amount: u64,
     pub sender: Bech32Address,
     pub recipient: Bech32Address,
-    pub nonce: u64,
+    pub nonce: Nonce,
     pub data: Vec<u8>,
     pub da_height: u64,
     pub status: MessageStatus,
@@ -31,7 +31,7 @@ impl Message {
         Input::compute_message_id(
             &(&self.sender).into(),
             &(&self.recipient).into(),
-            self.nonce,
+            &self.nonce,
             self.amount,
             &self.data,
         )
@@ -44,19 +44,24 @@ impl From<ClientMessage> for Message {
             amount: message.amount.0,
             sender: message.sender.0 .0.into(),
             recipient: message.recipient.0 .0.into(),
-            nonce: message.nonce.0,
+            nonce: message.nonce.into(),
             data: message.data.0 .0,
             da_height: message.da_height.0,
-            status: MessageStatus::from(message.status),
+            status: MessageStatus::Unspent,
         }
     }
 }
 
-impl From<ClientMessageStatus> for MessageStatus {
-    fn from(status: ClientMessageStatus) -> Self {
-        match status {
-            ClientMessageStatus::Unspent => MessageStatus::Unspent,
-            ClientMessageStatus::Spent => MessageStatus::Spent,
+impl From<ClientMessageCoin> for Message {
+    fn from(message: ClientMessageCoin) -> Self {
+        Self {
+            amount: message.amount.0,
+            sender: message.sender.0 .0.into(),
+            recipient: message.recipient.0 .0.into(),
+            nonce: message.nonce.into(),
+            data: Default::default(),
+            da_height: message.da_height.0,
+            status: MessageStatus::Unspent,
         }
     }
 }

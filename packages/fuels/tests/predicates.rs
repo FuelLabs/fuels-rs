@@ -1,3 +1,4 @@
+use fuel_core_types::fuel_types::BlockHeight;
 use fuel_tx::Output;
 use fuels::{
     prelude::*,
@@ -34,7 +35,7 @@ fn get_test_coins_and_messages(
                 &Bech32Address::default(),
                 address,
                 amount,
-                i,
+                i.into(),
                 [104, 97, 108, 51, 101].to_vec(),
             )
         })
@@ -202,7 +203,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(1000000, 10000, 0);
+    let tx_params = TxParameters::new(1000000, 10000, 0u32.into());
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -310,7 +311,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     assert!(contract_balances.is_empty());
 
     let amount = 300;
-    let (_tx_id, _receipts) = predicate
+    predicate
         .force_transfer_to_contract(
             &contract_id,
             amount,
@@ -372,7 +373,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id)
+        .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(1)))
         .await?
         .expect("Failed to retrieve message proof.");
 
@@ -441,7 +442,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
         .set_consensus_parameters(params)
         .build()?;
-    wallet.sign_transaction(&mut tx)?;
+    wallet.sign_transaction(&mut tx, &params)?;
 
     provider.send_transaction(&tx).await?;
 

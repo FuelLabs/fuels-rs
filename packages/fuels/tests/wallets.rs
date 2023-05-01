@@ -1,5 +1,6 @@
 use std::iter::repeat;
 
+use fuel_tx::input::coin::CoinSigned;
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
@@ -75,7 +76,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
     let inputs: Vec<Input> = inputs
         .iter()
         .map(|input| match input {
-            Input::CoinSigned {
+            Input::CoinSigned(CoinSigned {
                 owner,
                 amount,
                 asset_id,
@@ -83,7 +84,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
                 witness_index,
                 maturity,
                 ..
-            } => Input::coin_signed(
+            }) => Input::coin_signed(
                 zero_utxo_id,
                 *owner,
                 *amount,
@@ -146,7 +147,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0,
+        0u32.into(),
     )];
     let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
@@ -182,7 +183,7 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0,
+        0u32.into(),
     ))
     .take(3)
     .collect::<Vec<_>>();
@@ -241,7 +242,7 @@ async fn send_transfer_transactions() -> Result<()> {
     // Configure transaction parameters.
     let gas_price = 1;
     let gas_limit = 500_000;
-    let maturity = 0;
+    let maturity = 0u32.into();
 
     let tx_params = TxParameters::new(gas_price, gas_limit, maturity);
 
