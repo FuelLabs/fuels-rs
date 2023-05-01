@@ -57,6 +57,10 @@ impl AccountError {
     pub fn no_provider() -> Self {
         Self("No provider was setup: make sure to set_provider in your account!".to_string())
     }
+
+    pub fn no_resources() -> Self {
+        Self("Not enough resources could be found!".to_string())
+    }
 }
 
 impl Display for AccountError {
@@ -125,26 +129,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             .await
             .map_err(Into::into)
     }
-
-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Resource>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -165,6 +149,55 @@ pub trait Account: ViewOnlyAccount {
     fn get_used_resource_ids(&self) -> Vec<ResourceId>;
 
     fn get_expected_resources(&self) -> Vec<Resource>;
+
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> AccountResult<Vec<Resource>> {
+        let used_resource_ids = self.get_used_resource_ids();
+
+        let excluded_utxos = used_resource_ids
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                ResourceId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let excluded_message_ids = used_resource_ids
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                ResourceId::MessageId(message_id) => Some(message_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            excluded_utxos,
+            excluded_message_ids,
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+            .or_else(|_: Error| {
+                let resources = self.get_expected_resources();
+                if resources.is_empty() {
+                    return Err(AccountError::no_resources());
+                }
+                Ok(resources)
+            })
+    }
 
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(

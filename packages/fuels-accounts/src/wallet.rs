@@ -245,52 +245,6 @@ impl ViewOnlyAccount for WalletUnlocked {
         self.wallet.set_provider(provider);
         self
     }
-
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Resource>> {
-        let used_resource_ids = self.cache.lock().unwrap().get_used_resource_ids();
-
-        let excluded_utxos = used_resource_ids
-            .iter()
-            .filter_map(|resource_id| match resource_id {
-                ResourceId::UtxoId(utxo_id) => Some(utxo_id),
-                _ => None,
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let excluded_message_ids = used_resource_ids
-            .iter()
-            .filter_map(|resource_id| match resource_id {
-                ResourceId::MessageId(message_id) => Some(message_id),
-                _ => None,
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            excluded_utxos,
-            excluded_message_ids,
-        };
-
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-            .or_else(|_: Error| {
-                let resources = self.cache.lock().unwrap().get_expected_resources();
-                if resources.is_empty() {
-                    return Err(Error::WalletError("You broke".to_string()));
-                }
-                Ok(resources)
-            })
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]

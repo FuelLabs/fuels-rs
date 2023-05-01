@@ -13,7 +13,7 @@ use fuels_types::{
     errors::Result,
     input::Input,
     resource::{Resource, ResourceId},
-    transaction::{Transaction},
+    transaction::Transaction,
     transaction_builders::TransactionBuilder,
     unresolved_bytes::UnresolvedBytes,
 };
@@ -128,8 +128,7 @@ impl Account for Predicate {
         amount: u64,
         _witness_index: Option<u8>,
     ) -> Result<Vec<Input>> {
-        Ok(self
-            .get_spendable_resources(asset_id, amount)
+        Ok(Account::get_spendable_resources(self, asset_id, amount)
             .await?
             .into_iter()
             .map(|resource| {
