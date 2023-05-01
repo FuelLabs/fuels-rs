@@ -192,7 +192,7 @@ pub trait Account: ViewOnlyAccount {
             .map_err(Into::into)
             .or_else(|_: Error| {
                 let resources = self.get_expected_resources();
-                if resources.is_empty() {
+                if resources.iter().map(|c| c.amount()).sum::<u64>() < amount {
                     return Err(AccountError::no_resources());
                 }
                 Ok(resources)

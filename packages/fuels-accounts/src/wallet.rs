@@ -23,7 +23,7 @@ use thiserror::Error;
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::{Provider, ResourceFilter},
+    provider::Provider,
     resource_cache::ResourceCache,
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
