@@ -1,6 +1,6 @@
 contract;
 
-use std::storage::{get, store};
+use std::storage::storage_api::write;
 
 abi TestContract {
     #[storage(write)]
@@ -12,6 +12,6 @@ const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000
 impl TestContract for Contract {
     #[storage(write)]
     fn store_value(val: u64) {
-        store(COUNTER_KEY, val);
+        write(COUNTER_KEY, 0, val);
     }
 }

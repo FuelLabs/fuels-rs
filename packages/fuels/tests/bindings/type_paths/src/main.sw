@@ -1,7 +1,7 @@
 contract;
 
-dep contract_a_types;
-dep another_lib;
+mod contract_a_types;
+mod another_lib;
 
 use contract_a_types::AWrapper;
 use another_lib::VeryCommonNameStruct;

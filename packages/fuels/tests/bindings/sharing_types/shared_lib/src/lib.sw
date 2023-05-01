@@ -1,4 +1,4 @@
-library shared_lib;
+library;
 
 pub struct SharedStruct1<T> {
     a: T,

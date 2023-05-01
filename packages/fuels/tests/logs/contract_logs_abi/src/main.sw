@@ -1,4 +1,4 @@
-library contract_logs_abi;
+library;
 
 use std::logging::log;
 
