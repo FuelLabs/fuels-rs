@@ -15,7 +15,7 @@ use fuels_types::{
     errors::{Error, Result},
     input::Input,
     resource::{Resource, ResourceId},
-    transaction::{Transaction},
+    transaction::Transaction,
     transaction_builders::TransactionBuilder,
 };
 use rand::{CryptoRng, Rng};

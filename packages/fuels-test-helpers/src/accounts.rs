@@ -110,7 +110,7 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount, Account};
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
     use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
     use rand::Fill;
 
