@@ -26,7 +26,6 @@ abi VectorsOutputContract {
     fn u16_in_vec(len: u16) -> Vec<u16>;
     fn u32_in_vec(len: u32) -> Vec<u32>;
     fn u64_in_vec(len: u64) -> Vec<u64>;
-    fn u64_in_vec(len: u64) -> Vec<u64>;
     fn u8_in_vec(len: u8) -> Vec<u8>;
 }
 

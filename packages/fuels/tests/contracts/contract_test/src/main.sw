@@ -1,6 +1,6 @@
 contract;
 
-use std::storage::{get, store};
+use std::storage::storage_api::{read, write};
 use std::context::msg_amount;
 
 struct MyType {
@@ -47,20 +47,20 @@ impl TestContract for Contract {
     // ANCHOR_END: msg_amount
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64 {
-        store(COUNTER_KEY, value);
+        write(COUNTER_KEY, 0, value);
         value
     }
 
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64 {
-        let new_value = get::<u64>(COUNTER_KEY).unwrap_or(0) + value;
-        store(COUNTER_KEY, new_value);
+        let new_value = read::<u64>(COUNTER_KEY, 0).unwrap_or(0) + value;
+        write(COUNTER_KEY, 0, new_value);
         new_value
     }
 
     #[storage(read)]
     fn get_counter() -> u64 {
-        get::<u64>(COUNTER_KEY).unwrap_or(0)
+        read::<u64>(COUNTER_KEY, 0).unwrap_or(0)
     }
 
     fn get(x: u64, y: u64) -> u64 {
