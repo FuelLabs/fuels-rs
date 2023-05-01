@@ -257,10 +257,10 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
 
+        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        
         let cached_tx = tx.compute_cached_tx(self.address());
         self.cache(cached_tx);
-
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id().to_string(), receipts))
     }
