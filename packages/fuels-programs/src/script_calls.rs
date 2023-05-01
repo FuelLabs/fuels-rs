@@ -183,10 +183,13 @@ where
             &chain_info.consensus_parameters,
         )?;
 
-        let receipts = if simulate {
-            self.provider.checked_dry_run(&tx).await?
-        } else {
-            self.provider.send_transaction(&tx).await?
+        let receipts = match simulate {
+            true => self.provider.checked_dry_run(&tx).await?,
+            false => {
+                let receipts = self.provider.send_transaction(&tx).await?;
+                self.account.cache(&tx);
+                receipts
+            }
         };
         self.get_response(receipts)
     }

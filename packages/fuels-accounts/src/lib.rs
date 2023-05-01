@@ -5,7 +5,7 @@ use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{ConsensusParameters, Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -14,8 +14,8 @@ use fuels_types::{
     errors::{Error, Result},
     input::Input,
     message::Message,
-    resource::Resource,
-    transaction::{CachedTx, Transaction, TxParameters},
+    resource::{Resource, ResourceId},
+    transaction::{Transaction, TxParameters},
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     transaction_response::TransactionResponse,
 };
@@ -27,6 +27,7 @@ use crate::{accounts_utils::extract_message_id, provider::Provider};
 mod accounts_utils;
 pub mod predicate;
 pub mod provider;
+mod resource_cache;
 pub mod wallet;
 
 /// Trait for signing transactions and messages
@@ -159,7 +160,11 @@ pub trait Account: ViewOnlyAccount {
         witness_index: Option<u8>,
     ) -> Result<Vec<Input>>;
 
-    fn cache(&self, cached_tx: CachedTx);
+    fn cache(&self, tx: &impl Transaction);
+
+    fn get_used_resource_ids(&self) -> Vec<ResourceId>;
+
+    fn get_expected_resources(&self) -> Vec<Resource>;
 
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(
@@ -176,27 +181,32 @@ pub trait Account: ViewOnlyAccount {
         ]
     }
 
-    fn get_asset_outputs_for_amount2(
+    // Create a change output with a fixed amount so that it can be used for
+    // caching and spending expected outputs optimistically
+    fn get_calculated_change_output(
         &self,
-        to: &Bech32Address,
+        tx_builder: &impl TransactionBuilder,
+        consensus_parameters: &ConsensusParameters,
         asset_id: AssetId,
         amount: u64,
-        total_input_amount: u64,
-        max_fee: u64,
-    ) -> Vec<Output> {
+    ) -> Output {
+        let max_fee = tx_builder
+            .fee_checked_from_tx(consensus_parameters)
+            .unwrap()
+            .total();
+        let total_input_amount = tx_builder
+            .inputs()
+            .iter()
+            .filter_map(|input| input.amount())
+            .sum();
+
         let mut expected_amount = total_input_amount;
         if asset_id == BASE_ASSET_ID {
             expected_amount -= max_fee;
         }
         expected_amount -= amount;
 
-        vec![
-            Output::coin(to.into(), amount, asset_id),
-            Output::coin(self.address().into(), expected_amount, asset_id),
-            // Note that the change will be computed by the node.
-            // Here we only have to tell the node who will own the change and its asset ID.
-            Output::change(self.address().into(), 0, asset_id),
-        ]
+        Output::coin(self.address().into(), expected_amount, asset_id)
     }
 
     async fn add_fee_resources<Tb: TransactionBuilder>(
@@ -231,20 +241,10 @@ pub trait Account: ViewOnlyAccount {
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters)
             .set_consensus_parameters(consensus_parameters);
 
-        // Instead of just using Output:change, calculate the output amount and set it as
-        // Output::coin, then add Output:change to collect the rest.
-        // This is done to enable optimistic spending of coin outputs
-        let max_fee = tx_builder
-            .fee_checked_from_tx(&consensus_parameters)
-            .unwrap()
-            .total();
-        let total_input_amount = tx_builder
-            .inputs
-            .iter()
-            .filter_map(|input| input.amount())
-            .sum();
-        let outputs =
-            self.get_asset_outputs_for_amount2(to, asset_id, amount, total_input_amount, max_fee);
+        let mut outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let expected_change_output =
+            self.get_calculated_change_output(&tx_builder, &consensus_parameters, asset_id, amount);
+        outputs.push(expected_change_output);
         let tx_builder = tx_builder.set_outputs(outputs);
 
         // if we are not transferring the base asset, previous base amount is 0
@@ -258,9 +258,7 @@ pub trait Account: ViewOnlyAccount {
             .await?;
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
-        
-        let cached_tx = tx.compute_cached_tx(self.address());
-        self.cache(cached_tx);
+        self.cache(&tx);
 
         Ok((tx.id().to_string(), receipts))
     }
@@ -326,6 +324,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_id = tx.id();
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        self.cache(&tx);
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -354,6 +353,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_id = tx.id().to_string();
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        self.cache(&tx);
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

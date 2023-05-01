@@ -260,6 +260,7 @@ impl Contract {
             &chain_info.consensus_parameters,
         )?;
         provider.send_transaction(&tx).await?;
+        account.cache(&tx);
 
         Ok(self.contract_id.into())
     }
@@ -591,10 +592,13 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
-        } else {
-            provider.send_transaction(&tx).await?
+        let receipts = match simulate {
+            true => provider.checked_dry_run(&tx).await?,
+            false => {
+                let receipts = provider.send_transaction(&tx).await?;
+                self.account.cache(&tx);
+                receipts
+            }
         };
 
         self.get_response(receipts)
@@ -821,10 +825,13 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
-        } else {
-            provider.send_transaction(&tx).await?
+        let receipts = match simulate {
+            true => provider.checked_dry_run(&tx).await?,
+            false => {
+                let receipts = provider.send_transaction(&tx).await?;
+                self.account.cache(&tx);
+                receipts
+            }
         };
 
         self.get_response(receipts)

@@ -1,5 +1,4 @@
 use std::{
-    collections::VecDeque,
     fmt, ops,
     path::Path,
     sync::{Arc, Mutex},
@@ -16,7 +15,7 @@ use fuels_types::{
     errors::{Error, Result},
     input::Input,
     resource::{Resource, ResourceId},
-    transaction::{CachedTx, Transaction},
+    transaction::{Transaction},
     transaction_builders::TransactionBuilder,
 };
 use rand::{CryptoRng, Rng};
@@ -25,6 +24,7 @@ use thiserror::Error;
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::{Provider, ResourceFilter},
+    resource_cache::ResourceCache,
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
@@ -76,7 +76,7 @@ pub struct Wallet {
 pub struct WalletUnlocked {
     wallet: Wallet,
     pub(crate) private_key: SecretKey,
-    tx_cache: Arc<Mutex<VecDeque<CachedTx>>>,
+    cache: Arc<Mutex<ResourceCache>>,
 }
 
 impl Wallet {
@@ -106,7 +106,7 @@ impl Wallet {
         WalletUnlocked {
             wallet: self,
             private_key,
-            tx_cache: Default::default(),
+            cache: Default::default(),
         }
     }
 }
@@ -126,26 +126,6 @@ impl ViewOnlyAccount for Wallet {
 }
 
 impl WalletUnlocked {
-    fn get_used_resource_ids(&self) -> Vec<ResourceId> {
-        self.tx_cache
-            .lock()
-            .unwrap()
-            .iter()
-            .flat_map(|item| &item.resource_ids_used)
-            .cloned()
-            .collect()
-    }
-
-    fn get_expected_resources(&self) -> Vec<Resource> {
-        self.tx_cache
-            .lock()
-            .unwrap()
-            .iter()
-            .flat_map(|item| &item.expected_resource)
-            .cloned()
-            .collect()
-    }
-
     /// Lock the wallet by `drop`ping the private key from memory.
     pub fn lock(self) -> Wallet {
         self.wallet
@@ -271,11 +251,21 @@ impl ViewOnlyAccount for WalletUnlocked {
         asset_id: AssetId,
         amount: u64,
     ) -> Result<Vec<Resource>> {
-        let excluded_utxos = self
-            .get_used_resource_ids()
+        let used_resource_ids = self.cache.lock().unwrap().get_used_resource_ids();
+
+        let excluded_utxos = used_resource_ids
             .iter()
             .filter_map(|resource_id| match resource_id {
                 ResourceId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let excluded_message_ids = used_resource_ids
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                ResourceId::MessageId(message_id) => Some(message_id),
                 _ => None,
             })
             .cloned()
@@ -286,7 +276,7 @@ impl ViewOnlyAccount for WalletUnlocked {
             asset_id,
             amount,
             excluded_utxos,
-            ..Default::default()
+            excluded_message_ids,
         };
 
         self.try_provider()?
@@ -294,7 +284,7 @@ impl ViewOnlyAccount for WalletUnlocked {
             .await
             .map_err(Into::into)
             .or_else(|_: Error| {
-                let resources = self.get_expected_resources();
+                let resources = self.cache.lock().unwrap().get_expected_resources();
                 if resources.is_empty() {
                     return Err(Error::WalletError("You broke".to_string()));
                 }
@@ -323,9 +313,17 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    fn cache(&self, item: CachedTx) {
-        dbg!(&item);
-        self.tx_cache.lock().unwrap().push_back(item)
+    fn cache(&self, tx: &impl Transaction) {
+        let cached_tx = tx.compute_cached_tx(self.address());
+        self.cache.lock().unwrap().save(cached_tx)
+    }
+
+    fn get_used_resource_ids(&self) -> Vec<ResourceId> {
+        self.cache.lock().unwrap().get_used_resource_ids()
+    }
+
+    fn get_expected_resources(&self) -> Vec<Resource> {
+        self.cache.lock().unwrap().get_expected_resources()
     }
 
     async fn add_fee_resources<Tb: TransactionBuilder>(

@@ -65,9 +65,8 @@ use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
 #[derive(Clone, Debug)]
 pub struct CachedTx {
-    pub tx_id: Bytes32,
     pub resource_ids_used: HashSet<ResourceId>,
-    pub expected_resource: HashSet<Resource>,
+    pub expected_resources: HashSet<Resource>,
 }
 
 pub trait Transaction: Into<FuelTransaction> + Send {
@@ -171,7 +170,7 @@ macro_rules! impl_tx_wrapper {
                     .collect();
 
                 let tx_id = self.id();
-                let expected_resource = self
+                let expected_resources = self
                     .outputs()
                     .iter()
                     .enumerate()
@@ -190,9 +189,8 @@ macro_rules! impl_tx_wrapper {
                     .collect();
 
                 CachedTx {
-                    tx_id,
                     resource_ids_used,
-                    expected_resource,
+                    expected_resources,
                 }
             }
 

@@ -1,5 +1,4 @@
 use std::{
-    collections::VecDeque,
     fmt::Debug,
     fs,
     sync::{Arc, Mutex},
@@ -9,14 +8,20 @@ use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
 use fuels_core::Configurables;
 use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
-    transaction::CachedTx, transaction_builders::TransactionBuilder,
+    bech32::Bech32Address,
+    constants::BASE_ASSET_ID,
+    errors::Result,
+    input::Input,
+    resource::{Resource, ResourceId},
+    transaction::{Transaction},
+    transaction_builders::TransactionBuilder,
     unresolved_bytes::UnresolvedBytes,
 };
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::Provider,
+    resource_cache::ResourceCache,
     Account, AccountError, AccountResult, ViewOnlyAccount,
 };
 
@@ -26,7 +31,7 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
-    tx_cache: Arc<Mutex<VecDeque<CachedTx>>>,
+    cache: Arc<Mutex<ResourceCache>>,
 }
 
 impl Predicate {
@@ -57,7 +62,7 @@ impl Predicate {
             code,
             data: Default::default(),
             provider: None,
-            tx_cache: Default::default(),
+            cache: Default::default(),
         }
     }
 
@@ -133,8 +138,17 @@ impl Account for Predicate {
             .collect::<Vec<Input>>())
     }
 
-    fn cache(&self, item: CachedTx) {
-        self.tx_cache.lock().unwrap().push_back(item)
+    fn cache(&self, tx: &impl Transaction) {
+        let cached_tx = tx.compute_cached_tx(self.address());
+        self.cache.lock().unwrap().save(cached_tx)
+    }
+
+    fn get_used_resource_ids(&self) -> Vec<ResourceId> {
+        self.cache.lock().unwrap().get_used_resource_ids()
+    }
+
+    fn get_expected_resources(&self) -> Vec<Resource> {
+        self.cache.lock().unwrap().get_expected_resources()
     }
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
