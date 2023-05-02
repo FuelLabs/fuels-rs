@@ -121,7 +121,7 @@ mod tests {
 
     use crate::{
         launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet, AssetConfig,
-        Config, WalletsConfig,
+        WalletsConfig,
     };
 
     #[tokio::test]
