@@ -40,16 +40,6 @@ pub struct TransactionCost {
     pub total_fee: u64,
 }
 
-#[derive(Debug)]
-// ANCHOR: time_parameters
-pub struct TimeParameters {
-    // The time to set on the first block
-    pub start_time: DateTime<Utc>,
-    // The number of blocks to produce
-    pub blocks_to_produce: u64,
-}
-// ANCHOR_END: time_parameters
-
 pub(crate) struct ResourceQueries {
     utxos: Vec<String>,
     messages: Vec<String>,
