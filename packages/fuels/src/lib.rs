@@ -81,6 +81,7 @@ pub mod prelude {
             },
             logs::{LogDecoder, LogId},
         },
+        types::transaction::*,
         test_helpers::*,
     };
     pub use super::{
@@ -90,7 +91,6 @@ pub mod prelude {
             bech32::{Bech32Address, Bech32ContractId},
             constants::*,
             errors::{Error, Result},
-            transaction::*,
             Address, AssetId, Bytes, ContractId, RawSlice,
         },
     };
