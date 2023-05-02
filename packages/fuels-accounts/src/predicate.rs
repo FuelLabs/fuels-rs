@@ -1,7 +1,7 @@
 use std::{fmt::Debug, fs};
 
-use fuel_tx::Contract;
-use fuel_types::{Address, AssetId};
+use fuel_tx::ConsensusParameters;
+use fuel_types::AssetId;
 use fuels_core::Configurables;
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
@@ -20,6 +20,7 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
+    params: Option<ConsensusParameters>,
 }
 
 impl Predicate {
@@ -44,23 +45,27 @@ impl Predicate {
         self
     }
 
-    pub fn from_code(code: Vec<u8>) -> Self {
+    pub fn from_code(code: Vec<u8>, params: Option<ConsensusParameters>) -> Self {
         Self {
-            address: Self::calculate_address(&code),
+            address: Self::calculate_address(&code, &params),
             code,
             data: Default::default(),
             provider: None,
+            params,
         }
     }
 
-    fn calculate_address(code: &[u8]) -> Bech32Address {
-        let address: Address = (*Contract::root_from_code(code)).into();
-        address.into()
+    fn calculate_address(code: &[u8], params: &Option<ConsensusParameters>) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(
+            code,
+            params.as_ref().unwrap_or(&ConsensusParameters::DEFAULT),
+        )
+        .into()
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
-        Ok(Self::from_code(code))
+        Ok(Self::from_code(code, None))
     }
 
     pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
@@ -72,7 +77,8 @@ impl Predicate {
         Self {
             data: self.data,
             provider: self.provider,
-            ..Self::from_code(code)
+            params: self.params.clone(),
+            ..Self::from_code(code, self.params)
         }
     }
 
@@ -88,7 +94,8 @@ impl Predicate {
         Self {
             data: self.data,
             provider: self.provider,
-            ..Self::from_code(self.code)
+            params: self.params.clone(),
+            ..Self::from_code(self.code, self.params)
         }
     }
 }
