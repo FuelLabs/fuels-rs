@@ -81,8 +81,8 @@ pub mod prelude {
             },
             logs::{LogDecoder, LogId},
         },
-        types::transaction::*,
         test_helpers::*,
+        types::transaction::*,
     };
     pub use super::{
         macros::{abigen, setup_program_test},
