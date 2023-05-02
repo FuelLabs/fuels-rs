@@ -1,7 +1,5 @@
 contract;
 
-use std::storage::{get, store};
-
 abi TestContract {
     fn method_with_empty_argument() -> u64;
 }

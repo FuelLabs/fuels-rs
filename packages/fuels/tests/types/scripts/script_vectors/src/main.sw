@@ -1,8 +1,8 @@
 script;
 
-dep eq_impls;
-dep data_structures;
-dep utils;
+mod data_structures;
+mod eq_impls;
+mod utils;
 
 use eq_impls::*;
 use utils::*;
