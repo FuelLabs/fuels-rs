@@ -1,3 +1,5 @@
+#![cfg(feature = "std")]
+
 use std::{collections::HashSet, fmt::Debug};
 
 use fuel_tx::{
