@@ -1,5 +1,3 @@
-#![cfg(feature = "std")]
-
 use fuel_core_client::client::schema::resource::Resource as ClientResource;
 use fuel_tx::{AssetId, MessageId, UtxoId};
 
