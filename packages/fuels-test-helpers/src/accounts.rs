@@ -110,11 +110,19 @@ pub async fn setup_test_provider(
 
 #[cfg(test)]
 mod tests {
+    use fuel_tx::field::Outputs;
+    use fuel_types::Address;
     use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
-    use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
+    use fuels_types::{
+        bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, resource::Resource,
+        transaction::TxParameters,
+    };
     use rand::Fill;
 
-    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
+    use crate::{
+        launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet, AssetConfig,
+        Config, WalletsConfig,
+    };
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<()> {
@@ -253,6 +261,34 @@ mod tests {
                 &6_000_000_000
             );
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn transfer_produces_predictable_output() -> Result<()> {
+        let wallet = launch_provider_and_get_wallet().await;
+        let provider = wallet.try_provider()?;
+        let sender_address: Address = wallet.address().into();
+
+        let (tx_id, _) = wallet
+            .transfer(
+                &Bech32Address::default(),
+                1000,
+                BASE_ASSET_ID,
+                TxParameters::default(),
+            )
+            .await?;
+
+        let tx_response = provider.get_transaction_by_id(&tx_id).await?.unwrap();
+        let outputs = match tx_response.transaction {
+            fuel_tx::Transaction::Script(script) => script.outputs().clone(),
+            _ => panic!("Transfers must be a Script transaction!"),
+        };
+
+        assert!(outputs.iter().any(|output| {
+        matches!(output, fuel_tx::Output::Coin { to, asset_id, .. } if to == &sender_address && asset_id == &BASE_ASSET_ID)
+    }));
 
         Ok(())
     }
