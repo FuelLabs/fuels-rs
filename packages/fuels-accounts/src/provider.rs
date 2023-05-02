@@ -149,6 +149,31 @@ impl From<ProviderError> for Error {
     }
 }
 
+/// Extends the functionality of the [`FuelClient`].
+#[async_trait::async_trait]
+pub trait ClientExt {
+    // TODO: It should be part of the `fuel-core-client`.
+    /// Submits transaction, await confirmation and return receipts.
+    async fn submit_and_await_commit_with_receipts(
+        &self,
+        tx: &fuel_tx::Transaction,
+    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)>;
+}
+
+#[async_trait::async_trait]
+impl ClientExt for FuelClient {
+    async fn submit_and_await_commit_with_receipts(
+        &self,
+        tx: &fuel_tx::Transaction,
+    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)> {
+        let tx_id = self.submit(tx).await?.to_string();
+        let status = self.await_transaction_commit(&tx_id).await?;
+        let receipts = self.receipts(&tx_id).await?;
+
+        Ok((status, receipts))
+    }
+}
+
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which provides a broader API.
@@ -231,14 +256,10 @@ impl Provider {
         &self,
         tx: impl Transaction,
     ) -> ProviderResult<(TransactionStatus, Option<Vec<Receipt>>)> {
-        // TODO: Either return `tx_id` from `submit_and_await_commit` or
-        //  cache the `consensus_parameters` in the provider(`Self`).
-        let consensus_parameters = self.consensus_parameters().await?;
-        let tx_id = tx.id(&consensus_parameters).to_string();
-        let status = self.client.submit_and_await_commit(&tx.into()).await?;
-        let receipts = self.client.receipts(&tx_id).await?;
-
-        Ok((status, receipts))
+        self.client
+            .submit_and_await_commit_with_receipts(&tx.into())
+            .await
+            .map_err(Into::into)
     }
 
     #[cfg(feature = "fuel-core")]
