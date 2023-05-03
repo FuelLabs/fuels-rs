@@ -78,7 +78,7 @@ impl Predicate {
             data: self.data,
             provider: self.provider,
             params: Some(params),
-            ..Self::from_code(self.code, self.params.clone())
+            ..Self::from_code(self.code, self.params)
         }
     }
 
@@ -86,7 +86,7 @@ impl Predicate {
         Self {
             data: self.data,
             provider: self.provider,
-            params: self.params.clone(),
+            params: self.params,
             ..Self::from_code(code, self.params)
         }
     }
@@ -103,7 +103,7 @@ impl Predicate {
         Self {
             data: self.data,
             provider: self.provider,
-            params: self.params.clone(),
+            params: self.params,
             ..Self::from_code(self.code, self.params)
         }
     }

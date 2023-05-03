@@ -5,6 +5,5 @@ license = "Apache-2.0"
 name = "lib_contract"
 
 [dependencies]
-core = { git = "https://github.com/FuelLabs/sway", branch = "feature/fuel-core-0.18" }
 lib_contract = { path = "../lib_contract_abi/", package = "lib_contract_abi" }
 std = { git = "https://github.com/FuelLabs/sway", branch = "feature/fuel-core-0.18" }
