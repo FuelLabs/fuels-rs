@@ -24,7 +24,7 @@ Then, in Rust, after setting up and deploying the above contract, you can config
 {{#include ../../../examples/contracts/src/lib.rs:call_parameters}}
 ```
 
-<!-- This section should why `call_params` returns a result -->
+<!-- This section should explain why `call_params` returns a result -->
 <!-- payable:example:start -->
 `call_params` returns a result to ensure you don't forward assets to a contract method that isn't payable. 
 <!-- payable:example:end -->
