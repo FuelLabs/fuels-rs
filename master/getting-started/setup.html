@@ -139,16 +139,23 @@
                     <main>
                         <h1 id="setting-up-and-running-the-fuel-rust-sdk"><a class="header" href="#setting-up-and-running-the-fuel-rust-sdk">Setting up and running the Fuel Rust SDK</a></h1>
 <h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<!-- This section should list the dependencies for the Fuel Rust SDK -->
+<!-- rs_dependencies:example:start -->
+<p>The dependencies for using the Fuel Rust SDK are:</p>
 <ul>
 <li><a href="https://fuellabs.github.io/sway/master/introduction/installation.html">The latest <code>stable</code> Rust toolchain</a>;</li>
 <li><a href="https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo"><code>forc</code> and <code>fuel-core</code> binaries</a>.</li>
 </ul>
+<!-- rs_dependencies:example:end -->
 <p><code>forc</code> is Sway equivalent of Rust's <code>cargo</code>. <code>fuel-core</code> is a Fuel full node implementation.</p>
+<!-- This section should list the main ways developers can use the Fuel Rust SDK -->
+<!-- rs_uses:example:start -->
 <p>There are two main ways you can use the Fuel Rust SDK:</p>
 <ol>
 <li>Creating a new Sway project with <code>forc</code> and running the tests</li>
 <li>Creating a standalone project and importing the <code>fuels-rs</code> crate</li>
 </ol>
+<!-- rs_uses:example:end -->
 <h2 id="creating-a-new-project-with-forc"><a class="header" href="#creating-a-new-project-with-forc">Creating a new project with Forc</a></h2>
 <p>You can create a new Sway project with</p>
 <pre><code>forc new &lt;Project name&gt;
@@ -159,26 +166,41 @@
 <h3 id="adding-a-rust-integration-test-to-the-sway-project"><a class="header" href="#adding-a-rust-integration-test-to-the-sway-project">Adding a Rust integration test to the Sway project</a></h3>
 <p>Now that we have a new project, we can add a Rust integration test using a <code>cargo generate</code> template.
 If <code>cargo generate</code> is not already installed, you can instal it with:</p>
+<!-- This section should have the command to install cargo generate -->
+<!-- cargo_gen_install:example:start -->
 <pre><code>cargo install cargo-generate
 </code></pre>
+<!-- cargo_gen_install:example:end -->
 <blockquote>
 <p><strong>Note</strong> You can learn more about cargo generate by visiting its <a href="https://github.com/cargo-generate/cargo-generate">repository</a>.</p>
 </blockquote>
 <p>Let's generate the default test harness with the following command:</p>
+<!-- This section should have the command to cargo generate a test harness -->
+<!-- cargo_gen:example:start -->
 <pre><code>cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
 </code></pre>
+<!-- cargo_gen:example:end -->
+<!-- This section should explain the `--force` flag -->
+<!-- force_flag:example:start -->
 <p><code>--force</code> forces your <code>--name</code> input to retain your desired casing for the <code>{{project-name}}</code> placeholder in the template. Otherwise, <code>cargo-generate</code> automatically converts it to kebab-case. With <code>--force</code>, this means that both <code>my_fuel_project</code> and <code>my-fuel-project</code> are valid project names, depending on your needs.</p>
+<!-- force_flag:example:end -->
 <p>Before running test, we need to build the Sway project with:</p>
 <pre><code>forc build
 </code></pre>
 <p>Afterwards, we can run the test with:</p>
+<!-- This section should have the command to run a test -->
+<!-- run_test:example:start -->
 <pre><code>cargo test
 </code></pre>
+<!-- run_test:example:end -->
 <blockquote>
 <p><strong>Note</strong> If you need to capture output from the tests, use one of the following commands:</p>
 </blockquote>
+<!-- This section should have the command to run a test with no capture -->
+<!-- run_test_nocap:example:start -->
 <pre><code>cargo test -- --nocapture
 </code></pre>
+<!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">fuels = &quot;0.41&quot;
@@ -212,7 +234,7 @@ To build these tests, run the following command:</p>
 <pre><code>cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
-<p>Read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
+<p>Read <a href="https://fuellabs.github.io/sway/master/book/introduction/index.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
 
                     </main>
 

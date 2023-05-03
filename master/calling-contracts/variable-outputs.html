@@ -138,7 +138,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="output-variables"><a class="header" href="#output-variables">Output variables</a></h1>
+<!-- This section should explain variable outputs  -->
+<!-- variable_outputs:example:start -->
 <p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputvariable">variable outputs</a> to succeed.</p>
+<!-- variable_outputs:example:end -->
 <p>Let's say you deployed a contract with the following method:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
         transfer_to_address(coins, asset_id, recipient);
@@ -154,7 +157,10 @@
             .call()
             .await?;
 </code></pre>
+<!-- This section should explain what the `append_variable_outputs` method does -->
+<!-- append_variable_outputs:example:start -->
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the amount and the owner may vary based on transaction execution.</p>
+<!-- append_variable_outputs:example:end -->
 <blockquote>
 <p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 </blockquote>

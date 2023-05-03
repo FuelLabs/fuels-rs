@@ -138,13 +138,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="transaction-parameters"><a class="header" href="#transaction-parameters">Transaction parameters</a></h1>
-<p>Transaction parameters are:</p>
+<!-- This section should explain what the tx params are and how to configure them -->
+<!-- tx_params:example:start -->
+<p>The parameters for a transaction are:</p>
 <ol>
-<li>Gas price;</li>
-<li>Gas limit;</li>
-<li>Maturity.</li>
+<li>Gas price</li>
+<li>Gas limit</li>
+<li>Maturity</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <code>TxParameters</code> and passing it to a chain method called <code>tx_params</code>:</p>
+<!-- tx_params:example:end-->
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let my_tx_parameters = TxParameters::default()
@@ -158,7 +161,10 @@
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 </code></pre>
+<!-- This section should explain how to use the defauly tx params -->
+<!-- tx_params_default:example:start -->
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
+<!-- tx_params_default:example:end -->
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_MATURITY: u64 = 0;

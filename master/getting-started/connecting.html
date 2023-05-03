@@ -138,14 +138,17 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="connecting-to-a-fuel-node"><a class="header" href="#connecting-to-a-fuel-node">Connecting to a Fuel node</a></h1>
+<!-- This section should explain at a high level the main ways to connect to a node with the Rust SDK and when they are appropriate to use-->
+<!-- rs_node:example:start -->
 <p>At a high level, you can use the Fuel Rust SDK to build Rust-based applications that can run computations on the Fuel Virtual Machine through interactions with smart contracts written in Sway.</p>
 <p>For this interaction to work, the SDK must be able to communicate with a <code>fuel-core</code> node; you have two options at your disposal:</p>
 <ol>
-<li>Use the <a href="../providers/external-node.html">Testnet</a> or run a Fuel node (using <code>fuel-core</code>) and instantiate a provider that points to that node's IP and port.</li>
+<li>Use the testnet or run a Fuel node (using <code>fuel-core</code>) and instantiate a provider that points to that node's IP and port.</li>
 <li>Use the SDK's native <code>launch_provider_and_get_wallet()</code> that runs a short-lived test Fuel node;</li>
 </ol>
 <p>The second option is ideal for smart contract testing, as you can quickly spin up and tear down nodes between specific test cases.</p>
 <p>For application building, you should use the first option.</p>
+<!-- rs_node:example:end -->
 
                     </main>
 

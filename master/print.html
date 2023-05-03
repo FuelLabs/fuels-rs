@@ -139,30 +139,39 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="the-fuel-rust-sdk"><a class="header" href="#the-fuel-rust-sdk">The Fuel Rust SDK</a></h1>
-<p>Rust SDK for Fuel. It can be used for a variety of things, including but not limited to:</p>
+<!-- This section should explain what the Fuel Rust SDK can be used for -->
+<!-- fuels_rs:example:start -->
+<p>The Fuel Rust SDK can be used for a variety of things, including:</p>
 <ul>
-<li>Compiling, deploying, and testing <a href="https://github.com/FuelLabs/sway">Sway</a> contracts;</li>
-<li>Use the <a href="providers/external-node.html">Testnet</a> or run a local Fuel node;</li>
-<li>Crafting and signing transactions with hand-crafted scripts or contract calls;</li>
-<li>Generating type-safe Rust bindings of contract ABI methods;</li>
-<li>And more. <code>fuels-rs</code> is still in active development.</li>
+<li>Compiling, deploying, and testing <a href="https://github.com/FuelLabs/sway">Sway</a> contracts</li>
+<li>Using the testnet or running a local Fuel node</li>
+<li>Crafting and signing transactions with hand-crafted scripts or contract calls</li>
+<li>Generating type-safe Rust bindings of contract ABI methods</li>
 </ul>
+<!-- fuels_rs:example:end -->
 <p>This book is an overview of the different things one can achieve using the Rust SDK, and how to implement them. Keep in mind that both the SDK and the documentation are works-in-progress!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
 <p>This section gives some pointers for using the Fuel SDK for smart contract
 development.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="setting-up-and-running-the-fuel-rust-sdk"><a class="header" href="#setting-up-and-running-the-fuel-rust-sdk">Setting up and running the Fuel Rust SDK</a></h1>
 <h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
+<!-- This section should list the dependencies for the Fuel Rust SDK -->
+<!-- rs_dependencies:example:start -->
+<p>The dependencies for using the Fuel Rust SDK are:</p>
 <ul>
 <li><a href="https://fuellabs.github.io/sway/master/introduction/installation.html">The latest <code>stable</code> Rust toolchain</a>;</li>
 <li><a href="https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo"><code>forc</code> and <code>fuel-core</code> binaries</a>.</li>
 </ul>
+<!-- rs_dependencies:example:end -->
 <p><code>forc</code> is Sway equivalent of Rust's <code>cargo</code>. <code>fuel-core</code> is a Fuel full node implementation.</p>
+<!-- This section should list the main ways developers can use the Fuel Rust SDK -->
+<!-- rs_uses:example:start -->
 <p>There are two main ways you can use the Fuel Rust SDK:</p>
 <ol>
 <li>Creating a new Sway project with <code>forc</code> and running the tests</li>
 <li>Creating a standalone project and importing the <code>fuels-rs</code> crate</li>
 </ol>
+<!-- rs_uses:example:end -->
 <h2 id="creating-a-new-project-with-forc"><a class="header" href="#creating-a-new-project-with-forc">Creating a new project with Forc</a></h2>
 <p>You can create a new Sway project with</p>
 <pre><code>forc new &lt;Project name&gt;
@@ -173,26 +182,41 @@ development.</p>
 <h3 id="adding-a-rust-integration-test-to-the-sway-project"><a class="header" href="#adding-a-rust-integration-test-to-the-sway-project">Adding a Rust integration test to the Sway project</a></h3>
 <p>Now that we have a new project, we can add a Rust integration test using a <code>cargo generate</code> template.
 If <code>cargo generate</code> is not already installed, you can instal it with:</p>
+<!-- This section should have the command to install cargo generate -->
+<!-- cargo_gen_install:example:start -->
 <pre><code>cargo install cargo-generate
 </code></pre>
+<!-- cargo_gen_install:example:end -->
 <blockquote>
 <p><strong>Note</strong> You can learn more about cargo generate by visiting its <a href="https://github.com/cargo-generate/cargo-generate">repository</a>.</p>
 </blockquote>
 <p>Let's generate the default test harness with the following command:</p>
+<!-- This section should have the command to cargo generate a test harness -->
+<!-- cargo_gen:example:start -->
 <pre><code>cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
 </code></pre>
+<!-- cargo_gen:example:end -->
+<!-- This section should explain the `--force` flag -->
+<!-- force_flag:example:start -->
 <p><code>--force</code> forces your <code>--name</code> input to retain your desired casing for the <code>{{project-name}}</code> placeholder in the template. Otherwise, <code>cargo-generate</code> automatically converts it to kebab-case. With <code>--force</code>, this means that both <code>my_fuel_project</code> and <code>my-fuel-project</code> are valid project names, depending on your needs.</p>
+<!-- force_flag:example:end -->
 <p>Before running test, we need to build the Sway project with:</p>
 <pre><code>forc build
 </code></pre>
 <p>Afterwards, we can run the test with:</p>
+<!-- This section should have the command to run a test -->
+<!-- run_test:example:start -->
 <pre><code>cargo test
 </code></pre>
+<!-- run_test:example:end -->
 <blockquote>
 <p><strong>Note</strong> If you need to capture output from the tests, use one of the following commands:</p>
 </blockquote>
+<!-- This section should have the command to run a test with no capture -->
+<!-- run_test_nocap:example:start -->
 <pre><code>cargo test -- --nocapture
 </code></pre>
+<!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
 <pre><code class="language-toml">fuels = &quot;0.41&quot;
@@ -226,24 +250,36 @@ To build these tests, run the following command:</p>
 <pre><code>cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
-<p>Read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
+<p>Read <a href="https://fuellabs.github.io/sway/master/book/introduction/index.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="terminology"><a class="header" href="#terminology">Terminology</a></h1>
 <p>These are the common terms you will find across this documentation and while using the SDK.</p>
 <h2 id="contract"><a class="header" href="#contract">Contract</a></h2>
+<!-- This section should define a contract -->
+<!-- rs_contract:example:start -->
 <p>A contract, in the SDK, is an abstraction that represents a connection to a specific smart contract deployed on the Fuel Network. This contract instance can be used as a regular Rust object, with methods attached to it that reflect those in its smart contract equivalent.</p>
+<!-- rs_contract:example:end -->
 <h2 id="provider"><a class="header" href="#provider">Provider</a></h2>
+<!-- This section should define a provider -->
+<!-- rs_provider:example:start -->
 <p>A Provider is a struct that provides an abstraction for a connection to a Fuel node. It provides read-only access to the node. You can use this provider as-is or through the wallet.</p>
+<!-- rs_provider:example:end -->
 <h2 id="wallet-and-signer"><a class="header" href="#wallet-and-signer">Wallet and signer</a></h2>
+<!-- This section should define a wallet and signer -->
+<!-- rs_wallet_signer:example:start -->
 <p>A <code>Wallet</code> is a struct with direct or indirect access to a private key. You can use a <code>Wallet</code> to sign messages and transactions to authorize the network to charge your account to perform operations. The terms wallet and signer in the SDK are often used interchangeably, but, technically, a <code>Signer</code> is simply a Rust trait to enable the signing of transactions and messages; the <code>Wallet</code> implements the <code>Signer</code> trait.</p>
+<!-- rs_wallet_signer:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="connecting-to-a-fuel-node"><a class="header" href="#connecting-to-a-fuel-node">Connecting to a Fuel node</a></h1>
+<!-- This section should explain at a high level the main ways to connect to a node with the Rust SDK and when they are appropriate to use-->
+<!-- rs_node:example:start -->
 <p>At a high level, you can use the Fuel Rust SDK to build Rust-based applications that can run computations on the Fuel Virtual Machine through interactions with smart contracts written in Sway.</p>
 <p>For this interaction to work, the SDK must be able to communicate with a <code>fuel-core</code> node; you have two options at your disposal:</p>
 <ol>
-<li>Use the <a href="getting-started/../providers/external-node.html">Testnet</a> or run a Fuel node (using <code>fuel-core</code>) and instantiate a provider that points to that node's IP and port.</li>
+<li>Use the testnet or run a Fuel node (using <code>fuel-core</code>) and instantiate a provider that points to that node's IP and port.</li>
 <li>Use the SDK's native <code>launch_provider_and_get_wallet()</code> that runs a short-lived test Fuel node;</li>
 </ol>
 <p>The second option is ideal for smart contract testing, as you can quickly spin up and tear down nodes between specific test cases.</p>
 <p>For application building, you should use the first option.</p>
+<!-- rs_node:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="connecting-to-the-testnet-or-an-external-node"><a class="header" href="#connecting-to-the-testnet-or-an-external-node">Connecting to the Testnet or an external node</a></h1>
 <p>We can interact with the <code>Testnet</code> node by using the following example.</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
@@ -472,17 +508,23 @@ To build these tests, run the following command:</p>
 </code></pre>
 <p>The above example creates an <code>Address</code> from a string and converts it to a <code>Bech32Address</code>. Next, it calls <code>wallet.withdraw_to_base_layer</code> by providing the address, the amount to be transferred, and the transaction parameters. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with <code>provider.get_message_proof,</code> and the amount and the recipient are verified.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="managing-wallets"><a class="header" href="#managing-wallets">Managing wallets</a></h1>
+<!-- This section should explain in general how you can use a wallet in the SDK -->
+<!-- wallets:example:start -->
 <p>You can use wallets for many important things, for instance:</p>
 <ol>
-<li>Checking your balance;</li>
-<li>Transferring coins to a destination address or contract;</li>
-<li>Signing messages and transactions;</li>
-<li>Paying for network fees when sending transactions or deploying smart contracts.</li>
+<li>Checking your balance</li>
+<li>Transferring coins to a destination address or contract</li>
+<li>Signing messages and transactions</li>
+<li>Paying for network fees when sending transactions or deploying smart contracts</li>
 </ol>
+<!-- wallets:example:end -->
 <p>The SDK gives you many different ways to create and access wallets. Let's explore these different approaches in the following sub-chapters.</p>
+<!-- This section should provide best security practices for using wallets in the SDK -->
+<!-- security:example:start -->
 <blockquote>
 <p><strong>Note:</strong> Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase. If you're planning on storing the wallet on disk, do not store the plain private/secret key and do not store the plain mnemonic phrase. Instead, use <code>Wallet::encrypt</code> to encrypt its content first before saving it to disk.</p>
 </blockquote>
+<!-- security:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="creating-a-wallet-from-a-private-key"><a class="header" href="#creating-a-wallet-from-a-private-key">Creating a wallet from a private key</a></h1>
 <p>A new wallet with a randomly generated private key can be created by supplying <code>Option&lt;Provider&gt;</code>.</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
@@ -542,20 +584,30 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
         assert_eq!(wallet.address().to_string(), expected_address);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="wallet-access"><a class="header" href="#wallet-access">Wallet Access</a></h1>
+<!-- This section should explain the difference between the different types of wallets -->
+<!-- wallet_types:example:start -->
 <p>The kinds of operations we can perform with a <code>Wallet</code> instance depend on
 whether or not we have access to the wallet's private key.</p>
 <p>In order to differentiate between <code>Wallet</code> instances that know their private key
 and those that do not, we use the <code>WalletUnlocked</code> and <code>Wallet</code> types
 respectively.</p>
+<!-- wallet_types:example:end -->
 <h2 id="wallet-states"><a class="header" href="#wallet-states">Wallet States</a></h2>
+<!-- This section should explain the unlocked wallet type -->
+<!-- wallet_unlocked:example:start -->
 <p>The <code>WalletUnlocked</code> type represents a wallet whose private key is known and
 stored internally in memory. A wallet must be of type <code>WalletUnlocked</code> in order
-to perform operations that involve <a href="wallets/./signing.html">signing messages or
-transactions</a>.</p>
+to perform operations that involve signing messages or
+transactions.</p>
+<!-- wallet_unlocked:example:end -->
+<p>You can learn more about signing <a href="wallets/./signing.html">here</a>.</p>
+<!-- This section should explain the locked wallet type -->
+<!-- wallet_locked:example:start -->
 <p>The <code>Wallet</code> type represents a wallet whose private key is <em>not</em> known or stored
 in memory. Instead, <code>Wallet</code> only knows its public address. A <code>Wallet</code> cannot be
 used to sign transactions, however it may still perform a whole suite of useful
 operations including listing transactions, assets, querying balances, and so on.</p>
+<!-- wallet_locked:example:end -->
 <p>Note that the <code>WalletUnlocked</code> type provides a <code>Deref</code> implementation targeting
 its inner <code>Wallet</code> type. This means that all methods available on the <code>Wallet</code>
 type are also available on the <code>WalletUnlocked</code> type. In other words,
@@ -621,28 +673,43 @@ vulnerabilities in downstream libraries and applications.</p>
         let _uuid = wallet.encrypt(&amp;dir, password)?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="checking-balances-and-coins"><a class="header" href="#checking-balances-and-coins">Checking balances and coins</a></h1>
-<p>First, one should remember that, with UTXOs, each <em>coin</em> is unique. Each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This querying is done very easily with a wallet:</p>
+<!-- This section should explain getting the balance of a wallet -->
+<!-- balance:example:start -->
+<p>In the Fuel network, each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This querying is done very easily with a wallet:</p>
+<!-- balance:example:end -->
 <pre><code class="language-rust ignore">        let asset_id: AssetId = BASE_ASSET_ID;
         let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
 </code></pre>
-<p>If you want to query all the balances (i.e., get the balance for each asset ID in that wallet), then it is as simple as:</p>
+<!-- This section should explain getting all of the balances of a wallet -->
+<!-- balances:example:start -->
+<p>If you want to query all the balances (i.e., get the balance for each asset ID in that wallet), you can use the <code>get_balances</code> method:</p>
+<!-- balances:example:end -->
 <pre><code class="language-rust ignore">        let balances: HashMap&lt;String, u64&gt; = wallet.get_balances().await?;
 </code></pre>
+<!-- This section should explain the return type for `get_balances` -->
+<!-- balances_return:example:start -->
 <p>The return type is a <code>HashMap</code>, where the key is the <em>asset ID's</em> hex string, and the value is the corresponding balance. For example, we can get the base asset balance with:</p>
+<!-- balances_return:example:end -->
 <pre><code class="language-rust ignore">        let asset_id_key = format!(&quot;{asset_id:#x}&quot;);
         let asset_balance = balances.get(&amp;asset_id_key).unwrap();
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="setting-up-test-wallets"><a class="header" href="#setting-up-test-wallets">Setting up test wallets</a></h1>
 <p>You'll often want to create one or more test wallets when testing your contracts. Here's how to do it.</p>
 <h2 id="setting-up-multiple-test-wallets"><a class="header" href="#setting-up-multiple-test-wallets">Setting up multiple test wallets</a></h2>
-<p>If you need multiple test wallets, they can be set up as follows:</p>
+<!-- This section should explain setting up multiple test wallets -->
+<!-- test_wallets:example:start -->
+<p>If you need multiple test wallets, they can be set up using the <code>launch_custom_provider_and_get_wallets</code> method.</p>
+<!-- test_wallets:example:end -->
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
         // This helper will launch a local node and provide 10 test wallets linked to it.
         // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 </code></pre>
+<!-- This section should explain how to customize test wallets -->
+<!-- custom_test_wallets:example:start -->
 <p>You can customize your test wallets via <code>WalletsConfig</code>.</p>
+<!-- custom_test_wallets:example:end -->
 <pre><code class="language-rust ignore">        let num_wallets = 5;
         let coins_per_wallet = 3;
         let amount_per_coin = 100;
@@ -655,10 +722,13 @@ vulnerabilities in downstream libraries and applications.</p>
         // Launches a local node and provides test wallets as specified by the config
         let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
 </code></pre>
+<!-- This section should explain that test wallets are deterministic -->
+<!-- deterministic:example:start -->
 <blockquote>
 <p><strong>Note</strong> Wallets generated with <code>launch_provider_and_get_wallet</code> or <code>launch_custom_provider_and_get_wallets</code>
 will have deterministic addresses.</p>
 </blockquote>
+<!-- deterministic:example:end -->
 <h2 id="setting-up-a-test-wallet-with-multiple-random-assets"><a class="header" href="#setting-up-a-test-wallet-with-multiple-random-assets">Setting up a test wallet with multiple random assets</a></h2>
 <p>You can create a test wallet containing multiple assets (including the base asset to pay for gas).</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
@@ -854,11 +924,17 @@ coins and coin amount</p>
             abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
         ));
 </code></pre>
+<!-- This section should explain the purpose of the abigen -->
+<!-- abigen:example:start -->
 <p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.
 In order to call your contracts, scripts or predicates, you first need to generate the Rust bindings for them. </p>
+<!-- abigen:example:end -->
 <p>The following subsections contain more details about the <code>abigen!</code> syntax and the code generated from it.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-json-abi-file"><a class="header" href="#the-json-abi-file">The JSON ABI file</a></h1>
+<!-- This section should talk about the importance of the ABI -->
+<!-- abi:example:start -->
 <p>Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html#abi">ABI methods</a> in your smart contracts.</p>
+<!-- abi:example:end -->
 <p>For the same example Sway code as above:</p>
 <pre><code class="language-Rust">contract;
 
@@ -891,6 +967,8 @@ impl MyContract for Contract {
 </code></pre>
 <p>The Fuel Rust SDK will take this file as input and generate equivalent methods (and custom types if applicable) that you can call from your Rust code.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="abigen"><a class="header" href="#abigen">abigen!</a></h1>
+<!-- This section explain the `abigen!` macro -->
+<!-- abigen:example:start -->
 <p><code>abigen!</code> is a procedural macro -- it generates code. It accepts inputs in the format of:</p>
 <pre><code class="language-text">ProgramType(name=&quot;MyProgramType&quot;, abi=&quot;my_program-abi.json&quot;)...
 </code></pre>
@@ -906,6 +984,7 @@ impl MyContract for Contract {
 <p><code>abi</code> is either a path to the json abi file or its actual contents.</p>
 </li>
 </ul>
+<!-- abigen:example:end -->
 <hr />
 <p>So, an <code>abigen!</code> which generates bindings for two contracts and one script looks like this:</p>
 <pre><code class="language-rust ignore">        abigen!(
@@ -1211,9 +1290,16 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deploying-contracts"><a class="header" href="#deploying-contracts">Deploying contracts</a></h1>
 <p>There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to interact with existing contracts.</p>
 <h2 id="deploying-a-contract-binary"><a class="header" href="#deploying-a-contract-binary">Deploying a contract binary</a></h2>
-<p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
+<!-- This section should explain the artifacts produced by `forc build`  -->
+<!-- build:example:start -->
+<p>Once you've written a contract in Sway and compiled it with <code>forc build</code>, you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
+<!-- build:example:end -->
+<p>(Read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway.)</p>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="getting-started/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="getting-started/../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="getting-started/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
+<!-- This section should explain how to load and deploy a contract  -->
+<!-- deploy:example:start -->
 <p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
+<!-- deploy:example:end -->
 <pre><code class="language-rust ignore">        // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 
@@ -1468,7 +1554,10 @@ half-word   byte   op                raw           notes
 <p>The example above uses all the default configurations and performs a simple contract call.</p>
 <p>Next, we'll see how we can further configure the many different parameters in a contract call</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calls-with-different-wallets"><a class="header" href="#calls-with-different-wallets">Calls with different wallets</a></h1>
-<p>You can use the <code>with_wallet()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
+<!-- This section should explain how to call a contract with a certain wallet -->
+<!-- wallet:example:start -->
+<p>You can use the <code>with_account()</code> method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.</p>
+<!-- wallet:example:end-->
 <pre><code class="language-rust ignore">        // Create contract instance with wallet_1
         let contract_instance = MyContract::new(contract_id, wallet_1.clone());
 
@@ -1484,13 +1573,16 @@ half-word   byte   op                raw           notes
 <p><strong>Note:</strong> connecting a different wallet to an existing instance ignores its set provider in favor of the provider used to deploy the contract. If you have two wallets connected to separate providers (each communicating with a separate fuel-core), the one assigned to the deploying wallet will also be used for contract calls. This behavior is only relevant if multiple providers (i.e. fuel-core instances) are present and can otherwise be ignored.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="transaction-parameters"><a class="header" href="#transaction-parameters">Transaction parameters</a></h1>
-<p>Transaction parameters are:</p>
+<!-- This section should explain what the tx params are and how to configure them -->
+<!-- tx_params:example:start -->
+<p>The parameters for a transaction are:</p>
 <ol>
-<li>Gas price;</li>
-<li>Gas limit;</li>
-<li>Maturity.</li>
+<li>Gas price</li>
+<li>Gas limit</li>
+<li>Maturity</li>
 </ol>
 <p>You can configure these parameters by creating an instance of <code>TxParameters</code> and passing it to a chain method called <code>tx_params</code>:</p>
+<!-- tx_params:example:end-->
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let my_tx_parameters = TxParameters::default()
@@ -1504,7 +1596,10 @@ half-word   byte   op                raw           notes
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
 </code></pre>
+<!-- This section should explain how to use the defauly tx params -->
+<!-- tx_params_default:example:start -->
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
+<!-- tx_params_default:example:end -->
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
 pub const DEFAULT_MATURITY: u64 = 0;
@@ -1522,13 +1617,17 @@ pub const DEFAULT_MATURITY: u64 = 0;
 <p><strong>Note:</strong> whenever you perform an action that results in a transaction (contract deployment, contract call, asset transfer), the SDK will automatically estimate the fee based on the set gas limit and the transaction's byte size. This estimation is used when building the transaction. A side-effect of this is that your wallet must at least own a single coin of the base asset of any amount.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="call-parameters"><a class="header" href="#call-parameters">Call parameters</a></h1>
-<p>Call parameters are:</p>
+<!-- This section should explain what the call params are and how to configure them -->
+<!-- call_params:example:start -->
+<p>The parameters for a contract call are:</p>
 <ol>
-<li>Amount;</li>
-<li>Asset ID;</li>
-<li>Gas forwarded.</li>
+<li>Amount</li>
+<li>Asset ID</li>
+<li>Gas forwarded</li>
 </ol>
-<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html#"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<!-- call_params:example:end -->
+<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<!-- use_call_params:example:end -->
 <p>For instance, suppose the following contract that uses Sway's <code>msg_amount()</code> to return the amount sent in that transaction.</p>
 <pre><code class="language-rust ignore">    #[payable]
     fn get_msg_amount() -&gt; u64 {
@@ -1551,7 +1650,11 @@ pub const DEFAULT_MATURITY: u64 = 0;
             .call() // Perform the contract call.
             .await?;
 </code></pre>
-<p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
+<!-- This section should explain why `call_params` returns a result -->
+<!-- payable:example:start -->
+<p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. </p>
+<!-- payable:example:end -->
+<p>In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
         .call_params(CallParameters::default().set_amount(100))
@@ -1574,7 +1677,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .call()
             .await?;
 </code></pre>
+<!-- This section should explain what the `gas_forwarded` parameter does -->
+<!-- gas:example:start -->
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
+<!-- gas:example:end -->
 <pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 10_000 gas, while the actual call may
         // only use 4300 gas
@@ -1588,9 +1694,15 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .call() // Perform the contract call.
             .await?;
 </code></pre>
+<!-- This section should explain the default forwarding behavior for a call -->
+<!-- forwarding:example:start -->
 <p>If you don't set the call parameters or use <code>CallParameters::default()</code>, the transaction gas limit will be forwarded instead.</p>
+<!-- forwarding:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-asset-transfer"><a class="header" href="#custom-asset-transfer">Custom asset transfer</a></h1>
+<!-- This section should explain the `add_custom_asset()` method -->
+<!-- transfer:example:start -->
 <p>The SDK provides the option to transfer assets within the same transaction, when making a contract call. By using <code>add_custom_asset()</code> you specify the asset id, the amount, and the destination address:</p>
+<!-- transfer:example:end -->
 <pre><code class="language-rust ignore">        let amount = 1000;
         let _ = contract_instance
             .methods()
@@ -1600,13 +1712,19 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="call-response"><a class="header" href="#call-response">Call response</a></h1>
+<!-- This section should why you have to chain `.call().await.unwrap()` so often -->
+<!-- chaining:example:start -->
 <p>You've probably noticed that you're often chaining <code>.call().await.unwrap()</code>. That's because:</p>
 <ol>
-<li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section);</li>
-<li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async;</li>
+<li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section).</li>
+<li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async.</li>
 <li><code>.unwrap()</code> the <code>Result&lt;FuelCallResponse, Error&gt;</code> returned by the contract call.</li>
 </ol>
+<!-- chaining:example:end -->
+<!-- This section should preface what the `FuelCallResponse` is -->
+<!-- call_resp:example:start -->
 <p>Once you unwrap the <code>FuelCallResponse</code>, you have access to this struct:</p>
+<!-- call_resp:example:end -->
 <pre><code class="language-rust ignore">pub struct FuelCallResponse&lt;D&gt; {
     pub value: D,
     pub receipts: Vec&lt;Receipt&gt;,
@@ -1614,22 +1732,37 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
     pub log_decoder: LogDecoder,
 }
 </code></pre>
+<!-- This section should explain the fields of the `FuelCallResponse` struct -->
+<!-- call_resp_fields:example:start -->
 <p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM, E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing two components, a <code>u64</code>, and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust-land).</p>
 <ul>
 <li><code>receipts</code> will hold all <a href="https://specs.fuel.network/master/protocol/abi/receipts.html">receipts</a> generated by that specific contract call.</li>
 <li><code>gas_used</code> is the amount of gas it consumed by the contract call.</li>
 </ul>
+<!-- call_resp_fields:example:end -->
 <h2 id="error-handling"><a class="header" href="#error-handling">Error handling</a></h2>
+<!-- This section should explain how to use the `is_ok` and `is_err` methods for a call response -->
+<!-- call_resp_ok:example:start -->
 <p>You can use the <code>is_ok</code> and <code>is_err</code> methods to check if a contract call <code>Result</code> is ok or contains an error. These methods will return either <code>true</code> or <code>false</code>.</p>
+<!-- call_resp_ok:example:end -->
+<!-- This section should show an example of how to use the `is_ok` and `is_err` methods for a call response -->
+<!-- call_resp_ok_code:example:start -->
 <pre><code class="language-rust  ignore">let is_ok = response.is_ok();
 let is_error = response.is_err();
 </code></pre>
+<!-- call_resp_ok_code:example:end -->
+<!-- This section should explain how to use the `unwrap_err` method for a call response -->
+<!-- call_resp_error:example:start -->
 <p>If <code>is_err</code> returns <code>true</code>, you can use the <code>unwrap_err</code> method to unwrap the error message.</p>
+<!-- call_resp_error:example:end -->
+<!-- This section should show an example of how to unwrap a call response error -->
+<!-- call_resp_error_code:example:start -->
 <pre><code class="language-rust  ignore">if response.is_err() {
     let err = response.unwrap_err();
     println!(&quot;ERROR: {:?}&quot;, err);
 };
 </code></pre>
+<!-- call_resp_error_code:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="logs"><a class="header" href="#logs">Logs</a></h1>
 <p>Whenever you log a value within a contract method, the resulting log entry is added to the log receipt and the variable type is recorded in the contract's ABI. The SDK lets you parse those values into Rust types.</p>
 <p>Consider the following contract method:</p>
@@ -1671,7 +1804,10 @@ let is_error = response.is_err();
 </code></pre>
 <p>Due to possible performance hits, it is not recommended to use <code>decode_logs()</code> outside of a debugging scenario.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="output-variables"><a class="header" href="#output-variables">Output variables</a></h1>
+<!-- This section should explain variable outputs  -->
+<!-- variable_outputs:example:start -->
 <p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputvariable">variable outputs</a> to succeed.</p>
+<!-- variable_outputs:example:end -->
 <p>Let's say you deployed a contract with the following method:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
         transfer_to_address(coins, asset_id, recipient);
@@ -1687,7 +1823,10 @@ let is_error = response.is_err();
             .call()
             .await?;
 </code></pre>
+<!-- This section should explain what the `append_variable_outputs` method does -->
+<!-- append_variable_outputs:example:start -->
 <p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the amount and the owner may vary based on transaction execution.</p>
+<!-- append_variable_outputs:example:end -->
 <blockquote>
 <p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 </blockquote>
@@ -1704,14 +1843,20 @@ let is_error = response.is_err();
             .await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-only-calls"><a class="header" href="#read-only-calls">Read-only calls</a></h1>
+<!-- This section should explain read-only calls  -->
+<!-- read_only:example:start -->
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.</p>
 <p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
+<!-- read_only:example:end -->
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
+<!-- This section should explain what happens if you try a read-only call on a method that changes stae  -->
+<!-- simulate:example:start -->
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
+<!-- simulate:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
 <p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outpus for you. You have two methods that you can use: <code>set_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <p><code>set_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
@@ -2355,7 +2500,10 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p><strong>Note:</strong> when creating a <code>Bech32Address</code> from <code>Address</code> or <code>Bech32ContractId</code> from <code>ContractId</code> the HRP (Human-Readable Part) is set to <strong>&quot;fuel&quot;</strong> per default.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="structs-and-enums"><a class="header" href="#structs-and-enums">Structs and enums</a></h1>
+<!-- This section should explain how to get the custom types from a Sway program -->
+<!-- custom_types:example:start -->
 <p>The structs and enums you define in your Sway code have equivalents automatically generated by the SDK's <code>abigen!</code> macro.</p>
+<!-- custom_types:example:end -->
 <p>For instance, if in your Sway code you have a struct called <code>CounterConfig</code> that looks like this:</p>
 <pre><code class="language-rust ignore">struct CounterConfig {
   dummy: bool,
@@ -2559,28 +2707,63 @@ impl MyContract for Contract {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-basics"><a class="header" href="#testing-basics">Testing Basics</a></h1>
 <p>If you're new to Rust, you'll want to review these important tools to help you build tests.</p>
 <h2 id="the-assert-macro"><a class="header" href="#the-assert-macro">The <code>assert!</code> macro</a></h2>
+<!-- This section should explain the `assert!` macro -->
+<!-- assert:example:start -->
 <p>You can use the <code>assert!</code> macro to assert certain conditions in your test. This macro invokes <code>panic!()</code> and fails the test if the expression inside evaluates to <code>false</code>.</p>
+<!-- assert:example:end -->
+<!-- This section should show an example of the `assert!` macro -->
+<!-- assert_code:example:start -->
 <pre><code class="language-rust  ignore">assert!(value == 5);
 </code></pre>
+<!-- assert_code:example:end -->
 <h2 id="the-assert_eq-macro"><a class="header" href="#the-assert_eq-macro">The <code>assert_eq!</code> macro</a></h2>
+<!-- This section should show an example of the `assert_eq!` macro -->
+<!-- assert_eq:example:start -->
 <p>The <code>assert_eq!</code> macro works a lot like the <code>assert</code> macro, however instead it accepts two values, and panics if those values are not equal.</p>
+<!-- assert_eq:example:end -->
+<!-- This section should show an example of the `assert_eq!` macro -->
+<!-- assert_eq_code:example:start -->
 <pre><code class="language-rust  ignore">assert_eq!(balance, 100);
 </code></pre>
+<!-- assert_eq_code:example:end -->
 <h2 id="the-assert_ne-macro"><a class="header" href="#the-assert_ne-macro">The <code>assert_ne!</code> macro</a></h2>
+<!-- This section should show an example of the `assert_ne!` macro -->
+<!-- assert_ne:example:start -->
 <p>The <code>assert_ne!</code> macro works just like the <code>assert_eq!</code> macro, but it will panic if the two values are equal.</p>
+<!-- assert_ne:example:end -->
+<!-- This section should show an example of the `assert_ne!` macro -->
+<!-- assert_ne_code:example:start -->
 <pre><code class="language-rust  ignore">assert_ne!(address, 0);
 </code></pre>
+<!-- assert_ne_code:example:end -->
 <h2 id="the-println-macro"><a class="header" href="#the-println-macro">The <code>println!</code> macro</a></h2>
+<!-- This section should explain how the `println!` macro can be used in tests -->
+<!--print_ln:example:start -->
 <p>You can use the <code>println!</code> macro to print values to the console.</p>
+<!--print_ln:example:end -->
+<!-- This section should show an example of the `println!` macro -->
+<!--print_ln_code:example:start -->
 <pre><code class="language-rust  ignore">println!(&quot;WALLET 1 ADDRESS {}&quot;, wallet_1.address());
 println!(&quot;WALLET 1 ADDRESS {:?}&quot;, wallet_1.address());
 </code></pre>
+<!--print_ln_code:example:end -->
+<!-- This section should explain how `{}` and `{:?}` are used in the `println!` macro -->
+<!--print_ln_2:example:start -->
 <p>Using <code>{}</code> will print the value, and using <code>{:?}</code> will print the value plus its type.</p>
 <p>Using <code>{:?}</code> will also allow you to print values that do not have the <code>Display</code> trait implemented but do have the <code>Debug</code> trait. Alternatively you can use the <code>dbg!</code> macro to print these types of variables.</p>
+<!--print_ln_2:example:end -->
+<!-- This section should show an example of the `println!` and `dbg` macros -->
+<!--print_ln_dbg_code:example:start -->
 <pre><code class="language-rust  ignore">println!(&quot;WALLET 1 PROVIDER {:?}&quot;, wallet_1.provider().unwrap());
 dbg!(&quot;WALLET 1 PROVIDER {}&quot;, wallet_1.provider().unwrap());
 </code></pre>
+<!--print_ln_dbg_code:example:end -->
+<!-- This section should explain how implement custom fmt -->
+<!--fmt:example:start -->
 <p>To print more complex types that don't have it already, you can implement your own formatted display method with the <code>fmt</code> module from the Rust standard library.</p>
+<!--fmt:example:end -->
+<!-- This section should show a code example of how implement custom fmt -->
+<!--fmt_code:example:start -->
 <pre><code class="language-rust  ignore">use std::fmt;
 
 struct Point {
@@ -2598,11 +2781,15 @@ impl fmt::Display for Point {
 let p = Point {x: 1, y: 2};
 println!(&quot;POINT: {}&quot;, p);
 </code></pre>
+<!--fmt_code:example:end -->
 <h2 id="run-commands"><a class="header" href="#run-commands">Run Commands</a></h2>
 <p>You can run your tests to see if they pass or fail with</p>
 <pre><code>cargo test
 </code></pre>
+<!-- This section should when outputs are hidden and what the `nocapture` flag does -->
+<!--outputs:example:start -->
 <p>Outputs will be hidden if the test passes. If you want to see outputs printed from your tests regardless of whether they pass or fail, use the <code>nocapture</code> flag.</p>
+<!--outputs:example:end -->
 <pre><code>cargo test -- --nocapture
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-setup_program_test-macro"><a class="header" href="#the-setup_program_test-macro">The setup_program_test! macro</a></h1>

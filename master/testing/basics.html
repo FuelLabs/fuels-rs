@@ -140,28 +140,63 @@
                         <h1 id="testing-basics"><a class="header" href="#testing-basics">Testing Basics</a></h1>
 <p>If you're new to Rust, you'll want to review these important tools to help you build tests.</p>
 <h2 id="the-assert-macro"><a class="header" href="#the-assert-macro">The <code>assert!</code> macro</a></h2>
+<!-- This section should explain the `assert!` macro -->
+<!-- assert:example:start -->
 <p>You can use the <code>assert!</code> macro to assert certain conditions in your test. This macro invokes <code>panic!()</code> and fails the test if the expression inside evaluates to <code>false</code>.</p>
+<!-- assert:example:end -->
+<!-- This section should show an example of the `assert!` macro -->
+<!-- assert_code:example:start -->
 <pre><code class="language-rust  ignore">assert!(value == 5);
 </code></pre>
+<!-- assert_code:example:end -->
 <h2 id="the-assert_eq-macro"><a class="header" href="#the-assert_eq-macro">The <code>assert_eq!</code> macro</a></h2>
+<!-- This section should show an example of the `assert_eq!` macro -->
+<!-- assert_eq:example:start -->
 <p>The <code>assert_eq!</code> macro works a lot like the <code>assert</code> macro, however instead it accepts two values, and panics if those values are not equal.</p>
+<!-- assert_eq:example:end -->
+<!-- This section should show an example of the `assert_eq!` macro -->
+<!-- assert_eq_code:example:start -->
 <pre><code class="language-rust  ignore">assert_eq!(balance, 100);
 </code></pre>
+<!-- assert_eq_code:example:end -->
 <h2 id="the-assert_ne-macro"><a class="header" href="#the-assert_ne-macro">The <code>assert_ne!</code> macro</a></h2>
+<!-- This section should show an example of the `assert_ne!` macro -->
+<!-- assert_ne:example:start -->
 <p>The <code>assert_ne!</code> macro works just like the <code>assert_eq!</code> macro, but it will panic if the two values are equal.</p>
+<!-- assert_ne:example:end -->
+<!-- This section should show an example of the `assert_ne!` macro -->
+<!-- assert_ne_code:example:start -->
 <pre><code class="language-rust  ignore">assert_ne!(address, 0);
 </code></pre>
+<!-- assert_ne_code:example:end -->
 <h2 id="the-println-macro"><a class="header" href="#the-println-macro">The <code>println!</code> macro</a></h2>
+<!-- This section should explain how the `println!` macro can be used in tests -->
+<!--print_ln:example:start -->
 <p>You can use the <code>println!</code> macro to print values to the console.</p>
+<!--print_ln:example:end -->
+<!-- This section should show an example of the `println!` macro -->
+<!--print_ln_code:example:start -->
 <pre><code class="language-rust  ignore">println!(&quot;WALLET 1 ADDRESS {}&quot;, wallet_1.address());
 println!(&quot;WALLET 1 ADDRESS {:?}&quot;, wallet_1.address());
 </code></pre>
+<!--print_ln_code:example:end -->
+<!-- This section should explain how `{}` and `{:?}` are used in the `println!` macro -->
+<!--print_ln_2:example:start -->
 <p>Using <code>{}</code> will print the value, and using <code>{:?}</code> will print the value plus its type.</p>
 <p>Using <code>{:?}</code> will also allow you to print values that do not have the <code>Display</code> trait implemented but do have the <code>Debug</code> trait. Alternatively you can use the <code>dbg!</code> macro to print these types of variables.</p>
+<!--print_ln_2:example:end -->
+<!-- This section should show an example of the `println!` and `dbg` macros -->
+<!--print_ln_dbg_code:example:start -->
 <pre><code class="language-rust  ignore">println!(&quot;WALLET 1 PROVIDER {:?}&quot;, wallet_1.provider().unwrap());
 dbg!(&quot;WALLET 1 PROVIDER {}&quot;, wallet_1.provider().unwrap());
 </code></pre>
+<!--print_ln_dbg_code:example:end -->
+<!-- This section should explain how implement custom fmt -->
+<!--fmt:example:start -->
 <p>To print more complex types that don't have it already, you can implement your own formatted display method with the <code>fmt</code> module from the Rust standard library.</p>
+<!--fmt:example:end -->
+<!-- This section should show a code example of how implement custom fmt -->
+<!--fmt_code:example:start -->
 <pre><code class="language-rust  ignore">use std::fmt;
 
 struct Point {
@@ -179,11 +214,15 @@ impl fmt::Display for Point {
 let p = Point {x: 1, y: 2};
 println!(&quot;POINT: {}&quot;, p);
 </code></pre>
+<!--fmt_code:example:end -->
 <h2 id="run-commands"><a class="header" href="#run-commands">Run Commands</a></h2>
 <p>You can run your tests to see if they pass or fail with</p>
 <pre><code>cargo test
 </code></pre>
+<!-- This section should when outputs are hidden and what the `nocapture` flag does -->
+<!--outputs:example:start -->
 <p>Outputs will be hidden if the test passes. If you want to see outputs printed from your tests regardless of whether they pass or fail, use the <code>nocapture</code> flag.</p>
+<!--outputs:example:end -->
 <pre><code>cargo test -- --nocapture
 </code></pre>
 

@@ -138,7 +138,10 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="custom-asset-transfer"><a class="header" href="#custom-asset-transfer">Custom asset transfer</a></h1>
+<!-- This section should explain the `add_custom_asset()` method -->
+<!-- transfer:example:start -->
 <p>The SDK provides the option to transfer assets within the same transaction, when making a contract call. By using <code>add_custom_asset()</code> you specify the asset id, the amount, and the destination address:</p>
+<!-- transfer:example:end -->
 <pre><code class="language-rust ignore">        let amount = 1000;
         let _ = contract_instance
             .methods()

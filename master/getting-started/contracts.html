@@ -140,9 +140,16 @@
                         <h1 id="deploying-contracts"><a class="header" href="#deploying-contracts">Deploying contracts</a></h1>
 <p>There are two main ways of working with contracts in the SDK: deploying a contract with SDK or using the SDK to interact with existing contracts.</p>
 <h2 id="deploying-a-contract-binary"><a class="header" href="#deploying-a-contract-binary">Deploying a contract binary</a></h2>
-<p>Once you've written a contract in Sway and compiled it with <code>forc build</code> (read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway), you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
+<!-- This section should explain the artifacts produced by `forc build`  -->
+<!-- build:example:start -->
+<p>Once you've written a contract in Sway and compiled it with <code>forc build</code>, you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
+<!-- build:example:end -->
+<p>(Read <a href="https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html">here</a> for more on how to work with Sway.)</p>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
+<!-- This section should explain how to load and deploy a contract  -->
+<!-- deploy:example:start -->
 <p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
+<!-- deploy:example:end -->
 <pre><code class="language-rust ignore">        // This helper will launch a local node and provide a test wallet linked to it
         let wallet = launch_provider_and_get_wallet().await;
 

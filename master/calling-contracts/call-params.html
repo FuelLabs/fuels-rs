@@ -138,13 +138,17 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="call-parameters"><a class="header" href="#call-parameters">Call parameters</a></h1>
-<p>Call parameters are:</p>
+<!-- This section should explain what the call params are and how to configure them -->
+<!-- call_params:example:start -->
+<p>The parameters for a contract call are:</p>
 <ol>
-<li>Amount;</li>
-<li>Asset ID;</li>
-<li>Gas forwarded.</li>
+<li>Amount</li>
+<li>Asset ID</li>
+<li>Gas forwarded</li>
 </ol>
-<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html#"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<!-- call_params:example:end -->
+<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<!-- use_call_params:example:end -->
 <p>For instance, suppose the following contract that uses Sway's <code>msg_amount()</code> to return the amount sent in that transaction.</p>
 <pre><code class="language-rust ignore">    #[payable]
     fn get_msg_amount() -&gt; u64 {
@@ -167,7 +171,11 @@
             .call() // Perform the contract call.
             .await?;
 </code></pre>
-<p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
+<!-- This section should explain why `call_params` returns a result -->
+<!-- payable:example:start -->
+<p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable. </p>
+<!-- payable:example:end -->
+<p>In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
         .call_params(CallParameters::default().set_amount(100))
@@ -190,7 +198,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .call()
             .await?;
 </code></pre>
+<!-- This section should explain what the `gas_forwarded` parameter does -->
+<!-- gas:example:start -->
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
+<!-- gas:example:end -->
 <pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 10_000 gas, while the actual call may
         // only use 4300 gas
@@ -204,7 +215,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
             .call() // Perform the contract call.
             .await?;
 </code></pre>
+<!-- This section should explain the default forwarding behavior for a call -->
+<!-- forwarding:example:start -->
 <p>If you don't set the call parameters or use <code>CallParameters::default()</code>, the transaction gas limit will be forwarded instead.</p>
+<!-- forwarding:example:end -->
 
                     </main>
 

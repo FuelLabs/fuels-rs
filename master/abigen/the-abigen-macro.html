@@ -138,6 +138,8 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="abigen"><a class="header" href="#abigen">abigen!</a></h1>
+<!-- This section explain the `abigen!` macro -->
+<!-- abigen:example:start -->
 <p><code>abigen!</code> is a procedural macro -- it generates code. It accepts inputs in the format of:</p>
 <pre><code class="language-text">ProgramType(name=&quot;MyProgramType&quot;, abi=&quot;my_program-abi.json&quot;)...
 </code></pre>
@@ -153,6 +155,7 @@
 <p><code>abi</code> is either a path to the json abi file or its actual contents.</p>
 </li>
 </ul>
+<!-- abigen:example:end -->
 <hr />
 <p>So, an <code>abigen!</code> which generates bindings for two contracts and one script looks like this:</p>
 <pre><code class="language-rust ignore">        abigen!(

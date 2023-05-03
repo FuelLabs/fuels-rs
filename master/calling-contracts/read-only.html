@@ -138,14 +138,20 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="read-only-calls"><a class="header" href="#read-only-calls">Read-only calls</a></h1>
+<!-- This section should explain read-only calls  -->
+<!-- read_only:example:start -->
 <p>Sometimes you want to call a contract method that doesn't change the state of the blockchain. For instance, a method that only reads a value from storage and returns it.</p>
 <p>In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.</p>
 <p>You can do this with the SDK. Instead of <code>.call()</code>ing the method, use <code>.simulate()</code>:</p>
+<!-- read_only:example:end -->
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
+<!-- This section should explain what happens if you try a read-only call on a method that changes stae  -->
+<!-- simulate:example:start -->
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
+<!-- simulate:example:end -->
 
                     </main>
 

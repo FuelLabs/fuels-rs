@@ -138,20 +138,30 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="wallet-access"><a class="header" href="#wallet-access">Wallet Access</a></h1>
+<!-- This section should explain the difference between the different types of wallets -->
+<!-- wallet_types:example:start -->
 <p>The kinds of operations we can perform with a <code>Wallet</code> instance depend on
 whether or not we have access to the wallet's private key.</p>
 <p>In order to differentiate between <code>Wallet</code> instances that know their private key
 and those that do not, we use the <code>WalletUnlocked</code> and <code>Wallet</code> types
 respectively.</p>
+<!-- wallet_types:example:end -->
 <h2 id="wallet-states"><a class="header" href="#wallet-states">Wallet States</a></h2>
+<!-- This section should explain the unlocked wallet type -->
+<!-- wallet_unlocked:example:start -->
 <p>The <code>WalletUnlocked</code> type represents a wallet whose private key is known and
 stored internally in memory. A wallet must be of type <code>WalletUnlocked</code> in order
-to perform operations that involve <a href="./signing.html">signing messages or
-transactions</a>.</p>
+to perform operations that involve signing messages or
+transactions.</p>
+<!-- wallet_unlocked:example:end -->
+<p>You can learn more about signing <a href="./signing.html">here</a>.</p>
+<!-- This section should explain the locked wallet type -->
+<!-- wallet_locked:example:start -->
 <p>The <code>Wallet</code> type represents a wallet whose private key is <em>not</em> known or stored
 in memory. Instead, <code>Wallet</code> only knows its public address. A <code>Wallet</code> cannot be
 used to sign transactions, however it may still perform a whole suite of useful
 operations including listing transactions, assets, querying balances, and so on.</p>
+<!-- wallet_locked:example:end -->
 <p>Note that the <code>WalletUnlocked</code> type provides a <code>Deref</code> implementation targeting
 its inner <code>Wallet</code> type. This means that all methods available on the <code>Wallet</code>
 type are also available on the <code>WalletUnlocked</code> type. In other words,

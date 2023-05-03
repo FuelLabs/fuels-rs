@@ -138,17 +138,23 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="managing-wallets"><a class="header" href="#managing-wallets">Managing wallets</a></h1>
+<!-- This section should explain in general how you can use a wallet in the SDK -->
+<!-- wallets:example:start -->
 <p>You can use wallets for many important things, for instance:</p>
 <ol>
-<li>Checking your balance;</li>
-<li>Transferring coins to a destination address or contract;</li>
-<li>Signing messages and transactions;</li>
-<li>Paying for network fees when sending transactions or deploying smart contracts.</li>
+<li>Checking your balance</li>
+<li>Transferring coins to a destination address or contract</li>
+<li>Signing messages and transactions</li>
+<li>Paying for network fees when sending transactions or deploying smart contracts</li>
 </ol>
+<!-- wallets:example:end -->
 <p>The SDK gives you many different ways to create and access wallets. Let's explore these different approaches in the following sub-chapters.</p>
+<!-- This section should provide best security practices for using wallets in the SDK -->
+<!-- security:example:start -->
 <blockquote>
 <p><strong>Note:</strong> Keep in mind that you should never share your private/secret key. And in the case of wallets that were derived from a mnemonic phrase, never share your mnemonic phrase. If you're planning on storing the wallet on disk, do not store the plain private/secret key and do not store the plain mnemonic phrase. Instead, use <code>Wallet::encrypt</code> to encrypt its content first before saving it to disk.</p>
 </blockquote>
+<!-- security:example:end -->
 
                     </main>
 

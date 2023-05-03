@@ -140,11 +140,20 @@
                         <h1 id="terminology"><a class="header" href="#terminology">Terminology</a></h1>
 <p>These are the common terms you will find across this documentation and while using the SDK.</p>
 <h2 id="contract"><a class="header" href="#contract">Contract</a></h2>
+<!-- This section should define a contract -->
+<!-- rs_contract:example:start -->
 <p>A contract, in the SDK, is an abstraction that represents a connection to a specific smart contract deployed on the Fuel Network. This contract instance can be used as a regular Rust object, with methods attached to it that reflect those in its smart contract equivalent.</p>
+<!-- rs_contract:example:end -->
 <h2 id="provider"><a class="header" href="#provider">Provider</a></h2>
+<!-- This section should define a provider -->
+<!-- rs_provider:example:start -->
 <p>A Provider is a struct that provides an abstraction for a connection to a Fuel node. It provides read-only access to the node. You can use this provider as-is or through the wallet.</p>
+<!-- rs_provider:example:end -->
 <h2 id="wallet-and-signer"><a class="header" href="#wallet-and-signer">Wallet and signer</a></h2>
+<!-- This section should define a wallet and signer -->
+<!-- rs_wallet_signer:example:start -->
 <p>A <code>Wallet</code> is a struct with direct or indirect access to a private key. You can use a <code>Wallet</code> to sign messages and transactions to authorize the network to charge your account to perform operations. The terms wallet and signer in the SDK are often used interchangeably, but, technically, a <code>Signer</code> is simply a Rust trait to enable the signing of transactions and messages; the <code>Wallet</code> implements the <code>Signer</code> trait.</p>
+<!-- rs_wallet_signer:example:end -->
 
                     </main>
 
