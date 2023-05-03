@@ -55,7 +55,7 @@ impl Predicate {
         }
     }
 
-    fn calculate_address(code: &[u8], params: &Option<ConsensusParameters>) -> Bech32Address {
+    pub fn calculate_address(code: &[u8], params: &Option<ConsensusParameters>) -> Bech32Address {
         fuel_tx::Input::predicate_owner(
             code,
             params.as_ref().unwrap_or(&ConsensusParameters::DEFAULT),
@@ -71,6 +71,15 @@ impl Predicate {
     pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
         self.data = data;
         self
+    }
+
+    pub fn with_params(self, params: ConsensusParameters) -> Self {
+        Self {
+            data: self.data,
+            provider: self.provider,
+            params: Some(params),
+            ..Self::from_code(self.code, self.params.clone())
+        }
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {

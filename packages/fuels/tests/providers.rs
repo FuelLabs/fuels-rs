@@ -1,3 +1,4 @@
+use std::time::Duration;
 use std::{iter, str::FromStr, vec};
 
 use chrono::{TimeZone, Utc};
@@ -218,6 +219,9 @@ async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        block_production: Trigger::Interval {
+            block_time: Duration::from_secs(10),
+        },
         ..Config::local_node()
     };
     let wallets =
@@ -497,7 +501,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough resources to fit the target";
+    let expected = "Provider error: Response errors; not enough coins to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -679,7 +683,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let coin_1_utxo_id = coins[0].utxo_id;
     let coin_2_utxo_id = coins[1].utxo_id;
 
-    let message_id = message.message_id();
+    let message_nonce = message.nonce;
 
     let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
 
@@ -699,7 +703,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
             from: wallet.address().clone(),
             amount: coin_amount_1,
             excluded_utxos: vec![coin_2_utxo_id],
-            excluded_message_ids: vec![message_id],
+            excluded_message_nonces: vec![message_nonce],
             ..Default::default()
         };
         let resources = provider.get_spendable_resources(filter).await.unwrap();

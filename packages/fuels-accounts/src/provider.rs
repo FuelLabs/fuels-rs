@@ -9,7 +9,7 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
-use fuel_types::{BlockHeight, MessageId};
+use fuel_types::{BlockHeight, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -50,7 +50,7 @@ pub(crate) struct ResourceQueries {
 impl ResourceQueries {
     pub fn new(
         utxo_ids: Vec<UtxoId>,
-        message_ids: Vec<MessageId>,
+        message_nonces: Vec<Nonce>,
         asset_id: AssetId,
         amount: u64,
     ) -> Self {
@@ -59,9 +59,9 @@ impl ResourceQueries {
             .map(|utxo_id| format!("{utxo_id:#x}"))
             .collect::<Vec<_>>();
 
-        let messages = message_ids
+        let messages = message_nonces
             .iter()
-            .map(|msg_id| format!("{msg_id:#x}"))
+            .map(|nonce| format!("{nonce:#x}"))
             .collect::<Vec<_>>();
 
         Self {
@@ -95,7 +95,7 @@ pub struct ResourceFilter {
     pub asset_id: AssetId,
     pub amount: u64,
     pub excluded_utxos: Vec<UtxoId>,
-    pub excluded_message_ids: Vec<MessageId>,
+    pub excluded_message_nonces: Vec<Nonce>,
 }
 // ANCHOR_END: resource_filter
 
@@ -107,7 +107,7 @@ impl ResourceFilter {
     pub(crate) fn resource_queries(&self) -> ResourceQueries {
         ResourceQueries::new(
             self.excluded_utxos.clone(),
-            self.excluded_message_ids.clone(),
+            self.excluded_message_nonces.clone(),
             self.asset_id,
             self.amount,
         )
@@ -121,7 +121,7 @@ impl Default for ResourceFilter {
             asset_id: BASE_ASSET_ID,
             amount: Default::default(),
             excluded_utxos: Default::default(),
-            excluded_message_ids: Default::default(),
+            excluded_message_nonces: Default::default(),
         }
     }
 }

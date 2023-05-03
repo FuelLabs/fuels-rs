@@ -734,27 +734,19 @@ async fn test_output_message_estimation() -> Result<()> {
 
     let (wallets, _, _, contract_id) = setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
     let contract_methods = contract_instance.methods();
     let amount = 1000;
 
+    wallets[0]
+        .force_transfer_to_contract(&contract_id, amount, AssetId::BASE, TxParameters::default())
+        .await
+        .unwrap();
+
     let address = Bits256([1u8; 32]);
     {
-        // Should fail due to lack of output messages
-        let response = contract_methods.send_message(address, amount).call().await;
-
-        assert!(matches!(
-            response,
-            Err(Error::RevertTransactionError { .. })
-        ));
-    }
-
-    {
-        // Should add 1 output message automatically
         let _ = contract_methods
             .send_message(address, amount)
-            .estimate_tx_dependencies(Some(1))
-            .await?
             .call()
             .await?;
     }
@@ -801,15 +793,27 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
     let contract_methods = contract_instance.methods();
+    const NUM_OF_CALLS: u64 = 3;
     let amount = 1000;
+    let total_amount = amount * NUM_OF_CALLS;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..3).for_each(|_| {
+    (0..NUM_OF_CALLS).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
     });
+
+    wallets[0]
+        .force_transfer_to_contract(
+            &contract_id,
+            total_amount,
+            AssetId::BASE,
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
 
     let base_layer_addres = Bits256([1u8; 32]);
     let call_handler = contract_methods.send_message(base_layer_addres, amount);

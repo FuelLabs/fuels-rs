@@ -382,6 +382,15 @@ mod tests {
         let base_layer_address = Bits256([1u8; 32]);
         let amount = 1000;
 
+        wallet
+            .force_transfer_to_contract(
+                &contract_id,
+                amount,
+                AssetId::BASE,
+                TxParameters::default(),
+            )
+            .await
+            .unwrap();
         let response = contract_methods
             .send_message(base_layer_address, amount)
             .call()

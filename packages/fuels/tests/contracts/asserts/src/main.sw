@@ -1,19 +1,5 @@
 contract;
 
-// TODO: Remove when bug is fixed.
-use core::ops::*;
-fn assert_eq<T>(v1: T, v2: T)
-where
-    T: Eq
-{
-    let FAILED_ASSERT_EQ_SIGNAL = 0xffff_ffff_ffff_0003;
-    if (v1 != v2) {
-        log(v1);
-        log(v2);
-        revert(FAILED_ASSERT_EQ_SIGNAL);
-    }
-}
-// issue link: https://github.com/FuelLabs/fuels-rs/issues/829
 struct TestStruct {
     field_1: bool,
     field_2: u64,

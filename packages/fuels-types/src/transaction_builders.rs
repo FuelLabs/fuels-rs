@@ -300,7 +300,8 @@ impl ScriptTransactionBuilder {
             op::gtf(0x10, 0x00, GTFArgs::ScriptData.into()),
             op::addi(0x11, 0x10, Bytes32::LEN as u16),
             op::lw(0x11, 0x11, 0),
-            op::smo(0x10, 0x00, 0x00, 0x11),
+            // TODO: Return back with `fuel-vm 0.31.1`
+            op::smo(0x10, 0x10, 0x01, 0x11),
             op::ret(RegId::ONE),
         ]
         .into_iter()

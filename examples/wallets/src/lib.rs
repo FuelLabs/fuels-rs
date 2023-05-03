@@ -345,7 +345,17 @@ mod tests {
 
         use fuels::prelude::*;
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let config = Config {
+            manual_blocks_enabled: true,
+            ..Config::local_node()
+        };
+        let mut wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(1), None, None),
+            Some(config),
+            None,
+        )
+        .await;
+        let wallet = wallets.pop().unwrap();
 
         let amount = 1000;
         let base_layer_address =
@@ -357,10 +367,18 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
+        wallet
+            .provider()
+            .unwrap()
+            .client
+            .produce_blocks(1, None)
+            .await
+            .expect("We should be able to produce at least 1 block");
+
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(1)))
+            .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(2)))
             .await?
             .expect("Failed to retrieve message proof.");
 
