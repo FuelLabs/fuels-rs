@@ -1,6 +1,9 @@
 # The JSON ABI file
 
+<!-- This section should talk about the importance of the ABI -->
+<!-- abi:example:start -->
 Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the [ABI methods](https://fuellabs.github.io/sway/master/introduction/sway_quickstart.html#abi) in your smart contracts.
+<!-- abi:example:end -->
 
 For the same example Sway code as above:
 
