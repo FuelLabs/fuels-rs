@@ -1,23 +1,33 @@
 # Wallet Access
 
+<!-- This section should explain the difference between the different types of wallets -->
+<!-- wallet_types:example:start -->
 The kinds of operations we can perform with a `Wallet` instance depend on
 whether or not we have access to the wallet's private key.
 
 In order to differentiate between `Wallet` instances that know their private key
 and those that do not, we use the `WalletUnlocked` and `Wallet` types
 respectively.
+<!-- wallet_types:example:end -->
 
 ## Wallet States
 
+<!-- This section should explain the unlocked wallet type -->
+<!-- wallet_unlocked:example:start -->
 The `WalletUnlocked` type represents a wallet whose private key is known and
 stored internally in memory. A wallet must be of type `WalletUnlocked` in order
-to perform operations that involve [signing messages or
-transactions](./signing.md).
+to perform operations that involve signing messages or
+transactions.
+<!-- wallet_unlocked:example:end -->
+You can learn more about signing [here](./signing.md).
 
+<!-- This section should explain the locked wallet type -->
+<!-- wallet_locked:example:start -->
 The `Wallet` type represents a wallet whose private key is *not* known or stored
 in memory. Instead, `Wallet` only knows its public address. A `Wallet` cannot be
 used to sign transactions, however it may still perform a whole suite of useful
 operations including listing transactions, assets, querying balances, and so on.
+<!-- wallet_locked:example:end -->
 
 Note that the `WalletUnlocked` type provides a `Deref` implementation targeting
 its inner `Wallet` type. This means that all methods available on the `Wallet`

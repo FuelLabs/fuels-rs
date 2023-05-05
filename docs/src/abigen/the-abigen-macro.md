@@ -1,5 +1,7 @@
 # abigen!
 
+<!-- This section explain the `abigen!` macro -->
+<!-- abigen:example:start -->
 `abigen!` is a procedural macro -- it generates code. It accepts inputs in the format of:
 ```text
 ProgramType(name="MyProgramType", abi="my_program-abi.json")...
@@ -11,6 +13,7 @@ where:
 - `name` is the name that will be given to the generated bindings,
 
 - `abi` is either a path to the json abi file or its actual contents.
+<!-- abigen:example:end -->
 
 ---
 So, an `abigen!` which generates bindings for two contracts and one script looks like this:
