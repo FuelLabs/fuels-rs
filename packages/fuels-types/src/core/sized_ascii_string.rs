@@ -24,6 +24,30 @@ impl<const LEN: usize> SizedAsciiString<LEN> {
         }
         Ok(Self { data })
     }
+
+    pub fn to_trimmed_string(&self) -> String {
+        self.data.trim().to_string()
+    }
+    pub fn to_left_trimmed_string(&self) -> String {
+        self.data.trim_start().to_string()
+    }
+    pub fn to_right_trimmed_string(&self) -> String {
+        self.data.trim_end().to_string()
+    }
+
+    /// Pad `data` string with whitespace characters on the right to fit into the `SizedAsciiString`
+    pub fn new_with_right_whitespace_padding(data: String) -> Result<Self> {
+        if data.len() > LEN {
+            let l = data.len();
+            return Err(error!(
+                InvalidData,
+                "SizedAsciiString<{LEN}> cannot be constructed from a string of size {l}"
+            ));
+        }
+        Ok(Self {
+            data: format!("{:width$}", data, width = LEN),
+        })
+    }
 }
 
 impl<const LEN: usize> TryFrom<&str> for SizedAsciiString<LEN> {
@@ -137,5 +161,21 @@ mod tests {
         assert_eq!(sized_str, "abc");
         // and vice-versa
         assert_eq!("abc", sized_str);
+    }
+
+    #[test]
+    fn trim() -> Result<()> {
+        // Every whitespace in those literals is made of a single whitespace
+        let untrimmed = SizedAsciiString::<9>::new(" est abc ".to_string())?;
+
+        assert_eq!("est abc ", untrimmed.to_left_trimmed_string());
+        assert_eq!(" est abc", untrimmed.to_right_trimmed_string());
+        assert_eq!("est abc", untrimmed.to_trimmed_string());
+
+        let padded =
+            SizedAsciiString::<100>::new_with_right_whitespace_padding("victor".to_string())?;
+        assert_eq!(&*format!("{:width$}", "victor", width = 100), padded);
+
+        Ok(())
     }
 }
