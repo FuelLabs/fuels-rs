@@ -9,7 +9,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
-use fuels_accounts::Account;
+use fuels_accounts::{Account, AccountError};
 use fuels_types::resource::Resource;
 
 #[tokio::test]
@@ -503,8 +503,9 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough resources to fit the target";
-    assert!(response.to_string().starts_with(expected));
+    let expected: Error = AccountError::no_resources().into();
+    assert_eq!(response.to_string(), expected.to_string());
+
     Ok(())
 }
 
