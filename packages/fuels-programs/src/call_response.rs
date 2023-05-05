@@ -1,7 +1,7 @@
 use fuel_tx::Receipt;
 use fuels_core::{
-    errors::Result,
     traits::{Parameterize, Tokenizable},
+    types::errors::Result,
 };
 
 use crate::logs::{LogDecoder, LogResult};

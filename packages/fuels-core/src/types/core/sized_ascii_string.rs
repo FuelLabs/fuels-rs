@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::errors::{error, Error, Result};
+use crate::types::errors::{error, Error, Result};
 
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a

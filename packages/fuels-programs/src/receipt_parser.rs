@@ -1,11 +1,12 @@
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
     abi_decoder::ABIDecoder,
-    bech32::Bech32ContractId,
-    error,
-    errors::{Error, Result},
-    param_types::{ParamType, ReturnLocation},
-    Token,
+    types::{
+        bech32::Bech32ContractId,
+        errors::{error, Error, Result},
+        param_types::{ParamType, ReturnLocation},
+        Token,
+    },
 };
 use itertools::Itertools;
 

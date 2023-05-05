@@ -1,11 +1,15 @@
 use fuel_tx::Output;
+
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::AssetId,
-    types::{coin::Coin, message::Message},
+    types::{
+        coin::Coin,
+        message::Message,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        AssetId,
+    },
 };
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_core::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
 async fn assert_address_balance(
     address: &Bech32Address,

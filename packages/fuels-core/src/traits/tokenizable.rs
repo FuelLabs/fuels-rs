@@ -1,11 +1,12 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::{
-    core::{Bits256, RawSlice, SizedAsciiString, StringToken, Token},
-    errors::{error, Error, Result},
-    param_types::ParamType,
     traits::Parameterize,
-    Bytes,
+    types::{
+        errors::{error, Error, Result},
+        param_types::ParamType,
+        Bits256, Bytes, RawSlice, SizedAsciiString, StringToken, Token,
+    },
 };
 
 pub trait Tokenizable {

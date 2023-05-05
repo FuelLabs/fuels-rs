@@ -1,12 +1,10 @@
 use std::path::Path;
 
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::AssetId,
-    types::{coin::Coin, message::Message},
+    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId},
 };
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_core::unresolved_bytes::UnresolvedBytes;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,

@@ -13,7 +13,8 @@ use crate::{
 pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {
     let fuels_types_path =
         get_path_from_attr_or("FuelsTypesPath", &input.attrs, quote! {::fuels::types})?;
-
+    let fuels_core_path =
+        get_path_from_attr_or("FuelsCorePath", &input.attrs, quote! {::fuels::core})?;
     let no_std = find_attr("NoStd", &input.attrs).is_some();
 
     match input.data {
@@ -22,6 +23,7 @@ pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {
             input.generics,
             struct_contents,
             fuels_types_path,
+            fuels_core_path,
             no_std,
         ),
         Data::Enum(enum_contents) => tokenizable_for_enum(
@@ -29,6 +31,7 @@ pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {
             input.generics,
             enum_contents,
             fuels_types_path,
+            fuels_core_path,
             no_std,
         ),
         _ => Err(Error::new_spanned(input, "Union type is not supported")),
@@ -40,20 +43,21 @@ fn tokenizable_for_struct(
     generics: Generics,
     contents: DataStruct,
     fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
     no_std: bool,
 ) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let struct_name_str = name.to_string();
-    let members = extract_struct_members(contents, fuels_types_path.clone())?;
+    let members = extract_struct_members(contents, fuels_core_path.clone())?;
     let field_names = members.names().collect::<Vec<_>>();
 
     validate_and_extract_generic_types(&generics)?;
     let std_lib = std_lib_path(no_std);
 
     Ok(quote! {
-        impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {
+        impl #impl_gen #fuels_core_path::traits::Tokenizable for #name #type_gen #where_clause {
             fn into_token(self) -> #fuels_types_path::Token {
-                let tokens = #std_lib::vec![#(#fuels_types_path::traits::Tokenizable::into_token(self.#field_names)),*];
+                let tokens = #std_lib::vec![#(#fuels_core_path::traits::Tokenizable::into_token(self.#field_names)),*];
                 #fuels_types_path::Token::Struct(tokens)
             }
 
@@ -67,7 +71,7 @@ fn tokenizable_for_struct(
                         };
                         ::core::result::Result::Ok(Self {
                             #(
-                                #field_names: #fuels_types_path::traits::Tokenizable::from_token(next_token()?)?
+                                #field_names: #fuels_core_path::traits::Tokenizable::from_token(next_token()?)?
                              ),*
 
                         })
@@ -84,11 +88,12 @@ fn tokenizable_for_enum(
     generics: Generics,
     contents: DataEnum,
     fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
     no_std: bool,
 ) -> Result<TokenStream> {
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
-    let variants = utils::extract_variants(&contents.variants, fuels_types_path.clone())?;
+    let variants = utils::extract_variants(&contents.variants, fuels_core_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token(no_std);
 
@@ -97,11 +102,11 @@ fn tokenizable_for_enum(
     let std_lib = std_lib_path(no_std);
 
     Ok(quote! {
-        impl #impl_gen #fuels_types_path::traits::Tokenizable for #name #type_gen #where_clause {
+        impl #impl_gen #fuels_core_path::traits::Tokenizable for #name #type_gen #where_clause {
             fn into_token(self) -> #fuels_types_path::Token {
                 let (discriminant, token) = #discriminant_and_token;
 
-                let variants = match <Self as #fuels_types_path::traits::Parameterize>::param_type() {
+                let variants = match <Self as #fuels_core_path::traits::Parameterize>::param_type() {
                     #fuels_types_path::param_types::ParamType::Enum{variants, ..} => variants,
                     other => ::std::panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
                 };

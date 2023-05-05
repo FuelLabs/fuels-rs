@@ -1,7 +1,9 @@
 use crate::{
     constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
-    errors::{error, Error, Result},
-    param_types::ParamType,
+    types::{
+        errors::{error, Error, Result},
+        param_types::ParamType,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]

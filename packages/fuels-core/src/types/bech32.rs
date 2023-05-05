@@ -6,7 +6,7 @@ use std::{
 use bech32::{FromBase32, ToBase32, Variant::Bech32m};
 use fuel_tx::{Address, Bytes32, ContractId};
 
-use crate::errors::{Error, Result};
+use crate::types::errors::{Error, Result};
 
 // Fuel Network human-readable part for bech32 encoding
 pub const FUEL_BECH32_HRP: &str = "fuel";

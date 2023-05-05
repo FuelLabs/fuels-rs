@@ -102,7 +102,7 @@ pub fn validate_and_extract_generic_types(generics: &Generics) -> syn::Result<Ve
 pub(crate) struct Members {
     names: Vec<Ident>,
     types: Vec<TokenStream>,
-    fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
 }
 
 impl Members {
@@ -111,16 +111,16 @@ impl Members {
     }
 
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
-        let fuels_types_path = self.fuels_types_path.to_token_stream();
+        let fuels_core_path = self.fuels_core_path.to_token_stream();
         self.types.iter().map(move |ty| {
-            quote! { <#ty as #fuels_types_path::traits::Parameterize>::param_type() }
+            quote! { <#ty as #fuels_core_path::traits::Parameterize>::param_type() }
         })
     }
 }
 
 pub(crate) fn extract_struct_members(
     fields: DataStruct,
-    fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
 ) -> syn::Result<Members> {
     let named_fields = match fields.fields {
         Fields::Named(named_fields) => Ok(named_fields.named),
@@ -147,13 +147,13 @@ pub(crate) fn extract_struct_members(
     Ok(Members {
         names,
         types,
-        fuels_types_path,
+        fuels_core_path,
     })
 }
 
 pub(crate) fn extract_enum_members(
     data: DataEnum,
-    fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
 ) -> syn::Result<Members> {
     let components = data.variants.into_iter().map(|variant: Variant| {
         let name = variant.ident;
@@ -187,6 +187,6 @@ pub(crate) fn extract_enum_members(
     Ok(Members {
         names,
         types,
-        fuels_types_path,
+        fuels_core_path,
     })
 }

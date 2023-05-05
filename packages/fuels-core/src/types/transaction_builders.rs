@@ -8,14 +8,16 @@ use fuel_tx::{
 use fuel_types::{bytes::padded_len_usize, Address, AssetId, Bytes32, ContractId, Salt};
 
 use crate::{
-    coin::Coin,
     constants::{BASE_ASSET_ID, WORD_SIZE},
-    errors::{Error, Result},
-    input::Input,
-    message::Message,
     offsets,
-    resource::Resource,
-    transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+    types::{
+        coin::Coin,
+        errors::{Error, Result},
+        input::Input,
+        message::Message,
+        resource::Resource,
+        transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+    },
 };
 
 pub trait TransactionBuilder: Send {

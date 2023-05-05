@@ -15,7 +15,6 @@ mod abigen;
 mod derive;
 mod parse_utils;
 mod setup_program_test;
-mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
 /// input in the form of `ProgramType(name="MyBindings", abi=ABI_SOURCE)...`
@@ -59,7 +58,7 @@ pub fn setup_program_test(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, NoStd))]
+#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
 pub fn parameterize(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -68,7 +67,7 @@ pub fn parameterize(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, NoStd))]
+#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
 pub fn tokenizable(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -77,7 +76,7 @@ pub fn tokenizable(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(TryFrom, attributes(FuelsCorePath, NoStd))]
+#[proc_macro_derive(TryFrom, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
 pub fn try_from(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 

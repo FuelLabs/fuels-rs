@@ -8,16 +8,18 @@ use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_core::{
-    bech32::{Bech32Address, Bech32ContractId},
-    coin::Coin,
     constants::BASE_ASSET_ID,
-    errors::{Error, Result},
-    input::Input,
-    message::Message,
-    resource::Resource,
-    transaction::{Transaction, TxParameters},
-    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-    transaction_response::TransactionResponse,
+    types::{
+        bech32::{Bech32Address, Bech32ContractId},
+        coin::Coin,
+        errors::{Error, Result},
+        input::Input,
+        message::Message,
+        resource::Resource,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_response::TransactionResponse,
+    },
 };
 use provider::ResourceFilter;
 pub use wallet::{Wallet, WalletUnlocked};
@@ -327,7 +329,7 @@ mod tests {
     use fuel_tx::{
         Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_core::transaction::{ScriptTransaction, Transaction};
+    use fuels_core::types::transaction::{ScriptTransaction, Transaction};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;

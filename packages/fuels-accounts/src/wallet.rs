@@ -6,12 +6,14 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Witness};
 use fuels_core::{
-    bech32::{Bech32Address, FUEL_BECH32_HRP},
     constants::BASE_ASSET_ID,
-    errors::{Error, Result},
-    input::Input,
-    transaction::Transaction,
-    transaction_builders::TransactionBuilder,
+    types::{
+        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        errors::{Error, Result},
+        input::Input,
+        transaction::Transaction,
+        transaction_builders::TransactionBuilder,
+    },
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;

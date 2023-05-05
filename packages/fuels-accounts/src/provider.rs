@@ -14,18 +14,20 @@ use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Utxo
 use fuel_types::MessageId;
 use fuel_vm::state::ProgramState;
 use fuels_core::{
-    bech32::{Bech32Address, Bech32ContractId},
-    block::Block,
-    chain_info::ChainInfo,
-    coin::Coin,
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
-    errors::{error, Error, Result},
-    message::Message,
-    message_proof::MessageProof,
-    node_info::NodeInfo,
-    resource::Resource,
-    transaction::Transaction,
-    transaction_response::TransactionResponse,
+    types::{
+        bech32::{Bech32Address, Bech32ContractId},
+        block::Block,
+        chain_info::ChainInfo,
+        coin::Coin,
+        errors::{error, Error, Result},
+        message::Message,
+        message_proof::MessageProof,
+        node_info::NodeInfo,
+        resource::Resource,
+        transaction::Transaction,
+        transaction_response::TransactionResponse,
+    },
 };
 use itertools::Itertools;
 use tai64::Tai64;

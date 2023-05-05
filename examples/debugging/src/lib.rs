@@ -4,8 +4,8 @@ mod tests {
 
     use fuel_abi_types::program_abi::ProgramABI;
     use fuels::{
-        core::function_selector::resolve_fn_selector,
-        types::{errors::Result, param_types::ParamType, traits::Parameterize, SizedAsciiString},
+        core::{function_selector::resolve_fn_selector, traits::Parameterize},
+        types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
     #[test]

@@ -11,7 +11,7 @@ use fuel_tx::{
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    errors::Error,
+    types::errors::Error,
 };
 
 #[derive(Debug, Copy, Clone)]

@@ -2,10 +2,13 @@ use std::{convert::TryInto, str};
 
 use crate::{
     constants::WORD_SIZE,
-    enum_variants::EnumVariants,
-    errors::{error, Error, Result},
-    param_types::ParamType,
-    StringToken, Token, Tokenizable,
+    traits::Tokenizable,
+    types::{
+        enum_variants::EnumVariants,
+        errors::{error, Error, Result},
+        param_types::ParamType,
+        StringToken, Token,
+    },
 };
 use fuel_types::bytes::padded_len_usize;
 
@@ -716,4 +719,3 @@ mod tests {
         Ok(())
     }
 }
-

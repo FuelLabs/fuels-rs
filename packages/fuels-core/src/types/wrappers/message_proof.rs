@@ -3,7 +3,7 @@
 use fuel_core_client::client::schema::message::MessageProof as ClientMessageProof;
 use fuel_tx::{Bytes32, Bytes64};
 
-use crate::{bech32::Bech32Address, block::Header};
+use crate::types::{bech32::Bech32Address, block::Header};
 
 #[derive(Debug)]
 pub struct MessageProof {

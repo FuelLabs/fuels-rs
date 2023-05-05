@@ -3,14 +3,12 @@ use std::{iter, str::FromStr, vec};
 use chrono::{Duration, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
-    accounts::fuel_crypto::SecretKey,
+    accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,
-    types::{block::Block, errors::error, message::Message},
+    types::{block::Block, errors::error, message::Message, resource::Resource},
 };
-use fuels_accounts::Account;
-use fuels_core::resource::Resource;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

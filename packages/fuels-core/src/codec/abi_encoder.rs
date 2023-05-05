@@ -1,9 +1,11 @@
 use crate::{
     constants::WORD_SIZE,
-    errors::Result,
-    pad_string, pad_u16, pad_u32, pad_u8,
-    unresolved_bytes::{Data, UnresolvedBytes},
-    EnumSelector, StringToken, Token,
+    types::{
+        errors::Result,
+        pad_string, pad_u16, pad_u32, pad_u8,
+        unresolved_bytes::{Data, UnresolvedBytes},
+        EnumSelector, StringToken, Token,
+    },
 };
 use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
@@ -175,8 +177,8 @@ mod tests {
 
     use super::*;
     use crate::{
-        enum_variants::EnumVariants, errors::Result, param_types::ParamType,
-        utils::first_four_bytes_of_sha256_hash,
+        first_four_bytes_of_sha256_hash,
+        types::{enum_variants::EnumVariants, param_types::ParamType},
     };
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;

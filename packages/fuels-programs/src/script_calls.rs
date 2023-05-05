@@ -4,14 +4,16 @@ use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{provider::Provider, Account};
 use fuels_core::{
-    bech32::Bech32ContractId,
-    errors::Result,
-    input::Input,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
-    transaction::{Transaction, TxParameters},
-    transaction_builders::ScriptTransactionBuilder,
-    unresolved_bytes::UnresolvedBytes,
+    types::{
+        bech32::Bech32ContractId,
+        errors::Result,
+        input::Input,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::ScriptTransactionBuilder,
+        unresolved_bytes::UnresolvedBytes,
+    },
 };
 use itertools::chain;
 

@@ -132,8 +132,8 @@ mod tests {
         assert_eq!(
             stringified_result,
             vec![
-                "< u8 as :: fuels :: types :: traits :: Parameterize > :: param_type ()",
-                "< SomeStruct :: < T , K > as :: fuels :: types :: traits :: Parameterize > :: param_type ()"
+                "< u8 as :: fuels :: core :: traits :: Parameterize > :: param_type ()",
+                "< SomeStruct :: < T , K > as :: fuels :: core :: traits :: Parameterize > :: param_type ()"
             ]
         )
     }

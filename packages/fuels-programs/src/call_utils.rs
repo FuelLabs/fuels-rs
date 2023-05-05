@@ -5,14 +5,16 @@ use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
 use fuels_core::{
-    bech32::Bech32Address,
     constants::WORD_SIZE,
-    errors::Result,
-    input::Input,
     offsets::call_script_data_offset,
-    param_types::ParamType,
-    transaction::{ScriptTransaction, TxParameters},
-    transaction_builders::ScriptTransactionBuilder,
+    types::{
+        bech32::Bech32Address,
+        errors::Result,
+        input::Input,
+        param_types::ParamType,
+        transaction::{ScriptTransaction, TxParameters},
+        transaction_builders::ScriptTransactionBuilder,
+    },
 };
 use itertools::{chain, Itertools};
 
@@ -418,7 +420,7 @@ mod test {
 
     use fuels_accounts::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_core::{
+    use fuels_core::types::{
         bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         resource::Resource,

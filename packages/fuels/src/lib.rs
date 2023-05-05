@@ -31,7 +31,10 @@ pub mod programs {
 }
 
 pub mod core {
-    pub use fuels_core::*;
+    pub use fuels_core::{
+        abi_decoder, abi_encoder, constants, first_four_bytes_of_sha256_hash, function_selector,
+        offsets, traits, try_from_bytes, Configurables,
+    };
 }
 
 #[cfg(feature = "std")]
@@ -40,7 +43,7 @@ pub mod accounts {
 }
 
 pub mod types {
-    pub use fuels_core::*;
+    pub use fuels_core::types::*;
 }
 
 #[cfg(feature = "std")]
@@ -84,11 +87,11 @@ pub mod prelude {
         test_helpers::*,
     };
     pub use super::{
+        core::constants::*,
         macros::{abigen, setup_program_test},
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
-            constants::*,
             errors::{Error, Result},
             transaction::*,
             Address, AssetId, Bytes, ContractId, RawSlice,
