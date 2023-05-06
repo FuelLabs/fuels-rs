@@ -26,7 +26,7 @@ Then, in Rust, after setting up and deploying the above contract, you can config
 
 <!-- This section should explain why `call_params` returns a result -->
 <!-- payable:example:start -->
-`call_params` returns a result to ensure you don't forward assets to a contract method that isn't payable. 
+`call_params` returns a result to ensure you don't forward assets to a contract method that isn't payable.
 <!-- payable:example:end -->
 In the following example, we try to forward an amount of 100 of the base asset to `non_payable`. As its name suggests, `non_payable` isn't annotated with `#[payable]` in the contract code. Passing `CallParameters` with an amount other than 0 leads to an `InvalidCallParameters` error:
 
@@ -39,7 +39,7 @@ In the following example, we try to forward an amount of 100 of the base asset t
 You can also use `CallParameters::default()` to use the default values:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-types/src/constants.rs:default_call_parameters}}
+{{#include ../../../packages/fuels-core/src/utils/constants.rs:default_call_parameters}}
 ```
 
 This way:

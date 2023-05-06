@@ -3,7 +3,7 @@
 In the Rust SDK, Ethereum Virtual Machine (EVM) addresses can be represented with the 'EvmAddress' type. Its definition matches with the Sway standard library type with the same name and will be converted accordingly when interacting with contracts:
 
 ```rust,ignore
-{{#include ../../../packages/fuels-types/src/core/bits.rs:evm_address}}
+{{#include ../../../packages/fuels-core/src/types/core/bits.rs:evm_address}}
 ```
 
 Here's an example:
