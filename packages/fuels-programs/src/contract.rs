@@ -507,6 +507,7 @@ fn extract_vec_data<'a>(
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
+    /// Initially `None`, this gets set after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub datatype: PhantomData<D>,
@@ -846,6 +847,7 @@ pub struct MultiContractCallHandler<T: Account> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
+    /// Initially `None`, this gets set after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
 }

@@ -57,6 +57,7 @@ impl ScriptCall {
 pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
+    /// Initially `None`, this gets set after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub provider: Provider,
