@@ -1,7 +1,7 @@
 use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Attribute, Error, Expr, Fields, Lit, Meta, Result, Type, Variant};
+use syn::{Attribute, Error, Expr, ExprLit, Fields, Lit, Meta, Result, Type, Variant};
 
 pub(crate) fn get_path_from_attr_or(
     attr_name: &str,
@@ -16,12 +16,8 @@ pub(crate) fn get_path_from_attr_or(
         return Err(Error::new_spanned(attr.meta.path(), "Expected name='value'"));
     };
 
-    let Expr::Lit(expr_lit) = &name_value.value else {
-        return Err(Error::new_spanned(&name_value.value, "Expected literal"));
-    };
-
-    let Lit::Str(lit_str) = &expr_lit.lit else {
-        return Err(Error::new_spanned(&expr_lit.lit, "Expected string literal"));
+    let Expr::Lit(ExprLit{lit: Lit::Str(lit_str),..}) = &name_value.value else {
+        return Err(Error::new_spanned(&name_value.value, "Expected string literal"));
     };
 
     TypePath::new(lit_str.value())
