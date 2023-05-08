@@ -23,6 +23,8 @@ impl ReceiptParser {
             .cloned()
             .collect();
 
+        dbg!(&relevant_receipts);
+
         Self {
             receipts: relevant_receipts,
         }

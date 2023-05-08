@@ -36,7 +36,6 @@ impl Abigen {
     /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
         let parsed_targets = Self::parse_targets(targets)?;
-
         let generated_code = Self::generate_code(no_std, parsed_targets)?;
 
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
@@ -73,9 +72,11 @@ impl Abigen {
         parsed_targets: Vec<ParsedAbigenTarget>,
     ) -> Result<GeneratedCode> {
         let custom_types = Self::filter_custom_types(&parsed_targets);
+
         let shared_types = Self::filter_shared_types(custom_types);
 
         let bindings = Self::generate_all_bindings(parsed_targets, no_std, &shared_types)?;
+
         let shared_types = Self::generate_shared_types(shared_types, no_std)?;
 
         let mod_name = ident("abigen_bindings");
@@ -168,4 +169,19 @@ mod tests {
 
         assert_eq!(shared_types, HashSet::from([types[0].clone()]))
     }
+    //
+    // #[test]
+    // fn testis() {
+    //     let stream = Abigen::generate(vec![AbigenTarget {
+    //         name: "MyContractTest".to_string(),
+    //         abi: "/Users/emirsalkic/Documents/Git/fuels-rs/packages/fuels/tests/contracts/low_level_call/out/debug/low_level_call-abi.json".to_string(),
+    //         program_type: ProgramType::Contract,
+    //     }], false).unwrap().to_string();
+    //
+    //     std::fs::write(
+    //         "/Users/emirsalkic/Documents/Git/fuels-rs/packages/fuels/tests/MyContractTest.rs",
+    //         stream,
+    //     )
+    //     .unwrap();
+    // }
 }

@@ -41,10 +41,10 @@ pub(crate) async fn build_tx_from_contract_calls(
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
-    let (script_data, call_param_offsets) =
+    let (mut script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
 
-    let script = get_instructions(calls, call_param_offsets);
+    let mut script = get_instructions(calls, call_param_offsets);
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
@@ -266,8 +266,12 @@ pub(crate) fn get_single_call_instructions(
         op::call(0x10, 0x12, 0x13, 0x11),
     ]
     .to_vec();
+
     // The instructions are different if you want to return data that was on the heap
     if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
+
+        dbg!(&inner_type_byte_size);
+
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).
@@ -285,6 +289,39 @@ pub(crate) fn get_single_call_instructions(
             op::retd(0x15, 0x16),
         ]);
     }
+
+    // 15 ret 0
+    // 16 re 2
+    //
+    //
+    //
+    // inner_type
+
+    // 15 16
+    // call
+    //
+    //
+    //
+    // inner_type
+
+
+    // instructions.extend([
+    //     // The RET register contains the pointer address of the `CALL` return (a stack
+    //     // address).
+    //     // The RETL register contains the length of the `CALL` return (=24 because the Vec/Bytes
+    //     // struct takes 3 WORDs). We don't actually need it unless the Vec/Bytes struct encoding
+    //     // changes in the compiler.
+    //     // Load the word located at the address contained in RET, it's a word that
+    //     // translates to a heap address. 0x15 is a free register.
+    //     op::lw(0x15, RegId::RET, 0),
+    //     // We know a Vec/Bytes struct has its third WORD contain the length of the underlying
+    //     // vector, so use a 2 offset to store the length in 0x16, which is a free register.
+    //     op::lw(0x16, RegId::RET, 2),
+    //     // The in-memory size of the type is (in-memory size of the inner type) * length
+    //     op::muli(0x16, 0x16, inner_type_byte_size as u16),
+    //     op::retd(0x15, 0x16),
+    // ]);
+    //
 
     #[allow(clippy::iter_cloned_collect)]
     instructions.into_iter().collect::<Vec<u8>>()

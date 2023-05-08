@@ -16,6 +16,7 @@ pub struct AbigenTarget {
     pub program_type: ProgramType,
 }
 
+#[derive(Debug)]
 pub(crate) struct ParsedAbigenTarget {
     pub name: String,
     pub source: FullProgramABI,
