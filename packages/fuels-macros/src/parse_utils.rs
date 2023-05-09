@@ -162,7 +162,7 @@ pub(crate) fn extract_enum_members(
             Fields::Unnamed(fields_unnamed) => {
                 if fields_unnamed.unnamed.len() != 1 {
                     return Err(Error::new(
-                        fields_unnamed.paren_token.span,
+                        fields_unnamed.paren_token.span.join(),
                         "Must have exactly one element",
                     ));
                 }

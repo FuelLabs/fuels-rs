@@ -43,15 +43,13 @@ impl TryFrom<Command> for AbigenCommand {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
+        let span = command.name.span();
         let targets = command
-            .contents
+            .parse_nested_metas()?
             .into_iter()
             .map(|meta| Command::new(meta).and_then(TargetInfo::try_from))
             .collect::<Result<Vec<_>, _>>()?;
 
-        Ok(Self {
-            span: command.name.span(),
-            targets,
-        })
+        Ok(Self { span, targets })
     }
 }
