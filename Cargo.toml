@@ -78,7 +78,7 @@ serde_with = { version = "2.3.2", default-features = false }
 sha2 = "0.10.6"
 strum = "0.24"
 strum_macros = "0.24"
-syn = "1.0.107"
+syn = "2.0.15"
 tai64 = { version = "4.0", default-features = false }
 tempfile = "3.5.0"
 thiserror = { version = "1.0.40", default-features = false }
