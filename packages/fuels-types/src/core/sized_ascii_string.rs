@@ -166,16 +166,15 @@ mod tests {
 
     #[test]
     fn trim() -> Result<()> {
-        // Every whitespace in those literals is made of a single whitespace
+        // Using single whitespaces
         let untrimmed = SizedAsciiString::<9>::new(" est abc ".to_string())?;
-
         assert_eq!("est abc ", untrimmed.to_left_trimmed_string());
         assert_eq!(" est abc", untrimmed.to_right_trimmed_string());
         assert_eq!("est abc", untrimmed.to_trimmed_string());
 
-        let padded =
-            SizedAsciiString::<100>::new_with_right_whitespace_padding("victor".to_string())?;
-        assert_eq!(&*format!("{:width$}", "victor", width = 100), padded);
+        let padded = // adds 6 whitespaces
+            SizedAsciiString::<12>::new_with_right_whitespace_padding("victor".to_string())?;
+        assert_eq!("victor      ", padded);
 
         Ok(())
     }
