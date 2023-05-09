@@ -1,38 +1,50 @@
-use proc_macro2::Ident;
+use proc_macro2::{Ident, TokenStream};
 use syn::{
-    parse::ParseStream, parse_macro_input::ParseMacroInput, punctuated::Punctuated, AttributeArgs,
-    Error, Meta::List, MetaList, NestedMeta, NestedMeta::Meta,
+    parse::{ParseStream, Parser},
+    punctuated::Punctuated,
+    token::Comma,
+    Error, Meta,
+    Meta::List,
 };
 
 #[derive(Debug)]
 pub struct Command {
     pub name: Ident,
-    pub contents: Punctuated<NestedMeta, syn::token::Comma>,
+    pub contents: TokenStream,
 }
 
 impl Command {
     pub fn parse_multiple(input: ParseStream) -> syn::Result<Vec<Command>> {
-        AttributeArgs::parse(input)?
+        input
+            .call(Punctuated::<Meta, Comma>::parse_terminated)?
             .into_iter()
             .map(Command::new)
             .collect()
     }
 
-    pub fn new(nested_meta: NestedMeta) -> syn::Result<Self> {
-        if let Meta(List(MetaList { path, nested, .. })) = nested_meta {
-            let name = path.get_ident().cloned().ok_or_else(|| {
-                Error::new_spanned(path, "Command name cannot be a Path -- i.e. contain ':'.")
+    pub fn new(meta: Meta) -> syn::Result<Self> {
+        if let List(meta_list) = meta {
+            let name = meta_list.path.get_ident().cloned().ok_or_else(|| {
+                Error::new_spanned(
+                    &meta_list.path,
+                    "Command name cannot be a Path -- i.e. contain ':'.",
+                )
             })?;
+
             Ok(Self {
                 name,
-                contents: nested,
+                contents: meta_list.tokens,
             })
         } else {
             Err(Error::new_spanned(
-                nested_meta,
+                meta,
                 "Expected a command name literal -- e.g. `Something(...)`",
             ))
         }
+    }
+
+    pub fn parse_nested_metas(self) -> syn::Result<Punctuated<Meta, Comma>> {
+        Punctuated::<Meta, Comma>::parse_terminated.parse2(self.contents)
     }
 
     #[cfg(test)]

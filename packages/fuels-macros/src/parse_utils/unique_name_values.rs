@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
 use fuels_code_gen::utils::ident;
-use itertools::{chain, Itertools};
-use proc_macro2::{Ident, Span};
-use quote::ToTokens;
+use itertools::Itertools;
+use proc_macro2::{Ident, Span, TokenStream};
 use syn::{
-    punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, Meta::NameValue, MetaNameValue,
-    NestedMeta, NestedMeta::Meta,
+    parse::Parser, punctuated::Punctuated, spanned::Spanned, Error, Expr, Lit, LitStr,
+    MetaNameValue,
 };
 
 use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
@@ -18,9 +17,12 @@ pub struct UniqueNameValues {
 }
 
 impl UniqueNameValues {
-    pub fn new<T: ToTokens>(nested_metas: Punctuated<NestedMeta, T>) -> syn::Result<Self> {
-        let span = nested_metas.span();
-        let name_values = Self::extract_name_values(nested_metas.into_iter())?;
+    pub fn new(tokens: TokenStream) -> syn::Result<Self> {
+        let name_value_metas = Punctuated::<MetaNameValue, syn::token::Comma>::parse_terminated
+            .parse2(tokens)
+            .map_err(|e| Error::new(e.span(), "Expected name='value'"))?;
+        let span = name_value_metas.span();
+        let name_values = Self::extract_name_values(name_value_metas.into_iter())?;
 
         let names = name_values.iter().map(|(name, _)| name).collect::<Vec<_>>();
         validate_no_duplicates(&names, |&&name| name.clone())?;
@@ -70,14 +72,10 @@ impl UniqueNameValues {
         }
     }
 
-    fn extract_name_values<T: Iterator<Item = NestedMeta>>(
-        nested_metas: T,
+    fn extract_name_values<T: Iterator<Item = MetaNameValue>>(
+        name_value_metas: T,
     ) -> syn::Result<Vec<(Ident, Lit)>> {
-        let (name_values, name_value_errs): (Vec<_>, Vec<_>) = nested_metas
-            .map(Self::extract_name_value)
-            .partition_result();
-
-        let (ident_values, name_format_errors): (Vec<_>, Vec<Error>) = name_values
+        let (name_values, name_value_errors): (Vec<_>, Vec<Error>) = name_value_metas
             .into_iter()
             .map(|nv| {
                 let ident = nv.path.get_ident().cloned().ok_or_else(|| {
@@ -87,21 +85,17 @@ impl UniqueNameValues {
                     )
                 })?;
 
-                Ok((ident, nv.lit))
+                let Expr::Lit(expr_lit) = nv.value else {
+                    return Err(Error::new_spanned(nv.value, "Expected literal"));
+                };
+
+                Ok((ident, expr_lit.lit))
             })
             .partition_result();
 
-        chain!(name_value_errs, name_format_errors).validate_no_errors()?;
+        name_value_errors.into_iter().validate_no_errors()?;
 
-        Ok(ident_values)
-    }
-
-    fn extract_name_value(meta: NestedMeta) -> syn::Result<MetaNameValue> {
-        if let Meta(NameValue(nv)) = meta {
-            Ok(nv)
-        } else {
-            Err(Error::new_spanned(meta, "Expected name='value'."))
-        }
+        Ok(name_values)
     }
 }
 
@@ -169,7 +163,7 @@ mod tests {
 
         let err = extract_name_values(tokens).expect_err("Should have failed");
 
-        assert_eq!(err.to_string(), "Expected name='value'.");
+        assert_eq!(err.to_string(), "Expected name='value'");
     }
 
     #[test]

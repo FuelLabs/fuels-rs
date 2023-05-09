@@ -15,7 +15,6 @@ mod abigen;
 mod derive;
 mod parse_utils;
 mod setup_program_test;
-mod utils;
 
 /// Used to generate bindings for Contracts, Scripts and Predicates. Accepts
 /// input in the form of `ProgramType(name="MyBindings", abi=ABI_SOURCE)...`
