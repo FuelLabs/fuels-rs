@@ -38,14 +38,15 @@ impl<const LEN: usize> SizedAsciiString<LEN> {
     /// Pad `data` string with whitespace characters on the right to fit into the `SizedAsciiString`
     pub fn new_with_right_whitespace_padding(data: String) -> Result<Self> {
         if data.len() > LEN {
-            let l = data.len();
             return Err(error!(
                 InvalidData,
-                "SizedAsciiString<{LEN}> cannot be constructed from a string of size {l}"
+                "SizedAsciiString<{LEN}> cannot be constructed from a string of size {}",
+                data.len()
             ));
         }
+
         Ok(Self {
-            data: format!("{:width$}", data, width = LEN),
+            data: format!("{:LEN$}", data),
         })
     }
 }
