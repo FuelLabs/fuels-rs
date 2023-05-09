@@ -31,7 +31,7 @@ impl Bits256 {
 
 // A simple wrapper around [Bits256; 2] representing the `B512` type.
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
-#[FuelsTypesPath("crate")]
+#[FuelsTypesPath = "crate"]
 // ANCHOR: b512
 pub struct B512 {
     pub bytes: [Bits256; 2],
@@ -60,7 +60,7 @@ impl TryFrom<&[u8]> for B512 {
 }
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
-#[FuelsTypesPath("crate")]
+#[FuelsTypesPath = "crate"]
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
