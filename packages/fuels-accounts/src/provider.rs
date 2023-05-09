@@ -142,7 +142,7 @@ impl From<ProviderError> for Error {
 /// Extends the functionality of the [`FuelClient`].
 #[async_trait::async_trait]
 pub trait ClientExt {
-    // TODO: It should be part of the `fuel-core-client`.
+    // TODO: It should be part of the `fuel-core-client`. See https://github.com/FuelLabs/fuel-core/issues/1178
     /// Submits transaction, await confirmation and return receipts.
     async fn submit_and_await_commit_with_receipts(
         &self,
