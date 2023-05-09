@@ -1,38 +1,33 @@
 use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{
-    parenthesized, parse::ParseStream, Attribute, Error, Fields, LitStr, Result, Type, Variant,
-};
+use syn::{Attribute, Error, Expr, ExprLit, Fields, Lit, Meta, Result, Type, Variant};
 
 pub(crate) fn get_path_from_attr_or(
     attr_name: &str,
     attrs: &[Attribute],
     default: TokenStream,
 ) -> Result<TokenStream> {
-    let attr_tokens = if let Some(attr) = find_attr(attr_name, attrs) {
-        attr.tokens.clone()
-    } else {
+    let Some(attr) = find_attr(attr_name, attrs) else {
         return Ok(default);
     };
 
-    let path_str = syn::parse::Parser::parse2(
-        |parse_stream: ParseStream| {
-            let content;
-            parenthesized!(content in parse_stream);
-            content.parse::<LitStr>()
-        },
-        attr_tokens,
-    )?;
+    let Meta::NameValue(name_value) = &attr.meta else {
+        return Err(Error::new_spanned(attr.meta.path(), "Expected name='value'"));
+    };
 
-    TypePath::new(path_str.value())
-        .map_err(|_| Error::new_spanned(path_str, "Invalid path."))
+    let Expr::Lit(ExprLit{lit: Lit::Str(lit_str),..}) = &name_value.value else {
+        return Err(Error::new_spanned(&name_value.value, "Expected string literal"));
+    };
+
+    TypePath::new(lit_str.value())
+        .map_err(|_| Error::new_spanned(lit_str.value(), "Invalid path."))
         .map(|type_path| type_path.to_token_stream())
 }
 
 pub(crate) fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a Attribute> {
     attrs.iter().find(|attr| {
-        attr.path
+        attr.path()
             .get_ident()
             .map(|ident| ident == name)
             .unwrap_or(false)
