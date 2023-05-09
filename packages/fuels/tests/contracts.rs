@@ -1,20 +1,12 @@
-use fuel_tx::{Output, TxPointer, UtxoId};
 #[allow(unused_imports)]
 use std::future::Future;
-use std::io::Read;
 use std::vec;
 
 use fuels::prelude::*;
-use fuels::tx::Bytes32;
 use fuels_accounts::{predicate::Predicate, Account};
-use fuels_core::abi_encoder::ABIEncoder;
-use fuels_core::function_selector::resolve_fn_selector;
-use fuels_core::utils::first_four_bytes_of_sha256_hash;
-use fuels_types::input::Input;
-use fuels_types::param_types::ParamType;
-use fuels_types::traits::Tokenizable;
+use fuels_core::{calldata, fn_selector};
 use fuels_types::Bits256;
-/*
+
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
     setup_program_test!(
@@ -1239,22 +1231,10 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     let mut multi_call_handler = MultiContractCallHandler::new(wallet);
 
     multi_call_handler
-        .add_call(call_handler_1)Ï
+        .add_call(call_handler_1)
         .add_call(call_handler_2);
 
     Ok(())
-}
-*/
-
-macro_rules! fn_selector {
-    ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
-         ::fuels::core::function_selector::resolve_fn_selector(stringify!($fn_name), &[$( <$fn_arg as ::fuels::types::traits::Parameterize>::param_type() ),*]).to_vec()
-    }
-}
-macro_rules! calldata {
-    ( $($arg: expr),* ) => {
-        ::fuels::core::abi_encoder::ABIEncoder::encode(&[$(::fuels::types::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
-    }
 }
 
 #[tokio::test]
@@ -1278,138 +1258,10 @@ async fn low_level_call() -> Result<()> {
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
-    // let function_selector = fn_selector!(set_value(u64));
-    // let call_data = calldata!(42u64);
-    //
-    // let response = contract_instance
-    //     .methods()
-    //     .call_low_level_call(
-    //         contract_id.clone().into(),
-    //         Bytes(function_selector),
-    //         Bytes(call_data),
-    //         true,
-    //     )
-    //     .call()
-    //     .await?;
-    //
-    // let response = contract_instance.methods().get_value().call().await?;
-    // assert_eq!(response.value, 42);
-    //
-    // let function_selector =
-    //     fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
-    // let call_data = calldata!(
-    //     MyStruct {
-    //         a: true,
-    //         b: [1, 2, 3],
-    //     },
-    //     SizedAsciiString::<4>::try_from("fuel").unwrap()
-    // );
-    //
-    // let response = contract_instance
-    //     .methods()
-    //     .call_low_level_call(
-    //         contract_id.clone().into(),
-    //         Bytes(function_selector),
-    //         Bytes(call_data),
-    //         false,
-    //     )
-    //     .call()
-    //     .await?;
-    //
-    // let result_uint = contract_instance.methods().get_value().call().await.unwrap().value;
-    //
-    // let result_bool = contract_instance
-    //     .methods()
-    //     .get_bool_value()
-    //     .call()
-    //     .await
-    //     .unwrap()
-    //     .value;
-    //
-    // let result_str = contract_instance
-    //     .methods()
-    //     .get_str_value()
-    //     .call()
-    //     .await
-    //     .unwrap()
-    //     .value;
-    //
-    // assert_eq!(result_uint, 42);
-    // assert!(result_bool);
-    // assert_eq!(result_str, "fuel");
-    //
-    //
-    // let function_selector = fn_selector!(return_u64(u64));
-    // let call_data = calldata!(42u64);
-    //
-    // let response = contract_instance
-    //     .methods()
-    //     .call_low_level_call(
-    //         contract_id.clone().into(),
-    //         Bytes(function_selector),
-    //         Bytes(call_data),
-    //         true,
-    //     )
-    //     .call()
-    //     .await?;
-    //
-    // dbg!(&response.receipts[2].val().unwrap());
+    let function_selector = fn_selector!(set_value(u64));
+    let call_data = calldata!(42u64);
 
-    let mut function_selector = fn_selector!(return_raw_slice(u64));
-    let mut call_data = calldata!(5u64);
-    //
-    // let response = contract_instance
-    //     .methods()
-    //     .call_low_level_call(
-    //         contract_id.clone().into(),
-    //         Bytes(function_selector),
-    //         Bytes(call_data),
-    //         true,
-    //     )
-    //     .call()
-    //     .await?;
-    // dbg!(response);
-    // assert_eq!(&response.receipts[2].data, )
-    // assert_eq!(response.receipts[2].data().unwrap(), (0..3).collect::<Vec<_>>());
-    // dbg!((0..3).collect::<Vec<_>>());
-
-    // setup_program_test!(
-    //     Wallets("wallet"),
-    //     Abigen(Contract(
-    //         name = "VectorOutputContract",
-    //         project = "packages/fuels/tests/types/contracts/vector_output"
-    //     )),
-    //     Deploy(
-    //         name = "contract_instance",
-    //         contract = "VectorOutputContract",
-    //         wallet = "wallet"
-    //     ),
-    // );
-    // let contract_methods = contract_instance.methods();
-    //
-    // ANCHOR: returning_vec
-    // let response = contract_methods.u8_in_vec(10).call().await?;
-    // dbg!(&contract_instance.id());
-    // dbg!(&response);
-    // assert_eq!(response.value, (0..10).collect::<Vec<_>>());
-    // ANCHOR_END: returning_vec
-
-    // let response = contract_methods.u16_in_vec(11).call().await?;
-    // assert_eq!(response.value, (0..11).collect::<Vec<_>>());
-    //
-    // let response = contract_methods.u32_in_vec(12).call().await?;
-    // assert_eq!(response.value, (0..12).collect::<Vec<_>>());
-    //
-    // let response = contract_methods.u64_in_vec(13).call().await?;
-    // assert_eq!(response.value, (0..13).collect::<Vec<_>>());
-    //
-    // let response = contract_methods.bool_in_vec().call().await?;
-    // assert_eq!(response.value, [true, false, true, false].to_vec());
-
-    let function_selector = fn_selector!(u8_in_vec());
-    let call_data = calldata!();
-
-    let response = contract_instance
+    contract_instance
         .methods()
         .call_low_level_call(
             contract_id.clone().into(),
@@ -1419,8 +1271,58 @@ async fn low_level_call() -> Result<()> {
         )
         .call()
         .await?;
-    dbg!(response);
+
+    let response = contract_instance.methods().get_value().call().await?;
+    assert_eq!(response.value, 42);
     //
-    assert!(false);
+    let function_selector =
+        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let call_data = calldata!(
+        MyStruct {
+            a: true,
+            b: [1, 2, 3],
+        },
+        SizedAsciiString::<4>::try_from("fuel").unwrap()
+    );
+
+    contract_instance
+        .methods()
+        .call_low_level_call(
+            contract_id.clone().into(),
+            Bytes(function_selector),
+            Bytes(call_data),
+            false,
+        )
+        .call()
+        .await?;
+
+    let result_uint = contract_instance
+        .methods()
+        .get_value()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    let result_bool = contract_instance
+        .methods()
+        .get_bool_value()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    let result_str = contract_instance
+        .methods()
+        .get_str_value()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert_eq!(result_uint, 42);
+    assert!(result_bool);
+    assert_eq!(result_str, "fuel");
+
     Ok(())
 }

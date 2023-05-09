@@ -62,7 +62,6 @@ impl FunctionGenerator {
         let param_type_calls = param_type_calls(&self.args);
 
         let name = &self.name;
-
         quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 

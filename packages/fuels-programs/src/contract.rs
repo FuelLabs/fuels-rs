@@ -7,8 +7,6 @@ use fuel_tx::{
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::abi_decoder::ABIDecoder;
-use fuels_core::function_selector::resolve_fn_selector;
 use fuels_core::{abi_encoder::ABIEncoder, Configurables};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -591,7 +589,6 @@ where
 
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-
         let provider = self.account.try_provider()?;
 
         let receipts = if simulate {
@@ -659,14 +656,10 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-
         let token = ReceiptParser::new(&receipts).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
-
-        dbg!(&token);
-
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
@@ -929,7 +922,6 @@ impl<T: Account> MultiContractCallHandler<T> {
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-
         let response = FuelCallResponse::<D>::new(
             D::from_token(tokens_as_tuple)?,
             receipts,
