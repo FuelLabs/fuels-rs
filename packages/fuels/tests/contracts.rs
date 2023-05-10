@@ -1250,7 +1250,7 @@ async fn low_level_call() -> Result<()> {
             ),
             Contract(
                 name = "MyTargetContract",
-                project = "packages/fuels/tests/contracts/low_level_target"
+                project = "packages/fuels/tests/contracts/contract_test"
             ),
         ),
         Deploy(
@@ -1265,7 +1265,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
-    let function_selector = fn_selector!(set_value(u64));
+    let function_selector = fn_selector!(initialize_counter(u64));
     let call_data = calldata!(42u64);
 
     caller_contract_instance
@@ -1282,7 +1282,7 @@ async fn low_level_call() -> Result<()> {
 
     let response = target_contract_instance
         .methods()
-        .get_value()
+        .get_counter()
         .call()
         .await?;
     assert_eq!(response.value, 42);
@@ -1311,7 +1311,7 @@ async fn low_level_call() -> Result<()> {
 
     let result_uint = target_contract_instance
         .methods()
-        .get_value()
+        .get_counter()
         .call()
         .await
         .unwrap()
