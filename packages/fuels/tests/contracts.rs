@@ -1243,36 +1243,48 @@ async fn low_level_call() -> Result<()> {
 
     setup_program_test!(
         Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "packages/fuels/tests/contracts/low_level_call"
-        )),
+        Abigen(
+            Contract(
+                name = "MyCallerContract",
+                project = "packages/fuels/tests/contracts/low_level_caller"
+            ),
+            Contract(
+                name = "MyTargetContract",
+                project = "packages/fuels/tests/contracts/low_level_target"
+            ),
+        ),
+        Deploy(
+            name = "caller_contract_instance",
+            contract = "MyCallerContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "target_contract_instance",
+            contract = "MyTargetContract",
+            wallet = "wallet"
+        ),
     );
-
-    let contract_id = Contract::load_from(
-        "tests/contracts/low_level_call/out/debug/low_level_call.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let function_selector = fn_selector!(set_value(u64));
     let call_data = calldata!(42u64);
 
-    contract_instance
+    caller_contract_instance
         .methods()
         .call_low_level_call(
-            contract_id.clone().into(),
+            target_contract_instance.id().clone().into(),
             Bytes(function_selector),
             Bytes(call_data),
             true,
         )
+        .set_contracts(&[&target_contract_instance])
         .call()
         .await?;
 
-    let response = contract_instance.methods().get_value().call().await?;
+    let response = target_contract_instance
+        .methods()
+        .get_value()
+        .call()
+        .await?;
     assert_eq!(response.value, 42);
     //
     let function_selector =
@@ -1285,18 +1297,19 @@ async fn low_level_call() -> Result<()> {
         SizedAsciiString::<4>::try_from("fuel").unwrap()
     );
 
-    contract_instance
+    caller_contract_instance
         .methods()
         .call_low_level_call(
-            contract_id.clone().into(),
+            target_contract_instance.id().clone().into(),
             Bytes(function_selector),
             Bytes(call_data),
             false,
         )
+        .set_contracts(&[&target_contract_instance])
         .call()
         .await?;
 
-    let result_uint = contract_instance
+    let result_uint = target_contract_instance
         .methods()
         .get_value()
         .call()
@@ -1304,7 +1317,7 @@ async fn low_level_call() -> Result<()> {
         .unwrap()
         .value;
 
-    let result_bool = contract_instance
+    let result_bool = target_contract_instance
         .methods()
         .get_bool_value()
         .call()
@@ -1312,7 +1325,7 @@ async fn low_level_call() -> Result<()> {
         .unwrap()
         .value;
 
-    let result_str = contract_instance
+    let result_str = target_contract_instance
         .methods()
         .get_str_value()
         .call()

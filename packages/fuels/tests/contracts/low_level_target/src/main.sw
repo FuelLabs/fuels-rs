@@ -5,7 +5,7 @@ use std::constants::BASE_ASSET_ID;
 use std::low_level_call::{call_with_function_selector, CallParams};
 use std::bytes::Bytes;
 
-abi MyContract {
+abi MyTargetContract {
     #[storage(write)]
     fn set_value(new_value: u64);
     #[storage(read)]
@@ -16,7 +16,6 @@ abi MyContract {
     fn get_str_value() -> str[4];
     #[storage(read)]
     fn get_bool_value() -> bool;
-    fn call_low_level_call(target: ContractId, function_selector: Bytes, calldata: Bytes, single_value_type_arg: bool);
 }
 
 const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
@@ -33,7 +32,7 @@ pub struct MyStruct {
     b: [u64; 3],
 }
 
-impl MyContract for Contract {
+impl MyTargetContract for Contract {
     #[storage(write)]
     fn set_value(value: u64) {
         write(COUNTER_KEY, 0, value);
@@ -59,20 +58,5 @@ impl MyContract for Contract {
     #[storage(read)]
     fn get_bool_value() -> bool {
         storage.value_bool.read()
-    }
-
-    fn call_low_level_call(
-        target: ContractId,
-        function_selector: Bytes,
-        calldata: Bytes,
-        single_value_type_arg: bool,
-    ) {
-        let call_params = CallParams {
-            coins: 0,
-            asset_id: BASE_ASSET_ID,
-            gas: 10_000,
-        };
-
-        call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
     }
 }
