@@ -29,11 +29,11 @@ pub trait TransactionBuilder: Send {
 
     fn check_without_signatures(
         &self,
-        block_height: BlockHeight,
+        block_height: u32,
         parameters: &ConsensusParameters,
     ) -> Result<()>;
 
-    fn set_maturity(self, maturity: BlockHeight) -> Self;
+    fn set_maturity(self, maturity: u32) -> Self;
     fn set_gas_price(self, gas_price: u64) -> Self;
     fn set_gas_limit(self, gas_limit: u64) -> Self;
     fn set_tx_params(self, tx_params: TxParameters) -> Self;
@@ -73,7 +73,7 @@ macro_rules! impl_tx_trait {
 
             fn check_without_signatures(
                 &self,
-                block_height: BlockHeight,
+                block_height: u32,
                 parameters: &ConsensusParameters,
             ) -> Result<()> {
                 Ok(self
@@ -81,11 +81,11 @@ macro_rules! impl_tx_trait {
                     .build()
                     .expect("Error in build")
                     .tx
-                    .check_without_signatures(block_height, parameters)?)
+                    .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn set_maturity(mut self, maturity: BlockHeight) -> Self {
-                self.maturity = maturity;
+            fn set_maturity(mut self, maturity: u32) -> Self {
+                self.maturity = maturity.into();
                 self
             }
 
@@ -102,7 +102,7 @@ macro_rules! impl_tx_trait {
             fn set_tx_params(self, tx_params: TxParameters) -> Self {
                 self.set_gas_limit(tx_params.gas_limit())
                     .set_gas_price(tx_params.gas_price())
-                    .set_maturity(tx_params.maturity())
+                    .set_maturity(tx_params.maturity().into())
             }
 
             fn set_inputs(mut self, inputs: Vec<Input>) -> Self {
