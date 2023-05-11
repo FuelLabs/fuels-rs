@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::try_from_bytes,
+        core::codec::try_from_bytes,
         prelude::{AssetId, ContractId, Result},
     };
 

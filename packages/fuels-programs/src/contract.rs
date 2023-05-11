@@ -7,8 +7,8 @@ use fuel_tx::{
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::{abi_encoder::ABIEncoder, Configurables};
 use fuels_core::{
+    codec::ABIEncoder,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -20,6 +20,7 @@ use fuels_core::{
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
+    Configurables,
 };
 use itertools::Itertools;
 

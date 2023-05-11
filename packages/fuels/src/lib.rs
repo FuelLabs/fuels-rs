@@ -31,10 +31,7 @@ pub mod programs {
 }
 
 pub mod core {
-    pub use fuels_core::{
-        abi_decoder, abi_encoder, constants, first_four_bytes_of_sha256_hash, function_selector,
-        offsets, traits, try_from_bytes, Configurables,
-    };
+    pub use fuels_core::{codec, constants, offsets, traits, Configurables};
 }
 
 #[cfg(feature = "std")]

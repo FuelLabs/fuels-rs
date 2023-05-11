@@ -419,12 +419,14 @@ mod test {
     use std::slice;
 
     use fuels_accounts::WalletUnlocked;
-    use fuels_core::abi_encoder::ABIEncoder;
-    use fuels_core::types::{
-        bech32::Bech32ContractId,
-        coin::{Coin, CoinStatus},
-        resource::Resource,
-        Token,
+    use fuels_core::{
+        codec::ABIEncoder,
+        types::{
+            bech32::Bech32ContractId,
+            coin::{Coin, CoinStatus},
+            resource::Resource,
+            Token,
+        },
     };
     use rand::Rng;
 

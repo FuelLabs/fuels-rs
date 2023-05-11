@@ -1,7 +1,6 @@
-use crate::{
-    first_four_bytes_of_sha256_hash,
-    types::{param_types::ParamType, ByteArray},
-};
+use crate::types::{param_types::ParamType, ByteArray};
+
+use sha2::{Digest, Sha256};
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
@@ -74,6 +73,19 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::RawSlice => "rawslice".to_string(),
         ParamType::Bytes => "s(s(rawptr,u64),u64)".to_string(),
     }
+}
+
+/// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
+/// The function selector has to have been already encoded following the ABI specs defined
+/// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+pub(crate) fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
+    let string_as_bytes = string.as_bytes();
+    let mut hasher = Sha256::new();
+    hasher.update(string_as_bytes);
+    let result = hasher.finalize();
+    let mut output = ByteArray::default();
+    output[4..].copy_from_slice(&result[..4]);
+    output
 }
 
 #[cfg(test)]

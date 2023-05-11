@@ -1,9 +1,8 @@
-mod codec;
+pub mod codec;
 pub mod traits;
 pub mod types;
 mod utils;
 
-pub use codec::*;
 pub use utils::*;
 
 #[derive(Debug, Clone, Default)]

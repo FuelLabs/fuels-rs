@@ -1,7 +1,7 @@
 use std::{slice, str::FromStr};
 
 use fuels::{
-    core::abi_encoder::ABIEncoder,
+    core::codec::ABIEncoder,
     core::traits::Tokenizable,
     prelude::*,
     types::{Bits256, EvmAddress},

@@ -177,7 +177,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        first_four_bytes_of_sha256_hash,
+        codec::first_four_bytes_of_sha256_hash,
         types::{enum_variants::EnumVariants, param_types::ParamType},
     };
 

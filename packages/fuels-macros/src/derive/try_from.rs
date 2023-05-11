@@ -37,7 +37,7 @@ fn impl_try_from(
             type Error = #fuels_types_path::errors::Error;
 
             fn try_from(bytes: &[u8]) -> #fuels_types_path::errors::Result<Self> {
-                #fuels_core_path::try_from_bytes(bytes)
+                #fuels_core_path::codec::try_from_bytes(bytes)
             }
         }
 
@@ -45,7 +45,7 @@ fn impl_try_from(
             type Error = #fuels_types_path::errors::Error;
 
             fn try_from(bytes: &#std_lib::vec::Vec<u8>) -> #fuels_types_path::errors::Result<Self> {
-                #fuels_core_path::try_from_bytes(&bytes)
+                #fuels_core_path::codec::try_from_bytes(&bytes)
             }
         }
 
@@ -53,7 +53,7 @@ fn impl_try_from(
             type Error = #fuels_types_path::errors::Error;
 
             fn try_from(bytes: #std_lib::vec::Vec<u8>) -> #fuels_types_path::errors::Result<Self> {
-                #fuels_core_path::try_from_bytes(&bytes)
+                #fuels_core_path::codec::try_from_bytes(&bytes)
             }
         }
     })

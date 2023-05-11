@@ -3,7 +3,10 @@ use std::fmt;
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
-use crate::types::errors::{error, Error, Result};
+use crate::types::{
+    enum_variants::EnumVariants,
+    errors::{error, Error, Result},
+};
 
 pub use crate::types::{core::*, wrappers::*};
 pub use fuel_tx::{Address, AssetId, ContractId};
@@ -19,7 +22,7 @@ mod wrappers;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
-pub type EnumSelector = (u8, Token, enum_variants::EnumVariants);
+pub type EnumSelector = (u8, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {

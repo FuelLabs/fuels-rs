@@ -332,7 +332,7 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "some_abi_funct",
                         &[
                             <self::MyStruct1 as ::fuels::core::traits::Parameterize>::param_type(),
@@ -394,7 +394,7 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "HelloWorld",
                         &[<bool as ::fuels::core::traits::Parameterize>::param_type()]
                     ),
@@ -504,7 +504,7 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "hello_world",
                         &[<self::SomeWeirdFrenchCuisine as ::fuels::core::traits::Parameterize>::param_type()]
                     ),

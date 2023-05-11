@@ -11,8 +11,8 @@ use fuel_abi_types::error_codes::{
 };
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
+    codec::try_from_bytes,
     traits::{Parameterize, Tokenizable},
-    try_from_bytes,
     types::errors::{error, Error, Result},
 };
 
