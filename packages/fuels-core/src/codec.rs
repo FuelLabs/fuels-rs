@@ -23,7 +23,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use crate::{
         constants::WORD_SIZE,
         types::{Address, AssetId, ContractId},

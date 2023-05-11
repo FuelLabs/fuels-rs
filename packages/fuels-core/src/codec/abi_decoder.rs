@@ -1,5 +1,7 @@
 use std::{convert::TryInto, str};
 
+use fuel_types::bytes::padded_len_usize;
+
 use crate::{
     constants::WORD_SIZE,
     traits::Tokenizable,
@@ -10,7 +12,6 @@ use crate::{
         StringToken, Token,
     },
 };
-use fuel_types::bytes::padded_len_usize;
 
 #[derive(Debug, Clone)]
 struct DecodeResult {

@@ -1,3 +1,6 @@
+use fuel_types::bytes::padded_len_usize;
+use itertools::Itertools;
+
 use crate::{
     constants::WORD_SIZE,
     types::{
@@ -7,8 +10,6 @@ use crate::{
         EnumSelector, StringToken, Token,
     },
 };
-use fuel_types::bytes::padded_len_usize;
-use itertools::Itertools;
 
 pub struct ABIEncoder;
 

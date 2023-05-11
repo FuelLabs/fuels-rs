@@ -1,15 +1,14 @@
 use std::fmt;
 
+pub use fuel_tx::{Address, AssetId, ContractId};
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
+pub use crate::types::{core::*, wrappers::*};
 use crate::types::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
 };
-
-pub use crate::types::{core::*, wrappers::*};
-pub use fuel_tx::{Address, AssetId, ContractId};
 
 pub mod bech32;
 mod core;

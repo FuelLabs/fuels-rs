@@ -1,5 +1,4 @@
 use fuel_tx::Output;
-
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,

@@ -1,6 +1,5 @@
 pub use bits::*;
 pub use bytes::*;
-pub use bytes::*;
 pub use native::*;
 pub use raw_slice::*;
 pub use sized_ascii_string::*;

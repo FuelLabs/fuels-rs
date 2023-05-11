@@ -2,13 +2,13 @@ use std::{fmt::Debug, fs};
 
 use fuel_tx::Contract;
 use fuel_types::{Address, AssetId};
-use fuels_core::Configurables;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::Bech32Address, errors::Result, input::Input,
         transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
     },
+    Configurables,
 };
 
 use crate::{

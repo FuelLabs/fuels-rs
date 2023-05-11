@@ -1,12 +1,10 @@
 use std::{slice, str::FromStr};
 
 use fuels::{
-    core::codec::ABIEncoder,
-    core::traits::Tokenizable,
+    core::{codec::ABIEncoder, traits::Tokenizable},
     prelude::*,
     types::{Bits256, EvmAddress},
 };
-
 use sha2::{Digest, Sha256};
 
 pub fn null_contract_id() -> Bech32ContractId {

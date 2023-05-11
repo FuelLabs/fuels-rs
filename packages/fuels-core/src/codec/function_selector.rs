@@ -1,6 +1,6 @@
-use crate::types::{param_types::ParamType, ByteArray};
-
 use sha2::{Digest, Sha256};
+
+use crate::types::{param_types::ParamType, ByteArray};
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
