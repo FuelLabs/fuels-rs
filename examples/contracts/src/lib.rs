@@ -749,4 +749,55 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn low_level_call_example() -> Result<()> {
+        use fuels::{
+            core::{calldata, fn_selector},
+            prelude::*,
+        };
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(
+                Contract(
+                    name = "MyCallerContract",
+                    project = "packages/fuels/tests/contracts/low_level_caller"
+                ),
+                Contract(
+                    name = "MyTargetContract",
+                    project = "packages/fuels/tests/contracts/contract_test"
+                ),
+            ),
+            Deploy(
+                name = "caller_contract_instance",
+                contract = "MyCallerContract",
+                wallet = "wallet"
+            ),
+            Deploy(
+                name = "target_contract_instance",
+                contract = "MyTargetContract",
+                wallet = "wallet"
+            ),
+        );
+
+        // ANCHOR: low_level_call
+        let function_selector = fn_selector!(initialize_counter(u64));
+        let call_data = calldata!(42u64);
+
+        caller_contract_instance
+            .methods()
+            .call_low_level_call(
+                target_contract_instance.id().clone().into(),
+                Bytes(function_selector),
+                Bytes(call_data),
+                true,
+            )
+            .set_contracts(&[&target_contract_instance])
+            .call()
+            .await?;
+        // ANCHOR_END: low_level_call
+
+        Ok(())
+    }
 }

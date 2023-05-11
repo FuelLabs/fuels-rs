@@ -19,11 +19,11 @@ On the SDK side, you can construct an encoded function selector using the `fuels
 E.g. to call the following function on the target contract:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/contracts/contract_test/src/main.sw:22:23}}
+{{#include ../../../packages/fuels/tests/contracts/contract_test/src/main.sw:initialize_counter}}
 ```
 
 you would construct the function selector and the calldata as such, and provide them to the caller contract (like the one above):
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/contracts.rs:low_level_call_sdk}}
+{{#include ../../../examples/contracts/src/lib.rs:low_level_call}}
 ```

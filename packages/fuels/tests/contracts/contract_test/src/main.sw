@@ -19,8 +19,10 @@ enum State {
 }
 
 abi TestContract {
+    // ANCHOR: initialize_counter
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64;
+    // ANCHOR_END: initialize_counter
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64;
     #[storage(read)]
