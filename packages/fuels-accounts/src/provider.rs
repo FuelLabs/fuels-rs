@@ -170,11 +170,15 @@ impl ClientExt for FuelClient {
 #[derive(Debug, Clone)]
 pub struct Provider {
     pub client: FuelClient,
+    pub consensus_parameters: ConsensusParameters,
 }
 
 impl Provider {
-    pub fn new(client: FuelClient) -> Self {
-        Self { client }
+    pub fn new(client: FuelClient, consensus_parameters: ConsensusParameters) -> Self {
+        Self {
+            client,
+            consensus_parameters,
+        }
     }
 
     /// Sends a transaction to the underlying Provider's client.
@@ -262,15 +266,16 @@ impl Provider {
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = FuelClient::new(url).map_err(|err| error!(InfrastructureError, "{err}"))?;
-        Ok(Provider::new(client))
+        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
+        Ok(Provider::new(client, consensus_parameters))
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
         Ok(self.client.chain_info().await?.into())
     }
 
-    pub async fn consensus_parameters(&self) -> ProviderResult<ConsensusParameters> {
-        Ok(self.client.chain_info().await?.consensus_parameters.into())
+    pub fn consensus_parameters(&self) -> ProviderResult<ConsensusParameters> {
+        Ok(self.consensus_parameters)
     }
 
     pub async fn node_info(&self) -> ProviderResult<NodeInfo> {

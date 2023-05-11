@@ -6,9 +6,10 @@ use std::{
     time::Duration,
 };
 
-use fuel_core_chain_config::{ChainConfig, StateConfig};
+//TODO: improve `ChainConfig` confiuration and integration with the provider
+pub use fuel_core_chain_config::ChainConfig;
+use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
-use fuel_tx::ConsensusParameters;
 use fuel_types::BlockHeight;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
@@ -182,7 +183,6 @@ pub fn get_node_config_json(
     coins: Vec<Coin>,
     messages: Vec<Message>,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coin_configs = into_coin_configs(coins);
     let messages = into_message_configs(messages);
@@ -195,10 +195,6 @@ pub fn get_node_config_json(
         messages: Some(messages),
         height: None,
     });
-
-    if let Some(transaction_parameters) = consensus_parameters_config {
-        chain_config.transaction_parameters = transaction_parameters;
-    }
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
@@ -220,14 +216,12 @@ pub async fn new_fuel_node(
     messages: Vec<Message>,
     config: Config,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json =
-            get_node_config_json(coins, messages, chain_config, consensus_parameters_config);
+        let config_json = get_node_config_json(coins, messages, chain_config);
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = config.addr.port().to_string();
@@ -371,7 +365,6 @@ impl FuelService {
                 addr: bound_address,
                 ..config
             },
-            None,
             None,
         )
         .await;

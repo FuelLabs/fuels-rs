@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::{AssetId, ConsensusParameters, Witness};
+use fuel_tx::{AssetId, Witness};
 use fuels_types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     constants::BASE_ASSET_ID,
@@ -18,7 +18,7 @@ use thiserror::Error;
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
+    provider::{Provider, ProviderError},
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
@@ -38,6 +38,10 @@ pub enum WalletError {
     KeystoreError(#[from] KeystoreError),
     #[error(transparent)]
     FuelCrypto(#[from] fuel_crypto::Error),
+    #[error(transparent)]
+    ProviderError(#[from] ProviderError),
+    #[error(transparent)]
+    AccountError(#[from] AccountError),
 }
 
 impl From<WalletError> for Error {
@@ -285,7 +289,7 @@ impl Account for WalletUnlocked {
 
         let mut tx = tb.build()?;
 
-        self.sign_transaction(&mut tx, &consensus_parameters)?;
+        self.sign_transaction(&mut tx)?;
 
         Ok(tx)
     }
@@ -304,12 +308,9 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    fn sign_transaction(
-        &self,
-        tx: &mut impl Transaction,
-        consensus_parameters: &ConsensusParameters,
-    ) -> WalletResult<Signature> {
-        let id = tx.id(consensus_parameters);
+    fn sign_transaction(&self, tx: &mut impl Transaction) -> WalletResult<Signature> {
+        let consensus_parameters = self.try_provider()?.consensus_parameters()?;
+        let id = tx.id(&consensus_parameters);
 
         let message = Message::from_bytes(*id);
         let sig = Signature::sign(&self.private_key, &message);

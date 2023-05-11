@@ -5,7 +5,7 @@ use fuel_core_client::client::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{ConsensusParameters, Output, Receipt, TxPointer, UtxoId};
+use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -46,7 +46,6 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     fn sign_transaction(
         &self,
         message: &mut impl Transaction,
-        consensus_parameters: &ConsensusParameters,
     ) -> std::result::Result<Signature, Self::Error>;
 }
 
@@ -198,11 +197,7 @@ pub trait Account: ViewOnlyAccount {
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters()?;
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -261,7 +256,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.try_provider()?.consensus_parameters().await?;
+        let params = self.try_provider()?.consensus_parameters()?;
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -297,7 +292,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
-        let params = self.try_provider()?.consensus_parameters().await?;
+        let params = self.try_provider()?.consensus_parameters()?;
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;
@@ -323,11 +318,13 @@ pub trait Account: ViewOnlyAccount {
 
 #[cfg(test)]
 mod tests {
+    use fuel_core_client::client::FuelClient;
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
-        Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
+        Address, AssetId, Bytes32, ConsensusParameters, Input, Output,
+        Transaction as FuelTransaction, TxPointer, UtxoId,
     };
     use fuels_types::transaction::{ScriptTransaction, Transaction};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
@@ -375,7 +372,7 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
@@ -412,7 +409,9 @@ mod tests {
 
         // Sign the transaction.
         let param = Default::default();
-        let signature = wallet.sign_transaction(&mut tx, &param)?;
+        let test_provider = Provider::new(FuelClient::new("mock")?, ConsensusParameters::default());
+        wallet.set_provider(test_provider);
+        let signature = wallet.sign_transaction(&mut tx)?;
         let message = Message::from_bytes(*tx.id(&param));
 
         // Check if signature is what we expect it to be

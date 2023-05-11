@@ -89,6 +89,7 @@ mod tests {
     async fn custom_chain() -> Result<()> {
         use fuels::prelude::*;
         // ANCHOR: custom_chain_import
+        use fuels::fuel_node::ChainConfig;
         use fuels::tx::ConsensusParameters;
         // ANCHOR_END: custom_chain_import
 
@@ -97,6 +98,10 @@ mod tests {
             .with_max_gas_per_tx(1000)
             .with_gas_price_factor(10)
             .with_max_inputs(2);
+        let chain_config = ChainConfig {
+            transaction_parameters: consensus_parameters_config,
+            ..ChainConfig::default()
+        };
         // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
@@ -111,15 +116,9 @@ mod tests {
 
         // ANCHOR: custom_chain_client
         let node_config = Config::local_node();
-        let (client, _) = setup_test_client(
-            coins,
-            vec![],
-            Some(node_config),
-            None,
-            Some(consensus_parameters_config),
-        )
-        .await;
-        let _provider = Provider::new(client);
+        let (client, _bound_address, consensus_parameters) =
+            setup_test_client(coins, vec![], Some(node_config), Some(chain_config)).await;
+        let _provider = Provider::new(client, consensus_parameters);
         // ANCHOR_END: custom_chain_client
         Ok(())
     }
@@ -170,11 +169,10 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let params = provider.consensus_parameters().await?;
         let mut tx =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
                 .build()?;
-        wallet_1.sign_transaction(&mut tx, &params)?;
+        wallet_1.sign_transaction(&mut tx)?;
 
         provider.send_transaction(&tx).await?;
 

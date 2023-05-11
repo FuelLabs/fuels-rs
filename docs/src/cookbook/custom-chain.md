@@ -2,7 +2,7 @@
 
 This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.
 
-First, we have to import `ConsensusParameters` from the fuels-tx crate:
+First, we have to import `ConsensusParameters` and `ChainConfig`:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_chain_import}}

@@ -316,8 +316,8 @@ async fn test_wallet_get_coins() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, NUM_COINS, AMOUNT);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (client, _, consensus_parameters) = setup_test_client(coins, vec![], None, None).await;
+    let provider = Provider::new(client, consensus_parameters);
     wallet.set_provider(provider.clone());
 
     let wallet_initial_coins = wallet.get_coins(BASE_ASSET_ID).await?;
@@ -335,8 +335,8 @@ async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
 
     let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (client, _, consensus_parameters) = setup_test_client(coins, vec![], None, None).await;
+    let provider = Provider::new(client, consensus_parameters);
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
@@ -377,8 +377,8 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     let base_coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, AMOUNT);
     coins.extend(base_coins);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (client, _, consensus_parameters) = setup_test_client(coins, vec![], None, None).await;
+    let provider = Provider::new(client, consensus_parameters);
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);

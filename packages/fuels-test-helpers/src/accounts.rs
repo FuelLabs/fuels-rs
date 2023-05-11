@@ -104,8 +104,9 @@ pub async fn setup_test_provider(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, messages, node_config, chain_config, None).await;
-    (Provider::new(client), addr)
+    let (client, addr, consensus_parameters) =
+        setup_test_client(coins, messages, node_config, chain_config).await;
+    (Provider::new(client, consensus_parameters), addr)
 }
 
 #[cfg(test)]

@@ -1,3 +1,4 @@
+use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
 
@@ -1045,11 +1046,16 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
+    let chain_config = ChainConfig {
+        transaction_parameters: consensus_parameters_config,
+        ..ChainConfig::default()
+    };
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
+    let (fuel_client, _, consensus_parameters) =
+        setup_test_client(coins, vec![], None, Some(chain_config)).await;
+    let provider = Provider::new(fuel_client, consensus_parameters);
     wallet.set_provider(provider.clone());
+    assert_eq!(consensus_parameters_config, consensus_parameters);
 
     setup_program_test!(
         Abigen(Contract(
