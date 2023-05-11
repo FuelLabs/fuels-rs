@@ -1,11 +1,9 @@
 use std::vec::IntoIter;
 
-use itertools::{chain, Itertools};
-use proc_macro2::Span;
-use quote::ToTokens;
-use syn::{punctuated::Punctuated, spanned::Spanned, Error, Lit, LitStr, NestedMeta, Result};
+use proc_macro2::{Span, TokenStream};
+use syn::{parse::Parser, punctuated::Punctuated, spanned::Spanned, token::Comma, LitStr, Result};
 
-use crate::parse_utils::{validate_no_duplicates, ErrorsExt};
+use crate::parse_utils::validate_no_duplicates;
 
 #[derive(Debug)]
 pub struct UniqueLitStrs {
@@ -14,23 +12,12 @@ pub struct UniqueLitStrs {
 }
 
 impl UniqueLitStrs {
-    pub fn new<T: ToTokens>(nested_metas: Punctuated<NestedMeta, T>) -> Result<Self> {
-        let span = nested_metas.span();
+    pub fn new(tokens: TokenStream) -> Result<Self> {
+        let parsed_lit_strs = Punctuated::<LitStr, Comma>::parse_terminated.parse2(tokens)?;
+        let span = parsed_lit_strs.span();
+        let lit_strs: Vec<_> = parsed_lit_strs.into_iter().collect();
 
-        let (lit_strs, errors): (Vec<_>, Vec<_>) = nested_metas
-            .into_iter()
-            .map(|meta| {
-                if let NestedMeta::Lit(Lit::Str(lit_str)) = meta {
-                    Ok(lit_str)
-                } else {
-                    Err(Error::new_spanned(meta, "Expected a string!"))
-                }
-            })
-            .partition_result();
-
-        let maybe_error = validate_no_duplicates(&lit_strs, |e| e.value()).err();
-
-        chain!(errors, maybe_error).validate_no_errors()?;
+        validate_no_duplicates(&lit_strs, |ls| ls.value())?;
 
         Ok(Self { span, lit_strs })
     }
@@ -101,7 +88,7 @@ mod tests {
 
         let err = parse_unique_lit_strs(stream).expect_err("Should have failed");
 
-        assert_eq!(err.to_string(), "Expected a string!");
+        assert_eq!(err.to_string(), "expected string literal");
     }
 
     fn parse_unique_lit_strs(stream: TokenStream) -> Result<UniqueLitStrs> {
