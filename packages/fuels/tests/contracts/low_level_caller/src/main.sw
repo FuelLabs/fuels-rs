@@ -9,6 +9,7 @@ abi MyCallerContract {
 }
 
 impl MyCallerContract for Contract {
+    // ANCHOR: low_level_call_contract
     fn call_low_level_call(
         target: ContractId,
         function_selector: Bytes,
@@ -23,4 +24,5 @@ impl MyCallerContract for Contract {
 
         call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
     }
+    // ANCHOR_END: low_level_call_contract
 }

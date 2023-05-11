@@ -1265,6 +1265,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
+    // ANCHOR: low_level_call_sdk
     let function_selector = fn_selector!(initialize_counter(u64));
     let call_data = calldata!(42u64);
 
@@ -1279,6 +1280,7 @@ async fn low_level_call() -> Result<()> {
         .set_contracts(&[&target_contract_instance])
         .call()
         .await?;
+    // ANCHOR_END: low_level_call_sdk
 
     let response = target_contract_instance
         .methods()

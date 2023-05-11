@@ -38,6 +38,7 @@
   - [Multiple contract calls](./calling-contracts/multicalls.md)
   - [Transaction dependency estimation](./calling-contracts/tx-dependency-estimation.md)
   - [Estimating cost](./calling-contracts/cost-estimation.md)
+  - [Low-level calls](./calling-contracts/low-level-calls.md)
 - [Running scripts](./getting-started/running-scripts.md)
 - [Predicates](./getting-started/predicates.md)
   - [Signatures example](./predicates/send-spend-predicate.md)
