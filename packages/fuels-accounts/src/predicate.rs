@@ -43,10 +43,10 @@ impl Predicate {
         // Check that the consensus parameters are identical
         match &self.provider {
             Some(p) if p.consensus_parameters()? != provider.consensus_parameters()? => {
-                return Err(error!(
+                Err(error!(
                     InvalidData,
                     "Trying to set a new provider that uses different consensus parameters"
-                ));
+                ))
             }
             _ => {
                 self.provider = Some(provider);
@@ -70,7 +70,7 @@ impl Predicate {
             .consensus_parameters()
             .expect("Should be able to get consensus parameters out of a provider");
         Self {
-            address: Self::calculate_address(&code, &params),
+            address: Self::calculate_address(&code, params),
             code,
             data: Default::default(),
             provider: Some(provider),
