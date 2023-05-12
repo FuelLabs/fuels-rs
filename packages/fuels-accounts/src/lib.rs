@@ -318,6 +318,7 @@ pub trait Account: ViewOnlyAccount {
 
 #[cfg(test)]
 mod tests {
+    use fuel_core::schema::chain::ConsensusParameters;
     use fuel_core_client::client::FuelClient;
     use std::str::FromStr;
 
@@ -408,11 +409,11 @@ mod tests {
         .into();
 
         // Sign the transaction.
-        let param = Default::default();
-        let test_provider = Provider::new(FuelClient::new("mock")?, ConsensusParameters::default());
+        let consensus_parameters = ConsensusParameters::default();
+        let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters.clone());
         wallet.set_provider(test_provider);
         let signature = wallet.sign_transaction(&mut tx)?;
-        let message = Message::from_bytes(*tx.id(&param));
+        let message = Message::from_bytes(*tx.id(&consensus_parameters));
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("8d2d7f8d5190d9acdc07717e39173bdfb0024b1c06e70b084994440eb9bdff17e57dfdcb6b45bd36a896566054809a21dfd67c0a25344c73cf9c4d9d6a32be05")?);

@@ -114,12 +114,11 @@ mod tests {
         );
         // ANCHOR_END: custom_chain_coins
 
-        // ANCHOR: custom_chain_client
+        // ANCHOR: custom_chain_provider
         let node_config = Config::local_node();
-        let (client, _bound_address, consensus_parameters) =
-            setup_test_client(coins, vec![], Some(node_config), Some(chain_config)).await;
-        let _provider = Provider::new(client, consensus_parameters);
-        // ANCHOR_END: custom_chain_client
+        let (_provider, _bound_address) =
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
+        // ANCHOR_END: custom_chain_provider
         Ok(())
     }
 

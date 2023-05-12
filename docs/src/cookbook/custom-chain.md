@@ -20,8 +20,9 @@ Before we can start a node, we probably also want to define some genesis coins a
 {{#include ../../../examples/cookbook/src/lib.rs:custom_chain_coins}}
 ```
 
-Finally, we call `setup_test_client()`, which starts a node with the given configs and returns a client:
+Finally, we call `setup_test_provider()`, which starts a node with the given configs and returns a
+provider attached to that node:
 
 ```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:custom_chain_client}}
+{{#include ../../../examples/cookbook/src/lib.rs:custom_chain_provider}}
 ```

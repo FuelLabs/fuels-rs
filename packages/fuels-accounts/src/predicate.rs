@@ -97,7 +97,6 @@ impl Predicate {
         self
     }
 
-    /// Uses default `ConsensusParameters`, use `from_code_with_provider` to customize
     pub fn with_code(self, code: Vec<u8>) -> Self {
         match self.provider {
             None => Self::from_code(code),
