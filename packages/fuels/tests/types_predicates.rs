@@ -21,7 +21,7 @@ async fn assert_predicate_spendable(
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.set_provider(provider.clone());
+    predicate.set_provider(provider.clone())?;
 
     predicate
         .transfer(

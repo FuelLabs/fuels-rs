@@ -4,8 +4,8 @@ use fuel_tx::ConsensusParameters;
 use fuel_types::AssetId;
 use fuels_core::Configurables;
 use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
-    transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
+    bech32::Bech32Address, constants::BASE_ASSET_ID, error, errors::Error, errors::Result,
+    input::Input, transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
 };
 
 use crate::{
@@ -20,7 +20,6 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
-    params: Option<ConsensusParameters>,
 }
 
 impl Predicate {
@@ -40,32 +39,57 @@ impl Predicate {
         self.provider.as_ref()
     }
 
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        self.provider = Some(provider);
-        self
+    pub fn set_provider(&mut self, provider: Provider) -> Result<&mut Self> {
+        // Check that the consensus parameters are identical
+        match &self.provider {
+            Some(p) if p.consensus_parameters()? != provider.consensus_parameters()? => {
+                return Err(error!(
+                    InvalidData,
+                    "Trying to set a new provider that uses different consensus parameters"
+                ));
+            }
+            _ => {
+                self.provider = Some(provider);
+                Ok(self)
+            }
+        }
     }
 
-    pub fn from_code(code: Vec<u8>, params: Option<ConsensusParameters>) -> Self {
+    /// Uses default `ConsensusParameters`, use `from_code_with_provider` to customize
+    pub fn from_code(code: Vec<u8>) -> Self {
+        Self {
+            address: Self::calculate_address(&code, &ConsensusParameters::default()),
+            code,
+            data: Default::default(),
+            provider: None,
+        }
+    }
+
+    pub fn from_code_and_provider(code: Vec<u8>, provider: Provider) -> Self {
+        let params = &provider
+            .consensus_parameters()
+            .expect("Should be able to get consensus parameters out of a provider");
         Self {
             address: Self::calculate_address(&code, &params),
             code,
             data: Default::default(),
-            provider: None,
-            params,
+            provider: Some(provider),
         }
     }
 
-    pub fn calculate_address(code: &[u8], params: &Option<ConsensusParameters>) -> Bech32Address {
-        fuel_tx::Input::predicate_owner(
-            code,
-            params.as_ref().unwrap_or(&ConsensusParameters::DEFAULT),
-        )
-        .into()
+    pub fn calculate_address(code: &[u8], params: &ConsensusParameters) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(code, params).into()
     }
 
+    /// Uses default `ConsensusParameters`, use `load_from_with_provider` to customize
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
-        Ok(Self::from_code(code, None))
+        Ok(Self::from_code(code))
+    }
+
+    pub fn load_from_with_provider(file_path: &str, provider: Provider) -> Result<Self> {
+        let code = fs::read(file_path)?;
+        Ok(Self::from_code_and_provider(code, provider))
     }
 
     pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
@@ -73,38 +97,27 @@ impl Predicate {
         self
     }
 
-    pub fn with_params(self, params: ConsensusParameters) -> Self {
-        Self {
-            data: self.data,
-            provider: self.provider,
-            params: Some(params),
-            ..Self::from_code(self.code, self.params)
-        }
-    }
-
+    /// Uses default `ConsensusParameters`, use `from_code_with_provider` to customize
     pub fn with_code(self, code: Vec<u8>) -> Self {
-        Self {
-            data: self.data,
-            provider: self.provider,
-            params: self.params,
-            ..Self::from_code(code, self.params)
+        match self.provider {
+            None => Self::from_code(code),
+            Some(p) => Self::from_code_and_provider(code, p),
         }
-    }
-
-    pub fn with_provider(mut self, provider: Provider) -> Predicate {
-        self.set_provider(provider);
-        self
     }
 
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
 
-        Self {
-            data: self.data,
-            provider: self.provider,
-            params: self.params,
-            ..Self::from_code(self.code, self.params)
+        match self.provider {
+            None => Self {
+                data: self.data,
+                ..Self::from_code(self.code)
+            },
+            Some(p) => Self {
+                data: self.data,
+                ..Self::from_code_and_provider(self.code, p)
+            },
         }
     }
 }
@@ -119,7 +132,9 @@ impl ViewOnlyAccount for Predicate {
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        (self as &mut Predicate).set_provider(provider)
+        (self as &mut Predicate)
+            .set_provider(provider)
+            .expect("Use a provider that has the same consensus parameters")
     }
 }
 
