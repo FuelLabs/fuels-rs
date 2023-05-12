@@ -60,6 +60,12 @@ impl Default for TxParameters {
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
+#[derive(Debug, Clone)]
+pub enum TransactionType {
+    Script(ScriptTransaction),
+    Create(CreateTransaction),
+}
+
 pub trait Transaction: Into<FuelTransaction> + Send {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
@@ -81,7 +87,7 @@ pub trait Transaction: Into<FuelTransaction> + Send {
 
     fn gas_limit(&self) -> u64;
 
-    fn with_gas_limit(self, gas_price: u64) -> Self;
+    fn with_gas_limit(self, gas_limit: u64) -> Self;
 
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
 
