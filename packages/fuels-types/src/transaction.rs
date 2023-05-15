@@ -4,13 +4,14 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    Bytes32, Chargeable, Create, FormatValidityChecks, Input as FuelInput, Output,
+    Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
 use fuel_types::BlockHeight;
 
 use crate::{
+    consensus_parameters::ConsensusParameters,
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
     errors::Error,
 };
@@ -132,7 +133,7 @@ macro_rules! impl_tx_wrapper {
 
         impl Transaction for $wrapper {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(params, &self.tx)
+                TransactionFee::checked_from_tx(params.into(), &self.tx)
             }
 
             fn check_without_signatures(

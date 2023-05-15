@@ -2,8 +2,8 @@
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
-    ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
+    FormatValidityChecks, Input as FuelInput, Output, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, TxPointer, Witness,
 };
 use fuel_types::{
     bytes::padded_len_usize, Address, AssetId, BlockHeight, Bytes32, ContractId, Salt,
@@ -12,6 +12,7 @@ use fuel_types::{
 use crate::{
     coin::Coin,
     coin_type::CoinType,
+    consensus_parameters::ConsensusParameters,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     input::Input,
@@ -68,7 +69,7 @@ macro_rules! impl_tx_trait {
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 let tx = &self.clone().build().expect("Error in build").tx;
-                TransactionFee::checked_from_tx(params, tx)
+                TransactionFee::checked_from_tx(params.into(), tx)
             }
 
             fn check_without_signatures(
@@ -81,7 +82,7 @@ macro_rules! impl_tx_trait {
                     .build()
                     .expect("Error in build")
                     .tx
-                    .check_without_signatures(block_height.into(), parameters)?)
+                    .check_without_signatures(block_height.into(), parameters.into())?)
             }
 
             fn set_maturity(mut self, maturity: u32) -> Self {

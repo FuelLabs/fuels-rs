@@ -1,8 +1,8 @@
-use fuel_tx::{ConsensusParameters, Output, Receipt};
+use fuel_tx::{Output, Receipt};
 use fuel_types::MessageId;
 use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, input::Input,
-    transaction_builders::TransactionBuilder,
+    bech32::Bech32Address, consensus_parameters::ConsensusParameters, constants::BASE_ASSET_ID,
+    input::Input, transaction_builders::TransactionBuilder,
 };
 
 pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {

@@ -1,4 +1,3 @@
-use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
 
@@ -1033,8 +1032,9 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels_types::{
+        chain_config::ChainConfig, coin::Coin, consensus_parameters::ConsensusParameters,
+    };
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 

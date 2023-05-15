@@ -89,8 +89,7 @@ mod tests {
     async fn custom_chain() -> Result<()> {
         use fuels::prelude::*;
         // ANCHOR: custom_chain_import
-        use fuels::fuel_node::ChainConfig;
-        use fuels::tx::ConsensusParameters;
+        use fuels::types::{chain_config::ChainConfig, consensus_parameters::ConsensusParameters};
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus

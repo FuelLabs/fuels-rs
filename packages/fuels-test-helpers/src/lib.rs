@@ -9,16 +9,17 @@ pub use accounts::*;
 pub use fuel_core::service::Config;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::FuelService;
-use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
-use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
+use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_types::coin::CoinStatus;
 use fuels_types::{
     bech32::Bech32Address,
+    chain_config::ChainConfig,
     coin::Coin,
+    consensus_parameters::ConsensusParameters,
     constants::BASE_ASSET_ID,
     message::{Message, MessageStatus},
 };

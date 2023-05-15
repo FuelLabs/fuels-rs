@@ -15,6 +15,7 @@ chrono = { workspace = true }
 fuel-abi-types = { workspace = true }
 fuel-asm = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-vm = { workspace = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-tx = { workspace = true }

@@ -8,7 +8,7 @@ use fuel_core_client::client::{
     types::TransactionStatus,
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
+use fuel_tx::{AssetId, Receipt, ScriptExecutionResult, UtxoId};
 use fuel_types::{BlockHeight, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_types::{
@@ -17,6 +17,7 @@ use fuels_types::{
     chain_info::ChainInfo,
     coin::Coin,
     coin_type::CoinType,
+    consensus_parameters::ConsensusParameters,
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     errors::{error, Error, Result},
     message::Message,

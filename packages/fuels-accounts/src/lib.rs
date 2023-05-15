@@ -323,10 +323,13 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{
-        Address, AssetId, Bytes32, ConsensusParameters, Input, Output,
-        Transaction as FuelTransaction, TxPointer, UtxoId,
+        Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
     };
-    use fuels_types::transaction::{ScriptTransaction, Transaction};
+    use fuels_types::{
+        chain_config::ChainConfig,
+        consensus_parameters::ConsensusParameters,
+        transaction::{ScriptTransaction, Transaction},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;

@@ -1,7 +1,8 @@
+use crate::consensus_parameters::ConsensusParameters;
 use fuel_asm::Instruction;
 use fuel_tx::{
     field::{Salt, Script},
-    Bytes32, ConsensusParameters, InputRepr,
+    Bytes32, InputRepr,
 };
 use fuel_types::{bytes::padded_len_usize, ContractId};
 
