@@ -718,8 +718,6 @@ async fn test_output_variable_estimation() -> Result<()> {
 
         for wallet in wallets.iter() {
             let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-            dbg!(&mint_asset_id);
-            dbg!(&balance);
             assert_eq!(balance, amount);
         }
     }
