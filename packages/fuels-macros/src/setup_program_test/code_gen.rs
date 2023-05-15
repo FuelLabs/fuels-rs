@@ -6,7 +6,7 @@ use std::{
 use fuels_code_gen::{utils::ident, Abigen, AbigenTarget, ProgramType};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use rand::{prelude::StdRng, Rng, SeedableRng};
+use rand::{rngs::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
