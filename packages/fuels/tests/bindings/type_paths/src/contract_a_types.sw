@@ -1,4 +1,4 @@
-library contract_a_types;
+library;
 
 pub struct VeryCommonNameStruct {
     another_field: u32,

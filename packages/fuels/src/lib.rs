@@ -10,15 +10,15 @@
 //! ```
 //!
 //! Examples on how you can use the types imported by the prelude can be found in
-//! the [main test suite](https://github.com/FuelLabs/fuels-rs/blob/master/fuels/tests/harness.rs)
+//! the [test suite](https://github.com/FuelLabs/fuels-rs/tree/master/packages/fuels/tests)
 
 pub mod tx {
-    pub use fuel_tx::*;
+    pub use fuel_tx::{Bytes32, ConsensusParameters, Receipt, Salt, StorageSlot};
 }
 
 #[cfg(feature = "std")]
 pub mod client {
-    pub use fuel_core_client::client::*;
+    pub use fuel_core_client::client::{FuelClient, PageDirection, PaginationRequest};
 }
 
 pub mod macros {
@@ -80,12 +80,11 @@ pub mod prelude {
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId},
-            Configurables,
         },
         test_helpers::*,
     };
     pub use super::{
-        macros::{abigen, setup_contract_test},
+        macros::{abigen, setup_program_test},
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},

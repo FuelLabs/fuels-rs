@@ -315,7 +315,7 @@ mod tests {
                 launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT,
                 DEFAULT_NUM_COINS,
             },
-            tx::AssetId,
+            types::AssetId,
         };
 
         let wallet = launch_provider_and_get_wallet().await;

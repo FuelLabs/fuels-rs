@@ -1,6 +1,6 @@
 contract;
 
-use std::storage::get;
+use std::storage::storage_api::read;
 
 storage {
     x: u64 = 64,
@@ -17,11 +17,11 @@ abi MyContract {
 impl MyContract for Contract {
     #[storage(read)]
     fn get_value_b256(key: b256) -> b256 {
-        get::<b256>(key).unwrap()
+        read::<b256>(key, 0).unwrap()
     }
 
     #[storage(read)]
     fn get_value_u64(key: b256) -> u64 {
-        get::<u64>(key).unwrap()
+        read::<u64>(key, 0).unwrap()
     }
 }

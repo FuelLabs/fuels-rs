@@ -9,36 +9,41 @@ use quote::quote;
 use rand::{prelude::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
-use crate::setup_contract_test::parsing::{
-    DeployContract, GenerateContract, InitializeWallet, TestContractCommands,
+use crate::setup_program_test::parsing::{
+    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+    TestProgramCommands,
 };
 
-pub(crate) fn generate_setup_contract_test_code(
-    commands: TestContractCommands,
+pub(crate) fn generate_setup_program_test_code(
+    commands: TestProgramCommands,
 ) -> syn::Result<TokenStream> {
-    let TestContractCommands {
+    let TestProgramCommands {
         initialize_wallets,
-        generate_contract,
+        generate_bindings,
         deploy_contract,
+        load_scripts,
     } = commands;
 
-    let project_lookup = generate_project_lookup(&generate_contract)?;
+    let project_lookup = generate_project_lookup(&generate_bindings)?;
     let abigen_code = abigen_code(&project_lookup);
     let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
+    let script_code = script_loading_code(&load_scripts, &project_lookup);
 
     Ok(quote! {
        #abigen_code
        #wallet_code
        #deploy_code
+       #script_code
     })
 }
 
-fn generate_project_lookup(commands: &[GenerateContract]) -> syn::Result<HashMap<String, Project>> {
+fn generate_project_lookup(commands: &AbigenCommand) -> syn::Result<HashMap<String, Project>> {
     let pairs = commands
+        .targets
         .iter()
         .map(|command| -> syn::Result<_> {
-            let project = Project::new(&command.abi)?;
+            let project = Project::new(command.program_type, &command.project)?;
             Ok((command.name.value(), project))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -57,12 +62,12 @@ fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<Abi
         .map(|(name, project)| AbigenTarget {
             name: name.clone(),
             abi: project.abi_path(),
-            program_type: ProgramType::Contract,
+            program_type: project.program_type,
         })
         .collect()
 }
 
-fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenStream {
+fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) -> TokenStream {
     let command = if let Some(command) = maybe_command {
         command
     } else {
@@ -88,7 +93,7 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWallet>) -> TokenS
     }
 }
 
-fn extract_wallet_names(command: &InitializeWallet) -> Vec<Ident> {
+fn extract_wallet_names(command: &InitializeWalletCommand) -> Vec<Ident> {
     command
         .names
         .iter()
@@ -97,7 +102,7 @@ fn extract_wallet_names(command: &InitializeWallet) -> Vec<Ident> {
 }
 
 fn contract_deploying_code(
-    commands: &[DeployContract],
+    commands: &[DeployContractCommand],
     project_lookup: &HashMap<String, Project>,
 ) -> TokenStream {
     commands
@@ -140,12 +145,40 @@ fn contract_deploying_code(
         .unwrap_or_default()
 }
 
+fn script_loading_code(
+    commands: &[LoadScriptCommand],
+    project_lookup: &HashMap<String, Project>,
+) -> TokenStream {
+    commands
+        .iter()
+        .map(|command| {
+            let script_instance_name = ident(&command.name);
+            let script_struct_name = ident(&command.script.value());
+            let wallet_name = ident(&command.wallet);
+
+            let project = project_lookup
+                .get(&command.script.value())
+                .expect("Project should be in lookup");
+            let bin_path = project.bin_path();
+
+            quote! {
+                let #script_instance_name = #script_struct_name::new(#wallet_name.clone(), #bin_path);
+            }
+        })
+        .reduce(|mut all_code, code| {
+            all_code.extend(code);
+            all_code
+        })
+        .unwrap_or_default()
+}
+
 struct Project {
+    program_type: ProgramType,
     path: PathBuf,
 }
 
 impl Project {
-    fn new(dir: &LitStr) -> syn::Result<Self> {
+    fn new(program_type: ProgramType, dir: &LitStr) -> syn::Result<Self> {
         let path = Path::new(&dir.value()).canonicalize().map_err(|_| {
             syn::Error::new_spanned(
                 dir.clone(),
@@ -153,7 +186,7 @@ impl Project {
             )
         })?;
 
-        Ok(Self { path })
+        Ok(Self { program_type, path })
     }
 
     fn compile_file_path(&self, suffix: &str, description: &str) -> String {

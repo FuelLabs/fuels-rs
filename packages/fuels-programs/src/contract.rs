@@ -7,12 +7,12 @@ use fuel_tx::{
 };
 use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::{abi_decoder::ABIDecoder, abi_encoder::ABIEncoder};
+use fuels_core::{abi_encoder::ABIEncoder, Configurables};
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     errors::{error, Error, Result},
-    param_types::{ParamType, ReturnLocation},
+    param_types::ParamType,
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
     transaction_builders::CreateTransactionBuilder,
@@ -25,7 +25,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::build_tx_from_contract_calls,
     logs::{map_revert_error, LogDecoder},
-    Configurables,
+    receipt_parser::ReceiptParser,
 };
 
 #[derive(Debug, Clone)]
@@ -179,12 +179,13 @@ pub struct Contract {
     salt: Salt,
     storage_slots: Vec<StorageSlot>,
     contract_id: ContractId,
+    code_root: Bytes32,
     state_root: Bytes32,
 }
 
 impl Contract {
     pub fn new(binary: Vec<u8>, salt: Salt, storage_slots: Vec<StorageSlot>) -> Self {
-        let (contract_id, state_root) =
+        let (contract_id, code_root, state_root) =
             Self::compute_contract_id_and_state_root(&binary, &salt, &storage_slots);
 
         Self {
@@ -192,6 +193,7 @@ impl Contract {
             salt,
             storage_slots,
             contract_id,
+            code_root,
             state_root,
         }
     }
@@ -200,14 +202,14 @@ impl Contract {
         binary: &[u8],
         salt: &Salt,
         storage_slots: &[StorageSlot],
-    ) -> (ContractId, Bytes32) {
+    ) -> (ContractId, Bytes32, Bytes32) {
         let fuel_contract = FuelContract::from(binary);
-        let root = fuel_contract.root();
+        let code_root = fuel_contract.root();
         let state_root = FuelContract::initial_state_root(storage_slots.iter());
 
-        let contract_id = fuel_contract.id(salt, &root, &state_root);
+        let contract_id = fuel_contract.id(salt, &code_root, &state_root);
 
-        (contract_id, state_root)
+        (contract_id, code_root, state_root)
     }
 
     pub fn with_salt(self, salt: Salt) -> Self {
@@ -220,6 +222,10 @@ impl Contract {
 
     pub fn state_root(&self) -> Bytes32 {
         self.state_root
+    }
+
+    pub fn code_root(&self) -> Bytes32 {
+        self.code_root
     }
 
     /// Deploys a compiled contract to a running node
@@ -405,99 +411,6 @@ impl ContractCall {
 
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
-    }
-}
-
-/// Based on the receipts returned by the call, the contract ID (which is null in the case of a
-/// script), and the output param, decode the values and return them.
-pub fn get_decoded_output(
-    receipts: &[Receipt],
-    contract_id: Option<&Bech32ContractId>,
-    output_param: &ParamType,
-) -> Result<Token> {
-    let null_contract_id = ContractId::new([0u8; 32]);
-    // Multiple returns are handled as one `Tuple` (which has its own `ParamType`)
-    let contract_id: ContractId = match contract_id {
-        Some(contract_id) => contract_id.into(),
-        // During a script execution, the script's contract id is the **null** contract id
-        None => null_contract_id,
-    };
-    let encoded_value = match output_param.get_return_location() {
-        ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
-            // If the output of the function is a vector, then there are 2 consecutive ReturnData
-            // receipts. The first one is the one that returns the pointer to the vec struct in the
-            // VM memory, the second one contains the actual vector bytes (that the previous receipt
-            // points to).
-            // We ensure to take the right "first" ReturnData receipt by checking for the
-            // contract_id. There are no receipts in between the two ReturnData receipts because of
-            // the way the scripts are built (the calling script adds a RETD just after the CALL
-            // opcode, see `get_single_call_instructions`).
-            let vector_data = receipts
-                .iter()
-                .tuple_windows()
-                .find_map(|(current_receipt, next_receipt)| {
-                    extract_vec_data(current_receipt, next_receipt, contract_id)
-                })
-                .cloned()
-                .expect("Could not extract vector data");
-            Some(vector_data)
-        }
-        ReturnLocation::ReturnData => receipts
-            .iter()
-            .find(|receipt| {
-                matches!(receipt,
-                    Receipt::ReturnData { id, data, .. } if *id == contract_id && !data.is_empty())
-            })
-            .map(|receipt| {
-                receipt
-                    .data()
-                    .expect("ReturnData should have data")
-                    .to_vec()
-            }),
-        ReturnLocation::Return => receipts
-            .iter()
-            .find(|receipt| {
-                matches!(receipt,
-                    Receipt::Return { id, ..} if *id == contract_id)
-            })
-            .map(|receipt| {
-                receipt
-                    .val()
-                    .expect("Return should have val")
-                    .to_be_bytes()
-                    .to_vec()
-            }),
-    }
-    .unwrap_or_default();
-
-    let decoded_value = ABIDecoder::decode_single(output_param, &encoded_value)?;
-    Ok(decoded_value)
-}
-
-fn extract_vec_data<'a>(
-    current_receipt: &Receipt,
-    next_receipt: &'a Receipt,
-    contract_id: ContractId,
-) -> Option<&'a Vec<u8>> {
-    match (current_receipt, next_receipt) {
-        (
-            Receipt::ReturnData {
-                id: first_id,
-                data: first_data,
-                ..
-            },
-            Receipt::ReturnData {
-                id: second_id,
-                data: vec_data,
-                ..
-            },
-        ) if *first_id == contract_id
-            && !first_data.is_empty()
-            && *second_id == ContractId::zeroed() =>
-        {
-            Some(vec_data)
-        }
-        _ => None,
     }
 }
 
@@ -746,8 +659,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = get_decoded_output(
-            &receipts,
+        let token = ReceiptParser::new(&receipts).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -1010,14 +922,13 @@ impl<T: Account> MultiContractCallHandler<T> {
         &self,
         receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>> {
-        let mut final_tokens = vec![];
+        let mut receipt_parser = ReceiptParser::new(&receipts);
 
-        for call in self.contract_calls.iter() {
-            let decoded =
-                get_decoded_output(&receipts, Some(&call.contract_id), &call.output_param)?;
-
-            final_tokens.push(decoded.clone());
-        }
+        let final_tokens = self
+            .contract_calls
+            .iter()
+            .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
         let response = FuelCallResponse::<D>::new(

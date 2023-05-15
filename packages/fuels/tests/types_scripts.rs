@@ -2,14 +2,18 @@ use fuels::prelude::*;
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<()> {
-    abigen!(Script(
-        name = "MyScript",
-        abi =
-            "packages/fuels/tests/types/scripts/script_generics/out/debug/script_generics-abi.json"
-    ));
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/script_generics/out/debug/script_generics.bin";
-    let instance = MyScript::new(wallet, bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_generics"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
 
     let bim = GenericBimbam { val: 90 };
     let bam_comp = GenericBimbam { val: 4342 };
@@ -17,7 +21,10 @@ async fn main_function_generic_arguments() -> Result<()> {
         twix: bam_comp,
         mars: 1000,
     };
-    let result = instance.main(bim.clone(), bam.clone()).call().await?;
+    let result = script_instance
+        .main(bim.clone(), bam.clone())
+        .call()
+        .await?;
     let expected = (
         GenericSnack {
             twix: GenericBimbam {
@@ -33,31 +40,43 @@ async fn main_function_generic_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_option_result() -> Result<()> {
-    abigen!(Script(
-        name = "MyScript",
-        abi =
-            "packages/fuels/tests/types/scripts/options_results/out/debug/options_results-abi.json"
-    ));
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/options_results/out/debug/options_results.bin";
-    let instance = MyScript::new(wallet, bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/options_results"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
 
-    let result = instance.main(Some(42), None).call().await?;
+    let result = script_instance.main(Some(42), None).call().await?;
     assert_eq!(result.value, Ok(Some(true)));
-    let result = instance.main(Some(987), None).call().await?;
+    let result = script_instance.main(Some(987), None).call().await?;
     assert_eq!(result.value, Ok(None));
     let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
-    let result = instance.main(None, Some(987)).call().await?;
+    let result = script_instance.main(None, Some(987)).call().await?;
     assert_eq!(result.value, expected_error);
     Ok(())
 }
 
 #[tokio::test]
 async fn main_function_tuple_types() -> Result<()> {
-    abigen!(Script(
-        name = "MyScript",
-        abi = "packages/fuels/tests/types/scripts/script_tuples/out/debug/script_tuples-abi.json"
-    ));
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_tuples"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
     let wallet = launch_provider_and_get_wallet().await;
     let bin_path = "../fuels/tests/types/scripts/script_tuples/out/debug/script_tuples.bin";
     let instance = MyScript::new(wallet, bin_path);
@@ -93,13 +112,18 @@ async fn main_function_tuple_types() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_vector_arguments() -> Result<()> {
-    abigen!(Script(
-        name = "MyScript",
-        abi = "packages/fuels/tests/types/scripts/script_vectors/out/debug/script_vectors-abi.json"
-    ));
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/script_vectors/out/debug/script_vectors.bin";
-    let instance = MyScript::new(wallet, bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_vectors"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
 
     let u32_vec = vec![0, 1, 2];
     let vec_in_vec = vec![vec![0, 1, 2], vec![0, 1, 2]];
@@ -121,7 +145,7 @@ async fn main_function_vector_arguments() -> Result<()> {
         },
     ];
 
-    let result = instance
+    let result = script_instance
         .main(
             u32_vec,
             vec_in_vec,
@@ -145,14 +169,18 @@ async fn main_function_vector_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_raw_slice() -> Result<()> {
-    abigen!(Script(
-        name = "BimBamScript",
-        abi = "packages/fuels/tests/types/scripts/script_raw_slice/out/debug/script_raw_slice-abi.json",
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/script_raw_slice/out/debug/script_raw_slice.bin";
-    let instance = BimBamScript::new(wallet.clone(), bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "BimBamScript",
+            project = "packages/fuels/tests/types/scripts/script_raw_slice",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "BimBamScript",
+            wallet = "wallet"
+        )
+    );
 
     let raw_slice = RawSlice(vec![40, 41, 42]);
     let wrapper = Wrapper {
@@ -160,7 +188,7 @@ async fn test_script_raw_slice() -> Result<()> {
         inner_enum: SomeEnum::Second(raw_slice),
     };
 
-    let rtn = instance.main(10, wrapper).call().await?.value;
+    let rtn = script_instance.main(10, wrapper).call().await?.value;
     assert_eq!(rtn, RawSlice(vec![1, 2, 3]));
 
     Ok(())
@@ -168,13 +196,18 @@ async fn test_script_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn main_function_bytes_arguments() -> Result<()> {
-    abigen!(Script(
-        name = "MyScript",
-        abi = "packages/fuels/tests/types/scripts/script_bytes/out/debug/script_bytes-abi.json"
-    ));
-    let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/script_bytes/out/debug/script_bytes.bin";
-    let instance = MyScript::new(wallet, bin_path);
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "BimBamScript",
+            project = "packages/fuels/tests/types/scripts/script_bytes",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "BimBamScript",
+            wallet = "wallet"
+        )
+    );
 
     let bytes = Bytes(vec![40, 41, 42]);
     let wrapper = Wrapper {
@@ -182,7 +215,7 @@ async fn main_function_bytes_arguments() -> Result<()> {
         inner_enum: SomeEnum::Second(bytes),
     };
 
-    instance.main(10, wrapper).call().await?;
+    script_instance.main(10, wrapper).call().await?;
 
     Ok(())
 }

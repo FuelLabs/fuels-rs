@@ -21,12 +21,12 @@ fuels-test-helpers = { workspace = true, optional = true }
 fuels-types = { workspace = true }
 
 [dev-dependencies]
-chrono = "0.4.2"
+chrono = { workspace = true }
 fuel-core = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true }
-hex = { version = "0.4.3", default-features = false }
-sha2 = "0.9.5"
-tokio = "1.15.0"
+hex = { workspace = true, default-features = false }
+sha2 = { workspace = true }
+tokio = { workspace = true }
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts"]

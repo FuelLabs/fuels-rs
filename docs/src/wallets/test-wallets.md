@@ -4,20 +4,29 @@ You'll often want to create one or more test wallets when testing your contracts
 
 ## Setting up multiple test wallets
 
-If you need multiple test wallets, they can be set up as follows:
+<!-- This section should explain setting up multiple test wallets -->
+<!-- test_wallets:example:start -->
+If you need multiple test wallets, they can be set up using the `launch_custom_provider_and_get_wallets` method.
+<!-- test_wallets:example:end -->
 
 ```rust,ignore
 {{#include ../../../examples/wallets/src/lib.rs:multiple_wallets_helper}}
 ```
 
+<!-- This section should explain how to customize test wallets -->
+<!-- custom_test_wallets:example:start -->
 You can customize your test wallets via `WalletsConfig`.
+<!-- custom_test_wallets:example:end -->
 
 ```rust,ignore
 {{#include ../../../examples/wallets/src/lib.rs:setup_5_wallets}}
 ```
 
+<!-- This section should explain that test wallets are deterministic -->
+<!-- deterministic:example:start -->
 >**Note** Wallets generated with `launch_provider_and_get_wallet` or `launch_custom_provider_and_get_wallets`
 will have deterministic addresses.
+<!-- deterministic:example:end -->
 
 ## Setting up a test wallet with multiple random assets
 

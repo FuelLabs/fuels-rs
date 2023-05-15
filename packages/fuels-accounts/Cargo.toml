@@ -10,11 +10,11 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
 [dependencies]
-async-trait = { version = "0.1.50", default-features = false }
-bytes = { version = "1.1.0", features = ["serde"] }
-chrono = "0.4.2"
-elliptic-curve = { version = "0.11.6", default-features = false }
-eth-keystore = { version = "0.3.0" }
+async-trait = { workspace = true, default-features = false }
+bytes = { workspace = true, features = ["serde"] }
+chrono = { workspace = true }
+elliptic-curve = { workspace = true, default-features = false }
+eth-keystore =  { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, features = ["default"] }
 fuel-crypto = { workspace = true, features = ["random"] }
@@ -23,18 +23,18 @@ fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
-itertools = "0.10"
-rand = { version = "0.8.4", default-features = false }
-serde = { version = "1.0.124", default-features = true, features = ["derive"] }
-sha2 = { version = "0.9.8", default-features = false }
-tai64 = { version = "4.0", features = ["serde"] }
-thiserror = { version = "1.0.30", default-features = false }
-tokio = { version = "1.10.1", features = ["full"] }
+hex = { workspace = true, default-features = false, features = ["std"] }
+itertools = { workspace = true }
+rand = { workspace = true, default-features = false }
+serde = { workspace = true, default-features = true, features = ["derive"] }
+sha2 = { workspace = true, default-features = false }
+tai64 = { workspace = true, features = ["serde"] }
+thiserror = { workspace = true, default-features = false }
+tokio = { workspace = true, features = ["full"] }
 
 [dev-dependencies]
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
-tempfile = "3.3.0"
+hex = { workspace = true, default-features = false, features = ["std"] }
+tempfile = { workspace = true }
 
 [features]
 default = ["std"]

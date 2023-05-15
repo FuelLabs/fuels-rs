@@ -1,4 +1,4 @@
-error: Unsupported program type. Expected: 'Contract', 'Script' or 'Predicate'
+error: 'SomeInvalidProgramType' is not a valid program type. Expected one of: 'Script', 'Contract', 'Predicate'.
  --> tests/ui/abigen/invalid_program_type.rs:3:9
   |
 3 | abigen!(SomeInvalidProgramType(

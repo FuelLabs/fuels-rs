@@ -10,8 +10,8 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
-async-trait = { version = "0.1.50", default-features = false }
-bytes = { version = "1.0.1", features = ["serde"] }
+async-trait = { workspace = true, default-features = false }
+bytes = { workspace = true, features = ["serde"] }
 fuel-abi-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
@@ -19,19 +19,18 @@ fuel-vm = { workspace = true }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
 fuels-types = { workspace = true }
-futures = "0.3.21"
-hex = { version = "0.4.3", default-features = false, features = ["std"] }
-itertools = "0.10.3"
-proc-macro2 = "1.0"
-rand = "0.8"
-regex = "1.5.4"
-serde = { version = "1.0.124", default-features = false, features = ["derive"] }
-serde_json = { version = "1.0.64", default-features = true }
-sha2 = "0.9.5"
-strum = "0.21"
-strum_macros = "0.21"
-thiserror = { version = "1.0.26", default-features = false }
-tokio = "1.12"
+hex = { workspace = true, default-features = false, features = ["std"] }
+itertools = { workspace = true }
+proc-macro2 = { workspace = true }
+rand = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true, default-features = false }
+tokio = { workspace = true }
 
 [features]
 default = ["std"]
