@@ -46,6 +46,7 @@ fn enum_decl(
         |Component {
              field_name,
              field_type,
+             ..
          }| {
             if field_type.is_unit() {
                 quote! {#field_name}

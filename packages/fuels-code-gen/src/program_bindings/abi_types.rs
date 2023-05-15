@@ -259,13 +259,15 @@ impl FullTypeDeclaration {
     }
 
     pub fn is_enum_type(&self) -> bool {
-        let type_field = &self.type_field;
-        type_field.starts_with("enum ")
+        self.type_field.starts_with("enum ")
     }
 
     pub fn is_struct_type(&self) -> bool {
-        let type_field = &self.type_field;
-        type_field.starts_with("struct ")
+        self.type_field.starts_with("struct ")
+    }
+
+    pub fn wrap_type_into(&self) -> bool {
+        self.type_field.ends_with("Address") || self.type_field.ends_with("ContractId")
     }
 }
 

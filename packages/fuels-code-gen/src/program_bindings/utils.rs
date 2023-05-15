@@ -19,6 +19,7 @@ use crate::{
 pub(crate) struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
+    pub wrap_into: bool,
 }
 
 impl Component {
@@ -36,6 +37,7 @@ impl Component {
         Ok(Component {
             field_name: safe_ident(&field_name),
             field_type: TypeResolver::new(mod_of_component).resolve(component)?,
+            wrap_into: component.type_decl.wrap_type_into(),
         })
     }
 }

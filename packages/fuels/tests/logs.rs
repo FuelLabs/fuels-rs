@@ -1260,8 +1260,8 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         assert_revert_containing_msg("failed to send message", error);
     }
     {
-        let contract_id = contract_instance.contract_id().into();
-        let address = wallet.address().into();
+        let contract_id = contract_instance.contract_id();
+        let address = wallet.address();
 
         let error = contract_methods
             .transfer_coins_to_output(1_000_000, contract_id, address)

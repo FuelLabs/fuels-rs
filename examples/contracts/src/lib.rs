@@ -350,7 +350,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -435,7 +435,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -447,7 +447,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .set_contract_ids(&[called_contract_id.into()])
             .call()
@@ -460,7 +460,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
