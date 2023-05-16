@@ -17,7 +17,7 @@ use fuels_types::{
     transaction::{ScriptTransaction, Transaction, TxParameters},
     transaction_builders::CreateTransactionBuilder,
     unresolved_bytes::UnresolvedBytes,
-    Selector, Token,
+    Bytes, Selector, Token,
 };
 use itertools::Itertools;
 
@@ -665,6 +665,15 @@ where
             receipts,
             self.log_decoder.clone(),
         ))
+    }
+
+    pub fn encode(&self) -> Bytes {
+        let mut payload = Vec::new();
+        payload.extend(self.contract_call.contract_id.hash().as_slice());
+        payload.extend(&self.contract_call.encoded_selector);
+        // TODO: are args supposed to be resolved here or later?
+        payload.extend(&self.contract_call.encoded_args.resolve(0));
+        Bytes(payload)
     }
 }
 
