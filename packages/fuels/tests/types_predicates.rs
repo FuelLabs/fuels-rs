@@ -2,8 +2,7 @@ use std::path::Path;
 
 use fuels::{
     prelude::*,
-    types::AssetId,
-    types::{coin::Coin, message::Message},
+    types::{coin::Coin, message::Message, AssetId},
 };
 use fuels_accounts::{predicate::Predicate, Account};
 use fuels_types::unresolved_bytes::UnresolvedBytes;
