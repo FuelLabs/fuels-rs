@@ -21,13 +21,13 @@ use fuels_types::{
 };
 use itertools::Itertools;
 
+use crate::call_utils::FunctionCallData;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::build_tx_from_contract_calls,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
-use crate::call_utils::{EncodedPayload, FunctionCallData};
 
 #[derive(Debug, Clone)]
 pub struct CallParameters {
@@ -680,9 +680,8 @@ where
 
         FunctionCallData::new(
             Bytes(self.contract_call.encoded_selector.to_vec()),
-            Bytes(self.contract_call.encoded_args.resolve(0).to_vec())
+            Bytes(self.contract_call.encoded_args.resolve(0).to_vec()),
         )
-
     }
 }
 

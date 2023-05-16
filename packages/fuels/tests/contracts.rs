@@ -1267,7 +1267,6 @@ async fn test_encode() -> Result<()> {
     let calldata = calldata!(5u64, 6u64);
     dbg!(calldata);
 
-
     // Make sure we can call the contract with multiple arguments
     let contract_methods = contract_instance.methods();
     let response = contract_methods.get(5, 6).encode();

@@ -4,7 +4,17 @@ use fuel_tx::{AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
-use fuels_types::{bech32::Bech32Address, Bytes, constants::WORD_SIZE, errors::Result, input::Input, offsets::call_script_data_offset, param_types::ParamType, transaction::{ScriptTransaction, TxParameters}, transaction_builders::ScriptTransactionBuilder};
+use fuels_types::{
+    bech32::Bech32Address,
+    constants::WORD_SIZE,
+    errors::Result,
+    input::Input,
+    offsets::call_script_data_offset,
+    param_types::ParamType,
+    transaction::{ScriptTransaction, TxParameters},
+    transaction_builders::ScriptTransactionBuilder,
+    Bytes,
+};
 use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
@@ -21,18 +31,20 @@ pub(crate) struct CallOpcodeParamsOffset {
 
 pub struct FunctionCallData {
     pub fn_selector: Bytes,
-    pub call_data: Bytes
+    pub call_data: Bytes,
 }
 
 impl FunctionCallData {
     pub fn new(fn_selector: Bytes, call_data: Bytes) -> Self {
-        Self { fn_selector, call_data }
+        Self {
+            fn_selector,
+            call_data,
+        }
     }
 
     pub fn encode(&self) -> Bytes {
         unimplemented!()
     }
-
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
