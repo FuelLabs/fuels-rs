@@ -1639,6 +1639,58 @@ async fn test_b512() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_u128() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/u128"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    {
+        let u128 = u64::MAX as u128 + 2;
+
+        assert_eq!(u128, contract_methods.u128_as_output().call().await?.value);
+    }
+    {
+        let u128 = 2 * (u64::MAX as u128) + 4;
+        dbg!(&u128);
+        dbg!(
+            &contract_methods
+                .u128_as_input(u128)
+                .contract_call
+                .encoded_args
+        );
+
+        dbg!(
+            &contract_methods
+                .myu128_as_input(MyU128 { upper: 2, lower: 2 })
+                .contract_call
+                .encoded_args
+        );
+
+        let res = contract_methods.u128_as_input(u128).call().await?;
+        dbg!(&res.decode_logs().filter_succeeded());
+
+        let res = contract_methods
+            .myu128_as_input(MyU128 { upper: 2, lower: 2 })
+            .call()
+            .await?;
+        dbg!(&res.decode_logs().filter_succeeded());
+
+        // assert!(res.value);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_base_type_in_vec_output() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

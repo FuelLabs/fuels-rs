@@ -39,6 +39,7 @@ members = [
   'tests/scripts/script_configurables',
   'tests/scripts/script_require',
   'tests/types/contracts/b512',
+  'tests/types/contracts/u128',
   'tests/types/contracts/bytes',
   'tests/types/contracts/call_empty_return',
   'tests/types/contracts/complex_types_contract',

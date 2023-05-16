@@ -214,6 +214,7 @@ pub(crate) fn build_script_data_from_contract_calls(
         };
 
         let bytes = call.encoded_args.resolve(encoded_args_start_offset as u64);
+        dbg!(&bytes);
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
