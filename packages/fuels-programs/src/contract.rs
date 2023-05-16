@@ -27,6 +27,7 @@ use crate::{
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
+use crate::call_utils::{EncodedPayload, FunctionCallData};
 
 #[derive(Debug, Clone)]
 pub struct CallParameters {
@@ -667,13 +668,21 @@ where
         ))
     }
 
-    pub fn encode(&self) -> Bytes {
-        let mut payload = Vec::new();
-        payload.extend(self.contract_call.contract_id.hash().as_slice());
-        payload.extend(&self.contract_call.encoded_selector);
-        // TODO: are args supposed to be resolved here or later?
-        payload.extend(&self.contract_call.encoded_args.resolve(0));
-        Bytes(payload)
+    pub fn encode(&self) -> FunctionCallData {
+        // let mut payload = Vec::new();
+        //
+        // payload.extend(&self.contract_call.encoded_selector);
+        //
+        // dbg!(&self.contract_call.encoded_selector);
+        // dbg!(&self.contract_call.encoded_args.resolve(0));
+        //
+        // payload.extend(&self.contract_call.encoded_args.resolve(0));
+
+        FunctionCallData::new(
+            Bytes(self.contract_call.encoded_selector.to_vec()),
+            Bytes(self.contract_call.encoded_args.resolve(0).to_vec())
+        )
+
     }
 }
 
