@@ -327,3 +327,24 @@ async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
 
     Ok(())
 }
+
+fn u128_from_parts(upper: u64, lower: u64) -> u128 {
+    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+        .concat()
+        .try_into()
+        .unwrap();
+    u128::from_be_bytes(bytes)
+}
+
+#[tokio::test]
+async fn predicate_handles_u128() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_u128/out/debug/predicate_u128-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::encode_data(u128_from_parts(8, 2));
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_u128").await?;
+
+    Ok(())
+}

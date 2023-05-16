@@ -220,6 +220,14 @@ async fn main_function_bytes_arguments() -> Result<()> {
     Ok(())
 }
 
+fn u128_from_parts(upper: u64, lower: u64) -> u128 {
+    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+        .concat()
+        .try_into()
+        .unwrap();
+    u128::from_be_bytes(bytes)
+}
+
 #[tokio::test]
 async fn script_handles_u128() -> Result<()> {
     setup_program_test!(
@@ -235,16 +243,11 @@ async fn script_handles_u128() -> Result<()> {
         )
     );
 
-    let ones = [0u8, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1];
-    let twos = [0u8, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2];
+    let arg = u128_from_parts(10, 20);
+    let actual = script_instance.main(arg).call().await?.value;
 
-    let ones_decoded = u128::from_be_bytes(ones);
-
-    let sum = ones_decoded + u128::from_be_bytes(twos);
-
-    let result = script_instance.main(ones_decoded).call().await?.value;
-
-    assert_eq!(result, sum);
+    let expected = arg + u128_from_parts(8, 2);
+    assert_eq!(expected, actual);
 
     Ok(())
 }
