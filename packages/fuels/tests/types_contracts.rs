@@ -1638,6 +1638,14 @@ async fn test_b512() -> Result<()> {
     Ok(())
 }
 
+fn u128_from_parts(upper: u64, lower: u64) -> u128 {
+    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+        .concat()
+        .try_into()
+        .unwrap();
+    u128::from_be_bytes(bytes)
+}
+
 #[tokio::test]
 async fn test_u128() -> Result<()> {
     setup_program_test!(
@@ -1654,35 +1662,24 @@ async fn test_u128() -> Result<()> {
     );
     let contract_methods = contract_instance.methods();
     {
-        let u128 = u64::MAX as u128 + 2;
+        let arg = u128_from_parts(1, 2);
 
-        assert_eq!(u128, contract_methods.u128_as_output().call().await?.value);
+        let actual = contract_methods.u128_sum_and_ret(arg).call().await?.value;
+
+        let expected = arg + u128_from_parts(3, 4);
+
+        assert_eq!(expected, actual);
     }
     {
-        let u128 = 2 * (u64::MAX as u128) + 4;
+        let actual = contract_methods.u128_in_enum_output().call().await?.value;
 
-        contract_methods.u128_as_input(u128).call().await?;
+        let expected = SomeEnum::B(u128_from_parts(4, 4));
+        assert_eq!(expected, actual);
     }
-    // {
-    //     let u128 = 3 * (u64::MAX as u128) + 6;
-    //     let some_enum = SomeEnum::B(u128);
-
-    //     dbg!(&u128.to_be_bytes());
-
-    //     assert_eq!(
-    //         some_enum,
-    //         contract_methods.u128_in_enum_output().call().await?.value
-    //     );
-    // }
     {
-        let u128 = 4 * (u64::MAX as u128) + 8;
-        let some_enum = SomeEnum::B(u128);
-        dbg!(&u128.to_be_bytes());
+        let input = SomeEnum::B(u128_from_parts(3, 3));
 
-        contract_methods
-            .u128_in_enum_input(some_enum)
-            .call()
-            .await?;
+        contract_methods.u128_in_enum_input(input).call().await?;
     }
 
     Ok(())
