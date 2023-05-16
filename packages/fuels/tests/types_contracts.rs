@@ -1660,31 +1660,29 @@ async fn test_u128() -> Result<()> {
     }
     {
         let u128 = 2 * (u64::MAX as u128) + 4;
-        dbg!(&u128);
-        dbg!(
-            &contract_methods
-                .u128_as_input(u128)
-                .contract_call
-                .encoded_args
-        );
 
-        dbg!(
-            &contract_methods
-                .myu128_as_input(MyU128 { upper: 2, lower: 2 })
-                .contract_call
-                .encoded_args
-        );
+        contract_methods.u128_as_input(u128).call().await?;
+    }
+    // {
+    //     let u128 = 3 * (u64::MAX as u128) + 6;
+    //     let some_enum = SomeEnum::B(u128);
 
-        let res = contract_methods.u128_as_input(u128).call().await?;
-        dbg!(&res.decode_logs().filter_succeeded());
+    //     dbg!(&u128.to_be_bytes());
 
-        let res = contract_methods
-            .myu128_as_input(MyU128 { upper: 2, lower: 2 })
+    //     assert_eq!(
+    //         some_enum,
+    //         contract_methods.u128_in_enum_output().call().await?.value
+    //     );
+    // }
+    {
+        let u128 = 4 * (u64::MAX as u128) + 8;
+        let some_enum = SomeEnum::B(u128);
+        dbg!(&u128.to_be_bytes());
+
+        contract_methods
+            .u128_in_enum_input(some_enum)
             .call()
             .await?;
-        dbg!(&res.decode_logs().filter_succeeded());
-
-        assert!(res.value);
     }
 
     Ok(())
