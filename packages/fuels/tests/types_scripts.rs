@@ -219,3 +219,32 @@ async fn main_function_bytes_arguments() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn script_handles_u128() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_u128",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let ones = [0u8, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1];
+    let twos = [0u8, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 2];
+
+    let ones_decoded = u128::from_be_bytes(ones);
+
+    let sum = ones_decoded + u128::from_be_bytes(twos);
+
+    let result = script_instance.main(ones_decoded).call().await?.value;
+
+    assert_eq!(result, sum);
+
+    Ok(())
+}

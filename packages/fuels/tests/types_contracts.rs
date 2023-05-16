@@ -1684,7 +1684,7 @@ async fn test_u128() -> Result<()> {
             .await?;
         dbg!(&res.decode_logs().filter_succeeded());
 
-        // assert!(res.value);
+        assert!(res.value);
     }
 
     Ok(())
