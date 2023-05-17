@@ -13,7 +13,6 @@ use fuels_types::{
     param_types::ParamType,
     transaction::{ScriptTransaction, TxParameters},
     transaction_builders::ScriptTransactionBuilder,
-    Bytes,
 };
 use itertools::{chain, Itertools};
 
@@ -27,24 +26,6 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
-}
-
-pub struct FunctionCallData {
-    pub fn_selector: Bytes,
-    pub call_data: Bytes,
-}
-
-impl FunctionCallData {
-    pub fn new(fn_selector: Bytes, call_data: Bytes) -> Self {
-        Self {
-            fn_selector,
-            call_data,
-        }
-    }
-
-    pub fn encode(&self) -> Bytes {
-        unimplemented!()
-    }
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is

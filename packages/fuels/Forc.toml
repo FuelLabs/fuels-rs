@@ -10,6 +10,7 @@ members = [
   'tests/contracts/auth_testing_contract',
   'tests/contracts/configurables',
   'tests/contracts/contract_test',
+  'tests/contracts/general_call',
   'tests/contracts/large_return_data',
   'tests/contracts/lib_contract',
   'tests/contracts/lib_contract_abi',

@@ -1235,43 +1235,49 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     Ok(())
 }
 
-macro_rules! fn_selector {
-    ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
-         ::fuels::core::function_selector::resolve_fn_selector(stringify!($fn_name), &[$( <$fn_arg as ::fuels::types::traits::Parameterize>::param_type() ),*]).to_vec()
-    }
-}
-
-macro_rules! calldata {
-    ( $($arg: expr),* ) => {
-        ::fuels::core::abi_encoder::ABIEncoder::encode(&[$(::fuels::types::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
-    }
-}
-
 #[tokio::test]
 async fn test_encode() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
+        Abigen(
+            Contract(
+                name = "MyCallerContract",
+                project = "packages/fuels/tests/contracts/general_call"
+            ),
+            Contract(
+                name = "MyTargetContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            ),
+        ),
         Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
+            name = "caller_contract_instance",
+            contract = "MyCallerContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "target_contract_instance",
+            contract = "MyTargetContract",
             wallet = "wallet"
         ),
     );
 
-    let function_selector = fn_selector!(get(u64, u64));
-    dbg!(function_selector);
-    let calldata = calldata!(5u64, 6u64);
-    dbg!(calldata);
+    let contract_methods = target_contract_instance.methods();
+    let response = contract_methods.initialize_counter(42).encode();
 
-    // Make sure we can call the contract with multiple arguments
-    let contract_methods = contract_instance.methods();
-    let response = contract_methods.get(5, 6).encode();
+    caller_contract_instance
+        .methods()
+        .general_call(target_contract_instance.id().clone().into(), response)
+        .set_contracts(&[&target_contract_instance])
+        .call()
+        .await?;
 
-    assert!(false);
+    let response = target_contract_instance
+        .methods()
+        .get_counter()
+        .call()
+        .await?;
+
+    assert_eq!(response.value, 42);
 
     Ok(())
 }

@@ -21,7 +21,6 @@ use fuels_types::{
 };
 use itertools::Itertools;
 
-use crate::call_utils::FunctionCallData;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::build_tx_from_contract_calls,
@@ -668,20 +667,13 @@ where
         ))
     }
 
-    pub fn encode(&self) -> FunctionCallData {
-        // let mut payload = Vec::new();
-        //
-        // payload.extend(&self.contract_call.encoded_selector);
-        //
-        // dbg!(&self.contract_call.encoded_selector);
-        // dbg!(&self.contract_call.encoded_args.resolve(0));
-        //
-        // payload.extend(&self.contract_call.encoded_args.resolve(0));
+    pub fn encode(&self) -> Bytes {
+        let mut payload = Vec::new();
 
-        FunctionCallData::new(
-            Bytes(self.contract_call.encoded_selector.to_vec()),
-            Bytes(self.contract_call.encoded_args.resolve(0).to_vec()),
-        )
+        payload.extend(&self.contract_call.encoded_selector);
+        payload.extend(&self.contract_call.encoded_args.resolve(0));
+
+        Bytes(payload)
     }
 }
 
