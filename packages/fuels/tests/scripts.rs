@@ -90,6 +90,37 @@ async fn main_function_arguments() -> Result<()> {
 }
 
 #[tokio::test]
+async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/basic_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let tolerance = 0.0;
+
+    let a = 4u64;
+    let b = 2u32;
+    let estimated_gas_used = script_instance
+        .main(a, b)
+        .estimate_transaction_cost(Some(tolerance))
+        .await?
+        .gas_used;
+
+    let gas_used = script_instance.main(a, b).call().await?.gas_used;
+
+    assert_eq!(estimated_gas_used, gas_used);
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_basic_script_with_tx_parameters() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
