@@ -386,12 +386,16 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(Some(ParamType::Vector(Box::new(vec_elem_type))))
 }
 
-fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
-    if !["struct std::bytes::Bytes", "struct Bytes"].contains(&the_type.type_field.as_str()) {
-        return Ok(None);
-    }
+fn try_u128(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(["struct std::u128::U128", "struct U128"]
+        .contains(&the_type.type_field.as_str())
+        .then_some(ParamType::U128))
+}
 
-    Ok(Some(ParamType::Bytes))
+fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(["struct std::bytes::Bytes", "struct Bytes"]
+        .contains(&the_type.type_field.as_str())
+        .then_some(ParamType::Bytes))
 }
 
 fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
