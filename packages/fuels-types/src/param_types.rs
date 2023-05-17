@@ -331,6 +331,7 @@ impl TryFrom<&Type> for ParamType {
             try_bytes,
             try_raw_slice,
             try_enum,
+            try_u128,
             try_struct,
         ]
         .into_iter()
