@@ -755,6 +755,7 @@ mod tests {
         use fuels::{
             core::{calldata, fn_selector},
             prelude::*,
+            types::SizedAsciiString,
         };
 
         setup_program_test!(
@@ -782,8 +783,15 @@ mod tests {
         );
 
         // ANCHOR: low_level_call
-        let function_selector = fn_selector!(initialize_counter(u64));
-        let call_data = calldata!(42u64);
+        let function_selector =
+            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+        let call_data = calldata!(
+            MyStruct {
+                a: true,
+                b: [1, 2, 3],
+            },
+            SizedAsciiString::<4>::try_from("fuel").unwrap()
+        );
 
         caller_contract_instance
             .methods()
@@ -791,12 +799,40 @@ mod tests {
                 target_contract_instance.id().clone().into(),
                 Bytes(function_selector),
                 Bytes(call_data),
-                true,
+                false,
             )
             .set_contracts(&[&target_contract_instance])
             .call()
             .await?;
         // ANCHOR_END: low_level_call
+
+        let result_uint = target_contract_instance
+            .methods()
+            .get_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_bool = target_contract_instance
+            .methods()
+            .get_bool_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_str = target_contract_instance
+            .methods()
+            .get_str_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        assert_eq!(result_uint, 2);
+        assert!(result_bool);
+        assert_eq!(result_str, "fuel");
 
         Ok(())
     }

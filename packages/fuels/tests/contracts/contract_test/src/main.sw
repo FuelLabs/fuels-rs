@@ -33,6 +33,8 @@ abi TestContract {
     fn get_str_value() -> str[4];
     #[storage(read)]
     fn get_bool_value() -> bool;
+    #[storage(read)]
+    fn get_value() -> u64;
     fn get(x: u64, y: u64) -> u64;
     fn get_alt(x: MyType) -> MyType;
     fn get_single(x: u64) -> u64;
@@ -97,6 +99,11 @@ impl TestContract for Contract {
     #[storage(read)]
     fn get_bool_value() -> bool {
         storage.value_bool.read()
+    }
+
+    #[storage(read)]
+    fn get_value() -> u64 {
+        storage.value.read()
     }
 
     fn get(x: u64, y: u64) -> u64 {
