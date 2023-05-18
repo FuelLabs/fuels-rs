@@ -212,8 +212,8 @@ impl Contract {
         (contract_id, code_root, state_root)
     }
 
-    pub fn with_salt(self, salt: Salt) -> Self {
-        Self::new(self.binary, salt, self.storage_slots)
+    pub fn with_salt(self, salt: impl Into<Salt>) -> Self {
+        Self::new(self.binary, salt.into(), self.storage_slots)
     }
 
     pub fn contract_id(&self) -> ContractId {

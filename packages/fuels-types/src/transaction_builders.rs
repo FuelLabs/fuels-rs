@@ -357,8 +357,8 @@ impl CreateTransactionBuilder {
         self
     }
 
-    pub fn set_salt(mut self, salt: Salt) -> Self {
-        self.salt = salt;
+    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
+        self.salt = salt.into();
         self
     }
 
