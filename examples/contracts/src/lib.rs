@@ -801,7 +801,8 @@ mod tests {
                 Bytes(call_data),
                 false,
             )
-            .set_contracts(&[&target_contract_instance])
+            .estimate_tx_dependencies(None)
+            .await?
             .call()
             .await?;
         // ANCHOR_END: low_level_call

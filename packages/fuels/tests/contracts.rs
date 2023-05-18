@@ -1276,7 +1276,8 @@ async fn low_level_call() -> Result<()> {
             Bytes(call_data),
             true,
         )
-        .set_contracts(&[&target_contract_instance])
+        .estimate_tx_dependencies(None)
+        .await?
         .call()
         .await?;
 
@@ -1286,7 +1287,7 @@ async fn low_level_call() -> Result<()> {
         .call()
         .await?;
     assert_eq!(response.value, 42);
-    //
+
     let function_selector =
         fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
     let call_data = calldata!(
@@ -1305,7 +1306,8 @@ async fn low_level_call() -> Result<()> {
             Bytes(call_data),
             false,
         )
-        .set_contracts(&[&target_contract_instance])
+        .estimate_tx_dependencies(None)
+        .await?
         .call()
         .await?;
 
