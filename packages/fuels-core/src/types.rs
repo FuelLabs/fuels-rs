@@ -78,6 +78,7 @@ pub enum Token {
     U16(u16),
     U32(u32),
     U64(u64),
+    U128(u128),
     Bool(bool),
     B256([u8; 32]),
     Array(Vec<Token>),
