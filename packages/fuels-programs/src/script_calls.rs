@@ -2,7 +2,10 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_accounts::{provider::Provider, Account};
+use fuels_accounts::{
+    provider::{Provider, TransactionCost},
+    Account,
+};
 use fuels_types::{
     bech32::Bech32ContractId,
     errors::Result,
@@ -207,6 +210,22 @@ where
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    /// Get a scripts's estimated cost
+    pub async fn estimate_transaction_cost(
+        &self,
+        tolerance: Option<f64>,
+    ) -> Result<TransactionCost> {
+        let tb = self.prepare_builder().await?;
+        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+
+        let transaction_cost = self
+            .provider
+            .estimate_transaction_cost(&tx, tolerance)
+            .await?;
+
+        Ok(transaction_cost)
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

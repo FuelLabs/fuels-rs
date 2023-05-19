@@ -1638,6 +1638,53 @@ async fn test_b512() -> Result<()> {
     Ok(())
 }
 
+fn u128_from_parts(upper: u64, lower: u64) -> u128 {
+    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+        .concat()
+        .try_into()
+        .unwrap();
+    u128::from_be_bytes(bytes)
+}
+
+#[tokio::test]
+async fn test_u128() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/u128"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    {
+        let arg = u128_from_parts(1, 2);
+
+        let actual = contract_methods.u128_sum_and_ret(arg).call().await?.value;
+
+        let expected = arg + u128_from_parts(3, 4);
+
+        assert_eq!(expected, actual);
+    }
+    {
+        let actual = contract_methods.u128_in_enum_output().call().await?.value;
+
+        let expected = SomeEnum::B(u128_from_parts(4, 4));
+        assert_eq!(expected, actual);
+    }
+    {
+        let input = SomeEnum::B(u128_from_parts(3, 3));
+
+        contract_methods.u128_in_enum_input(input).call().await?;
+    }
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn test_base_type_in_vec_output() -> Result<()> {
     setup_program_test!(
