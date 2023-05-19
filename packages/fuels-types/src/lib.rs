@@ -5,7 +5,6 @@
 
 pub mod bech32;
 pub mod block;
-// pub mod chain_config;
 pub mod chain_info;
 pub mod coin;
 pub mod coin_type;
