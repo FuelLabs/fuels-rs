@@ -21,6 +21,7 @@ pub enum ParamType {
     U16,
     U32,
     U64,
+    U128,
     Bool,
     B256,
     // The Unit ParamType is used for unit variants in Enums. The corresponding type field is `()`,
@@ -146,7 +147,7 @@ impl ParamType {
             | ParamType::U32
             | ParamType::U64
             | ParamType::Bool => 1,
-            ParamType::RawSlice => 2,
+            ParamType::U128 | ParamType::RawSlice => 2,
             ParamType::Vector(_) | ParamType::Bytes => 3,
             ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
@@ -330,6 +331,7 @@ impl TryFrom<&Type> for ParamType {
             try_bytes,
             try_raw_slice,
             try_enum,
+            try_u128,
             try_struct,
         ]
         .into_iter()
@@ -385,12 +387,16 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(Some(ParamType::Vector(Box::new(vec_elem_type))))
 }
 
-fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
-    if !["struct std::bytes::Bytes", "struct Bytes"].contains(&the_type.type_field.as_str()) {
-        return Ok(None);
-    }
+fn try_u128(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(["struct std::u128::U128", "struct U128"]
+        .contains(&the_type.type_field.as_str())
+        .then_some(ParamType::U128))
+}
 
-    Ok(Some(ParamType::Bytes))
+fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(["struct std::bytes::Bytes", "struct Bytes"]
+        .contains(&the_type.type_field.as_str())
+        .then_some(ParamType::Bytes))
 }
 
 fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
