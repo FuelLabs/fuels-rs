@@ -58,6 +58,7 @@ members = [
   'tests/types/contracts/tuples',
   'tests/types/contracts/two_structs',
   'tests/types/contracts/type_inside_enum',
+  'tests/types/contracts/u128',
   'tests/types/contracts/vector_output',
   'tests/types/contracts/vectors',
   'tests/types/predicates/address',
@@ -66,6 +67,7 @@ members = [
   'tests/types/predicates/predicate_generics',
   'tests/types/predicates/predicate_raw_slice',
   'tests/types/predicates/predicate_tuples',
+  'tests/types/predicates/predicate_u128',
   'tests/types/predicates/predicate_vector',
   'tests/types/predicates/predicate_vectors',
   'tests/types/predicates/structs',
@@ -75,5 +77,6 @@ members = [
   'tests/types/scripts/script_generics',
   'tests/types/scripts/script_raw_slice',
   'tests/types/scripts/script_tuples',
+  'tests/types/scripts/script_u128',
   'tests/types/scripts/script_vectors',
 ]
