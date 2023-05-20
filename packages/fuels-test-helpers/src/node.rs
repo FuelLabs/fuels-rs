@@ -6,7 +6,6 @@ use std::{
     time::Duration,
 };
 
-//TODO: improve `ChainConfig` confiuration and integration with the provider
 pub use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
