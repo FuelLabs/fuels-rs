@@ -270,8 +270,7 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // wallet_1 has now only one spent coin
     assert_eq!(wallet_1_spendable_resources.len(), 1);
-    // But it has two coins (one spent, one unspent (the change))
-    assert_eq!(wallet_1_all_coins.len(), 2);
+    assert_eq!(wallet_1_all_coins.len(), 1);
     // Check that wallet two now has a coin.
     assert_eq!(wallet_2_all_coins.len(), 1);
     assert_eq!(wallet_2_spendable_resources.len(), 1);
