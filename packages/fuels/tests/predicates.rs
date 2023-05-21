@@ -2,8 +2,7 @@ use fuel_core_types::fuel_types::BlockHeight;
 use fuel_tx::Output;
 use fuels::{
     prelude::*,
-    types::AssetId,
-    types::{coin::Coin, message::Message},
+    types::{coin::Coin, message::Message, AssetId},
 };
 use fuels_accounts::{predicate::Predicate, Account};
 use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
