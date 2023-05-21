@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Output, Receipt};
+use fuel_tx::{Address, AssetId, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
@@ -8,6 +8,7 @@ use fuels_accounts::{
 };
 use fuels_types::{
     bech32::Bech32ContractId,
+    constants::BASE_ASSET_ID,
     errors::Result,
     input::Input,
     offsets::base_offset_script,
@@ -34,6 +35,7 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
+    pub variable_outputs: Option<Vec<Output>>,
 }
 
 impl ScriptCall {
@@ -51,6 +53,22 @@ impl ScriptCall {
         ScriptCall {
             external_contracts,
             ..self
+        }
+    }
+
+    pub fn append_variable_outputs(&mut self, num: u64) {
+        let new_variable_outputs = vec![
+            Output::Variable {
+                amount: 0,
+                to: Address::zeroed(),
+                asset_id: AssetId::default(),
+            };
+            num as usize
+        ];
+
+        match self.variable_outputs {
+            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
+            None => self.variable_outputs = Some(new_variable_outputs),
         }
     }
 }
@@ -84,6 +102,7 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
+            variable_outputs: None,
         };
         Self {
             script_call,
@@ -130,6 +149,19 @@ where
         self
     }
 
+    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_script_instance.main(...).append__variable_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Variable`]: fuel_tx::Output::Variable
+    pub fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.script_call.append_variable_outputs(num);
+        self
+    }
+
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters().await?;
@@ -161,6 +193,10 @@ where
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
+            self.script_call
+                .variable_outputs
+                .clone()
+                .unwrap_or_default(),
         )
         .collect();
 
@@ -171,6 +207,22 @@ where
         Ok(tb)
     }
 
+    fn calculate_base_asset_sum(&self) -> u64 {
+        self.script_call
+            .inputs
+            .iter()
+            .map(|input| match input {
+                Input::ResourceSigned { resource, .. }
+                | Input::ResourcePredicate { resource, .. }
+                    if resource.asset_id() == BASE_ASSET_ID =>
+                {
+                    resource.amount()
+                }
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Call a script on the node. If `simulate == true`, then the call is done in a
     /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
@@ -179,7 +231,11 @@ where
     async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        let base_amount = self.calculate_base_asset_sum();
+        let tx = self
+            .account
+            .add_fee_resources(tb, base_amount, None)
+            .await?;
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

@@ -539,7 +539,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).add_variable_outputs(num).call()
+    /// my_contract_instance.my_method(...).append__variable_outputs(num).call()
     /// ```
     ///
     /// [`Output::Variable`]: fuel_tx::Output::Variable
