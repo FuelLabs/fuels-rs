@@ -157,7 +157,6 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
 }
 
 pub(crate) fn find_into_impl_type(ttype: &str) -> Option<TokenStream> {
-    dbg!(&ttype);
     match ttype {
         ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
         ":: fuels :: types :: ContractId" => {
