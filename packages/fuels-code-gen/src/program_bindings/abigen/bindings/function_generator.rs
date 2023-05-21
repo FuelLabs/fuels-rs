@@ -6,7 +6,7 @@ use crate::{
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
-        utils::{param_type_calls, Component},
+        utils::{find_into_impl_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
@@ -68,14 +68,13 @@ impl FunctionGenerator {
     pub fn tokenized_args(&self) -> TokenStream {
         let arg_names = self.args.iter().map(|component| {
             let field_name = &component.field_name;
+            let field_type = &component.field_type;
 
-            if component.wrap_into {
-                let field_type = &component.field_type;
-
-                quote! {::core::convert::Into::<#field_type>::into(#field_name)}
-            } else {
-                quote! {#field_name}
-            }
+            find_into_impl_type(&field_type.type_name.to_string())
+                .map(|_| {
+                    quote! {#field_type::from(#field_name.into())}
+                })
+                .unwrap_or(quote! {#field_name})
         });
         quote! {[#(::fuels::types::traits::Tokenizable::into_token(#arg_names)),*]}
     }
@@ -119,11 +118,12 @@ impl From<&FunctionGenerator> for TokenStream {
             let name = &component.field_name;
             let field_type = &component.field_type;
 
-            if component.wrap_into {
-                quote! { #name: impl ::core::convert::Into<#field_type> }
-            } else {
-                quote! { #name: #field_type }
-            }
+            find_into_impl_type(&field_type.type_name.to_string())
+                .map(|new_type| {
+                    let new_type = new_type;
+                    quote! { #name: impl ::core::convert::Into<#new_type> }
+                })
+                .unwrap_or(quote! { #name: #field_type })
         });
 
         let output_type = fun.output_type();

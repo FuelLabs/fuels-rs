@@ -102,7 +102,6 @@ mod tests {
                     type_name: quote! {u8},
                     generic_params: vec![],
                 },
-                wrap_into: false,
             },
             Component {
                 field_name: ident("b"),
@@ -119,7 +118,6 @@ mod tests {
                         },
                     ],
                 },
-                wrap_into: false,
             },
         ];
 

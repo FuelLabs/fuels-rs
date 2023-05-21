@@ -547,7 +547,7 @@ mod tests {
                 "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
                     .parse()
                     .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
             // ANCHOR_END: deployed_contracts_hex
         }
 

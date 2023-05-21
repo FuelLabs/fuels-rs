@@ -19,7 +19,6 @@ use crate::{
 pub(crate) struct Component {
     pub field_name: Ident,
     pub field_type: ResolvedType,
-    pub wrap_into: bool,
 }
 
 impl Component {
@@ -37,7 +36,6 @@ impl Component {
         Ok(Component {
             field_name: safe_ident(&field_name),
             field_type: TypeResolver::new(mod_of_component).resolve(component)?,
-            wrap_into: component.type_decl.wrap_type_into(),
         })
     }
 }
@@ -156,4 +154,15 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ]
     })
     .collect()
+}
+
+pub(crate) fn find_into_impl_type(ttype: &str) -> Option<TokenStream> {
+    dbg!(&ttype);
+    match ttype {
+        ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        ":: fuels :: types :: ContractId" => {
+            Some(quote! {::fuels::types::bech32::Bech32ContractId})
+        }
+        _ => None,
+    }
 }

@@ -265,10 +265,6 @@ impl FullTypeDeclaration {
     pub fn is_struct_type(&self) -> bool {
         self.type_field.starts_with("struct ")
     }
-
-    pub fn wrap_type_into(&self) -> bool {
-        self.type_field.ends_with("Address") || self.type_field.ends_with("ContractId")
-    }
 }
 
 #[cfg(test)]
