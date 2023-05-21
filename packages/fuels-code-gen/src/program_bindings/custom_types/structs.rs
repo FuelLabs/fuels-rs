@@ -43,7 +43,6 @@ fn struct_decl(
         |Component {
              field_name,
              field_type,
-             ..
          }| {
             quote! { pub #field_name: #field_type }
         },
