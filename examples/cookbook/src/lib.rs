@@ -173,7 +173,7 @@ mod tests {
                 .build()?;
         wallet_1.sign_transaction(&mut tx)?;
 
-        provider.send_transaction(&tx).await?;
+        let _receipts = provider.send_transaction(&tx).await?;
 
         let balances = wallet_2.get_balances().await?;
 

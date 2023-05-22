@@ -191,7 +191,7 @@ mod tests {
         // Transfer an amount of 300 to the contract
         let amount = 300;
         let asset_id = random_asset_id;
-        wallet
+        let (_tx_id, _receipts) = wallet
             .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
             .await?;
 
@@ -367,13 +367,7 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
-        wallet
-            .provider()
-            .unwrap()
-            .client
-            .produce_blocks(1, None)
-            .await
-            .expect("We should be able to produce at least 1 block");
+        let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;
 
         // Retrieve a message proof from the provider
         let proof = wallet
