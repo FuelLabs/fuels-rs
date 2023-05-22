@@ -40,7 +40,7 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> Result<&mut Self> {
-        self.address = Self::calculate_address(&*self.code, &provider.consensus_parameters());
+        self.address = Self::calculate_address(&self.code, &provider.consensus_parameters());
         self.provider = Some(provider);
         Ok(self)
     }
@@ -78,7 +78,7 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
-        let address = Self::calculate_address(&*code, &self.consensus_parameters());
+        let address = Self::calculate_address(&code, &self.consensus_parameters());
         Self {
             code,
             address,
@@ -87,7 +87,7 @@ impl Predicate {
     }
 
     pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&*self.code, &self.consensus_parameters());
+        let address = Self::calculate_address(&self.code, &provider.consensus_parameters());
         Self {
             address,
             provider: Some(provider),
@@ -98,7 +98,7 @@ impl Predicate {
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-        let address = Self::calculate_address(&*self.code, &self.consensus_parameters());
+        let address = Self::calculate_address(&self.code, &self.consensus_parameters());
         self.address = address;
         self
     }
