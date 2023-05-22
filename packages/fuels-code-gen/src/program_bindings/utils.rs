@@ -120,18 +120,19 @@ mod tests {
 
 pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
     [
-        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
         ("std::address::Address", "::fuels::types::Address"),
+        ("std::b512::B512", "::fuels::types::B512"),
+        ("std::bytes::Bytes", "::fuels::types::Bytes"),
+        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
         ("std::identity::Identity", "::fuels::types::Identity"),
+        ("std::option::Option", "::core::option::Option"),
+        ("std::result::Result", "::core::result::Result"),
+        ("std::u128::U128", "u128"),
+        ("std::vec::Vec", "::std::vec::Vec"),
         (
             "std::vm::evm::evm_address::EvmAddress",
             "::fuels::types::EvmAddress",
         ),
-        ("std::b512::B512", "::fuels::types::B512"),
-        ("std::vec::Vec", "::std::vec::Vec"),
-        ("std::result::Result", "::core::result::Result"),
-        ("std::option::Option", "::core::option::Option"),
-        ("std::bytes::Bytes", "::fuels::types::Bytes"),
     ]
     .into_iter()
     .map(|(original_type_path, provided_type_path)| {
