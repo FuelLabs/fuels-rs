@@ -360,48 +360,6 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn output_messages_test() -> Result<()> {
-        use fuels::prelude::*;
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-        ));
-
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
-        .bin",
-            LoadConfiguration::default(),
-        )?
-        .deploy(&wallet, TxParameters::default())
-        .await?;
-
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
-        // ANCHOR: message_outputs
-        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        wallet
-            .force_transfer_to_contract(
-                &contract_id,
-                amount,
-                AssetId::BASE,
-                TxParameters::default(),
-            )
-            .await
-            .unwrap();
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .call()
-            .await?;
-        // ANCHOR_END: message_outputs
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[allow(unused_variables)]
     async fn dependency_estimation() -> Result<()> {
         use fuels::prelude::*;
         abigen!(

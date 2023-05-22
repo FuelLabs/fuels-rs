@@ -727,35 +727,6 @@ async fn test_output_variable_estimation() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_output_message_estimation() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-    ));
-
-    let (wallets, _, _, contract_id) = setup_output_variable_estimation_test().await?;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
-    let contract_methods = contract_instance.methods();
-    let amount = 1000;
-
-    wallets[0]
-        .force_transfer_to_contract(&contract_id, amount, AssetId::BASE, TxParameters::default())
-        .await
-        .unwrap();
-
-    let address = Bits256([1u8; 32]);
-    {
-        let _ = contract_methods
-            .send_message(address, amount)
-            .call()
-            .await?;
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",

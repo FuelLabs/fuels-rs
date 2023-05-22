@@ -23,13 +23,3 @@ When calling `transfer_coins_to_output` with the SDK, you can specify the number
 <!-- append_variable_outputs:example:end -->
 
 > **Note:** that the Sway `lib-std` function `mint_to_address` calls `transfer_to_address` under the hood, so you need to call `append_variable_outputs` in the Rust SDK tests like you would for `transfer_to_address`.
-
-# Output messages
-
-Similarly, when your contract transfers messages, the underlying transaction has to have the appropriate number of [output messages](https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputmessage). 
-
-Output messages can be added to a contract call by chaining `append_output_messages(amount)`:
-
-```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:message_outputs}}
-```
