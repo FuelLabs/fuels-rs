@@ -274,8 +274,8 @@ impl Provider {
         Ok(self.client.chain_info().await?.into())
     }
 
-    pub fn consensus_parameters(&self) -> ProviderResult<ConsensusParameters> {
-        Ok(self.consensus_parameters)
+    pub fn consensus_parameters(&self) -> ConsensusParameters {
+        self.consensus_parameters
     }
 
     pub async fn node_info(&self) -> ProviderResult<NodeInfo> {

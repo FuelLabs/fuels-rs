@@ -42,12 +42,10 @@ impl Predicate {
     pub fn set_provider(&mut self, provider: Provider) -> Result<&mut Self> {
         // Check that the consensus parameters are identical
         match &self.provider {
-            Some(p) if p.consensus_parameters()? != provider.consensus_parameters()? => {
-                Err(error!(
-                    InvalidData,
-                    "Trying to set a new provider that uses different consensus parameters"
-                ))
-            }
+            Some(p) if p.consensus_parameters() != provider.consensus_parameters() => Err(error!(
+                InvalidData,
+                "Trying to set a new provider that uses different consensus parameters"
+            )),
             _ => {
                 self.provider = Some(provider);
                 Ok(self)
@@ -66,9 +64,7 @@ impl Predicate {
     }
 
     pub fn from_code_and_provider(code: Vec<u8>, provider: Provider) -> Self {
-        let params = &provider
-            .consensus_parameters()
-            .expect("Should be able to get consensus parameters out of a provider");
+        let params = &provider.consensus_parameters();
         Self {
             address: Self::calculate_address(&code, params),
             code,

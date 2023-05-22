@@ -197,7 +197,7 @@ pub trait Account: ViewOnlyAccount {
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self.try_provider()?.consensus_parameters()?;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -256,7 +256,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.try_provider()?.consensus_parameters()?;
+        let params = self.try_provider()?.consensus_parameters();
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -292,7 +292,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
-        let params = self.try_provider()?.consensus_parameters()?;
+        let params = self.try_provider()?.consensus_parameters();
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;

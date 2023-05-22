@@ -1024,10 +1024,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 
     let (provider, _address) = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
     wallet.set_provider(provider.clone());
-    assert_eq!(
-        consensus_parameters_config,
-        provider.consensus_parameters()?
-    );
+    assert_eq!(consensus_parameters_config, provider.consensus_parameters());
 
     setup_program_test!(
         Abigen(Contract(

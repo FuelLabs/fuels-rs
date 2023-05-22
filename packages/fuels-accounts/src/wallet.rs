@@ -309,7 +309,7 @@ impl Signer for WalletUnlocked {
     }
 
     fn sign_transaction(&self, tx: &mut impl Transaction) -> WalletResult<Signature> {
-        let consensus_parameters = self.try_provider()?.consensus_parameters()?;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
         let id = tx.id(&consensus_parameters);
 
         let message = Message::from_bytes(*id);

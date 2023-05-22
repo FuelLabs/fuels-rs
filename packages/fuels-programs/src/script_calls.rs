@@ -132,7 +132,7 @@ where
 
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
-        let consensus_parameters = self.provider.consensus_parameters()?;
+        let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
