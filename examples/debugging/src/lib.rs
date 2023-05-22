@@ -7,6 +7,7 @@ mod tests {
         core::function_selector::resolve_fn_selector,
         types::{errors::Result, param_types::ParamType, traits::Parameterize, SizedAsciiString},
     };
+    use fuels::core::{calldata, fn_selector};
 
     #[test]
     fn get_a_fn_selector() {
@@ -54,5 +55,16 @@ mod tests {
         // ANCHOR_END: example_fn_selector_json
 
         Ok(())
+    }
+
+    #[test]
+    fn test_macros() {
+
+        let function_selector = fn_selector!(initialize_counter(u64));
+        let call_data = calldata!(42u64);
+
+        assert_eq!(vec![0, 0, 0, 0, 171, 100, 229, 242], function_selector);
+        assert_eq!(vec![0, 0, 0, 0, 0, 0, 0, 42], call_data);
+
     }
 }
