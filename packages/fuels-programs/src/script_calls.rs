@@ -183,7 +183,7 @@ where
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         let tx = self.account.add_fee_resources(tb, 0, None).await?;
-        self.cached_tx_id = Some(tx.id());
+        self.cached_tx_id = Some(tx.id(&chain_info.consensus_parameters));
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,

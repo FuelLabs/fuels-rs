@@ -549,8 +549,10 @@ where
 
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(tx.id());
         let provider = self.account.try_provider()?;
+
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(&consensus_parameters));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -781,9 +783,10 @@ impl<T: Account> MultiContractCallHandler<T> {
         &mut self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(tx.id());
+        let provider = self.account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(&consensus_parameters));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
