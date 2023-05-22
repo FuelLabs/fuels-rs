@@ -9,7 +9,6 @@ pub enum Identity {
     ContractId(ContractId),
 }
 
-
 impl Default for Identity {
     fn default() -> Self {
         Self::Address(Address::default())
