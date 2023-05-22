@@ -376,11 +376,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .await?;
 
     // Create the next commit block to be able generate the proof
-    provider
-        .client
-        .produce_blocks(1, None)
-        .await
-        .expect("Should be able to produce at least 1 block");
+    provider.produce_blocks(1, None).await?;
 
     let proof = predicate
         .try_provider()?
