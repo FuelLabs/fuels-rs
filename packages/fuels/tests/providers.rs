@@ -575,9 +575,8 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-// TODO: currently skipping this test because the testnet isn't running
-// the latest version of fuel-core. Once the testnet is updated, this test
-// should be re-enabled.
+/// This test will not work for as no endpoint supports the new `fuel-core` release yet
+/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.

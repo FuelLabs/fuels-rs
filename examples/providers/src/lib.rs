@@ -5,6 +5,7 @@ mod tests {
 
     #[tokio::test]
     /// This test will not work for as no endpoint supports the new `fuel-core` release yet
+    /// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
     #[ignore]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
