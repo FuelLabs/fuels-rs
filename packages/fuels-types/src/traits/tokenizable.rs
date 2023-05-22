@@ -157,6 +157,21 @@ impl Tokenizable for u64 {
     }
 }
 
+impl Tokenizable for u128 {
+    fn from_token(token: Token) -> Result<Self> {
+        match token {
+            Token::U128(data) => Ok(data),
+            other => Err(error!(
+                InstantiationError,
+                "Expected `u128`, got {:?}", other
+            )),
+        }
+    }
+    fn into_token(self) -> Token {
+        Token::U128(self)
+    }
+}
+
 impl Tokenizable for RawSlice {
     fn from_token(token: Token) -> Result<Self>
     where
