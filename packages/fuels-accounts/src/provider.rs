@@ -213,10 +213,7 @@ impl Provider {
         )?;
 
         let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
-        let receipts = receipts.ok_or(error!(
-            ProviderError,
-            "submitted transaction doesn't have receipts"
-        ))?;
+        let receipts = receipts.ok_or(error!(ProviderError, "Submitting transaction failed"))?;
         Self::if_failure_generate_error(&status, &receipts)?;
 
         Ok(receipts)
