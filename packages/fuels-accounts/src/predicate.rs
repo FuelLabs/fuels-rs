@@ -39,10 +39,10 @@ impl Predicate {
         self.provider.as_ref()
     }
 
-    pub fn set_provider(&mut self, provider: Provider) -> Result<&mut Self> {
+    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.address = Self::calculate_address(&self.code, &provider.consensus_parameters());
         self.provider = Some(provider);
-        Ok(self)
+        self
     }
 
     pub fn calculate_address(code: &[u8], params: &ConsensusParameters) -> Bech32Address {
