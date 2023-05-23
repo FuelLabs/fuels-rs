@@ -114,9 +114,7 @@ impl ViewOnlyAccount for Predicate {
     }
 
     fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        (self as &mut Predicate)
-            .set_provider(provider)
-            .expect("Use a provider that has the same consensus parameters")
+        (self as &mut Predicate).set_provider(provider)
     }
 }
 

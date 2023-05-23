@@ -1,4 +1,3 @@
-use fuel_core_types::fuel_types::BlockHeight;
 use fuel_tx::Output;
 use fuels::{
     prelude::*,
@@ -380,7 +379,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(2)))
+        .get_message_proof(&tx_id, &msg_id, None, 2)
         .await?
         .expect("Failed to retrieve message proof.");
 

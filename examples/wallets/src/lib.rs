@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use fuels::accounts::fuel_crypto::fuel_types::BlockHeight;
     use fuels::prelude::*;
 
     #[tokio::test]
@@ -372,7 +371,7 @@ mod tests {
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&tx_id, &msg_id, None, Some(BlockHeight::new(2)))
+            .get_message_proof(&tx_id, &msg_id, None, 2)
             .await?
             .expect("Failed to retrieve message proof.");
 

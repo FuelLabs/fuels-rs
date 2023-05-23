@@ -5,9 +5,7 @@ use fuel_tx::{
     ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
 };
-use fuel_types::{
-    bytes::padded_len_usize, Address, AssetId, BlockHeight, Bytes32, ContractId, Salt,
-};
+use fuel_types::{bytes::padded_len_usize, Address, AssetId, Bytes32, ContractId, Salt};
 
 use crate::{
     coin::Coin,
@@ -167,7 +165,7 @@ macro_rules! impl_tx_trait {
 pub struct ScriptTransactionBuilder {
     pub gas_price: u64,
     pub gas_limit: u64,
-    pub maturity: BlockHeight,
+    pub maturity: u32,
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
@@ -180,7 +178,7 @@ pub struct ScriptTransactionBuilder {
 pub struct CreateTransactionBuilder {
     pub gas_price: u64,
     pub gas_limit: u64,
-    pub maturity: BlockHeight,
+    pub maturity: u32,
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
     pub storage_slots: Vec<StorageSlot>,
@@ -199,7 +197,7 @@ impl ScriptTransactionBuilder {
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
-            self.maturity,
+            self.maturity.into(),
             self.script,
             self.script_data,
             convert_to_fuel_inputs(&self.inputs, base_offset),
@@ -322,7 +320,7 @@ impl CreateTransactionBuilder {
         FuelTransaction::create(
             self.gas_price,
             self.gas_limit,
-            self.maturity,
+            self.maturity.into(),
             self.bytecode_witness_index,
             self.salt,
             self.storage_slots,

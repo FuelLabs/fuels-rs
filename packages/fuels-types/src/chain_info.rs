@@ -1,14 +1,12 @@
 #![cfg(feature = "std")]
 
+use crate::block::Block;
 use fuel_core_client::client::schema::chain::ChainInfo as ClientChainInfo;
 use fuel_tx::ConsensusParameters;
-use fuel_types::BlockHeight;
-
-use crate::block::Block;
 
 #[derive(Debug)]
 pub struct ChainInfo {
-    pub base_chain_height: BlockHeight,
+    pub base_chain_height: u32,
     pub name: String,
     pub peer_count: i32,
     pub latest_block: Block,

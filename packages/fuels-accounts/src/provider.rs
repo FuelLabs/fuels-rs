@@ -9,7 +9,7 @@ use fuel_core_client::client::{
     FuelClient, PageDirection, PaginatedResult, PaginationRequest,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
-use fuel_types::{BlockHeight, Nonce};
+use fuel_types::Nonce;
 use fuel_vm::state::ProgramState;
 use fuels_types::{
     bech32::{Bech32Address, Bech32ContractId},
@@ -518,8 +518,8 @@ impl Provider {
         })
     }
 
-    pub async fn latest_block_height(&self) -> ProviderResult<BlockHeight> {
-        Ok(self.chain_info().await?.latest_block.header.height)
+    pub async fn latest_block_height(&self) -> ProviderResult<u32> {
+        Ok(self.chain_info().await?.latest_block.header.height.into())
     }
 
     pub async fn latest_block_time(&self) -> ProviderResult<Option<DateTime<Utc>>> {
@@ -530,11 +530,12 @@ impl Provider {
         &self,
         blocks_to_produce: u64,
         start_time: Option<DateTime<Utc>>,
-    ) -> io::Result<BlockHeight> {
+    ) -> io::Result<u32> {
         let start_time = start_time.map(|time| Tai64::from_unix(time.timestamp()).0);
         self.client
             .produce_blocks(blocks_to_produce, start_time)
             .await
+            .map(Into::into)
     }
 
     /// Get block by id.
@@ -641,11 +642,16 @@ impl Provider {
         tx_id: &str,
         message_id: &str,
         commit_block_id: Option<&str>,
-        commit_block_height: Option<BlockHeight>,
+        commit_block_height: Option<u32>,
     ) -> ProviderResult<Option<MessageProof>> {
         let proof = self
             .client
-            .message_proof(tx_id, message_id, commit_block_id, commit_block_height)
+            .message_proof(
+                tx_id,
+                message_id,
+                commit_block_id,
+                commit_block_height.map(Into::into),
+            )
             .await?
             .map(Into::into);
         Ok(proof)

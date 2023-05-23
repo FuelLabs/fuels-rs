@@ -3,7 +3,6 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::schema::block::{Block as ClientBlock, Header as ClientHeader};
 use fuel_tx::Bytes32;
-use fuel_types::BlockHeight;
 
 #[derive(Debug)]
 pub struct Header {
@@ -13,7 +12,7 @@ pub struct Header {
     pub message_receipt_count: u64,
     pub transactions_root: Bytes32,
     pub message_receipt_root: Bytes32,
-    pub height: BlockHeight,
+    pub height: u32,
     pub prev_root: Bytes32,
     pub time: Option<DateTime<Utc>>,
     pub application_hash: Bytes32,
