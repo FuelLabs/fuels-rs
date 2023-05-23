@@ -205,11 +205,11 @@ async fn can_increase_block_height() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0u32.into());
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
     provider.produce_blocks(3, None).await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3u32.into());
+    assert_eq!(provider.latest_block_height().await?, 3u32);
     // ANCHOR_END: use_produce_blocks_to_increase_block_height
     Ok(())
 }
@@ -229,13 +229,13 @@ async fn can_set_custom_block_time() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0u32.into());
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
     provider
         .produce_blocks(3, Some(Utc.timestamp_opt(100, 0).unwrap()))
         .await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3u32.into());
+    assert_eq!(provider.latest_block_height().await?, 3u32);
 
     let req = PaginationRequest {
         cursor: None,
@@ -300,14 +300,14 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         })
     };
 
-    let err = deploy_w_maturity(1u32.into())?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    let err = deploy_w_maturity(1u32)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
         Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1u32.into())?
+    deploy_w_maturity(1u32)?
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
     Ok(())
