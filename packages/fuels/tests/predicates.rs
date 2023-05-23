@@ -206,7 +206,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(1000000, 10000, 0u32.into());
+    let tx_params = TxParameters::new(1000000, 10000, 0);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
