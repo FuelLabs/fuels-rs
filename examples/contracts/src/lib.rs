@@ -146,7 +146,7 @@ mod tests {
         let tx_parameters = TxParameters::default()
             .set_gas_price(0)
             .set_gas_limit(1_000_000)
-            .set_maturity(0u32.into());
+            .set_maturity(0);
 
         let contract_id_2 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -271,7 +271,7 @@ mod tests {
         let my_tx_parameters = TxParameters::default()
             .set_gas_price(1)
             .set_gas_limit(1_000_000)
-            .set_maturity(0u32.into());
+            .set_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
