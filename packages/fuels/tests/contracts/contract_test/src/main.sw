@@ -19,12 +19,22 @@ enum State {
 }
 
 abi TestContract {
+    // ANCHOR: initialize_counter
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64;
+    // ANCHOR_END: initialize_counter
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64;
     #[storage(read)]
     fn get_counter() -> u64;
+    #[storage(write)]
+    fn set_value_multiple_complex(a: MyStruct, b: str[4]);
+    #[storage(read)]
+    fn get_str_value() -> str[4];
+    #[storage(read)]
+    fn get_bool_value() -> bool;
+    #[storage(read)]
+    fn get_value() -> u64;
     fn get(x: u64, y: u64) -> u64;
     fn get_alt(x: MyType) -> MyType;
     fn get_single(x: u64) -> u64;
@@ -37,6 +47,17 @@ abi TestContract {
 }
 
 const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
+
+storage {
+    value: u64 = 0,
+    value_str: str[4] = "none",
+    value_bool: bool = false,
+}
+
+pub struct MyStruct {
+    a: bool,
+    b: [u64; 3],
+}
 
 impl TestContract for Contract {
     // ANCHOR: msg_amount
@@ -61,6 +82,28 @@ impl TestContract for Contract {
     #[storage(read)]
     fn get_counter() -> u64 {
         read::<u64>(COUNTER_KEY, 0).unwrap_or(0)
+    }
+
+    #[storage(write)]
+    fn set_value_multiple_complex(a: MyStruct, b: str[4]) {
+        storage.value.write(a.b[1]);
+        storage.value_str.write(b);
+        storage.value_bool.write(a.a);
+    }
+
+    #[storage(read)]
+    fn get_str_value() -> str[4] {
+        storage.value_str.read()
+    }
+
+    #[storage(read)]
+    fn get_bool_value() -> bool {
+        storage.value_bool.read()
+    }
+
+    #[storage(read)]
+    fn get_value() -> u64 {
+        storage.value.read()
     }
 
     fn get(x: u64, y: u64) -> u64 {

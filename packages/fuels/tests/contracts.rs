@@ -1,8 +1,10 @@
 #[allow(unused_imports)]
 use std::future::Future;
+use std::vec;
 
 use fuels::prelude::*;
 use fuels_accounts::{predicate::Predicate, Account};
+use fuels_core::{calldata, fn_selector};
 use fuels_types::Bits256;
 
 #[tokio::test]
@@ -275,7 +277,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 606;
+    let expected_gas_used = 739;
     let expected_metered_bytes_size = 720;
     let expected_total_fee = 368;
 
@@ -1231,6 +1233,111 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     multi_call_handler
         .add_call(call_handler_1)
         .add_call(call_handler_2);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn low_level_call() -> Result<()> {
+    use fuels::types::SizedAsciiString;
+
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "MyCallerContract",
+                project = "packages/fuels/tests/contracts/low_level_caller"
+            ),
+            Contract(
+                name = "MyTargetContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            ),
+        ),
+        Deploy(
+            name = "caller_contract_instance",
+            contract = "MyCallerContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "target_contract_instance",
+            contract = "MyTargetContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let function_selector = fn_selector!(initialize_counter(u64));
+    let call_data = calldata!(42u64);
+
+    caller_contract_instance
+        .methods()
+        .call_low_level_call(
+            target_contract_instance.id().clone().into(),
+            Bytes(function_selector),
+            Bytes(call_data),
+            true,
+        )
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    let response = target_contract_instance
+        .methods()
+        .get_counter()
+        .call()
+        .await?;
+    assert_eq!(response.value, 42);
+
+    let function_selector =
+        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let call_data = calldata!(
+        MyStruct {
+            a: true,
+            b: [1, 2, 3],
+        },
+        SizedAsciiString::<4>::try_from("fuel").unwrap()
+    );
+
+    caller_contract_instance
+        .methods()
+        .call_low_level_call(
+            target_contract_instance.id().clone().into(),
+            Bytes(function_selector),
+            Bytes(call_data),
+            false,
+        )
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    let result_uint = target_contract_instance
+        .methods()
+        .get_counter()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    let result_bool = target_contract_instance
+        .methods()
+        .get_bool_value()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    let result_str = target_contract_instance
+        .methods()
+        .get_str_value()
+        .call()
+        .await
+        .unwrap()
+        .value;
+
+    assert_eq!(result_uint, 42);
+    assert!(result_bool);
+    assert_eq!(result_str, "fuel");
 
     Ok(())
 }
