@@ -5,7 +5,6 @@ use std::vec;
 
 use fuels::prelude::*;
 use fuels_accounts::{predicate::Predicate, Account};
-use fuels_core::{calldata, fn_selector};
 use fuels_types::Bits256;
 
 #[tokio::test]
@@ -399,9 +398,9 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .tx_params(TxParameters::default().set_maturity(maturity))
     };
 
-    call_w_maturity(1u32.into()).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(3u32.into()).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3u32).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
     Ok(())
 }
 
@@ -1216,109 +1215,110 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-// TODO: re-enable once this is merged in Sway so we can unify the `std` lib dependency
-#[ignore]
-async fn low_level_call() -> Result<()> {
-    use fuels::types::SizedAsciiString;
-
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(
-            Contract(
-                name = "MyCallerContract",
-                project = "packages/fuels/tests/contracts/low_level_caller"
-            ),
-            Contract(
-                name = "MyTargetContract",
-                project = "packages/fuels/tests/contracts/contract_test"
-            ),
-        ),
-        Deploy(
-            name = "caller_contract_instance",
-            contract = "MyCallerContract",
-            wallet = "wallet"
-        ),
-        Deploy(
-            name = "target_contract_instance",
-            contract = "MyTargetContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let function_selector = fn_selector!(initialize_counter(u64));
-    let call_data = calldata!(42u64);
-
-    caller_contract_instance
-        .methods()
-        .call_low_level_call(
-            target_contract_instance.id().clone().into(),
-            Bytes(function_selector),
-            Bytes(call_data),
-            true,
-        )
-        .estimate_tx_dependencies(None)
-        .await?
-        .call()
-        .await?;
-
-    let response = target_contract_instance
-        .methods()
-        .get_counter()
-        .call()
-        .await?;
-    assert_eq!(response.value, 42);
-
-    let function_selector =
-        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
-    let call_data = calldata!(
-        MyStruct {
-            a: true,
-            b: [1, 2, 3],
-        },
-        SizedAsciiString::<4>::try_from("fuel").unwrap()
-    );
-
-    caller_contract_instance
-        .methods()
-        .call_low_level_call(
-            target_contract_instance.id().clone().into(),
-            Bytes(function_selector),
-            Bytes(call_data),
-            false,
-        )
-        .estimate_tx_dependencies(None)
-        .await?
-        .call()
-        .await?;
-
-    let result_uint = target_contract_instance
-        .methods()
-        .get_counter()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    let result_bool = target_contract_instance
-        .methods()
-        .get_bool_value()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    let result_str = target_contract_instance
-        .methods()
-        .get_str_value()
-        .call()
-        .await
-        .unwrap()
-        .value;
-
-    assert_eq!(result_uint, 42);
-    assert!(result_bool);
-    assert_eq!(result_str, "fuel");
-
-    Ok(())
-}
+// #[tokio::test]
+// // TODO: re-enable once this is merged in Sway so we can unify the `std` lib dependency
+// #[allow(clippy::all)]
+// #[ignore]
+// async fn low_level_call() -> Result<()> {
+//     use fuels::types::SizedAsciiString;
+//
+//     setup_program_test!(
+//         Wallets("wallet"),
+//         Abigen(
+//             Contract(
+//                 name = "MyCallerContract",
+//                 project = "packages/fuels/tests/contracts/low_level_caller"
+//             ),
+//             Contract(
+//                 name = "MyTargetContract",
+//                 project = "packages/fuels/tests/contracts/contract_test"
+//             ),
+//         ),
+//         Deploy(
+//             name = "caller_contract_instance",
+//             contract = "MyCallerContract",
+//             wallet = "wallet"
+//         ),
+//         Deploy(
+//             name = "target_contract_instance",
+//             contract = "MyTargetContract",
+//             wallet = "wallet"
+//         ),
+//     );
+//
+//     let function_selector = fn_selector!(initialize_counter(u64));
+//     let call_data = calldata!(42u64);
+//
+//     caller_contract_instance
+//         .methods()
+//         .call_low_level_call(
+//             target_contract_instance.id().clone().into(),
+//             Bytes(function_selector),
+//             Bytes(call_data),
+//             true,
+//         )
+//         .estimate_tx_dependencies(None)
+//         .await?
+//         .call()
+//         .await?;
+//
+//     let response = target_contract_instance
+//         .methods()
+//         .get_counter()
+//         .call()
+//         .await?;
+//     assert_eq!(response.value, 42);
+//
+//     let function_selector =
+//         fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+//     let call_data = calldata!(
+//         MyStruct {
+//             a: true,
+//             b: [1, 2, 3],
+//         },
+//         SizedAsciiString::<4>::try_from("fuel").unwrap()
+//     );
+//
+//     caller_contract_instance
+//         .methods()
+//         .call_low_level_call(
+//             target_contract_instance.id().clone().into(),
+//             Bytes(function_selector),
+//             Bytes(call_data),
+//             false,
+//         )
+//         .estimate_tx_dependencies(None)
+//         .await?
+//         .call()
+//         .await?;
+//
+//     let result_uint = target_contract_instance
+//         .methods()
+//         .get_counter()
+//         .call()
+//         .await
+//         .unwrap()
+//         .value;
+//
+//     let result_bool = target_contract_instance
+//         .methods()
+//         .get_bool_value()
+//         .call()
+//         .await
+//         .unwrap()
+//         .value;
+//
+//     let result_str = target_contract_instance
+//         .methods()
+//         .get_str_value()
+//         .call()
+//         .await
+//         .unwrap()
+//         .value;
+//
+//     assert_eq!(result_uint, 42);
+//     assert!(result_bool);
+//     assert_eq!(result_str, "fuel");
+//
+//     Ok(())
+// }

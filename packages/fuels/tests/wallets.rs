@@ -243,7 +243,7 @@ async fn send_transfer_transactions() -> Result<()> {
     // Configure transaction parameters.
     let gas_price = 1;
     let gas_limit = 500_000;
-    let maturity = 0u32.into();
+    let maturity = 0u32;
 
     let tx_params = TxParameters::new(gas_price, gas_limit, maturity);
 
