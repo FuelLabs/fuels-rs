@@ -1,0 +1,8 @@
+[project]
+authors = ["lulwat"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "block_timestamp"
+
+[dependencies]
+std = { git = "https://github.com/FuelLabs/sway", branch = "feature/fuel-core-0.18" }
