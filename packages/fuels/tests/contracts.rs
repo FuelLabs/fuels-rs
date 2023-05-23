@@ -1217,6 +1217,8 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
+// TODO: re-enable once this is merged in Sway so we can unify the `std` lib dependency
+#[ignore]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
