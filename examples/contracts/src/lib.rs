@@ -703,6 +703,8 @@ mod tests {
     }
 
     #[tokio::test]
+    // TODO: re-enable once this is merged in Sway so we can unify the `std` lib dependency
+    #[ignore]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
             core::{calldata, fn_selector},
