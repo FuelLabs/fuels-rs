@@ -81,7 +81,7 @@ pub mod prelude {
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
             },
-            logs::{LogDecoder, LogId},
+            logs::{LogDecoder, LogId, LogResult},
         },
         test_helpers::*,
     };
