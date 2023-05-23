@@ -348,13 +348,13 @@ mod tests {
             manual_blocks_enabled: true,
             ..Config::local_node()
         };
-        let mut wallets = launch_custom_provider_and_get_wallets(
+        let wallets = launch_custom_provider_and_get_wallets(
             WalletsConfig::new(Some(1), None, None),
             Some(config),
             None,
         )
         .await;
-        let wallet = wallets.pop().unwrap();
+        let wallet = wallets.first().unwrap();
 
         let amount = 1000;
         let base_layer_address =
