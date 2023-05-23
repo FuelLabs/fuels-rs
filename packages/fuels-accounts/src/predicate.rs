@@ -50,9 +50,9 @@ impl Predicate {
     }
 
     fn consensus_parameters(&self) -> ConsensusParameters {
-        match &self.provider() {
-            None => ConsensusParameters::default(),
-            Some(p) => p.consensus_parameters(),
+        self.provider()
+            .map(|p| p.consensus_parameters())
+            .unwrap_or_default()
         }
     }
 
