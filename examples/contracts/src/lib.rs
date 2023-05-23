@@ -107,7 +107,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 505);
+        assert_eq!(transaction_cost.gas_used, 616);
 
         Ok(())
     }
@@ -676,7 +676,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 790);
+        assert_eq!(transaction_cost.gas_used, 1003);
 
         Ok(())
     }
@@ -746,6 +746,94 @@ mod tests {
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn low_level_call_example() -> Result<()> {
+        use fuels::{
+            core::{calldata, fn_selector},
+            prelude::*,
+            types::SizedAsciiString,
+        };
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(
+                Contract(
+                    name = "MyCallerContract",
+                    project = "packages/fuels/tests/contracts/low_level_caller"
+                ),
+                Contract(
+                    name = "MyTargetContract",
+                    project = "packages/fuels/tests/contracts/contract_test"
+                ),
+            ),
+            Deploy(
+                name = "caller_contract_instance",
+                contract = "MyCallerContract",
+                wallet = "wallet"
+            ),
+            Deploy(
+                name = "target_contract_instance",
+                contract = "MyTargetContract",
+                wallet = "wallet"
+            ),
+        );
+
+        // ANCHOR: low_level_call
+        let function_selector =
+            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+        let call_data = calldata!(
+            MyStruct {
+                a: true,
+                b: [1, 2, 3],
+            },
+            SizedAsciiString::<4>::try_from("fuel").unwrap()
+        );
+
+        caller_contract_instance
+            .methods()
+            .call_low_level_call(
+                target_contract_instance.id().clone().into(),
+                Bytes(function_selector),
+                Bytes(call_data),
+                false,
+            )
+            .estimate_tx_dependencies(None)
+            .await?
+            .call()
+            .await?;
+        // ANCHOR_END: low_level_call
+
+        let result_uint = target_contract_instance
+            .methods()
+            .get_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_bool = target_contract_instance
+            .methods()
+            .get_bool_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_str = target_contract_instance
+            .methods()
+            .get_str_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        assert_eq!(result_uint, 2);
+        assert!(result_bool);
+        assert_eq!(result_str, "fuel");
 
         Ok(())
     }

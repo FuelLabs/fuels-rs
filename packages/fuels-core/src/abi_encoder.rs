@@ -33,6 +33,7 @@ impl ABIEncoder {
             Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
             Token::U32(arg_u32) => vec![Self::encode_u32(*arg_u32)],
             Token::U64(arg_u64) => vec![Self::encode_u64(*arg_u64)],
+            Token::U128(arg_u128) => vec![Self::encode_u128(*arg_u128)],
             Token::Bool(arg_bool) => vec![Self::encode_bool(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
@@ -75,6 +76,10 @@ impl ABIEncoder {
 
     fn encode_bool(arg_bool: bool) -> Data {
         Data::Inline(pad_u8(u8::from(arg_bool)).to_vec())
+    }
+
+    fn encode_u128(arg_u128: u128) -> Data {
+        Data::Inline(arg_u128.to_be_bytes().to_vec())
     }
 
     fn encode_u64(arg_u64: u64) -> Data {

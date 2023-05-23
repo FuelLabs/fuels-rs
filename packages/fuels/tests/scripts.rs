@@ -17,11 +17,8 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
     let call_handler = contract_instance.methods().initialize_counter(42);
 
-    let tx = call_handler.build_tx().await?;
-    let provider = wallet.try_provider()?;
-    let receipts = provider.send_transaction(&tx).await?;
-
-    let response = call_handler.get_response(receipts)?;
+    let response = call_handler.call().await?;
+    assert!(response.tx_id.is_some());
     assert_eq!(response.value, 42);
     Ok(())
 }
@@ -51,13 +48,9 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let provider = wallet.try_provider()?;
-    let tx = multi_call_handler.build_tx().await?;
-    let receipts = provider.send_transaction(&tx).await?;
-    let (counter, array) = multi_call_handler
-        .get_response::<(u64, [u64; 2])>(receipts)?
-        .value;
-
+    let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
+    assert!(response.tx_id.is_some());
+    let (counter, array) = response.value;
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
     Ok(())
@@ -86,6 +79,37 @@ async fn main_function_arguments() -> Result<()> {
     let expected = Bimbam { val: 2190 };
     assert_eq!(result.value, expected);
     // ANCHOR_END: script_with_arguments
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/basic_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let tolerance = 0.0;
+
+    let a = 4u64;
+    let b = 2u32;
+    let estimated_gas_used = script_instance
+        .main(a, b)
+        .estimate_transaction_cost(Some(tolerance))
+        .await?
+        .gas_used;
+
+    let gas_used = script_instance.main(a, b).call().await?.gas_used;
+
+    assert_eq!(estimated_gas_used, gas_used);
     Ok(())
 }
 
