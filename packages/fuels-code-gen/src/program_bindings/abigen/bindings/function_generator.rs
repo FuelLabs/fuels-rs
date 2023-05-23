@@ -6,7 +6,7 @@ use crate::{
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
-        utils::{find_into_impl_type, param_type_calls, Component},
+        utils::{get_equivalent_bech32_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
@@ -70,7 +70,7 @@ impl FunctionGenerator {
             let field_name = &component.field_name;
             let field_type = &component.field_type;
 
-            find_into_impl_type(&field_type.type_name.to_string())
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
                 .map(|_| {
                     quote! {#field_type::from(#field_name.into())}
                 })
@@ -118,9 +118,8 @@ impl From<&FunctionGenerator> for TokenStream {
             let name = &component.field_name;
             let field_type = &component.field_type;
 
-            find_into_impl_type(&field_type.type_name.to_string())
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
                 .map(|new_type| {
-                    let new_type = new_type;
                     quote! { #name: impl ::core::convert::Into<#new_type> }
                 })
                 .unwrap_or(quote! { #name: #field_type })
