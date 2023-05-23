@@ -1271,7 +1271,7 @@ async fn low_level_call() -> Result<()> {
     caller_contract_instance
         .methods()
         .call_low_level_call(
-            target_contract_instance.id().clone().into(),
+            target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
             true,
@@ -1301,7 +1301,7 @@ async fn low_level_call() -> Result<()> {
     caller_contract_instance
         .methods()
         .call_low_level_call(
-            target_contract_instance.id().clone().into(),
+            target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
             false,
