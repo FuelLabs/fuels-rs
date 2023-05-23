@@ -30,7 +30,7 @@ impl From<ClientHeader> for Header {
             message_receipt_count: client_header.message_receipt_count.0,
             transactions_root: client_header.transactions_root.0 .0,
             message_receipt_root: client_header.message_receipt_root.0 .0,
-            height: client_header.height.0.into(),
+            height: client_header.height.0,
             prev_root: client_header.prev_root.0 .0,
             time,
             application_hash: client_header.application_hash.0 .0,

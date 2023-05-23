@@ -28,10 +28,10 @@ impl From<ClientCoin> for Coin {
     fn from(coin: ClientCoin) -> Self {
         Self {
             amount: coin.amount.0,
-            block_created: coin.block_created.0.into(),
+            block_created: coin.block_created.0,
             asset_id: coin.asset_id.0 .0,
             utxo_id: coin.utxo_id.0 .0,
-            maturity: coin.maturity.0.into(),
+            maturity: coin.maturity.0,
             owner: coin.owner.0 .0.into(),
             status: CoinStatus::Unspent,
         }

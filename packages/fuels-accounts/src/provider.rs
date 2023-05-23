@@ -519,7 +519,7 @@ impl Provider {
     }
 
     pub async fn latest_block_height(&self) -> ProviderResult<u32> {
-        Ok(self.chain_info().await?.latest_block.header.height.into())
+        Ok(self.chain_info().await?.latest_block.header.height)
     }
 
     pub async fn latest_block_time(&self) -> ProviderResult<Option<DateTime<Utc>>> {
