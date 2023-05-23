@@ -76,6 +76,24 @@ fn resolve_arg(arg: &ParamType) -> String {
     }
 }
 
+#[macro_export]
+macro_rules! fn_selector {
+    ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
+         ::fuels::core::function_selector::resolve_fn_selector(stringify!($fn_name), &[$( <$fn_arg as ::fuels::types::traits::Parameterize>::param_type() ),*]).to_vec()
+    }
+}
+
+pub use fn_selector;
+
+#[macro_export]
+macro_rules! calldata {
+    ( $($arg: expr),* ) => {
+        ::fuels::core::abi_encoder::ABIEncoder::encode(&[$(::fuels::types::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
+    }
+}
+
+pub use calldata;
+
 #[cfg(test)]
 mod tests {
     use fuels_types::enum_variants::EnumVariants;
