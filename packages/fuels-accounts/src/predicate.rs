@@ -53,7 +53,6 @@ impl Predicate {
         self.provider()
             .map(|p| p.consensus_parameters())
             .unwrap_or_default()
-        }
     }
 
     /// Uses default `ConsensusParameters`
