@@ -668,10 +668,10 @@ mod test {
             .map(|asset_id| {
                 let coin = CoinType::Coin(Coin {
                     amount: 100,
-                    block_created: 0u32.into(),
+                    block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u32.into(),
+                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
