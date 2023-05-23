@@ -106,6 +106,12 @@ impl Parameterize for u64 {
     }
 }
 
+impl Parameterize for u128 {
+    fn param_type() -> ParamType {
+        ParamType::U128
+    }
+}
+
 impl<T> Parameterize for Option<T>
 where
     T: Parameterize,

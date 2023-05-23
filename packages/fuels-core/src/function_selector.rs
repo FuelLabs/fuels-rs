@@ -26,6 +26,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::U16 => "u16".to_owned(),
         ParamType::U32 => "u32".to_owned(),
         ParamType::U64 => "u64".to_owned(),
+        ParamType::U128 => "s(u64,u64)".to_owned(),
         ParamType::Bool => "bool".to_owned(),
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
@@ -74,6 +75,24 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::Bytes => "s(s(rawptr,u64),u64)".to_string(),
     }
 }
+
+#[macro_export]
+macro_rules! fn_selector {
+    ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
+         ::fuels::core::function_selector::resolve_fn_selector(stringify!($fn_name), &[$( <$fn_arg as ::fuels::types::traits::Parameterize>::param_type() ),*]).to_vec()
+    }
+}
+
+pub use fn_selector;
+
+#[macro_export]
+macro_rules! calldata {
+    ( $($arg: expr),* ) => {
+        ::fuels::core::abi_encoder::ABIEncoder::encode(&[$(::fuels::types::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
+    }
+}
+
+pub use calldata;
 
 #[cfg(test)]
 mod tests {

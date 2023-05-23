@@ -11,6 +11,9 @@ use fuels_types::{
 
 use crate::Tokenizable;
 
+const U128_BYTES_SIZE: usize = 2 * WORD_SIZE;
+const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
+
 #[derive(Debug, Clone)]
 struct DecodeResult {
     token: Token,
@@ -63,6 +66,7 @@ impl ABIDecoder {
             ParamType::U16 => Self::decode_u16(bytes),
             ParamType::U32 => Self::decode_u32(bytes),
             ParamType::U64 => Self::decode_u64(bytes),
+            ParamType::U128 => Self::decode_u128(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
             ParamType::RawSlice => Self::decode_raw_slice(bytes),
@@ -172,7 +176,7 @@ impl ABIDecoder {
     fn decode_b256(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::B256(*peek_fixed::<32>(bytes)?),
-            bytes_read: 32,
+            bytes_read: B256_BYTES_SIZE,
         })
     }
 
@@ -182,37 +186,44 @@ impl ABIDecoder {
 
         let result = DecodeResult {
             token: Token::Bool(b),
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         };
 
         Ok(result)
     }
 
+    fn decode_u128(bytes: &[u8]) -> Result<DecodeResult> {
+        Ok(DecodeResult {
+            token: Token::U128(peek_u128(bytes)?),
+            bytes_read: U128_BYTES_SIZE,
+        })
+    }
+
     fn decode_u64(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::U64(peek_u64(bytes)?),
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
     fn decode_u32(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::U32(peek_u32(bytes)?),
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
     fn decode_u16(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::U16(peek_u16(bytes)?),
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
     fn decode_u8(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::U8(peek_u8(bytes)?),
-            bytes_read: 8,
+            bytes_read: WORD_SIZE,
         })
     }
 
@@ -266,6 +277,11 @@ impl ABIDecoder {
             Self::decode_param(selected_variant, bytes)
         }
     }
+}
+
+fn peek_u128(bytes: &[u8]) -> Result<u128> {
+    let slice = peek_fixed::<U128_BYTES_SIZE>(bytes)?;
+    Ok(u128::from_be_bytes(*slice))
 }
 
 fn peek_u64(bytes: &[u8]) -> Result<u64> {

@@ -26,4 +26,8 @@ pub mod unresolved_bytes;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
 
+pub mod output {
+    pub use fuel_tx::Output;
+}
+
 pub use crate::core::*;
