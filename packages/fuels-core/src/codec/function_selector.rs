@@ -89,6 +89,28 @@ pub(crate) fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
     output
 }
 
+#[macro_export]
+macro_rules! fn_selector {
+    ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
+         ::fuels::core::codec::resolve_fn_selector(
+                 stringify!($fn_name),
+                 &[$( <$fn_arg as ::fuels::core::traits::Parameterize>::param_type() ),*]
+             )
+             .to_vec()
+    }
+}
+
+pub use fn_selector;
+
+#[macro_export]
+macro_rules! calldata {
+    ( $($arg: expr),* ) => {
+        ::fuels::core::codec::ABIEncoder::encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
+    }
+}
+
+pub use calldata;
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -423,6 +423,8 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
@@ -575,7 +577,7 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>> {
+    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -584,14 +586,15 @@ where
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
-    pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
+        self.cached_tx_id = Some(tx.id());
         let provider = self.account.try_provider()?;
 
         let receipts = if simulate {
@@ -667,6 +670,7 @@ where
             D::from_token(token)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         ))
     }
 }
@@ -723,6 +727,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     Ok(ContractCallHandler {
         contract_call,
         tx_parameters,
+        cached_tx_id: None,
         account,
         datatype: PhantomData,
         log_decoder,
@@ -758,6 +763,8 @@ pub struct MultiContractCallHandler<T: Account> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
 }
 
@@ -766,6 +773,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
+            cached_tx_id: None,
             account,
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
@@ -801,7 +809,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -812,18 +820,19 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
     /// [call]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
-        &self,
+        &mut self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
+        self.cached_tx_id = Some(tx.id());
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -930,6 +939,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             D::from_token(tokens_as_tuple)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         );
 
         Ok(response)
