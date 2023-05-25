@@ -1,6 +1,7 @@
+use std::time::Duration;
 use std::{iter, str::FromStr, vec};
 
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
     accounts::fuel_crypto::SecretKey,
@@ -10,7 +11,7 @@ use fuels::{
     types::{block::Block, errors::error, message::Message},
 };
 use fuels_accounts::Account;
-use fuels_types::resource::Resource;
+use fuels_types::coin_type::CoinType;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -112,7 +113,7 @@ async fn test_input_message() -> Result<()> {
         &Bech32Address::default(),
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
-        0,
+        0.into(),
         vec![1, 2],
     )];
 
@@ -156,7 +157,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         },
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
-        0,
+        0.into(),
         vec![],
     );
 
@@ -204,11 +205,11 @@ async fn can_increase_block_height() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
     provider.produce_blocks(3, None).await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3);
+    assert_eq!(provider.latest_block_height().await?, 3u32);
     // ANCHOR_END: use_produce_blocks_to_increase_block_height
     Ok(())
 }
@@ -218,6 +219,9 @@ async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        block_production: Trigger::Interval {
+            block_time: Duration::from_secs(10),
+        },
         ..Config::local_node()
     };
     let wallets =
@@ -225,15 +229,13 @@ async fn can_set_custom_block_time() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
-    let time = TimeParameters {
-        start_time: Utc.timestamp_opt(100, 0).unwrap(),
-        block_time_interval: Duration::seconds(10),
-    };
-    provider.produce_blocks(3, Some(time)).await?;
+    provider
+        .produce_blocks(3, Some(Utc.timestamp_opt(100, 0).unwrap()))
+        .await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3);
+    assert_eq!(provider.latest_block_height().await?, 3u32);
 
     let req = PaginationRequest {
         cursor: None,
@@ -255,11 +257,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     let since_epoch = 1676039910;
 
     let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
-    let time = TimeParameters {
-        start_time: latest_timestamp,
-        block_time_interval: Duration::seconds(1),
-    };
-    provider.produce_blocks(1, Some(time)).await?;
+    provider.produce_blocks(1, Some(latest_timestamp)).await?;
 
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
@@ -302,14 +300,14 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         })
     };
 
-    let err = deploy_w_maturity(1)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    let err = deploy_w_maturity(1u32)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
         Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1)?
+    deploy_w_maturity(1u32)?
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
     Ok(())
@@ -503,7 +501,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough resources to fit the target";
+    let expected = "Provider error: Response errors; not enough coins to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -577,9 +575,8 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-// TODO: currently skipping this test because the testnet isn't running
-// the latest version of fuel-core. Once the testnet is updated, this test
-// should be re-enabled.
+/// This test will not work for as no endpoint supports the new `fuel-core` release yet
+/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
@@ -685,7 +682,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let coin_1_utxo_id = coins[0].utxo_id;
     let coin_2_utxo_id = coins[1].utxo_id;
 
-    let message_id = message.message_id();
+    let message_nonce = message.nonce;
 
     let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
 
@@ -705,13 +702,13 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
             from: wallet.address().clone(),
             amount: coin_amount_1,
             excluded_utxos: vec![coin_2_utxo_id],
-            excluded_message_ids: vec![message_id],
+            excluded_message_nonces: vec![message_nonce],
             ..Default::default()
         };
         let resources = provider.get_spendable_resources(filter).await.unwrap();
 
         match resources.as_slice() {
-            [Resource::Coin(coin)] => {
+            [CoinType::Coin(coin)] => {
                 assert_eq!(coin.utxo_id, coin_1_utxo_id);
             }
             _ => {
@@ -728,7 +725,7 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
         &Bech32Address::default(),
         &address,
         message_amount,
-        0,
+        0.into(),
         vec![],
     )
 }

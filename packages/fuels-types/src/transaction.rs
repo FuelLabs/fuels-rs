@@ -18,24 +18,24 @@ use crate::{
 pub struct TxParameters {
     gas_price: u64,
     gas_limit: u64,
-    maturity: u64,
+    maturity: u32,
 }
 
 macro_rules! impl_setter_getter {
-    ($setter_name: ident, $field: ident) => {
-        pub fn $setter_name(mut self, $field: u64) -> Self {
+    ($setter_name: ident, $field: ident, $ty: ty) => {
+        pub fn $setter_name(mut self, $field: $ty) -> Self {
             self.$field = $field;
             self
         }
 
-        pub fn $field(&self) -> u64 {
+        pub fn $field(&self) -> $ty {
             self.$field
         }
     };
 }
 
 impl TxParameters {
-    pub fn new(gas_price: u64, gas_limit: u64, maturity: u64) -> Self {
+    pub fn new(gas_price: u64, gas_limit: u64, maturity: u32) -> Self {
         Self {
             gas_price,
             gas_limit,
@@ -43,9 +43,9 @@ impl TxParameters {
         }
     }
 
-    impl_setter_getter!(set_gas_price, gas_price);
-    impl_setter_getter!(set_gas_limit, gas_limit);
-    impl_setter_getter!(set_maturity, maturity);
+    impl_setter_getter!(set_gas_price, gas_price, u64);
+    impl_setter_getter!(set_gas_limit, gas_limit, u64);
+    impl_setter_getter!(set_maturity, maturity, u32);
 }
 
 impl Default for TxParameters {
@@ -65,15 +65,15 @@ pub trait Transaction: Into<FuelTransaction> + Send {
 
     fn check_without_signatures(
         &self,
-        block_height: u64,
+        block_height: u32,
         parameters: &ConsensusParameters,
     ) -> Result<(), Error>;
 
-    fn id(&self) -> Bytes32;
+    fn id(&self, params: &ConsensusParameters) -> Bytes32;
 
-    fn maturity(&self) -> u64;
+    fn maturity(&self) -> u32;
 
-    fn with_maturity(self, maturity: u64) -> Self;
+    fn with_maturity(self, maturity: u32) -> Self;
 
     fn gas_price(&self) -> u64;
 
@@ -136,22 +136,24 @@ macro_rules! impl_tx_wrapper {
 
             fn check_without_signatures(
                 &self,
-                block_height: u64,
+                block_height: u32,
                 parameters: &ConsensusParameters,
             ) -> Result<(), Error> {
-                Ok(self.tx.check_without_signatures(block_height, parameters)?)
+                Ok(self
+                    .tx
+                    .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn id(&self) -> Bytes32 {
-                self.tx.id()
+            fn id(&self, params: &ConsensusParameters) -> Bytes32 {
+                self.tx.id(params)
             }
 
-            fn maturity(&self) -> u64 {
-                *self.tx.maturity()
+            fn maturity(&self) -> u32 {
+                (*self.tx.maturity()).into()
             }
 
-            fn with_maturity(mut self, maturity: u64) -> Self {
-                *self.tx.maturity_mut() = maturity;
+            fn with_maturity(mut self, maturity: u32) -> Self {
+                *self.tx.maturity_mut() = maturity.into();
                 self
             }
 

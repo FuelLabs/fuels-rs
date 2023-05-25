@@ -82,8 +82,8 @@ mod tests {
         let code_path = "../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(provider.clone());
+            .with_provider(provider)
+            .with_data(predicate_data);
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
@@ -152,8 +152,8 @@ mod tests {
             "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(first_wallet.try_provider()?.clone());
+            .with_provider(first_wallet.try_provider()?.clone())
+            .with_data(predicate_data);
         // ANCHOR_END: with_predicate_data
 
         // ANCHOR: predicate_data_lock_amount

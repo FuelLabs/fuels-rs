@@ -51,9 +51,11 @@ pub mod test_helpers {
 #[cfg(feature = "std")]
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::{Config, FuelService};
+    pub use fuel_core::chain_config::ChainConfig;
+    #[cfg(feature = "fuel-core-lib")]
+    pub use fuel_core::service::{config::Trigger, Config, FuelService};
     #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::{Config, FuelService};
+    pub use fuels_test_helpers::node::{ChainConfig, Config, FuelService, Trigger};
 }
 
 /// Easy imports of frequently used
@@ -79,7 +81,7 @@ pub mod prelude {
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
             },
-            logs::{LogDecoder, LogId},
+            logs::{LogDecoder, LogId, LogResult},
         },
         test_helpers::*,
     };

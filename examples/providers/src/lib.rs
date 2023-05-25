@@ -4,6 +4,9 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
+    /// This test will not work for as no endpoint supports the new `fuel-core` release yet
+    /// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
+    #[ignore]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -11,6 +14,8 @@ mod tests {
         use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
+        // This example will not work as the testnet does not support the new version of fuel-core
+        // yet
         let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
 
         // Setup a private key

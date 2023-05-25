@@ -36,7 +36,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     tx_parameters: TxParameters,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.try_provider()?.consensus_parameters().await?;
+    let consensus_parameters = account.try_provider()?.consensus_parameters();
 
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
@@ -311,8 +311,7 @@ pub(crate) fn get_transaction_inputs_outputs(
         generate_contract_outputs(num_of_contracts),
         generate_asset_change_outputs(account.address(), asset_ids),
         generate_custom_outputs(calls),
-        extract_variable_outputs(calls),
-        extract_message_outputs(calls)
+        extract_variable_outputs(calls)
     )
     .collect();
     (inputs, outputs)
@@ -356,14 +355,6 @@ fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
         .filter_map(|call| call.variable_outputs.clone())
-        .flatten()
-        .collect()
-}
-
-fn extract_message_outputs(calls: &[ContractCall]) -> Vec<Output> {
-    calls
-        .iter()
-        .filter_map(|call| call.message_outputs.clone())
         .flatten()
         .collect()
 }
@@ -418,12 +409,9 @@ mod test {
 
     use fuels_accounts::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
+    use fuels_types::coin::CoinStatus;
     use fuels_types::{
-        bech32::Bech32ContractId,
-        coin::{Coin, CoinStatus},
-        param_types::ParamType,
-        resource::Resource,
-        Token,
+        bech32::Bech32ContractId, coin::Coin, coin_type::CoinType, param_types::ParamType, Token,
     };
     use rand::Rng;
 
@@ -441,7 +429,6 @@ mod test {
                 variable_outputs: None,
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
-                message_outputs: None,
                 is_payable: false,
                 custom_assets: Default::default(),
             }
@@ -490,7 +477,6 @@ mod test {
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: None,
-                message_outputs: None,
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
                 is_payable: false,
@@ -680,12 +666,12 @@ mod test {
         let coins = asset_ids
             .into_iter()
             .map(|asset_id| {
-                let coin = Resource::Coin(Coin {
+                let coin = CoinType::Coin(Coin {
                     amount: 100,
-                    block_created: 0,
+                    block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0,
+                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
@@ -739,32 +725,6 @@ mod test {
         let expected_outputs: HashSet<Output> = variable_outputs.into();
 
         assert_eq!(expected_outputs, actual_variable_outputs);
-    }
-
-    #[test]
-    fn message_outputs_appended_to_outputs() {
-        // given
-        let message_outputs =
-            [100, 200].map(|amount| Output::message(random_bech32_addr().into(), amount));
-
-        let calls = message_outputs
-            .iter()
-            .cloned()
-            .map(|message_output| {
-                ContractCall::new_with_random_id().with_message_outputs(vec![message_output])
-            })
-            .collect::<Vec<_>>();
-
-        let wallet = WalletUnlocked::new_random(None);
-
-        // when
-        let (_, outputs) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
-
-        // then
-        let actual_message_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
-        let expected_outputs: HashSet<Output> = message_outputs.into();
-
-        assert_eq!(expected_outputs, actual_message_outputs);
     }
 
     #[test]

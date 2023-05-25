@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
-    };
+    use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -107,7 +104,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 616);
+        assert_eq!(transaction_cost.gas_used, 625);
 
         Ok(())
     }
@@ -355,51 +352,6 @@ mod tests {
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[allow(unused_variables)]
-    async fn output_messages_test() -> Result<()> {
-        use fuels::prelude::*;
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-        ));
-
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
-        .bin",
-            LoadConfiguration::default(),
-        )?
-        .deploy(&wallet, TxParameters::default())
-        .await?;
-
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
-        // ANCHOR: message_outputs
-        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .append_message_outputs(1)
-            .call()
-            .await?;
-        // ANCHOR_END: message_outputs
-
-        // fails due to missing message output
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .call()
-            .await;
-
-        assert!(matches!(
-            response,
-            Err(Error::RevertTransactionError { .. })
-        ));
-
         Ok(())
     }
 
@@ -676,7 +628,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1003);
+        assert_eq!(transaction_cost.gas_used, 1021);
 
         Ok(())
     }
