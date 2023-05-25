@@ -24,6 +24,7 @@ fn get_test_coins_and_messages(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
+    start_nonce: u64,
 ) -> (Vec<Coin>, Vec<Message>, AssetId) {
     let asset_id = AssetId::default();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
@@ -33,8 +34,8 @@ fn get_test_coins_and_messages(
                 &Bech32Address::default(),
                 address,
                 amount,
-                i,
-                [104, 97, 108, 51, 101].to_vec(),
+                (start_nonce + i).into(),
+                vec![],
             )
         })
         .collect();
@@ -58,7 +59,7 @@ async fn setup_predicate_test(
     let mut receiver = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =
-        get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount);
+        get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
 
     coins.extend(setup_single_asset_coins(
         receiver.address(),
@@ -74,7 +75,11 @@ async fn setup_predicate_test(
         amount,
     ));
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -96,7 +101,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
+        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
 
     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
 
@@ -309,7 +314,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     assert!(contract_balances.is_empty());
 
     let amount = 300;
-    let (_tx_id, _receipts) = predicate
+    predicate
         .force_transfer_to_contract(
             &contract_id,
             amount,
@@ -369,9 +374,12 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
         .await?;
 
+    // Create the next commit block to be able generate the proof
+    provider.produce_blocks(1, None).await?;
+
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id)
+        .get_message_proof(&tx_id, &msg_id, None, Some(2))
         .await?
         .expect("Failed to retrieve message proof.");
 
@@ -411,12 +419,14 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         predicate_num_coins,
         predicate_num_messages,
         predicate_amount,
+        0,
     );
     let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
         wallet.address(),
         wallet_num_coins,
         wallet_num_messages,
         wallet_amount,
+        predicate_num_messages,
     );
 
     coins.extend(wallet_coins);
@@ -436,7 +446,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
-    let params = provider.consensus_parameters().await?;
+    let params = provider.consensus_parameters();
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
         .set_consensus_parameters(params)
         .build()?;

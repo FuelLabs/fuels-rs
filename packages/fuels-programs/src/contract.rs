@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
-use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
     StorageSlot,
@@ -310,7 +310,6 @@ pub struct ContractCall {
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
     pub variable_outputs: Option<Vec<Output>>,
-    pub message_outputs: Option<Vec<Output>>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
@@ -342,13 +341,6 @@ impl ContractCall {
         }
     }
 
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
-        ContractCall {
-            message_outputs: Some(message_outputs),
-            ..self
-        }
-    }
-
     pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
         ContractCall {
             call_parameters,
@@ -376,31 +368,10 @@ impl ContractCall {
         self.external_contracts.push(contract_id)
     }
 
-    pub fn append_message_outputs(&mut self, num: u64) {
-        let new_message_outputs = vec![
-            Output::Message {
-                recipient: Address::zeroed(),
-                amount: 0,
-            };
-            num as usize
-        ];
-
-        match self.message_outputs {
-            Some(ref mut outputs) => outputs.extend(new_message_outputs),
-            None => self.message_outputs = Some(new_message_outputs),
-        }
-    }
-
     fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
         receipts.iter().any(
             |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
         )
-    }
-
-    fn is_missing_message_output(receipts: &[Receipt]) -> bool {
-        receipts
-            .iter()
-            .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_SEND_MESSAGE_SIGNAL))
     }
 
     fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
@@ -550,19 +521,6 @@ where
         self
     }
 
-    /// Appends `num` [`fuel_tx::Output::Message`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).add_message_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Message`]: fuel_tx::Output::Message
-    pub fn append_message_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_message_outputs(num);
-        self
-    }
-
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
@@ -591,8 +549,10 @@ where
 
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(tx.id());
         let provider = self.account.try_provider()?;
+
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(&consensus_parameters));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -626,9 +586,6 @@ where
     fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
         if ContractCall::is_missing_output_variables(receipts) {
             self = self.append_variable_outputs(1)
-        }
-        if ContractCall::is_missing_message_output(receipts) {
-            self = self.append_message_outputs(1);
         }
         if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
@@ -714,7 +671,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         call_parameters,
         compute_custom_input_offset,
         variable_outputs: None,
-        message_outputs: None,
         external_contracts: vec![],
         output_param: D::param_type(),
         is_payable,
@@ -827,9 +783,10 @@ impl<T: Account> MultiContractCallHandler<T> {
         &mut self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(tx.id());
+        let provider = self.account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(&consensus_parameters));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -878,13 +835,6 @@ impl<T: Account> MultiContractCallHandler<T> {
                 .iter_mut()
                 .take(1)
                 .for_each(|call| call.append_variable_outputs(1));
-        }
-
-        if ContractCall::is_missing_message_output(receipts) {
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_message_outputs(1));
         }
 
         if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {

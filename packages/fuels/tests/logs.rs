@@ -1248,18 +1248,6 @@ async fn contract_token_ops_error_messages() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
-        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let error = contract_methods
-            .send_message(base_layer_address, amount)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_revert_containing_msg("failed to send message", error);
-    }
-    {
         let contract_id = contract_instance.contract_id().into();
         let address = wallet.address().into();
 
