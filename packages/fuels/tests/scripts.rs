@@ -17,11 +17,8 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
     let call_handler = contract_instance.methods().initialize_counter(42);
 
-    let tx = call_handler.build_tx().await?;
-    let provider = wallet.try_provider()?;
-    let receipts = provider.send_transaction(&tx).await?;
-
-    let response = call_handler.get_response(receipts)?;
+    let response = call_handler.call().await?;
+    assert!(response.tx_id.is_some());
     assert_eq!(response.value, 42);
     Ok(())
 }
@@ -51,13 +48,9 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let provider = wallet.try_provider()?;
-    let tx = multi_call_handler.build_tx().await?;
-    let receipts = provider.send_transaction(&tx).await?;
-    let (counter, array) = multi_call_handler
-        .get_response::<(u64, [u64; 2])>(receipts)?
-        .value;
-
+    let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
+    assert!(response.tx_id.is_some());
+    let (counter, array) = response.value;
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
     Ok(())
@@ -160,6 +153,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels_types::coin::Coin;
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+    let chain_config = ChainConfig {
+        transaction_parameters: consensus_parameters_config,
+        ..ChainConfig::default()
+    };
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -170,9 +167,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
+    let (fuel_client, _, consensus_parameters) =
+        setup_test_client(coins, vec![], None, Some(chain_config)).await;
+    let provider = Provider::new(fuel_client, consensus_parameters);
+    assert_eq!(consensus_parameters, consensus_parameters_config);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(

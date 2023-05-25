@@ -45,17 +45,17 @@ chrono = "0.4.24"
 elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.2.1"
-fuel-asm = "0.26"
-fuel-core = { version = "0.17", default-features = false }
-fuel-core-chain-config = { version = "0.17", default-features = false }
-fuel-core-client = { version = "0.17", default-features = false }
-fuel-core-types = { version = "0.17", default-features = false }
-fuel-crypto = "0.26"
-fuel-merkle = "0.26"
-fuel-storage = "0.26"
-fuel-tx = "0.26"
-fuel-types = { version = "0.26", default-features = false }
-fuel-vm = "0.26"
+fuel-asm = "0.31.1"
+fuel-core = { version = "0.18.1", default-features = false }
+fuel-core-chain-config = { version = "0.18.1", default-features = false }
+fuel-core-client = { version = "0.18.1", default-features = false }
+fuel-core-types = { version = "0.18.1", default-features = false }
+fuel-crypto = "0.31.1"
+fuel-merkle = "0.31.1"
+fuel-storage = "0.31.1"
+fuel-tx = "0.31.1"
+fuel-types = { version = "0.31.1", default-features = false }
+fuel-vm = "0.31.1"
 fuels = { version = "0.41.0", path = "./packages/fuels" }
 fuels-accounts = { version = "0.41.0", path = "./packages/fuels-accounts", default-features = false }
 fuels-code-gen = { version = "0.41.0", path = "./packages/fuels-code-gen", default-features = false }

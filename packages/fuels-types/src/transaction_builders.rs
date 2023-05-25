@@ -9,12 +9,12 @@ use fuel_types::{bytes::padded_len_usize, Address, AssetId, Bytes32, ContractId,
 
 use crate::{
     coin::Coin,
+    coin_type::CoinType,
     constants::{BASE_ASSET_ID, WORD_SIZE},
     errors::{Error, Result},
     input::Input,
     message::Message,
     offsets,
-    resource::Resource,
     transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
 };
 
@@ -27,11 +27,11 @@ pub trait TransactionBuilder: Send {
 
     fn check_without_signatures(
         &self,
-        block_height: u64,
+        block_height: u32,
         parameters: &ConsensusParameters,
     ) -> Result<()>;
 
-    fn set_maturity(self, maturity: u64) -> Self;
+    fn set_maturity(self, maturity: u32) -> Self;
     fn set_gas_price(self, gas_price: u64) -> Self;
     fn set_gas_limit(self, gas_limit: u64) -> Self;
     fn set_tx_params(self, tx_params: TxParameters) -> Self;
@@ -71,7 +71,7 @@ macro_rules! impl_tx_trait {
 
             fn check_without_signatures(
                 &self,
-                block_height: u64,
+                block_height: u32,
                 parameters: &ConsensusParameters,
             ) -> Result<()> {
                 Ok(self
@@ -79,11 +79,11 @@ macro_rules! impl_tx_trait {
                     .build()
                     .expect("Error in build")
                     .tx
-                    .check_without_signatures(block_height, parameters)?)
+                    .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn set_maturity(mut self, maturity: u64) -> Self {
-                self.maturity = maturity;
+            fn set_maturity(mut self, maturity: u32) -> Self {
+                self.maturity = maturity.into();
                 self
             }
 
@@ -100,7 +100,7 @@ macro_rules! impl_tx_trait {
             fn set_tx_params(self, tx_params: TxParameters) -> Self {
                 self.set_gas_limit(tx_params.gas_limit())
                     .set_gas_price(tx_params.gas_price())
-                    .set_maturity(tx_params.maturity())
+                    .set_maturity(tx_params.maturity().into())
             }
 
             fn set_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -165,7 +165,7 @@ macro_rules! impl_tx_trait {
 pub struct ScriptTransactionBuilder {
     pub gas_price: u64,
     pub gas_limit: u64,
-    pub maturity: u64,
+    pub maturity: u32,
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
@@ -178,7 +178,7 @@ pub struct ScriptTransactionBuilder {
 pub struct CreateTransactionBuilder {
     pub gas_price: u64,
     pub gas_limit: u64,
-    pub maturity: u64,
+    pub maturity: u32,
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
     pub storage_slots: Vec<StorageSlot>,
@@ -197,7 +197,7 @@ impl ScriptTransactionBuilder {
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
-            self.maturity,
+            self.maturity.into(),
             self.script,
             self.script_data,
             convert_to_fuel_inputs(&self.inputs, base_offset),
@@ -304,11 +304,7 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        let outputs = vec![
-            // when signing a transaction, recipient and amount are set to zero
-            Output::message(Address::zeroed(), 0),
-            Output::change(to, 0, BASE_ASSET_ID),
-        ];
+        let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
 
         ScriptTransactionBuilder::default()
             .set_tx_params(params)
@@ -324,7 +320,7 @@ impl CreateTransactionBuilder {
         FuelTransaction::create(
             self.gas_price,
             self.gas_limit,
-            self.maturity,
+            self.maturity.into(),
             self.bytecode_witness_index,
             self.salt,
             self.storage_slots,
@@ -391,7 +387,7 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
         .iter()
         .map(|input| match input {
             Input::ResourcePredicate {
-                resource: Resource::Coin(coin),
+                resource: CoinType::Coin(coin),
                 code,
                 data,
             } => {
@@ -403,7 +399,7 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
                 create_coin_predicate(coin.clone(), coin.asset_id, code.clone(), data)
             }
             Input::ResourcePredicate {
-                resource: Resource::Message(message),
+                resource: CoinType::Message(message),
                 code,
                 data,
             } => {
@@ -413,19 +409,19 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
                 let data = data.clone().resolve(new_offset as u64);
                 new_offset += data.len();
 
-                create_message_predicate(message.clone(), code.clone(), data)
+                create_coin_message_predicate(message.clone(), code.clone(), data)
             }
             Input::ResourceSigned {
                 resource,
                 witness_index,
             } => match resource {
-                Resource::Coin(coin) => {
+                CoinType::Coin(coin) => {
                     new_offset += offsets::coin_signed_data_offset();
                     create_coin_input(coin.clone(), *witness_index)
                 }
-                Resource::Message(message) => {
+                CoinType::Message(message) => {
                     new_offset += offsets::message_signed_data_offset(message.data.len());
-                    create_message_input(message.clone(), *witness_index)
+                    create_coin_message_input(message.clone(), *witness_index)
                 }
             },
             Input::Contract {
@@ -456,19 +452,17 @@ pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
         coin.asset_id,
         TxPointer::default(),
         witness_index,
-        0,
+        0u32.into(),
     )
 }
 
-pub fn create_message_input(message: Message, witness_index: u8) -> FuelInput {
-    FuelInput::message_signed(
-        message.message_id(),
+pub fn create_coin_message_input(message: Message, witness_index: u8) -> FuelInput {
+    FuelInput::message_coin_signed(
         message.sender.into(),
         message.recipient.into(),
         message.amount,
         message.nonce,
         witness_index,
-        message.data,
     )
 }
 
@@ -484,24 +478,22 @@ pub fn create_coin_predicate(
         coin.amount,
         asset_id,
         TxPointer::default(),
-        0,
+        0u32.into(),
         code,
         predicate_data,
     )
 }
 
-pub fn create_message_predicate(
+pub fn create_coin_message_predicate(
     message: Message,
     code: Vec<u8>,
     predicate_data: Vec<u8>,
 ) -> FuelInput {
-    FuelInput::message_predicate(
-        message.message_id(),
+    FuelInput::message_coin_predicate(
         message.sender.into(),
         message.recipient.into(),
         message.amount,
         message.nonce,
-        message.data,
         code,
         predicate_data,
     )
