@@ -139,14 +139,19 @@
                     <main>
                         <h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
-<p>First, we have to import <code>ConsensusParameters</code> from the fuels-tx crate:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::ConsensusParameters;
+<p>First, we have to import <code>ConsensusParameters</code> and <code>ChainConfig</code>:</p>
+<pre><code class="language-rust ignore">        use fuels::fuel_node::ChainConfig;
+        use fuels::tx::ConsensusParameters;
 </code></pre>
 <p>Next, we can define some values for the consensus parameters:</p>
 <pre><code class="language-rust ignore">        let consensus_parameters_config = ConsensusParameters::DEFAULT
             .with_max_gas_per_tx(1000)
             .with_gas_price_factor(10)
             .with_max_inputs(2);
+        let chain_config = ChainConfig {
+            transaction_parameters: consensus_parameters_config,
+            ..ChainConfig::default()
+        };
 </code></pre>
 <p>Before we can start a node, we probably also want to define some genesis coins and assign them to an address:</p>
 <pre><code class="language-rust ignore">        let wallet = WalletUnlocked::new_random(None);
@@ -157,17 +162,11 @@
             DEFAULT_COIN_AMOUNT,
         );
 </code></pre>
-<p>Finally, we call <code>setup_test_client()</code>, which starts a node with the given configs and returns a client:</p>
+<p>Finally, we call <code>setup_test_provider()</code>, which starts a node with the given configs and returns a
+provider attached to that node:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
-        let (client, _) = setup_test_client(
-            coins,
-            vec![],
-            Some(node_config),
-            None,
-            Some(consensus_parameters_config),
-        )
-        .await;
-        let _provider = Provider::new(client);
+        let (_provider, _bound_address) =
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
 </code></pre>
 
                     </main>

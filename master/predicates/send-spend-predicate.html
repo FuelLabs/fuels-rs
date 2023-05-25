@@ -220,8 +220,8 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         let code_path = &quot;../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(provider.clone());
+            .with_provider(provider)
+            .with_data(predicate_data);
 </code></pre>
 <p>Next, we transfer some assets from a wallet to the created predicate. We also confirm that the funds are indeed transferred.</p>
 <pre><code class="language-rust ignore">        let amount_to_predicate = 512;

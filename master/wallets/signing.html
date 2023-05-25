@@ -143,7 +143,10 @@
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&amp;mut secret_seed);
 
-        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
+        let secret = secret_seed
+            .as_slice()
+            .try_into()
+            .expect(&quot;The seed size is valid&quot;);
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -169,7 +172,7 @@
 <pre><code class="language-rust ignore">        let secret = SecretKey::from_str(
             &quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;,
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
@@ -181,7 +184,7 @@
             AssetId::from([0u8; 32]),
             TxPointer::default(),
             0,
-            0,
+            0u32.into(),
         );
 
         let output_coin = Output::coin(
@@ -195,7 +198,7 @@
         let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
-            0,
+            0u32.into(),
             hex::decode(&quot;24400000&quot;)?,
             vec![],
             vec![input_coin],
@@ -205,11 +208,14 @@
         .into();
 
         // Sign the transaction.
+        let consensus_parameters = ConsensusParameters::default();
+        let test_provider = Provider::new(FuelClient::new(&quot;test&quot;)?, consensus_parameters);
+        wallet.set_provider(test_provider);
         let signature = wallet.sign_transaction(&amp;mut tx)?;
-        let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
+        let message = Message::from_bytes(*tx.id(&amp;consensus_parameters));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;8d2d7f8d5190d9acdc07717e39173bdfb0024b1c06e70b084994440eb9bdff17e57dfdcb6b45bd36a896566054809a21dfd67c0a25344c73cf9c4d9d6a32be05&quot;)?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;

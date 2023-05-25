@@ -287,6 +287,8 @@ To build these tests, run the following command:</p>
         use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
+        // This example will not work as the testnet does not support the new version of fuel-core
+        // yet
         let provider = Provider::connect(&quot;node-beta-2.fuel.network&quot;).await.unwrap();
 
         // Setup a private key
@@ -393,7 +395,7 @@ To build these tests, run the following command:</p>
     pub asset_id: AssetId,
     pub amount: u64,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
-    pub excluded_message_ids: Vec&lt;MessageId&gt;,
+    pub excluded_message_nonces: Vec&lt;Nonce&gt;,
 }
 </code></pre>
 <p>The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the id lists respectively:</p>
@@ -483,7 +485,17 @@ To build these tests, run the following command:</p>
 
         use fuels::prelude::*;
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let config = Config {
+            manual_blocks_enabled: true,
+            ..Config::local_node()
+        };
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(1), None, None),
+            Some(config),
+            None,
+        )
+        .await;
+        let wallet = wallets.first().unwrap();
 
         let amount = 1000;
         let base_layer_address =
@@ -495,10 +507,12 @@ To build these tests, run the following command:</p>
             .withdraw_to_base_layer(&amp;base_layer_address, amount, TxParameters::default())
             .await?;
 
+        let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;
+
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&amp;tx_id, &amp;msg_id)
+            .get_message_proof(&amp;tx_id, &amp;msg_id, None, Some(2))
             .await?
             .expect(&quot;Failed to retrieve message proof.&quot;);
 
@@ -840,7 +854,10 @@ coins and coin amount</p>
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&amp;mut secret_seed);
 
-        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
+        let secret = secret_seed
+            .as_slice()
+            .try_into()
+            .expect(&quot;The seed size is valid&quot;);
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -866,7 +883,7 @@ coins and coin amount</p>
 <pre><code class="language-rust ignore">        let secret = SecretKey::from_str(
             &quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;,
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
         let input_coin = Input::coin_signed(
@@ -878,7 +895,7 @@ coins and coin amount</p>
             AssetId::from([0u8; 32]),
             TxPointer::default(),
             0,
-            0,
+            0u32.into(),
         );
 
         let output_coin = Output::coin(
@@ -892,7 +909,7 @@ coins and coin amount</p>
         let mut tx: ScriptTransaction = FuelTransaction::script(
             0,
             1000000,
-            0,
+            0u32.into(),
             hex::decode(&quot;24400000&quot;)?,
             vec![],
             vec![input_coin],
@@ -902,11 +919,14 @@ coins and coin amount</p>
         .into();
 
         // Sign the transaction.
+        let consensus_parameters = ConsensusParameters::default();
+        let test_provider = Provider::new(FuelClient::new(&quot;test&quot;)?, consensus_parameters);
+        wallet.set_provider(test_provider);
         let signature = wallet.sign_transaction(&amp;mut tx)?;
-        let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
+        let message = Message::from_bytes(*tx.id(&amp;consensus_parameters));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;8d2d7f8d5190d9acdc07717e39173bdfb0024b1c06e70b084994440eb9bdff17e57dfdcb6b45bd36a896566054809a21dfd67c0a25344c73cf9c4d9d6a32be05&quot;)?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;
@@ -1602,7 +1622,7 @@ half-word   byte   op                raw           notes
 <!-- tx_params_default:example:end -->
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
 pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
-pub const DEFAULT_MATURITY: u64 = 0;
+pub const DEFAULT_MATURITY: u32 = 0;
 </code></pre>
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
@@ -1832,18 +1852,6 @@ let is_error = response.is_err();
 <blockquote>
 <p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 </blockquote>
-<h1 id="output-messages"><a class="header" href="#output-messages">Output messages</a></h1>
-<p>Similarly, when your contract transfers messages, the underlying transaction has to have the appropriate number of <a href="https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputmessage">output messages</a>. </p>
-<p>Output messages can be added to a contract call by chaining <code>append_output_messages(amount)</code>:</p>
-<pre><code class="language-rust ignore">        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .append_message_outputs(1)
-            .call()
-            .await?;
-</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-only-calls"><a class="header" href="#read-only-calls">Read-only calls</a></h1>
 <!-- This section should explain read-only calls  -->
 <!-- read_only:example:start -->
@@ -2197,8 +2205,8 @@ fn main(a: u32, b: u64) -&gt; bool {
             &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(first_wallet.try_provider()?.clone());
+            .with_provider(first_wallet.try_provider()?.clone())
+            .with_data(predicate_data);
 </code></pre>
 <p>Next, we lock some assets in this predicate using the first wallet:</p>
 <pre><code class="language-rust ignore">        // First wallet transfers amount to predicate.
@@ -2370,8 +2378,8 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         let code_path = &quot;../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(provider.clone());
+            .with_provider(provider)
+            .with_data(predicate_data);
 </code></pre>
 <p>Next, we transfer some assets from a wallet to the created predicate. We also confirm that the funds are indeed transferred.</p>
 <pre><code class="language-rust ignore">        let amount_to_predicate = 512;
@@ -3017,23 +3025,18 @@ should point to root of the <code>forc</code> project.</p>
     let wallet = &amp;wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
     provider.produce_blocks(3, None).await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3);
+    assert_eq!(provider.latest_block_height().await?, 3u32);
 </code></pre>
-<p>You can also set a custom block time by providing <code>TimeParameters</code> as the second, optional argument. <code>TimeParameters</code> is defined as:</p>
-<pre><code class="language-rust ignore">pub struct TimeParameters {
-    // The time to set on the first block
-    pub start_time: DateTime&lt;Utc&gt;,
-    // The time interval between subsequent blocks
-    pub block_time_interval: Duration,
-}
-</code></pre>
-<p>And here is an example:</p>
+<p>You can also set a custom block time as the second, optional argument. Here is an example:</p>
 <pre><code class="language-rust ignore">    let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        block_production: Trigger::Interval {
+            block_time: Duration::from_secs(10),
+        },
         ..Config::local_node()
     };
     let wallets =
@@ -3041,15 +3044,13 @@ should point to root of the <code>forc</code> project.</p>
     let wallet = &amp;wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
-    let time = TimeParameters {
-        start_time: Utc.timestamp_opt(100, 0).unwrap(),
-        block_time_interval: Duration::seconds(10),
-    };
-    provider.produce_blocks(3, Some(time)).await?;
+    provider
+        .produce_blocks(3, Some(Utc.timestamp_opt(100, 0).unwrap()))
+        .await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3);
+    assert_eq!(provider.latest_block_height().await?, 3u32);
 
     let req = PaginationRequest {
         cursor: None,
@@ -3069,14 +3070,19 @@ should point to root of the <code>forc</code> project.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
-<p>First, we have to import <code>ConsensusParameters</code> from the fuels-tx crate:</p>
-<pre><code class="language-rust ignore">        use fuels::tx::ConsensusParameters;
+<p>First, we have to import <code>ConsensusParameters</code> and <code>ChainConfig</code>:</p>
+<pre><code class="language-rust ignore">        use fuels::fuel_node::ChainConfig;
+        use fuels::tx::ConsensusParameters;
 </code></pre>
 <p>Next, we can define some values for the consensus parameters:</p>
 <pre><code class="language-rust ignore">        let consensus_parameters_config = ConsensusParameters::DEFAULT
             .with_max_gas_per_tx(1000)
             .with_gas_price_factor(10)
             .with_max_inputs(2);
+        let chain_config = ChainConfig {
+            transaction_parameters: consensus_parameters_config,
+            ..ChainConfig::default()
+        };
 </code></pre>
 <p>Before we can start a node, we probably also want to define some genesis coins and assign them to an address:</p>
 <pre><code class="language-rust ignore">        let wallet = WalletUnlocked::new_random(None);
@@ -3087,17 +3093,11 @@ should point to root of the <code>forc</code> project.</p>
             DEFAULT_COIN_AMOUNT,
         );
 </code></pre>
-<p>Finally, we call <code>setup_test_client()</code>, which starts a node with the given configs and returns a client:</p>
+<p>Finally, we call <code>setup_test_provider()</code>, which starts a node with the given configs and returns a
+provider attached to that node:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
-        let (client, _) = setup_test_client(
-            coins,
-            vec![],
-            Some(node_config),
-            None,
-            Some(consensus_parameters_config),
-        )
-        .await;
-        let _provider = Provider::new(client);
+        let (_provider, _bound_address) =
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deposit-and-withdraw"><a class="header" href="#deposit-and-withdraw">Deposit and withdraw</a></h1>
 <p>Consider the following contract:</p>

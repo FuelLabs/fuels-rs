@@ -185,7 +185,7 @@
     pub asset_id: AssetId,
     pub amount: u64,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
-    pub excluded_message_ids: Vec&lt;MessageId&gt;,
+    pub excluded_message_nonces: Vec&lt;Nonce&gt;,
 }
 </code></pre>
 <p>The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the id lists respectively:</p>

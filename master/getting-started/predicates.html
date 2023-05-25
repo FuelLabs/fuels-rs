@@ -179,8 +179,8 @@ fn main(a: u32, b: u64) -&gt; bool {
             &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
-            .with_data(predicate_data)
-            .with_provider(first_wallet.try_provider()?.clone());
+            .with_provider(first_wallet.try_provider()?.clone())
+            .with_data(predicate_data);
 </code></pre>
 <p>Next, we lock some assets in this predicate using the first wallet:</p>
 <pre><code class="language-rust ignore">        // First wallet transfers amount to predicate.

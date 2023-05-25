@@ -164,18 +164,6 @@
 <blockquote>
 <p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 </blockquote>
-<h1 id="output-messages"><a class="header" href="#output-messages">Output messages</a></h1>
-<p>Similarly, when your contract transfers messages, the underlying transaction has to have the appropriate number of <a href="https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputmessage">output messages</a>. </p>
-<p>Output messages can be added to a contract call by chaining <code>append_output_messages(amount)</code>:</p>
-<pre><code class="language-rust ignore">        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .append_message_outputs(1)
-            .call()
-            .await?;
-</code></pre>
 
                     </main>
 
