@@ -1,7 +1,9 @@
 use std::iter::repeat;
 
+use fuel_tx::input::coin::CoinSigned;
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
+use fuels_test_helpers::setup_test_provider;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {
@@ -74,7 +76,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
     let inputs: Vec<Input> = inputs
         .iter()
         .map(|input| match input {
-            Input::CoinSigned {
+            Input::CoinSigned(CoinSigned {
                 owner,
                 amount,
                 asset_id,
@@ -82,7 +84,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
                 witness_index,
                 maturity,
                 ..
-            } => Input::coin_signed(
+            }) => Input::coin_signed(
                 zero_utxo_id,
                 *owner,
                 *amount,
@@ -145,7 +147,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0,
+        0u32.into(),
     )];
     let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
@@ -181,7 +183,7 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0,
+        0u32.into(),
     ))
     .take(3)
     .collect::<Vec<_>>();
@@ -240,7 +242,7 @@ async fn send_transfer_transactions() -> Result<()> {
     // Configure transaction parameters.
     let gas_price = 1;
     let gas_limit = 500_000;
-    let maturity = 0;
+    let maturity = 0u32;
 
     let tx_params = TxParameters::new(gas_price, gas_limit, maturity);
 
@@ -314,8 +316,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, NUM_COINS, AMOUNT);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
     wallet.set_provider(provider.clone());
 
     let wallet_initial_coins = wallet.get_coins(BASE_ASSET_ID).await?;
@@ -333,8 +334,7 @@ async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
 
     let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
@@ -375,8 +375,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
     let base_coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, AMOUNT);
     coins.extend(base_coins);
 
-    let (client, _) = setup_test_client(coins, vec![], None, None, None).await;
-    let provider = Provider::new(client);
+    let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
 
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);

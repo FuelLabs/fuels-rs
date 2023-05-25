@@ -104,8 +104,9 @@ pub async fn setup_test_provider(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, messages, node_config, chain_config, None).await;
-    (Provider::new(client), addr)
+    let (client, addr, consensus_parameters) =
+        setup_test_client(coins, messages, node_config, chain_config).await;
+    (Provider::new(client, consensus_parameters), addr)
 }
 
 #[cfg(test)]
@@ -113,7 +114,7 @@ mod tests {
     use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
     use fuels_core::{
         constants::BASE_ASSET_ID,
-        types::{errors::Result, resource::Resource},
+        types::{coin_type::CoinType, errors::Result},
     };
     use rand::Fill;
 
@@ -186,10 +187,10 @@ mod tests {
                 for resource in resources {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
-                        Resource::Coin(coin) => {
+                        CoinType::Coin(coin) => {
                             assert_eq!(&coin.owner, wallet.address())
                         }
-                        Resource::Message(_) => panic!("Resources contained messages."),
+                        CoinType::Message(_) => panic!("Resources contained messages."),
                     }
                 }
             }
