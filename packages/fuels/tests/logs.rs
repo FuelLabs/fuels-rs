@@ -378,19 +378,18 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         ),
     );
 
-    let contract_id: ContractId = Contract::load_from(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
+    .await?;
 
-    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let call_handler_1 = contract_caller_instance
         .methods()
-        .logs_from_external_contract(contract_id)
+        .logs_from_external_contract(contract_id.clone())
         .set_contracts(&[&contract_instance]);
 
     let call_handler_2 = contract_caller_instance2
@@ -695,15 +694,14 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         )
     );
 
-    let contract_id: ContractId = Contract::load_from(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
+    .await?;
 
-    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let expected_logs: Vec<String> = vec![
         format!("{:?}", 64),
@@ -748,7 +746,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     .await?
     .into();
 
-    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
 
     let bin_path =
         "../fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
@@ -956,15 +954,14 @@ async fn test_contract_require_from_contract() -> Result<()> {
         )
     );
 
-    let contract_id: ContractId = Contract::load_from(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
+    .await?;
 
-    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let error = contract_caller_instance
         .methods()
@@ -1009,15 +1006,14 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         ),
     );
 
-    let contract_id: ContractId = Contract::load_from(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
+    .await?;
 
-    let lib_contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let call_handler_1 = contract_instance.methods().produce_logs_values();
 
@@ -1049,15 +1045,14 @@ async fn test_script_require_from_contract() -> Result<()> {
     abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
             Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
 
-    let contract_id: ContractId = Contract::load_from(
+    let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
+    .await?;
 
-    let contract_instance = MyContract::new(contract_id.into(), wallet.clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let bin_path =
         "../fuels/tests/scripts/require_from_contract/out/debug/require_from_contract.bin";
@@ -1248,8 +1243,8 @@ async fn contract_token_ops_error_messages() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
-        let contract_id = contract_instance.contract_id().into();
-        let address = wallet.address().into();
+        let contract_id = contract_instance.contract_id();
+        let address = wallet.address();
 
         let error = contract_methods
             .transfer_coins_to_output(1_000_000, contract_id, address)

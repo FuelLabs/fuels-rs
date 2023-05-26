@@ -79,7 +79,7 @@ async fn test_contract_calling_contract() -> Result<()> {
 
     let response = contract_caller_instance
         .methods()
-        .increment_from_contracts(lib_contract_id.into(), lib_contract_id2.into(), 42)
+        .increment_from_contracts(lib_contract_id, lib_contract_id2, 42)
         // Note that the two lib_contract_instances have different types
         .set_contracts(&[&lib_contract_instance, &lib_contract_instance2])
         .call()
@@ -90,7 +90,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     // ANCHOR: external_contract
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -101,7 +101,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     // ANCHOR: external_contract_ids
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contract_ids(&[lib_contract_id.clone()])
         .call()
         .await?;
@@ -423,7 +423,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = contract_instance
         .methods()
-        .check_msg_sender(wallet.address().into())
+        .check_msg_sender(wallet.address())
         .call()
         .await?;
 
@@ -552,7 +552,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     // The first contract can be called because they were deployed on the same provider
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -561,7 +561,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
 
     let response = contract_caller_instance2
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -921,7 +921,7 @@ async fn test_contract_set_estimation() -> Result<()> {
         // Should fail due to missing external contracts
         let res = contract_caller_instance
             .methods()
-            .increment_from_contract(lib_contract_id.into(), 42)
+            .increment_from_contract(lib_contract_id, 42)
             .call()
             .await;
 
@@ -930,7 +930,7 @@ async fn test_contract_set_estimation() -> Result<()> {
 
     let res = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .estimate_tx_dependencies(None)
         .await?
         .call()
@@ -983,7 +983,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     multi_call_handler.tx_params(Default::default());
 
     (0..3).for_each(|_| {
-        let call_handler = contract_methods.increment_from_contract(lib_contract_id.into(), 42);
+        let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
         multi_call_handler.add_call(call_handler);
     });
 
@@ -1250,7 +1250,7 @@ async fn low_level_call() -> Result<()> {
     caller_contract_instance
         .methods()
         .call_low_level_call(
-            target_contract_instance.id().clone().into(),
+            target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
             true,
@@ -1280,7 +1280,7 @@ async fn low_level_call() -> Result<()> {
     caller_contract_instance
         .methods()
         .call_low_level_call(
-            target_contract_instance.id().clone().into(),
+            target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
             false,

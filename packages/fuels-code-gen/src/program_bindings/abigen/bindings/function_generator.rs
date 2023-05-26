@@ -6,7 +6,7 @@ use crate::{
     program_bindings::{
         abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
-        utils::{param_type_calls, Component},
+        utils::{get_equivalent_bech32_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
@@ -66,7 +66,16 @@ impl FunctionGenerator {
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|component| &component.field_name);
+        let arg_names = self.args.iter().map(|component| {
+            let field_name = &component.field_name;
+            let field_type = &component.field_type;
+
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
+                .map(|_| {
+                    quote! {#field_type::from(#field_name.into())}
+                })
+                .unwrap_or(quote! {#field_name})
+        });
         quote! {[#(::fuels::types::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
@@ -108,7 +117,12 @@ impl From<&FunctionGenerator> for TokenStream {
         let arg_declarations = fun.args.iter().map(|component| {
             let name = &component.field_name;
             let field_type = &component.field_type;
-            quote! { #name: #field_type }
+
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
+                .map(|new_type| {
+                    quote! { #name: impl ::core::convert::Into<#new_type> }
+                })
+                .unwrap_or(quote! { #name: #field_type })
         });
 
         let output_type = fun.output_type();
