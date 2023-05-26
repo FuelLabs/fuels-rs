@@ -4,7 +4,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::schema::block::{Block as ClientBlock, Header as ClientHeader};
 use fuel_tx::Bytes32;
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Header {
     pub id: Bytes32,
     pub da_height: u64,
@@ -38,7 +38,7 @@ impl From<ClientHeader> for Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Block {
     pub id: Bytes32,
     pub header: Header,
