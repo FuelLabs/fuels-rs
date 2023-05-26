@@ -367,7 +367,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let mut balance_response = contract_methods
-        .get_balance(contract_id.into(), contract_id.into())
+        .get_balance(contract_id, contract_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -375,7 +375,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     contract_methods.mint_coins(5_000_000).call().await?;
 
     balance_response = contract_methods
-        .get_balance(contract_id.into(), contract_id.into())
+        .get_balance(contract_id, contract_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -408,7 +408,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+        .transfer_coins_to_output(1_000_000, contract_id, address)
         .append_variable_outputs(1)
         .call()
         .await?;
