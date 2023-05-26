@@ -1491,7 +1491,7 @@ impl TestContract for Contract {
                 &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
                     .parse()
                     .expect(&quot;Invalid ID&quot;);
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
 <p>You can learn more about the Fuel SDK bech32 types <a href="contracts/../types/bech32.html">here</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-fuelvm-binary-file"><a class="header" href="#the-fuelvm-binary-file">The FuelVM binary file</a></h1>
@@ -1840,7 +1840,7 @@ let is_error = response.is_err();
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -1872,7 +1872,7 @@ let is_error = response.is_err();
 <p><code>set_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
@@ -1880,7 +1880,7 @@ let is_error = response.is_err();
 <p>If however, you do not need do decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contract_ids(&amp;[lib_contract_id.clone()])
         .call()
         .await?;
@@ -1917,7 +1917,7 @@ let is_error = response.is_err();
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -1928,7 +1928,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.set_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .set_contract_ids(&amp;[called_contract_id.into()])
             .call()
@@ -1936,7 +1936,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>But this requires you to know the contract id of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -2033,7 +2033,7 @@ let is_error = response.is_err();
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id().clone().into(),
+                target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
                 false,
@@ -2975,7 +2975,7 @@ should point to root of the <code>forc</code> project.</p>
     // The first contract can be called because they were deployed on the same provider
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
@@ -2984,7 +2984,7 @@ should point to root of the <code>forc</code> project.</p>
 
     let response = contract_caller_instance2
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
@@ -3193,7 +3193,7 @@ impl LiquidityPool for Contract {
             .set_asset_id(base_asset_id);
 
         contract_methods
-            .deposit(wallet.address().into())
+            .deposit(wallet.address())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
@@ -3208,7 +3208,7 @@ impl LiquidityPool for Contract {
             .set_asset_id(lp_asset_id);
 
         contract_methods
-            .withdraw(wallet.address().into())
+            .withdraw(wallet.address())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()

@@ -162,7 +162,7 @@
                 &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
                     .parse()
                     .expect(&quot;Invalid ID&quot;);
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
 <p>You can learn more about the Fuel SDK bech32 types <a href="../types/bech32.html">here</a>.</p>
 

@@ -255,7 +255,7 @@ should point to root of the <code>forc</code> project.</p>
     // The first contract can be called because they were deployed on the same provider
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
@@ -264,7 +264,7 @@ should point to root of the <code>forc</code> project.</p>
 
     let response = contract_caller_instance2
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;

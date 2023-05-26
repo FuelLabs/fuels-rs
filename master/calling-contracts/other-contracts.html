@@ -142,7 +142,7 @@
 <p><code>set_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
@@ -150,7 +150,7 @@
 <p>If however, you do not need do decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contract_ids(&amp;[lib_contract_id.clone()])
         .call()
         .await?;
