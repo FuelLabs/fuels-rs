@@ -1,17 +1,21 @@
-use std::time::Duration;
+use std::ops::Mul;
 use std::{iter, str::FromStr, vec};
 
-use chrono::{TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
+use fuel_core_types::fuel_asm::op::exp;
+use fuel_core_types::tai64::Tai64;
 use fuels::{
     accounts::fuel_crypto::SecretKey,
     client::{PageDirection, PaginationRequest},
     prelude::*,
+    test_helpers::Config,
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
 use fuels_accounts::Account;
 use fuels_types::coin_type::CoinType;
+use tokio::time::Duration as TokioDuration;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -217,10 +221,12 @@ async fn can_increase_block_height() -> Result<()> {
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
+    let block_time = 20u32; // seconds
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        // This is how you specify the time between blocks
         block_production: Trigger::Interval {
-            block_time: Duration::from_secs(10),
+            block_time: std::time::Duration::from_secs(block_time.into()),
         },
         ..Config::local_node()
     };
@@ -230,12 +236,21 @@ async fn can_set_custom_block_time() -> Result<()> {
     let provider = wallet.try_provider()?;
 
     assert_eq!(provider.latest_block_height().await?, 0u32);
+    let origin_block_time = provider.latest_block_time().await?.unwrap();
+    let blocks_to_produce = 3u32;
 
     provider
-        .produce_blocks(3, Some(Utc.timestamp_opt(100, 0).unwrap()))
+        .produce_blocks(blocks_to_produce.into(), None)
         .await?;
-
-    assert_eq!(provider.latest_block_height().await?, 3u32);
+    assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
+    let expected_latest_block_time = origin_block_time
+        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .unwrap();
+    assert_eq!(
+        provider.latest_block_time().await?.unwrap(),
+        expected_latest_block_time
+    );
+    // ANCHOR_END: use_produce_blocks_custom_time
 
     let req = PaginationRequest {
         cursor: None,
@@ -244,10 +259,9 @@ async fn can_set_custom_block_time() -> Result<()> {
     };
     let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 100);
-    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 110);
-    assert_eq!(blocks[3].header.time.unwrap().timestamp(), 120);
-    // ANCHOR_END: use_produce_blocks_custom_time
+    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
+    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
+    assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
     Ok(())
 }
 
