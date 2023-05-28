@@ -1,9 +1,8 @@
-use std::ops::Mul;
+use std::ops::Add;
 use std::{iter, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-use fuel_core_types::fuel_asm::op::exp;
 use fuel_core_types::tai64::Tai64;
 use fuels::{
     accounts::fuel_crypto::SecretKey,
@@ -15,7 +14,6 @@ use fuels::{
 };
 use fuels_accounts::Account;
 use fuels_types::coin_type::CoinType;
-use tokio::time::Duration as TokioDuration;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -742,4 +740,76 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
         0.into(),
         vec![],
     )
+}
+
+fn convert_logged_timestamp(r: LogResult) -> DateTime<Utc> {
+    let r = r.filter_succeeded().pop().unwrap();
+    let r_int = Tai64(r.parse::<u64>().unwrap());
+    let unix = r_int.to_unix();
+    DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
+}
+
+#[tokio::test]
+async fn test_sway_timestamp() -> Result<()> {
+    let block_time = 1u32; // seconds
+    let provider_config = Config {
+        manual_blocks_enabled: true,
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
+        ..Config::local_node()
+    };
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(1), Some(100)),
+        Some(provider_config),
+        None,
+    )
+    .await;
+    let wallet = wallets.pop().unwrap();
+    let provider = wallet.try_provider()?;
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/block_timestamp"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let origin_timestamp = provider.latest_block_time().await?.unwrap();
+    let methods = contract_instance.methods();
+
+    let response = methods.log_timestamp().call().await?;
+    let mut expected_timestamp = origin_timestamp.add(Duration::seconds(block_time as i64));
+    assert_eq!(
+        convert_logged_timestamp(response.decode_logs()),
+        expected_timestamp
+    );
+
+    let blocks_to_produce = 600;
+    provider
+        .produce_blocks(blocks_to_produce.into(), None)
+        .await?;
+
+    let response = methods.log_timestamp().call().await?;
+
+    // `produce_blocks` call
+    expected_timestamp =
+        expected_timestamp.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    // method call
+    expected_timestamp = expected_timestamp.add(Duration::seconds(block_time as i64));
+
+    assert_eq!(
+        convert_logged_timestamp(response.decode_logs()),
+        expected_timestamp
+    );
+    assert_eq!(
+        provider.latest_block_time().await?.unwrap(),
+        expected_timestamp
+    );
+    Ok(())
 }

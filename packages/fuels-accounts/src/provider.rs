@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug, io};
 
-use chrono::{DateTime, Duration, Utc};
+use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
