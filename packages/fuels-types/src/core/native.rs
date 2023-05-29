@@ -8,3 +8,9 @@ pub enum Identity {
     Address(Address),
     ContractId(ContractId),
 }
+
+impl Default for Identity {
+    fn default() -> Self {
+        Self::Address(Address::default())
+    }
+}
