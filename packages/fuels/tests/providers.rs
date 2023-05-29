@@ -749,6 +749,9 @@ fn convert_logged_timestamp(r: LogResult) -> DateTime<Utc> {
     DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
 }
 
+/// This test is here in addition to `can_set_custom_block_time` because even though this test
+/// passed, the Sway `timestamp` function didn't take into account the block time change. This
+/// was fixed and this test is here to demonstrate the fix.
 #[tokio::test]
 async fn test_sway_timestamp() -> Result<()> {
     let block_time = 1u32; // seconds
