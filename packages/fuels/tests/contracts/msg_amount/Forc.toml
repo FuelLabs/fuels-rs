@@ -5,3 +5,4 @@ license = "Apache-2.0"
 name = "msg_amount"
 
 [dependencies]
+std = { git = "https://github.com/FuelLabs/sway", branch = "feature/fuel-core-0.18" }

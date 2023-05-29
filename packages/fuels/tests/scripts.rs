@@ -153,6 +153,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels_types::coin::Coin;
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+    let chain_config = ChainConfig {
+        transaction_parameters: consensus_parameters_config,
+        ..ChainConfig::default()
+    };
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -163,9 +167,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
+    let (fuel_client, _, consensus_parameters) =
+        setup_test_client(coins, vec![], None, Some(chain_config)).await;
+    let provider = Provider::new(fuel_client, consensus_parameters);
+    assert_eq!(consensus_parameters, consensus_parameters_config);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(

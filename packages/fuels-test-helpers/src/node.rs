@@ -6,10 +6,10 @@ use std::{
     time::Duration,
 };
 
-use fuel_core_chain_config::{ChainConfig, StateConfig};
+pub use fuel_core_chain_config::ChainConfig;
+use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
-use fuel_core_types::blockchain::primitives::BlockHeight;
-use fuel_tx::ConsensusParameters;
+use fuel_types::BlockHeight;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
 use fuels_types::{
@@ -27,10 +27,25 @@ use tokio::{process::Command, sync::oneshot};
 use crate::utils::{into_coin_configs, into_message_configs};
 
 #[derive(Clone, Debug)]
+pub enum Trigger {
+    Instant,
+    Never,
+    Interval {
+        block_time: Duration,
+    },
+    Hybrid {
+        min_block_time: Duration,
+        max_tx_idle_time: Duration,
+        max_block_time: Duration,
+    },
+}
+
+#[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
     pub utxo_validation: bool,
     pub manual_blocks_enabled: bool,
+    pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
 }
@@ -41,6 +56,7 @@ impl Config {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             utxo_validation: false,
             manual_blocks_enabled: false,
+            block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
         }
@@ -147,7 +163,7 @@ impl SerializeAs<BlockHeight> for HexNumber {
     where
         S: Serializer,
     {
-        let number: u64 = (*value).into();
+        let number = u32::from(*value) as u64;
         HexNumber::serialize_as(&number, serializer)
     }
 }
@@ -158,7 +174,7 @@ impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
         D: Deserializer<'de>,
     {
         let number: u64 = HexNumber::deserialize_as(deserializer)?;
-        Ok(number.into())
+        Ok((number as u32).into())
     }
 }
 
@@ -166,7 +182,6 @@ pub fn get_node_config_json(
     coins: Vec<Coin>,
     messages: Vec<Message>,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) -> Value {
     let coin_configs = into_coin_configs(coins);
     let messages = into_message_configs(messages);
@@ -179,10 +194,6 @@ pub fn get_node_config_json(
         messages: Some(messages),
         height: None,
     });
-
-    if let Some(transaction_parameters) = consensus_parameters_config {
-        chain_config.transaction_parameters = transaction_parameters;
-    }
 
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
@@ -204,39 +215,70 @@ pub async fn new_fuel_node(
     messages: Vec<Message>,
     config: Config,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
 
     tokio::spawn(async move {
-        let config_json =
-            get_node_config_json(coins, messages, chain_config, consensus_parameters_config);
+        let config_json = get_node_config_json(coins, messages, chain_config);
         let temp_config_file = write_temp_config_file(config_json);
 
-        let port = &config.addr.port().to_string();
+        let port = config.addr.port().to_string();
         let mut args = vec![
-            "run", // `fuel-core` is now run with `fuel-core run`
-            "--ip",
-            "127.0.0.1",
-            "--port",
+            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+            "--ip".to_string(),
+            "127.0.0.1".to_string(),
+            "--port".to_string(),
             port,
-            "--db-type",
-            "in-memory",
-            "--chain",
-            temp_config_file.path().to_str().unwrap(),
+            "--db-type".to_string(),
+            "in-memory".to_string(),
+            "--chain".to_string(),
+            temp_config_file.path().to_str().unwrap().to_string(),
         ];
 
         if config.utxo_validation {
-            args.push("--utxo-validation");
+            args.push("--utxo-validation".to_string());
         }
 
         if config.manual_blocks_enabled {
-            args.push("--manual_blocks_enabled");
+            args.push("--manual_blocks_enabled".to_string());
         }
 
+        match config.block_production {
+            Trigger::Instant => {
+                args.push("--poa-instant=true".to_string());
+            }
+            Trigger::Never => {
+                args.push("--poa-instant=false".to_string());
+            }
+            Trigger::Interval { block_time } => {
+                args.push(format!(
+                    "--poa-interval-period={}ms",
+                    block_time.as_millis()
+                ));
+            }
+            Trigger::Hybrid {
+                min_block_time,
+                max_tx_idle_time,
+                max_block_time,
+            } => {
+                args.push(format!(
+                    "--poa-hybrid-min-time={}ms",
+                    min_block_time.as_millis()
+                ));
+                args.push(format!(
+                    "--poa-hybrid-idle-time={}ms",
+                    max_tx_idle_time.as_millis()
+                ));
+                args.push(format!(
+                    "--poa-hybrid-max-time={}ms",
+                    max_block_time.as_millis()
+                ));
+            }
+        };
+
         if config.vm_backtrace {
-            args.push("--vm-backtrace");
+            args.push("--vm-backtrace".to_string());
         }
 
         // Warn if there is more than one binary in PATH.
@@ -322,7 +364,6 @@ impl FuelService {
                 addr: bound_address,
                 ..config
             },
-            None,
             None,
         )
         .await;

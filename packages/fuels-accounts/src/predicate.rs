@@ -1,7 +1,7 @@
 use std::{fmt::Debug, fs};
 
-use fuel_tx::Contract;
-use fuel_types::{Address, AssetId};
+use fuel_tx::ConsensusParameters;
+use fuel_types::AssetId;
 use fuels_core::Configurables;
 use fuels_types::{
     bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
@@ -40,24 +40,32 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.address = Self::calculate_address(&self.code, &provider.consensus_parameters());
         self.provider = Some(provider);
         self
     }
 
+    pub fn calculate_address(code: &[u8], params: &ConsensusParameters) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(code, params).into()
+    }
+
+    fn consensus_parameters(&self) -> ConsensusParameters {
+        self.provider()
+            .map(|p| p.consensus_parameters())
+            .unwrap_or_default()
+    }
+
+    /// Uses default `ConsensusParameters`
     pub fn from_code(code: Vec<u8>) -> Self {
         Self {
-            address: Self::calculate_address(&code),
+            address: Self::calculate_address(&code, &ConsensusParameters::default()),
             code,
             data: Default::default(),
             provider: None,
         }
     }
 
-    fn calculate_address(code: &[u8]) -> Bech32Address {
-        let address: Address = (*Contract::root_from_code(code)).into();
-        address.into()
-    }
-
+    /// Uses default `ConsensusParameters`
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
         Ok(Self::from_code(code))
@@ -69,27 +77,29 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
+        let address = Self::calculate_address(&code, &self.consensus_parameters());
         Self {
-            data: self.data,
-            provider: self.provider,
-            ..Self::from_code(code)
+            code,
+            address,
+            ..self
         }
     }
 
-    pub fn with_provider(mut self, provider: Provider) -> Predicate {
-        self.set_provider(provider);
-        self
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address = Self::calculate_address(&self.code, &provider.consensus_parameters());
+        Self {
+            address,
+            provider: Some(provider),
+            ..self
+        }
     }
 
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-
-        Self {
-            data: self.data,
-            provider: self.provider,
-            ..Self::from_code(self.code)
-        }
+        let address = Self::calculate_address(&self.code, &self.consensus_parameters());
+        self.address = address;
+        self
     }
 }
 
