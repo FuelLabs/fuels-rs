@@ -79,6 +79,11 @@ bech32type!(Bech32Address);
 bech32type!(Bech32ContractId);
 
 // Bech32Address - Address conversion
+impl From<&Bech32Address> for Bech32Address {
+    fn from(data: &Bech32Address) -> Bech32Address {
+        data.clone()
+    }
+}
 impl From<&Bech32Address> for Address {
     fn from(data: &Bech32Address) -> Address {
         Address::new(*data.hash)
@@ -99,6 +104,11 @@ impl From<Address> for Bech32Address {
 }
 
 // Bech32ContractId - ContractId conversion
+impl From<&Bech32ContractId> for Bech32ContractId {
+    fn from(data: &Bech32ContractId) -> Bech32ContractId {
+        data.clone()
+    }
+}
 impl From<&Bech32ContractId> for ContractId {
     fn from(data: &Bech32ContractId) -> ContractId {
         ContractId::new(*data.hash)

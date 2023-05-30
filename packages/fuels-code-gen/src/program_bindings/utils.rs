@@ -155,3 +155,13 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
     })
     .collect()
 }
+
+pub(crate) fn get_equivalent_bech32_type(ttype: &str) -> Option<TokenStream> {
+    match ttype {
+        ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        ":: fuels :: types :: ContractId" => {
+            Some(quote! {::fuels::types::bech32::Bech32ContractId})
+        }
+        _ => None,
+    }
+}

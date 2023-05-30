@@ -347,7 +347,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -387,7 +387,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -399,7 +399,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .set_contract_ids(&[called_contract_id.into()])
             .call()
@@ -412,7 +412,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -499,7 +499,7 @@ mod tests {
                 "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
                     .parse()
                     .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
             // ANCHOR_END: deployed_contracts_hex
         }
 
@@ -748,7 +748,7 @@ mod tests {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id().clone().into(),
+                target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
                 false,
