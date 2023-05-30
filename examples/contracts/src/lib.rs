@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
-    };
+    use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -107,7 +104,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 616);
+        assert_eq!(transaction_cost.gas_used, 625);
 
         Ok(())
     }
@@ -350,56 +347,11 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[allow(unused_variables)]
-    async fn output_messages_test() -> Result<()> {
-        use fuels::prelude::*;
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-        ));
-
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
-        .bin",
-            LoadConfiguration::default(),
-        )?
-        .deploy(&wallet, TxParameters::default())
-        .await?;
-
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
-        // ANCHOR: message_outputs
-        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .append_message_outputs(1)
-            .call()
-            .await?;
-        // ANCHOR_END: message_outputs
-
-        // fails due to missing message output
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .call()
-            .await;
-
-        assert!(matches!(
-            response,
-            Err(Error::RevertTransactionError { .. })
-        ));
-
         Ok(())
     }
 
@@ -435,7 +387,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -447,7 +399,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .set_contract_ids(&[called_contract_id.into()])
             .call()
@@ -460,7 +412,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -547,7 +499,7 @@ mod tests {
                 "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
                     .parse()
                     .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
             // ANCHOR_END: deployed_contracts_hex
         }
 
@@ -676,7 +628,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1003);
+        assert_eq!(transaction_cost.gas_used, 1021);
 
         Ok(())
     }
@@ -796,7 +748,7 @@ mod tests {
         caller_contract_instance
             .methods()
             .call_low_level_call(
-                target_contract_instance.id().clone().into(),
+                target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
                 false,

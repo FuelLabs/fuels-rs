@@ -135,7 +135,7 @@ where
 
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
-        let consensus_parameters = self.provider.consensus_parameters().await?;
+        let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
@@ -183,7 +183,7 @@ where
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         let tx = self.account.add_fee_resources(tb, 0, None).await?;
-        self.cached_tx_id = Some(tx.id());
+        self.cached_tx_id = Some(tx.id(&chain_info.consensus_parameters));
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
