@@ -18,8 +18,8 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.18.1
   RUST_VERSION: 1.68.0
-  FORC_VERSION: 0.39.0
-  FORC_PATCH_BRANCH: "feature/fuel-core-0.18"
+  FORC_VERSION: 0.40.0
+  FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
 jobs:
