@@ -4,12 +4,13 @@ use quote::{quote, ToTokens};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
         utils::{get_equivalent_bech32_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {

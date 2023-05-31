@@ -1,7 +1,4 @@
-pub use ident::{ident, safe_ident};
+pub use fuel_abi_types::utils::{ident, safe_ident, TypePath};
 pub use source::Source;
-pub use type_path::TypePath;
 
-mod ident;
 mod source;
-mod type_path;

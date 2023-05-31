@@ -5,9 +5,10 @@ use proc_macro2::Ident;
 use crate::{
     error,
     error::{Error, Result},
-    program_bindings::abi_types::FullProgramABI,
     utils::Source,
 };
+
+use fuel_abi_types::abi::full_program::FullProgramABI;
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {
@@ -37,7 +38,7 @@ impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
 fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
-    FullProgramABI::from_json_abi(&json_abi_str)
+    FullProgramABI::from_json_abi(&json_abi_str).map_err(|e| e.into())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

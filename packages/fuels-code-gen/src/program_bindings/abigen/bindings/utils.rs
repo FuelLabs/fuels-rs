@@ -1,7 +1,6 @@
-use crate::{
-    error::{error, Result},
-    program_bindings::abi_types::FullABIFunction,
-};
+use crate::error::{error, Result};
+
+use fuel_abi_types::abi::full_program::FullABIFunction;
 
 pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunction> {
     let candidates = abi
@@ -26,7 +25,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunctio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::program_bindings::abi_types::{FullTypeApplication, FullTypeDeclaration};
+    use fuel_abi_types::abi::full_program::{FullTypeApplication, FullTypeDeclaration};
 
     #[test]
     fn correctly_extracts_the_main_fn() {

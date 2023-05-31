@@ -6,13 +6,14 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
         utils::sdk_provided_custom_types_lookup,
     },
     utils::TypePath,
 };
+
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 mod enums;
 mod structs;
