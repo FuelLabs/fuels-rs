@@ -1,15 +1,17 @@
 use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
-use fuels_types::{
-    constants::WORD_SIZE,
-    enum_variants::EnumVariants,
-    errors::{error, Error, Result},
-    param_types::ParamType,
-    StringToken, Token,
-};
 
-use crate::Tokenizable;
+use crate::{
+    constants::WORD_SIZE,
+    traits::Tokenizable,
+    types::{
+        enum_variants::EnumVariants,
+        errors::{error, Error, Result},
+        param_types::ParamType,
+        StringToken, Token,
+    },
+};
 
 const U128_BYTES_SIZE: usize = 2 * WORD_SIZE;
 const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
@@ -34,7 +36,7 @@ impl ABIDecoder {
     /// # Examples
     ///
     /// ```
-    /// use fuels_core::abi_decoder::ABIDecoder;
+    /// use fuels_core::codec::ABIDecoder;
     /// use fuels_types::{Token, param_types::ParamType};
     ///
     /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
@@ -352,8 +354,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 #[cfg(test)]
 mod tests {
     use std::vec;
-
-    use fuels_types::{enum_variants::EnumVariants, errors::Error};
 
     use super::*;
 

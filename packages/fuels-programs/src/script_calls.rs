@@ -6,16 +6,18 @@ use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_types::{
-    bech32::Bech32ContractId,
-    constants::BASE_ASSET_ID,
-    errors::Result,
-    input::Input,
+use fuels_core::{
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
-    transaction::{Transaction, TxParameters},
-    transaction_builders::ScriptTransactionBuilder,
-    unresolved_bytes::UnresolvedBytes,
+    types::{
+        bech32::Bech32ContractId,
+        errors::Result,
+        input::Input,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::ScriptTransactionBuilder,
+        unresolved_bytes::UnresolvedBytes,
+    },
+    constants::BASE_ASSET_ID,
 };
 use itertools::chain;
 

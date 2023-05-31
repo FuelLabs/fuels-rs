@@ -3,7 +3,10 @@
 use fuel_core_client::client::schema::coins::CoinType as ClientCoinType;
 use fuel_types::AssetId;
 
-use crate::{coin::Coin, constants::BASE_ASSET_ID, message::Message};
+use crate::{
+    constants::BASE_ASSET_ID,
+    types::{coin::Coin, message::Message},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {

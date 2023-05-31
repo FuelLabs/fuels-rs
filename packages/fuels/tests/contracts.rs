@@ -3,10 +3,12 @@ use fuel_core::chain_config::ChainConfig;
 use std::future::Future;
 use std::vec;
 
-use fuels::prelude::*;
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_core::{calldata, fn_selector};
-use fuels_types::Bits256;
+use fuels::{
+    accounts::{predicate::Predicate, Account},
+    core::codec::{calldata, fn_selector},
+    prelude::*,
+    types::Bits256,
+};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1006,8 +1008,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels::{tx::ConsensusParameters, types::coin::Coin};
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 

@@ -1,6 +1,6 @@
-use fuels_types::{param_types::ParamType, ByteArray};
+use sha2::{Digest, Sha256};
 
-use crate::utils::first_four_bytes_of_sha256_hash;
+use crate::types::{param_types::ParamType, ByteArray};
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
@@ -76,10 +76,27 @@ fn resolve_arg(arg: &ParamType) -> String {
     }
 }
 
+/// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
+/// The function selector has to have been already encoded following the ABI specs defined
+/// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
+pub(crate) fn first_four_bytes_of_sha256_hash(string: &str) -> ByteArray {
+    let string_as_bytes = string.as_bytes();
+    let mut hasher = Sha256::new();
+    hasher.update(string_as_bytes);
+    let result = hasher.finalize();
+    let mut output = ByteArray::default();
+    output[4..].copy_from_slice(&result[..4]);
+    output
+}
+
 #[macro_export]
 macro_rules! fn_selector {
     ( $fn_name: ident ( $($fn_arg: ty),* )  ) => {
-         ::fuels::core::function_selector::resolve_fn_selector(stringify!($fn_name), &[$( <$fn_arg as ::fuels::types::traits::Parameterize>::param_type() ),*]).to_vec()
+         ::fuels::core::codec::resolve_fn_selector(
+                 stringify!($fn_name),
+                 &[$( <$fn_arg as ::fuels::core::traits::Parameterize>::param_type() ),*]
+             )
+             .to_vec()
     }
 }
 
@@ -88,7 +105,7 @@ pub use fn_selector;
 #[macro_export]
 macro_rules! calldata {
     ( $($arg: expr),* ) => {
-        ::fuels::core::abi_encoder::ABIEncoder::encode(&[$(::fuels::types::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
+        ::fuels::core::codec::ABIEncoder::encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
     }
 }
 
@@ -96,9 +113,8 @@ pub use calldata;
 
 #[cfg(test)]
 mod tests {
-    use fuels_types::enum_variants::EnumVariants;
-
     use super::*;
+    use crate::types::enum_variants::EnumVariants;
 
     #[test]
     fn handles_primitive_types() {

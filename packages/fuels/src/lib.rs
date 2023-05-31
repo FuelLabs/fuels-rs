@@ -31,7 +31,7 @@ pub mod programs {
 }
 
 pub mod core {
-    pub use fuels_core::*;
+    pub use fuels_core::{codec, constants, offsets, traits, Configurables};
 }
 
 #[cfg(feature = "std")]
@@ -40,7 +40,7 @@ pub mod accounts {
 }
 
 pub mod types {
-    pub use fuels_types::*;
+    pub use fuels_core::types::*;
 }
 
 #[cfg(feature = "std")]
@@ -86,11 +86,11 @@ pub mod prelude {
         test_helpers::*,
     };
     pub use super::{
+        core::constants::*,
         macros::{abigen, setup_program_test},
         tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
-            constants::*,
             errors::{Error, Result},
             transaction::*,
             Address, AssetId, Bytes, ContractId, RawSlice,

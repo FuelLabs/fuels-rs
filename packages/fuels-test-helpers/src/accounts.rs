@@ -4,7 +4,7 @@ use std::{mem::size_of, net::SocketAddr};
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
 use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount, WalletUnlocked};
-use fuels_types::{coin::Coin, message::Message};
+use fuels_core::types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
@@ -112,7 +112,10 @@ pub async fn setup_test_provider(
 #[cfg(test)]
 mod tests {
     use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
-    use fuels_types::{coin_type::CoinType, constants::BASE_ASSET_ID, errors::Result};
+    use fuels_core::{
+        constants::BASE_ASSET_ID,
+        types::{coin_type::CoinType, errors::Result},
+    };
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
