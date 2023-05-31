@@ -80,6 +80,8 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
 
     fn try_provider(&self) -> AccountResult<&Provider>;
 
+    fn set_provider(&mut self, provider: Provider) -> &mut Self;
+
     async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
