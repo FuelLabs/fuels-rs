@@ -10,6 +10,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, errors::error, message::Message},
 };
+use fuels_accounts::wallet::WalletUnlocked;
 use fuels_accounts::Account;
 use fuels_types::coin_type::CoinType;
 

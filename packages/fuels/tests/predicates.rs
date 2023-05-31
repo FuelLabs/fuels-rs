@@ -3,6 +3,7 @@ use fuels::{
     prelude::*,
     types::{coin::Coin, message::Message, AssetId},
 };
+use fuels_accounts::wallet::WalletUnlocked;
 use fuels_accounts::{predicate::Predicate, Account};
 use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 

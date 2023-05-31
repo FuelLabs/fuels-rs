@@ -20,7 +20,6 @@ use fuels_types::{
     transaction_response::TransactionResponse,
 };
 use provider::ResourceFilter;
-pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::{accounts_utils::extract_message_id, provider::Provider};
 

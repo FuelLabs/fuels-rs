@@ -3,7 +3,8 @@ use std::{mem::size_of, net::SocketAddr};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
-use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount, WalletUnlocked};
+use fuels_accounts::wallet::WalletUnlocked;
+use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount};
 use fuels_types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]

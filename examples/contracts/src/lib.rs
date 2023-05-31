@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::accounts::wallet::WalletUnlocked;
     use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]

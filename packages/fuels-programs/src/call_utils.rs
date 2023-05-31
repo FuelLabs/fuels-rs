@@ -407,7 +407,7 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
 mod test {
     use std::slice;
 
-    use fuels_accounts::WalletUnlocked;
+    use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::abi_encoder::ABIEncoder;
     use fuels_types::coin::CoinStatus;
     use fuels_types::{

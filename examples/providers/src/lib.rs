@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-
+    use fuels::accounts::wallet::WalletUnlocked;
     use fuels::prelude::Result;
 
     #[tokio::test]

@@ -73,7 +73,6 @@ pub mod prelude {
     pub use super::{
         accounts::{
             provider::*, wallet::generate_mnemonic_phrase, Account, Signer, ViewOnlyAccount,
-            Wallet, WalletUnlocked,
         },
         fuel_node::*,
         programs::{

@@ -3,6 +3,7 @@ use std::iter::repeat;
 use fuel_tx::input::coin::CoinSigned;
 use fuel_tx::{Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::prelude::*;
+use fuels_accounts::wallet::{Wallet, WalletUnlocked};
 use fuels_test_helpers::setup_test_provider;
 use fuels_types::transaction_builders::ScriptTransactionBuilder;
 
