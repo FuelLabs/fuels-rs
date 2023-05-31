@@ -5,7 +5,7 @@ use std::hash::Hash;
 use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId};
 
-use crate::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
+use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input {

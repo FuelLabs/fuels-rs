@@ -2,7 +2,10 @@ extern crate alloc;
 
 #[cfg(test)]
 mod tests {
-    use fuels::{core::abi_encoder::ABIEncoder, macros::wasm_abigen, types::traits::Tokenizable};
+    use fuels::{
+        core::{codec::ABIEncoder, traits::Tokenizable},
+        macros::wasm_abigen,
+    };
     use wasm_bindgen_test::wasm_bindgen_test;
 
     wasm_abigen!(Contract(

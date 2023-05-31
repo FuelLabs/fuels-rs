@@ -9,8 +9,10 @@ use strum_macros::EnumString;
 
 use crate::{
     constants::WORD_SIZE,
-    enum_variants::EnumVariants,
-    errors::{error, Error, Result},
+    types::{
+        enum_variants::EnumVariants,
+        errors::{error, Error, Result},
+    },
 };
 
 #[derive(Debug, Clone, EnumString, PartialEq, Eq, Default)]
@@ -475,7 +477,7 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::param_types::ParamType;
+    use crate::types::param_types::ParamType;
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;

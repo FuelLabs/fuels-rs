@@ -149,8 +149,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels::{tx::ConsensusParameters, types::coin::Coin};
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
     let chain_config = ChainConfig {

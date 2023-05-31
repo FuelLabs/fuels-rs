@@ -22,7 +22,6 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
-fuels-types = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }
 itertools = { workspace = true }
 rand = { workspace = true, default-features = false }
@@ -38,7 +37,4 @@ tempfile = { workspace = true }
 
 [features]
 default = ["std"]
-std = [
-    "fuels-core/std",
-    "fuels-types/std",
-]
+std = ["fuels-core/std"]

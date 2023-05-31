@@ -22,7 +22,6 @@ members = [
     "packages/fuels-macros",
     "packages/fuels-programs",
     "packages/fuels-test-helpers",
-    "packages/fuels-types",
     "packages/wasm-tests",
     "scripts/check-docs",
 ]
@@ -63,7 +62,6 @@ fuels-core = { version = "0.42.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.42.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.42.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.42.0", path = "./packages/fuels-test-helpers", default-features = false }
-fuels-types = { version = "0.42.0", path = "./packages/fuels-types", default-features = false }
 futures = "0.3.26"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.10"
@@ -85,4 +83,3 @@ thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"
 which = { version = "4.4", default-features = false }
-

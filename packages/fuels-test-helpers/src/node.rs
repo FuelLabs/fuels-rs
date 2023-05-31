@@ -12,7 +12,7 @@ use fuel_core_client::client::FuelClient;
 use fuel_types::BlockHeight;
 use fuel_types::Word;
 use fuel_vm::consts::WORD_SIZE;
-use fuels_types::{
+use fuels_core::types::{
     coin::Coin,
     errors::{error, Error},
     message::Message,
