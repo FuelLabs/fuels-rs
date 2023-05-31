@@ -6,4 +6,3 @@ name = "lib_contract_caller"
 
 [dependencies]
 lib_contract = { path = "../lib_contract_abi/", package = "lib_contract_abi" }
-std = { git = "https://github.com/FuelLabs/sway", branch = "feature/fuel-core-0.18" }
