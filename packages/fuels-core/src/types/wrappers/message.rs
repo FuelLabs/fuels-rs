@@ -6,7 +6,7 @@ use fuel_core_client::client::schema::message::Message as ClientMessage;
 use fuel_tx::{Input, MessageId};
 use fuel_types::Nonce;
 
-use crate::bech32::Bech32Address;
+use crate::types::bech32::Bech32Address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum MessageStatus {

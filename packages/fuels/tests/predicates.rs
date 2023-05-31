@@ -1,7 +1,13 @@
 use fuel_tx::Output;
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId},
+    types::{
+        coin::Coin,
+        message::Message,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        AssetId,
+    },
 };
 use fuels_accounts::wallet::WalletUnlocked;
 use fuels_accounts::{predicate::Predicate, Account};

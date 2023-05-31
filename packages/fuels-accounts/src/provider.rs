@@ -11,19 +11,21 @@ use fuel_core_client::client::{
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
 use fuel_types::Nonce;
 use fuel_vm::state::ProgramState;
-use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId},
-    block::Block,
-    chain_info::ChainInfo,
-    coin::Coin,
-    coin_type::CoinType,
+use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
-    errors::{error, Error, Result},
-    message::Message,
-    message_proof::MessageProof,
-    node_info::NodeInfo,
-    transaction::Transaction,
-    transaction_response::TransactionResponse,
+    types::{
+        bech32::{Bech32Address, Bech32ContractId},
+        block::Block,
+        chain_info::ChainInfo,
+        coin::Coin,
+        coin_type::CoinType,
+        errors::{error, Error, Result},
+        message::Message,
+        message_proof::MessageProof,
+        node_info::NodeInfo,
+        transaction::Transaction,
+        transaction_response::TransactionResponse,
+    },
 };
 use itertools::Itertools;
 use tai64::Tai64;

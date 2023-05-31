@@ -1,8 +1,9 @@
 use std::path::Path;
 
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId},
+    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId},
 };
 use fuels_accounts::wallet::WalletUnlocked;
 use fuels_accounts::{predicate::Predicate, Account};

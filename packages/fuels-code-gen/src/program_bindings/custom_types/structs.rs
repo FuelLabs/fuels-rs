@@ -60,7 +60,7 @@ fn struct_decl(
             ::fuels::macros::TryFrom
         )]
         #maybe_disable_std
-        pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
+        pub struct #struct_ident <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> {
             #(#fields),*
         }
     }

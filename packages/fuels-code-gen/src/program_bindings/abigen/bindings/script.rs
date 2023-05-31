@@ -88,7 +88,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
+            let encoded_args = ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
