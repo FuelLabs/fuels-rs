@@ -4,7 +4,7 @@ use std::{iter, str::FromStr, vec};
 use chrono::{TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuels::{
-    accounts::{fuel_crypto::SecretKey, Account},
+    accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     tx::Receipt,

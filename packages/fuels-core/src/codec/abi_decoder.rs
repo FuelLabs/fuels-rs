@@ -37,7 +37,7 @@ impl ABIDecoder {
     ///
     /// ```
     /// use fuels_core::codec::ABIDecoder;
-    /// use fuels_types::{Token, param_types::ParamType};
+    /// use fuels_core::types::{param_types::ParamType, Token};
     ///
     /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
     ///
