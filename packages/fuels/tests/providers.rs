@@ -783,8 +783,8 @@ async fn test_sway_timestamp() -> Result<()> {
     let methods = contract_instance.methods();
 
     let response = methods.return_timestamp().call().await?;
-    let mut expected_timestamp = origin_timestamp.add(Duration::seconds(block_time as i64));
-    assert_eq!(convert_to_datetime(response.value), expected_timestamp);
+    let mut expected_datetime = origin_timestamp.add(Duration::seconds(block_time as i64));
+    assert_eq!(convert_to_datetime(response.value), expected_datetime);
 
     let blocks_to_produce = 600;
     provider
@@ -794,15 +794,15 @@ async fn test_sway_timestamp() -> Result<()> {
     let response = methods.return_timestamp().call().await?;
 
     // `produce_blocks` call
-    expected_timestamp =
-        expected_timestamp.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    expected_datetime =
+        expected_datetime.add(Duration::seconds((block_time * blocks_to_produce) as i64));
     // method call
-    expected_timestamp = expected_timestamp.add(Duration::seconds(block_time as i64));
+    expected_datetime = expected_datetime.add(Duration::seconds(block_time as i64));
 
-    assert_eq!(convert_to_datetime(response.value), expected_timestamp);
+    assert_eq!(convert_to_datetime(response.value), expected_datetime);
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
-        expected_timestamp
+        expected_datetime
     );
     Ok(())
 }
