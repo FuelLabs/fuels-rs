@@ -740,10 +740,8 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
     )
 }
 
-fn convert_logged_timestamp(r: LogResult) -> DateTime<Utc> {
-    let r = r.filter_succeeded().pop().unwrap();
-    let r_int = Tai64(r.parse::<u64>().unwrap());
-    let unix = r_int.to_unix();
+fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
+    let unix = Tai64(timestamp).to_unix();
     DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
 }
 
@@ -784,19 +782,16 @@ async fn test_sway_timestamp() -> Result<()> {
     let origin_timestamp = provider.latest_block_time().await?.unwrap();
     let methods = contract_instance.methods();
 
-    let response = methods.log_timestamp().call().await?;
+    let response = methods.return_timestamp().call().await?;
     let mut expected_timestamp = origin_timestamp.add(Duration::seconds(block_time as i64));
-    assert_eq!(
-        convert_logged_timestamp(response.decode_logs()),
-        expected_timestamp
-    );
+    assert_eq!(convert_to_datetime(response.value), expected_timestamp);
 
     let blocks_to_produce = 600;
     provider
         .produce_blocks(blocks_to_produce.into(), None)
         .await?;
 
-    let response = methods.log_timestamp().call().await?;
+    let response = methods.return_timestamp().call().await?;
 
     // `produce_blocks` call
     expected_timestamp =
@@ -804,10 +799,7 @@ async fn test_sway_timestamp() -> Result<()> {
     // method call
     expected_timestamp = expected_timestamp.add(Duration::seconds(block_time as i64));
 
-    assert_eq!(
-        convert_logged_timestamp(response.decode_logs()),
-        expected_timestamp
-    );
+    assert_eq!(convert_to_datetime(response.value), expected_timestamp);
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
         expected_timestamp

@@ -3,12 +3,11 @@ contract;
 use std::block::timestamp;
 
 abi MyContract {
-    fn log_timestamp() -> bool;
+    fn return_timestamp() -> u64;
 }
 
 impl MyContract for Contract {
-    fn log_timestamp() -> bool {
-        log(timestamp());
-        true
+    fn return_timestamp() -> u64 {
+        timestamp()
     }
 }
