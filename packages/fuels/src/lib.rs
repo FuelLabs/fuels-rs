@@ -13,7 +13,10 @@
 //! the [test suite](https://github.com/FuelLabs/fuels-rs/tree/master/packages/fuels/tests)
 
 pub mod tx {
-    pub use fuel_tx::{Bytes32, ConsensusParameters, Receipt, Salt, StorageSlot};
+    pub use fuel_tx::{
+        field, Bytes32, ConsensusParameters, Receipt, Salt, ScriptExecutionResult, StorageSlot,
+        Transaction as FuelTransaction, TxId,
+    };
 }
 
 #[cfg(feature = "std")]
