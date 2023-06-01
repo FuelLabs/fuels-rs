@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use fuels_accounts::wallet::WalletUnlocked;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {

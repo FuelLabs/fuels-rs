@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use fuels::{
-    accounts::{predicate::Predicate, Account},
+    accounts::{predicate::Predicate, wallet::WalletUnlocked, Account},
     prelude::*,
     types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId},
 };
