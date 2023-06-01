@@ -15,12 +15,13 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
-use fuels_types::coin::CoinStatus;
-use fuels_types::{
-    bech32::Bech32Address,
-    coin::Coin,
+use fuels_core::{
     constants::BASE_ASSET_ID,
-    message::{Message, MessageStatus},
+    types::{
+        bech32::Bech32Address,
+        coin::{Coin, CoinStatus},
+        message::{Message, MessageStatus},
+    },
 };
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
@@ -218,7 +219,7 @@ pub async fn setup_test_client(
 mod tests {
     use std::net::Ipv4Addr;
 
-    use fuels_types::bech32::FUEL_BECH32_HRP;
+    use fuels_core::types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
 

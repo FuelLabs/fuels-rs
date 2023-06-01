@@ -68,7 +68,7 @@ fn enum_decl(
             ::fuels::macros::TryFrom
         )]
         #maybe_disable_std
-        pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
+        pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
             #(#enum_variants),*
         }
     }

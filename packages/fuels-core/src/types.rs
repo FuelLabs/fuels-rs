@@ -1,22 +1,23 @@
 use std::fmt;
 
+pub use fuel_tx::{Address, AssetId, ContractId};
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
-use crate::{
+pub use crate::types::{core::*, wrappers::*};
+use crate::types::{
     enum_variants::EnumVariants,
     errors::{error, Error, Result},
 };
 
-mod bits;
-mod bytes;
-mod native;
-mod raw_slice;
-mod sized_ascii_string;
-
-pub use crate::core::{
-    bits::*, bytes::Bytes, native::*, raw_slice::RawSlice, sized_ascii_string::*,
-};
+pub mod bech32;
+mod core;
+pub mod enum_variants;
+pub mod errors;
+pub mod param_types;
+pub mod transaction_builders;
+pub mod unresolved_bytes;
+mod wrappers;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;

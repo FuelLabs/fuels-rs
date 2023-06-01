@@ -62,7 +62,7 @@ impl FunctionGenerator {
         let param_type_calls = param_type_calls(&self.args);
 
         let name = &self.name;
-        quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
+        quote! {::fuels::core::codec::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
@@ -76,7 +76,7 @@ impl FunctionGenerator {
                 })
                 .unwrap_or(quote! {#field_name})
         });
-        quote! {[#(::fuels::types::traits::Tokenizable::into_token(#arg_names)),*]}
+        quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
     pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {
@@ -328,7 +328,7 @@ mod tests {
 
         assert_eq!(
             fn_selector_code.to_string(),
-            r#":: fuels :: core :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: types :: traits :: Parameterize > :: param_type ()])"#
+            r#":: fuels :: core :: codec :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
         );
 
         Ok(())
@@ -343,7 +343,7 @@ mod tests {
 
         assert_eq!(
             tokenized_args.to_string(),
-            "[:: fuels :: types :: traits :: Tokenizable :: into_token (arg_0)]"
+            "[:: fuels :: core :: traits :: Tokenizable :: into_token (arg_0)]"
         );
 
         Ok(())

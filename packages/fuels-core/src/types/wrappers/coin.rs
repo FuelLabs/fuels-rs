@@ -4,7 +4,7 @@ use fuel_core_chain_config::CoinConfig;
 use fuel_core_client::client::schema::coins::Coin as ClientCoin;
 use fuel_tx::{AssetId, UtxoId};
 
-use crate::bech32::Bech32Address;
+use crate::types::bech32::Bech32Address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
 pub enum CoinStatus {

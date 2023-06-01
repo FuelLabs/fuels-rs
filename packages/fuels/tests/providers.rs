@@ -5,15 +5,13 @@ use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuel_core_types::tai64::Tai64;
 use fuels::{
-    accounts::fuel_crypto::SecretKey,
+    accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     test_helpers::Config,
     tx::Receipt,
-    types::{block::Block, errors::error, message::Message},
+    types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
-use fuels_accounts::Account;
-use fuels_types::coin_type::CoinType;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

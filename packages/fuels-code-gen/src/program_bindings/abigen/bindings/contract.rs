@@ -336,16 +336,16 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "some_abi_funct",
                         &[
-                            <self::MyStruct1 as ::fuels::types::traits::Parameterize>::param_type(),
-                            <self::MyStruct2 as ::fuels::types::traits::Parameterize>::param_type()
+                            <self::MyStruct1 as ::fuels::core::traits::Parameterize>::param_type(),
+                            <self::MyStruct2 as ::fuels::core::traits::Parameterize>::param_type()
                         ]
                     ),
                     &[
-                        ::fuels::types::traits::Tokenizable::into_token(s_1),
-                        ::fuels::types::traits::Tokenizable::into_token(s_2)
+                        ::fuels::core::traits::Tokenizable::into_token(s_1),
+                        ::fuels::core::traits::Tokenizable::into_token(s_2)
                     ],
                     self.log_decoder.clone(),
                     false,
@@ -398,11 +398,11 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "HelloWorld",
-                        &[<bool as ::fuels::types::traits::Parameterize>::param_type()]
+                        &[<bool as ::fuels::core::traits::Parameterize>::param_type()]
                     ),
-                    &[::fuels::types::traits::Tokenizable::into_token(bimbam)],
+                    &[::fuels::core::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,
                 )
@@ -508,11 +508,11 @@ mod tests {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    ::fuels::core::function_selector::resolve_fn_selector(
+                    ::fuels::core::codec::resolve_fn_selector(
                         "hello_world",
-                        &[<self::SomeWeirdFrenchCuisine as ::fuels::types::traits::Parameterize>::param_type()]
+                        &[<self::SomeWeirdFrenchCuisine as ::fuels::core::traits::Parameterize>::param_type()]
                     ),
-                    &[::fuels::types::traits::Tokenizable::into_token(
+                    &[::fuels::core::traits::Tokenizable::into_token(
                         the_only_allowed_input
                     )],
                     self.log_decoder.clone(),

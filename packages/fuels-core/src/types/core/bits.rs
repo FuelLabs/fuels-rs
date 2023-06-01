@@ -1,6 +1,6 @@
-use fuels_macros::{Parameterize, Tokenizable};
+use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
-use crate::errors::{error, Error, Result};
+use crate::types::errors::{error, Error, Result};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -30,8 +30,9 @@ impl Bits256 {
 }
 
 // A simple wrapper around [Bits256; 2] representing the `B512` type.
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
-#[FuelsTypesPath = "crate"]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable, TryFrom)]
+#[FuelsCorePath = "crate"]
+#[FuelsTypesPath = "crate::types"]
 // ANCHOR: b512
 pub struct B512 {
     pub bytes: [Bits256; 2],
@@ -46,21 +47,9 @@ impl From<(Bits256, Bits256)> for B512 {
     }
 }
 
-impl TryFrom<&[u8]> for B512 {
-    type Error = Error;
-
-    fn try_from(slice: &[u8]) -> Result<Self> {
-        Ok(B512 {
-            bytes: [
-                Bits256(slice[0..32].try_into()?),
-                Bits256(slice[32..].try_into()?),
-            ],
-        })
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable)]
-#[FuelsTypesPath = "crate"]
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Parameterize, Tokenizable, TryFrom)]
+#[FuelsCorePath = "crate"]
+#[FuelsTypesPath = "crate::types"]
 // ANCHOR: evm_address
 pub struct EvmAddress {
     // An evm address is only 20 bytes, the first 12 bytes should be set to 0
@@ -97,9 +86,8 @@ impl From<Bits256> for EvmAddress {
 mod tests {
     use super::*;
     use crate::{
-        param_types::ParamType,
         traits::{Parameterize, Tokenizable},
-        Token,
+        types::{param_types::ParamType, Token},
     };
 
     #[test]
