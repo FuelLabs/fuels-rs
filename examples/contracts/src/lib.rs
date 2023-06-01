@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::accounts::wallet::WalletUnlocked;
     use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]
@@ -705,7 +706,7 @@ mod tests {
     #[tokio::test]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
-            core::{calldata, fn_selector},
+            core::codec::{calldata, fn_selector},
             prelude::*,
             types::SizedAsciiString,
         };

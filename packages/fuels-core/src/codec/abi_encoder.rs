@@ -1,12 +1,15 @@
 use fuel_types::bytes::padded_len_usize;
-use fuels_types::{
-    constants::WORD_SIZE,
-    errors::Result,
-    pad_string, pad_u16, pad_u32, pad_u8,
-    unresolved_bytes::{Data, UnresolvedBytes},
-    EnumSelector, StringToken, Token,
-};
 use itertools::Itertools;
+
+use crate::{
+    constants::WORD_SIZE,
+    types::{
+        errors::Result,
+        pad_string, pad_u16, pad_u32, pad_u8,
+        unresolved_bytes::{Data, UnresolvedBytes},
+        EnumSelector, StringToken, Token,
+    },
+};
 
 pub struct ABIEncoder;
 
@@ -175,12 +178,14 @@ fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
 mod tests {
     use std::slice;
 
-    use fuels_types::{enum_variants::EnumVariants, errors::Result, param_types::ParamType};
     use itertools::chain;
     use sha2::{Digest, Sha256};
 
     use super::*;
-    use crate::utils::first_four_bytes_of_sha256_hash;
+    use crate::{
+        codec::first_four_bytes_of_sha256_hash,
+        types::{enum_variants::EnumVariants, param_types::ParamType},
+    };
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;

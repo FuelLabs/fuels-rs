@@ -3,10 +3,12 @@ mod tests {
     use std::collections::HashMap;
 
     use fuel_abi_types::program_abi::ProgramABI;
-    use fuels::core::{calldata, fn_selector};
     use fuels::{
-        core::function_selector::resolve_fn_selector,
-        types::{errors::Result, param_types::ParamType, traits::Parameterize, SizedAsciiString},
+        core::{
+            codec::{calldata, fn_selector, resolve_fn_selector},
+            traits::Parameterize,
+        },
+        types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
     #[test]

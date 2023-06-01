@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use crate::block::Block;
+use crate::types::block::Block;
 use fuel_core_client::client::schema::chain::ChainInfo as ClientChainInfo;
 use fuel_tx::ConsensusParameters;
 
