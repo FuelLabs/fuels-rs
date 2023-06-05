@@ -1,9 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
-    };
+    use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -107,7 +105,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 505);
+        assert_eq!(transaction_cost.gas_used, 625);
 
         Ok(())
     }
@@ -350,56 +348,11 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+            .transfer_coins_to_output(1_000_000, contract_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[allow(unused_variables)]
-    async fn output_messages_test() -> Result<()> {
-        use fuels::prelude::*;
-        abigen!(Contract(
-            name = "MyContract",
-            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-        ));
-
-        let wallet = launch_provider_and_get_wallet().await;
-
-        let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
-        .bin",
-            LoadConfiguration::default(),
-        )?
-        .deploy(&wallet, TxParameters::default())
-        .await?;
-
-        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
-        // ANCHOR: message_outputs
-        let base_layer_address = Bits256([1u8; 32]);
-        let amount = 1000;
-
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .append_message_outputs(1)
-            .call()
-            .await?;
-        // ANCHOR_END: message_outputs
-
-        // fails due to missing message output
-        let response = contract_methods
-            .send_message(base_layer_address, amount)
-            .call()
-            .await;
-
-        assert!(matches!(
-            response,
-            Err(Error::RevertTransactionError { .. })
-        ));
-
         Ok(())
     }
 
@@ -435,7 +388,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -447,7 +400,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .set_contract_ids(&[called_contract_id.into()])
             .call()
@@ -460,7 +413,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address.into())
+            .increment_from_contract_then_mint(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -547,7 +500,7 @@ mod tests {
                 "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
                     .parse()
                     .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id.into(), wallet);
+            let connected_contract_instance = MyContract::new(contract_id, wallet);
             // ANCHOR_END: deployed_contracts_hex
         }
 
@@ -676,7 +629,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 790);
+        assert_eq!(transaction_cost.gas_used, 1021);
 
         Ok(())
     }
@@ -746,6 +699,94 @@ mod tests {
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn low_level_call_example() -> Result<()> {
+        use fuels::{
+            core::codec::{calldata, fn_selector},
+            prelude::*,
+            types::SizedAsciiString,
+        };
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(
+                Contract(
+                    name = "MyCallerContract",
+                    project = "packages/fuels/tests/contracts/low_level_caller"
+                ),
+                Contract(
+                    name = "MyTargetContract",
+                    project = "packages/fuels/tests/contracts/contract_test"
+                ),
+            ),
+            Deploy(
+                name = "caller_contract_instance",
+                contract = "MyCallerContract",
+                wallet = "wallet"
+            ),
+            Deploy(
+                name = "target_contract_instance",
+                contract = "MyTargetContract",
+                wallet = "wallet"
+            ),
+        );
+
+        // ANCHOR: low_level_call
+        let function_selector =
+            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+        let call_data = calldata!(
+            MyStruct {
+                a: true,
+                b: [1, 2, 3],
+            },
+            SizedAsciiString::<4>::try_from("fuel").unwrap()
+        );
+
+        caller_contract_instance
+            .methods()
+            .call_low_level_call(
+                target_contract_instance.id(),
+                Bytes(function_selector),
+                Bytes(call_data),
+                false,
+            )
+            .estimate_tx_dependencies(None)
+            .await?
+            .call()
+            .await?;
+        // ANCHOR_END: low_level_call
+
+        let result_uint = target_contract_instance
+            .methods()
+            .get_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_bool = target_contract_instance
+            .methods()
+            .get_bool_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        let result_str = target_contract_instance
+            .methods()
+            .get_str_value()
+            .call()
+            .await
+            .unwrap()
+            .value;
+
+        assert_eq!(result_uint, 2);
+        assert!(result_bool);
+        assert_eq!(result_str, "fuel");
 
         Ok(())
     }

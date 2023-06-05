@@ -1,11 +1,10 @@
 use std::path::Path;
 
 use fuels::{
+    accounts::{predicate::Predicate, wallet::WalletUnlocked, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId},
+    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId},
 };
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::unresolved_bytes::UnresolvedBytes;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,
@@ -83,15 +82,7 @@ fn get_test_coins_and_messages(
     let asset_id = AssetId::default();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
-        .map(|i| {
-            setup_single_message(
-                &Bech32Address::default(),
-                address,
-                amount,
-                i,
-                [104, 97, 108, 51, 101].to_vec(),
-            )
-        })
+        .map(|i| setup_single_message(&Bech32Address::default(), address, amount, i.into(), vec![]))
         .collect();
 
     (coins, messages, asset_id)

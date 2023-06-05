@@ -1,20 +1,22 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Output, Receipt};
+use fuel_tx::{Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Result,
-    input::Input,
+use fuels_core::{
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
-    transaction::{Transaction, TxParameters},
-    transaction_builders::ScriptTransactionBuilder,
-    unresolved_bytes::UnresolvedBytes,
+    types::{
+        bech32::Bech32ContractId,
+        errors::Result,
+        input::Input,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::ScriptTransactionBuilder,
+        unresolved_bytes::UnresolvedBytes,
+    },
 };
 use itertools::chain;
 
@@ -61,6 +63,8 @@ impl ScriptCall {
 pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
@@ -88,6 +92,7 @@ where
         Self {
             script_call,
             tx_parameters: TxParameters::default(),
+            cached_tx_id: None,
             account,
             provider,
             datatype: PhantomData,
@@ -132,7 +137,7 @@ where
 
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
-        let consensus_parameters = self.provider.consensus_parameters().await?;
+        let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
@@ -176,10 +181,11 @@ where
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        self.cached_tx_id = Some(tx.id(&chain_info.consensus_parameters));
 
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
@@ -195,7 +201,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>> {
+    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -206,7 +212,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -236,6 +242,7 @@ where
             D::from_token(token)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         ))
     }
 }

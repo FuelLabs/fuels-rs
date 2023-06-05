@@ -2,9 +2,8 @@ use std::{result::Result as StdResult, str::FromStr};
 
 use fuels::{
     prelude::*,
-    types::{Bits256, EvmAddress, Identity, B512},
+    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512},
 };
-use fuels_types::SizedAsciiString;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

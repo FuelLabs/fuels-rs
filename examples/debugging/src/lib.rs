@@ -4,8 +4,11 @@ mod tests {
 
     use fuel_abi_types::program_abi::ProgramABI;
     use fuels::{
-        core::function_selector::resolve_fn_selector,
-        types::{errors::Result, param_types::ParamType, traits::Parameterize, SizedAsciiString},
+        core::{
+            codec::{calldata, fn_selector, resolve_fn_selector},
+            traits::Parameterize,
+        },
+        types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
     #[test]
@@ -54,5 +57,14 @@ mod tests {
         // ANCHOR_END: example_fn_selector_json
 
         Ok(())
+    }
+
+    #[test]
+    fn test_macros() {
+        let function_selector = fn_selector!(initialize_counter(u64));
+        let call_data = calldata!(42u64);
+
+        assert_eq!(vec![0, 0, 0, 0, 171, 100, 229, 242], function_selector);
+        assert_eq!(vec![0, 0, 0, 0, 0, 0, 0, 42], call_data);
     }
 }

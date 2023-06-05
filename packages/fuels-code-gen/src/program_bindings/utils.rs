@@ -62,9 +62,9 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
         .collect::<Vec<_>>();
 
     if parameters.is_empty() {
-        quote! { <#type_name as ::fuels::types::traits::Parameterize>::param_type() }
+        quote! { <#type_name as ::fuels::core::traits::Parameterize>::param_type() }
     } else {
-        quote! { <#type_name::<#(#parameters),*> as ::fuels::types::traits::Parameterize>::param_type() }
+        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::traits::Parameterize>::param_type() }
     }
 }
 
@@ -154,4 +154,14 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ]
     })
     .collect()
+}
+
+pub(crate) fn get_equivalent_bech32_type(ttype: &str) -> Option<TokenStream> {
+    match ttype {
+        ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        ":: fuels :: types :: ContractId" => {
+            Some(quote! {::fuels::types::bech32::Bech32ContractId})
+        }
+        _ => None,
+    }
 }

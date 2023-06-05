@@ -21,7 +21,7 @@ You can also use `TxParameters::default()` to use the default values:
 <!-- tx_params_default:example:end -->
 
 ```rust,ignore
-{{#include ../../../packages/fuels-types/src/constants.rs:default_tx_parameters}}
+{{#include ../../../packages/fuels-core/src/utils/constants.rs:default_tx_parameters}}
 ```
 
 This way:

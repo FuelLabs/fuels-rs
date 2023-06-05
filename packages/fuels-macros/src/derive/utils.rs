@@ -42,7 +42,7 @@ pub(crate) struct ExtractedVariant {
 
 pub(crate) fn extract_variants<'a>(
     contents: impl IntoIterator<Item = &'a Variant>,
-    fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
 ) -> Result<ExtractedVariants> {
     let variants = contents
         .into_iter()
@@ -60,12 +60,12 @@ pub(crate) fn extract_variants<'a>(
 
     Ok(ExtractedVariants {
         variants,
-        fuels_types_path,
+        fuels_core_path,
     })
 }
 
 pub(crate) struct ExtractedVariants {
-    fuels_types_path: TokenStream,
+    fuels_core_path: TokenStream,
     variants: Vec<ExtractedVariant>,
 }
 
@@ -74,11 +74,11 @@ impl ExtractedVariants {
         let match_branches = self.variants.iter().map(|variant| {
             let discriminant = variant.discriminant;
             let name = &variant.name;
-            let fuels_types_path = &self.fuels_types_path;
+            let fuels_core_path = &self.fuels_core_path;
             if variant.is_unit {
-                quote! { Self::#name => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(())) }
+                quote! { Self::#name => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(())) }
             } else {
-                quote! { Self::#name(inner) => (#discriminant, #fuels_types_path::traits::Tokenizable::into_token(inner))}
+                quote! { Self::#name(inner) => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(inner))}
             }
         });
 
@@ -92,12 +92,12 @@ impl ExtractedVariants {
         let match_discriminant = self.variants.iter().map(|variant| {
             let name = &variant.name;
             let discriminant = variant.discriminant;
-            let fuels_types_path = &self.fuels_types_path;
+            let fuels_core_path = &self.fuels_core_path;
 
             let variant_value = if variant.is_unit {
                 quote! {}
             } else {
-                quote! { (#fuels_types_path::traits::Tokenizable::from_token(variant_token)?) }
+                quote! { (#fuels_core_path::traits::Tokenizable::from_token(variant_token)?) }
             };
 
             quote! { #discriminant => ::core::result::Result::Ok(Self::#name #variant_value)}

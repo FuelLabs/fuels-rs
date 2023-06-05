@@ -1,11 +1,11 @@
 use fuel_tx::{ConsensusParameters, Output, Receipt};
 use fuel_types::MessageId;
-use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, input::Input,
-    transaction_builders::TransactionBuilder,
+use fuels_core::{
+    constants::BASE_ASSET_ID,
+    types::{bech32::Bech32Address, input::Input, transaction_builders::TransactionBuilder},
 };
 
-pub fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
     receipts.iter().find_map(|m| m.message_id())
 }
 
