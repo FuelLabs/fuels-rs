@@ -11,7 +11,7 @@ abi MyContract {
 }
 
 impl MyContract for Contract {
-    fn test_function(arg: AWrapper) -> VeryCommonNameStruct {
+    fn test_function(_arg: AWrapper) -> VeryCommonNameStruct {
         VeryCommonNameStruct { field_a: 10u32 }
     }
 }

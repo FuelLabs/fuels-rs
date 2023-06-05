@@ -5,6 +5,7 @@ struct TestStruct {
     field_2: u64,
 }
 
+#[allow(dead_code)]
 enum TestEnum {
     VariantOne: (),
     VariantTwo: (),
@@ -26,6 +27,7 @@ impl Eq for TestEnum {
     }
 }
 
+#[allow(dead_code)]
 enum MatchEnum {
     AssertPrimitive: (u64, u64),
     AssertEqPrimitive: (u64, u64),

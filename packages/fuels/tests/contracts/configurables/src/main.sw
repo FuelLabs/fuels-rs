@@ -1,5 +1,6 @@
 contract;
 
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),

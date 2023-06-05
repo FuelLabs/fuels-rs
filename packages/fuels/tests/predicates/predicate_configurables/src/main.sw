@@ -16,6 +16,7 @@ impl Eq for EnumWithGeneric<bool> {
     }
 }
 
+#[allow(dead_code)]
 // ANCHOR: predicate_configurables
 enum EnumWithGeneric<D> {
     VariantOne: D,

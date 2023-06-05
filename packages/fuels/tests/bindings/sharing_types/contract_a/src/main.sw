@@ -9,6 +9,7 @@ struct StructSameNameButDifferentInternals {
     a: u32,
 }
 
+#[allow(dead_code)]
 enum EnumSameNameButDifferentInternals {
     a: u32,
 }

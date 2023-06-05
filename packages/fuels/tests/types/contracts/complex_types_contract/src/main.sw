@@ -4,6 +4,7 @@ use std::storage::storage_api::{read, write};
 
 struct EmptyStruct {}
 
+#[allow(dead_code)]
 struct CounterConfig {
     dummy: bool,
     initial_value: u64,
@@ -40,9 +41,8 @@ impl TestContract for Contract {
     }
 
     fn input_empty_struct(es: EmptyStruct) -> bool {
-        if let EmptyStruct {} = es {
-            return true;
-        }
-        false
+        let EmptyStruct {} = es;
+
+        true
     }
 }

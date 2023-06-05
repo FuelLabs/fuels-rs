@@ -2,16 +2,19 @@ contract;
 
 use std::logging::log;
 
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithNestedGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 struct StructDeeplyNestedGeneric<D> {
     field_1: D,
     field_2: u64,
