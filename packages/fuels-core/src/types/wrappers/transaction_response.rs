@@ -8,7 +8,7 @@ use fuel_core_client::client::types::{
 };
 use fuel_tx::Bytes32;
 
-use crate::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
+use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {
