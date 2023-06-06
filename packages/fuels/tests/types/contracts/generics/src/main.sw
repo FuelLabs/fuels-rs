@@ -76,7 +76,9 @@ impl MyContract for Contract {
     }
 
     fn struct_w_generic_in_tuple(arg1: StructWTupleGeneric<u32>) -> StructWTupleGeneric<u32> {
-        let expected = StructWTupleGeneric { a: (1u32, 2u32) };
+        let expected = StructWTupleGeneric {
+            a: (1u32, 2u32),
+        };
         assert(expected.a.0 == arg1.a.0);
         assert(expected.a.1 == arg1.a.1);
 
