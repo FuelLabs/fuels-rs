@@ -1,23 +1,24 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{Bytes32,Address, AssetId, ContractId, Output, Receipt};
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_tx::{Address, AssetId, Bytes32, ContractId, Output, PanicReason, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
 use fuels_core::{
+    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
-        errors::Result,
+        errors::{Error, Result},
         input::Input,
         transaction::{Transaction, TxParameters},
         transaction_builders::ScriptTransactionBuilder,
         unresolved_bytes::UnresolvedBytes,
     },
-    constants::BASE_ASSET_ID,
 };
 use itertools::chain;
 
@@ -56,6 +57,22 @@ impl ScriptCall {
             external_contracts,
             ..self
         }
+    }
+
+    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+        receipts.iter().any(
+            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+        )
+    }
+
+    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+        receipts.iter().find(
+            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+        )
+    }
+
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
     }
 
     pub fn append_variable_outputs(&mut self, num: u64) {
@@ -167,6 +184,11 @@ where
         self
     }
 
+    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.script_call.append_external_contracts(contract_id);
+        self
+    }
+
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters();
@@ -268,7 +290,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(mut self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -288,6 +310,42 @@ where
             .await?;
 
         Ok(transaction_cost)
+    }
+
+    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Forwards the received error if it cannot be fixed.
+    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(10);
+
+        for _ in 0..attempts {
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
+
+                Err(Error::RevertTransactionError { ref receipts, .. }) => {
+                    self = self.append_missing_deps(receipts);
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        self.simulate().await.map(|_| self)
+    }
+
+    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
+        if ScriptCall::is_missing_output_variables(receipts) {
+            self = self.append_variable_outputs(1)
+        }
+        if let Some(panic_receipt) = ScriptCall::find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            self = self.append_contract(contract_id);
+        }
+
+        self
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

@@ -184,7 +184,10 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+    pub async fn send_transaction<T: Transaction + Clone + Debug>(
+        &self,
+        tx: &T,
+    ) -> Result<Vec<Receipt>> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,

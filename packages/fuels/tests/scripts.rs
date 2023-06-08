@@ -249,14 +249,16 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let amount = 1000;
     let asset_id = ContractId::from(*BASE_ASSET_ID);
-
-    let script_call = script_instance.main(amount, asset_id, receiver.address().into());
+    let script_call = script_instance.main(amount, asset_id, receiver.address());
     let inputs = wallet
         .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
         .await?;
-    let script_call = script_call.with_inputs(inputs).append_variable_outputs(1);
-
-    let _ = script_call.call().await?;
+    let _ = script_call
+        .with_inputs(inputs)
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
 
     let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
     assert_eq!(receiver_balance, amount);
