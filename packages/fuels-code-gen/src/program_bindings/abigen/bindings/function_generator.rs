@@ -152,10 +152,9 @@ impl From<FunctionGenerator> for TokenStream {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ABIFunction, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{program::{ABIFunction, TypeApplication, TypeDeclaration}, full_program::FullTypeDeclaration};
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn test_expand_fn_arguments() -> Result<()> {

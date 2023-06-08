@@ -169,7 +169,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::program::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
 
     use super::*;
 

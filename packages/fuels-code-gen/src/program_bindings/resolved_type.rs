@@ -252,10 +252,9 @@ impl TypeResolver {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{program::{TypeApplication, TypeDeclaration}, full_program::FullTypeDeclaration};
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,

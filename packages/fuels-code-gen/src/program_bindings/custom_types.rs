@@ -123,7 +123,7 @@ fn is_type_unused(type_path: &TypePath) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::program::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
     use super::*;
