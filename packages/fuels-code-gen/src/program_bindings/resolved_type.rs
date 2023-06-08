@@ -252,7 +252,10 @@ impl TypeResolver {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::abi::{program::{TypeApplication, TypeDeclaration}, full_program::FullTypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullTypeDeclaration,
+        program::{TypeApplication, TypeDeclaration},
+    };
 
     use super::*;
 
