@@ -1,6 +1,7 @@
 use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
+use std::path::PathBuf;
 use std::vec;
 
 use fuels::{
@@ -1318,6 +1319,51 @@ async fn low_level_call() -> Result<()> {
     assert_eq!(result_uint, 42);
     assert!(result_bool);
     assert_eq!(result_str, "fuel");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_storage_config() -> Result<()> {
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+    );
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    const NUM_ASSETS: u64 = 1;
+    const AMOUNT: u64 = 100_0000;
+    const NUM_COINS: u64 = 1;
+    let (coins, _) =
+        setup_multiple_assets_coins(wallet.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
+
+    let node_config = fuels_test_helpers::Config {
+        database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db"),
+        #[cfg(feature = "fuel-core-lib")]
+        database_type: fuel_core::service::DbType::RocksDb,
+        #[cfg(not(feature = "fuel-core-lib"))]
+        database_type: fuels_test_helpers::DbType::RocksDb,
+        ..Config::local_node()
+    };
+
+
+    // let (provider, _) = setup_test_provider(coins, vec![], Some(node_config), None).await;
+    let (provider, _) = setup_test_provider(coins, vec![], Some(node_config), None).await;
+    wallet.set_provider(provider.clone());
+
+    dbg!(wallet.get_balances().await?);
+
+    let contract_id = Contract::load_from(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+        .deploy(&wallet, TxParameters::default())
+        .await?;
+
 
     Ok(())
 }

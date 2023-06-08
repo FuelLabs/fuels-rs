@@ -4,6 +4,13 @@ use std::{
     net::{Ipv4Addr, SocketAddr},
     process::Stdio,
     time::Duration,
+    path::PathBuf
+};
+
+use strum_macros::{
+    Display,
+    EnumString,
+    EnumVariantNames,
 };
 
 pub use fuel_core_chain_config::ChainConfig;
@@ -40,9 +47,22 @@ pub enum Trigger {
     },
 }
 
+#[derive(
+Clone, Debug, Display, Eq, PartialEq, EnumString, EnumVariantNames, /*ValueEnum,*/
+)]
+#[strum(serialize_all = "kebab_case")]
+pub enum DbType {
+    InMemory,
+    RocksDb,
+}
+
+
 #[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub max_database_cache_size: usize,
+    pub database_path: PathBuf,
+    pub database_type: DbType,
     pub utxo_validation: bool,
     pub manual_blocks_enabled: bool,
     pub block_production: Trigger,
@@ -54,6 +74,9 @@ impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            max_database_cache_size: 10 * 1024 * 1024,
+            database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join("fuel/db"),
+            database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
             block_production: Trigger::Instant,
@@ -218,9 +241,12 @@ pub async fn new_fuel_node(
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
+    use std::fs::File;
+    use std::io::{self, BufRead, BufReader};
 
     tokio::spawn(async move {
         let config_json = get_node_config_json(coins, messages, chain_config);
+
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = config.addr.port().to_string();
@@ -230,11 +256,33 @@ pub async fn new_fuel_node(
             "127.0.0.1".to_string(),
             "--port".to_string(),
             port,
-            "--db-type".to_string(),
-            "in-memory".to_string(),
+            // "--db-path".to_string(),
+            // "Users/salka1988/Documents/Git/fuels-rs/tralaa".to_string(),
+            //
+            // "--db-type".to_string(),
+            // "rocks-db".to_string(),
+            //
             "--chain".to_string(),
             temp_config_file.path().to_str().unwrap().to_string(),
         ];
+
+        if !config.database_path.as_os_str().is_empty() {
+            args.push("--db-path".to_string());
+            args.push(config.database_path.to_string_lossy().to_string());
+        }
+
+
+        args.push("--db-type".to_string());
+        dbg!(&config.database_type);
+        let db_type = match config.database_type {
+            DbType::InMemory => "in-memory",
+            DbType::RocksDb => "rocks-db",
+        };
+        args.push(db_type.to_string());
+
+
+        dbg!(db_type);
+
 
         if config.utxo_validation {
             args.push("--utxo-validation".to_string());

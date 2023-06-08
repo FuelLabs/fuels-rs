@@ -29,6 +29,10 @@ serde_with = { workspace = true }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
+strum = "0.24"
+strum_macros = "0.24"
+
+
 
 [features]
 default = ["fuels-accounts", "std"]

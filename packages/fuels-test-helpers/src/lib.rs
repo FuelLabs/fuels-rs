@@ -180,6 +180,8 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (FuelClient, SocketAddr, ConsensusParameters) {
+    dbg!(&node_config);
+
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
@@ -190,6 +192,7 @@ pub async fn setup_test_client(
     } else {
         panic!("Error: Address already in use");
     };
+
 
     new_fuel_node(
         coins,
