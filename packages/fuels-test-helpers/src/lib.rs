@@ -7,6 +7,10 @@ use std::net::SocketAddr;
 pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::Config;
+
+#[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::DbType;
+
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::FuelService;
 use fuel_core_chain_config::ChainConfig;
@@ -180,8 +184,6 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (FuelClient, SocketAddr, ConsensusParameters) {
-    dbg!(&node_config);
-
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
@@ -192,7 +194,6 @@ pub async fn setup_test_client(
     } else {
         panic!("Error: Address already in use");
     };
-
 
     new_fuel_node(
         coins,

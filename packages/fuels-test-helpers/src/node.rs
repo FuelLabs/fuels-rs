@@ -2,16 +2,12 @@ use std::{
     fmt,
     io::Write,
     net::{Ipv4Addr, SocketAddr},
+    path::PathBuf,
     process::Stdio,
     time::Duration,
-    path::PathBuf
 };
 
-use strum_macros::{
-    Display,
-    EnumString,
-    EnumVariantNames,
-};
+use strum_macros::{Display, EnumString, EnumVariantNames};
 
 pub use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
@@ -47,15 +43,12 @@ pub enum Trigger {
     },
 }
 
-#[derive(
-Clone, Debug, Display, Eq, PartialEq, EnumString, EnumVariantNames, /*ValueEnum,*/
-)]
+#[derive(Clone, Debug, Display, Eq, PartialEq, EnumString, EnumVariantNames /*ValueEnum,*/)]
 #[strum(serialize_all = "kebab_case")]
 pub enum DbType {
     InMemory,
     RocksDb,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct Config {
@@ -75,7 +68,7 @@ impl Config {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             max_database_cache_size: 10 * 1024 * 1024,
-            database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join("fuel/db"),
+            database_path: Default::default(),
             database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
@@ -241,8 +234,6 @@ pub async fn new_fuel_node(
 ) {
     // Create a new one-shot channel for sending single values across asynchronous tasks.
     let (tx, rx) = oneshot::channel();
-    use std::fs::File;
-    use std::io::{self, BufRead, BufReader};
 
     tokio::spawn(async move {
         let config_json = get_node_config_json(coins, messages, chain_config);
@@ -266,23 +257,31 @@ pub async fn new_fuel_node(
             temp_config_file.path().to_str().unwrap().to_string(),
         ];
 
-        if !config.database_path.as_os_str().is_empty() {
-            args.push("--db-path".to_string());
-            args.push(config.database_path.to_string_lossy().to_string());
+        args.extend(vec![
+            "--db-type".to_string(),
+            match config.database_type {
+                DbType::InMemory => "in-memory",
+                DbType::RocksDb => "rocks-db",
+            }
+            .to_string(),
+        ]);
+
+        if let DbType::RocksDb = config.database_type {
+            if config.database_path.as_os_str().is_empty() {
+                args.extend(vec![
+                    "--db-path".to_string(),
+                    PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                        .join(".fuel/db")
+                        .to_string_lossy()
+                        .to_string(),
+                ]);
+            } else if !config.database_path.as_os_str().is_empty() {
+                args.extend(vec![
+                    "--db-path".to_string(),
+                    config.database_path.to_string_lossy().to_string(),
+                ]);
+            }
         }
-
-
-        args.push("--db-type".to_string());
-        dbg!(&config.database_type);
-        let db_type = match config.database_type {
-            DbType::InMemory => "in-memory",
-            DbType::RocksDb => "rocks-db",
-        };
-        args.push(db_type.to_string());
-
-
-        dbg!(db_type);
-
 
         if config.utxo_validation {
             args.push("--utxo-validation".to_string());
