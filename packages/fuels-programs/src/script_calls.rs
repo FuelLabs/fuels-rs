@@ -1,7 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
-use fuel_tx::{Address, AssetId, Bytes32, ContractId, Output, PanicReason, Receipt};
+use fuel_tx::{Address, AssetId, Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
@@ -24,7 +23,10 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    call_utils::{
+        find_contract_not_in_inputs, generate_contract_inputs, generate_contract_outputs,
+        is_missing_output_variables,
+    },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -57,18 +59,6 @@ impl ScriptCall {
             external_contracts,
             ..self
         }
-    }
-
-    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-        receipts.iter().any(
-            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-        )
-    }
-
-    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-        receipts.iter().find(
-            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-        )
     }
 
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
@@ -333,10 +323,10 @@ where
     }
 
     fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if ScriptCall::is_missing_output_variables(receipts) {
+        if is_missing_output_variables(receipts) {
             self = self.append_variable_outputs(1)
         }
-        if let Some(panic_receipt) = ScriptCall::find_contract_not_in_inputs(receipts) {
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
                 *panic_receipt
                     .contract_id()

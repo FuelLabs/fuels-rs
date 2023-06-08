@@ -1,6 +1,7 @@
 use std::{collections::HashSet, iter, vec};
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId};
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuel_types::Word;
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
@@ -403,6 +404,18 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
                 .chain(iter::once((&call.contract_id).into()))
         })
         .collect()
+}
+
+pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+    receipts.iter().any(
+        |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+    )
+}
+
+pub fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
+    receipts.iter().find(
+        |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
+    )
 }
 
 #[cfg(test)]

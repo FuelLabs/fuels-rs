@@ -1,11 +1,9 @@
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
-use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{
     Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
     StorageSlot,
 };
-use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::ABIEncoder,
@@ -26,7 +24,9 @@ use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::build_tx_from_contract_calls,
+    call_utils::{
+        build_tx_from_contract_calls, find_contract_not_in_inputs, is_missing_output_variables,
+    },
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
@@ -371,18 +371,6 @@ impl ContractCall {
         self.external_contracts.push(contract_id)
     }
 
-    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-        receipts.iter().any(
-            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-        )
-    }
-
-    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-        receipts.iter().find(
-            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-        )
-    }
-
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
     }
@@ -587,10 +575,10 @@ where
     }
 
     fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if ContractCall::is_missing_output_variables(receipts) {
+        if is_missing_output_variables(receipts) {
             self = self.append_variable_outputs(1)
         }
-        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
                 *panic_receipt
                     .contract_id()
@@ -833,14 +821,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
         // Append to any call, they will be merged to a single script tx
         // At least 1 call should exist at this point, otherwise simulate would have failed
-        if ContractCall::is_missing_output_variables(receipts) {
+        if is_missing_output_variables(receipts) {
             self.contract_calls
                 .iter_mut()
                 .take(1)
                 .for_each(|call| call.append_variable_outputs(1));
         }
 
-        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
                 *panic_receipt
                     .contract_id()
