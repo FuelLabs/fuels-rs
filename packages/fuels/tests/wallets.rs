@@ -261,7 +261,10 @@ async fn send_transfer_transactions() -> Result<()> {
         .await?
         .unwrap();
 
-    let script: ScriptTransaction = res.transaction.as_script().cloned().unwrap().into();
+    let script: ScriptTransaction = match res.transaction {
+        TransactionType::Script(tx) => tx,
+        _ => panic!("Received unexpected tx type!"),
+    };
     assert_eq!(script.gas_limit(), gas_limit);
     assert_eq!(script.gas_price(), gas_price);
     assert_eq!(script.maturity(), maturity);

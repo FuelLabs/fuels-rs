@@ -1,5 +1,6 @@
 contract;
 
+#[allow(dead_code)]
 enum EnumThatHasABigAndSmallVariant {
     Big: b256,
     Small: u32,
@@ -12,6 +13,7 @@ struct BigBundle {
     arg_4: u64,
 }
 
+#[allow(dead_code)]
 enum UnitEnum {
     var1: (),
     var2: (),
@@ -32,7 +34,7 @@ abi EnumTesting {
 
 impl EnumTesting for Contract {
     fn get_big_bundle() -> BigBundle {
-        let arg_1 = EnumThatHasABigAndSmallVariant::Small(12345);
+        let arg_1 = EnumThatHasABigAndSmallVariant::Small(12345u32);
         let arg_2 = 6666;
         let arg_3 = 7777;
         let arg_4 = 8888;

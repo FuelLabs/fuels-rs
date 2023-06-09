@@ -29,7 +29,7 @@ async fn test_multiple_args() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.get(5, 6).call().await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     let t = MyType { x: 5, y: 6 };
     let response = contract_methods.get_alt(t.clone()).call().await?;
@@ -162,11 +162,11 @@ async fn test_multiple_read_calls() -> Result<()> {
     // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
     // We can notice here that, thanks to this, we don't generate a TransactionId collision,
     // even if the transactions are theoretically the same.
-    let stored = contract_methods.read(0).simulate().await?;
+    let stored = contract_methods.read().simulate().await?;
 
     assert_eq!(stored.value, 42);
 
-    let stored = contract_methods.read(0).simulate().await?;
+    let stored = contract_methods.read().simulate().await?;
 
     assert_eq!(stored.value, 42);
     Ok(())
@@ -1001,7 +1001,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
         .call::<(u64, u64, u64, u64)>()
         .await?;
 
-    assert_eq!(call_response.value, (43, 43, 43, 5));
+    assert_eq!(call_response.value, (43, 43, 43, 11));
 
     Ok(())
 }
@@ -1043,7 +1043,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 
     let response = contract_instance.methods().get(5, 6).call().await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     Ok(())
 }
@@ -1101,7 +1101,7 @@ async fn test_add_custom_assets() -> Result<()> {
         .call()
         .await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
     let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;

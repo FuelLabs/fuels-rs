@@ -1,5 +1,6 @@
 script;
 
+#[allow(dead_code)]
 enum SomeEnum<T> {
     First: bool,
     Second: T,
@@ -24,7 +25,7 @@ fn validate_vec(vec: Vec<raw_slice>) {
     validate_raw_slice(vec.get(1).unwrap());
 }
 
-fn main(a: u64, wrapper: Wrapper<Vec<raw_slice>>) -> raw_slice {
+fn main(_arg: u64, wrapper: Wrapper<Vec<raw_slice>>) -> raw_slice {
     if let SomeEnum::Second(enum_raw_slice) = wrapper.inner_enum
     {
         validate_raw_slice(enum_raw_slice);

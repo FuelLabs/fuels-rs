@@ -5,6 +5,7 @@ struct TestStruct {
     field_2: u64,
 }
 
+#[allow(dead_code)]
 enum TestEnum {
     VariantOne: (),
     VariantTwo: (),
