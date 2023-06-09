@@ -103,8 +103,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 pub async fn setup_test_provider(
     coins: Vec<Coin>,
     messages: Vec<Message>,
-    #[cfg(feature = "fuel-core-lib")] node_config: Option<Config>,
-    #[cfg(not(feature = "fuel-core-lib"))] node_config: Option<Config>,
+    node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (Provider, SocketAddr) {
     let (client, addr, consensus_parameters) =

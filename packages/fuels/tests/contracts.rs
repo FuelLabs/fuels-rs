@@ -1339,12 +1339,11 @@ async fn test_storage_config() -> Result<()> {
 
     let node_config = Config {
         database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-            .join(".kkk/db"),
+            .join(".spider/db"),
         database_type: DbType::RocksDb,
         ..Config::local_node()
     };
 
-    // let (provider, _) = setup_test_provider(coins, vec![], Some(node_config), None).await;
     let (provider, _) = setup_test_provider(coins, vec![], Some(node_config), None).await;
     wallet.set_provider(provider.clone());
 

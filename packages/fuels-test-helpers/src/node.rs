@@ -247,12 +247,6 @@ pub async fn new_fuel_node(
             "127.0.0.1".to_string(),
             "--port".to_string(),
             port,
-            // "--db-path".to_string(),
-            // "Users/salka1988/Documents/Git/fuels-rs/tralaa".to_string(),
-            //
-            // "--db-type".to_string(),
-            // "rocks-db".to_string(),
-            //
             "--chain".to_string(),
             temp_config_file.path().to_str().unwrap().to_string(),
         ];
