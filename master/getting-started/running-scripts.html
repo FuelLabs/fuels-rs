@@ -206,11 +206,13 @@
 <p>Same as contracts, you can define <code>configurable</code> constants in <code>scripts</code> which can be changed during the script execution. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">script;
 
+#[allow(dead_code)]
 enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithGeneric&lt;D&gt; {
     field_1: D,
     field_2: u64,

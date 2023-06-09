@@ -1405,6 +1405,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <p>In Sway, you can define <code>configurable</code> constants which can be changed during the contract deployment in the SDK. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">contract;
 
+#[allow(dead_code)]
 enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),
@@ -2112,11 +2113,13 @@ let is_error = response.is_err();
 <p>Same as contracts, you can define <code>configurable</code> constants in <code>scripts</code> which can be changed during the script execution. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">script;
 
+#[allow(dead_code)]
 enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithGeneric&lt;D&gt; {
     field_1: D,
     field_2: u64,
@@ -2170,7 +2173,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
 <pre><code class="language-rust ignore">predicate;
 
 fn main(a: u32, b: u64) -&gt; bool {
-    a == b
+    b == a
 }
 </code></pre>
 <p>We will look at a complete example of using the SDK to send and receive funds from a predicate.</p>
@@ -2242,7 +2245,8 @@ fn main(a: u32, b: u64) -&gt; bool {
 </code></pre>
 <h2 id="configurable-constants-2"><a class="header" href="#configurable-constants-2">Configurable constants</a></h2>
 <p>Same as contracts and scripts, you can define configurable constants in <code>predicates</code>, which can be changed during the predicate execution. Here is an example of how the constants are defined.</p>
-<pre><code class="language-rust ignore">enum EnumWithGeneric&lt;D&gt; {
+<pre><code class="language-rust ignore">#[allow(dead_code)]
+enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),
 }

@@ -141,6 +141,7 @@
 <p>In Sway, you can define <code>configurable</code> constants which can be changed during the contract deployment in the SDK. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">contract;
 
+#[allow(dead_code)]
 enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),

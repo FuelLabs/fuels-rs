@@ -144,7 +144,7 @@
 <pre><code class="language-rust ignore">predicate;
 
 fn main(a: u32, b: u64) -&gt; bool {
-    a == b
+    b == a
 }
 </code></pre>
 <p>We will look at a complete example of using the SDK to send and receive funds from a predicate.</p>
@@ -216,7 +216,8 @@ fn main(a: u32, b: u64) -&gt; bool {
 </code></pre>
 <h2 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h2>
 <p>Same as contracts and scripts, you can define configurable constants in <code>predicates</code>, which can be changed during the predicate execution. Here is an example of how the constants are defined.</p>
-<pre><code class="language-rust ignore">enum EnumWithGeneric&lt;D&gt; {
+<pre><code class="language-rust ignore">#[allow(dead_code)]
+enum EnumWithGeneric&lt;D&gt; {
     VariantOne: D,
     VariantTwo: (),
 }
