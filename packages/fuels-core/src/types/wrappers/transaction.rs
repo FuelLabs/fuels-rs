@@ -60,6 +60,12 @@ impl Default for TxParameters {
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
+#[derive(Debug, Clone)]
+pub enum TransactionType {
+    Script(ScriptTransaction),
+    Create(CreateTransaction),
+}
+
 pub trait Transaction: Into<FuelTransaction> + Send {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
@@ -81,7 +87,7 @@ pub trait Transaction: Into<FuelTransaction> + Send {
 
     fn gas_limit(&self) -> u64;
 
-    fn with_gas_limit(self, gas_price: u64) -> Self;
+    fn with_gas_limit(self, gas_limit: u64) -> Self;
 
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
 
@@ -96,6 +102,133 @@ pub trait Transaction: Into<FuelTransaction> + Send {
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
 
     fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
+}
+
+impl From<TransactionType> for FuelTransaction {
+    fn from(value: TransactionType) -> Self {
+        match value {
+            TransactionType::Script(tx) => tx.into(),
+            TransactionType::Create(tx) => tx.into(),
+        }
+    }
+}
+
+impl Transaction for TransactionType {
+    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+        match self {
+            TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
+            TransactionType::Create(tx) => tx.fee_checked_from_tx(params),
+        }
+    }
+
+    fn check_without_signatures(
+        &self,
+        block_height: u32,
+        parameters: &ConsensusParameters,
+    ) -> Result<(), Error> {
+        match self {
+            TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
+            TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
+        }
+    }
+
+    fn id(&self, params: &ConsensusParameters) -> Bytes32 {
+        match self {
+            TransactionType::Script(tx) => tx.id(params),
+            TransactionType::Create(tx) => tx.id(params),
+        }
+    }
+
+    fn maturity(&self) -> u32 {
+        match self {
+            TransactionType::Script(tx) => tx.maturity(),
+            TransactionType::Create(tx) => tx.maturity(),
+        }
+    }
+
+    fn with_maturity(self, maturity: u32) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
+        }
+    }
+
+    fn gas_price(&self) -> u64 {
+        match self {
+            TransactionType::Script(tx) => tx.gas_price(),
+            TransactionType::Create(tx) => tx.gas_price(),
+        }
+    }
+
+    fn with_gas_price(self, gas_price: u64) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
+        }
+    }
+
+    fn gas_limit(&self) -> u64 {
+        match self {
+            TransactionType::Script(tx) => tx.gas_limit(),
+            TransactionType::Create(tx) => tx.gas_limit(),
+        }
+    }
+
+    fn with_gas_limit(self, gas_limit: u64) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
+        }
+    }
+
+    fn with_tx_params(self, tx_params: TxParameters) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_tx_params(tx_params)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_tx_params(tx_params)),
+        }
+    }
+
+    fn metered_bytes_size(&self) -> usize {
+        match self {
+            TransactionType::Script(tx) => tx.metered_bytes_size(),
+            TransactionType::Create(tx) => tx.metered_bytes_size(),
+        }
+    }
+
+    fn inputs(&self) -> &Vec<FuelInput> {
+        match self {
+            TransactionType::Script(tx) => tx.inputs(),
+            TransactionType::Create(tx) => tx.inputs(),
+        }
+    }
+
+    fn outputs(&self) -> &Vec<Output> {
+        match self {
+            TransactionType::Script(tx) => tx.outputs(),
+            TransactionType::Create(tx) => tx.outputs(),
+        }
+    }
+
+    fn witnesses(&self) -> &Vec<Witness> {
+        match self {
+            TransactionType::Script(tx) => tx.witnesses(),
+            TransactionType::Create(tx) => tx.witnesses(),
+        }
+    }
+
+    fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
+        match self {
+            TransactionType::Script(tx) => tx.witnesses_mut(),
+            TransactionType::Create(tx) => tx.witnesses_mut(),
+        }
+    }
+
+    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_witnesses(witnesses)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_witnesses(witnesses)),
+        }
+    }
 }
 
 macro_rules! impl_tx_wrapper {
