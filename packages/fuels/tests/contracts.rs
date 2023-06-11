@@ -1,7 +1,10 @@
 use fuel_core::chain_config::ChainConfig;
+use fuel_core_client::client::{PageDirection, PaginationRequest};
+use fuel_core_types::fuel_vm::SecretKey;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::path::PathBuf;
+use std::str::FromStr;
 use std::vec;
 
 use fuels::{
@@ -1324,18 +1327,21 @@ async fn low_level_call() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_storage_config() -> Result<()> {
+async fn test_create_db() -> Result<()> {
     setup_program_test!(Abigen(Contract(
         name = "TestContract",
         project = "packages/fuels/tests/contracts/contract_test"
     )),);
 
-    let mut wallet = WalletUnlocked::new_random(None);
+    let mut wallet = WalletUnlocked::new_from_private_key(
+        SecretKey::from_str("0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32")
+            .unwrap(),
+        None,
+    );
 
-    const NUM_ASSETS: u64 = 1;
-    const AMOUNT: u64 = 100_0000;
+    const NUM_ASSETS: u64 = 2;
+    const AMOUNT: u64 = 225883;
     const NUM_COINS: u64 = 1;
-    let (coins, _) = setup_multiple_assets_coins(wallet.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
     let node_config = Config {
         database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
@@ -1343,16 +1349,79 @@ async fn test_storage_config() -> Result<()> {
         database_type: DbType::RocksDb,
         ..Config::local_node()
     };
+    let chain_config = ChainConfig {
+        chain_name: "spider".to_string(),
+        initial_state: None,
+        transaction_parameters: Default::default(),
+        ..ChainConfig::local_testnet()
+    };
 
-    let (provider, _) = setup_test_provider(coins, vec![], Some(node_config), None).await;
-    wallet.set_provider(provider.clone());
+    let (coins, _) = setup_multiple_assets_coins(wallet.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
+    let (provider, _) =
+        setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
 
-    let _contract_id_ = Contract::load_from(
+    dbg!(&provider.chain_info().await?);
+
+    wallet.set_provider(provider);
+
+    let _ = Contract::load_from(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;
+
+    let _ = Contract::load_from(
+        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default().set_salt(Salt::new([1u8; 32])),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
+
+    dbg!(wallet.address());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_created_db() -> Result<()> {
+    let node_config = Config {
+        database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+            .join(".spider/db"),
+        database_type: DbType::RocksDb,
+        ..Config::local_node()
+    };
+
+    let mut wallet = WalletUnlocked::new_from_private_key(
+        SecretKey::from_str("0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32")
+            .unwrap(),
+        None,
+    );
+
+    let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
+
+    wallet.set_provider(provider.clone());
+
+    let blocks = provider
+        .get_blocks(PaginationRequest {
+            cursor: None,
+            results: 10,
+            direction: PageDirection::Forward,
+        })
+        .await?
+        .results;
+
+    assert_eq!(provider.chain_info().await?.name, "spider");
+    assert_eq!(blocks.len(), 3);
+    assert_eq!(
+        *wallet.get_balances().await?.iter().next().unwrap().1,
+        225883
+    );
+    assert_eq!(
+        *wallet.get_balances().await?.iter().next().unwrap().1,
+        225883
+    );
+    assert_eq!(wallet.get_balances().await?.len(), 2);
 
     Ok(())
 }
