@@ -2,6 +2,7 @@ contract;
 
 use std::u128::U128;
 
+#[allow(dead_code)]
 enum SomeEnum<T> {
     A: bool,
     B: T,

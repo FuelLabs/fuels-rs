@@ -1,10 +1,12 @@
 script;
 
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithGeneric<D> {
     field_1: D,
     field_2: u64,

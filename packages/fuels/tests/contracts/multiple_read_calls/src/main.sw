@@ -6,7 +6,7 @@ abi MyContract {
     #[storage(write)]
     fn store(input: u64);
     #[storage(read)]
-    fn read(input: u64) -> u64;
+    fn read() -> u64;
 }
 
 const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000000000;
@@ -18,8 +18,7 @@ impl MyContract for Contract {
     }
 
     #[storage(read)]
-    fn read(input: u64) -> u64 {
-        let v = read::<u64>(COUNTER_KEY, 0).unwrap_or(0);
-        v
+    fn read() -> u64 {
+        read::<u64>(COUNTER_KEY, 0).unwrap_or(0)
     }
 }

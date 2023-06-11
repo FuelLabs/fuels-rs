@@ -18,11 +18,13 @@ struct StructWTupleGeneric<M> {
     a: (M, M),
 }
 
+#[allow(dead_code)]
 enum EnumWGeneric<N> {
     a: u64,
     b: N,
 }
 
+#[allow(dead_code)]
 struct MegaExample<T, U> {
     a: ([U; 2], T),
     b: Vec<([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32)>,
@@ -74,7 +76,9 @@ impl MyContract for Contract {
     }
 
     fn struct_w_generic_in_tuple(arg1: StructWTupleGeneric<u32>) -> StructWTupleGeneric<u32> {
-        let expected = StructWTupleGeneric { a: (1, 2) };
+        let expected = StructWTupleGeneric {
+            a: (1u32, 2u32),
+        };
         assert(expected.a.0 == arg1.a.0);
         assert(expected.a.1 == arg1.a.1);
 
@@ -93,5 +97,5 @@ impl MyContract for Contract {
         EnumWGeneric::b(10)
     }
 
-    fn complex_test(arg1: MegaExample<str[2], b256>) {}
+    fn complex_test(_arg: MegaExample<str[2], b256>) {}
 }
