@@ -492,7 +492,7 @@ pub fn create_coin_predicate(
         asset_id,
         TxPointer::default(),
         0u32.into(),
-        0u64.into(),
+        0u64,
         code,
         predicate_data,
     )
@@ -509,7 +509,7 @@ pub fn create_coin_message_predicate(
             Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
-            0u64.into(),
+            0u64,
             code,
             predicate_data,
         )
@@ -519,7 +519,7 @@ pub fn create_coin_message_predicate(
             Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
-            0u64.into(),
+            0u64,
             message.data,
             code,
             predicate_data,

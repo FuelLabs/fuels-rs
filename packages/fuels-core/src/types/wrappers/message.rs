@@ -42,13 +42,13 @@ impl Message {
 
 impl From<ClientMessage> for Message {
     fn from(message: ClientMessage) -> Self {
-        let sender: Address = message.sender.into();
-        let recipient: Address = message.recipient.into();
+        let sender: Address = message.sender;
+        let recipient: Address = message.recipient;
         Self {
             amount: message.amount,
             sender: Bech32Address::from(sender),
             recipient: Bech32Address::from(recipient),
-            nonce: Nonce::from(message.nonce),
+            nonce: message.nonce,
             data: message.data,
             da_height: message.da_height,
             status: MessageStatus::Unspent,
@@ -58,13 +58,13 @@ impl From<ClientMessage> for Message {
 
 impl From<ClientMessageCoin> for Message {
     fn from(message: ClientMessageCoin) -> Self {
-        let sender: Address = message.sender.into();
-        let recipient: Address = message.recipient.into();
+        let sender: Address = message.sender;
+        let recipient: Address = message.recipient;
         Self {
             amount: message.amount,
             sender: Bech32Address::from(sender),
             recipient: Bech32Address::from(recipient),
-            nonce: message.nonce.into(),
+            nonce: message.nonce,
             data: Default::default(),
             da_height: message.da_height,
             status: MessageStatus::Unspent,
@@ -77,7 +77,7 @@ impl From<Message> for MessageConfig {
         MessageConfig {
             sender: Address::new(message.sender.hash().into()),
             recipient: Address::new(message.recipient.hash().into()),
-            nonce: message.nonce.into(),
+            nonce: message.nonce,
             amount: message.amount,
             data: message.data,
             da_height: message.da_height.into(),

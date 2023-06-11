@@ -24,16 +24,16 @@ impl From<ClientHeader> for Header {
         let time = naive.map(|time| DateTime::<Utc>::from_utc(time, Utc));
 
         Self {
-            id: client_header.id.into(),
-            da_height: client_header.da_height.into(),
-            transactions_count: client_header.transactions_count.into(),
-            message_receipt_count: client_header.message_receipt_count.into(),
-            transactions_root: client_header.transactions_root.into(),
-            message_receipt_root: client_header.message_receipt_root.into(),
-            height: client_header.height.into(),
-            prev_root: client_header.prev_root.into(),
+            id: client_header.id,
+            da_height: client_header.da_height,
+            transactions_count: client_header.transactions_count,
+            message_receipt_count: client_header.message_receipt_count,
+            transactions_root: client_header.transactions_root,
+            message_receipt_root: client_header.message_receipt_root,
+            height: client_header.height,
+            prev_root: client_header.prev_root,
             time,
-            application_hash: client_header.application_hash.into(),
+            application_hash: client_header.application_hash,
         }
     }
 }
@@ -50,7 +50,7 @@ impl From<ClientBlock> for Block {
         let transactions = client_block.transactions.into_iter().collect();
 
         Self {
-            id: client_block.id.into(),
+            id: client_block.id,
             header: client_block.header.into(),
             transactions,
         }

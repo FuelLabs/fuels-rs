@@ -20,7 +20,7 @@ impl From<ClientMerkleProof> for MerkleProof {
     fn from(client_merkle_proof: ClientMerkleProof) -> Self {
         Self {
             proof_set: client_merkle_proof.proof_set,
-            proof_index: client_merkle_proof.proof_index.into(),
+            proof_index: client_merkle_proof.proof_index,
         }
     }
 }
@@ -46,8 +46,8 @@ pub struct MessageProof {
 
 impl From<ClientMessageProof> for MessageProof {
     fn from(client_message_proof: ClientMessageProof) -> Self {
-        let sender: Address = client_message_proof.sender.into();
-        let recipient: Address = client_message_proof.recipient.into();
+        let sender: Address = client_message_proof.sender;
+        let recipient: Address = client_message_proof.recipient;
         Self {
             message_proof: client_message_proof.message_proof.into(),
             block_proof: client_message_proof.block_proof.into(),
@@ -55,7 +55,7 @@ impl From<ClientMessageProof> for MessageProof {
             commit_block_header: client_message_proof.commit_block_header.into(),
             sender: Bech32Address::from(sender),
             recipient: Bech32Address::from(recipient),
-            nonce: client_message_proof.nonce.into(),
+            nonce: client_message_proof.nonce,
             amount: client_message_proof.amount,
             data: client_message_proof.data,
         }

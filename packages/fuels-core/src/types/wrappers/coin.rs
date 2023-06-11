@@ -29,7 +29,7 @@ pub struct Coin {
 
 impl From<ClientCoin> for Coin {
     fn from(coin: ClientCoin) -> Self {
-        let owner: Address = coin.owner.into();
+        let owner: Address = coin.owner;
         Self {
             amount: coin.amount,
             block_created: coin.block_created,
@@ -51,7 +51,7 @@ impl From<Coin> for CoinConfig {
             tx_pointer_block_height: Some(coin.block_created.into()),
             tx_pointer_tx_idx: None,
             maturity: Some(coin.maturity.into()),
-            owner: Address::from(owner),
+            owner,
             amount: coin.amount,
             asset_id: coin.asset_id,
         }

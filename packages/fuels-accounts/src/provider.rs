@@ -423,7 +423,7 @@ impl Provider {
                      owner: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| (asset_id.to_string(), amount),
             )
             .collect();
         Ok(balances)
@@ -454,7 +454,7 @@ impl Provider {
                      contract: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| (asset_id.to_string(), amount),
             )
             .collect();
         Ok(balances)
