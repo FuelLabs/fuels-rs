@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
-use fuel_core_client::client::{PaginatedResult, PaginationRequest};
+use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
@@ -214,7 +214,10 @@ pub trait Account: ViewOnlyAccount {
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id(&consensus_parameters).to_string(), receipts))
+        Ok((
+            tx.id(consensus_parameters.chain_id.into()).to_string(),
+            receipts,
+        ))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -276,7 +279,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
-        let tx_id = tx.id(&params);
+        let tx_id = tx.id(params.chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
@@ -291,7 +294,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
-        let params = self.try_provider()?.consensus_parameters();
+        let chain_id = self.try_provider()?.consensus_parameters().chain_id;
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;
@@ -305,7 +308,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, amount, None).await?;
 
-        let tx_id = tx.id(&params).to_string();
+        let tx_id = tx.id(chain_id.into()).to_string();
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
@@ -401,7 +404,7 @@ mod tests {
         let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
         wallet.set_provider(test_provider);
         let signature = wallet.sign_transaction(&mut tx)?;
-        let message = Message::from_bytes(*tx.id(&consensus_parameters));
+        let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("c09c82ff0671431cd3dfba9a0ffaaef9474ab0e336fcb3b833dc84108066ed1187c06739d47548b6faa3ee1e83739bb77a4ceb1872f31d1ef26b6cfa45b5a8c0")?);

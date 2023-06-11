@@ -449,7 +449,7 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
 pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
     FuelInput::coin_signed(
         coin.utxo_id,
-        coin.owner.into(),
+        Address::new(coin.owner.hash().into()),
         coin.amount,
         coin.asset_id,
         TxPointer::default(),
@@ -461,16 +461,16 @@ pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
 pub fn create_coin_message_input(message: Message, witness_index: u8) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_signed(
-            message.sender.into(),
-            message.recipient.into(),
+            Address::new(message.sender.hash().into()),
+            Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
             witness_index,
         )
     } else {
         FuelInput::message_data_signed(
-            message.sender.into(),
-            message.recipient.into(),
+            Address::new(message.sender.hash().into()),
+            Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
             witness_index,
@@ -487,11 +487,12 @@ pub fn create_coin_predicate(
 ) -> FuelInput {
     FuelInput::coin_predicate(
         coin.utxo_id,
-        coin.owner.into(),
+        Address::new(coin.owner.hash().into()),
         coin.amount,
         asset_id,
         TxPointer::default(),
         0u32.into(),
+        0u64.into(),
         code,
         predicate_data,
     )
@@ -504,19 +505,21 @@ pub fn create_coin_message_predicate(
 ) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_predicate(
-            message.sender.into(),
-            message.recipient.into(),
+            Address::new(message.sender.hash().into()),
+            Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
+            0u64.into(),
             code,
             predicate_data,
         )
     } else {
         FuelInput::message_data_predicate(
-            message.sender.into(),
-            message.recipient.into(),
+            Address::new(message.sender.hash().into()),
+            Address::new(message.recipient.hash().into()),
             message.amount,
             message.nonce,
+            0u64.into(),
             message.data,
             code,
             predicate_data,

@@ -21,7 +21,10 @@ pub mod tx {
 
 #[cfg(feature = "std")]
 pub mod client {
-    pub use fuel_core_client::client::{FuelClient, PageDirection, PaginationRequest};
+    pub use fuel_core_client::client::{
+        pagination::{PageDirection, PaginationRequest},
+        FuelClient,
+    };
 }
 
 pub mod macros {

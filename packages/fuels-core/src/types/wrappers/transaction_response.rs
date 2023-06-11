@@ -6,9 +6,10 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
-use fuel_tx::Bytes32;
+use fuel_tx::Transaction;
 
 use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
+use fuel_types::Bytes32;
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {
@@ -49,13 +50,9 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         };
 
         let transaction = match client_response.transaction {
-            fuel_tx::Transaction::Script(tx) => {
-                TransactionType::Script(ScriptTransaction::from(tx))
-            }
-            fuel_tx::Transaction::Create(tx) => {
-                TransactionType::Create(CreateTransaction::from(tx))
-            }
-            fuel_tx::Transaction::Mint(_) => unimplemented!(),
+            Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
+            Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
+            Transaction::Mint(_) => unimplemented!(),
         };
 
         Self {

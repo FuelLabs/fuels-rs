@@ -75,7 +75,7 @@ pub trait Transaction: Into<FuelTransaction> + Send {
         parameters: &ConsensusParameters,
     ) -> Result<(), Error>;
 
-    fn id(&self, params: &ConsensusParameters) -> Bytes32;
+    fn id(&self, chain_id: u64) -> Bytes32;
 
     fn maturity(&self) -> u32;
 
@@ -132,10 +132,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn id(&self, params: &ConsensusParameters) -> Bytes32 {
+    fn id(&self, chain_id: u64) -> Bytes32 {
         match self {
-            TransactionType::Script(tx) => tx.id(params),
-            TransactionType::Create(tx) => tx.id(params),
+            TransactionType::Script(tx) => tx.id(chain_id),
+            TransactionType::Create(tx) => tx.id(chain_id),
         }
     }
 
@@ -277,8 +277,8 @@ macro_rules! impl_tx_wrapper {
                     .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn id(&self, params: &ConsensusParameters) -> Bytes32 {
-                self.tx.id(params)
+            fn id(&self, chain_id: u64) -> Bytes32 {
+                self.tx.id(&chain_id.into())
             }
 
             fn maturity(&self) -> u32 {

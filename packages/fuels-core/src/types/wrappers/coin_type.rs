@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use fuel_core_client::client::schema::coins::CoinType as ClientCoinType;
+use fuel_core_client::client::types::CoinType as ClientCoinType;
 use fuel_types::AssetId;
 
 use crate::{

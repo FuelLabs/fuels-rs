@@ -1,8 +1,11 @@
 #![cfg(feature = "std")]
 
 use fuel_core_chain_config::CoinConfig;
-use fuel_core_client::client::schema::coins::Coin as ClientCoin;
-use fuel_tx::{AssetId, UtxoId};
+use fuel_core_client::client::types::{
+    coins::Coin as ClientCoin,
+    primitives::{AssetId, UtxoId},
+};
+use fuel_types::Address;
 
 use crate::types::bech32::Bech32Address;
 
@@ -26,13 +29,14 @@ pub struct Coin {
 
 impl From<ClientCoin> for Coin {
     fn from(coin: ClientCoin) -> Self {
+        let owner: Address = coin.owner.into();
         Self {
-            amount: coin.amount.0,
-            block_created: coin.block_created.0,
-            asset_id: coin.asset_id.0 .0,
-            utxo_id: coin.utxo_id.0 .0,
-            maturity: coin.maturity.0,
-            owner: coin.owner.0 .0.into(),
+            amount: coin.amount,
+            block_created: coin.block_created,
+            asset_id: coin.asset_id,
+            utxo_id: coin.utxo_id,
+            maturity: coin.maturity,
+            owner: Bech32Address::from(owner),
             status: CoinStatus::Unspent,
         }
     }
@@ -40,13 +44,14 @@ impl From<ClientCoin> for Coin {
 
 impl From<Coin> for CoinConfig {
     fn from(coin: Coin) -> CoinConfig {
+        let owner: Address = coin.owner.into();
         Self {
             tx_id: Some(*coin.utxo_id.tx_id()),
             output_index: Some(coin.utxo_id.output_index()),
             tx_pointer_block_height: Some(coin.block_created.into()),
             tx_pointer_tx_idx: None,
             maturity: Some(coin.maturity.into()),
-            owner: coin.owner.into(),
+            owner: Address::from(owner),
             amount: coin.amount,
             asset_id: coin.asset_id,
         }

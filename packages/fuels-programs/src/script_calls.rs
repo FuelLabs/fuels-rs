@@ -221,12 +221,10 @@ where
             .account
             .add_fee_resources(tb, base_amount, None)
             .await?;
-        self.cached_tx_id = Some(tx.id(&chain_info.consensus_parameters));
+        let consensus_parameters = self.provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
+        tx.check_without_signatures(chain_info.latest_block.header.height, &consensus_parameters)?;
 
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
