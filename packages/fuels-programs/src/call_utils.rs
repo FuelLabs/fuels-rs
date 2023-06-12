@@ -1,4 +1,4 @@
-use std::{collections::HashSet, iter, vec};
+use std::{collections::HashSet, error::Error, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
@@ -10,7 +10,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::Bech32Address,
-        errors::Result,
+        errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxParameters},
@@ -29,6 +29,35 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
+}
+
+#[async_trait::async_trait]
+pub trait TxDependencyEstimation {
+    type Handler: Send + Sync + 'static;
+
+    async fn estimate_tx_dependencies(
+        mut handler: Self::Handler,
+        max_attempts: Option<u64>,
+    ) -> Result<Self::Handler> {
+        let attempts = max_attempts.unwrap_or(10);
+
+        for _ in 0..attempts {
+            match Self::simulate(&mut handler).await {
+                Ok(_) => return Ok(handler),
+
+                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                    handler = Self::append_missing_deps(handler, receipts);
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        Self::simulate(&mut handler).await.map(|_| handler)
+    }
+
+    async fn simulate(handler: &mut Self::Handler) -> Result<()>;
+    fn append_missing_deps(handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler;
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is

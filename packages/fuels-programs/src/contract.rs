@@ -26,6 +26,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         build_tx_from_contract_calls, find_contract_not_in_inputs, is_missing_output_variables,
+        TxDependencyEstimation,
     },
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -620,6 +621,37 @@ where
     }
 }
 
+#[async_trait::async_trait]
+impl<T, D> TxDependencyEstimation for ContractCallHandler<T, D>
+where
+    T: Account + 'static,
+    D: Tokenizable + Debug + Send + Sync + 'static,
+{
+    type Handler = ContractCallHandler<T, D>;
+
+    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
+        handler.simulate().await?;
+
+        Ok(())
+    }
+
+    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+        if is_missing_output_variables(receipts) {
+            handler = handler.append_variable_outputs(1)
+        }
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            handler = handler.append_contract(contract_id);
+        }
+
+        handler
+    }
+}
+
 /// Creates an ABI call based on a function [selector](Selector) and
 /// the encoding of its call arguments, which is a slice of [`Token`]s.
 /// It returns a prepared [`ContractCall`] that can further be used to
@@ -883,3 +915,45 @@ impl<T: Account> MultiContractCallHandler<T> {
         Ok(response)
     }
 }
+
+/*
+#[async_trait::async_trait]
+impl<T, D> TxDependencyEstimation for MultiContractCallHandler<T>
+where
+    T: Account + 'static,
+    D: Tokenizable + Debug + Send + Sync + 'static,
+{
+    type Handler = MultiContractCallHandler<T>;
+
+    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
+        handler.simulate::<D>().await?;
+
+        Ok(())
+    }
+
+    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+        // Append to any call, they will be merged to a single script tx
+        // At least 1 call should exist at this point, otherwise simulate would have failed
+        if is_missing_output_variables(receipts) {
+            handler.contract_calls
+                .iter_mut()
+                .take(1)
+                .for_each(|call| call.append_variable_outputs(1));
+        }
+
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            handler.contract_calls
+                .iter_mut()
+                .take(1)
+                .for_each(|call| call.append_external_contracts(contract_id.clone()));
+        }
+
+        handler
+    }
+}
+ */

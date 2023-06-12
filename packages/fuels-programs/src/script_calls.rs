@@ -25,7 +25,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         find_contract_not_in_inputs, generate_contract_inputs, generate_contract_outputs,
-        is_missing_output_variables,
+        is_missing_output_variables, TxDependencyEstimation,
     },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
@@ -348,5 +348,36 @@ where
             self.log_decoder.clone(),
             self.cached_tx_id,
         ))
+    }
+}
+
+#[async_trait::async_trait]
+impl<T, D> TxDependencyEstimation for ScriptCallHandler<T, D>
+where
+    T: Account + 'static,
+    D: Tokenizable + Parameterize + Debug + Send + Sync + 'static,
+{
+    type Handler = ScriptCallHandler<T, D>;
+
+    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
+        handler.simulate().await?;
+
+        Ok(())
+    }
+
+    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+        if is_missing_output_variables(receipts) {
+            handler = handler.append_variable_outputs(1)
+        }
+        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
+            let contract_id = Bech32ContractId::from(
+                *panic_receipt
+                    .contract_id()
+                    .expect("Panic receipt must contain contract id."),
+            );
+            handler = handler.append_contract(contract_id);
+        }
+
+        handler
     }
 }
