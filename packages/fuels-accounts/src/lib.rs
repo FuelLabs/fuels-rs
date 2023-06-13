@@ -76,7 +76,7 @@ impl From<AccountError> for Error {
 type AccountResult<T> = std::result::Result<T, AccountError>;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
+pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone + 'static {
     fn address(&self) -> &Bech32Address;
 
     fn try_provider(&self) -> AccountResult<&Provider>;

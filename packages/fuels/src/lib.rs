@@ -84,6 +84,7 @@ pub mod prelude {
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId, LogResult},
+            tx_dependency_estimation::TxDependencyEstimation,
         },
         test_helpers::*,
     };

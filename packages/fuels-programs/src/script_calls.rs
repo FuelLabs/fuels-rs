@@ -12,7 +12,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
-        errors::{Error, Result},
+        errors::Result,
         input::Input,
         transaction::{Transaction, TxParameters},
         transaction_builders::ScriptTransactionBuilder,
@@ -25,11 +25,12 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         find_contract_not_in_inputs, generate_contract_inputs, generate_contract_outputs,
-        is_missing_output_variables, TxDependencyEstimation,
+        is_missing_output_variables,
     },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    tx_dependency_estimation::{TxDependencyEstimation, TxDependencyEstimator},
 };
 
 #[derive(Debug)]
@@ -98,7 +99,7 @@ pub struct ScriptCallHandler<T: Account, D> {
 
 impl<T: Account, D> ScriptCallHandler<T, D>
 where
-    D: Parameterize + Tokenizable + Debug,
+    D: Parameterize + Tokenizable + Debug + Send + Sync,
 {
     pub fn new(
         script_binary: Vec<u8>,
@@ -304,38 +305,8 @@ where
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
-
-        for _ in 0..attempts {
-            match self.simulate().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_deps(receipts);
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        self.simulate().await.map(|_| self)
-    }
-
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1)
-        }
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self = self.append_contract(contract_id);
-        }
-
-        self
+    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
+        TxDependencyEstimator::estimate_tx_dependencies(self, max_attempts).await
     }
 
     /// Create a [`FuelCallResponse`] from call receipts
@@ -354,20 +325,18 @@ where
 #[async_trait::async_trait]
 impl<T, D> TxDependencyEstimation for ScriptCallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Parameterize + Debug + Send + Sync + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
-    type Handler = ScriptCallHandler<T, D>;
-
-    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
-        handler.simulate().await?;
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate().await?;
 
         Ok(())
     }
 
-    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
         if is_missing_output_variables(receipts) {
-            handler = handler.append_variable_outputs(1)
+            self = self.append_variable_outputs(1)
         }
         if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
@@ -375,9 +344,9 @@ where
                     .contract_id()
                     .expect("Panic receipt must contain contract id."),
             );
-            handler = handler.append_contract(contract_id);
+            self = self.append_contract(contract_id);
         }
 
-        handler
+        self
     }
 }

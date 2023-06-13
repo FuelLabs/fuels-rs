@@ -26,10 +26,10 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         build_tx_from_contract_calls, find_contract_not_in_inputs, is_missing_output_variables,
-        TxDependencyEstimation,
     },
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    tx_dependency_estimation::{TxDependencyEstimation, TxDependencyEstimator},
 };
 
 #[derive(Debug, Clone)]
@@ -85,9 +85,6 @@ impl Default for CallParameters {
         }
     }
 }
-
-/// How many times to attempt to resolve missing tx dependencies.
-pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 // Trait implemented by contract instances so that
 // they can be passed to the `set_contracts` method
@@ -393,7 +390,7 @@ pub struct ContractCallHandler<T: Account, D> {
 impl<T, D> ContractCallHandler<T, D>
 where
     T: Account,
-    D: Tokenizable + Debug,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
@@ -557,38 +554,8 @@ where
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
-
-        for _ in 0..attempts {
-            match self.simulate().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_deps(receipts);
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        self.simulate().await.map(|_| self)
-    }
-
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1)
-        }
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self = self.append_contract(contract_id);
-        }
-
-        self
+    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
+        TxDependencyEstimator::estimate_tx_dependencies(self, max_attempts).await
     }
 
     /// Get a contract's estimated cost
@@ -624,20 +591,17 @@ where
 #[async_trait::async_trait]
 impl<T, D> TxDependencyEstimation for ContractCallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Debug + Send + Sync + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
-    type Handler = ContractCallHandler<T, D>;
-
-    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
-        handler.simulate().await?;
-
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate().await?;
         Ok(())
     }
 
-    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
         if is_missing_output_variables(receipts) {
-            handler = handler.append_variable_outputs(1)
+            self = self.append_variable_outputs(1)
         }
         if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
             let contract_id = Bech32ContractId::from(
@@ -645,10 +609,10 @@ where
                     .contract_id()
                     .expect("Panic receipt must contain contract id."),
             );
-            handler = handler.append_contract(contract_id);
+            self = self.append_contract(contract_id);
         }
 
-        handler
+        self
     }
 }
 
@@ -832,47 +796,8 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
-
-        for _ in 0..attempts {
-            match self.simulate_without_decode().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_dependencies(receipts);
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        Ok(self)
-    }
-
-    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
-        // Append to any call, they will be merged to a single script tx
-        // At least 1 call should exist at this point, otherwise simulate would have failed
-        if is_missing_output_variables(receipts) {
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_variable_outputs(1));
-        }
-
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_external_contracts(contract_id.clone()));
-        }
-
-        self
+    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
+        TxDependencyEstimator::estimate_tx_dependencies(self, max_attempts).await
     }
 
     /// Get a contract's estimated cost
@@ -916,26 +841,21 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 }
 
-/*
 #[async_trait::async_trait]
-impl<T, D> TxDependencyEstimation for MultiContractCallHandler<T>
+impl<T> TxDependencyEstimation for MultiContractCallHandler<T>
 where
-    T: Account + 'static,
-    D: Tokenizable + Debug + Send + Sync + 'static,
+    T: Account,
 {
-    type Handler = MultiContractCallHandler<T>;
-
-    async fn simulate(handler: &mut Self::Handler) -> Result<()> {
-        handler.simulate::<D>().await?;
-
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate_without_decode().await?;
         Ok(())
     }
 
-    fn append_missing_deps(mut handler: Self::Handler, receipts: &[Receipt]) -> Self::Handler {
+    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
         // Append to any call, they will be merged to a single script tx
         // At least 1 call should exist at this point, otherwise simulate would have failed
         if is_missing_output_variables(receipts) {
-            handler.contract_calls
+            self.contract_calls
                 .iter_mut()
                 .take(1)
                 .for_each(|call| call.append_variable_outputs(1));
@@ -947,13 +867,12 @@ where
                     .contract_id()
                     .expect("Panic receipt must contain contract id."),
             );
-            handler.contract_calls
+            self.contract_calls
                 .iter_mut()
                 .take(1)
                 .for_each(|call| call.append_external_contracts(contract_id.clone()));
         }
 
-        handler
+        self
     }
 }
- */
