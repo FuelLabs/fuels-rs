@@ -459,13 +459,24 @@ pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
 }
 
 pub fn create_coin_message_input(message: Message, witness_index: u8) -> FuelInput {
-    FuelInput::message_coin_signed(
-        message.sender.into(),
-        message.recipient.into(),
-        message.amount,
-        message.nonce,
-        witness_index,
-    )
+    if message.data.is_empty() {
+        FuelInput::message_coin_signed(
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount,
+            message.nonce,
+            witness_index,
+        )
+    } else {
+        FuelInput::message_data_signed(
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount,
+            message.nonce,
+            witness_index,
+            message.data,
+        )
+    }
 }
 
 pub fn create_coin_predicate(
@@ -491,19 +502,32 @@ pub fn create_coin_message_predicate(
     code: Vec<u8>,
     predicate_data: Vec<u8>,
 ) -> FuelInput {
-    FuelInput::message_coin_predicate(
-        message.sender.into(),
-        message.recipient.into(),
-        message.amount,
-        message.nonce,
-        code,
-        predicate_data,
-    )
+    if message.data.is_empty() {
+        FuelInput::message_coin_predicate(
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount,
+            message.nonce,
+            code,
+            predicate_data,
+        )
+    } else {
+        FuelInput::message_data_predicate(
+            message.sender.into(),
+            message.recipient.into(),
+            message.amount,
+            message.nonce,
+            message.data,
+            code,
+            predicate_data,
+        )
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::{bech32::Bech32Address, message::MessageStatus};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -520,5 +544,49 @@ mod tests {
         bytes_32[0] = key;
 
         StorageSlot::new(bytes_32, Default::default())
+    }
+
+    #[test]
+    fn create_message_coin_signed_if_data_is_empty() {
+        assert!(matches!(
+            create_coin_message_input(given_a_message(vec![]), 0),
+            FuelInput::MessageCoinSigned(_)
+        ));
+    }
+
+    #[test]
+    fn create_message_data_signed_if_data_is_not_empty() {
+        assert!(matches!(
+            create_coin_message_input(given_a_message(vec![42]), 0),
+            FuelInput::MessageDataSigned(_)
+        ));
+    }
+
+    #[test]
+    fn create_message_coin_predicate_if_data_is_empty() {
+        assert!(matches!(
+            create_coin_message_predicate(given_a_message(vec![]), vec![], vec![]),
+            FuelInput::MessageCoinPredicate(_)
+        ));
+    }
+
+    #[test]
+    fn create_message_data_predicate_if_data_is_not_empty() {
+        assert!(matches!(
+            create_coin_message_predicate(given_a_message(vec![42]), vec![], vec![]),
+            FuelInput::MessageDataPredicate(_)
+        ));
+    }
+
+    fn given_a_message(data: Vec<u8>) -> Message {
+        Message {
+            sender: Bech32Address::default(),
+            recipient: Bech32Address::default(),
+            nonce: 0.into(),
+            amount: 0,
+            data,
+            da_height: 0,
+            status: MessageStatus::Unspent,
+        }
     }
 }

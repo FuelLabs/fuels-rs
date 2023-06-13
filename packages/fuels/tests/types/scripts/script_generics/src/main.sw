@@ -4,6 +4,7 @@ struct GenericBimbam<U> {
     val: U,
 }
 
+#[allow(dead_code)]
 struct GenericSnack<T, V> {
     twix: GenericBimbam<T>,
     mars: V,
@@ -17,8 +18,8 @@ fn main(
     (
         GenericSnack {
             twix: bot,
-            mars: 2 * bim.val,
+            mars: 2u32 * bim.val,
         },
-        GenericBimbam { val: 255 },
+        GenericBimbam { val: 255u8 },
     )
 }

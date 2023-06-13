@@ -35,18 +35,18 @@ impl TestContract for Contract {
     }
 
     fn get_small_struct() -> SmallStruct {
-        SmallStruct { foo: 100 }
+        SmallStruct { foo: 100u32 }
     }
 
     fn get_large_struct() -> LargeStruct {
         LargeStruct {
-            foo: 12,
-            bar: 42,
+            foo: 12u8,
+            bar: 42u8,
         }
     }
 
     fn get_large_array() -> [u32; 2] {
-        let x: [u32; 2] = [1, 2];
+        let x: [u32; 2] = [1u32, 2u32];
         x
     }
 

@@ -240,7 +240,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(12, 30, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -289,7 +289,7 @@ async fn predicate_contract_transfer() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -353,7 +353,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(22, 20, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -400,7 +400,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -486,7 +486,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(22, 20, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -563,7 +563,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(28, 14, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
