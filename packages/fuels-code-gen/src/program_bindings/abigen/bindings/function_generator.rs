@@ -4,12 +4,13 @@ use quote::{quote, ToTokens};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
         utils::{get_equivalent_bech32_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {
@@ -151,10 +152,12 @@ impl From<FunctionGenerator> for TokenStream {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ABIFunction, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullTypeDeclaration,
+        program::{ABIFunction, TypeApplication, TypeDeclaration},
+    };
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn test_expand_fn_arguments() -> Result<()> {
