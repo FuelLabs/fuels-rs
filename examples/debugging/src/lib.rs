@@ -2,7 +2,7 @@
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::ProgramABI;
+    use fuel_abi_types::abi::program::ProgramABI;
     use fuels::{
         core::{
             codec::{calldata, fn_selector, resolve_fn_selector},

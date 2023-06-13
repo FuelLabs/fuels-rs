@@ -6,12 +6,11 @@ use quote::{quote, ToTokens};
 
 use crate::{
     error::Result,
-    program_bindings::{
-        abi_types::FullTypeApplication,
-        resolved_type::{ResolvedType, TypeResolver},
-    },
+    program_bindings::resolved_type::{ResolvedType, TypeResolver},
     utils::{safe_ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::FullTypeApplication;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -71,7 +70,7 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
+    use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
