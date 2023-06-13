@@ -1,9 +1,6 @@
 use fuel_core::chain_config::ChainConfig;
-use fuel_core_types::fuel_vm::SecretKey;
 #[allow(unused_imports)]
 use std::future::Future;
-use std::path::PathBuf;
-use std::str::FromStr;
 use std::vec;
 
 use fuels::{
@@ -1326,7 +1323,12 @@ async fn low_level_call() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg(feature = "rocksdb")]
 async fn test_create_db() -> Result<()> {
+    use fuel_core_types::fuel_vm::SecretKey;
+    use std::path::PathBuf;
+    use std::str::FromStr;
+
     setup_program_test!(Abigen(Contract(
         name = "TestContract",
         project = "packages/fuels/tests/contracts/contract_test"

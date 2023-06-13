@@ -1,15 +1,10 @@
-use fuel_core_client::client::{PageDirection, PaginationRequest};
-use std::fs;
-use std::path::PathBuf;
 use std::str::FromStr;
 
-use fuels::accounts::fuel_crypto::SecretKey;
 use fuels::{
     prelude::*,
     tx::{Bytes32, StorageSlot},
     types::Bits256,
 };
-use fuels_accounts::wallet::WalletUnlocked;
 
 #[tokio::test]
 async fn test_storage_initialization() -> Result<()> {
@@ -112,7 +107,14 @@ async fn storage_load_error_messages() {
 }
 
 #[tokio::test]
+#[cfg(feature = "rocksdb")]
 async fn test_created_db() -> Result<()> {
+    use fuel_core_client::client::{PageDirection, PaginationRequest};
+    use fuels::accounts::fuel_crypto::SecretKey;
+    use fuels_accounts::wallet::WalletUnlocked;
+    use std::fs;
+    use std::path::PathBuf;
+
     let path =
         PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".spider/db");
 
