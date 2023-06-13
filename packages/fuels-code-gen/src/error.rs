@@ -46,4 +46,9 @@ macro_rules! impl_from {
     }
 }
 
-impl_from!(serde_json::Error, io::Error, proc_macro2::LexError);
+impl_from!(
+    serde_json::Error,
+    io::Error,
+    proc_macro2::LexError,
+    fuel_abi_types::error::Error
+);

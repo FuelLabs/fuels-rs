@@ -1,14 +1,15 @@
 use std::fmt::{Display, Formatter};
 
-use fuel_abi_types::utils::{
-    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+use fuel_abi_types::{
+    abi::full_program::FullTypeApplication,
+    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
     error::{error, Result},
-    program_bindings::{abi_types::FullTypeApplication, utils::sdk_provided_custom_types_lookup},
+    program_bindings::utils::sdk_provided_custom_types_lookup,
     utils::{safe_ident, TypePath},
 };
 
@@ -251,10 +252,12 @@ impl TypeResolver {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullTypeDeclaration,
+        program::{TypeApplication, TypeDeclaration},
+    };
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,

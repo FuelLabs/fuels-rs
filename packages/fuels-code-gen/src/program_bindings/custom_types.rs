@@ -6,13 +6,14 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         custom_types::{enums::expand_custom_enum, structs::expand_custom_struct},
         generated_code::GeneratedCode,
         utils::sdk_provided_custom_types_lookup,
     },
     utils::TypePath,
 };
+
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 mod enums;
 mod structs;
@@ -122,7 +123,7 @@ fn is_type_unused(type_path: &TypePath) -> bool {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::program::{ProgramABI, TypeApplication, TypeDeclaration};
     use quote::quote;
 
     use super::*;
