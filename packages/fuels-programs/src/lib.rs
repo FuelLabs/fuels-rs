@@ -4,4 +4,3 @@ pub mod contract;
 pub mod logs;
 pub mod receipt_parser;
 pub mod script_calls;
-pub mod tx_dependency_estimation;
