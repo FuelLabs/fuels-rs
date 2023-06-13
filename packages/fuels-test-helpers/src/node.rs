@@ -7,8 +7,6 @@ use std::{
     time::Duration,
 };
 
-use strum_macros::{Display, EnumString, EnumVariantNames};
-
 pub use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
@@ -43,8 +41,7 @@ pub enum Trigger {
     },
 }
 
-#[derive(Clone, Debug, Display, Eq, PartialEq, EnumString, EnumVariantNames /*ValueEnum,*/)]
-#[strum(serialize_all = "kebab_case")]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DbType {
     InMemory,
     RocksDb,

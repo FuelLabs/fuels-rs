@@ -1,5 +1,4 @@
 use fuel_core::chain_config::ChainConfig;
-use fuel_core_client::client::{PageDirection, PaginationRequest};
 use fuel_core_types::fuel_vm::SecretKey;
 #[allow(unused_imports)]
 use std::future::Future;
@@ -1360,8 +1359,6 @@ async fn test_create_db() -> Result<()> {
     let (provider, _) =
         setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
 
-    dbg!(&provider.chain_info().await?);
-
     wallet.set_provider(provider);
 
     let _ = Contract::load_from(
@@ -1377,51 +1374,6 @@ async fn test_create_db() -> Result<()> {
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;
-
-    dbg!(wallet.address());
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_created_db() -> Result<()> {
-    let node_config = Config {
-        database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-            .join(".spider/db"),
-        database_type: DbType::RocksDb,
-        ..Config::local_node()
-    };
-
-    let mut wallet = WalletUnlocked::new_from_private_key(
-        SecretKey::from_str("0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32")
-            .unwrap(),
-        None,
-    );
-
-    let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
-
-    wallet.set_provider(provider.clone());
-
-    let blocks = provider
-        .get_blocks(PaginationRequest {
-            cursor: None,
-            results: 10,
-            direction: PageDirection::Forward,
-        })
-        .await?
-        .results;
-
-    assert_eq!(provider.chain_info().await?.name, "spider");
-    assert_eq!(blocks.len(), 3);
-    assert_eq!(
-        *wallet.get_balances().await?.iter().next().unwrap().1,
-        225883
-    );
-    assert_eq!(
-        *wallet.get_balances().await?.iter().next().unwrap().1,
-        225883
-    );
-    assert_eq!(wallet.get_balances().await?.len(), 2);
 
     Ok(())
 }
