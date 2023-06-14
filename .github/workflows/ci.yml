@@ -151,10 +151,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
+        cargo_command: [check]
+        args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
-          - cargo_command: [ check ]
-            args: [ --all-features ]
           - cargo_command: fmt
             args: --all --verbose -- --check
           - cargo_command: clippy
