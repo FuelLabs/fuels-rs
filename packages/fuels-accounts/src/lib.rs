@@ -321,11 +321,8 @@ mod tests {
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{
-        Address, AssetId, Bytes32, ConsensusParameters, Input, Output,
-        Transaction as FuelTransaction, TxPointer, UtxoId,
-    };
-    use fuels_core::types::transaction::{ScriptTransaction, Transaction};
+    use fuel_tx::{Address, ConsensusParameters, Output};
+    use fuels_core::types::transaction::Transaction;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -374,37 +371,30 @@ mod tests {
         let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
-        let input_coin = Input::coin_signed(
-            UtxoId::new(Bytes32::zeroed(), 0),
-            Address::from_str(
-                "0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e",
-            )?,
-            10000000,
-            AssetId::from([0u8; 32]),
-            TxPointer::default(),
-            0,
-            0u32.into(),
-        );
+        let coin = Coin {
+            amount: 10000000,
+            owner: wallet.address().clone(),
+            ..Default::default()
+        };
+        let input_coin = Input::ResourceSigned {
+            resource: CoinType::Coin(coin),
+            witness_index: 0,
+        };
 
         let output_coin = Output::coin(
             Address::from_str(
                 "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
             )?,
             1,
-            AssetId::from([0u8; 32]),
+            Default::default(),
         );
 
-        let mut tx: ScriptTransaction = FuelTransaction::script(
-            0,
-            1000000,
-            0u32.into(),
-            hex::decode("24400000")?,
-            vec![],
+        let mut tx = ScriptTransactionBuilder::prepare_transfer(
             vec![input_coin],
             vec![output_coin],
-            vec![],
+            Default::default(),
         )
-        .into();
+        .build()?;
 
         // Sign the transaction.
         let consensus_parameters = ConsensusParameters::default();
@@ -414,7 +404,7 @@ mod tests {
         let message = Message::from_bytes(*tx.id(&consensus_parameters));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("8d2d7f8d5190d9acdc07717e39173bdfb0024b1c06e70b084994440eb9bdff17e57dfdcb6b45bd36a896566054809a21dfd67c0a25344c73cf9c4d9d6a32be05")?);
+        assert_eq!(signature, Signature::from_str("c09c82ff0671431cd3dfba9a0ffaaef9474ab0e336fcb3b833dc84108066ed1187c06739d47548b6faa3ee1e83739bb77a4ceb1872f31d1ef26b6cfa45b5a8c0")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
