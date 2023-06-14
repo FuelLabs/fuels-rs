@@ -27,6 +27,8 @@ use tokio::{process::Command, sync::oneshot};
 
 use crate::utils::{into_coin_configs, into_message_configs};
 
+pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
+
 #[derive(Clone, Debug)]
 pub enum Trigger {
     Instant,
@@ -64,7 +66,7 @@ impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: 10 * 1024 * 1024,
+            max_database_cache_size: DEFAULT_CACHE_SIZE,
             database_path: Default::default(),
             database_type: DbType::InMemory,
             utxo_validation: false,
@@ -274,7 +276,7 @@ pub async fn new_fuel_node(
             }
         }
 
-        if config.max_database_cache_size {
+        if config.max_database_cache_size != DEFAULT_CACHE_SIZE {
             args.push("--max-database-cache-size".to_string());
             args.push(config.max_database_cache_size.to_string());
         }

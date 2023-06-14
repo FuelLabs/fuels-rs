@@ -152,7 +152,7 @@ jobs:
     strategy:
       matrix:
         cargo_command: [check]
-        args: [--all-features]
+        args: [--features "default fuel-core-lib test-type-paths"]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - cargo_command: fmt
@@ -161,10 +161,10 @@ jobs:
             args: --all-targets
             download_sway_artifacts: sway-examples
           - cargo_command: clippy
-            args: --all-targets --all-features
+            args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: test
-            args: --all-targets --all-features --workspace
+            args: --all-targets --features "default fuel-core-lib test-type-paths" --workspace
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: test
             args: --all-targets --workspace
