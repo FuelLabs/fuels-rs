@@ -161,10 +161,10 @@ jobs:
             args: --all-targets
             download_sway_artifacts: sway-examples
           - cargo_command: clippy
-            args: --all-targets --features "default fuel-core-lib test-type-paths"
+            args: --all-targets --all-features
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: test
-            args: --all-targets --features "default fuel-core-lib test-type-paths" --workspace
+            args: --all-targets --all-features --workspace
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: test
             args: --all-targets --workspace
@@ -213,7 +213,14 @@ jobs:
 
       - name: Cargo (package-level)
         if: ${{ matrix.cargo_command && matrix.package }}
-        run: cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
+        run: |
+         if [[ ${{ matrix.package }} == "fuel" &&  ${{ matrix.cargo_command }} == "test" ]]; then
+           cargo test -p fuel --all-targets --features "default fuel-core-lib test-type-paths" --workspace
+         elif [[ ${{ matrix.package }} == "fuel" &&  ${{ matrix.cargo_command }} == "clippy" ]]; then
+           cargo clippy -p fuel --all-targets --features "default fuel-core-lib test-type-paths"
+         else
+           cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
+         fi
 
       - name: Install NodeJS for WASM testing
         if: ${{ matrix.command == 'test_wasm' }}
