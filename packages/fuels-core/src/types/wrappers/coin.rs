@@ -13,7 +13,7 @@ pub enum CoinStatus {
     Spent,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
 pub struct Coin {
     pub amount: u64,
     pub block_created: u32,
