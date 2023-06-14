@@ -8,6 +8,7 @@
 - [Connecting to a Fuel node](./getting-started/connecting.md)
   - [Connecting to the Testnet or an external node](./providers/external-node.md)
   - [Running a short-lived Fuel node with the SDK](./providers/short-lived.md)
+  - [Rocksdb](./providers/rocksdb.md)
   - [Querying the blockchain](./providers/querying.md)
 - [Accounts](./getting-started/account.md)
 - [Managing wallets](./getting-started/managing-wallets.md)

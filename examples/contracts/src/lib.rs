@@ -790,4 +790,72 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    #[ignore]
+    #[cfg(not(feature = "fuel-core-lib"))]
+    async fn create_rocksdb() -> Result<()> {
+        use fuels::accounts::fuel_crypto::SecretKey;
+        use std::path::PathBuf;
+        use std::str::FromStr;
+
+        use fuels::prelude::*;
+
+        setup_program_test!(Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),);
+
+        let mut wallet = WalletUnlocked::new_from_private_key(
+            SecretKey::from_str(
+                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+            )
+            .unwrap(),
+            None,
+        );
+
+        const NUM_ASSETS: u64 = 2;
+        const AMOUNT: u64 = 225883;
+        const NUM_COINS: u64 = 1;
+
+        // ANCHOR: create_rocksdb
+        let node_config = Config {
+            database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                .join(".spider/db"),
+            database_type: DbType::RocksDb,
+            ..Config::local_node()
+        };
+
+        let chain_config = ChainConfig {
+            chain_name: "spider".to_string(),
+            initial_state: None,
+            transaction_parameters: Default::default(),
+            ..ChainConfig::local_testnet()
+        };
+
+        let (coins, _) =
+            setup_multiple_assets_coins(wallet.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
+        let (provider, _) =
+            setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
+
+        // ANCHOR_END: create_rocksdb
+
+        wallet.set_provider(provider);
+
+        let _ = Contract::load_from(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
+        )?
+        .deploy(&wallet, TxParameters::default())
+        .await?;
+
+        let _ = Contract::load_from(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default().set_salt(Salt::new([1u8; 32])),
+        )?
+        .deploy(&wallet, TxParameters::default())
+        .await?;
+
+        Ok(())
+    }
 }

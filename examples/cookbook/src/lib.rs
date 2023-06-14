@@ -5,6 +5,7 @@ mod tests {
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     };
+    use std::str::FromStr;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -183,6 +184,67 @@ mod tests {
             assert_eq!(balance, AMOUNT);
         }
         // ANCHOR_END: transfer_multiple_transaction
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore]
+    #[cfg(not(feature = "fuel-core-lib"))]
+    async fn use_created_db_rocksdb() -> Result<()> {
+        use fuels::accounts::fuel_crypto::SecretKey;
+        use fuels::accounts::wallet::WalletUnlocked;
+        use fuels::client::{PageDirection, PaginationRequest};
+        use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
+        use std::fs;
+        use std::path::PathBuf;
+
+        // ANCHOR: use_created_rocksdb
+        let path =
+            PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".spider/db");
+
+        let node_config = Config {
+            database_path: path.clone(),
+            database_type: DbType::RocksDb,
+            ..Config::local_node()
+        };
+
+        let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
+        //the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
+        let mut wallet = WalletUnlocked::new_from_private_key(
+            SecretKey::from_str(
+                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+            )
+                .unwrap(),
+            None,
+        );
+
+        wallet.set_provider(provider.clone());
+
+        // ANCHOR_END: use_created_rocksdb
+
+        let blocks = provider
+            .get_blocks(PaginationRequest {
+                cursor: None,
+                results: 10,
+                direction: PageDirection::Forward,
+            })
+            .await?
+            .results;
+
+        assert_eq!(provider.chain_info().await?.name, "spider");
+        assert_eq!(blocks.len(), 3);
+        assert_eq!(
+            *wallet.get_balances().await?.iter().next().unwrap().1,
+            225883
+        );
+        assert_eq!(
+            *wallet.get_balances().await?.iter().next().unwrap().1,
+            225883
+        );
+        assert_eq!(wallet.get_balances().await?.len(), 2);
+
+        fs::remove_dir_all(path.parent().expect("Db parend folder do not exist"))?;
 
         Ok(())
     }

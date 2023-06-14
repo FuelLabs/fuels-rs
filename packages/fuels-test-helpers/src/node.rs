@@ -274,6 +274,11 @@ pub async fn new_fuel_node(
             }
         }
 
+        if config.max_database_cache_size {
+            args.push("--max-database-cache-size".to_string());
+            args.push(config.max_database_cache_size.to_string());
+        }
+
         if config.utxo_validation {
             args.push("--utxo-validation".to_string());
         }

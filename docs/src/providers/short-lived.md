@@ -29,3 +29,11 @@ The `fuel-core-lib` is a feature defined in the `fuels` library, allowing us to 
 ```rust,ignore
 fuels = { version = "0.42.0", features = ["fuel-core-lib"] }
 ```
+
+## RocksDb
+
+The `rocksdb` is a feature defined in the `fuels` library, allowing us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine and creating rocksDb database. Using the `rocksdb` feature flag entails downloading all the dependencies needed to run the fuel-core node and rocksdb.
+
+```rust,ignore
+fuels = { version = "0.42.0", features = ["rocksdb"] }
+```
