@@ -151,10 +151,10 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        cargo_command: [check]
-        args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
+          - cargo_command: [ check ]
+            args: [ --all-features ]
           - cargo_command: fmt
             args: --all --verbose -- --check
           - cargo_command: clippy
@@ -218,14 +218,14 @@ jobs:
            if [[ ${{ matrix.cargo_command }} == "test" ]]; then
              cargo test -p fuel --all-targets --features "default fuel-core-lib test-type-paths" --workspace
            fi
-#           if [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
-#             cargo clippy -p fuel --all-targets --features "default fuel-core-lib test-type-paths"
-#           fi
-#           if [[ ${{ matrix.cargo_command }} == "check" ]]; then
-#             cargo check -p fuel --features "default fuel-core-lib test-type-paths"
-#           fi
-#         else
-#           cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
+           if [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
+             cargo clippy -p fuel --all-targets --features "default fuel-core-lib test-type-paths"
+           fi
+           if [[ ${{ matrix.cargo_command }} == "check" ]]; then
+             cargo check -p fuel --features "default fuel-core-lib test-type-paths"
+           fi
+         else
+           cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
          fi
 
       - name: Install NodeJS for WASM testing
