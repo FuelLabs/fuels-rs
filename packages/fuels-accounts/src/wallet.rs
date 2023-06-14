@@ -117,10 +117,6 @@ impl ViewOnlyAccount for Wallet {
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
     }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
-        self.set_provider(provider)
-    }
 }
 
 impl WalletUnlocked {
@@ -238,11 +234,6 @@ impl ViewOnlyAccount for WalletUnlocked {
 
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
-    }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        self.wallet.set_provider(provider);
-        self
     }
 }
 

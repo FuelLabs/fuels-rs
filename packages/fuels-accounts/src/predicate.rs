@@ -114,10 +114,6 @@ impl ViewOnlyAccount for Predicate {
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
     }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        (self as &mut Predicate).set_provider(provider)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
