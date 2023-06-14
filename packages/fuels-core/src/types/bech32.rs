@@ -4,7 +4,7 @@ use std::{
 };
 
 use bech32::{FromBase32, ToBase32, Variant::Bech32m};
-use fuel_core_client::client::types::primitives::{Address, Bytes32, ContractId};
+use fuel_tx::{Address, Bytes32, ContractId};
 
 use crate::types::errors::{Error, Result};
 
