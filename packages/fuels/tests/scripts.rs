@@ -1,6 +1,4 @@
-use fuels::prelude::*;
-use fuels::programs::call_utils::TxDependencyEstimation;
-use fuels_accounts::wallet::WalletUnlocked;
+use fuels::{accounts::wallet::WalletUnlocked, prelude::*};
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
