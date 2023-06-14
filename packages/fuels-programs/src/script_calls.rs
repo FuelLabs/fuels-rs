@@ -24,8 +24,8 @@ use itertools::chain;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        estimate_tx_dependencies, find_contract_not_in_inputs, generate_contract_inputs,
-        generate_contract_outputs, is_missing_output_variables, TxDependencyEstimation,
+        find_contract_not_in_inputs, generate_contract_inputs, generate_contract_outputs,
+        is_missing_output_variables, TxDependencyEstimation,
     },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
@@ -300,12 +300,6 @@ where
             .await?;
 
         Ok(transaction_cost)
-    }
-
-    /// Simulates the call and attempts to resolve missing tx dependencies.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
-        estimate_tx_dependencies(self, max_attempts).await
     }
 
     /// Create a [`FuelCallResponse`] from call receipts

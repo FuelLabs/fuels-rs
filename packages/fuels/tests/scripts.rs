@@ -1,4 +1,5 @@
 use fuels::prelude::*;
+use fuels::programs::call_utils::TxDependencyEstimation;
 use fuels_accounts::wallet::WalletUnlocked;
 
 #[tokio::test]

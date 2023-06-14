@@ -25,8 +25,8 @@ use itertools::Itertools;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        build_tx_from_contract_calls, estimate_tx_dependencies, find_contract_not_in_inputs,
-        is_missing_output_variables, TxDependencyEstimation,
+        build_tx_from_contract_calls, find_contract_not_in_inputs, is_missing_output_variables,
+        TxDependencyEstimation,
     },
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -552,12 +552,6 @@ where
         self.get_response(receipts)
     }
 
-    /// Simulates the call and attempts to resolve missing tx dependencies.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
-        estimate_tx_dependencies(self, max_attempts).await
-    }
-
     /// Get a contract's estimated cost
     pub async fn estimate_transaction_cost(
         &self,
@@ -792,12 +786,6 @@ impl<T: Account> MultiContractCallHandler<T> {
         provider.checked_dry_run(&tx).await?;
 
         Ok(())
-    }
-
-    /// Simulates the call and attempts to resolve missing tx dependencies.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(self, max_attempts: Option<u64>) -> Result<Self> {
-        estimate_tx_dependencies(self, max_attempts).await
     }
 
     /// Get a contract's estimated cost

@@ -35,30 +35,29 @@ pub(crate) struct CallOpcodeParamsOffset {
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 #[async_trait::async_trait]
-pub trait TxDependencyEstimation {
+pub trait TxDependencyEstimation: Sized {
     async fn simulate(&mut self) -> Result<()>;
     fn append_missing_deps(self, receipts: &[Receipt]) -> Self;
-}
 
-pub async fn estimate_tx_dependencies<T: TxDependencyEstimation + Send + Sync>(
-    mut program_handler: T,
-    max_attempts: Option<u64>,
-) -> Result<T> {
-    let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
+    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Forwards the received error if it cannot be fixed.
+    async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
 
-    for _ in 0..attempts {
-        match program_handler.simulate().await {
-            Ok(_) => return Ok(program_handler),
+        for _ in 0..attempts {
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
 
-            Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
-                program_handler = program_handler.append_missing_deps(receipts);
+                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                    self = self.append_missing_deps(receipts);
+                }
+
+                Err(other_error) => return Err(other_error),
             }
-
-            Err(other_error) => return Err(other_error),
         }
-    }
 
-    program_handler.simulate().await.map(|_| program_handler)
+        self.simulate().await.map(|_| self)
+    }
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
