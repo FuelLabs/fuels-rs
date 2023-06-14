@@ -6,6 +6,7 @@ struct Person {
     name: str[4],
 }
 
+#[allow(dead_code)]
 enum State {
     A: (),
     B: (),

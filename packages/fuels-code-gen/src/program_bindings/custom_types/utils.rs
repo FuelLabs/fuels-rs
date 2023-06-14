@@ -2,9 +2,10 @@ use fuel_abi_types::utils::extract_generic_name;
 use proc_macro2::TokenStream;
 use quote::quote;
 
-use crate::{
-    error::Result,
-    program_bindings::{abi_types::FullTypeDeclaration, utils::Component},
+use crate::{error::Result, program_bindings::utils::Component};
+
+use fuel_abi_types::{
+    abi::full_program::FullTypeDeclaration,
     utils::{ident, TypePath},
 };
 
@@ -42,7 +43,7 @@ pub(crate) fn extract_generic_parameters(
 
 #[cfg(test)]
 mod tests {
-    use fuel_abi_types::{program_abi::TypeDeclaration, utils::extract_custom_type_name};
+    use fuel_abi_types::{abi::program::TypeDeclaration, utils::extract_custom_type_name};
 
     use super::*;
     use crate::program_bindings::{resolved_type::ResolvedType, utils::param_type_calls};

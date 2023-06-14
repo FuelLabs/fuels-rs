@@ -5,7 +5,6 @@ use quote::{quote, TokenStreamExt};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullABIFunction, FullProgramABI},
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constants,
@@ -15,6 +14,8 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 
 pub(crate) fn contract_bindings(
     name: &Ident,
@@ -168,7 +169,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::program::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
 
     use super::*;
 

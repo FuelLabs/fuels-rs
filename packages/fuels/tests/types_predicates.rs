@@ -214,7 +214,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_vector").await?;
 

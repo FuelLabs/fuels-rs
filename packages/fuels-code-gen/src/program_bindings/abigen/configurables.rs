@@ -3,12 +3,11 @@ use quote::quote;
 
 use crate::{
     error::Result,
-    program_bindings::{
-        abi_types::FullConfigurable,
-        resolved_type::{ResolvedType, TypeResolver},
-    },
+    program_bindings::resolved_type::{ResolvedType, TypeResolver},
     utils::safe_ident,
 };
+
+use fuel_abi_types::abi::full_program::FullConfigurable;
 
 #[derive(Debug)]
 pub(crate) struct ResolvedConfigurable {
