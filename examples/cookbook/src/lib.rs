@@ -215,7 +215,7 @@ mod tests {
             SecretKey::from_str(
                 "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
             )
-                .unwrap(),
+            .unwrap(),
             None,
         );
 
