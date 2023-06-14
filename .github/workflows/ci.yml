@@ -152,7 +152,7 @@ jobs:
     strategy:
       matrix:
         cargo_command: [check]
-        args: [--features "default fuel-core-lib test-type-paths"]
+        args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - cargo_command: fmt
@@ -214,7 +214,7 @@ jobs:
       - name: Cargo (package-level)
         if: ${{ matrix.cargo_command && matrix.package }}
         run: |
-         if [[ ${{ matrix.package }} == "fuel" &&  ${{ matrix.cargo_command }} == "test" ]]; then
+         if [[ ${{ matrix.package }} == fuel &&  ${{ matrix.cargo_command }} == test ]]; then
            cargo test -p fuel --all-targets --features "default fuel-core-lib test-type-paths" --workspace
          elif [[ ${{ matrix.package }} == "fuel" &&  ${{ matrix.cargo_command }} == "clippy" ]]; then
            cargo clippy -p fuel --all-targets --features "default fuel-core-lib test-type-paths"
