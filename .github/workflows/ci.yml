@@ -216,13 +216,13 @@ jobs:
         run: |
          if [[ ${{ matrix.package }} == "fuels" ]]; then
            if [[ ${{ matrix.cargo_command }} == "test" ]]; then
-             cargo test -p fuel --all-targets --features "default fuel-core-lib test-type-paths" --workspace
+             cargo test -p fuels --all-targets --features "default fuel-core-lib test-type-paths" --workspace
            fi
            if [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
-             cargo clippy -p fuel --all-targets --features "default fuel-core-lib test-type-paths"
+             cargo clippy -p fuels --all-targets --features "default fuel-core-lib test-type-paths"
            fi
            if [[ ${{ matrix.cargo_command }} == "check" ]]; then
-             cargo check -p fuel --features "default fuel-core-lib test-type-paths"
+             cargo check -p fuels --features "default fuel-core-lib test-type-paths"
            fi
          else
            cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
