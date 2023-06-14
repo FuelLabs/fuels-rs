@@ -214,7 +214,7 @@ jobs:
       - name: Cargo (package-level)
         if: ${{ matrix.cargo_command && matrix.package }}
         run: |
-         if [[ ${{ matrix.package }} == "fuel" ]]; then
+         if [[ ${{ matrix.package }} == "fuels" ]]; then
            if [[ ${{ matrix.cargo_command }} == "test" ]]; then
              cargo test -p fuel --all-targets --features "default fuel-core-lib test-type-paths" --workspace
            fi
