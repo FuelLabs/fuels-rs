@@ -4,9 +4,9 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
+    Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
+    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
 
 use crate::{
@@ -75,6 +75,10 @@ pub trait Transaction: Into<FuelTransaction> + Send {
         parameters: &ConsensusParameters,
     ) -> Result<(), Error>;
 
+    fn precompute(&mut self, chain_id: u64) -> Result<(), Error>;
+
+    fn is_computed(&self) -> bool;
+
     fn id(&self, chain_id: u64) -> Bytes32;
 
     fn maturity(&self) -> u32;
@@ -119,6 +123,20 @@ impl Transaction for TransactionType {
             TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
             TransactionType::Create(tx) => tx.fee_checked_from_tx(params),
         }
+    }
+
+    fn is_computed(&self) -> bool {
+        match self {
+            TransactionType::Script(tx) => tx.is_computed(),
+            TransactionType::Create(tx) => tx.is_computed(),
+        }
+    }
+
+    fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
+        Ok(match self {
+            TransactionType::Script(tx) => tx.precompute(chain_id)?,
+            TransactionType::Create(tx) => tx.precompute(chain_id)?,
+        })
     }
 
     fn check_without_signatures(
@@ -275,6 +293,14 @@ macro_rules! impl_tx_wrapper {
                 Ok(self
                     .tx
                     .check_without_signatures(block_height.into(), parameters)?)
+            }
+
+            fn is_computed(&self) -> bool {
+                self.tx.is_computed()
+            }
+
+            fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
+                Ok(self.tx.precompute(&chain_id.into())?)
             }
 
             fn id(&self, chain_id: u64) -> Bytes32 {

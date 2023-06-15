@@ -242,7 +242,7 @@ impl Contract {
             tx_parameters,
         );
 
-        let tx = account
+        let mut tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
@@ -251,12 +251,11 @@ impl Contract {
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
         let chain_info = provider.chain_info().await?;
+        let consensus_params = provider.consensus_parameters();
 
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &provider.consensus_parameters(),
-        )?;
-        provider.send_transaction(&tx).await?;
+        tx.precompute(consensus_params.chain_id.into())?;
+        tx.check_without_signatures(chain_info.latest_block.header.height, &consensus_params)?;
+        provider.send_transaction(&mut tx).await?;
 
         Ok(self.contract_id.into())
     }
