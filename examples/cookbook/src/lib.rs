@@ -220,7 +220,6 @@ mod tests {
         );
 
         wallet.set_provider(provider.clone());
-
         // ANCHOR_END: use_created_rocksdb
 
         let blocks = provider
