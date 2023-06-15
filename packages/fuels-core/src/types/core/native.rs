@@ -26,15 +26,3 @@ impl AsRef<[u8]> for Identity {
         }
     }
 }
-
-#[cfg(test)]
-mod test {
-    use crate::types::Identity;
-    use fuel_types::Address;
-    use std::str::FromStr;
-
-    #[test]
-    fn test_as_ref() -> Result<()> {
-        let a = Identity::Address(Address::from_str("erbsterst"));
-    }
-}
