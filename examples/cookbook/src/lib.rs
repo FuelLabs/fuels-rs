@@ -189,8 +189,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
-    #[cfg(not(feature = "fuel-core-lib"))]
+    #[cfg(feature = "rocksdb")]
     async fn use_created_db_rocksdb() -> Result<()> {
         use fuels::accounts::fuel_crypto::SecretKey;
         use fuels::accounts::wallet::WalletUnlocked;

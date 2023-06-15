@@ -792,8 +792,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore]
-    #[cfg(not(feature = "fuel-core-lib"))]
+    #[cfg(feature = "rocksdb")]
     async fn create_rocksdb() -> Result<()> {
         use fuels::accounts::fuel_crypto::SecretKey;
         use std::path::PathBuf;

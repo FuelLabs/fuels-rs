@@ -217,11 +217,9 @@ jobs:
          if [[ ${{ matrix.package }} == "fuels" ]]; then
            if [[ ${{ matrix.cargo_command }} == "test" ]]; then
              cargo test -p fuels --all-targets --features "default fuel-core-lib test-type-paths" --workspace
-           fi
-           if [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
+           elif [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
              cargo clippy -p fuels --all-targets --features "default fuel-core-lib test-type-paths"
-           fi
-           if [[ ${{ matrix.cargo_command }} == "check" ]]; then
+           else
              cargo check -p fuels --features "default fuel-core-lib test-type-paths"
            fi
          else
