@@ -244,7 +244,7 @@ mod tests {
         );
         assert_eq!(wallet.get_balances().await?.len(), 2);
 
-        fs::remove_dir_all(path.parent().expect("Db parend folder do not exist"))?;
+        fs::remove_dir_all(path.parent().expect("Db parent folder does not exist"))?;
 
         Ok(())
     }
