@@ -210,7 +210,7 @@ mod tests {
         };
 
         let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
-        //the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
+        // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
         let mut wallet = WalletUnlocked::new_from_private_key(
             SecretKey::from_str(
                 "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
