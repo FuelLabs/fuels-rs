@@ -13,6 +13,7 @@ To utilize an existing database, follow these instructions:
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:use_created_rocksdb}}
 ```
-Please note that if the specified database doesn't exist, the provided code will create a new database at the specified path.
+
+> Note 1: If the specified database does not exist a new database will be created at that path.
 
 Please be aware that if the `fuel-core` library is not installed locally on your machine, you will need to use the `rocksdb` feature to successfully utilize the code snippets mentioned above.
