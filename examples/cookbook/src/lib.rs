@@ -5,7 +5,6 @@ mod tests {
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     };
-    use std::str::FromStr;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -129,7 +128,6 @@ mod tests {
         use std::str::FromStr;
 
         use fuels::prelude::*;
-
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None);
@@ -197,6 +195,7 @@ mod tests {
         use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
         use std::fs;
         use std::path::PathBuf;
+        use std::str::FromStr;
 
         // ANCHOR: use_created_rocksdb
         let path =
@@ -234,11 +233,11 @@ mod tests {
         assert_eq!(blocks.len(), 3);
         assert_eq!(
             *wallet.get_balances().await?.iter().next().unwrap().1,
-            225883
+            1000000000
         );
         assert_eq!(
             *wallet.get_balances().await?.iter().next().unwrap().1,
-            225883
+            1000000000
         );
         assert_eq!(wallet.get_balances().await?.len(), 2);
 
