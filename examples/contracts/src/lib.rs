@@ -837,7 +837,6 @@ mod tests {
             setup_multiple_assets_coins(wallet.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
         let (provider, _) =
             setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
-
         // ANCHOR_END: create_rocksdb
 
         wallet.set_provider(provider);
