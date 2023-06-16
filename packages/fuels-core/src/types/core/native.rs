@@ -17,3 +17,12 @@ impl Default for Identity {
         Self::Address(Address::default())
     }
 }
+
+impl AsRef<[u8]> for Identity {
+    fn as_ref(&self) -> &[u8] {
+        match self {
+            Identity::Address(address) => address.as_ref(),
+            Identity::ContractId(contract_id) => contract_id.as_ref(),
+        }
+    }
+}

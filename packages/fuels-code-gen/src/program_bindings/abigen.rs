@@ -10,13 +10,14 @@ use regex::Regex;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
         custom_types::generate_types,
         generated_code::GeneratedCode,
     },
     utils::ident,
 };
+
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 mod abigen_target;
 mod bindings;

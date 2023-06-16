@@ -1,7 +1,7 @@
 use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
-    program_abi::{TypeApplication, TypeDeclaration},
+    abi::program::{TypeApplication, TypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use itertools::chain;

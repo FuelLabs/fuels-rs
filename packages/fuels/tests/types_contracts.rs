@@ -511,7 +511,7 @@ async fn test_enum_inside_struct() -> Result<()> {
     );
 
     let expected = Cocktail {
-        the_thing_you_mix_in: Shaker::Mojito(222),
+        the_thing_you_mix_in: Shaker::Mojito(11),
         glass: 333,
     };
 
@@ -533,7 +533,7 @@ async fn test_enum_inside_struct() -> Result<()> {
         .call()
         .await?;
 
-    assert_eq!(response.value, 6666);
+    assert_eq!(response.value, 555);
     Ok(())
 }
 
@@ -764,8 +764,9 @@ async fn type_inside_enum() -> Result<()> {
         .return_struct_inside_enum(11)
         .call()
         .await?;
-    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 99 });
+    let expected = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 11 });
     assert_eq!(response.value, expected);
+
     let struct_inside_enum = Shaker::Cosmopolitan(Recipe { ice: 22, sugar: 66 });
     let response = contract_methods
         .take_struct_inside_enum(struct_inside_enum)

@@ -50,9 +50,9 @@ impl TestFuelCoin for Contract {
 
     fn send_message(recipient: b256, coins: u64) {
         let mut data = Bytes::new();
-        data.push(1);
-        data.push(2);
-        data.push(3);
+        data.push(1u8);
+        data.push(2u8);
+        data.push(3u8);
 
         send_message(recipient, data, coins);
     }

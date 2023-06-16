@@ -8,10 +8,12 @@ struct MyType {
     y: u64,
 }
 
+#[allow(dead_code)]
 struct Person {
     name: str[4],
 }
 
+#[allow(dead_code)]
 enum State {
     A: (),
     B: (),
@@ -107,7 +109,7 @@ impl TestContract for Contract {
     }
 
     fn get(x: u64, y: u64) -> u64 {
-        x
+        x + y
     }
 
     fn get_alt(t: MyType) -> MyType {

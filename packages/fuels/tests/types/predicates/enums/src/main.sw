@@ -1,9 +1,11 @@
 predicate;
 
+#[allow(dead_code)]
 enum TestEnum {
     A: u64,
 }
 
+#[allow(dead_code)]
 enum AnotherTestEnum {
     A: u64,
     B: u64,

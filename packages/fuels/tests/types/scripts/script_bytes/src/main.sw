@@ -2,6 +2,7 @@ script;
 
 use std::bytes::Bytes;
 
+#[allow(dead_code)]
 enum SomeEnum<T> {
     First: bool,
     Second: T,
@@ -15,14 +16,14 @@ struct Wrapper<T> {
 fn expected_bytes() -> Bytes {
     let mut bytes = Bytes::new();
 
-    bytes.push(40);
-    bytes.push(41);
-    bytes.push(42);
+    bytes.push(40u8);
+    bytes.push(41u8);
+    bytes.push(42u8);
 
     bytes
 }
 
-fn main(a: u64, wrapper: Wrapper<Vec<Bytes>>) {
+fn main(_arg: u64, wrapper: Wrapper<Vec<Bytes>>) {
     if let SomeEnum::Second(enum_bytes) = wrapper.inner_enum {
         require(enum_bytes == expected_bytes(), "wrapper.inner_enum didn't carry the expected bytes")
     } else {
