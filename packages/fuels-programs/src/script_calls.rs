@@ -87,7 +87,7 @@ pub struct ScriptCallHandler<T: Account, D> {
 
 impl<T: Account, D> ScriptCallHandler<T, D>
 where
-    D: Parameterize + Tokenizable + Debug + Send + Sync,
+    D: Parameterize + Tokenizable + Debug,
 {
     pub fn new(
         script_binary: Vec<u8>,

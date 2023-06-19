@@ -375,7 +375,7 @@ pub struct ContractCallHandler<T: Account, D> {
 impl<T, D> ContractCallHandler<T, D>
 where
     T: Account,
-    D: Tokenizable + Parameterize + Debug + Send + Sync,
+    D: Tokenizable + Parameterize + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
