@@ -23,10 +23,7 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{
-        find_contract_not_in_inputs, generate_contract_inputs, generate_contract_outputs,
-        is_missing_output_variables, TxDependencyEstimation,
-    },
+    call_utils::{generate_contract_inputs, generate_contract_outputs, TxDependencyExtension},
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -158,24 +155,6 @@ where
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
         }
-        self
-    }
-
-    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_script_instance.main(...).append__variable_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Variable`]: fuel_tx::Output::Variable
-    pub fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.script_call.append_variable_outputs(num);
-        self
-    }
-
-    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.script_call.append_external_contracts(contract_id);
         self
     }
 
@@ -316,7 +295,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<T, D> TxDependencyEstimation for ScriptCallHandler<T, D>
+impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
 where
     T: Account,
     D: Tokenizable + Parameterize + Debug + Send + Sync,
@@ -327,19 +306,13 @@ where
         Ok(())
     }
 
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1)
-        }
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self = self.append_contract(contract_id);
-        }
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.script_call.append_variable_outputs(num);
+        self
+    }
 
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.script_call.append_external_contracts(contract_id);
         self
     }
 }

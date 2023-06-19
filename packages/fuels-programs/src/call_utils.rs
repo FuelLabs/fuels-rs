@@ -9,7 +9,7 @@ use fuels_core::{
     constants::WORD_SIZE,
     offsets::call_script_data_offset,
     types::{
-        bech32::Bech32Address,
+        bech32::{Bech32Address, Bech32ContractId},
         errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
@@ -35,9 +35,45 @@ pub(crate) struct CallOpcodeParamsOffset {
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 #[async_trait::async_trait]
-pub trait TxDependencyEstimation: Sized {
+pub trait TxDependencyExtension: Sized {
     async fn simulate(&mut self) -> Result<()>;
-    fn append_missing_deps(self, receipts: &[Receipt]) -> Self;
+
+    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_variable_outputs(num).call()
+    /// my_script_instance.main(...).append_variable_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Variable`]: fuel_tx::Output::Variable
+    fn append_variable_outputs(self, num: u64) -> Self;
+
+    /// Appends additional external contracts as dependencies to this call.
+    /// Effectively, this will be used to create additional
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
+    /// pairs and set them into the transaction. Note that this is a builder
+    /// method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
+    /// my_script_instance.main(...).append_contracts(additional_contract_id).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
+    fn append_contract(self, contract_id: Bech32ContractId) -> Self;
+
+    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
+        if is_missing_output_variables(receipts) {
+            self = self.append_variable_outputs(1);
+        }
+        if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+            self = self.append_contract(contract_id);
+        }
+
+        self
+    }
 
     /// Simulates the call and attempts to resolve missing tx dependencies.
     /// Forwards the received error if it cannot be fixed.
@@ -49,7 +85,7 @@ pub trait TxDependencyEstimation: Sized {
                 Ok(_) => return Ok(self),
 
                 Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_deps(receipts);
+                    self = self.append_missing_dependencies(receipts);
                 }
 
                 Err(other_error) => return Err(other_error),
@@ -441,10 +477,19 @@ pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
     )
 }
 
-pub fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-    receipts.iter().find(
-        |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-    )
+pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32ContractId> {
+    receipts.iter().find_map(|receipt| match receipt {
+        Receipt::Panic {
+            reason,
+            contract_id,
+            ..
+        } if *reason.reason() == PanicReason::ContractNotInInputs => {
+            let contract_id = contract_id
+                .expect("panic caused by a contract not in inputs must have a contract id");
+            Some(Bech32ContractId::from(contract_id))
+        }
+        _ => None,
+    })
 }
 
 #[cfg(test)]

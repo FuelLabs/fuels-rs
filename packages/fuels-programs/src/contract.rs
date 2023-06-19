@@ -24,10 +24,7 @@ use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{
-        build_tx_from_contract_calls, find_contract_not_in_inputs, is_missing_output_variables,
-        TxDependencyEstimation,
-    },
+    call_utils::{build_tx_from_contract_calls, TxDependencyExtension},
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
@@ -449,23 +446,6 @@ where
         self
     }
 
-    /// Appends additional external contracts as dependencies to this contract's
-    /// call. Effectively, this will be used to create additional
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_call.append_external_contracts(contract_id);
-        self
-    }
-
     pub fn is_payable(&self) -> bool {
         self.contract_call.is_payable
     }
@@ -495,19 +475,6 @@ where
         }
         self.contract_call.call_parameters = params;
         Ok(self)
-    }
-
-    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).append_variable_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Variable`]: fuel_tx::Output::Variable
-    pub fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_variable_outputs(num);
-        self
     }
 
     /// Returns the script that executes the contract call
@@ -583,7 +550,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<T, D> TxDependencyEstimation for ContractCallHandler<T, D>
+impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
 where
     T: Account,
     D: Tokenizable + Parameterize + Debug + Send + Sync,
@@ -593,19 +560,13 @@ where
         Ok(())
     }
 
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1)
-        }
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self = self.append_contract(contract_id);
-        }
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.contract_call.append_variable_outputs(num);
+        self
+    }
 
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.append_external_contracts(contract_id);
         self
     }
 }
@@ -830,7 +791,7 @@ impl<T: Account> MultiContractCallHandler<T> {
 }
 
 #[async_trait::async_trait]
-impl<T> TxDependencyEstimation for MultiContractCallHandler<T>
+impl<T> TxDependencyExtension for MultiContractCallHandler<T>
 where
     T: Account,
 {
@@ -839,28 +800,20 @@ where
         Ok(())
     }
 
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        // Append to any call, they will be merged to a single script tx
-        // At least 1 call should exist at this point, otherwise simulate would have failed
-        if is_missing_output_variables(receipts) {
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_variable_outputs(1));
-        }
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.contract_calls
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_variable_outputs(num));
 
-        if let Some(panic_receipt) = find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_external_contracts(contract_id.clone()));
-        }
+        self
+    }
 
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_calls
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_external_contracts(contract_id.clone()));
         self
     }
 }

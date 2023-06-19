@@ -79,7 +79,7 @@ pub mod prelude {
         },
         fuel_node::*,
         programs::{
-            call_utils::TxDependencyEstimation,
+            call_utils::TxDependencyExtension,
             contract::{
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
