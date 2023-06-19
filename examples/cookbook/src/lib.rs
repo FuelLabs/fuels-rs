@@ -1,12 +1,12 @@
 #[cfg(test)]
 mod tests {
     use fuels::accounts::wallet::WalletUnlocked;
+    #[cfg(feature = "rocksdb")]
+    use fuels::test_helpers::DEFAULT_NUM_COINS;
     use fuels::{
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     };
-    #[cfg(feature = "rocksdb")]
-    use fuels::test_helpers::DEFAULT_NUM_COINS;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -230,7 +230,6 @@ mod tests {
             })
             .await?
             .results;
-
 
         assert_eq!(provider.chain_info().await?.name, "spider");
         assert_eq!(blocks.len(), 3);
