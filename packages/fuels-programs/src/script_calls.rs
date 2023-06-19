@@ -1,6 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{Address, AssetId, Bytes32, ContractId, Output, Receipt};
+use fuel_tx::{Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
@@ -23,7 +23,10 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs, TxDependencyExtension},
+    call_utils::{
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        TxDependencyExtension,
+    },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -37,7 +40,7 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub variable_outputs: Option<Vec<Output>>,
+    pub variable_outputs: Vec<Output>,
 }
 
 impl ScriptCall {
@@ -63,19 +66,8 @@ impl ScriptCall {
     }
 
     pub fn append_variable_outputs(&mut self, num: u64) {
-        let new_variable_outputs = vec![
-            Output::Variable {
-                amount: 0,
-                to: Address::zeroed(),
-                asset_id: AssetId::default(),
-            };
-            num as usize
-        ];
-
-        match self.variable_outputs {
-            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
-            None => self.variable_outputs = Some(new_variable_outputs),
-        }
+        self.variable_outputs
+            .extend(new_variable_outputs(num as usize));
     }
 }
 
@@ -110,7 +102,7 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
-            variable_outputs: None,
+            variable_outputs: vec![],
         };
         Self {
             script_call,
@@ -189,10 +181,7 @@ where
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
-            self.script_call
-                .variable_outputs
-                .clone()
-                .unwrap_or_default(),
+            self.script_call.variable_outputs.clone(),
         )
         .collect();
 

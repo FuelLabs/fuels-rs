@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
 use fuel_tx::{
-    Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot,
+    AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
@@ -24,7 +23,7 @@ use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{build_tx_from_contract_calls, TxDependencyExtension},
+    call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
@@ -307,7 +306,7 @@ pub struct ContractCall {
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
-    pub variable_outputs: Option<Vec<Output>>,
+    pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
@@ -334,7 +333,7 @@ impl ContractCall {
 
     pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
         ContractCall {
-            variable_outputs: Some(variable_outputs),
+            variable_outputs,
             ..self
         }
     }
@@ -347,19 +346,8 @@ impl ContractCall {
     }
 
     pub fn append_variable_outputs(&mut self, num: u64) {
-        let new_variable_outputs = vec![
-            Output::Variable {
-                amount: 0,
-                to: Address::zeroed(),
-                asset_id: AssetId::default(),
-            };
-            num as usize
-        ];
-
-        match self.variable_outputs {
-            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
-            None => self.variable_outputs = Some(new_variable_outputs),
-        }
+        self.variable_outputs
+            .extend(new_variable_outputs(num as usize));
     }
 
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
@@ -612,7 +600,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         encoded_args: unresolved_bytes,
         call_parameters,
         compute_custom_input_offset,
-        variable_outputs: None,
+        variable_outputs: vec![],
         external_contracts: vec![],
         output_param: D::param_type(),
         is_payable,

@@ -2,7 +2,7 @@ use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
-use fuel_types::Word;
+use fuel_types::{Address, Word};
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
 use fuels_core::{
@@ -422,8 +422,7 @@ fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
 fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .filter_map(|call| call.variable_outputs.clone())
-        .flatten()
+        .flat_map(|call| call.variable_outputs.clone())
         .collect()
 }
 
@@ -492,6 +491,17 @@ pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32Contrac
     })
 }
 
+pub fn new_variable_outputs(num: usize) -> Vec<Output> {
+    vec![
+        Output::Variable {
+            amount: 0,
+            to: Address::zeroed(),
+            asset_id: AssetId::default(),
+        };
+        num
+    ]
+}
+
 #[cfg(test)]
 mod test {
     use std::slice;
@@ -519,7 +529,7 @@ mod test {
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
-                variable_outputs: None,
+                variable_outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
                 is_payable: false,
@@ -569,7 +579,7 @@ mod test {
                 encoded_args: args[i].clone(),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
-                variable_outputs: None,
+                variable_outputs: vec![],
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
                 is_payable: false,
