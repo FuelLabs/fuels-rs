@@ -5,6 +5,8 @@ mod tests {
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     };
+    #[cfg(feature = "rocksdb")]
+    use fuels::test_helpers::DEFAULT_NUM_COINS;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
@@ -229,15 +231,16 @@ mod tests {
             .await?
             .results;
 
+
         assert_eq!(provider.chain_info().await?.name, "spider");
         assert_eq!(blocks.len(), 3);
         assert_eq!(
             *wallet.get_balances().await?.iter().next().unwrap().1,
-            1000000000
+            DEFAULT_COIN_AMOUNT
         );
         assert_eq!(
             *wallet.get_balances().await?.iter().next().unwrap().1,
-            1000000000
+            DEFAULT_COIN_AMOUNT
         );
         assert_eq!(wallet.get_balances().await?.len(), 2);
 
