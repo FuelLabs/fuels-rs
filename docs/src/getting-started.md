@@ -1,4 +1,4 @@
-# Setting up and running the Fuel Rust SDK
+# Getting Started
 
 ## Dependencies
 

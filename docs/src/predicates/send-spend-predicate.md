@@ -30,7 +30,7 @@ Next, we transfer some assets from a wallet to the created predicate. We also co
 {{#include ../../../examples/predicates/src/lib.rs:predicate_receive}}
 ```
 
-We can use the `transfer` method from the [Account](../getting-started/account.md) trait to transfer the assets. If the predicate data is correct, the `receiver` wallet will get the funds, and we will verify that the amount is correct.
+We can use the `transfer` method from the [Account](../accounts.md) trait to transfer the assets. If the predicate data is correct, the `receiver` wallet will get the funds, and we will verify that the amount is correct.
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_spend}}
