@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "fuel-core")]
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     schema::{balance::Balance, contract::ContractBalance},
@@ -255,7 +255,7 @@ impl Provider {
             .map_err(Into::into)
     }
 
-    #[cfg(feature = "fuel-core")]
+    #[cfg(feature = "fuel-core-lib")]
     /// Launches a local `fuel-core` network based on provided config.
     pub async fn launch(config: Config) -> Result<FuelClient> {
         let srv = FuelService::new_node(config).await.unwrap();
