@@ -152,7 +152,7 @@ jobs:
     strategy:
       matrix:
         cargo_command: [check]
-        args: [--features "default fuel-core-lib test-type-paths"]
+        args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
           - cargo_command: fmt
