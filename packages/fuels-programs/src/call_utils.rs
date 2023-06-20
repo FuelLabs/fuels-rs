@@ -56,8 +56,8 @@ pub trait TxDependencyExtension: Sized {
     /// method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
-    /// my_script_instance.main(...).append_contracts(additional_contract_id).call()
+    /// my_contract_instance.my_method(...).append_contract(additional_contract_id).call()
+    /// my_script_instance.main(...).append_contract(additional_contract_id).call()
     /// ```
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
