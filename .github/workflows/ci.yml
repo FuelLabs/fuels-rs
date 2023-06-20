@@ -213,18 +213,7 @@ jobs:
 
       - name: Cargo (package-level)
         if: ${{ matrix.cargo_command && matrix.package }}
-        run: |
-         if [[ ${{ matrix.package }} == "fuels" ]]; then
-           if [[ ${{ matrix.cargo_command }} == "test" ]]; then
-             cargo test -p fuels --all-targets --features "default fuel-core-lib test-type-paths" --workspace
-           elif [[ ${{ matrix.cargo_command }} == "clippy" ]]; then
-             cargo clippy -p fuels --all-targets --features "default fuel-core-lib test-type-paths"
-           else
-             cargo check -p fuels --features "default fuel-core-lib test-type-paths"
-           fi
-         else
-           cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
-         fi
+        run: cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
 
       - name: Install NodeJS for WASM testing
         if: ${{ matrix.command == 'test_wasm' }}
