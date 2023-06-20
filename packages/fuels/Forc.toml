@@ -8,6 +8,7 @@ members = [
   'tests/contracts/asserts',
   'tests/contracts/auth_testing_abi',
   'tests/contracts/auth_testing_contract',
+  'tests/contracts/block_timestamp',
   'tests/contracts/configurables',
   'tests/contracts/contract_test',
   'tests/contracts/large_return_data',
