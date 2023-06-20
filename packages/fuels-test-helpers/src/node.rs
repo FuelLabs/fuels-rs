@@ -24,7 +24,7 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
-use crate::utils::{into_coin_configs, into_message_configs};
+use crate::utils::{get_fuel_core_dependency_version, into_coin_configs, into_message_configs};
 
 #[derive(Clone, Debug)]
 pub enum Trigger {
@@ -297,11 +297,27 @@ pub async fn new_fuel_node(
             );
         }
 
+        let version = get_fuel_core_dependency_version().await;
+        eprintln!("{version:?}");
+
+        let output = Command::new(path)
+            .arg("--version")
+            .output()
+            .await
+            .expect("Failed to execute command");
+        let fuel_core_version = String::from_utf8_lossy(&output.stdout)
+            .trim_end()
+            .to_string();
+
+        eprintln!("{fuel_core_version:?}");
+
+
         let mut command = Command::new(path);
         command.stdin(Stdio::null());
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
+
         let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
         let client = FuelClient::from(config.addr);

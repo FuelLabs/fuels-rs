@@ -23,6 +23,7 @@ futures = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std", "serde"] }
 portpicker = { workspace = true }
 rand = { workspace = true, default-features = false }
+isahc = { workspace = true, default-features = false }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, features = ["raw_value"] }
 serde_with = { workspace = true }

@@ -45,7 +45,7 @@ elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
 fuel-asm = "0.31.1"
-fuel-core = { version = "0.18.2", default-features = false }
+fuel-core = { version = "0.18.3", default-features = false }
 fuel-core-chain-config = { version = "0.18.2", default-features = false }
 fuel-core-client = { version = "0.18.2", default-features = false }
 fuel-core-types = { version = "0.18.2", default-features = false }
@@ -70,6 +70,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
 regex = "1.8.1"
+isahc = "1.7"
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.96"
 serde_with = { version = "2.3.2", default-features = false }
