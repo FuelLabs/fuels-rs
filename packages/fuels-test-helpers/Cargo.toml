@@ -34,4 +34,4 @@ which = { workspace = true, default-features = false }
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std"]
 fuel-core-lib = ["fuel-core"]
-rocksdb = ["fuel-core", "fuel-core/rocksdb"]
+rocksdb = ["fuel-core?/rocksdb"]
