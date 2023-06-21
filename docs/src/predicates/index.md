@@ -34,7 +34,7 @@ Next, we lock some assets in this predicate using the first wallet:
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_lock_amount}}
 ```
 
-Then we can transfer assets owned by the predicate via the [Account](../getting-started/account.md) trait:
+Then we can transfer assets owned by the predicate via the [Account](../accounts.md) trait:
 
 ```rust,ignore
 {{#include ../../../examples/predicates/src/lib.rs:predicate_data_unlock}}

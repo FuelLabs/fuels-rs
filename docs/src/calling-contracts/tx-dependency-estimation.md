@@ -24,6 +24,6 @@ The minimal number of attempts corresponds to the number of external contracts a
 
 > **Note:** `estimate_tx_dependencies()` can also be used when working with multi calls.
 
-> **Note:** `estimate_tx_dependencies()` does not currently resolve the dependencies needed for logging from an external contract. For more information, see [here](./calling-contracts/logs.md).
+> **Note:** `estimate_tx_dependencies()` does not currently resolve the dependencies needed for logging from an external contract. For more information, see [here](./logs.md).
 
 > **Note:** if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.
