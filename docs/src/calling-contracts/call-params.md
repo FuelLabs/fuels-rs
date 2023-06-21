@@ -9,7 +9,7 @@ The parameters for a contract call are:
 3. Gas forwarded
 <!-- call_params:example:end -->
 
-You can use these to forward coins to a contract. You can configure these parameters by creating an instance of [`CallParameters`](https://docs.rs/fuels/latest/fuels/core/parameters/struct.CallParameters.html) and passing it to a chain method called `call_params`.
+You can use these to forward coins to a contract. You can configure these parameters by creating an instance of [`CallParameters`](https://docs.rs/fuels/latest/fuels/programs/contract/struct.CallParameters.html) and passing it to a chain method called `call_params`.
 <!-- use_call_params:example:end -->
 
 For instance, suppose the following contract that uses Sway's `msg_amount()` to return the amount sent in that transaction.
