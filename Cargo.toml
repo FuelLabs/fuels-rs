@@ -70,7 +70,7 @@ proc-macro2 = "1.0"
 quote = "1.0"
 rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
 regex = "1.8.1"
-isahc = "1.7"
+isahc = { version = "1.7", default-features = false, features = ["text-decoding"]}
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.96"
 serde_with = { version = "2.3.2", default-features = false }

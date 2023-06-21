@@ -3,6 +3,7 @@ extern crate core;
 
 use std::net::SocketAddr;
 
+use crate::utils::check_fuel_core_dependency_version;
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
@@ -141,6 +142,8 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (FuelClient, SocketAddr, ConsensusParameters) {
+    check_fuel_core_dependency_version().await;
+
     let coin_configs = into_coin_configs(coins);
     let message_configs = into_message_configs(messages);
     let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
@@ -180,6 +183,8 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (FuelClient, SocketAddr, ConsensusParameters) {
+    check_fuel_core_dependency_version().await;
+
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
