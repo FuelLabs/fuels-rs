@@ -1,12 +1,11 @@
-# Interacting with the blockchain
+# Querying the blockchain
 
 Once you set up a provider, you can interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the [official provider API documentation](https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html).
 
-- [Interacting with the blockchain](#interacting-with-the-blockchain)
-  - [Set up](#set-up)
-  - [Get all coins from an address](#get-all-coins-from-an-address)
-  - [Get spendable resources owned by an address](#get-spendable-resources-owned-by-an-address)
-  - [Get balances from an address](#get-balances-from-an-address)
+- [Set up](#set-up)
+- [Get all coins from an address](#get-all-coins-from-an-address)
+- [Get spendable resources owned by an address](#get-spendable-resources-owned-by-an-address)
+- [Get balances from an address](#get-balances-from-an-address)
 
 ## Set up
 

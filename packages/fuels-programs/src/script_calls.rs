@@ -7,6 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
+    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
@@ -22,7 +23,10 @@ use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    call_utils::{
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        TxDependencyExtension,
+    },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -36,6 +40,7 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
+    pub variable_outputs: Vec<Output>,
 }
 
 impl ScriptCall {
@@ -54,6 +59,15 @@ impl ScriptCall {
             external_contracts,
             ..self
         }
+    }
+
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
+    }
+
+    pub fn append_variable_outputs(&mut self, num: u64) {
+        self.variable_outputs
+            .extend(new_variable_outputs(num as usize));
     }
 }
 
@@ -88,6 +102,7 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
+            variable_outputs: vec![],
         };
         Self {
             script_call,
@@ -166,6 +181,7 @@ where
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
+            self.script_call.variable_outputs.clone(),
         )
         .collect();
 
@@ -176,6 +192,22 @@ where
         Ok(tb)
     }
 
+    fn calculate_base_asset_sum(&self) -> u64 {
+        self.script_call
+            .inputs
+            .iter()
+            .map(|input| match input {
+                Input::ResourceSigned { resource, .. }
+                | Input::ResourcePredicate { resource, .. }
+                    if resource.asset_id() == BASE_ASSET_ID =>
+                {
+                    resource.amount()
+                }
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Call a script on the node. If `simulate == true`, then the call is done in a
     /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
@@ -184,7 +216,11 @@ where
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        let base_amount = self.calculate_base_asset_sum();
+        let tx = self
+            .account
+            .add_fee_resources(tb, base_amount, None)
+            .await?;
         self.cached_tx_id = Some(tx.id(&chain_info.consensus_parameters));
 
         tx.check_without_signatures(
@@ -212,7 +248,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(mut self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -244,5 +280,28 @@ where
             self.log_decoder.clone(),
             self.cached_tx_id,
         ))
+    }
+}
+
+#[async_trait::async_trait]
+impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
+where
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
+{
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate().await?;
+
+        Ok(())
+    }
+
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.script_call.append_variable_outputs(num);
+        self
+    }
+
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.script_call.append_external_contracts(contract_id);
+        self
     }
 }

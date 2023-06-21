@@ -1,15 +1,16 @@
 use std::{collections::HashSet, iter, vec};
 
-use fuel_tx::{AssetId, Bytes32, ContractId, Output, TxPointer, UtxoId};
-use fuel_types::Word;
+use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
+use fuel_types::{Address, Word};
 use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
     offsets::call_script_data_offset,
     types::{
-        bech32::Bech32Address,
-        errors::Result,
+        bech32::{Bech32Address, Bech32ContractId},
+        errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxParameters},
@@ -28,6 +29,71 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub amount_offset: usize,
     pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
+}
+
+/// How many times to attempt to resolve missing tx dependencies.
+pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
+
+#[async_trait::async_trait]
+pub trait TxDependencyExtension: Sized {
+    async fn simulate(&mut self) -> Result<()>;
+
+    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_variable_outputs(num).call()
+    /// my_script_instance.main(...).append_variable_outputs(num).call()
+    /// ```
+    ///
+    /// [`Output::Variable`]: fuel_tx::Output::Variable
+    fn append_variable_outputs(self, num: u64) -> Self;
+
+    /// Appends additional external contracts as dependencies to this call.
+    /// Effectively, this will be used to create additional
+    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
+    /// pairs and set them into the transaction. Note that this is a builder
+    /// method, i.e. use it as a chain:
+    ///
+    /// ```ignore
+    /// my_contract_instance.my_method(...).append_contract(additional_contract_id).call()
+    /// my_script_instance.main(...).append_contract(additional_contract_id).call()
+    /// ```
+    ///
+    /// [`Input::Contract`]: fuel_tx::Input::Contract
+    /// [`Output::Contract`]: fuel_tx::Output::Contract
+    fn append_contract(self, contract_id: Bech32ContractId) -> Self;
+
+    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
+        if is_missing_output_variables(receipts) {
+            self = self.append_variable_outputs(1);
+        }
+        if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+            self = self.append_contract(contract_id);
+        }
+
+        self
+    }
+
+    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Forwards the received error if it cannot be fixed.
+    async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
+
+        for _ in 0..attempts {
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
+
+                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                    self = self.append_missing_dependencies(receipts);
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        self.simulate().await.map(|_| self)
+    }
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
@@ -356,8 +422,7 @@ fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
 fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
     calls
         .iter()
-        .filter_map(|call| call.variable_outputs.clone())
-        .flatten()
+        .flat_map(|call| call.variable_outputs.clone())
         .collect()
 }
 
@@ -405,6 +470,38 @@ fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {
         .collect()
 }
 
+pub fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
+    receipts.iter().any(
+        |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
+    )
+}
+
+pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32ContractId> {
+    receipts.iter().find_map(|receipt| match receipt {
+        Receipt::Panic {
+            reason,
+            contract_id,
+            ..
+        } if *reason.reason() == PanicReason::ContractNotInInputs => {
+            let contract_id = contract_id
+                .expect("panic caused by a contract not in inputs must have a contract id");
+            Some(Bech32ContractId::from(contract_id))
+        }
+        _ => None,
+    })
+}
+
+pub fn new_variable_outputs(num: usize) -> Vec<Output> {
+    vec![
+        Output::Variable {
+            amount: 0,
+            to: Address::zeroed(),
+            asset_id: AssetId::default(),
+        };
+        num
+    ]
+}
+
 #[cfg(test)]
 mod test {
     use std::slice;
@@ -432,7 +529,7 @@ mod test {
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
-                variable_outputs: None,
+                variable_outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
                 is_payable: false,
@@ -482,7 +579,7 @@ mod test {
                 encoded_args: args[i].clone(),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
-                variable_outputs: None,
+                variable_outputs: vec![],
                 external_contracts: vec![],
                 output_param: ParamType::Unit,
                 is_payable: false,

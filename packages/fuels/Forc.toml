@@ -36,6 +36,7 @@ members = [
   'tests/predicates/signatures',
   'tests/scripts/arguments',
   'tests/scripts/basic_script',
+  'tests/scripts/transfer_script',
   'tests/scripts/require_from_contract',
   'tests/scripts/script_asserts',
   'tests/scripts/script_configurables',

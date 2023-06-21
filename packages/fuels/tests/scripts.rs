@@ -1,5 +1,4 @@
-use fuels::prelude::*;
-use fuels_accounts::wallet::WalletUnlocked;
+use fuels::{accounts::wallet::WalletUnlocked, prelude::*};
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
@@ -224,6 +223,44 @@ async fn test_script_signing() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_output_variable_estimation() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "transfer_script",
+            project = "packages/fuels/tests/scripts/transfer_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "transfer_script",
+            wallet = "wallet"
+        )
+    );
+
+    let provider = wallet.try_provider()?.clone();
+    let mut receiver = WalletUnlocked::new_random(None);
+    receiver.set_provider(provider);
+
+    let amount = 1000;
+    let asset_id = ContractId::from(*BASE_ASSET_ID);
+    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+        .await?;
+    let _ = script_call
+        .with_inputs(inputs)
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    assert_eq!(receiver_balance, amount);
 
     Ok(())
 }

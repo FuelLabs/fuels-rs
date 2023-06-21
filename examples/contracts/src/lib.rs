@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::accounts::wallet::WalletUnlocked;
-    use fuels::types::errors::{error, Error, Result};
+    use fuels::{
+        accounts::wallet::WalletUnlocked,
+        types::errors::{error, Error, Result},
+    };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
