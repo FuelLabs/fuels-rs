@@ -280,6 +280,12 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl AsMut<$wrapped> for $wrapper {
+            fn as_mut(&mut self) -> &mut $wrapped {
+                &mut self.tx
+            }
+        }
+
         impl Transaction for $wrapper {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
