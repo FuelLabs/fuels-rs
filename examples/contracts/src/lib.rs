@@ -824,6 +824,7 @@ mod tests {
             database_type: DbType::RocksDb,
             ..Config::local_node()
         };
+        // ANCHOR_END: create_rocksdb
 
         let chain_config = ChainConfig {
             chain_name: "spider".to_string(),
@@ -840,7 +841,6 @@ mod tests {
         );
         let (provider, _) =
             setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
-        // ANCHOR_END: create_rocksdb
 
         wallet.set_provider(provider);
 
