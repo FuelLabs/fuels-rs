@@ -108,9 +108,9 @@ fn generate_encoder_code(ttype: &ResolvedType) -> TokenStream {
 
 fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
     quote! {
-        impl From<#configurable_struct_name> for ::fuels::programs::Configurables {
+        impl From<#configurable_struct_name> for ::fuels::core::Configurables {
             fn from(config: #configurable_struct_name) -> Self {
-                ::fuels::programs::Configurables::new(config.offsets_with_data)
+                ::fuels::core::Configurables::new(config.offsets_with_data)
             }
         }
     }

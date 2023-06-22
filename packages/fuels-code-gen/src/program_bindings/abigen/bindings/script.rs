@@ -59,10 +59,10 @@ pub(crate) fn script_bindings(
                ::core::result::Result::Ok(#name { account, binary: self.binary, log_decoder: self.log_decoder})
             }
 
-            pub fn with_configurables(mut self, configurables: impl Into<::fuels::programs::Configurables>)
+            pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
                 -> Self
             {
-                let configurables: ::fuels::programs::Configurables = configurables.into();
+                let configurables: ::fuels::core::Configurables = configurables.into();
                 configurables.update_constants_in(&mut self.binary);
                 self
             }

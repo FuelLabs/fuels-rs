@@ -80,7 +80,6 @@ pub mod prelude {
                 SettableContract, StorageConfiguration,
             },
             logs::{LogDecoder, LogId},
-            Configurables,
         },
         test_helpers::*,
     };

@@ -138,7 +138,7 @@ async fn setup_predicate_test(
 #[tokio::test]
 async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
     ));
 
@@ -152,7 +152,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_address() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/address/out/debug/address-abi.json"
     ));
 
@@ -166,10 +166,11 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
 
     Ok(())
 }
+
 #[tokio::test]
 async fn spend_predicate_coins_messages_enums() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/enums/out/debug/enums-abi.json"
     ));
 
@@ -183,7 +184,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_structs() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/structs/out/debug/structs-abi.json"
     ));
 
@@ -203,7 +204,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/predicate_tuples/out/debug/predicate_tuples-abi.json"
     ));
 
@@ -218,7 +219,7 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_vector() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi =
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
@@ -232,7 +233,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_vectors() -> Result<()> {
-    abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
 
     let u32_vec = vec![0, 4, 3];
     let vec_in_vec = vec![vec![0, 2, 2], vec![0, 1, 2]];
@@ -275,7 +276,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_generics() -> Result<()> {
-    abigen!(Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
 
     let data = MyPredicateEncoder::encode_data(
         GenericStruct { value: 64u8 },
@@ -290,7 +291,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_bytes() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/predicate_bytes/out/debug/predicate_bytes-abi.json"
     ));
 
@@ -310,7 +311,7 @@ async fn spend_predicate_coins_messages_bytes() -> Result<()> {
 #[tokio::test]
 async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
     abigen!(Predicate(
-        name = "MyPredicateEncoder",
+        name = "MyPredicate",
         abi = "packages/fuels/tests/types/predicates/predicate_raw_slice/out/debug/predicate_raw_slice-abi.json"
     ));
 
