@@ -136,17 +136,19 @@ impl Transaction for TransactionType {
     }
 
     fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
-        Ok(match self {
+        match self {
             TransactionType::Script(tx) => tx.precompute(chain_id)?,
             TransactionType::Create(tx) => tx.precompute(chain_id)?,
-        })
+        }
+        Ok(())
     }
 
     fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error> {
-        Ok(match self {
+        match self {
             TransactionType::Script(tx) => tx.estimate_predicates(parameters)?,
             TransactionType::Create(tx) => tx.estimate_predicates(parameters)?,
-        })
+        };
+        Ok(())
     }
 
     fn check_without_signatures(
