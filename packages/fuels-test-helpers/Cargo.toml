@@ -30,7 +30,8 @@ serde_with = { workspace = true }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
-
+cargo_metadata = { workspace = true }
+#toml = { workspace = true }
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std"]

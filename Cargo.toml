@@ -45,7 +45,7 @@ elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
 fuel-asm = "0.31.1"
-fuel-core = { version = "0.18.3", default-features = false }
+fuel-core = { version = "0.18.2", default-features = false }
 fuel-core-chain-config = { version = "0.18.2", default-features = false }
 fuel-core-client = { version = "0.18.2", default-features = false }
 fuel-core-types = { version = "0.18.2", default-features = false }
@@ -83,4 +83,6 @@ tempfile = { version ="3.5.0", default-features = false }
 thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"
+cargo_metadata = "0.15.4"
+#toml = "0.7.4"
 which = { version = "4.4", default-features = false }
