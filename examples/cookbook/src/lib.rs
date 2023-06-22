@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::prelude::DEFAULT_COIN_AMOUNT;
     #[cfg(feature = "rocksdb")]
-    use fuels::test_helpers::DEFAULT_NUM_COINS;
     use fuels::{
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
