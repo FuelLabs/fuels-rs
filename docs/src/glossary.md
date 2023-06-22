@@ -1,6 +1,4 @@
-# Terminology
-
-These are the common terms you will find across this documentation and while using the SDK.
+# Glossary
 
 ## Contract
 

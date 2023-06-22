@@ -7,9 +7,9 @@ use crate::utils::check_fuel_core_dependency_version;
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::Config;
-#[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::FuelService;
+#[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::{config::Trigger, Config};
 use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_chain_config::StateConfig;
