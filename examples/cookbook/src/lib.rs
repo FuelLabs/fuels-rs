@@ -1,8 +1,6 @@
 #[cfg(test)]
 mod tests {
     use fuels::accounts::wallet::WalletUnlocked;
-    use fuels::prelude::DEFAULT_COIN_AMOUNT;
-    #[cfg(feature = "rocksdb")]
     use fuels::{
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
@@ -198,6 +196,7 @@ mod tests {
         use std::fs;
         use std::path::PathBuf;
         use std::str::FromStr;
+        use fuels::prelude::DEFAULT_COIN_AMOUNT;
 
         // ANCHOR: use_created_rocksdb
         let path =
