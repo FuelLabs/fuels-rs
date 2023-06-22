@@ -7,8 +7,6 @@ pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId};
-use fuel_vm::checked_transaction::EstimatePredicates;
-use fuel_vm::gas::GasCosts;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -210,9 +208,11 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let tx = self
+        let mut tx = self
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
+
+        tx.estimate_predicates(&consensus_parameters)?;
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
@@ -279,7 +279,8 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let tx = self.add_fee_resources(tb, base_amount, None).await?;
+        let mut tx = self.add_fee_resources(tb, base_amount, None).await?;
+        tx.estimate_predicates(&params)?;
 
         let tx_id = tx.id(params.chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
@@ -310,9 +311,7 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let mut tx = self.add_fee_resources(tb, amount, None).await?;
-        // TODO: Fetch `GasCosts` from the `fuel-core`:
-        //  https://github.com/FuelLabs/fuel-core/issues/1221
-        tx.as_mut().estimate_predicates(&params, &GasCosts::default())?;
+        tx.estimate_predicates(&params)?;
 
         let tx_id = tx.id(chain_id.into()).to_string();
         let receipts = self.try_provider()?.send_transaction(&tx).await?;

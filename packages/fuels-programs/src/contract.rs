@@ -250,12 +250,11 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        let chain_info = provider.chain_info().await?;
         let consensus_params = provider.consensus_parameters();
 
         tx.precompute(consensus_params.chain_id.into())?;
-        tx.check_without_signatures(chain_info.latest_block.header.height, &consensus_params)?;
-        provider.send_transaction(&mut tx).await?;
+        tx.estimate_predicates(&consensus_params)?;
+        provider.send_transaction(&tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -491,11 +490,12 @@ where
     }
 
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
+        let mut tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         let consensus_parameters = provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        tx.estimate_predicates(&consensus_parameters)?;
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?

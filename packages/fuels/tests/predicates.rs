@@ -455,6 +455,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         .set_consensus_parameters(params)
         .build()?;
     wallet.sign_transaction(&mut tx)?;
+    tx.estimate_predicates(&params)?;
 
     provider.send_transaction(&tx).await?;
 

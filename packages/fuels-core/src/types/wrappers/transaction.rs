@@ -8,6 +8,7 @@ use fuel_tx::{
     Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
+use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
@@ -79,6 +80,8 @@ pub trait Transaction: Into<FuelTransaction> + Send {
 
     fn is_computed(&self) -> bool;
 
+    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error>;
+
     fn id(&self, chain_id: u64) -> Bytes32;
 
     fn maturity(&self) -> u32;
@@ -136,6 +139,13 @@ impl Transaction for TransactionType {
         Ok(match self {
             TransactionType::Script(tx) => tx.precompute(chain_id)?,
             TransactionType::Create(tx) => tx.precompute(chain_id)?,
+        })
+    }
+
+    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error> {
+        Ok(match self {
+            TransactionType::Script(tx) => tx.estimate_predicates(parameters)?,
+            TransactionType::Create(tx) => tx.estimate_predicates(parameters)?,
         })
     }
 
@@ -303,6 +313,17 @@ macro_rules! impl_tx_wrapper {
 
             fn is_computed(&self) -> bool {
                 self.tx.is_computed()
+            }
+
+            // TODO: Fetch `GasCosts` from the `fuel-core`:
+            //  https://github.com/FuelLabs/fuel-core/issues/1221
+            fn estimate_predicates(
+                &mut self,
+                parameters: &ConsensusParameters,
+            ) -> Result<(), Error> {
+                self.tx
+                    .estimate_predicates(parameters, &GasCosts::default())
+                    .map_err(Error::ValidationError)
             }
 
             fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {

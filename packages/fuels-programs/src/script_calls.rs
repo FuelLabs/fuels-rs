@@ -214,17 +214,16 @@ where
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let chain_info = self.provider.chain_info().await?;
         let tb = self.prepare_builder().await?;
         let base_amount = self.calculate_base_asset_sum();
-        let tx = self
+        let mut tx = self
             .account
             .add_fee_resources(tb, base_amount, None)
             .await?;
         let consensus_parameters = self.provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
-        tx.check_without_signatures(chain_info.latest_block.header.height, &consensus_parameters)?;
+        tx.estimate_predicates(&consensus_parameters)?;
 
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
