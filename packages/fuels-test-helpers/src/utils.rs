@@ -26,84 +26,76 @@ pub async fn check_fuel_core_dependency_version() {
     //     grep -o '"crate_id":"fuel-core","[^}]*' | head -n 1 | grep -o '"req":"[^"]*"' | cut -d '"' -f 4 | cut -c 2-
 
     let binary_name = "fuel-core";
-
-    let used_fuel_version = if cfg!(not(feature = "fuel-core-lib")) {
-        let path = match which::which(binary_name) {
-            Ok(path) => path,
-            Err(err) => {
-                eprintln!("Failed to fetch dependency information: {}", err);
-                return;
-            }
-        };
-
-        let output = match Command::new(path).arg("--version").output().await {
-            Ok(output) => output,
-            Err(err) => {
-                eprintln!("Failed to fetch dependency information: {}", err);
-                return;
-            }
-        };
-
-        let version = match String::from_utf8_lossy(&output.stdout)
-            .split_whitespace()
-            .nth(1)
-        {
-            Some(version) => version.trim_end().to_string(),
-            None => {
-                eprintln!("Failed to fetch dependency information");
-                return;
-            }
-        };
-
-        version.split('.').take(2).collect::<Vec<&str>>().join(".")
-    } else {
-        let current_dir = match env::current_dir() {
-            Ok(mut current_dir) => {
-                current_dir.pop();
-                current_dir.pop();
-                current_dir
-            }
-            Err(err) => {
-                eprintln!("Failed to fetch dependency information: {}", err);
-                return;
-            }
-        };
-
-        let metadata = match cargo_metadata::MetadataCommand::new()
-            .current_dir(&current_dir)
-            .exec()
-        {
-            Ok(metadata) => metadata,
-            Err(err) => {
-                eprintln!("Failed to fetch dependency information: {}", err);
-                return;
-            }
-        };
-
-        let current_package = match metadata
-            .packages
-            .iter()
-            .find(|package| package.name == binary_name)
-        {
-            Some(package) => package,
-            None => {
-                eprintln!("Failed to fetch dependency information");
-                return;
-            }
-        };
-
-        current_package
-            .version
-            .to_string()
-            .split('.')
-            .take(2)
-            .collect::<Vec<&str>>()
-            .join(".")
-    };
-
     let crate_name = "fuels";
 
+    let used_fuel_version = if cfg!(not(feature = "fuel-core-lib")) {
+        match which::which(binary_name) {
+            Ok(path) => match Command::new(path).arg("--version").output().await {
+                Ok(output) => match String::from_utf8_lossy(&output.stdout)
+                    .split_whitespace()
+                    .nth(1)
+                {
+                    Some(version) => version.trim_end().to_string(),
+                    None => {
+                        eprintln!("Failed to fetch dependency information");
+                        return;
+                    }
+                },
+                Err(err) => {
+                    eprintln!("Failed to fetch dependency information: {}", err);
+                    return;
+                }
+            },
+            Err(err) => {
+                eprintln!("Failed to fetch dependency information: {}", err);
+                return;
+            }
+        }
+        .split('.')
+        .take(2)
+        .collect::<Vec<&str>>()
+        .join(".")
+    } else {
+        match env::current_dir().map(|mut current_dir| {
+            current_dir.pop();
+            current_dir.pop();
+            current_dir
+        }) {
+            Ok(current_dir) => match cargo_metadata::MetadataCommand::new()
+                .current_dir(&current_dir)
+                .exec()
+            {
+                Ok(metadata) => match metadata
+                    .packages
+                    .iter()
+                    .find(|package| package.name == "fuel-core")
+                {
+                    Some(package) => package
+                        .version
+                        .to_string()
+                        .split('.')
+                        .take(2)
+                        .collect::<Vec<&str>>()
+                        .join("."),
+                    None => {
+                        eprintln!("Failed to fetch dependency information");
+                        return;
+                    }
+                },
+                Err(err) => {
+                    eprintln!("Failed to fetch dependency information: {}", err);
+                    return;
+                }
+            },
+            Err(err) => {
+                eprintln!("Failed to fetch dependency information: {}", err);
+                return;
+            }
+        }
+    };
+
     let crate_info_url = format!("https://crates.io/api/v1/crates/{}", crate_name);
+
     let mut crate_info_response = match isahc::get(crate_info_url) {
         Ok(response) => response,
         Err(err) => {
@@ -121,7 +113,13 @@ pub async fn check_fuel_core_dependency_version() {
     };
 
     let crate_info_json: Result<Value, serde_json::error::Error> =
-        serde_json::from_str(&crate_info_body);
+        match serde_json::from_str(&crate_info_body) {
+            Ok(json) => Ok(json),
+            Err(err) => {
+                eprintln!("Failed to fetch dependency information: {}", err);
+                return;
+            }
+        };
 
     let latest_version = match crate_info_json {
         Ok(ref json) => match json["versions"][0]["num"].as_str() {
@@ -179,7 +177,7 @@ pub async fn check_fuel_core_dependency_version() {
                     .split('.')
                     .take(2)
                     .collect::<Vec<&str>>()
-                    .join(".-");
+                    .join(".");
 
                 if fuel_core_req != used_fuel_version {
                     eprintln!(
