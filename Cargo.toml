@@ -68,9 +68,9 @@ itertools = "0.10"
 portpicker = "0.1.1"
 proc-macro2 = "1.0"
 quote = "1.0"
-rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
+rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"] }
 regex = "1.8.1"
-isahc = { version = "1.7", default-features = false, features = ["text-decoding"]}
+isahc = { version = "1.7", default-features = false, features = ["text-decoding"] }
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.96"
 serde_with = { version = "2.3.2", default-features = false }
@@ -79,10 +79,9 @@ strum = "0.24"
 strum_macros = "0.24"
 syn = "2.0.15"
 tai64 = { version = "4.0", default-features = false }
-tempfile = { version ="3.5.0", default-features = false }
+tempfile = { version = "3.5.0", default-features = false }
 thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"
 cargo_metadata = "0.15.4"
-#toml = "0.7.4"
 which = { version = "4.4", default-features = false }
