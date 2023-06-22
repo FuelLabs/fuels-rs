@@ -412,7 +412,7 @@ mod tests {
         let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("c09c82ff0671431cd3dfba9a0ffaaef9474ab0e336fcb3b833dc84108066ed1187c06739d47548b6faa3ee1e83739bb77a4ceb1872f31d1ef26b6cfa45b5a8c0")?);
+        assert_eq!(signature, Signature::from_str("13ce336c5f239a748f20f39323e3df3237ccfe104b04f128be66f26a49abd09d3b4b19c7f07efbb708c442371feb5fc6545f2b614e1f9f336702cca3e62d0cc8")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;
