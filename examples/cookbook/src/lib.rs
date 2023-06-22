@@ -192,11 +192,11 @@ mod tests {
         use fuels::accounts::fuel_crypto::SecretKey;
         use fuels::accounts::wallet::WalletUnlocked;
         use fuels::client::{PageDirection, PaginationRequest};
+        use fuels::prelude::DEFAULT_COIN_AMOUNT;
         use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
         use std::fs;
         use std::path::PathBuf;
         use std::str::FromStr;
-        use fuels::prelude::DEFAULT_COIN_AMOUNT;
 
         // ANCHOR: use_created_rocksdb
         let path =
