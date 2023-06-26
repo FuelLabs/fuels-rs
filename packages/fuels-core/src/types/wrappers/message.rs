@@ -31,8 +31,8 @@ pub struct Message {
 impl Message {
     pub fn message_id(&self) -> MessageId {
         Input::compute_message_id(
-            &Address::new(self.sender.hash().into()),
-            &Address::new(self.recipient.hash().into()),
+            &self.sender.clone().into(),
+            &self.recipient.clone().into(),
             &Nonce::from(*self.nonce),
             self.amount,
             &self.data,
@@ -75,8 +75,8 @@ impl From<ClientMessageCoin> for Message {
 impl From<Message> for MessageConfig {
     fn from(message: Message) -> MessageConfig {
         MessageConfig {
-            sender: Address::new(message.sender.hash().into()),
-            recipient: Address::new(message.recipient.hash().into()),
+            sender: message.sender.into(),
+            recipient: message.recipient.into(),
             nonce: message.nonce,
             amount: message.amount,
             data: message.data,
