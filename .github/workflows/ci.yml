@@ -210,7 +210,7 @@ jobs:
           path: packages/fuels/tests/
 
       - name: Install nextest
-        if: ${{ matrix.command == 'nextest' }}
+        if: ${{ matrix.cargo_command == 'nextest' }}
         uses: taiki-e/install-action@nextest
 
       - name: Cargo (workspace-level)
