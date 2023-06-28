@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use fuels::prelude::*;
+use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -9,12 +9,12 @@ pub fn null_contract_id() -> Bech32ContractId {
 }
 
 #[tokio::test]
-async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
+async fn create_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -72,7 +72,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
             ]
           }
         "#,
-    );
+    ));
 
     // Decoded tokens
     let u8_token = Token::U8(10);
@@ -95,7 +95,7 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
@@ -103,12 +103,12 @@ async fn create_struct_from_decoded_tokens() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
+async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(
-        SimpleContract,
-        r#"
+    abigen!(Contract(
+        name = "SimpleContract",
+        abi = r#"
         {
             "types": [
               {
@@ -178,7 +178,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
             ]
           }
         "#,
-    );
+    ));
 
     // Creating just the InnerStruct is possible
     let a = Token::Bool(true);
@@ -210,7 +210,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<(), Error> {
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(&encoded_args)
+        hex::encode(encoded_args)
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);

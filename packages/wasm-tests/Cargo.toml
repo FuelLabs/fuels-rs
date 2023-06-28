@@ -1,17 +1,22 @@
 [package]
 name = "wasm-tests"
-version = "0.0.0"
-edition = "2021"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
 publish = false
+repository = { workspace = true }
+rust-version = { workspace = true }
 
 [lib]
 crate-type = ['cdylib']
 
-[dependencies]
-fuels-abigen-macro = { path = "../fuels-abigen-macro" }
-fuels-core = { path = "../fuels-core" }
-fuels-types = { path = "../fuels-types" }
-getrandom = { version = "0.2", features = ["js"] }
-
 [dev-dependencies]
-webassembly-test = "0.1"
+# `fuels` itentionally not specified through `workspace=true`. In
+# the workspace cargo.toml `fuels` has default features enabled (so
+# that our examples don't inherit `fuels` with disabled features).
+# Cargo wouldn't respect any attempts here to disable them again.
+fuels = { path = "../fuels", default-features = false }
+getrandom = { version = "0.2", features = ["js"] }
+wasm-bindgen-test = "0.3.34"

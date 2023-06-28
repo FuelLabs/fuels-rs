@@ -1,13 +1,17 @@
-use fuels::prelude::*;
-use fuels_core::tx::{Bytes32, StorageSlot};
 use std::str::FromStr;
 
+use fuels::{
+    prelude::*,
+    tx::{Bytes32, StorageSlot},
+    types::Bits256,
+};
+
 #[tokio::test]
-async fn test_storage_initialization() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+async fn test_storage_initialization() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
 
@@ -15,14 +19,13 @@ async fn test_storage_initialization() -> Result<(), Error> {
     let value = Bytes32::from([2u8; 32]);
     let storage_slot = StorageSlot::new(key, value);
     let storage_vec = vec![storage_slot.clone()];
+    let storage_configuration = StorageConfiguration::from(storage_vec);
 
-    let contract_id = Contract::deploy_with_parameters(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::with_manual_storage(Some(storage_vec)),
-        Salt::from([0; 32]),
-    )
+    let contract_id = Contract::load_from(
+        "tests/contracts/storage/out/debug/storage.bin",
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+    )?
+    .deploy(&wallet, TxParameters::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -39,23 +42,23 @@ async fn test_storage_initialization() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_init_storage_automatically() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+async fn test_init_storage_automatically() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+    ));
 
     let wallet = launch_provider_and_get_wallet().await;
+    let storage_configuration = StorageConfiguration::load_from(
+        "tests/contracts/storage/out/debug/storage-storage_slots.json",
+    )?;
 
-    let contract_id = Contract::deploy_with_parameters(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::with_storage_path(
-            Some("tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slots.json".to_string())),
-        Salt::default(),
-    )
-        .await?;
+    let contract_id = Contract::load_from(
+        "tests/contracts/storage/out/debug/storage.bin",
+        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
 
     let key1 =
         Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
@@ -83,28 +86,22 @@ async fn test_init_storage_automatically() -> Result<(), Error> {
 }
 
 #[tokio::test]
-async fn test_init_storage_automatically_bad_json_path() -> Result<(), Error> {
-    abigen!(
-        MyContract,
-        "packages/fuels/tests/storage/contract_storage_test/out/debug/contract_storage_test-abi.json"
-    );
+async fn storage_load_error_messages() {
+    {
+        let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
+        let expected_error = format!("Invalid data: file '{json_path}' does not exist");
 
-    let wallet = launch_provider_and_get_wallet().await;
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
 
-    let response = Contract::deploy_with_parameters(
-        "tests/storage/contract_storage_test/out/debug/contract_storage_test.bin",
-        &wallet,
-        TxParameters::default(),
-        StorageConfiguration::with_storage_path(Some(
-            "tests/storage/contract_storage_test/out/debug/contract_storage_test-storage_slts.json"
-                .to_string(),
-        )),
-        Salt::default(),
-    )
-    .await
-    .expect_err("Should fail");
+        assert_eq!(error.to_string(), expected_error);
+    }
+    {
+        let json_path = "tests/contracts/storage/out/debug/storage.bin";
+        let expected_error =
+            format!("Invalid data: expected `{json_path}` to have '.json' extension");
 
-    let expected = "Invalid data:";
-    assert!(response.to_string().starts_with(expected));
-    Ok(())
+        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
+
+        assert_eq!(error.to_string(), expected_error);
+    }
 }

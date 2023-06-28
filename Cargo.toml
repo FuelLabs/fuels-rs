@@ -6,23 +6,80 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
+    "examples/abigen",
     "examples/contracts",
     "examples/cookbook",
+    "examples/debugging",
     "examples/predicates",
     "examples/providers",
     "examples/rust_bindings",
     "examples/types",
     "examples/wallets",
-    "examples/debugging",
     "packages/fuels",
-    "packages/fuels-abigen-macro",
-    "packages/fuels-contract",
+    "packages/fuels-accounts",
+    "packages/fuels-code-gen",
     "packages/fuels-core",
-    "packages/fuels-signers",
+    "packages/fuels-macros",
+    "packages/fuels-programs",
     "packages/fuels-test-helpers",
-    "packages/fuels-types",
     "packages/wasm-tests",
-    "scripts/test-projects",
     "scripts/check-docs",
-    "tools/fuels-abi-cli",
 ]
+
+[workspace.package]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+edition = "2021"
+homepage = "https://fuel.network/"
+license = "Apache-2.0"
+repository = "https://github.com/FuelLabs/fuels-rs"
+rust-version = "1.68.0"
+version = "0.43.0"
+
+[workspace.dependencies]
+Inflector = "0.11.4"
+async-trait = { version = "0.1.68", default-features = false }
+bech32 = "0.9.1"
+bytes = { version = "1.4.0", default-features = false }
+chrono = "0.4.24"
+elliptic-curve = { version = "0.13.4", default-features = false }
+eth-keystore = "0.5.0"
+fuel-abi-types = "0.3.0"
+fuel-asm = "0.31.1"
+fuel-core = { version = "0.18.2", default-features = false }
+fuel-core-chain-config = { version = "0.18.2", default-features = false }
+fuel-core-client = { version = "0.18.2", default-features = false }
+fuel-core-types = { version = "0.18.2", default-features = false }
+fuel-crypto = "0.31.1"
+fuel-merkle = "0.31.1"
+fuel-storage = "0.31.1"
+fuel-tx = "0.31.1"
+fuel-types = { version = "0.31.1", default-features = false }
+fuel-vm = "0.31.2"
+fuels = { version = "0.43.0", path = "./packages/fuels" }
+fuels-accounts = { version = "0.43.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.43.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.43.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.43.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.43.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.43.0", path = "./packages/fuels-test-helpers", default-features = false }
+futures = "0.3.26"
+hex = { version = "0.4.3", default-features = false }
+itertools = "0.10"
+portpicker = "0.1.1"
+proc-macro2 = "1.0"
+quote = "1.0"
+rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
+regex = "1.8.1"
+serde = { version = "1.0", default-features = false }
+serde_json = "1.0.96"
+serde_with = { version = "2.3.2", default-features = false }
+sha2 = { version = "0.10.6", default-features = false }
+strum = "0.24"
+strum_macros = "0.24"
+syn = "2.0.15"
+tai64 = { version = "4.0", default-features = false }
+tempfile = { version ="3.5.0", default-features = false }
+thiserror = { version = "1.0.40", default-features = false }
+tokio = { version = "1.27.0", default-features = false }
+trybuild = "1.0.80"
+which = { version = "4.4", default-features = false }

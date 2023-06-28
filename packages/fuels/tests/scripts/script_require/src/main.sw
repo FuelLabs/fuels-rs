@@ -1,24 +1,31 @@
 script;
 
+use std::logging::log;
+
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithNestedGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 struct StructDeeplyNestedGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 enum MatchEnum {
     RequirePrimitive: (),
     RequireString: (),
     RequireCustomGeneric: (),
+    RequireWithAdditionalLogs: (),
 }
 
 fn main(match_enum: MatchEnum) {
@@ -40,5 +47,9 @@ fn main(match_enum: MatchEnum) {
         };
 
         require(false, test_deeply_nested_generic);
+    } else if let MatchEnum::RequireWithAdditionalLogs = match_enum {
+        log(42);
+        log("fuel");
+        require(false, 64);
     }
 }

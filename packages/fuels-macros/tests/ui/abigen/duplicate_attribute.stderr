@@ -1,0 +1,17 @@
+error: Original defined here:
+ --> tests/ui/abigen/duplicate_attribute.rs:4:5
+  |
+4 |     abi = "some-abi.json",
+  |     ^^^
+
+error: Duplicate!
+ --> tests/ui/abigen/duplicate_attribute.rs:5:5
+  |
+5 |     abi = "some-abi2.json",
+  |     ^^^
+
+error: Duplicate!
+ --> tests/ui/abigen/duplicate_attribute.rs:7:5
+  |
+7 |     abi = "some-abi3.json",
+  |     ^^^

@@ -1,0 +1,23 @@
+error: Const generics not supported
+ --> tests/ui/derive/tokenizable/only_generic_types_are_supported.rs:4:15
+  |
+4 | enum SomeEnum<const T: usize> {
+  |               ^^^^^^^^^^^^^^
+
+error: Lifetimes not supported
+ --> tests/ui/derive/tokenizable/only_generic_types_are_supported.rs:9:18
+  |
+9 | enum AnotherEnum<'a> {
+  |                  ^^
+
+error: Const generics not supported
+  --> tests/ui/derive/tokenizable/only_generic_types_are_supported.rs:14:19
+   |
+14 | struct SomeStruct<const T: usize> {}
+   |                   ^^^^^^^^^^^^^^
+
+error: Lifetimes not supported
+  --> tests/ui/derive/tokenizable/only_generic_types_are_supported.rs:17:22
+   |
+17 | struct AnotherStruct<'a> {
+   |                      ^^

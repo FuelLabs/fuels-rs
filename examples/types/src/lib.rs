@@ -4,13 +4,14 @@ mod tests {
 
     #[cfg(feature = "fuel-core-lib")]
     use fuels::prelude::Config;
-    use fuels::prelude::Error;
+    use fuels::prelude::Result;
 
     #[tokio::test]
-    async fn bytes32() -> Result<(), Error> {
+    async fn bytes32() -> Result<()> {
         // ANCHOR: bytes32
-        use fuels::tx::Bytes32;
         use std::str::FromStr;
+
+        use fuels::tx::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
@@ -32,7 +33,7 @@ mod tests {
 
         // ANCHOR: bytes32_format
         let b256_string = b256.to_string();
-        let b256_hex_string = format!("{:#x}", b256);
+        let b256_hex_string = format!("{b256:#x}");
         // ANCHOR_END: bytes32_format
 
         assert_eq!(hex_str[2..], b256_string);
@@ -41,10 +42,11 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn address() -> Result<(), Error> {
+    async fn address() -> Result<()> {
         // ANCHOR: address
-        use fuels::tx::Address;
         use std::str::FromStr;
+
+        use fuels::types::Address;
 
         // Zeroed Bytes32
         let address = Address::zeroed();
@@ -66,10 +68,9 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn bech32() -> Result<(), Error> {
+    async fn bech32() -> Result<()> {
         // ANCHOR: bech32
-        use fuels::prelude::Bech32Address;
-        use fuels::tx::{Address, Bytes32};
+        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
 
         // New from HRP string and a hash
         let hrp = "fuel";
@@ -99,10 +100,11 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn asset_id() -> Result<(), Error> {
+    async fn asset_id() -> Result<()> {
         // ANCHOR: asset_id
-        use fuels::tx::AssetId;
         use std::str::FromStr;
+
+        use fuels::types::AssetId;
 
         // Zeroed Bytes32
         let asset_id = AssetId::zeroed();
@@ -124,10 +126,11 @@ mod tests {
         Ok(())
     }
     #[tokio::test]
-    async fn contract_id() -> Result<(), Error> {
+    async fn contract_id() -> Result<()> {
         // ANCHOR: contract_id
-        use fuels::tx::ContractId;
         use std::str::FromStr;
+
+        use fuels::types::ContractId;
 
         // Zeroed Bytes32
         let contract_id = ContractId::zeroed();
@@ -151,9 +154,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn type_conversion() -> Result<(), Error> {
+    async fn type_conversion() -> Result<()> {
         // ANCHOR: type_conversion
-        use fuels::tx::{AssetId, ContractId};
+        use fuels::types::{AssetId, ContractId};
 
         let contract_id = ContractId::new([1u8; 32]);
 

@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.14.1
-  RUST_VERSION: 1.64.0
-  FORC_VERSION: 0.31.1
+  FUEL_CORE_VERSION: 0.18.1
+  RUST_VERSION: 1.68.0
+  FORC_VERSION: 0.40.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -28,14 +28,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@master
         with:
-          profile: minimal
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
-      - uses: Swatinem/rust-cache@v1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: "v1-rust"
 
       - name: Set git config
         run: |
@@ -43,36 +43,49 @@ jobs:
 
       - name: Install forc and forc-fmt
         run: |
-          if [[ -z $FORC_PATCH_BRANCH && -z $FORC_PATCH_REVISION ]]; then
+          if [[ -n $FORC_PATCH_BRANCH ]]; then
+            cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
+          elif [[ -n $FORC_PATCH_REVISION ]]; then
+            cargo install --locked forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
+          else
             curl -sSLf https://github.com/FuelLabs/sway/releases/download/v${{ env.FORC_VERSION }}/forc-binaries-linux_amd64.tar.gz -L -o forc.tar.gz
             tar -xvf forc.tar.gz
             chmod +x forc-binaries/forc
             mv forc-binaries/forc /usr/local/bin/forc
             mv forc-binaries/forc-fmt /usr/local/bin/forc-fmt
-          else
-            if [[ -n $FORC_PATCH_BRANCH ]]; then
-              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --branch $FORC_PATCH_BRANCH
-            else 
-              cargo install forc forc-fmt --git https://github.com/FuelLabs/sway --rev $FORC_PATCH_REVISION
-            fi
           fi
 
-      - name: Build Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- build
-
       - name: Check format of Sway test projects
-        uses: actions-rs/cargo@v1
-        with:
-          command: run
-          args: --bin test-projects -- format --check
+        run: forc fmt --check
+        working-directory: packages/fuels
+
+      - name: Build Sway test projects
+        run: forc build --terse
+        working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
         with:
           retention-days: 2
           name: sway-examples
+          # cache only the sway build artifacts, skip all src files
+          path: |
+            packages/fuels/tests
+            !packages/fuels/tests/*.rs
+            !packages/fuels/tests/**/*.rs
+            !packages/fuels/tests/**/*.sw
+            !packages/fuels/tests/**/Forc.toml
+            !packages/fuels/tests/**/Forc.lock
+            !packages/fuels/tests/.gitignore
+
+      # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+      - name: Build Sway test projects w type paths
+        run: forc build --terse --json-abi-with-callpaths
+        working-directory: packages/fuels
+
+      - uses: actions/upload-artifact@v2
+        with:
+          retention-days: 2
+          name: sway-examples-w-type-paths
           # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
@@ -106,112 +119,129 @@ jobs:
       - run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          MIN_VERSION=$(cat packages/fuels/Cargo.toml | dasel -r toml 'package.rust-version')
+          MIN_VERSION=$(cat Cargo.toml | dasel -r toml 'workspace.package.rust-version')
           RUST_VERSION="${{ env.RUST_VERSION }}"
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
+
+  # Ensure workspace is publishable
+  publish-crates-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+
+      - name: Publish crate check
+        uses: katyo/publish-crates@v2
+        with:
+          dry-run: true
+          check-repo: false
+          ignore-unpublished-changes: true
 
   cargo-verifications:
     needs:
       - setup-test-projects
       - verify-rust-version
       - get-workspace-members
+      - publish-crates-check
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        command: [check]
+        cargo_command: [check]
         args: [--all-features]
         package: ${{fromJSON(needs.get-workspace-members.outputs.members)}}
         include:
-          - command: fmt
+          - cargo_command: fmt
             args: --all --verbose -- --check
-          - command: clippy
-            args: --all-targets --all-features
-          - command: test
-            args: --all-targets --all-features
-          - command: test
+          - cargo_command: clippy
             args: --all-targets
+            download_sway_artifacts: sway-examples
+          - cargo_command: clippy
+            args: --all-targets --all-features
+            download_sway_artifacts: sway-examples-w-type-paths
+          - cargo_command: test
+            args: --all-targets --all-features --workspace
+            download_sway_artifacts: sway-examples-w-type-paths
+          - cargo_command: test
+            args: --all-targets --workspace
+            download_sway_artifacts: sway-examples
+          - command: test_wasm
+            args:
+          - command: check_doc_anchors_valid
+            args:
+          - command: check_doc_unresolved_links
+            args:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          override: true
+          components: clippy,rustfmt
+
         # selecting a toolchain either by action or manual `rustup` calls should happen
         # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v2.0.1
         continue-on-error: true
         with:
-          key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
-
-      - name: Add WASM target
-        if: ${{ matrix.command == 'test' }}
-        run: rustup target add wasm32-unknown-unknown
-
-      - name: Install WebAssembly Test harness
-        if: ${{ matrix.command == 'test' }}
-        uses: baptiste0928/cargo-install@v1
-        with:
-          crate: webassembly-test-runner
-          cache-key: "${{ matrix.command }} ${{ matrix.args }} ${{ matrix.package }}"
-
-      # TODO: Enable WASM tests
-      # - name: Test WASM package
-      #   if: ${{ matrix.command == 'test' }}
-      #   run: |
-      #     cd packages/wasm-tests
-      #     cargo test --target wasm32-unknown-unknown --all-targets --all-features
-      #     cargo test --target wasm32-unknown-unknown --all-targets --no-default-features
+          key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       - name: Install Fuel Core
-        if: ${{ matrix.command == 'test' }}
+        if: ${{ matrix.cargo_command == 'test' }}
         run: |
           curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
           tar -xvf fuel-core.tar.gz
           chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
           mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
 
-      - name: Install rustfmt
-        if: ${{ matrix.command == 'fmt' }}
-        run: rustup component add rustfmt
-
-      - name: Install clippy
-        if: ${{ matrix.command == 'clippy' }}
-        run: rustup component add clippy
-
       - name: Download sway example artifacts
-        if: ${{ matrix.command == 'test' || matrix.command == 'clippy' }}
+        if: ${{ matrix.download_sway_artifacts }}
         uses: actions/download-artifact@v3
         with:
-          name: sway-examples
+          name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
 
       - name: Cargo (workspace-level)
-        if: ${{ !matrix.package }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: ${{ matrix.command }}
-          args: ${{ matrix.args }}
+        if: ${{ matrix.cargo_command && !matrix.package }}
+        run: cargo ${{ matrix.cargo_command }} ${{ matrix.args }}
 
       - name: Cargo (package-level)
-        if: ${{ matrix.package }}
-        uses: actions-rs/cargo@v1
-        with:
-          command: ${{ matrix.command }}
-          args: -p ${{ matrix.package }} ${{ matrix.args }}
+        if: ${{ matrix.cargo_command && matrix.package }}
+        run: cargo ${{ matrix.cargo_command }} -p ${{ matrix.package }} ${{ matrix.args }}
 
-      - name: Check Docs. Validity
-        uses: actions-rs/cargo@v1
+      - name: Install NodeJS for WASM testing
+        if: ${{ matrix.command == 'test_wasm' }}
+        uses: actions/setup-node@v3
         with:
-          command: run
-          args: --bin check-docs
+          node-version:  18
+
+      - name: Test WASM
+        if: ${{ matrix.command == 'test_wasm' }}
+        run: |
+          rustup target add wasm32-unknown-unknown
+          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+          cd packages/wasm-tests
+          wasm-pack test --node
+
+      - name: Check for invalid documentation anchors
+        if: ${{ matrix.command == 'check_doc_anchors_valid' }}
+        run: cargo run --bin check-docs
+
+      - name: Check for unresolved documentation links
+        if: ${{ matrix.command == 'check_doc_unresolved_links' }}
+        run: |
+          ! cargo doc |& grep -A 6  "warning: unresolved link to"
 
   publish:
-    needs: cargo-verifications
+    needs:
+      - cargo-verifications
+      - publish-crates-check
     # Only do this job if publishing a release
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
@@ -220,25 +250,17 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Install toolchain
-        uses: actions-rs/toolchain@v1
+      - uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
-          override: true
+          toolchain: ${{ env.RUST_VERSION }}
 
       - name: Verify tag version
         run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-contract/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-core/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-abigen-macro/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-types/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} packages/fuels-test-helpers/Cargo.toml
-          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} tools/fuels-abi-cli/Cargo.toml
+          ./.github/workflows/scripts/verify_tag.sh ${{ github.ref_name }} Cargo.toml
       - name: Publish crate
-        uses: katyo/publish-crates@v1
+        uses: katyo/publish-crates@v2
         with:
           publish-delay: 30000
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}

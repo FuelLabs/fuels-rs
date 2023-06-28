@@ -1,0 +1,11 @@
+error: Contract is unknown
+ --> tests/ui/setup_program_test/unknown_contract.rs:7:20
+  |
+7 |         contract = "SomeUnknownContract",
+  |                    ^^^^^^^^^^^^^^^^^^^^^
+
+error: Consider adding: Contract(name="SomeUnknownContract", project=...)
+ --> tests/ui/setup_program_test/unknown_contract.rs:4:5
+  |
+4 |     Abigen(Contract(project = "some_project", name = "MismatchedName")),
+  |     ^^^^^^

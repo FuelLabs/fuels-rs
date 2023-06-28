@@ -1,64 +1,44 @@
 //! Testing helpers/utilities for Fuel SDK.
-
 extern crate core;
 
-use std::{iter::repeat, iter::zip, net::SocketAddr};
+use std::net::SocketAddr;
 
+#[cfg(feature = "fuels-accounts")]
+pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
-use fuel_chain_config::StateConfig;
-
+use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::{DbType, FuelService};
-
+pub use fuel_core::service::{config::Trigger, Config};
+use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::Config;
-
-#[cfg(feature = "fuel-core-lib")]
-pub use utils::{get_coin_configs, get_message_configs};
-
+use fuel_core_chain_config::StateConfig;
+use fuel_core_client::client::FuelClient;
+use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
+use fuel_types::{AssetId, Nonce};
+use fuels_core::{
+    constants::BASE_ASSET_ID,
+    types::{
+        bech32::Bech32Address,
+        coin::{Coin, CoinStatus},
+        message::{Message, MessageStatus},
+    },
+};
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::{get_socket_address, new_fuel_node, Config};
-
+pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
-
-use fuels_types::{
-    coin::{Coin, CoinStatus},
-    message::Message,
-};
-
-use fuel_chain_config::ChainConfig;
-use fuel_gql_client::{
-    client::FuelClient,
-    fuel_tx::{Bytes32, ConsensusParameters, UtxoId},
-};
-
-use fuels_core::constants::BASE_ASSET_ID;
-use fuels_signers::fuel_crypto::{fuel_types::AssetId, rand};
-use fuels_types::param_types::ParamType;
 use rand::Fill;
+#[cfg(feature = "fuel-core-lib")]
+pub use utils::{into_coin_configs, into_message_configs};
+pub use wallets_config::*;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
-mod chains;
-#[cfg(feature = "fuels-signers")]
-mod signers;
+#[cfg(feature = "fuels-accounts")]
+mod accounts;
 mod utils;
 mod wallets_config;
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node::*;
-
-pub use chains::*;
-use fuels_types::bech32::Bech32Address;
-#[cfg(feature = "fuels-signers")]
-pub use signers::*;
-pub use wallets_config::*;
-
-pub fn generate_unused_field_names(types: Vec<ParamType>) -> Vec<(String, ParamType)> {
-    zip(repeat("unused".to_string()), types).collect()
-}
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
@@ -137,55 +117,60 @@ pub fn setup_single_message(
     sender: &Bech32Address,
     recipient: &Bech32Address,
     amount: u64,
-    nonce: u64,
+    nonce: Nonce,
     data: Vec<u8>,
-) -> Vec<Message> {
-    vec![Message {
+) -> Message {
+    Message {
         sender: sender.clone(),
         recipient: recipient.clone(),
         nonce,
         amount,
         data,
         da_height: 0,
-        fuel_block_spend: None,
-    }]
+        status: MessageStatus::Unspent,
+    }
 }
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
 #[cfg(feature = "fuel-core-lib")]
+#[allow(clippy::let_unit_value)]
 pub async fn setup_test_client(
     coins: Vec<Coin>,
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
-) -> (FuelClient, SocketAddr) {
-    let coin_configs = get_coin_configs(coins);
-    let message_configs = get_message_configs(messages);
+) -> (FuelClient, SocketAddr, ConsensusParameters) {
+    let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
+    let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
 
-    // Setup node config with genesis coins and utxo_validation enabled
-    let chain_conf = chain_config.unwrap_or_else(|| ChainConfig {
-        initial_state: Some(StateConfig {
-            coins: Some(coin_configs),
-            contracts: None,
-            messages: Some(message_configs),
-            ..StateConfig::default()
-        }),
-        transaction_parameters: consensus_parameters_config.unwrap_or_default(),
-        ..ChainConfig::local_testnet()
+    chain_conf.initial_state = Some(StateConfig {
+        coins: Some(coin_configs),
+        contracts: None,
+        messages: Some(message_configs),
+        ..StateConfig::default()
     });
 
-    let config = Config {
-        chain_conf,
-        database_type: DbType::InMemory,
-        ..node_config.unwrap_or_else(Config::local_node)
-    };
+    let mut config = node_config.unwrap_or_else(Config::local_node);
+    config.chain_conf = chain_conf;
 
     let srv = FuelService::new_node(config).await.unwrap();
-    let client = FuelClient::from(srv.bound_address);
+    let address = srv.bound_address;
+    tokio::spawn(async move {
+        let _own_the_handle = srv;
+        let () = futures::future::pending().await;
+    });
 
-    (client, srv.bound_address)
+    let client = FuelClient::from(address);
+    let consensus_parameters = client
+        .chain_info()
+        .await
+        .expect("Could not retrieve consensus parameters of running client, should not happen")
+        .consensus_parameters
+        .into();
+
+    (client, address, consensus_parameters)
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -194,8 +179,7 @@ pub async fn setup_test_client(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-    consensus_parameters_config: Option<ConsensusParameters>,
-) -> (FuelClient, SocketAddr) {
+) -> (FuelClient, SocketAddr, ConsensusParameters) {
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
@@ -215,25 +199,29 @@ pub async fn setup_test_client(
             ..config
         },
         chain_config,
-        consensus_parameters_config,
     )
     .await;
 
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
 
-    (client, bound_address)
+    let consensus_parameters = client
+        .chain_info()
+        .await
+        .expect("Could not retrieve consensus parameters of running client should not happen")
+        .consensus_parameters
+        .into();
+
+    (client, bound_address, consensus_parameters)
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use fuels_contract::contract::Contract;
-    use fuels_core::parameters::{StorageConfiguration, TxParameters};
-    use fuels_signers::provider::Provider;
-    use fuels_signers::WalletUnlocked;
-    use fuels_types::bech32::FUEL_BECH32_HRP;
     use std::net::Ipv4Addr;
+
+    use fuels_core::types::bech32::FUEL_BECH32_HRP;
+
+    use super::*;
 
     #[tokio::test]
     async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
@@ -348,57 +336,73 @@ mod tests {
     #[tokio::test]
     async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
-
-        let wallet = WalletUnlocked::new_random(None);
-
-        let coins: Vec<Coin> = setup_single_asset_coins(
-            wallet.address(),
-            Default::default(),
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
-
         let config = Config {
             addr: socket,
+            utxo_validation: true,
+            manual_blocks_enabled: true,
             ..Config::local_node()
         };
 
-        let wallets = setup_test_client(coins, vec![], Some(config), None, None).await;
+        let (client, bound_addr, _consensus_parameters) =
+            setup_test_client(vec![], vec![], Some(config.clone()), None).await;
+        let node_info = client
+            .node_info()
+            .await
+            .expect("Failed to retrieve node info!");
 
-        assert_eq!(wallets.1, socket);
+        assert_eq!(bound_addr, socket);
+        assert_eq!(node_info.utxo_validation, config.utxo_validation);
+
         Ok(())
     }
 
     #[tokio::test]
     async fn test_setup_test_client_consensus_parameters_config() {
-        let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_gas_per_tx(1);
+        let configured_parameters = ConsensusParameters::DEFAULT
+            .with_max_gas_per_tx(2)
+            .with_gas_per_byte(2)
+            .with_max_inputs(58)
+            .with_max_storage_slots(83);
 
-        let mut wallet = WalletUnlocked::new_random(None);
+        let chain_config = ChainConfig {
+            transaction_parameters: configured_parameters,
+            ..ChainConfig::default()
+        };
+        let (client, _, client_consensus_parameters) =
+            setup_test_client(vec![], vec![], None, Some(chain_config)).await;
 
-        let coins: Vec<Coin> = setup_single_asset_coins(
-            wallet.address(),
-            Default::default(),
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
+        let retrieved_parameters: ConsensusParameters = client
+            .chain_info()
+            .await
+            .expect("Failed to retrieve consensus chain info!")
+            .consensus_parameters
+            .into();
 
-        let (fuel_client, _) =
-            setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-        let provider = Provider::new(fuel_client);
-        wallet.set_provider(provider.clone());
+        assert_eq!(retrieved_parameters, configured_parameters);
+        assert_eq!(client_consensus_parameters, configured_parameters)
+    }
 
-        let result = Contract::deploy(
-            "../fuels/tests/types/contract_output_test/out/debug/contract_output_test.bin",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
-        .await;
+    #[tokio::test]
+    async fn test_chain_config_and_consensus_parameters() {
+        let consensus_parameters_config = ConsensusParameters::DEFAULT
+            .with_max_inputs(123)
+            .with_gas_per_byte(456);
 
-        let expected = result.expect_err("should fail");
+        let chain_config = ChainConfig {
+            chain_name: "Solo_Munib".to_string(),
+            transaction_parameters: consensus_parameters_config,
+            ..ChainConfig::local_testnet()
+        };
 
-        let error_string = "Validation error: TransactionGasLimit";
+        let (fuel_client, _, client_consensus_parameters) =
+            setup_test_client(vec![], vec![], None, Some(chain_config)).await;
 
-        assert!(expected.to_string().contains(error_string));
+        let chain_info = fuel_client.chain_info().await.unwrap();
+
+        assert_eq!(chain_info.name, "Solo_Munib");
+        assert_eq!(chain_info.consensus_parameters.max_inputs.0, 123);
+        assert_eq!(chain_info.consensus_parameters.gas_per_byte.0, 456);
+        assert_eq!(client_consensus_parameters.gas_per_byte, 456);
+        assert_eq!(client_consensus_parameters.max_inputs, 123);
     }
 }

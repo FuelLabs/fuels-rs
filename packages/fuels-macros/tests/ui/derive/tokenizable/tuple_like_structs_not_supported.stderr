@@ -1,0 +1,5 @@
+error: Tuple-like structs not supported
+ --> tests/ui/derive/tokenizable/tuple_like_structs_not_supported.rs:4:19
+  |
+4 | struct SomeStruct(pub u64, pub String);
+  |                   ^^^^^^^^^^^^^^^^^^^

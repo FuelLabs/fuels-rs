@@ -1,6 +1,6 @@
 contract;
 
-use std::{context::balance_of, context::msg_amount, token::*};
+use std::{bytes::Bytes, context::balance_of, context::msg_amount, message::send_message, token::*};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);
@@ -9,7 +9,9 @@ abi TestFuelCoin {
     fn force_transfer_coins(coins: u64, asset_id: ContractId, target: ContractId);
     fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address);
     fn get_balance(target: ContractId, asset_id: ContractId) -> u64;
+    #[payable]
     fn get_msg_amount() -> u64;
+    fn send_message(recipient: b256, coins: u64);
 }
 
 impl TestFuelCoin for Contract {
@@ -41,7 +43,17 @@ impl TestFuelCoin for Contract {
         balance_of(target, asset_id)
     }
 
+    #[payable]
     fn get_msg_amount() -> u64 {
         msg_amount()
+    }
+
+    fn send_message(recipient: b256, coins: u64) {
+        let mut data = Bytes::new();
+        data.push(1u8);
+        data.push(2u8);
+        data.push(3u8);
+
+        send_message(recipient, data, coins);
     }
 }

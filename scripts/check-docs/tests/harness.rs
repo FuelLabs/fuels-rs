@@ -1,7 +1,7 @@
 use anyhow::Error;
 use check_docs::{
-    extract_starts_and_ends, filter_valid_anchors, parse_includes, search_for_patterns_in_project,
-    validate_includes, Anchor, Include,
+    extract_starts_and_ends, filter_valid_anchors, find_files, parse_includes, parse_md_files,
+    search_for_pattern, validate_includes, validate_md_files, Anchor, Include,
 };
 
 enum TestEnum {
@@ -22,7 +22,7 @@ fn contains_any(vec: &TestEnum, str: &str) -> bool {
 
 #[test]
 fn test_anchors() -> anyhow::Result<()> {
-    let test_data = search_for_patterns_in_project("ANCHOR")?;
+    let test_data = search_for_pattern("ANCHOR", ".")?;
 
     let (starts, ends) = extract_starts_and_ends(&test_data)?;
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
@@ -54,7 +54,7 @@ fn test_anchors() -> anyhow::Result<()> {
         "Missing anchor start for Anchor { line_no: 21, name: \"test_same_name_multiple_time\""
     ));
 
-    let text_mentioning_include = search_for_patterns_in_project("{{#include")?;
+    let text_mentioning_include = search_for_pattern("{{#include", ".")?;
 
     let (includes, include_path_errors) = parse_includes(text_mentioning_include);
 
@@ -88,6 +88,20 @@ fn test_anchors() -> anyhow::Result<()> {
         &include_err_vec,
         "No anchor available to satisfy include Include { anchor_name: \"no_existing_anchor\""
     ));
+
+    Ok(())
+}
+
+#[test]
+fn test_unused_md() -> anyhow::Result<()> {
+    let text_with_md_files = search_for_pattern(".md", "./tests/test_data/docs/src/SUMMARY.md")?;
+    let md_files_in_summary = parse_md_files(text_with_md_files, "./tests/test_data/docs/src/");
+    let md_files_in_src = find_files("*.md", "./tests/test_data/docs/src/", "SUMMARY.md")?;
+    let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
+
+    let error_msg = md_files_errors.first().unwrap().to_string();
+
+    assert!(error_msg.contains("test-not-there.md` not in SUMMARY.md"));
 
     Ok(())
 }

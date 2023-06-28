@@ -1,21 +1,27 @@
 # Transaction parameters
 
-Transaction parameters are:
+<!-- This section should explain what the tx params are and how to configure them -->
+<!-- tx_params:example:start -->
+The parameters for a transaction are:
 
-1. Gas price;
-2. Gas limit;
-3. Maturity.
+1. Gas price
+2. Gas limit
+3. Maturity
 
-You can configure these parameters by creating an instance of [`TxParameters`](https://github.com/FuelLabs/fuels-rs/blob/adf81bd451d7637ce0976363bd7784408430031a/packages/fuels-contract/src/parameters.rs#L7) and passing it to a chain method called `tx_params`:
+You can configure these parameters by creating an instance of `TxParameters` and passing it to a chain method called `tx_params`:
+<!-- tx_params:example:end-->
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}
 ```
 
+<!-- This section should explain how to use the defauly tx params -->
+<!-- tx_params_default:example:start -->
 You can also use `TxParameters::default()` to use the default values:
+<!-- tx_params_default:example:end -->
 
 ```rust,ignore
-{{#include ../../../packages/fuels-core/src/constants.rs:default_tx_parameters}}
+{{#include ../../../packages/fuels-core/src/utils/constants.rs:default_tx_parameters}}
 ```
 
 This way:

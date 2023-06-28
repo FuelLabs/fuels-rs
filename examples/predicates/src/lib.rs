@@ -1,13 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
-    use fuels::prelude::*;
+    use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::{
+        accounts::{predicate::Predicate, Account},
+        prelude::*,
+        types::B512,
+    };
 
     #[tokio::test]
-    async fn predicate_example() -> Result<(), Error> {
-        use fuels::contract::predicate::Predicate;
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
+    async fn predicate_example() -> Result<()> {
+        use fuels::accounts::fuel_crypto::SecretKey;
 
         // ANCHOR: predicate_wallets
         let secret_key1: SecretKey =
@@ -28,93 +30,96 @@ mod tests {
         let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
         let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
         let mut wallet3 = WalletUnlocked::new_from_private_key(secret_key3, None);
-        let receiver = WalletUnlocked::new_random(None);
+        let mut receiver = WalletUnlocked::new_random(None);
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins
-        let all_coins = [&wallet, &wallet2, &wallet3]
+        let asset_id = AssetId::default();
+        let num_coins = 32;
+        let amount = 64;
+        let initial_balance = amount * num_coins;
+        let all_coins = [&wallet, &wallet2, &wallet3, &receiver]
             .iter()
             .flat_map(|wallet| {
-                setup_single_asset_coins(wallet.address(), AssetId::default(), 10, 1_000_000)
+                setup_single_asset_coins(wallet.address(), asset_id, num_coins, amount)
             })
             .collect::<Vec<_>>();
 
-        let (provider, _) = setup_test_provider(
-            all_coins,
-            vec![],
-            Some(Config {
-                utxo_validation: true,
-                ..Config::local_node()
-            }),
-            None,
-        )
-        .await;
+        let (provider, _) = setup_test_provider(all_coins, vec![], None, None).await;
 
-        [&mut wallet, &mut wallet2, &mut wallet3]
+        [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
             .iter_mut()
-            .for_each(|wallet| wallet.set_provider(provider.clone()));
+            .for_each(|wallet| {
+                wallet.set_provider(provider.clone());
+            });
         // ANCHOR_END: predicate_coins
 
-        // ANCHOR: predicate_load
-        // ANCHOR: predicate_load_from
-        let predicate = Predicate::load_from(
-            "../../packages/fuels/tests/predicates/predicate_signatures/out/debug/predicate_signatures.bin",
-        )?;
+        let data_to_sign = [0; 32];
+        let signature1: B512 = wallet
+            .sign_message(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
+        let signature2: B512 = wallet2
+            .sign_message(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
+        let signature3: B512 = wallet3
+            .sign_message(data_to_sign)
+            .await?
+            .as_ref()
+            .try_into()?;
 
-        let predicate_code = predicate.code();
-        let predicate_address = predicate.address();
-        // ANCHOR_END: predicate_load_from
-        let amount_to_predicate = 1000;
-        let asset_id = AssetId::default();
+        let signatures = [signature1, signature2, signature3];
+
+        // ANCHOR: predicate_load
+        abigen!(Predicate(
+            name = "MyPredicate",
+            abi = "packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json"
+        ));
+
+        let predicate_data = MyPredicateEncoder::encode_data(signatures);
+        let code_path = "../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin";
+
+        let predicate: Predicate = Predicate::load_from(code_path)?
+            .with_provider(provider)
+            .with_data(predicate_data);
         // ANCHOR_END: predicate_load
 
-        // ANCHOR: predicate_send
+        // ANCHOR: predicate_receive
+        let amount_to_predicate = 512;
+
         wallet
             .transfer(
-                predicate_address,
+                predicate.address(),
                 amount_to_predicate,
                 asset_id,
                 TxParameters::default(),
             )
             .await?;
 
-        let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
-            .await?;
+        let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
         assert_eq!(predicate_balance, amount_to_predicate);
-        // ANCHOR_END: predicate_send
-
-        // ANCHOR: predicate_signatures
-        let data_to_sign = [0; 32];
-        let signature1 = wallet.sign_message(data_to_sign).await?.to_vec();
-        let signature2 = wallet2.sign_message(data_to_sign).await?.to_vec();
-        let signature3 = wallet3.sign_message(data_to_sign).await?.to_vec();
-
-        let signatures = vec![signature1, signature2, signature3];
-        // ANCHOR_END: predicate_signatures
+        // ANCHOR_END: predicate_receive
 
         // ANCHOR: predicate_spend
-        let predicate_data = signatures.into_iter().flatten().collect();
-        wallet
-            .spend_predicate(
-                predicate_address,
-                predicate_code,
+        predicate
+            .transfer(
+                receiver.address(),
                 amount_to_predicate,
                 asset_id,
-                receiver.address(),
-                Some(predicate_data),
                 TxParameters::default(),
             )
             .await?;
 
-        let receiver_balance_after = provider
-            .get_asset_balance(receiver.address(), asset_id)
-            .await?;
-        assert_eq!(amount_to_predicate, receiver_balance_after);
+        let receiver_balance_after = receiver.get_asset_balance(&asset_id).await?;
+        assert_eq!(
+            initial_balance + amount_to_predicate,
+            receiver_balance_after
+        );
 
-        let predicate_balance = provider
-            .get_asset_balance(predicate.address(), asset_id)
-            .await?;
+        let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
         assert_eq!(predicate_balance, 0);
         // ANCHOR_END: predicate_spend
 
@@ -122,82 +127,62 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn predicate_data_example() -> Result<(), Error> {
+    async fn predicate_data_example() -> Result<()> {
         // ANCHOR: predicate_data_setup
-        let provider_config = Config {
-            utxo_validation: true,
-            ..Config::local_node()
-        };
-
+        let asset_id = AssetId::default();
         let wallets_config = WalletsConfig::new_multiple_assets(
             2,
             vec![AssetConfig {
-                id: AssetId::default(),
+                id: asset_id,
                 num_coins: 1,
                 coin_amount: 1_000,
             }],
         );
 
-        let wallets =
-            &launch_custom_provider_and_get_wallets(wallets_config, Some(provider_config), None)
-                .await;
+        let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await;
 
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        let predicate = Predicate::load_from( "../../packages/fuels/tests/predicates/predicate_data_example/out/debug/predicate_data_example.bin")?;
-
-        let predicate_code = predicate.code();
-        let predicate_address = predicate.address();
+        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
         // ANCHOR_END: predicate_data_setup
+
+        // ANCHOR: with_predicate_data
+        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+        let code_path =
+            "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+
+        let predicate: Predicate = Predicate::load_from(code_path)?
+            .with_provider(first_wallet.try_provider()?.clone())
+            .with_data(predicate_data);
+        // ANCHOR_END: with_predicate_data
 
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
-        let _result = first_wallet
-            .transfer(
-                predicate_address,
-                500,
-                AssetId::default(),
-                TxParameters::default(),
-            )
+        first_wallet
+            .transfer(predicate.address(), 500, asset_id, TxParameters::default())
             .await?;
 
         // Check predicate balance.
-        let balance = first_wallet
-            .get_provider()?
-            .get_asset_balance(predicate_address, AssetId::default())
-            .await?;
+        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
 
         assert_eq!(balance, 500);
         // ANCHOR_END: predicate_data_lock_amount
 
         // ANCHOR: predicate_data_unlock
-        // We use the Predicate's `encode_data()` to encode the data we want to
-        // send to the predicate.
-
-        // ANCHOR: encode_predicate_data
-        let predicate_data: Vec<u8> = predicate.encode_data(42_u64)?;
-        // ANCHOR_END: encode_predicate_data
-
         let amount_to_unlock = 500;
 
-        let _result = second_wallet
-            .spend_predicate(
-                predicate_address,
-                predicate_code,
-                amount_to_unlock,
-                AssetId::default(),
+        predicate
+            .transfer(
                 second_wallet.address(),
-                Some(predicate_data),
+                amount_to_unlock,
+                asset_id,
                 TxParameters::default(),
             )
             .await?;
 
         // Predicate balance is zero.
-        let balance = first_wallet
-            .get_provider()?
-            .get_asset_balance(predicate_address, AssetId::default())
-            .await?;
+        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
 
         assert_eq!(balance, 0);
 

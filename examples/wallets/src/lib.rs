@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use fuels::prelude::Error;
+    use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::prelude::*;
 
     #[tokio::test]
     async fn create_random_wallet() {
@@ -16,11 +17,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_wallet_from_secret_key() -> Result<(), Box<dyn std::error::Error>> {
+    async fn create_wallet_from_secret_key() -> std::result::Result<(), Box<dyn std::error::Error>>
+    {
         // ANCHOR: create_wallet_from_secret_key
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
         use std::str::FromStr;
+
+        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
         let (provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
@@ -37,7 +39,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_wallet_from_mnemonic() -> Result<(), Error> {
+    async fn create_wallet_from_mnemonic() -> Result<()> {
         // ANCHOR: create_wallet_from_mnemonic
         use fuels::prelude::*;
 
@@ -65,7 +67,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_and_restore_json_wallet() -> Result<(), Error> {
+    async fn create_and_restore_json_wallet() -> Result<()> {
         // ANCHOR: create_and_restore_json_wallet
         use fuels::prelude::*;
 
@@ -83,13 +85,13 @@ mod tests {
 
         let path = dir.join(uuid);
 
-        let _recovered_wallet = WalletUnlocked::load_keystore(&path, password, Some(provider))?;
+        let _recovered_wallet = WalletUnlocked::load_keystore(path, password, Some(provider))?;
         // ANCHOR_END: create_and_restore_json_wallet
         Ok(())
     }
 
     #[tokio::test]
-    async fn create_and_store_mnemonic_wallet() -> Result<(), Error> {
+    async fn create_and_store_mnemonic_wallet() -> Result<()> {
         // ANCHOR: create_and_store_mnemonic_wallet
         use fuels::prelude::*;
 
@@ -113,7 +115,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_transfer() -> Result<(), Error> {
+    async fn wallet_transfer() -> Result<()> {
         // ANCHOR: wallet_transfer
         use fuels::prelude::*;
 
@@ -145,7 +147,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_contract_transfer() -> Result<(), Error> {
+    async fn wallet_contract_transfer() -> Result<()> {
         use fuels::prelude::*;
         use rand::Fill;
 
@@ -171,18 +173,17 @@ mod tests {
             .pop()
             .unwrap();
 
-        let contract_id = Contract::deploy(
+        let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-            &wallet,
-            TxParameters::default(),
-            StorageConfiguration::default(),
-        )
+            LoadConfiguration::default(),
+        )?
+        .deploy(&wallet, TxParameters::default())
         .await?;
 
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'
         let contract_balances = wallet
-            .get_provider()?
+            .try_provider()?
             .get_contract_balances(&contract_id)
             .await?;
         assert!(contract_balances.is_empty());
@@ -196,12 +197,12 @@ mod tests {
 
         // Check that the contract now has 1 coin
         let contract_balances = wallet
-            .get_provider()?
+            .try_provider()?
             .get_contract_balances(&contract_id)
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!("{:#x}", random_asset_id);
+        let random_asset_id_key = format!("{random_asset_id:#x}");
         let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
         assert_eq!(*random_asset_balance, 300);
         // ANCHOR_END: wallet_contract_transfer
@@ -211,7 +212,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_multiple_wallets() -> Result<(), Error> {
+    async fn setup_multiple_wallets() -> Result<()> {
         // ANCHOR: multiple_wallets_helper
         use fuels::prelude::*;
         // This helper will launch a local node and provide 10 test wallets linked to it.
@@ -237,7 +238,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_multiple_assets() -> Result<(), Error> {
+    async fn setup_wallet_multiple_assets() -> Result<()> {
         // ANCHOR: multiple_assets_wallet
         // ANCHOR: multiple_assets_coins
         use fuels::prelude::*;
@@ -261,7 +262,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_custom_assets() -> Result<(), rand::Error> {
+    async fn setup_wallet_custom_assets() -> std::result::Result<(), rand::Error> {
         // ANCHOR: custom_assets_wallet
         use fuels::prelude::*;
         use rand::Fill;
@@ -307,12 +308,16 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn get_balances() -> Result<(), Error> {
-        use fuels::prelude::{
-            launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS,
-        };
-        use fuels::tx::AssetId;
+    async fn get_balances() -> Result<()> {
         use std::collections::HashMap;
+
+        use fuels::{
+            prelude::{
+                launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT,
+                DEFAULT_NUM_COINS,
+            },
+            types::AssetId,
+        };
 
         let wallet = launch_provider_and_get_wallet().await;
         // ANCHOR: get_asset_balance
@@ -324,7 +329,7 @@ mod tests {
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap
-        let asset_id_key = format!("{:#x}", asset_id);
+        let asset_id_key = format!("{asset_id:#x}");
         let asset_balance = balances.get(&asset_id_key).unwrap();
         // ANCHOR_END: get_balance_hashmap
 
@@ -334,12 +339,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn wallet_transfer_to_base_layer() -> Result<(), Error> {
+    async fn wallet_transfer_to_base_layer() -> Result<()> {
         // ANCHOR: wallet_withdraw_to_base
-        use fuels::prelude::*;
         use std::str::FromStr;
 
-        let wallet = launch_provider_and_get_wallet().await;
+        use fuels::prelude::*;
+
+        let config = Config {
+            manual_blocks_enabled: true,
+            ..Config::local_node()
+        };
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(1), None, None),
+            Some(config),
+            None,
+        )
+        .await;
+        let wallet = wallets.first().unwrap();
 
         let amount = 1000;
         let base_layer_address =
@@ -351,10 +367,12 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
+        let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;
+
         // Retrieve a message proof from the provider
         let proof = wallet
-            .get_provider()?
-            .get_message_proof(&tx_id, &msg_id)
+            .try_provider()?
+            .get_message_proof(&tx_id, &msg_id, None, Some(2))
             .await?
             .expect("Failed to retrieve message proof.");
 

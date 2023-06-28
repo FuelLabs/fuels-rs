@@ -1,6 +1,9 @@
 # Calls with different wallets
 
-You can use the `with_wallet()` method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.
+<!-- This section should explain how to call a contract with a certain wallet -->
+<!-- wallet:example:start -->
+You can use the `with_account()` method on an existing contract instance as a shorthand for creating a new instance connected to the provided wallet. This lets you make contracts calls with different wallets in a chain like fashion.
+<!-- wallet:example:end-->
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:connect_wallet}}

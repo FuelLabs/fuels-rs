@@ -1,0 +1,20 @@
+[package]
+name = "fuels-code-gen"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+description = "Used for code generation in the Fuel Rust SDK"
+
+[dependencies]
+Inflector = { workspace = true }
+fuel-abi-types = { workspace = true }
+itertools = { workspace = true }
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+regex = { workspace = true }
+serde_json = { workspace = true }
+syn = { workspace = true }

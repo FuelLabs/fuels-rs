@@ -13,13 +13,16 @@ use std::{
 };
 
 abi LiquidityPool {
+    #[payable]
     fn deposit(recipient: Address);
+    #[payable]
     fn withdraw(recipient: Address);
 }
 
 const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c;
 
 impl LiquidityPool for Contract {
+    #[payable]
     fn deposit(recipient: Address) {
         assert(ContractId::from(BASE_TOKEN) == msg_asset_id());
         assert(0 < msg_amount());
@@ -31,6 +34,7 @@ impl LiquidityPool for Contract {
         mint_to_address(amount_to_mint, recipient);
     }
 
+    #[payable]
     fn withdraw(recipient: Address) {
         assert(contract_id() == msg_asset_id());
         assert(0 < msg_amount());

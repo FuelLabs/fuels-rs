@@ -1,11 +1,15 @@
 #[cfg(test)]
 mod tests {
-    use fuels::core::code_gen::function_selector::resolve_fn_selector;
-    use fuels::core::Parameterize;
-    use fuels::prelude::SizedAsciiString;
-    use fuels::types::param_types::ParamType;
-    use fuels::types::ProgramABI;
     use std::collections::HashMap;
+
+    use fuel_abi_types::abi::program::ProgramABI;
+    use fuels::{
+        core::{
+            codec::{calldata, fn_selector, resolve_fn_selector},
+            traits::Parameterize,
+        },
+        types::{errors::Result, param_types::ParamType, SizedAsciiString},
+    };
 
     #[test]
     fn get_a_fn_selector() {
@@ -21,7 +25,7 @@ mod tests {
     }
 
     #[test]
-    fn a_fn_selector_from_json_abi() -> anyhow::Result<()> {
+    fn a_fn_selector_from_json_abi() -> Result<()> {
         let json_abi_file =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
@@ -45,7 +49,7 @@ mod tests {
             .inputs
             .into_iter()
             .map(|type_appl| ParamType::try_from_type_application(&type_appl, &type_lookup))
-            .collect::<Result<Vec<_>, _>>()?;
+            .collect::<Result<Vec<_>>>()?;
 
         let selector = resolve_fn_selector(&a_fun.name, &inputs);
 
@@ -53,5 +57,14 @@ mod tests {
         // ANCHOR_END: example_fn_selector_json
 
         Ok(())
+    }
+
+    #[test]
+    fn test_macros() {
+        let function_selector = fn_selector!(initialize_counter(u64));
+        let call_data = calldata!(42u64);
+
+        assert_eq!(vec![0, 0, 0, 0, 171, 100, 229, 242], function_selector);
+        assert_eq!(vec![0, 0, 0, 0, 0, 0, 0, 42], call_data);
     }
 }

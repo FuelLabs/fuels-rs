@@ -1,0 +1,11 @@
+error: Expected name='value'
+ --> tests/ui/derive/parameterize/attribute_must_be_named_value.rs:4:3
+  |
+4 | #[FuelsTypesPath]
+  |   ^^^^^^^^^^^^^^
+
+error: Expected string literal
+  --> tests/ui/derive/parameterize/attribute_must_be_named_value.rs:10:20
+   |
+10 | #[FuelsTypesPath = true]
+   |                    ^^^^

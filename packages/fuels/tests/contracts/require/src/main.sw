@@ -1,15 +1,20 @@
 contract;
 
+use std::logging::log;
+
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithNestedGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 struct StructDeeplyNestedGeneric<D> {
     field_1: D,
     field_2: u64,
@@ -19,6 +24,7 @@ abi TestContract {
     fn require_primitive();
     fn require_string();
     fn require_custom_generic();
+    fn require_with_additional_logs();
 }
 
 impl TestContract for Contract {
@@ -44,5 +50,11 @@ impl TestContract for Contract {
         };
 
         require(false, test_deeply_nested_generic);
+    }
+
+    fn require_with_additional_logs() {
+        log(42);
+        log("fuel");
+        require(false, 64);
     }
 }

@@ -1,0 +1,8 @@
+[project]
+authors = ["Fuel Labs <contact@fuel.sh>"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "require_from_contract"
+
+[dependencies]
+library = { path = "../../contracts/lib_contract_abi", package = "lib_contract_abi" }

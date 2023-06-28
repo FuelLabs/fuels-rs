@@ -1,0 +1,39 @@
+[package]
+name = "fuels-programs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+description = "Fuel Rust SDK contracts."
+
+[dependencies]
+async-trait = { workspace = true, default-features = false }
+bytes = { workspace = true, features = ["serde"] }
+fuel-abi-types = { workspace = true }
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true, features = ["default"] }
+fuel-vm = { workspace = true }
+fuels-accounts = { workspace = true }
+fuels-core = { workspace = true }
+hex = { workspace = true, default-features = false, features = ["std"] }
+itertools = { workspace = true }
+proc-macro2 = { workspace = true }
+rand = { workspace = true }
+regex = { workspace = true }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true, default-features = false }
+tokio = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+    "fuels-core/std",
+    "fuels-accounts/std",
+]

@@ -1,17 +1,22 @@
 #[cfg(test)]
 mod tests {
-
-    use fuels::prelude::Error;
+    use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::prelude::Result;
 
     #[tokio::test]
+    /// This test will not work for as no endpoint supports the new `fuel-core` release yet
+    /// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
+    #[ignore]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
-        use fuels::prelude::*;
-        use fuels::signers::fuel_crypto::SecretKey;
         use std::str::FromStr;
 
+        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
+
         // Create a provider pointing to the testnet.
-        let provider = Provider::connect("node-beta-1.fuel.network").await.unwrap();
+        // This example will not work as the testnet does not support the new version of fuel-core
+        // yet
+        let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
@@ -31,7 +36,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn query_the_blockchain() -> Result<(), Error> {
+    async fn query_the_blockchain() -> Result<()> {
         // ANCHOR: setup_test_blockchain
         use fuels::prelude::*;
 
@@ -64,9 +69,12 @@ mod tests {
         // ANCHOR_END: get_coins
 
         // ANCHOR: get_spendable_resources
-        let spendable_resources = provider
-            .get_spendable_resources(wallet.address(), BASE_ASSET_ID, 1)
-            .await?;
+        let filter = ResourceFilter {
+            from: wallet.address().clone(),
+            amount: 1,
+            ..Default::default()
+        };
+        let spendable_resources = provider.get_spendable_resources(filter).await?;
         assert_eq!(spendable_resources.len(), 1);
         // ANCHOR_END: get_spendable_resources
 

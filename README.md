@@ -29,10 +29,75 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 - [ ] Wallet integration
 - [ ] Events querying/monitoring
 
-
 ## FAQ
+
+### What dependencies do I need?
+
+- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/introduction/installation.html);
+- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo).
+
+### How can I run the SDK tests?
+
+First, build the test projects using `forc`:
+
+```shell
+forc build --path packages/fuels
+```
+
+Then you can run the SDK tests with:
+
+```shell
+cargo test
+```
+
+You can also run specific tests. The following example will run all integration tests in `types.rs` whose names contain `in_vector` and show their outputs:
+
+```shell
+cargo test --test types in_vector -- --show-output
+``` 
+### How to run WASM tests?
+You need to have wasm32 as a target, if you don't already:
+```shell
+ rustup target add wasm32-unknown-unknown
+```
+You also need `wasm-pack`, if you don't already: 
+```shell
+cargo install wasm-pack
+```
+
+Navigate to `packages/wasm-tests` and run `wasm-pack test`.
+### What to do if my tests are failing on `master`
+
+Before doing anything else, try all these commands:
+
+```shell
+cargo clean
+rm Cargo.lock
+forc build --path packages/fuels
+cargo test
+```
 
 ### Why is the prefix `fuels` and not `fuel`?
 
 In order to make the SDK for Fuel feel familiar with those coming from the [ethers.js](https://github.com/ethers-io/ethers.js) ecosystem, this project opted for an `s` at the end. The `fuels-*` family of SDKs is inspired by The Ethers Project.
+
+### How can I run the docs locally?
+
+Install `mdbook` by running:
+
+```shell
+cargo install mdbook
+```
+
+Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
+
+```shell
+mdbook serve --open
+```
+
+You can build the book by running:
+
+```shell
+mdbook build
+```
 

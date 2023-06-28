@@ -1,33 +1,37 @@
 [package]
 name = "fuels-core"
-version = "0.31.1"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
-Inflector = "0.11"
-anyhow = "1"
-fuel-tx = "0.23"
-fuel-types = "0.5"
-fuels-types = { version = "0.31.1", path = "../fuels-types" }
-hex = { version = "0.4.3", features = ["std"] }
-itertools = "0.10"
-proc-macro2 = "1.0"
-lazy_static = "1.4.0"
-quote = "1.0"
-rand = { version = "0.8.4" }
-regex = "1.6.0"
-serde = { version = "1.0.124", features = ["derive"] }
-serde_json = { version = "1.0.64", default-features = true }
-sha2 = "0.9.5"
-strum = "0.21"
-strum_macros = "0.21"
-syn = "1.0.12"
-thiserror = "1.0.30"
+bech32 = "0.9.0"
+chrono = "0.4.2"
+fuel-abi-types = { workspace = true }
+fuel-asm = { workspace = true }
+fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core-chain-config = { workspace = true }
+fuel-core-client = { workspace = true, optional = true }
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true, features = ["default"] }
+fuel-vm = { workspace = true }
+fuels-macros = { workspace = true }
+hex = { workspace = true, features = ["std"] }
+itertools = { workspace = true }
+proc-macro2 = { workspace = true }
+regex ={ workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, default-features = true }
+sha2 = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+thiserror = { workspace = true, default-features = false }
 
-[dev-dependencies]
-fuels-test-helpers = { version = "0.31.1", path = "../fuels-test-helpers" }
+[features]
+default = ["std"]
+std = ["dep:fuel-core-client"]

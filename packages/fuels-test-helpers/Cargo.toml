@@ -1,35 +1,36 @@
 [package]
 name = "fuels-test-helpers"
-version = "0.31.1"
-authors = ["Fuel Labs <contact@fuel.sh>"]
-edition = "2021"
-homepage = "https://fuel.network/"
-license = "Apache-2.0"
-repository = "https://github.com/FuelLabs/fuels-rs"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-anyhow = { version = "1.0.58" }
-fuel-core = { version = "0.14", default-features = false, optional = true }
-fuel-chain-config = { version = "0.14", default-features = false }
-fuel-core-interfaces = { version = "0.14", default-features = false }
-fuel-gql-client = { version = "0.14", default-features = false }
-fuel-types = { version = "0.5", default-features = false, features = ["random"] }
-fuels-contract = { version = "0.31.1", path = "../fuels-contract" }
-fuels-core = { version = "0.31.1", path = "../fuels-core" }
-fuels-signers = { version = "0.31.1", path = "../fuels-signers", optional = true }
-fuels-types = { version = "0.31.1", path = "../fuels-types" }
-
-hex = { version = "0.4.3", default-features = false, features = ["std", "serde"] }
-portpicker = { version = "0.1.1" }
-rand = { version = "0.8.4", default-features = false }
-serde = { version = "1.0.137", features = ["derive"] }
-serde_json = { version = "1.0", features = ["raw_value"] }
-serde_with = { version = "1.11", features = ["serde_json"] }
-tempfile = { version = "3.0.1", default-features = false }
-tokio = { version = "1.15", default-features = false }
-which = { version = "4.3", default-features = false }
+fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core-chain-config = { workspace = true }
+fuel-core-client = { workspace = true }
+fuel-core-types = { workspace = true }
+fuel-tx = { workspace = true }
+fuel-types = { workspace = true, features = ["random"] }
+fuel-vm = { workspace = true }
+fuels-accounts = { workspace = true, optional = true }
+fuels-core = { workspace = true }
+futures = { workspace = true }
+hex = { workspace = true, default-features = false, features = ["std", "serde"] }
+portpicker = { workspace = true }
+rand = { workspace = true, default-features = false }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true, features = ["raw_value"] }
+serde_with = { workspace = true }
+tempfile = { workspace = true, default-features = false }
+tokio = { workspace = true, default-features = false }
+which = { workspace = true, default-features = false }
 
 [features]
-default = ["fuels-signers"]
+default = ["fuels-accounts", "std"]
+std = ["fuels-accounts?/std", "fuels-core/std"]
 fuel-core-lib = ["fuel-core"]
