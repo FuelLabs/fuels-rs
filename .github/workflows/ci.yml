@@ -173,7 +173,7 @@ jobs:
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: test
-            args: --doc --all-targets --workspace
+            args: --doc --workspace
           - command: test_wasm
             args:
           - command: check_doc_anchors_valid
