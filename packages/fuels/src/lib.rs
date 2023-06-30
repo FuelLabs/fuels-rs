@@ -75,7 +75,9 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
-            provider::*, wallet::generate_mnemonic_phrase, Account, Signer, ViewOnlyAccount,
+            provider::*,
+            wallet::{generate_mnemonic_phrase, WalletUnlocked},
+            Account, Signer, ViewOnlyAccount,
         },
         fuel_node::*,
         programs::{
