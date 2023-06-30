@@ -1,6 +1,6 @@
 use fuel_tx::Output;
 use fuels::{
-    accounts::{predicate::Predicate, wallet::WalletUnlocked, Account},
+    accounts::{predicate::Predicate, Account},
     prelude::*,
     types::{
         coin::Coin,

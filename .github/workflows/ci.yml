@@ -163,11 +163,11 @@ jobs:
           - cargo_command: clippy
             args: --all-targets --all-features
             download_sway_artifacts: sway-examples-w-type-paths
-          - cargo_command: test
-            args: --all-targets --all-features --workspace
+          - cargo_command: nextest
+            args: run --all-targets --all-features --workspace
             download_sway_artifacts: sway-examples-w-type-paths
-          - cargo_command: test
-            args: --all-targets --workspace
+          - cargo_command: nextest
+            args: run --all-targets --workspace
             download_sway_artifacts: sway-examples
           - command: test_wasm
             args:
@@ -192,8 +192,9 @@ jobs:
         with:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
+
       - name: Install Fuel Core
-        if: ${{ matrix.cargo_command == 'test' }}
+        if: ${{ matrix.cargo_command == 'nextest' }}
         run: |
           curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
           tar -xvf fuel-core.tar.gz
@@ -206,6 +207,10 @@ jobs:
         with:
           name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
+
+      - name: Install nextest
+        if: ${{ matrix.cargo_command == 'nextest' }}
+        uses: taiki-e/install-action@nextest
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}
