@@ -1347,14 +1347,12 @@ fn db_rocksdb() {
 
             const NUMBER_OF_ASSETS: u64 = 2;
 
-            // ANCHOR: create_rocksdb
             let mut node_config = Config {
                 database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
                     .join(".chupacabra/db"),
                 database_type: DbType::RocksDb,
                 ..Config::local_node()
             };
-            // ANCHOR_END: create_rocksdb
 
             node_config.manual_blocks_enabled = true;
 
@@ -1405,7 +1403,6 @@ fn db_rocksdb() {
             );
 
             wallet.set_provider(provider.clone());
-            // ANCHOR_END: use_created_rocksdb
 
             let blocks = provider
                 .get_blocks(PaginationRequest {
