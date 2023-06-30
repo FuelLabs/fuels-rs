@@ -5,7 +5,7 @@ use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuel_core_types::tai64::Tai64;
 use fuels::{
-    accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, Account},
+    accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     test_helpers::Config,
