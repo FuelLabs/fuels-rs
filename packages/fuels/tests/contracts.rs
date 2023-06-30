@@ -4,7 +4,7 @@ use std::future::Future;
 use std::vec;
 
 use fuels::{
-    accounts::{predicate::Predicate, wallet::WalletUnlocked, Account},
+    accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
     prelude::*,
     types::Bits256,
