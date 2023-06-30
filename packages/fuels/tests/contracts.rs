@@ -1321,3 +1321,116 @@ async fn low_level_call() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(feature = "rocksdb")]
+#[test]
+fn db_rocksdb() {
+    use fuels::accounts::fuel_crypto::SecretKey;
+    use fuels::accounts::wallet::WalletUnlocked;
+    use fuels::client::{PageDirection, PaginationRequest};
+    use fuels::prelude::DEFAULT_COIN_AMOUNT;
+    use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
+    use std::fs;
+    use std::path::PathBuf;
+    use std::str::FromStr;
+
+    tokio::runtime::Runtime::new()
+        .expect("Tokio runtime failed")
+        .block_on(async {
+            let wallet = WalletUnlocked::new_from_private_key(
+                SecretKey::from_str(
+                    "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+                )
+                .unwrap(),
+                None,
+            );
+
+            const NUMBER_OF_ASSETS: u64 = 2;
+
+            // ANCHOR: create_rocksdb
+            let mut node_config = Config {
+                database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                    .join(".chupacabra/db"),
+                database_type: DbType::RocksDb,
+                ..Config::local_node()
+            };
+            // ANCHOR_END: create_rocksdb
+
+            node_config.manual_blocks_enabled = true;
+
+            let chain_config = ChainConfig {
+                chain_name: "chupacabra".to_string(),
+                initial_state: None,
+                transaction_parameters: Default::default(),
+                ..ChainConfig::local_testnet()
+            };
+
+            let (coins, _) = setup_multiple_assets_coins(
+                wallet.address(),
+                NUMBER_OF_ASSETS,
+                DEFAULT_NUM_COINS,
+                DEFAULT_COIN_AMOUNT,
+            );
+
+            let (provider, _) =
+                setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config))
+                    .await;
+
+            provider.produce_blocks(2, None).await?;
+
+            Ok::<(), Box<dyn std::error::Error>>(())
+        })
+        .unwrap();
+
+    tokio::runtime::Runtime::new()
+        .unwrap()
+        .block_on(async move {
+            let path = PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                .join(".chupacabra/db");
+
+            let node_config = Config {
+                database_path: path.clone(),
+                database_type: DbType::RocksDb,
+                ..Config::local_node()
+            };
+
+            let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
+            // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
+            let mut wallet = WalletUnlocked::new_from_private_key(
+                SecretKey::from_str(
+                    "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+                )
+                .unwrap(),
+                None,
+            );
+
+            wallet.set_provider(provider.clone());
+            // ANCHOR_END: use_created_rocksdb
+
+            let blocks = provider
+                .get_blocks(PaginationRequest {
+                    cursor: None,
+                    results: 10,
+                    direction: PageDirection::Forward,
+                })
+                .await?
+                .results;
+
+            assert_eq!(provider.chain_info().await?.name, "chupacabra");
+            assert_eq!(blocks.len(), 3);
+            assert_eq!(
+                *wallet.get_balances().await?.iter().next().unwrap().1,
+                DEFAULT_COIN_AMOUNT
+            );
+            assert_eq!(
+                *wallet.get_balances().await?.iter().next().unwrap().1,
+                DEFAULT_COIN_AMOUNT
+            );
+            assert_eq!(wallet.get_balances().await?.len(), 2);
+
+            fs::remove_dir_all(path.parent().expect("Db parent folder does not exist"))?;
+
+            Ok::<(), Box<dyn std::error::Error>>(())
+        })
+        .unwrap();
+}
