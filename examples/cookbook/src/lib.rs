@@ -188,50 +188,20 @@ mod tests {
     #[tokio::test]
     #[cfg(feature = "rocksdb")]
     async fn create_or_use_rocksdb() -> Result<()> {
-        use fuels::accounts::fuel_crypto::SecretKey;
-        use std::path::PathBuf;
-        use std::str::FromStr;
-
         use fuels::prelude::*;
-
-        let wallet = WalletUnlocked::new_from_private_key(
-            SecretKey::from_str(
-                "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
-            )
-            .unwrap(),
-            None,
-        );
-
-        const NUMBER_OF_ASSETS: u64 = 2;
+        use std::path::PathBuf;
 
         // ANCHOR: create_or_use_rocksdb
-        let mut node_config = Config {
-            database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-                .join(".spider/db"),
+        let provider_config = Config {
+            database_path: PathBuf::from("/tmp/.spider/db"),
             database_type: DbType::RocksDb,
             ..Config::local_node()
         };
         // ANCHOR_END: create_or_use_rocksdb
 
-        node_config.manual_blocks_enabled = true;
-
-        let chain_config = ChainConfig {
-            chain_name: "spider".to_string(),
-            initial_state: None,
-            transaction_parameters: Default::default(),
-            ..ChainConfig::local_testnet()
-        };
-
-        let (coins, _) = setup_multiple_assets_coins(
-            wallet.address(),
-            NUMBER_OF_ASSETS,
-            DEFAULT_NUM_COINS,
-            DEFAULT_COIN_AMOUNT,
-        );
-        let (provider, _) =
-            setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config)).await;
-
-        provider.produce_blocks(2, None).await?;
+        let _wallets =
+            launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
+                .await;
 
         Ok(())
     }

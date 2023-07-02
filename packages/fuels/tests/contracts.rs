@@ -1322,7 +1322,7 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "rocksdb")]
+// #[cfg(feature = "rocksdb")]
 #[test]
 fn db_rocksdb() {
     use fuels::accounts::fuel_crypto::SecretKey;
@@ -1331,8 +1331,16 @@ fn db_rocksdb() {
     use fuels::prelude::DEFAULT_COIN_AMOUNT;
     use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
     use std::fs;
-    use std::path::PathBuf;
     use std::str::FromStr;
+
+    let temp_dir = tempfile::tempdir().expect("Failed to make tempdir");
+    let temp_dir_name = temp_dir
+        .path()
+        .file_name()
+        .expect("Failed to get file name")
+        .to_string_lossy()
+        .to_string();
+    let temp_database_path = temp_dir.path().join("db");
 
     tokio::runtime::Runtime::new()
         .expect("Tokio runtime failed")
@@ -1348,8 +1356,7 @@ fn db_rocksdb() {
             const NUMBER_OF_ASSETS: u64 = 2;
 
             let mut node_config = Config {
-                database_path: PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-                    .join(".chupacabra/db"),
+                database_path: temp_database_path.clone(),
                 database_type: DbType::RocksDb,
                 ..Config::local_node()
             };
@@ -1357,7 +1364,7 @@ fn db_rocksdb() {
             node_config.manual_blocks_enabled = true;
 
             let chain_config = ChainConfig {
-                chain_name: "chupacabra".to_string(),
+                chain_name: temp_dir_name.clone(),
                 initial_state: None,
                 transaction_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
@@ -1381,13 +1388,10 @@ fn db_rocksdb() {
         .unwrap();
 
     tokio::runtime::Runtime::new()
-        .unwrap()
-        .block_on(async move {
-            let path = PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-                .join(".chupacabra/db");
-
+        .expect("Tokio runtime failed")
+        .block_on(async {
             let node_config = Config {
-                database_path: path.clone(),
+                database_path: temp_database_path.clone(),
                 database_type: DbType::RocksDb,
                 ..Config::local_node()
             };
@@ -1413,7 +1417,7 @@ fn db_rocksdb() {
                 .await?
                 .results;
 
-            assert_eq!(provider.chain_info().await?.name, "chupacabra");
+            assert_eq!(provider.chain_info().await?.name, temp_dir_name);
             assert_eq!(blocks.len(), 3);
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
@@ -1425,7 +1429,11 @@ fn db_rocksdb() {
             );
             assert_eq!(wallet.get_balances().await?.len(), 2);
 
-            fs::remove_dir_all(path.parent().expect("Db parent folder does not exist"))?;
+            fs::remove_dir_all(
+                temp_database_path
+                    .parent()
+                    .expect("Db parent folder does not exist"),
+            )?;
 
             Ok::<(), Box<dyn std::error::Error>>(())
         })

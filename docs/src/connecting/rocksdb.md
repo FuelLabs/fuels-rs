@@ -10,4 +10,4 @@ To create or to use a local database, follow these instructions:
 
 > Note 1: If the specified database does not exist a new database will be created at that path.
 
-> Note 2: To utilize the code snippets above, either the `fuel-core` binary must be present or the `rocksdb` feature needs to be used.
+> Note 2: To utilize the code snippets above, either the `fuel-core` binary must be present or the `fuel-core-lib, rocksdb` features need to be enabled.
