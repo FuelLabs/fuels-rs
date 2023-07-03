@@ -308,3 +308,25 @@ async fn test_script_enum() -> Result<()> {
     assert_eq!(response.value, 2);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_array() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_array"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_array: [u64; 4] = [1, 2, 3, 4];
+    let response = script_instance.main(my_array).call().await?;
+
+    assert_eq!(response.value, 10);
+    Ok(())
+}
