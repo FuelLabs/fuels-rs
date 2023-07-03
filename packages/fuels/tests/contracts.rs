@@ -1322,7 +1322,10 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
-// #[cfg(feature = "rocksdb")]
+#[cfg(any(
+    all(feature = "fuel-core-lib", feature = "rocksdb"),
+    not(any(feature = "fuel-core-lib", feature = "rocksdb"))
+))]
 #[test]
 fn db_rocksdb() {
     use fuels::accounts::fuel_crypto::SecretKey;
@@ -1333,14 +1336,15 @@ fn db_rocksdb() {
     use std::fs;
     use std::str::FromStr;
 
-    let temp_dir = tempfile::tempdir().expect("Failed to make tempdir");
+    let temp_dir = tempfile::tempdir()
+        .expect("Failed to make tempdir")
+        .into_path();
     let temp_dir_name = temp_dir
-        .path()
         .file_name()
         .expect("Failed to get file name")
         .to_string_lossy()
         .to_string();
-    let temp_database_path = temp_dir.path().join("db");
+    let temp_database_path = temp_dir.join("db");
 
     tokio::runtime::Runtime::new()
         .expect("Tokio runtime failed")
