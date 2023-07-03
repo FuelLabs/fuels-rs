@@ -264,3 +264,25 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_struct() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_struct"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let foo = Foo { bar: 42, baz: true };
+    let response = script_instance.main(foo).call().await?;
+
+    assert_eq!(response.value, 42);
+    Ok(())
+}
