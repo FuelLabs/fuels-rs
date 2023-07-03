@@ -286,3 +286,25 @@ async fn test_script_struct() -> Result<()> {
     assert_eq!(response.value, 42);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_enum() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_enum"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_enum = MyEnum::Two;
+    let response = script_instance.main(my_enum).call().await?;
+
+    assert_eq!(response.value, 2);
+    Ok(())
+}
