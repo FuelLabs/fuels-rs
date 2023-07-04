@@ -1322,10 +1322,7 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
-#[cfg(any(
-    all(feature = "fuel-core-lib", feature = "rocksdb"),
-    not(any(feature = "fuel-core-lib", feature = "rocksdb"))
-))]
+#[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 #[test]
 fn db_rocksdb() {
     use fuels::accounts::fuel_crypto::SecretKey;
@@ -1390,6 +1387,8 @@ fn db_rocksdb() {
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .unwrap();
+
+    // I had to terminate the runtime as I encountered an issue while attempting to start two nodes within the same runtime that utilize the same RocksDB.
 
     tokio::runtime::Runtime::new()
         .expect("Tokio runtime failed")

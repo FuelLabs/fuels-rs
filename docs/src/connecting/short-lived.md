@@ -32,9 +32,8 @@ fuels = { version = "0.43.0", features = ["fuel-core-lib"] }
 
 ## RocksDb
 
-The `rocksdb` is a feature that allows us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine and creating rocksDb database. 
-Enabling the `rocksdb` feature flag will result in cargo downloading additional dependencies required to run the `fuel-core` node and `rocksdb`.
+The `rocksdb` is an additional feature that, when combined with `fuel-core-lib`, provides persistent storage capabilities while using `fuel-core` as a library.
 
 ```rust,ignore
-fuels = { version = "0.42.0", features = ["rocksdb"] }
+fuels = { version = "0.43.0", features = ["rocksdb"] }
 ```
