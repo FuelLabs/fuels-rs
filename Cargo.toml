@@ -30,6 +30,7 @@ members = [
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
+readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.68.0"
