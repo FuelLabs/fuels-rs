@@ -1,6 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use fuels::accounts::wallet::WalletUnlocked;
     use fuels::{
         accounts::{predicate::Predicate, Account},
         prelude::*,
