@@ -8,3 +8,6 @@ pub mod message_proof;
 pub mod node_info;
 pub mod transaction;
 pub mod transaction_response;
+pub mod output {
+    pub use fuel_tx::Output;
+}
