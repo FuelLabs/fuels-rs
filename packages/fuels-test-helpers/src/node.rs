@@ -26,7 +26,7 @@ use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
 use crate::utils::{into_coin_configs, into_message_configs};
-// Set the cache for tests = 10MB
+// Set the cache for tests = 10MB, , which is the default size in `fuel-core`.
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
 #[derive(Clone, Debug)]

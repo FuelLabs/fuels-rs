@@ -186,7 +186,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "rocksdb")]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn create_or_use_rocksdb() -> Result<()> {
         use fuels::prelude::*;
         use std::path::PathBuf;
@@ -199,9 +199,8 @@ mod tests {
         };
         // ANCHOR_END: create_or_use_rocksdb
 
-        let _wallets =
-            launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
-                .await;
+        launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
+            .await;
 
         Ok(())
     }
