@@ -24,6 +24,7 @@ pub enum ParamType {
     U32,
     U64,
     U128,
+    U256,
     Bool,
     B256,
     // The Unit ParamType is used for unit variants in Enums. The corresponding type field is `()`,
@@ -151,7 +152,7 @@ impl ParamType {
             | ParamType::Bool => 1,
             ParamType::U128 | ParamType::RawSlice => 2,
             ParamType::Vector(_) | ParamType::Bytes => 3,
-            ParamType::B256 => 4,
+            ParamType::U256 | ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::String(len) => count_words(*len),
             ParamType::Struct { fields, .. } => fields
@@ -334,6 +335,7 @@ impl TryFrom<&Type> for ParamType {
             try_raw_slice,
             try_enum,
             try_u128,
+            try_u256,
             try_struct,
         ]
         .into_iter()
@@ -393,6 +395,12 @@ fn try_u128(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(["struct std::u128::U128", "struct U128"]
         .contains(&the_type.type_field.as_str())
         .then_some(ParamType::U128))
+}
+
+fn try_u256(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(["struct std::u256::U256", "struct U256"]
+        .contains(&the_type.type_field.as_str())
+        .then_some(ParamType::U256))
 }
 
 fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {

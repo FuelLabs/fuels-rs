@@ -2,7 +2,7 @@ use std::{result::Result as StdResult, str::FromStr};
 
 use fuels::{
     prelude::*,
-    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512},
+    types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -1638,8 +1638,8 @@ async fn test_b512() -> Result<()> {
     Ok(())
 }
 
-fn u128_from_parts(upper: u64, lower: u64) -> u128 {
-    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+fn u128_from(parts: (u64, u64)) -> u128 {
+    let bytes: [u8; 16] = [parts.0.to_be_bytes(), parts.1.to_be_bytes()]
         .concat()
         .try_into()
         .unwrap();
@@ -1662,24 +1662,76 @@ async fn test_u128() -> Result<()> {
     );
     let contract_methods = contract_instance.methods();
     {
-        let arg = u128_from_parts(1, 2);
+        let arg = u128_from((1, 2));
 
         let actual = contract_methods.u128_sum_and_ret(arg).call().await?.value;
 
-        let expected = arg + u128_from_parts(3, 4);
+        let expected = arg + u128_from((3, 4));
 
         assert_eq!(expected, actual);
     }
     {
         let actual = contract_methods.u128_in_enum_output().call().await?.value;
 
-        let expected = SomeEnum::B(u128_from_parts(4, 4));
+        let expected = SomeEnum::B(u128_from((4, 4)));
         assert_eq!(expected, actual);
     }
     {
-        let input = SomeEnum::B(u128_from_parts(3, 3));
+        let input = SomeEnum::B(u128_from((3, 3)));
 
         contract_methods.u128_in_enum_input(input).call().await?;
+    }
+
+    Ok(())
+}
+
+fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
+    let bytes: [u8; 32] = [
+        parts.0.to_be_bytes(),
+        parts.1.to_be_bytes(),
+        parts.2.to_be_bytes(),
+        parts.3.to_be_bytes(),
+    ]
+    .concat()
+    .try_into()
+    .unwrap();
+    U256::from(bytes)
+}
+
+#[tokio::test]
+async fn test_u256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/u256"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    {
+        let arg = u256_from((1, 2, 3, 4));
+
+        let actual = contract_methods.u256_sum_and_ret(arg).call().await?.value;
+
+        let expected = arg + u256_from((3, 4, 5, 6));
+
+        assert_eq!(expected, actual);
+    }
+    {
+        let actual = contract_methods.u256_in_enum_output().call().await?.value;
+
+        let expected = SomeEnum::B(u256_from((1, 2, 3, 4)));
+        assert_eq!(expected, actual);
+    }
+    {
+        let input = SomeEnum::B(u256_from((2, 3, 4, 5)));
+
+        contract_methods.u256_in_enum_input(input).call().await?;
     }
 
     Ok(())
