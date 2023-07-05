@@ -3,7 +3,7 @@ use std::path::Path;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId},
+    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, U256},
 };
 
 async fn assert_predicate_spendable(
@@ -318,8 +318,8 @@ async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
     Ok(())
 }
 
-fn u128_from_parts(upper: u64, lower: u64) -> u128 {
-    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+fn u128_from(parts: (u64, u64)) -> u128 {
+    let bytes: [u8; 16] = [parts.0.to_be_bytes(), parts.1.to_be_bytes()]
         .concat()
         .try_into()
         .unwrap();
@@ -333,8 +333,34 @@ async fn predicate_handles_u128() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_u128/out/debug/predicate_u128-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(u128_from_parts(8, 2));
+    let data = MyPredicateEncoder::encode_data(u128_from((8, 2)));
     assert_predicate_spendable(data, "tests/types/predicates/predicate_u128").await?;
+
+    Ok(())
+}
+
+fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
+    let bytes: [u8; 32] = [
+        parts.0.to_be_bytes(),
+        parts.1.to_be_bytes(),
+        parts.2.to_be_bytes(),
+        parts.3.to_be_bytes(),
+    ]
+    .concat()
+    .try_into()
+    .unwrap();
+    U256::from(bytes)
+}
+
+#[tokio::test]
+async fn predicate_handles_u256() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_u256/out/debug/predicate_u256-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::encode_data(u256_from((10, 11, 12, 13)));
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_u256").await?;
 
     Ok(())
 }
