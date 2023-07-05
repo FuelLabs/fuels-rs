@@ -7,7 +7,7 @@ use crate::{
         errors::Result,
         pad_string, pad_u16, pad_u32, pad_u8,
         unresolved_bytes::{Data, UnresolvedBytes},
-        EnumSelector, StringToken, Token,
+        EnumSelector, StringToken, Token, U256,
     },
 };
 
@@ -37,6 +37,7 @@ impl ABIEncoder {
             Token::U32(arg_u32) => vec![Self::encode_u32(*arg_u32)],
             Token::U64(arg_u64) => vec![Self::encode_u64(*arg_u64)],
             Token::U128(arg_u128) => vec![Self::encode_u128(*arg_u128)],
+            Token::U256(arg_u256) => vec![Self::encode_u256(*arg_u256)],
             Token::Bool(arg_bool) => vec![Self::encode_bool(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
@@ -83,6 +84,12 @@ impl ABIEncoder {
 
     fn encode_u128(arg_u128: u128) -> Data {
         Data::Inline(arg_u128.to_be_bytes().to_vec())
+    }
+
+    fn encode_u256(arg_u256: U256) -> Data {
+        let mut bytes = [0u8; 32];
+        arg_u256.to_big_endian(&mut bytes);
+        Data::Inline(bytes.to_vec())
     }
 
     fn encode_u64(arg_u64: u64) -> Data {

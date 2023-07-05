@@ -166,9 +166,13 @@ jobs:
           - cargo_command: nextest
             args: run --all-targets --all-features --workspace
             download_sway_artifacts: sway-examples-w-type-paths
+            install_fuel_core: true
           - cargo_command: nextest
             args: run --all-targets --workspace
             download_sway_artifacts: sway-examples
+            install_fuel_core: true
+          - cargo_command: test
+            args: --doc --workspace
           - command: test_wasm
             args:
           - command: check_doc_anchors_valid
@@ -192,9 +196,8 @@ jobs:
         with:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
-
       - name: Install Fuel Core
-        if: ${{ matrix.cargo_command == 'nextest' }}
+        if: ${{ matrix.install_fuel_core }}
         run: |
           curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
           tar -xvf fuel-core.tar.gz
