@@ -2,7 +2,7 @@
 
 RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.
 
-To create or to use a local database, follow these instructions:
+To create or use a local database, follow these instructions:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:create_or_use_rocksdb}}
