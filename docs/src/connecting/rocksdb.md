@@ -8,7 +8,7 @@ To create or use a local database, follow these instructions:
 {{#include ../../../examples/cookbook/src/lib.rs:create_or_use_rocksdb}}
 ```
 
-> Note 1: If the specified database does not exist a new database will be created at that path.
+> Note 1: If the specified database does not exist, a new database will be created at that path.
 
 > Note 2: To utilize the code snippets above, either:
 - the `fuel-core` binary must be present
