@@ -27,6 +27,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::U32 => "u32".to_owned(),
         ParamType::U64 => "u64".to_owned(),
         ParamType::U128 => "s(u64,u64)".to_owned(),
+        ParamType::U256 => "s(u64,u64,u64,u64)".to_owned(),
         ParamType::Bool => "bool".to_owned(),
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
