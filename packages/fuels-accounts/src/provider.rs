@@ -89,7 +89,7 @@ pub struct ResourceFilter {
 
 impl ResourceFilter {
     pub fn owner(&self) -> Address {
-        self.from.clone().into()
+        (&self.from).into()
     }
 
     pub(crate) fn resource_queries(&self) -> ResourceQueries {

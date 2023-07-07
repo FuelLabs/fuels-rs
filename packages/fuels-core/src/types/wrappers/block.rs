@@ -47,12 +47,11 @@ pub struct Block {
 
 impl From<ClientBlock> for Block {
     fn from(client_block: ClientBlock) -> Self {
-        let transactions = client_block.transactions.into_iter().collect();
 
         Self {
             id: client_block.id,
             header: client_block.header.into(),
-            transactions,
+            transactions: client_block.transactions,
         }
     }
 }

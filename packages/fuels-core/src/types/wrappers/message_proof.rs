@@ -46,8 +46,6 @@ pub struct MessageProof {
 
 impl From<ClientMessageProof> for MessageProof {
     fn from(client_message_proof: ClientMessageProof) -> Self {
-        let sender: Address = client_message_proof.sender;
-        let recipient: Address = client_message_proof.recipient;
         Self {
             message_proof: client_message_proof.message_proof.into(),
             block_proof: client_message_proof.block_proof.into(),

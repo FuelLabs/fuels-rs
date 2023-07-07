@@ -31,9 +31,9 @@ pub struct Message {
 impl Message {
     pub fn message_id(&self) -> MessageId {
         Input::compute_message_id(
-            &self.sender.clone().into(),
-            &self.recipient.clone().into(),
-            &Nonce::from(*self.nonce),
+            &(&self.sender).into(),
+            &(&self.recipient).into(),
+            &self.nonce,
             self.amount,
             &self.data,
         )
