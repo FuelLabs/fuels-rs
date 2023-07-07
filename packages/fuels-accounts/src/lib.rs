@@ -5,8 +5,8 @@ use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId};
+use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -189,7 +189,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>)> {
+    ) -> Result<(TxId, Vec<Receipt>)> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
@@ -216,10 +216,7 @@ pub trait Account: ViewOnlyAccount {
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
-        Ok((
-            tx.id(consensus_parameters.chain_id.into()).to_string(),
-            receipts,
-        ))
+        Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -296,7 +293,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
+    ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
         let params = self.try_provider()?.consensus_parameters();
         let chain_id = params.chain_id;
         let inputs = self
@@ -313,13 +310,13 @@ pub trait Account: ViewOnlyAccount {
         let mut tx = self.add_fee_resources(tb, amount, None).await?;
         tx.estimate_predicates(&params)?;
 
-        let tx_id = tx.id(chain_id.into()).to_string();
+        let tx_id = tx.id(chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, message_id.to_string(), receipts))
+        Ok((tx_id, message_id, receipts))
     }
 }
 

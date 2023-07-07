@@ -1,4 +1,3 @@
-use std::str::FromStr;
 use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Utc};
@@ -462,10 +461,9 @@ impl Provider {
 
     pub async fn get_transaction_by_id(
         &self,
-        tx_id: &str,
+        tx_id: &TxId,
     ) -> ProviderResult<Option<TransactionResponse>> {
-        let tx_id: TxId = TxId::from_str(tx_id).expect("Should be able to convert to TxId");
-        Ok(self.client.transaction(&tx_id).await?.map(Into::into))
+        Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
     // - Get transaction(s)
@@ -622,22 +620,17 @@ impl Provider {
 
     pub async fn get_message_proof(
         &self,
-        tx_id: &str,
-        message_id: &str,
-        commit_block_id: Option<&str>,
+        tx_id: &TxId,
+        message_id: &MessageId,
+        commit_block_id: Option<&BlockId>,
         commit_block_height: Option<u32>,
     ) -> ProviderResult<Option<MessageProof>> {
-        let message_id =
-            MessageId::from_str(message_id).expect("Should be able to convert to MessageId");
-        let tx_id = TxId::from_str(tx_id).expect("Should be able to convert to TxId");
-        let commit_block_id = commit_block_id
-            .map(|b| BlockId::from_str(b).expect("Should be able to convert to BlockId"));
         let proof = self
             .client
             .message_proof(
                 &tx_id,
                 &message_id,
-                commit_block_id.as_ref(),
+                commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
             .await?

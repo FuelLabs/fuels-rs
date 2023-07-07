@@ -657,7 +657,7 @@ async fn test_parse_block_time() -> Result<()> {
     let tx_response = wallet
         .try_provider()
         .unwrap()
-        .get_transaction_by_id(tx_id.as_str())
+        .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
