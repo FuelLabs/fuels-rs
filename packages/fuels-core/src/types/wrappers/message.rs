@@ -2,9 +2,7 @@
 
 use fuel_core_chain_config::MessageConfig;
 use fuel_core_client::client::types::{
-    coins::MessageCoin as ClientMessageCoin,
-    message::Message as ClientMessage,
-    primitives::{Nonce},
+    coins::MessageCoin as ClientMessageCoin, message::Message as ClientMessage, primitives::Nonce,
 };
 use fuel_tx::{Input, MessageId};
 

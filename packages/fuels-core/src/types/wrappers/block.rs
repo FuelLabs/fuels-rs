@@ -47,7 +47,6 @@ pub struct Block {
 
 impl From<ClientBlock> for Block {
     fn from(client_block: ClientBlock) -> Self {
-
         Self {
             id: client_block.id,
             header: client_block.header.into(),

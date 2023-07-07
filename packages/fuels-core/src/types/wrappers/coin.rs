@@ -6,7 +6,6 @@ use fuel_core_client::client::types::{
     primitives::{AssetId, UtxoId},
 };
 
-
 use crate::types::bech32::Bech32Address;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]

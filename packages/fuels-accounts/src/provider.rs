@@ -628,8 +628,8 @@ impl Provider {
         let proof = self
             .client
             .message_proof(
-                &tx_id,
-                &message_id,
+                tx_id,
+                message_id,
                 commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
