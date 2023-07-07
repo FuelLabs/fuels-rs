@@ -1,7 +1,10 @@
 use fuel_tx::{Address, ContractId};
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Parameterize, Tokenizable, TryFrom)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Hash, Parameterize, Tokenizable, TryFrom, Serialize, Deserialize,
+)]
 #[FuelsCorePath = "crate"]
 #[FuelsTypesPath = "crate::types"]
 pub enum Identity {

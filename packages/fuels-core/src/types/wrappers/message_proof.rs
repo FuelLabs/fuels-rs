@@ -4,7 +4,7 @@ use fuel_core_client::client::types::primitives::Nonce;
 use fuel_core_client::client::types::{
     MerkleProof as ClientMerkleProof, MessageProof as ClientMessageProof,
 };
-use fuel_types::{Address, Bytes32};
+use fuel_types::{Bytes32};
 
 use crate::types::{bech32::Bech32Address, block::Header};
 
@@ -51,8 +51,8 @@ impl From<ClientMessageProof> for MessageProof {
             block_proof: client_message_proof.block_proof.into(),
             message_block_header: client_message_proof.message_block_header.into(),
             commit_block_header: client_message_proof.commit_block_header.into(),
-            sender: Bech32Address::from(sender),
-            recipient: Bech32Address::from(recipient),
+            sender: client_message_proof.sender.into(),
+            recipient: client_message_proof.recipient.into(),
             nonce: client_message_proof.nonce,
             amount: client_message_proof.amount,
             data: client_message_proof.data,

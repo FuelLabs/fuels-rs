@@ -4,7 +4,7 @@ use fuel_core_chain_config::MessageConfig;
 use fuel_core_client::client::types::{
     coins::MessageCoin as ClientMessageCoin,
     message::Message as ClientMessage,
-    primitives::{Address, Nonce},
+    primitives::{Nonce},
 };
 use fuel_tx::{Input, MessageId};
 
@@ -42,12 +42,10 @@ impl Message {
 
 impl From<ClientMessage> for Message {
     fn from(message: ClientMessage) -> Self {
-        let sender: Address = message.sender;
-        let recipient: Address = message.recipient;
         Self {
             amount: message.amount,
-            sender: Bech32Address::from(sender),
-            recipient: Bech32Address::from(recipient),
+            sender: message.sender.into(),
+            recipient: message.recipient.into(),
             nonce: message.nonce,
             data: message.data,
             da_height: message.da_height,
@@ -58,12 +56,10 @@ impl From<ClientMessage> for Message {
 
 impl From<ClientMessageCoin> for Message {
     fn from(message: ClientMessageCoin) -> Self {
-        let sender: Address = message.sender;
-        let recipient: Address = message.recipient;
         Self {
             amount: message.amount,
-            sender: Bech32Address::from(sender),
-            recipient: Bech32Address::from(recipient),
+            sender: message.sender.into(),
+            recipient: message.recipient.into(),
             nonce: message.nonce,
             data: Default::default(),
             da_height: message.da_height,

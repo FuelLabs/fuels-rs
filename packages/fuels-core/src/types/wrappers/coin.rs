@@ -5,7 +5,7 @@ use fuel_core_client::client::types::{
     coins::Coin as ClientCoin,
     primitives::{AssetId, UtxoId},
 };
-use fuel_types::Address;
+
 
 use crate::types::bech32::Bech32Address;
 
