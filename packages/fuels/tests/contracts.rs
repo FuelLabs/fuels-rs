@@ -1321,3 +1321,25 @@ async fn low_level_call() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_retry_mechanism() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    // Make sure we can call the contract with multiple arguments
+    let contract_methods = contract_instance.methods();
+    let _response = contract_methods.get(5, 6).call_with_retry(None).await?;
+
+    Ok(())
+}
