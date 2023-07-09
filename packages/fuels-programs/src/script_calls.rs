@@ -243,7 +243,10 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn call_with_retry(mut self, max_attempts: Option<u64>) -> Result<FuelCallResponse<D>> {
+    pub async fn call_with_retry(
+        mut self,
+        max_attempts: Option<u64>,
+    ) -> Result<FuelCallResponse<D>> {
         let attempts = max_attempts.unwrap_or(0);
         for _ in 1..=attempts {
             if let Ok(response) = self.call_or_simulate(false).await {
