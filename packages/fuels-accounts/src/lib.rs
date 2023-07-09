@@ -212,8 +212,6 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
 
-        tx.estimate_predicates(&consensus_parameters)?;
-
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
@@ -277,7 +275,6 @@ pub trait Account: ViewOnlyAccount {
         };
 
         let mut tx = self.add_fee_resources(tb, base_amount, None).await?;
-        tx.estimate_predicates(&params)?;
 
         let tx_id = tx.id(params.chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
@@ -307,8 +304,7 @@ pub trait Account: ViewOnlyAccount {
             tx_parameters,
         );
 
-        let mut tx = self.add_fee_resources(tb, amount, None).await?;
-        tx.estimate_predicates(&params)?;
+        let tx = self.add_fee_resources(tb, amount, None).await?;
 
         let tx_id = tx.id(chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;

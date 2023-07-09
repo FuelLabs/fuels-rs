@@ -54,16 +54,24 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
-                let base_offset = if self.is_using_predicates() {
-                    let params = self
+                let uses_predicates = self.is_using_predicates();
+                let (base_offset, consensus_params) = if uses_predicates {
+                    let consensus_params = self
                         .consensus_parameters
                         .ok_or(Error::TransactionBuildError)?;
-                    self.base_offset(&params)
+                    (self.base_offset(&consensus_params), consensus_params)
                 } else {
-                    0
+                    // If no ConsensusParameters have been set, we can use the default
+                    (0, self.consensus_parameters.unwrap_or_default())
                 };
-
-                Ok(self.convert_to_fuel_tx(base_offset))
+                let mut fuel_tx = self.convert_to_fuel_tx(base_offset);
+                if !fuel_tx.is_computed() {
+                    fuel_tx.precompute(consensus_params.chain_id.into())?
+                }
+                if uses_predicates {
+                    fuel_tx.estimate_predicates(&consensus_params)?;
+                };
+                Ok(fuel_tx)
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {

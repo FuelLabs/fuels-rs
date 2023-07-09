@@ -216,14 +216,12 @@ where
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tb = self.prepare_builder().await?;
         let base_amount = self.calculate_base_asset_sum();
-        let mut tx = self
+        let tx = self
             .account
             .add_fee_resources(tb, base_amount, None)
             .await?;
         let consensus_parameters = self.provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
-
-        tx.estimate_predicates(&consensus_parameters)?;
 
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
