@@ -242,7 +242,7 @@ impl Contract {
             tx_parameters,
         );
 
-        let mut tx = account
+        let tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;

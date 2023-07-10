@@ -208,7 +208,7 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let mut tx = self
+        let tx = self
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
 
@@ -274,7 +274,7 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let mut tx = self.add_fee_resources(tb, base_amount, None).await?;
+        let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
         let tx_id = tx.id(params.chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
