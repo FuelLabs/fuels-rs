@@ -419,6 +419,69 @@ mod tests {
     }
 
     #[test]
+    fn test_resolve_bytes() -> Result<()> {
+        test_resolve_first_type(
+            ":: fuels :: types :: Bytes",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct String".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "bytes".to_string(),
+                        type_id: 1,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct std::bytes::Bytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "buf".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "len".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "struct std::bytes::RawBytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "ptr".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "cap".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "raw untyped ptr".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "u64".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
     fn test_resolve_string() -> Result<()> {
         test_resolve_primitive_type("str[3]", ":: fuels :: types :: SizedAsciiString < 3usize >")
     }
