@@ -61,7 +61,8 @@ macro_rules! impl_tx_trait {
                         .ok_or(Error::TransactionBuildError)?;
                     (self.base_offset(&consensus_params), consensus_params)
                 } else {
-                    // If no ConsensusParameters have been set, we can use the default
+                    // If no ConsensusParameters have been set, we can use the default instead of
+                    // erroring out since the tx doesn't use predicates
                     (0, self.consensus_parameters.unwrap_or_default())
                 };
                 let mut fuel_tx = self.convert_to_fuel_tx(base_offset);
