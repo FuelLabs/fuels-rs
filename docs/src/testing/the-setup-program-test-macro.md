@@ -31,7 +31,7 @@ Example: `Wallets("a_wallet", "another_wallet"...)`
 
 Description: Launches a local provider and generates wallets with names taken from the provided `ARG`s.
 
-Cardinality: 0 or 1.
+Cardinality: 0 or N.
 
 Abigen
 ---
