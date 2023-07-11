@@ -1468,6 +1468,7 @@ mod tests {
         assert_eq!(param_type, ParamType::RawSlice);
     }
 
+    #[test]
     fn try_std_string_correctly_resolves_param_type() {
         let the_type = given_type_with_path("std::string::String");
 
