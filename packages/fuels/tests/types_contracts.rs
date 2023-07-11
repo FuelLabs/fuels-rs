@@ -1,9 +1,14 @@
+#![allow(unused_imports, unused_variables)]
+use fuel_tx::Receipt;
 use std::{result::Result as StdResult, str::FromStr};
 
 use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
+use fuels_core::codec::ABIDecoder;
+use fuels_core::fn_selector;
+use fuels_core::types::param_types::ParamType;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -1965,5 +1970,26 @@ async fn test_contract_raw_slice() -> Result<()> {
             .await?;
     }
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_contract_std_lib_string() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "StdLibString",
+            project = "packages/fuels/tests/types/contracts/std_lib_string"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "StdLibString",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+    let resp = contract_methods.return_dynamic_string().call().await?;
+    let expected = String::from("hello world");
+    assert_eq!(resp.value, expected);
     Ok(())
 }
