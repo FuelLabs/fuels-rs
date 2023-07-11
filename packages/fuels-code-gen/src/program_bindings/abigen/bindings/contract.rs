@@ -100,6 +100,7 @@ pub(crate) fn contract_bindings(
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
+
             fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
                 self.log_decoder.clone()
             }
