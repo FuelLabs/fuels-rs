@@ -492,7 +492,6 @@ where
         let consensus_parameters = provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
-        println!("This is the tx script data:\n{:?}", tx.script_data());
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
         } else {

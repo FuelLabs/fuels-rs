@@ -64,6 +64,7 @@ members = [
   'tests/types/contracts/u128',
   'tests/types/contracts/u256',
   'tests/types/contracts/vector_output',
+  'tests/types/contracts/std_lib_string',
   'tests/types/contracts/vectors',
   'tests/types/predicates/address',
   'tests/types/predicates/enums',

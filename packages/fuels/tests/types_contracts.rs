@@ -1991,5 +1991,11 @@ async fn test_contract_std_lib_string() -> Result<()> {
     let resp = contract_methods.return_dynamic_string().call().await?;
     let expected = String::from("hello world");
     assert_eq!(resp.value, expected);
+
+    let resp = contract_methods
+        .accepts_dynamic_string("world".to_string())
+        .call()
+        .await?;
+    assert!(resp.value);
     Ok(())
 }
