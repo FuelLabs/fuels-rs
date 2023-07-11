@@ -1,6 +1,8 @@
 use std::fmt;
 
-pub use fuel_tx::{Address, AssetId, ContractId};
+pub use fuel_tx::{Address, AssetId, ContractId, TxPointer, UtxoId};
+pub use fuel_types::Nonce;
+
 use fuel_types::bytes::padded_len;
 use strum_macros::EnumString;
 
