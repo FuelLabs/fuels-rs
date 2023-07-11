@@ -1388,7 +1388,7 @@ fn db_rocksdb() {
         })
         .unwrap();
 
-    // I had to terminate the runtime as I encountered an issue while attempting to start two nodes within the same runtime that utilize the same RocksDB.
+    // The runtime needs to be terminated because the node can currently only be killed when the runtime itself shuts down.
 
     tokio::runtime::Runtime::new()
         .expect("Tokio runtime failed")

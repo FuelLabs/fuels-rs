@@ -268,7 +268,7 @@ pub async fn new_fuel_node(
                         .to_string_lossy()
                         .to_string(),
                 ]);
-            } else if !config.database_path.as_os_str().is_empty() {
+            } else {
                 args.extend(vec![
                     "--db-path".to_string(),
                     config.database_path.to_string_lossy().to_string(),
