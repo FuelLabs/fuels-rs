@@ -1,3 +1,4 @@
+use std::time::Duration;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{Bytes32, ContractId, Output, Receipt};
@@ -20,6 +21,7 @@ use fuels_core::{
     },
 };
 use itertools::chain;
+use tokio::time::sleep;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -248,11 +250,16 @@ where
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
         let attempts = max_attempts.unwrap_or(0);
+        let mut delay = Duration::from_secs(1); // Initial delay of 1 second
+
         for _ in 1..=attempts {
             if let Ok(response) = self.call_or_simulate(false).await {
                 return Ok(response);
             }
+            sleep(delay).await;
+            delay *= 2;
         }
+
         self.call().await
     }
 

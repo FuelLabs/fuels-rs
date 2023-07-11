@@ -1,3 +1,4 @@
+use std::time::Duration;
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
 use fuel_tx::{
@@ -20,6 +21,7 @@ use fuels_core::{
     Configurables,
 };
 use itertools::Itertools;
+use tokio::time::sleep;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -487,11 +489,16 @@ where
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
         let attempts = max_attempts.unwrap_or(0);
+        let mut delay = Duration::from_secs(1); // Initial delay of 1 second
+
         for _ in 1..=attempts {
             if let Ok(response) = self.call_or_simulate(false).await {
                 return Ok(response);
             }
+            sleep(delay).await;
+            delay *= 2;
         }
+
         self.call().await
     }
 
@@ -717,11 +724,16 @@ impl<T: Account> MultiContractCallHandler<T> {
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
         let attempts = max_attempts.unwrap_or(0);
+        let mut delay = Duration::from_secs(1); // Initial delay of 1 second
+
         for _ in 1..=attempts {
             if let Ok(response) = self.call_or_simulate(false).await {
                 return Ok(response);
             }
+            sleep(delay).await;
+            delay *= 2;
         }
+
         self.call().await
     }
 
