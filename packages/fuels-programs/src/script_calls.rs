@@ -250,7 +250,7 @@ where
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
         let attempts = max_attempts.unwrap_or(0);
-        let mut delay = Duration::from_secs(1); // Initial delay of 1 second
+        let mut delay = Duration::from_secs(1);
 
         for _ in 1..=attempts {
             if let Ok(response) = self.call_or_simulate(false).await {
