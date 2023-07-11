@@ -94,6 +94,7 @@ pub enum Token {
     Tuple(Vec<Token>),
     RawSlice(Vec<u64>),
     Bytes(Vec<u8>),
+    StdString(String),
 }
 
 impl fmt::Display for Token {
