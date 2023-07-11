@@ -15,7 +15,7 @@ mod tests {
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core
         // yet
-        let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
+        let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
