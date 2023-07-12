@@ -1,7 +1,8 @@
 use std::fmt;
 
 pub use fuel_tx::{Address, AssetId, ContractId};
-use fuel_types::{bytes::padded_len, MessageId};
+use fuel_types::bytes::padded_len;
+pub use fuel_types::MessageId;
 use strum_macros::EnumString;
 
 pub use crate::types::{core::*, wrappers::*};
