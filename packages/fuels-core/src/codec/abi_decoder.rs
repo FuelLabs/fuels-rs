@@ -495,6 +495,17 @@ mod tests {
     }
 
     #[test]
+    fn decode_bytes() -> Result<()> {
+        let data = [0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
+        let decoded = ABIDecoder::decode_single(&ParamType::Bytes, &data)?;
+
+        let expected = Token::Bytes(data.to_vec());
+
+        assert_eq!(decoded, expected);
+        Ok(())
+    }
+
+    #[test]
     fn decode_enum() -> Result<()> {
         // enum MyEnum {
         //     x: u32,
