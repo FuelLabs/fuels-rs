@@ -488,16 +488,16 @@ where
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
-        let attempts = max_attempts.unwrap_or(0);
-        let mut delay = Duration::from_secs(1);
-
-        for _ in 1..=attempts {
-            if let Ok(response) = self.call_or_simulate(false).await {
-                return Ok(response);
-            }
-            sleep(delay).await;
-            delay *= 2;
-        }
+        // let attempts = max_attempts.unwrap_or(0);
+        // let mut delay = Duration::from_secs(1);
+        //
+        // for _ in 1..=attempts {
+        //     if let OÏk(response) = self.call_or_simulate(false).await {
+        //         return Ok(response);
+        //     }
+        //     sleep(delay).await;
+        //     delay *= 2;
+        // }
 
         self.call().await
     }

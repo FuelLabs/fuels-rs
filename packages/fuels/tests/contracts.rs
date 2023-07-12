@@ -2,6 +2,7 @@ use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::vec;
+use fuel_core::service::ServiceTrait;
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
@@ -1324,22 +1325,72 @@ async fn low_level_call() -> Result<()> {
 
 #[tokio::test]
 async fn test_retry_mechanism() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
+    // setup_program_test!(
+    //     Abigen(Contract(
+    //         name = "TestContract",
+    //         project = "packages/fuels/tests/contracts/contract_test"
+    //     )),
+    // );
+
+    // let mut wallet = WalletUnlocked::new_random(None);
+    // let (provider, _) = setup_test_provider(vec![], vec![], None, None).await;
+
+    // let number_of_assets = 7;
+    // let coins_per_asset = 21;
+    // let amount_per_coin = 11;
+    //
+    // let (coins, asset_ids) = setup_multiple_assets_coins(
+    //     wallet.address(),
+    //     number_of_assets,
+    //     coins_per_asset,
+    //     amount_per_coin,
+    // );
+
+    // Error: ProviderError("Account error: No provider was setup: make sure to set_provider in your account!")
+    // Error: ProviderError("Provider error: Response errors; not enough coins to fit the target")
+    // ProviderError::ClientRequestError
+
+    // wallet.set_provider(provider);
+
+    // let contract_id = Contract::load_from(
+    //     "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+    //     LoadConfiguration::default(),
+    // )?
+    //     .deploy(&wallet, TxParameters::default())
+    //     .await?;
+    //
+    // let fake_contract_id = Bech32ContractId::default();
+
+    // ANCHOR: contract_call_cost_estimation
+    // let contract_instance = TestContract::new(fake_contract_id, wallet);
 
     // Make sure we can call the contract with multiple arguments
-    let contract_methods = contract_instance.methods();
-    let _response = contract_methods.get(5, 6).call_with_retry(None).await?;
+    // let contract_methods = contract_instance.methods();
+    // let _response = contract_methods.get(5, 6).call_with_retry(None).await?;
+    use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
+
+    let mut wallet = WalletUnlocked::new_random(None);
+    let config = CoreConfig::local_node();
+    let service = FuelService::new_node(config)
+        .await
+        .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
+    wallet.set_provider(provider);
+
+    // Simulate an unreachable node
+    service.stop_and_await().await.unwrap();
+
+    let response = Contract::load_from(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+        .deploy(&wallet, TxParameters::default())
+        .await;
+
+    dbg!(&response);
+
+    assert!(matches!(response, Err(Error::ProviderError(_))));
+
 
     Ok(())
 }
