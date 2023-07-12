@@ -260,20 +260,15 @@ pub async fn new_fuel_node(
         ]);
 
         if let DbType::RocksDb = config.database_type {
-            if config.database_path.as_os_str().is_empty() {
-                args.extend(vec![
-                    "--db-path".to_string(),
-                    PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-                        .join(".fuel/db")
-                        .to_string_lossy()
-                        .to_string(),
-                ]);
+            let path = if config.database_path.as_os_str().is_empty() {
+                PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
             } else {
-                args.extend(vec![
-                    "--db-path".to_string(),
-                    config.database_path.to_string_lossy().to_string(),
-                ]);
-            }
+                config.database_path
+            };
+            args.extend(vec![
+                "--db-path".to_string(),
+                path.to_string_lossy().to_string(),
+            ]);
         }
 
         if config.max_database_cache_size != DEFAULT_CACHE_SIZE {
