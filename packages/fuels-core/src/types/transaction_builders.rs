@@ -13,7 +13,7 @@ use crate::{
     types::{
         coin::Coin,
         coin_type::CoinType,
-        errors::{Error, Result},
+        errors::{error, Error, Result},
         input::Input,
         message::Message,
         transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
@@ -58,7 +58,9 @@ macro_rules! impl_tx_trait {
                 let (base_offset, consensus_params) = if uses_predicates {
                     let consensus_params = self
                         .consensus_parameters
-                        .ok_or(Error::TransactionBuildError)?;
+                        .ok_or(error!(
+                                TransactionBuildError,
+                                "predicate inputs require consensus parameters. Use `.set_consensus_parameters()`."))?;
                     (self.base_offset(&consensus_params), consensus_params)
                 } else {
                     // If no ConsensusParameters have been set, we can use the default instead of
@@ -75,7 +77,7 @@ macro_rules! impl_tx_trait {
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                let tx = &self.clone().build().expect("Error in build").tx;
+                let tx = &self.clone().build().expect("error in build").tx;
                 TransactionFee::checked_from_tx(params, tx)
             }
 
@@ -87,7 +89,7 @@ macro_rules! impl_tx_trait {
                 Ok(self
                     .clone()
                     .build()
-                    .expect("Error in build")
+                    .expect("error in build")
                     .tx
                     .check_without_signatures(block_height.into(), parameters)?)
             }

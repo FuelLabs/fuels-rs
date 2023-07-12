@@ -35,15 +35,15 @@ pub enum Error {
         revert_id: u64,
         receipts: Vec<Receipt>,
     },
-    #[error("Transaction is using predicates. Provide consensus parameters by using .set_consensus_parameters().")]
-    TransactionBuildError,
+    #[error("Transaction build error: {0}")]
+    TransactionBuildError(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// This macro can only be used for `Error` variants that have a `String` field.
 /// Those are: `InvalidData`, `InvalidType`, `InfrastructureError`,
-/// `InstantiationError`, `WalletError`, `ProviderError`
+/// `InstantiationError`, `WalletError`, `ProviderError`, `TransactionBuildError`
 #[macro_export]
 macro_rules! error {
    ($err_variant:ident, $fmt_str: literal $(,$arg: expr)*) => {
