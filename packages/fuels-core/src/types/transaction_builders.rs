@@ -66,9 +66,8 @@ macro_rules! impl_tx_trait {
                     (0, self.consensus_parameters.unwrap_or_default())
                 };
                 let mut fuel_tx = self.convert_to_fuel_tx(base_offset);
-                if !fuel_tx.is_computed() {
-                    fuel_tx.precompute(consensus_params.chain_id.into())?
-                }
+                // the transaction was just created, so it's not precomputed
+                fuel_tx.precompute(consensus_params.chain_id.into())?;
                 if uses_predicates {
                     fuel_tx.estimate_predicates(&consensus_params)?;
                 };
