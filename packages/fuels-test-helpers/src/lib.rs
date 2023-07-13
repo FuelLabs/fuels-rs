@@ -6,6 +6,8 @@ use std::net::SocketAddr;
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
 #[cfg(feature = "fuel-core-lib")]
+pub use fuel_core::service::DbType;
+#[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::{config::Trigger, Config};
