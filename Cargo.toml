@@ -69,7 +69,7 @@ itertools = "0.10"
 portpicker = "0.1.1"
 proc-macro2 = "1.0"
 quote = "1.0"
-rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
+rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"] }
 regex = "1.8.1"
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.96"
@@ -79,7 +79,7 @@ strum = "0.24"
 strum_macros = "0.24"
 syn = "2.0.15"
 tai64 = { version = "4.0", default-features = false }
-tempfile = { version ="3.5.0", default-features = false }
+tempfile = { version = "3.5.0", default-features = false }
 thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"

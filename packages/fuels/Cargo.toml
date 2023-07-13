@@ -26,6 +26,7 @@ fuel-core = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true }
 hex = { workspace = true, default-features = false }
 sha2 = { workspace = true }
+tempfile = { workspace = true }
 tokio = { workspace = true }
 
 [features]
@@ -46,3 +47,4 @@ std = [
 # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
 test-type-paths = []
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
+rocksdb = ["fuel-core?/rocksdb"]

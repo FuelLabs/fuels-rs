@@ -2,6 +2,7 @@ use std::{
     fmt,
     io::Write,
     net::{Ipv4Addr, SocketAddr},
+    path::PathBuf,
     process::Stdio,
     time::Duration,
 };
@@ -27,6 +28,8 @@ use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
 use crate::utils::{into_coin_configs, into_message_configs};
+// Set the cache for tests to 10MB, which is the default size in `fuel-core`.
+pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
 #[derive(Clone, Debug)]
 pub enum Trigger {
@@ -42,9 +45,18 @@ pub enum Trigger {
     },
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum DbType {
+    InMemory,
+    RocksDb,
+}
+
 #[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
+    pub max_database_cache_size: usize,
+    pub database_path: PathBuf,
+    pub database_type: DbType,
     pub utxo_validation: bool,
     pub manual_blocks_enabled: bool,
     pub block_production: Trigger,
@@ -56,6 +68,9 @@ impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            max_database_cache_size: DEFAULT_CACHE_SIZE,
+            database_path: Default::default(),
+            database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
             block_production: Trigger::Instant,
@@ -223,6 +238,7 @@ pub async fn new_fuel_node(
 
     tokio::spawn(async move {
         let config_json = get_node_config_json(coins, messages, chain_config);
+
         let temp_config_file = write_temp_config_file(config_json);
 
         let port = config.addr.port().to_string();
@@ -232,11 +248,35 @@ pub async fn new_fuel_node(
             "127.0.0.1".to_string(),
             "--port".to_string(),
             port,
-            "--db-type".to_string(),
-            "in-memory".to_string(),
             "--chain".to_string(),
             temp_config_file.path().to_str().unwrap().to_string(),
         ];
+
+        args.extend(vec![
+            "--db-type".to_string(),
+            match config.database_type {
+                DbType::InMemory => "in-memory",
+                DbType::RocksDb => "rocks-db",
+            }
+            .to_string(),
+        ]);
+
+        if let DbType::RocksDb = config.database_type {
+            let path = if config.database_path.as_os_str().is_empty() {
+                PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
+            } else {
+                config.database_path
+            };
+            args.extend(vec![
+                "--db-path".to_string(),
+                path.to_string_lossy().to_string(),
+            ]);
+        }
+
+        if config.max_database_cache_size != DEFAULT_CACHE_SIZE {
+            args.push("--max-database-cache-size".to_string());
+            args.push(config.max_database_cache_size.to_string());
+        }
 
         if config.utxo_validation {
             args.push("--utxo-validation".to_string());
