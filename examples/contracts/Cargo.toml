@@ -16,3 +16,4 @@ tokio = { workspace = true, features = ["full"] }
 
 [features]
 fuel-core-lib = ["fuels/fuel-core-lib"]
+rocksdb = ["fuels/rocksdb"]
