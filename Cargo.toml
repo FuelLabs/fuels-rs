@@ -45,10 +45,10 @@ chrono = "0.4.24"
 elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-fuel-core = { version = "0.19.0", default-features = false }
-fuel-core-chain-config = { version = "0.19.0", default-features = false }
-fuel-core-client = { version = "0.19.0", default-features = false }
-fuel-core-types = { version = "0.19.0", default-features = false }
+fuel-core = { version = "0.19.1", default-features = false }
+fuel-core-chain-config = { version = "0.19.1", default-features = false }
+fuel-core-client = { version = "0.19.1", default-features = false }
+fuel-core-types = { version = "0.19.1", default-features = false }
 fuel-asm = "0.34.0"
 fuel-crypto = "0.34.0"
 fuel-merkle = "0.34.0"
