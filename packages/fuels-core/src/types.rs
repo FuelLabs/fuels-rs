@@ -3,7 +3,6 @@ use std::fmt;
 pub use fuel_tx::{Address, AssetId, ContractId, TxPointer, UtxoId};
 pub use fuel_types::Nonce;
 
-pub use fuel_core_client::client::types::primitives::BlockId;
 use fuel_types::bytes::padded_len;
 pub use fuel_types::MessageId;
 use strum_macros::EnumString;

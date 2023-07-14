@@ -5,7 +5,7 @@ use chrono::{DateTime, Utc};
 use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance, primitives::BlockId, TransactionStatus},
+    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
     FuelClient,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
@@ -622,7 +622,7 @@ impl Provider {
         &self,
         tx_id: &TxId,
         message_id: &MessageId,
-        commit_block_id: Option<&BlockId>,
+        commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
     ) -> ProviderResult<Option<MessageProof>> {
         let proof = self
