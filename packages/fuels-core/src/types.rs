@@ -5,7 +5,6 @@ pub use fuel_types::Nonce;
 
 use fuel_types::bytes::padded_len;
 pub use fuel_types::MessageId;
-use strum_macros::EnumString;
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{
@@ -29,11 +28,11 @@ pub type EnumSelector = (u8, Token, EnumVariants);
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct StringToken {
     data: String,
-    expected_len: usize,
+    expected_len: Option<usize>,
 }
 
 impl StringToken {
-    pub fn new(data: String, expected_len: usize) -> Self {
+    pub fn new(data: String, expected_len: Option<usize>) -> Self {
         StringToken { data, expected_len }
     }
 
@@ -45,13 +44,15 @@ impl StringToken {
             ));
         }
 
-        if self.data.len() != self.expected_len {
-            return Err(error!(
-                InvalidData,
-                "String data has len {}, but the expected len is {}",
-                self.data.len(),
-                self.expected_len
-            ));
+        if let Some(expected_len) = self.expected_len {
+            if self.data.len() != expected_len {
+                return Err(error!(
+                    InvalidData,
+                    "String data has len {}, but the expected len is {}",
+                    self.data.len(),
+                    expected_len
+                ));
+            }
         }
 
         Ok(())
@@ -71,8 +72,7 @@ impl TryFrom<StringToken> for String {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, EnumString)]
-#[strum(ascii_case_insensitive)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.
@@ -87,9 +87,9 @@ pub enum Token {
     B256([u8; 32]),
     Array(Vec<Token>),
     Vector(Vec<Token>),
-    String(StringToken),
+    StringSlice(StringToken),
+    StringArray(StringToken),
     Struct(Vec<Token>),
-    #[strum(disabled)]
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
     RawSlice(Vec<u64>),
