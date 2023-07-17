@@ -54,18 +54,26 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
-                let base_offset = if self.is_using_predicates() {
-                    let params = self
+                let uses_predicates = self.is_using_predicates();
+                let (base_offset, consensus_params) = if uses_predicates {
+                    let consensus_params = self
                         .consensus_parameters
                         .ok_or(error!(
                                 TransactionBuildError,
                                 "predicate inputs require consensus parameters. Use `.set_consensus_parameters()`."))?;
-                    self.base_offset(&params)
+                    (self.base_offset(&consensus_params), consensus_params)
                 } else {
-                    0
+                    // If no ConsensusParameters have been set, we can use the default instead of
+                    // erroring out since the tx doesn't use predicates
+                    (0, self.consensus_parameters.unwrap_or_default())
                 };
-
-                Ok(self.convert_to_fuel_tx(base_offset))
+                let mut fuel_tx = self.convert_to_fuel_tx(base_offset);
+                // the transaction was just created, so it's not precomputed
+                fuel_tx.precompute(consensus_params.chain_id.into())?;
+                if uses_predicates {
+                    fuel_tx.estimate_predicates(&consensus_params)?;
+                };
+                Ok(fuel_tx)
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
@@ -494,6 +502,7 @@ pub fn create_coin_predicate(
         asset_id,
         TxPointer::default(),
         0u32.into(),
+        0u64,
         code,
         predicate_data,
     )
@@ -510,6 +519,7 @@ pub fn create_coin_message_predicate(
             message.recipient.into(),
             message.amount,
             message.nonce,
+            0u64,
             code,
             predicate_data,
         )
@@ -519,6 +529,7 @@ pub fn create_coin_message_predicate(
             message.recipient.into(),
             message.amount,
             message.nonce,
+            0u64,
             message.data,
             code,
             predicate_data,

@@ -201,8 +201,7 @@ mod tests {
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!("{random_asset_id:#x}");
-        let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+        let random_asset_balance = contract_balances.get(&random_asset_id.to_string()).unwrap();
         assert_eq!(*random_asset_balance, 300);
         // ANCHOR_END: wallet_contract_transfer
 
@@ -328,8 +327,7 @@ mod tests {
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap
-        let asset_id_key = format!("{asset_id:#x}");
-        let asset_balance = balances.get(&asset_id_key).unwrap();
+        let asset_balance = balances.get(&asset_id.to_string()).unwrap();
         // ANCHOR_END: get_balance_hashmap
 
         assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);

@@ -402,8 +402,8 @@ mod tests {
         let chain_info = fuel_client.chain_info().await.unwrap();
 
         assert_eq!(chain_info.name, "Solo_Munib");
-        assert_eq!(chain_info.consensus_parameters.max_inputs.0, 123);
-        assert_eq!(chain_info.consensus_parameters.gas_per_byte.0, 456);
+        assert_eq!(chain_info.consensus_parameters.max_inputs, 123);
+        assert_eq!(chain_info.consensus_parameters.gas_per_byte, 456);
         assert_eq!(client_consensus_parameters.gas_per_byte, 456);
         assert_eq!(client_consensus_parameters.max_inputs, 123);
     }

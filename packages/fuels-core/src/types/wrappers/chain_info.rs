@@ -1,8 +1,8 @@
 #![cfg(feature = "std")]
 
 use crate::types::block::Block;
-use fuel_core_client::client::schema::chain::ChainInfo as ClientChainInfo;
-use fuel_tx::ConsensusParameters;
+use fuel_core_client::client::types::chain_info::ChainInfo as ClientChainInfo;
+use fuel_core_client::client::types::ConsensusParameters;
 
 #[derive(Debug)]
 pub struct ChainInfo {
@@ -16,11 +16,11 @@ pub struct ChainInfo {
 impl From<ClientChainInfo> for ChainInfo {
     fn from(client_chain_info: ClientChainInfo) -> Self {
         Self {
-            base_chain_height: client_chain_info.base_chain_height.0,
+            base_chain_height: client_chain_info.base_chain_height,
             name: client_chain_info.name,
             peer_count: client_chain_info.peer_count,
             latest_block: client_chain_info.latest_block.into(),
-            consensus_parameters: client_chain_info.consensus_parameters.into(),
+            consensus_parameters: client_chain_info.consensus_parameters,
         }
     }
 }

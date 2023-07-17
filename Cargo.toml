@@ -33,7 +33,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.68.0"
+rust-version = "1.70.0"
 version = "0.43.0"
 
 [workspace.dependencies]
@@ -45,17 +45,17 @@ chrono = "0.4.24"
 elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-fuel-asm = "0.31.1"
-fuel-core = { version = "0.18.2", default-features = false }
-fuel-core-chain-config = { version = "0.18.2", default-features = false }
-fuel-core-client = { version = "0.18.2", default-features = false }
-fuel-core-types = { version = "0.18.2", default-features = false }
-fuel-crypto = "0.31.1"
-fuel-merkle = "0.31.1"
-fuel-storage = "0.31.1"
-fuel-tx = "0.31.1"
-fuel-types = { version = "0.31.1", default-features = false }
-fuel-vm = "0.31.2"
+fuel-core = { version = "0.19.1", default-features = false }
+fuel-core-chain-config = { version = "0.19.1", default-features = false }
+fuel-core-client = { version = "0.19.1", default-features = false }
+fuel-core-types = { version = "0.19.1", default-features = false }
+fuel-asm = "0.34.0"
+fuel-crypto = "0.34.0"
+fuel-merkle = "0.34.0"
+fuel-storage = "0.34.0"
+fuel-tx = "0.34.0"
+fuel-types = { version = "0.34.0", default-features = false }
+fuel-vm = "0.34.0"
 fuels = { version = "0.43.0", path = "./packages/fuels" }
 fuels-accounts = { version = "0.43.0", path = "./packages/fuels-accounts", default-features = false }
 fuels-code-gen = { version = "0.43.0", path = "./packages/fuels-code-gen", default-features = false }
