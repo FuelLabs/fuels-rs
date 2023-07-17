@@ -12,4 +12,4 @@ jobs:
         with:
           project: SDK
           column: 👀 In review
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token: ${{ secrets.GH_SDK_PROJECT }}
