@@ -202,8 +202,7 @@
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!(&quot;{random_asset_id:#x}&quot;);
-        let random_asset_balance = contract_balances.get(&amp;random_asset_id_key).unwrap();
+        let random_asset_balance = contract_balances.get(&amp;random_asset_id.to_string()).unwrap();
         assert_eq!(*random_asset_balance, 300);
 </code></pre>
 <p>For transferring assets to the base layer chain, you can use <code>wallet.withdraw_to_base_layer</code>.</p>
