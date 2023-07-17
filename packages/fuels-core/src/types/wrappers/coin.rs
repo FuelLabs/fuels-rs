@@ -1,8 +1,10 @@
 #![cfg(feature = "std")]
 
 use fuel_core_chain_config::CoinConfig;
-use fuel_core_client::client::schema::coins::Coin as ClientCoin;
-use fuel_tx::{AssetId, UtxoId};
+use fuel_core_client::client::types::{
+    coins::Coin as ClientCoin,
+    primitives::{AssetId, UtxoId},
+};
 
 use crate::types::bech32::Bech32Address;
 
@@ -27,12 +29,12 @@ pub struct Coin {
 impl From<ClientCoin> for Coin {
     fn from(coin: ClientCoin) -> Self {
         Self {
-            amount: coin.amount.0,
-            block_created: coin.block_created.0,
-            asset_id: coin.asset_id.0 .0,
-            utxo_id: coin.utxo_id.0 .0,
-            maturity: coin.maturity.0,
-            owner: coin.owner.0 .0.into(),
+            amount: coin.amount,
+            block_created: coin.block_created,
+            asset_id: coin.asset_id,
+            utxo_id: coin.utxo_id,
+            maturity: coin.maturity,
+            owner: Bech32Address::from(coin.owner),
             status: CoinStatus::Unspent,
         }
     }

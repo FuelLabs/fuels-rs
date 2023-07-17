@@ -24,7 +24,7 @@ fuels-macros = { workspace = true }
 hex = { workspace = true, features = ["std"] }
 itertools = { workspace = true }
 proc-macro2 = { workspace = true }
-regex ={ workspace = true }
+regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }

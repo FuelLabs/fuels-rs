@@ -280,9 +280,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 750;
-    let expected_metered_bytes_size = 720;
-    let expected_total_fee = 368;
+    let expected_gas_used = 597;
+    let expected_metered_bytes_size = 728;
+    let expected_total_fee = 372;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -850,8 +850,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let contract_balances = contract_instance.get_balances().await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_id_key = format!("{random_asset_id:#x}");
-    let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+    let random_asset_balance = contract_balances.get(&random_asset_id.to_string()).unwrap();
     assert_eq!(*random_asset_balance, amount);
 
     Ok(())

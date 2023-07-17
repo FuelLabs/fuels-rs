@@ -3,7 +3,7 @@ use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 use serde::{Deserialize, Serialize};
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Parameterize, Tokenizable, TryFrom,
+    Debug, Clone, PartialEq, Eq, Hash, Parameterize, Tokenizable, TryFrom, Serialize, Deserialize,
 )]
 #[FuelsCorePath = "crate"]
 #[FuelsTypesPath = "crate::types"]
