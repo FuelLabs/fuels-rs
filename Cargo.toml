@@ -75,24 +75,16 @@ trybuild = "1.0.80"
 which = { version = "4.4", default-features = false }
 
 # Depednencies from `fuel-core` repository:
-fuel-core = { version = "0.19.1", default-features = false }
-fuel-core-chain-config = { version = "0.19.1", default-features = false }
-fuel-core-client = { version = "0.19.1", default-features = false }
-fuel-core-types = { version = "0.19.1", default-features = false }
+fuel-core = { version = "0.20.1", default-features = false }
+fuel-core-chain-config = { version = "0.20.1", default-features = false }
+fuel-core-client = { version = "0.20.1", default-features = false }
+fuel-core-types = { version = "0.20.1", default-features = false }
 
 # Depednencies from `fuel-vm` repository:
-fuel-asm = "0.34.0"
-fuel-crypto = "0.34.0"
-fuel-merkle = "0.34.0"
-fuel-storage = "0.34.0"
-fuel-tx = "0.34.0"
-fuel-types = { version = "0.34.0", default-features = false }
-fuel-vm = "0.34.0"
-
-[patch.crates-io]
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-
-# For dependencies from the `fuel-vm` repository, we need to use the same version as the `fuel-core master`.
+fuel-asm = "0.35.0"
+fuel-crypto = "0.35.0"
+fuel-merkle = "0.35.0"
+fuel-storage = "0.35.0"
+fuel-tx = "0.35.0"
+fuel-types = { version = "0.35.0", default-features = false }
+fuel-vm = "0.35.0"
