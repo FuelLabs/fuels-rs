@@ -43,13 +43,14 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        self.address = Self::calculate_address(&self.code, &provider.consensus_parameters());
+        self.address =
+            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
         self.provider = Some(provider);
         self
     }
 
-    pub fn calculate_address(code: &[u8], params: &ConsensusParameters) -> Bech32Address {
-        fuel_tx::Input::predicate_owner(code, params).into()
+    pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(code, &chain_id.into()).into()
     }
 
     fn consensus_parameters(&self) -> ConsensusParameters {
@@ -61,7 +62,7 @@ impl Predicate {
     /// Uses default `ConsensusParameters`
     pub fn from_code(code: Vec<u8>) -> Self {
         Self {
-            address: Self::calculate_address(&code, &ConsensusParameters::default()),
+            address: Self::calculate_address(&code, ConsensusParameters::default().chain_id.into()),
             code,
             data: Default::default(),
             provider: None,
@@ -80,7 +81,7 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
-        let address = Self::calculate_address(&code, &self.consensus_parameters());
+        let address = Self::calculate_address(&code, self.consensus_parameters().chain_id.into());
         Self {
             code,
             address,
@@ -89,7 +90,8 @@ impl Predicate {
     }
 
     pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, &provider.consensus_parameters());
+        let address =
+            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
         Self {
             address,
             provider: Some(provider),
@@ -100,7 +102,8 @@ impl Predicate {
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-        let address = Self::calculate_address(&self.code, &self.consensus_parameters());
+        let address =
+            Self::calculate_address(&self.code, self.consensus_parameters().chain_id.into());
         self.address = address;
         self
     }
@@ -147,11 +150,7 @@ impl Account for Predicate {
         previous_base_amount: u64,
         _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
 
         tb = tb.set_consensus_parameters(consensus_parameters);
 

@@ -21,7 +21,10 @@ pub mod tx {
 
 #[cfg(feature = "std")]
 pub mod client {
-    pub use fuel_core_client::client::{FuelClient, PageDirection, PaginationRequest};
+    pub use fuel_core_client::client::{
+        pagination::{PageDirection, PaginationRequest},
+        FuelClient,
+    };
 }
 
 pub mod macros {
@@ -56,9 +59,9 @@ pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
     pub use fuel_core::chain_config::ChainConfig;
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::{config::Trigger, Config, FuelService};
+    pub use fuel_core::service::{config::Trigger, Config, DbType, FuelService};
     #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::{ChainConfig, Config, FuelService, Trigger};
+    pub use fuels_test_helpers::node::{ChainConfig, Config, DbType, FuelService, Trigger};
 }
 
 /// Easy imports of frequently used

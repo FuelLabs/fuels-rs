@@ -252,12 +252,6 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        let chain_info = provider.chain_info().await?;
-
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
         provider.send_transaction(&tx).await?;
 
         Ok(self.contract_id.into())
@@ -516,7 +510,7 @@ where
         let provider = self.account.try_provider()?;
 
         let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(&consensus_parameters));
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -755,7 +749,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
         let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(&consensus_parameters));
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?

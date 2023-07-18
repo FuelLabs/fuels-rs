@@ -178,6 +178,15 @@ mod tests {
     }
 
     #[test]
+    fn handles_bytes() {
+        let inputs = [ParamType::Bytes];
+
+        let selector = resolve_fn_signature("some_fun", &inputs);
+
+        assert_eq!(selector, "some_fun(s(s(rawptr,u64),u64))")
+    }
+
+    #[test]
     fn handles_enums() {
         let types = vec![ParamType::U64, ParamType::U32];
         let variants = EnumVariants::new(types).unwrap();

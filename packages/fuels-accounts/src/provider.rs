@@ -4,12 +4,12 @@ use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
-    schema::{balance::Balance, contract::ContractBalance},
-    types::TransactionStatus,
-    FuelClient, PageDirection, PaginatedResult, PaginationRequest,
+    pagination::{PageDirection, PaginatedResult, PaginationRequest},
+    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
+    FuelClient,
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, UtxoId};
-use fuel_types::Nonce;
+use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
+use fuel_types::{Address, Bytes32, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
@@ -27,7 +27,6 @@ use fuels_core::{
         transaction_response::TransactionResponse,
     },
 };
-use itertools::Itertools;
 use tai64::Tai64;
 use thiserror::Error;
 
@@ -43,9 +42,9 @@ pub struct TransactionCost {
 }
 
 pub(crate) struct ResourceQueries {
-    utxos: Vec<String>,
-    messages: Vec<String>,
-    asset_id: String,
+    utxos: Vec<UtxoId>,
+    messages: Vec<Nonce>,
+    asset_id: AssetId,
     amount: u64,
 }
 
@@ -56,38 +55,24 @@ impl ResourceQueries {
         asset_id: AssetId,
         amount: u64,
     ) -> Self {
-        let utxos = utxo_ids
-            .iter()
-            .map(|utxo_id| format!("{utxo_id:#x}"))
-            .collect::<Vec<_>>();
-
-        let messages = message_nonces
-            .iter()
-            .map(|nonce| format!("{nonce:#x}"))
-            .collect::<Vec<_>>();
-
         Self {
-            utxos,
-            messages,
-            asset_id: format!("{asset_id:#x}"),
+            utxos: utxo_ids,
+            messages: message_nonces,
+            asset_id,
             amount,
         }
     }
 
-    pub fn exclusion_query(&self) -> Option<(Vec<&str>, Vec<&str>)> {
+    pub fn exclusion_query(&self) -> Option<(Vec<UtxoId>, Vec<Nonce>)> {
         if self.utxos.is_empty() && self.messages.is_empty() {
             return None;
         }
 
-        let utxos_as_str = self.utxos.iter().map(AsRef::as_ref).collect::<Vec<_>>();
-
-        let msg_ids_as_str = self.messages.iter().map(AsRef::as_ref).collect::<Vec<_>>();
-
-        Some((utxos_as_str, msg_ids_as_str))
+        Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self) -> Vec<(&str, u64, Option<u64>)> {
-        vec![(self.asset_id.as_str(), self.amount, None)]
+    pub fn spend_query(&self) -> Vec<(AssetId, u64, Option<u64>)> {
+        vec![(self.asset_id, self.amount, None)]
     }
 }
 
@@ -102,8 +87,8 @@ pub struct ResourceFilter {
 // ANCHOR_END: resource_filter
 
 impl ResourceFilter {
-    pub fn owner(&self) -> String {
-        self.from.hash().to_string()
+    pub fn owner(&self) -> Address {
+        (&self.from).into()
     }
 
     pub(crate) fn resource_queries(&self) -> ResourceQueries {
@@ -158,7 +143,7 @@ impl ClientExt for FuelClient {
         &self,
         tx: &fuel_tx::Transaction,
     ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)> {
-        let tx_id = self.submit(tx).await?.to_string();
+        let tx_id = self.submit(tx).await?;
         let status = self.await_transaction_commit(&tx_id).await?;
         let receipts = self.receipts(&tx_id).await?;
 
@@ -211,7 +196,7 @@ impl Provider {
         let chain_info = self.chain_info().await?;
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
+            &self.consensus_parameters(),
         )?;
 
         let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
@@ -341,8 +326,8 @@ impl Provider {
             let res = self
                 .client
                 .coins(
-                    &from.hash().to_string(),
-                    Some(&asset_id.to_string()),
+                    &from.into(),
+                    Some(&asset_id),
                     PaginationRequest {
                         cursor: cursor.clone(),
                         results: 100,
@@ -380,13 +365,8 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(|coin_type| {
-                coin_type
-                    .try_into()
-                    .map_err(ProviderError::ClientRequestError)
-            })
-            .try_collect()?;
-
+            .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
+            .collect::<ProviderResult<Vec<CoinType>>>()?;
         Ok(res)
     }
 
@@ -399,7 +379,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> ProviderResult<u64> {
         self.client
-            .balance(&address.hash().to_string(), Some(&*asset_id.to_string()))
+            .balance(&address.into(), Some(&asset_id))
             .await
             .map_err(Into::into)
     }
@@ -411,7 +391,7 @@ impl Provider {
         asset_id: AssetId,
     ) -> ProviderResult<u64> {
         self.client
-            .contract_balance(&contract_id.hash().to_string(), Some(&asset_id.to_string()))
+            .contract_balance(&contract_id.into(), Some(&asset_id))
             .await
             .map_err(Into::into)
     }
@@ -432,7 +412,7 @@ impl Provider {
         };
         let balances_vec = self
             .client
-            .balances(&address.hash().to_string(), pagination)
+            .balances(&address.into(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -442,7 +422,7 @@ impl Provider {
                      owner: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| (asset_id.to_string(), amount),
             )
             .collect();
         Ok(balances)
@@ -463,7 +443,7 @@ impl Provider {
 
         let balances_vec = self
             .client
-            .contract_balances(&contract_id.hash().to_string(), pagination)
+            .contract_balances(&contract_id.into(), pagination)
             .await?
             .results;
         let balances = balances_vec
@@ -473,7 +453,7 @@ impl Provider {
                      contract: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount.try_into().unwrap()),
+                 }| (asset_id.to_string(), amount),
             )
             .collect();
         Ok(balances)
@@ -481,7 +461,7 @@ impl Provider {
 
     pub async fn get_transaction_by_id(
         &self,
-        tx_id: &str,
+        tx_id: &TxId,
     ) -> ProviderResult<Option<TransactionResponse>> {
         Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
@@ -509,7 +489,7 @@ impl Provider {
     ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
         let pr = self
             .client
-            .transactions_by_owner(&owner.hash().to_string(), request)
+            .transactions_by_owner(&owner.into(), request)
             .await?;
 
         Ok(PaginatedResult {
@@ -541,7 +521,7 @@ impl Provider {
     }
 
     /// Get block by id.
-    pub async fn block(&self, block_id: &str) -> ProviderResult<Option<Block>> {
+    pub async fn block(&self, block_id: &Bytes32) -> ProviderResult<Option<Block>> {
         let block = self.client.block(block_id).await?.map(Into::into);
         Ok(block)
     }
@@ -570,7 +550,7 @@ impl Provider {
 
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
         let dry_run_tx = Self::generate_dry_run_tx(tx);
-        let consensus_parameters = self.chain_info().await?.consensus_parameters;
+        let consensus_parameters = self.consensus_parameters();
         let gas_used = self
             .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
             .await?;
@@ -590,7 +570,7 @@ impl Provider {
             gas_price,
             gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
-            total_fee: transaction_fee.total(),
+            total_fee: transaction_fee.max_fee(),
         })
     }
 
@@ -628,22 +608,21 @@ impl Provider {
             results: 100,
             direction: PageDirection::Forward,
         };
-        let res = self
+        Ok(self
             .client
-            .messages(Some(&from.hash().to_string()), pagination)
+            .messages(Some(&from.into()), pagination)
             .await?
             .results
             .into_iter()
             .map(Into::into)
-            .collect();
-        Ok(res)
+            .collect())
     }
 
     pub async fn get_message_proof(
         &self,
-        tx_id: &str,
-        message_id: &str,
-        commit_block_id: Option<&str>,
+        tx_id: &TxId,
+        message_id: &MessageId,
+        commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
     ) -> ProviderResult<Option<MessageProof>> {
         let proof = self
@@ -651,7 +630,7 @@ impl Provider {
             .message_proof(
                 tx_id,
                 message_id,
-                commit_block_id,
+                commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
             .await?
