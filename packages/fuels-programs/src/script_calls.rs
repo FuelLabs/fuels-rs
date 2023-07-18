@@ -7,6 +7,7 @@ use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
+use fuels_core::types::errors::Error::ProviderError;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
@@ -248,11 +249,14 @@ where
         let mut delay = Duration::from_secs(1);
 
         for _ in 1..=attempts {
-            if let Ok(response) = self.call_or_simulate(false).await {
-                return Ok(response);
+            match self.call_or_simulate(false).await {
+                Ok(response) => return Ok(response),
+                Err(ProviderError(description)) if description.starts_with("Client request error") => {
+                    sleep(delay).await;
+                    delay *= 2;
+                }
+                Err(error) => return Err(error),
             }
-            sleep(delay).await;
-            delay *= 2;
         }
 
         self.call().await

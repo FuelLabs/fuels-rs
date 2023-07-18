@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, io};
+use std::{collections::HashMap, fmt, fmt::Debug, io};
 
 use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]
@@ -116,7 +116,7 @@ impl Default for ResourceFilter {
 #[derive(Debug, Error)]
 pub enum ProviderError {
     // Every IO error in the context of Provider comes from the gql client
-    #[error(transparent)]
+    #[error("Client request error: {0}")]
     ClientRequestError(#[from] io::Error),
 }
 
@@ -355,14 +355,15 @@ impl Provider {
     ) -> ProviderResult<Vec<CoinType>> {
         let queries = filter.resource_queries();
 
-        let res = self
+        let res: Vec<_> = self
             .client
             .coins_to_spend(
                 &filter.owner(),
                 queries.spend_query(),
                 queries.exclusion_query(),
             )
-            .await?
+            .await
+            .map_err(ProviderError::ClientRequestError)?
             .into_iter()
             .flatten()
             .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))

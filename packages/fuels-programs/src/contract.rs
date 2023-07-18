@@ -5,6 +5,7 @@ use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_core::types::errors::Error::ProviderError;
 use fuels_core::{
     codec::ABIEncoder,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -247,7 +248,8 @@ impl Contract {
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
-            .map_err(|err| error!(ProviderError, "{err}"))?;
+            // .map_err(|err| error!(ProviderError, "{err}"))?;
+            .map_err(|err| err)?;
 
         let provider = account
             .try_provider()
@@ -482,16 +484,21 @@ where
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
-        // let attempts = max_attempts.unwrap_or(0);
-        // let mut delay = Duration::from_secs(1);
-        //
-        // for _ in 1..=attempts {
-        //     if let OÏk(response) = self.call_or_simulate(false).await {
-        //         return Ok(response);
-        //     }
-        //     sleep(delay).await;
-        //     delay *= 2;
-        // }
+        let attempts = max_attempts.unwrap_or(0);
+        let mut delay = Duration::from_secs(1);
+
+        for _ in 1..=attempts {
+            match self.call_or_simulate(false).await {
+                Ok(response) => return Ok(response),
+                Err(ProviderError(description))
+                    if description.starts_with("Client request error") =>
+                {
+                    sleep(delay).await;
+                    delay *= 2;
+                }
+                Err(error) => return Err(error),
+            }
+        }
 
         self.call().await
     }
@@ -713,7 +720,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn call_with_retry<D: Tokenizable + Debug>(
+    pub async fn call_call_with_retry<D: Tokenizable + Debug>(
         mut self,
         max_attempts: Option<u64>,
     ) -> Result<FuelCallResponse<D>> {
@@ -721,11 +728,16 @@ impl<T: Account> MultiContractCallHandler<T> {
         let mut delay = Duration::from_secs(1);
 
         for _ in 1..=attempts {
-            if let Ok(response) = self.call_or_simulate(false).await {
-                return Ok(response);
+            match self.call_or_simulate(false).await {
+                Ok(response) => return Ok(response),
+                Err(ProviderError(description))
+                    if description.starts_with("Client request error") =>
+                {
+                    sleep(delay).await;
+                    delay *= 2;
+                }
+                Err(error) => return Err(error),
             }
-            sleep(delay).await;
-            delay *= 2;
         }
 
         self.call().await

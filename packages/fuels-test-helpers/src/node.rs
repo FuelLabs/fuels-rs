@@ -60,6 +60,7 @@ pub struct Config {
     pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
+    pub chain_conf: ChainConfig,
 }
 
 impl Config {
@@ -74,6 +75,7 @@ impl Config {
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
+            chain_conf: ChainConfig::default(),
         }
     }
 }
