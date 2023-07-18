@@ -511,7 +511,9 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough coins to fit the target";
+    let expected =
+        "Provider error: Client request error: Response errors; not enough coins to fit the target";
+
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
