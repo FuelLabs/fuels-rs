@@ -251,7 +251,9 @@ where
         for _ in 1..=attempts {
             match self.call_or_simulate(false).await {
                 Ok(response) => return Ok(response),
-                Err(ProviderError(description)) if description.starts_with("Client request error") => {
+                Err(ProviderError(description))
+                    if description.starts_with("Client request error") =>
+                {
                     sleep(delay).await;
                     delay *= 2;
                 }

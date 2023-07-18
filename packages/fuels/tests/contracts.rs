@@ -1,5 +1,4 @@
-use fuel_core::chain_config::{ChainConfig, StateConfig};
-use fuel_core::service::ServiceTrait;
+use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::vec;
@@ -10,7 +9,6 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
-use fuels_core::types::coin::Coin;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {

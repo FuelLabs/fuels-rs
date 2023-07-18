@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt, fmt::Debug, io};
+use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]

@@ -248,8 +248,7 @@ impl Contract {
         let tx = account
             .add_fee_resources(tb, 0, Some(1))
             .await
-            // .map_err(|err| error!(ProviderError, "{err}"))?;
-            .map_err(|err| err)?;
+            .map_err(|err| error!(ProviderError, "{err}"))?;
 
         let provider = account
             .try_provider()
