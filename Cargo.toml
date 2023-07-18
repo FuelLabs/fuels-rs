@@ -74,13 +74,13 @@ tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"
 which = { version = "4.4", default-features = false }
 
-# Depednencies from `fuel-core` repository:
+# Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.20.1", default-features = false }
 fuel-core-chain-config = { version = "0.20.1", default-features = false }
 fuel-core-client = { version = "0.20.1", default-features = false }
 fuel-core-types = { version = "0.20.1", default-features = false }
 
-# Depednencies from `fuel-vm` repository:
+# Dependencies from the `fuel-vm` repository:
 fuel-asm = "0.35.0"
 fuel-crypto = "0.35.0"
 fuel-merkle = "0.35.0"
