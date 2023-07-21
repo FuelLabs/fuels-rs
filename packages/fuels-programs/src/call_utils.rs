@@ -1,9 +1,9 @@
 use std::{collections::HashSet, iter, vec};
 
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
+use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuel_types::{Address, Word};
-use fuel_vm::fuel_asm::{op, RegId};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
