@@ -31,6 +31,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::Bool => "bool".to_owned(),
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
+        ParamType::StringSlice => "str".to_owned(),
         ParamType::String(len) => {
             format!("str[{len}]")
         }
@@ -134,6 +135,7 @@ mod tests {
             (ParamType::B256, "b256"),
             (ParamType::Unit, "()"),
             (ParamType::String(15), "str[15]"),
+            (ParamType::StringSlice, "str"),
         ] {
             check_selector_for_type(param_type, expected_signature);
         }

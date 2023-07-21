@@ -2,6 +2,73 @@ use std::fmt::{Debug, Display, Formatter};
 
 use crate::types::errors::{error, Error, Result};
 
+// To be used when interacting with contracts which have string slices in their ABI.
+// The FuelVM strings only support ascii characters.
+#[derive(Debug, PartialEq, Clone, Eq)]
+pub struct AsciiString {
+    data: String,
+}
+
+impl AsciiString {
+    pub fn new(data: String) -> Result<Self> {
+        if !data.is_ascii() {
+            return Err(error!(InvalidData,
+                "AsciiString must be constructed from a string containing only ascii encodable characters. Got: {data}"
+            ));
+        }
+        Ok(Self { data })
+    }
+
+    pub fn to_trimmed_str(&self) -> &str {
+        self.data.trim()
+    }
+    pub fn to_left_trimmed_str(&self) -> &str {
+        self.data.trim_start()
+    }
+    pub fn to_right_trimmed_str(&self) -> &str {
+        self.data.trim_end()
+    }
+}
+
+impl TryFrom<&str> for AsciiString {
+    type Error = Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        Self::new(value.to_owned())
+    }
+}
+
+impl TryFrom<String> for AsciiString {
+    type Error = Error;
+
+    fn try_from(value: String) -> Result<Self> {
+        Self::new(value)
+    }
+}
+
+impl From<AsciiString> for String {
+    fn from(ascii_str: AsciiString) -> Self {
+        ascii_str.data
+    }
+}
+
+impl Display for AsciiString {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.data)
+    }
+}
+
+impl PartialEq<&str> for AsciiString {
+    fn eq(&self, other: &&str) -> bool {
+        self.data == *other
+    }
+}
+impl PartialEq<AsciiString> for &str {
+    fn eq(&self, other: &AsciiString) -> bool {
+        *self == other.data
+    }
+}
+
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a
 // different type from str[3]. The FuelVM strings only support ascii characters.
