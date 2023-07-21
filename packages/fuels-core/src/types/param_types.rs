@@ -5,7 +5,6 @@ use fuel_abi_types::{
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use itertools::chain;
-use strum_macros::EnumString;
 
 use crate::{
     constants::WORD_SIZE,
@@ -15,10 +14,8 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, EnumString, PartialEq, Eq, Default)]
-#[strum(ascii_case_insensitive)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ParamType {
-    #[default]
     U8,
     U16,
     U32,
@@ -32,14 +29,12 @@ pub enum ParamType {
     Unit,
     Array(Box<ParamType>, usize),
     Vector(Box<ParamType>),
-    #[strum(serialize = "str")]
+    StringSlice,
     String(usize),
-    #[strum(disabled)]
     Struct {
         fields: Vec<ParamType>,
         generics: Vec<ParamType>,
     },
-    #[strum(disabled)]
     Enum {
         variants: EnumVariants,
         generics: Vec<ParamType>,
@@ -150,7 +145,7 @@ impl ParamType {
             | ParamType::U32
             | ParamType::U64
             | ParamType::Bool => 1,
-            ParamType::U128 | ParamType::RawSlice => 2,
+            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => 2,
             ParamType::Vector(_) | ParamType::Bytes => 3,
             ParamType::U256 | ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
@@ -328,7 +323,8 @@ impl TryFrom<&Type> for ParamType {
         let matched_param_type = [
             try_primitive,
             try_array,
-            try_str,
+            try_str_array,
+            try_str_slice,
             try_tuple,
             try_vector,
             try_bytes,
@@ -444,8 +440,16 @@ fn param_types(coll: &[Type]) -> Result<Vec<ParamType>> {
     coll.iter().map(|e| e.try_into()).collect()
 }
 
-fn try_str(the_type: &Type) -> Result<Option<ParamType>> {
+fn try_str_array(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(extract_str_len(&the_type.type_field).map(ParamType::String))
+}
+
+fn try_str_slice(the_type: &Type) -> Result<Option<ParamType>> {
+    Ok(if the_type.type_field == "str" {
+        Some(ParamType::StringSlice)
+    } else {
+        None
+    })
 }
 
 fn try_array(the_type: &Type) -> Result<Option<ParamType>> {
@@ -476,6 +480,7 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
         "u64" => Some(ParamType::U64),
         "b256" => Some(ParamType::B256),
         "()" => Some(ParamType::Unit),
+        "str" => Some(ParamType::StringSlice),
         _ => None,
     };
 
@@ -597,6 +602,7 @@ mod tests {
         assert_eq!(parse_param_type("b256")?, ParamType::B256);
         assert_eq!(parse_param_type("()")?, ParamType::Unit);
         assert_eq!(parse_param_type("str[21]")?, ParamType::String(21));
+        assert_eq!(parse_param_type("str")?, ParamType::StringSlice);
 
         Ok(())
     }

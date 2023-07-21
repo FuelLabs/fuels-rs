@@ -74,6 +74,7 @@ impl TypeResolver {
             Self::to_generic,
             Self::to_array,
             Self::to_sized_ascii_string,
+            Self::to_ascii_string,
             Self::to_tuple,
             Self::to_bytes,
             Self::to_raw_slice,
@@ -163,6 +164,20 @@ impl TypeResolver {
             type_name: quote! { ::fuels::types::SizedAsciiString },
             generic_params,
         }))
+    }
+
+    fn to_ascii_string(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field == "str" {
+            Ok(Some(ResolvedType {
+                type_name: quote! { ::fuels::types::AsciiString },
+                generic_params: vec![],
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     fn to_tuple(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {

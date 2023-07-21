@@ -629,7 +629,8 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
                     | Token::U128(_)
                     | Token::U256(_)
                     | Token::Vector(_)
-                    | Token::String(_)
+                    | Token::StringArray(_)
+                    | Token::StringSlice(_)
             )
         })
 }
