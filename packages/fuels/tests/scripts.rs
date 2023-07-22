@@ -280,8 +280,11 @@ async fn test_script_struct() -> Result<()> {
         )
     );
 
-    let foo = Foo { bar: 42, baz: true };
-    let response = script_instance.main(foo).call().await?;
+    let my_struct = MyStruct {
+        number: 42,
+        boolean: true,
+    };
+    let response = script_instance.main(my_struct).call().await?;
 
     assert_eq!(response.value, 42);
     Ok(())

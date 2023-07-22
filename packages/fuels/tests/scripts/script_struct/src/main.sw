@@ -1,10 +1,10 @@
 script;
 
-struct Foo {
-    bar: u64,
-    baz: bool,
+struct MyStruct {
+    number: u64,
+    boolean: bool,
 }
 
-fn main(foo: Foo) -> u64 {
-    if foo.baz { foo.bar } else { 0 }
+fn main(my_struct: MyStruct) -> u64 {
+    if my_struct.boolean { my_struct.number } else { 0 }
 }
