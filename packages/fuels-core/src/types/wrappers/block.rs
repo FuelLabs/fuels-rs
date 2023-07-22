@@ -1,8 +1,8 @@
 #![cfg(feature = "std")]
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use fuel_core_client::client::schema::block::{Block as ClientBlock, Header as ClientHeader};
-use fuel_tx::Bytes32;
+use fuel_core_client::client::types::block::{Block as ClientBlock, Header as ClientHeader};
+use fuel_core_client::client::types::primitives::Bytes32;
 
 #[derive(Debug)]
 pub struct Header {
@@ -20,20 +20,20 @@ pub struct Header {
 
 impl From<ClientHeader> for Header {
     fn from(client_header: ClientHeader) -> Self {
-        let naive = NaiveDateTime::from_timestamp_opt(client_header.time.0.to_unix(), 0);
+        let naive = NaiveDateTime::from_timestamp_opt(client_header.time.to_unix(), 0);
         let time = naive.map(|time| DateTime::<Utc>::from_utc(time, Utc));
 
         Self {
-            id: client_header.id.0 .0,
-            da_height: client_header.da_height.0,
-            transactions_count: client_header.transactions_count.0,
-            message_receipt_count: client_header.message_receipt_count.0,
-            transactions_root: client_header.transactions_root.0 .0,
-            message_receipt_root: client_header.message_receipt_root.0 .0,
-            height: client_header.height.0,
-            prev_root: client_header.prev_root.0 .0,
+            id: client_header.id,
+            da_height: client_header.da_height,
+            transactions_count: client_header.transactions_count,
+            message_receipt_count: client_header.message_receipt_count,
+            transactions_root: client_header.transactions_root,
+            message_receipt_root: client_header.message_receipt_root,
+            height: client_header.height,
+            prev_root: client_header.prev_root,
             time,
-            application_hash: client_header.application_hash.0 .0,
+            application_hash: client_header.application_hash,
         }
     }
 }
@@ -47,16 +47,10 @@ pub struct Block {
 
 impl From<ClientBlock> for Block {
     fn from(client_block: ClientBlock) -> Self {
-        let transactions = client_block
-            .transactions
-            .iter()
-            .map(|tx| tx.id.0 .0)
-            .collect();
-
         Self {
-            id: client_block.id.0 .0,
+            id: client_block.id,
             header: client_block.header.into(),
-            transactions,
+            transactions: client_block.transactions,
         }
     }
 }

@@ -27,9 +27,11 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::U32 => "u32".to_owned(),
         ParamType::U64 => "u64".to_owned(),
         ParamType::U128 => "s(u64,u64)".to_owned(),
+        ParamType::U256 => "s(u64,u64,u64,u64)".to_owned(),
         ParamType::Bool => "bool".to_owned(),
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
+        ParamType::StringSlice => "str".to_owned(),
         ParamType::String(len) => {
             format!("str[{len}]")
         }
@@ -133,6 +135,7 @@ mod tests {
             (ParamType::B256, "b256"),
             (ParamType::Unit, "()"),
             (ParamType::String(15), "str[15]"),
+            (ParamType::StringSlice, "str"),
         ] {
             check_selector_for_type(param_type, expected_signature);
         }
@@ -174,6 +177,15 @@ mod tests {
         let selector = resolve_fn_signature("some_fun", &inputs);
 
         assert_eq!(selector, "some_fun(s<u32>(s<u32>(rawptr,u64),u64))")
+    }
+
+    #[test]
+    fn handles_bytes() {
+        let inputs = [ParamType::Bytes];
+
+        let selector = resolve_fn_signature("some_fun", &inputs);
+
+        assert_eq!(selector, "some_fun(s(s(rawptr,u64),u64))")
     }
 
     #[test]

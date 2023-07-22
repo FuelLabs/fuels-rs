@@ -24,13 +24,14 @@ fuels-macros = { workspace = true }
 hex = { workspace = true, features = ["std"] }
 itertools = { workspace = true }
 proc-macro2 = { workspace = true }
-regex ={ workspace = true }
+regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
+uint = { version = "0.9.5", default-features = false }
 
 [features]
 default = ["std"]

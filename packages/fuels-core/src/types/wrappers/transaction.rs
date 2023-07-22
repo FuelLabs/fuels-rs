@@ -4,10 +4,11 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input as FuelInput,
-    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
+    Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
+    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
+use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
@@ -75,7 +76,13 @@ pub trait Transaction: Into<FuelTransaction> + Send {
         parameters: &ConsensusParameters,
     ) -> Result<(), Error>;
 
-    fn id(&self, params: &ConsensusParameters) -> Bytes32;
+    fn precompute(&mut self, chain_id: u64) -> Result<(), Error>;
+
+    fn is_computed(&self) -> bool;
+
+    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error>;
+
+    fn id(&self, chain_id: u64) -> Bytes32;
 
     fn maturity(&self) -> u32;
 
@@ -121,6 +128,29 @@ impl Transaction for TransactionType {
         }
     }
 
+    fn is_computed(&self) -> bool {
+        match self {
+            TransactionType::Script(tx) => tx.is_computed(),
+            TransactionType::Create(tx) => tx.is_computed(),
+        }
+    }
+
+    fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
+        match self {
+            TransactionType::Script(tx) => tx.precompute(chain_id)?,
+            TransactionType::Create(tx) => tx.precompute(chain_id)?,
+        }
+        Ok(())
+    }
+
+    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error> {
+        match self {
+            TransactionType::Script(tx) => tx.estimate_predicates(parameters)?,
+            TransactionType::Create(tx) => tx.estimate_predicates(parameters)?,
+        };
+        Ok(())
+    }
+
     fn check_without_signatures(
         &self,
         block_height: u32,
@@ -132,10 +162,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn id(&self, params: &ConsensusParameters) -> Bytes32 {
+    fn id(&self, chain_id: u64) -> Bytes32 {
         match self {
-            TransactionType::Script(tx) => tx.id(params),
-            TransactionType::Create(tx) => tx.id(params),
+            TransactionType::Script(tx) => tx.id(chain_id),
+            TransactionType::Create(tx) => tx.id(chain_id),
         }
     }
 
@@ -262,6 +292,12 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl AsMut<$wrapped> for $wrapper {
+            fn as_mut(&mut self) -> &mut $wrapped {
+                &mut self.tx
+            }
+        }
+
         impl Transaction for $wrapper {
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
@@ -277,8 +313,27 @@ macro_rules! impl_tx_wrapper {
                     .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn id(&self, params: &ConsensusParameters) -> Bytes32 {
-                self.tx.id(params)
+            fn is_computed(&self) -> bool {
+                self.tx.is_computed()
+            }
+
+            // TODO: Fetch `GasCosts` from the `fuel-core`:
+            //  https://github.com/FuelLabs/fuel-core/issues/1221
+            fn estimate_predicates(
+                &mut self,
+                parameters: &ConsensusParameters,
+            ) -> Result<(), Error> {
+                self.tx
+                    .estimate_predicates(parameters, &GasCosts::default())
+                    .map_err(Error::ValidationError)
+            }
+
+            fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
+                Ok(self.tx.precompute(&chain_id.into())?)
+            }
+
+            fn id(&self, chain_id: u64) -> Bytes32 {
+                self.tx.id(&chain_id.into())
             }
 
             fn maturity(&self) -> u32 {

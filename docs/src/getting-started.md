@@ -6,8 +6,8 @@
 <!-- rs_dependencies:example:start -->
 The dependencies for using the Fuel Rust SDK are:
 
-- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/introduction/installation.html);
-- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/introduction/installation.html#installing-from-cargo).
+- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/book/introduction/installation.html);
+- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/book/introduction/installation.html#installing-from-cargo).
 <!-- rs_dependencies:example:end -->
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
@@ -90,10 +90,10 @@ cargo test -- --nocapture
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "0.43"
+fuels = "0.44"
 ```
 
-> **Note** We're using version `0.43` of the SDK, which is the latest version at the time of this writing.
+> **Note** We're using version `0.44` of the SDK, which is the latest version at the time of this writing.
 
 And then, in your Rust file that's going to make use of the SDK:
 

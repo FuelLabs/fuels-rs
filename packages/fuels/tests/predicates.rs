@@ -334,7 +334,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     assert_eq!(contract_balances.len(), 1);
 
     let random_asset_balance = contract_balances
-        .get(format!("{:#?}", AssetId::default()).as_str())
+        .get(&AssetId::default().to_string())
         .unwrap();
     assert_eq!(*random_asset_balance, 300);
 

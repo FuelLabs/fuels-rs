@@ -30,10 +30,11 @@ members = [
 authors = ["Fuel Labs <contact@fuel.sh>"]
 edition = "2021"
 homepage = "https://fuel.network/"
+readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.68.0"
-version = "0.43.0"
+rust-version = "1.70.0"
+version = "0.44.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
@@ -44,31 +45,31 @@ chrono = "0.4.24"
 elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-fuel-asm = "0.31.1"
-fuel-core = { version = "0.18.2", default-features = false }
-fuel-core-chain-config = { version = "0.18.2", default-features = false }
-fuel-core-client = { version = "0.18.2", default-features = false }
-fuel-core-types = { version = "0.18.2", default-features = false }
-fuel-crypto = "0.31.1"
-fuel-merkle = "0.31.1"
-fuel-storage = "0.31.1"
-fuel-tx = "0.31.1"
-fuel-types = { version = "0.31.1", default-features = false }
-fuel-vm = "0.31.2"
-fuels = { version = "0.43.0", path = "./packages/fuels" }
-fuels-accounts = { version = "0.43.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.43.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.43.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.43.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.43.0", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.43.0", path = "./packages/fuels-test-helpers", default-features = false }
+fuel-core = { version = "0.19.1", default-features = false }
+fuel-core-chain-config = { version = "0.19.1", default-features = false }
+fuel-core-client = { version = "0.19.1", default-features = false }
+fuel-core-types = { version = "0.19.1", default-features = false }
+fuel-asm = "0.34.0"
+fuel-crypto = "0.34.0"
+fuel-merkle = "0.34.0"
+fuel-storage = "0.34.0"
+fuel-tx = "0.34.0"
+fuel-types = { version = "0.34.0", default-features = false }
+fuel-vm = "0.34.0"
+fuels = { version = "0.44.0", path = "./packages/fuels" }
+fuels-accounts = { version = "0.44.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.44.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.44.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.44.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.44.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.44.0", path = "./packages/fuels-test-helpers", default-features = false }
 futures = "0.3.26"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.10"
 portpicker = "0.1.1"
 proc-macro2 = "1.0"
 quote = "1.0"
-rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"]}
+rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"] }
 regex = "1.8.1"
 serde = { version = "1.0", default-features = false }
 serde_json = "1.0.96"
@@ -78,7 +79,7 @@ strum = "0.24"
 strum_macros = "0.24"
 syn = "2.0.15"
 tai64 = { version = "4.0", default-features = false }
-tempfile = { version ="3.5.0", default-features = false }
+tempfile = { version = "3.5.0", default-features = false }
 thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"

@@ -68,6 +68,10 @@ pub(crate) fn script_bindings(
                 self
             }
 
+            pub fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+                self.log_decoder.clone()
+            }
+
             #main_function
         }
 

@@ -1,4 +1,4 @@
-use fuels::prelude::*;
+use fuels::{prelude::*, types::U256};
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<()> {
@@ -220,8 +220,8 @@ async fn main_function_bytes_arguments() -> Result<()> {
     Ok(())
 }
 
-fn u128_from_parts(upper: u64, lower: u64) -> u128 {
-    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+fn u128_from(parts: (u64, u64)) -> u128 {
+    let bytes: [u8; 16] = [parts.0.to_be_bytes(), parts.1.to_be_bytes()]
         .concat()
         .try_into()
         .unwrap();
@@ -243,10 +243,47 @@ async fn script_handles_u128() -> Result<()> {
         )
     );
 
-    let arg = u128_from_parts(10, 20);
+    let arg = u128_from((10, 20));
     let actual = script_instance.main(arg).call().await?.value;
 
-    let expected = arg + u128_from_parts(8, 2);
+    let expected = arg + u128_from((8, 2));
+    assert_eq!(expected, actual);
+
+    Ok(())
+}
+
+fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
+    let bytes: [u8; 32] = [
+        parts.0.to_be_bytes(),
+        parts.1.to_be_bytes(),
+        parts.2.to_be_bytes(),
+        parts.3.to_be_bytes(),
+    ]
+    .concat()
+    .try_into()
+    .unwrap();
+    U256::from(bytes)
+}
+
+#[tokio::test]
+async fn script_handles_u256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_u256",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let arg = u256_from((10, 20, 30, 40));
+    let actual = script_instance.main(arg).call().await?.value;
+
+    let expected = arg + u256_from((6, 7, 8, 9));
     assert_eq!(expected, actual);
 
     Ok(())

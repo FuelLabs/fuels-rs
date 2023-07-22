@@ -263,11 +263,7 @@ impl Account for WalletUnlocked {
         previous_base_amount: u64,
         witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
         tb = tb.set_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
@@ -306,7 +302,7 @@ impl Signer for WalletUnlocked {
             .try_provider()
             .map_err(|_| WalletError::NoProviderError)?
             .consensus_parameters();
-        let id = tx.id(&consensus_parameters);
+        let id = tx.id(consensus_parameters.chain_id.into());
 
         let message = Message::from_bytes(*id);
         let sig = Signature::sign(&self.private_key, &message);
