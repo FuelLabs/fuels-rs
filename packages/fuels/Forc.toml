@@ -39,7 +39,6 @@ members = [
   'tests/scripts/require_from_contract',
   'tests/scripts/script_array',
   'tests/scripts/script_asserts',
-  'tests/scripts/script_asserts',
   'tests/scripts/script_b256',
   'tests/scripts/script_configurables',
   'tests/scripts/script_enum',
