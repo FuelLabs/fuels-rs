@@ -31,6 +31,21 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub call_data_offset: usize,
 }
 
+#[derive(Default, Debug)]
+pub struct RetryOptions {
+    pub max_attempts: usize,
+    pub interval: usize,
+}
+
+impl RetryOptions {
+    pub fn new(max_attempts: usize) -> Self {
+        RetryOptions {
+            max_attempts,
+            interval: 0,
+        }
+    }
+}
+
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 

@@ -24,6 +24,7 @@ use fuels_core::{
 use itertools::chain;
 use tokio::time::sleep;
 
+use crate::call_utils::RetryOptions;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
@@ -86,6 +87,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
+    pub retry_options: RetryOptions,
 }
 
 impl<T: Account, D> ScriptCallHandler<T, D>
@@ -115,7 +117,13 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
+            retry_options: Default::default(),
         }
+    }
+
+    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+        self.retry_options = retry_options;
+        self
     }
 
     /// Sets the transaction parameters for a given transaction.
@@ -241,14 +249,10 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn call_with_retry(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<FuelCallResponse<D>> {
-        let attempts = max_attempts.unwrap_or(0);
+    pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
         let mut delay = Duration::from_secs(1);
 
-        for _ in 1..=attempts {
+        for _ in 0..self.retry_options.max_attempts {
             match self.call_or_simulate(false).await {
                 Ok(response) => return Ok(response),
                 Err(ProviderError(description))

@@ -31,6 +31,10 @@ strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true }
 
+[dev-dependencies]
+anyhow = "1.0.71"
+
+
 [features]
 default = ["std"]
 std = [

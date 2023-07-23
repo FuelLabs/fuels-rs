@@ -24,6 +24,7 @@ use fuels_core::{
 use itertools::Itertools;
 use tokio::time::sleep;
 
+use crate::call_utils::RetryOptions;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
@@ -367,6 +368,7 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
+    pub retry_options: RetryOptions,
 }
 
 impl<T, D> ContractCallHandler<T, D>
@@ -374,6 +376,11 @@ where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
 {
+    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+        self.retry_options = retry_options;
+        self
+    }
+
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
@@ -479,14 +486,10 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn call_with_retry(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<FuelCallResponse<D>> {
-        let attempts = max_attempts.unwrap_or(0);
+    pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
         let mut delay = Duration::from_secs(1);
 
-        for _ in 1..=attempts {
+        for _ in 0..self.retry_options.max_attempts {
             match self.call_or_simulate(false).await {
                 Ok(response) => return Ok(response),
                 Err(ProviderError(description))
@@ -634,6 +637,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         account,
         datatype: PhantomData,
         log_decoder,
+        retry_options: Default::default(),
     })
 }
 
@@ -670,6 +674,7 @@ pub struct MultiContractCallHandler<T: Account> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
+    pub retry_options: RetryOptions,
 }
 
 impl<T: Account> MultiContractCallHandler<T> {
@@ -682,7 +687,13 @@ impl<T: Account> MultiContractCallHandler<T> {
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
             },
+            retry_options: Default::default(),
         }
+    }
+
+    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+        self.retry_options = retry_options;
+        self
     }
 
     /// Adds a contract call to be bundled in the transaction
@@ -719,14 +730,10 @@ impl<T: Account> MultiContractCallHandler<T> {
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn call_call_with_retry<D: Tokenizable + Debug>(
-        mut self,
-        max_attempts: Option<u64>,
-    ) -> Result<FuelCallResponse<D>> {
-        let attempts = max_attempts.unwrap_or(0);
+    pub async fn call_with_retry<D: Tokenizable + Debug>(mut self) -> Result<FuelCallResponse<D>> {
         let mut delay = Duration::from_secs(1);
 
-        for _ in 1..=attempts {
+        for _ in 0..self.retry_options.max_attempts {
             match self.call_or_simulate(false).await {
                 Ok(response) => return Ok(response),
                 Err(ProviderError(description))
