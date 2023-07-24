@@ -131,7 +131,7 @@ impl ReceiptParser {
                     ..
                 },
             ) if *first_id == *contract_id
-                && !first_data.is_none()
+                && first_data.is_some()
                 && *second_id == ContractId::zeroed() =>
             {
                 vec_data.as_ref()
