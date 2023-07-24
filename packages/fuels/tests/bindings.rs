@@ -1,9 +1,9 @@
 use std::{slice, str::FromStr};
 
 use fuels::{
-    core::abi_encoder::ABIEncoder,
+    core::{codec::ABIEncoder, traits::Tokenizable},
     prelude::*,
-    types::{traits::Tokenizable, Bits256, EvmAddress},
+    types::{Bits256, EvmAddress},
 };
 use sha2::{Digest, Sha256};
 
@@ -32,7 +32,7 @@ async fn compile_bindings_from_contract_file() {
 
     let call_handler = simple_contract_instance
         .methods()
-        .takes_ints_returns_bool(42);
+        .takes_int_returns_bool(42);
 
     let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
     let encoded = format!(
@@ -41,7 +41,7 @@ async fn compile_bindings_from_contract_file() {
         hex::encode(encoded_args)
     );
 
-    assert_eq!("000000009593586c000000000000002a", encoded);
+    assert_eq!("000000005f68ee3d000000000000002a", encoded);
 }
 
 #[tokio::test]

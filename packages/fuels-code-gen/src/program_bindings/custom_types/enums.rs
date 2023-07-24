@@ -6,12 +6,13 @@ use quote::quote;
 use crate::{
     error::{error, Result},
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         utils::Component,
     },
 };
+
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the enum described by the
@@ -68,7 +69,7 @@ fn enum_decl(
             ::fuels::macros::TryFrom
         )]
         #maybe_disable_std
-        pub enum #enum_ident <#(#generics: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize),*> {
+        pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
             #(#enum_variants),*
         }
     }

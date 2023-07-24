@@ -1,26 +1,27 @@
 use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
-use fuel_core_client::client::{PaginatedResult, PaginationRequest};
+use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Output, Receipt, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId};
-use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId},
-    coin::Coin,
+use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
+use fuels_core::{
     constants::BASE_ASSET_ID,
-    errors::{Error, Result},
-    input::Input,
-    message::Message,
-    resource::Resource,
-    transaction::{Transaction, TxParameters},
-    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-    transaction_response::TransactionResponse,
+    types::{
+        bech32::{Bech32Address, Bech32ContractId},
+        coin::Coin,
+        coin_type::CoinType,
+        errors::{Error, Result},
+        input::Input,
+        message::Message,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_response::TransactionResponse,
+    },
 };
 use provider::ResourceFilter;
-pub use wallet::{Wallet, WalletUnlocked};
 
 use crate::{accounts_utils::extract_message_id, provider::Provider};
 
@@ -80,8 +81,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
 
     fn try_provider(&self) -> AccountResult<&Provider>;
 
-    fn set_provider(&mut self, provider: Provider) -> &mut Self;
-
     async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
@@ -132,7 +131,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> Result<Vec<Resource>> {
+    ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id,
@@ -190,18 +189,14 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> Result<(String, Vec<Receipt>)> {
+    ) -> Result<(TxId, Vec<Receipt>)> {
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -219,7 +214,7 @@ pub trait Account: ViewOnlyAccount {
 
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
-        Ok((tx.id().to_string(), receipts))
+        Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -260,7 +255,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.try_provider()?.consensus_parameters().await?;
+        let params = self.try_provider()?.consensus_parameters();
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -281,7 +276,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
-        let tx_id = tx.id();
+        let tx_id = tx.id(params.chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         Ok((tx_id.to_string(), receipts))
@@ -295,7 +290,9 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, String, Vec<Receipt>), Error> {
+    ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
+        let params = self.try_provider()?.consensus_parameters();
+        let chain_id = params.chain_id;
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;
@@ -309,25 +306,24 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, amount, None).await?;
 
-        let tx_id = tx.id().to_string();
+        let tx_id = tx.id(chain_id.into());
         let receipts = self.try_provider()?.send_transaction(&tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, message_id.to_string(), receipts))
+        Ok((tx_id, message_id, receipts))
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use fuel_core_client::client::FuelClient;
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{
-        Address, AssetId, Bytes32, Input, Output, Transaction as FuelTransaction, TxPointer, UtxoId,
-    };
-    use fuels_types::transaction::{ScriptTransaction, Transaction};
+    use fuel_tx::{Address, ConsensusParameters, Output};
+    use fuels_core::types::transaction::Transaction;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -340,7 +336,10 @@ mod tests {
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
-        let secret = unsafe { SecretKey::from_bytes_unchecked(secret_seed) };
+        let secret = secret_seed
+            .as_slice()
+            .try_into()
+            .expect("The seed size is valid");
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -370,47 +369,43 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         // Set up a dummy transaction.
-        let input_coin = Input::coin_signed(
-            UtxoId::new(Bytes32::zeroed(), 0),
-            Address::from_str(
-                "0xf1e92c42b90934aa6372e30bc568a326f6e66a1a0288595e6e3fbd392a4f3e6e",
-            )?,
-            10000000,
-            AssetId::from([0u8; 32]),
-            TxPointer::default(),
-            0,
-            0,
-        );
+        let coin = Coin {
+            amount: 10000000,
+            owner: wallet.address().clone(),
+            ..Default::default()
+        };
+        let input_coin = Input::ResourceSigned {
+            resource: CoinType::Coin(coin),
+            witness_index: 0,
+        };
 
         let output_coin = Output::coin(
             Address::from_str(
                 "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
             )?,
             1,
-            AssetId::from([0u8; 32]),
+            Default::default(),
         );
 
-        let mut tx: ScriptTransaction = FuelTransaction::script(
-            0,
-            1000000,
-            0,
-            hex::decode("24400000")?,
-            vec![],
+        let mut tx = ScriptTransactionBuilder::prepare_transfer(
             vec![input_coin],
             vec![output_coin],
-            vec![],
+            Default::default(),
         )
-        .into();
+        .build()?;
 
         // Sign the transaction.
+        let consensus_parameters = ConsensusParameters::default();
+        let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
+        wallet.set_provider(test_provider);
         let signature = wallet.sign_transaction(&mut tx)?;
-        let message = unsafe { Message::from_bytes_unchecked(*tx.id()) };
+        let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("34482a581d1fe01ba84900581f5321a8b7d4ec65c3e7ca0de318ff8fcf45eb2c793c4b99e96400673e24b81b7aa47f042cad658f05a84e2f96f365eb0ce5a511")?);
+        assert_eq!(signature, Signature::from_str("13ce336c5f239a748f20f39323e3df3237ccfe104b04f128be66f26a49abd09d3b4b19c7f07efbb708c442371feb5fc6545f2b614e1f9f336702cca3e62d0cc8")?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&message)?;

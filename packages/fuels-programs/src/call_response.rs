@@ -1,7 +1,7 @@
-use fuel_tx::Receipt;
-use fuels_types::{
-    errors::Result,
+use fuel_tx::{Bytes32, Receipt};
+use fuels_core::{
     traits::{Parameterize, Tokenizable},
+    types::errors::Result,
 };
 
 use crate::logs::{LogDecoder, LogResult};
@@ -18,6 +18,7 @@ pub struct FuelCallResponse<D> {
     pub receipts: Vec<Receipt>,
     pub gas_used: u64,
     pub log_decoder: LogDecoder,
+    pub tx_id: Option<Bytes32>,
 }
 // ANCHOR_END: fuel_call_response
 
@@ -32,12 +33,18 @@ impl<D> FuelCallResponse<D> {
             .expect("could not retrieve gas used from ScriptResult")
     }
 
-    pub fn new(value: D, receipts: Vec<Receipt>, log_decoder: LogDecoder) -> Self {
+    pub fn new(
+        value: D,
+        receipts: Vec<Receipt>,
+        log_decoder: LogDecoder,
+        tx_id: Option<Bytes32>,
+    ) -> Self {
         Self {
             value,
             gas_used: Self::get_gas_used(&receipts),
             receipts,
             log_decoder,
+            tx_id,
         }
     }
 

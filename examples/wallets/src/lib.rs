@@ -201,8 +201,7 @@ mod tests {
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_id_key = format!("{random_asset_id:#x}");
-        let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+        let random_asset_balance = contract_balances.get(&random_asset_id.to_string()).unwrap();
         assert_eq!(*random_asset_balance, 300);
         // ANCHOR_END: wallet_contract_transfer
 
@@ -328,8 +327,7 @@ mod tests {
         // ANCHOR_END: get_balances
 
         // ANCHOR: get_balance_hashmap
-        let asset_id_key = format!("{asset_id:#x}");
-        let asset_balance = balances.get(&asset_id_key).unwrap();
+        let asset_balance = balances.get(&asset_id.to_string()).unwrap();
         // ANCHOR_END: get_balance_hashmap
 
         assert_eq!(*asset_balance, DEFAULT_COIN_AMOUNT * DEFAULT_NUM_COINS);
@@ -344,7 +342,17 @@ mod tests {
 
         use fuels::prelude::*;
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let config = Config {
+            manual_blocks_enabled: true,
+            ..Config::local_node()
+        };
+        let wallets = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(1), None, None),
+            Some(config),
+            None,
+        )
+        .await;
+        let wallet = wallets.first().unwrap();
 
         let amount = 1000;
         let base_layer_address =
@@ -356,10 +364,12 @@ mod tests {
             .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
             .await?;
 
+        let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;
+
         // Retrieve a message proof from the provider
         let proof = wallet
             .try_provider()?
-            .get_message_proof(&tx_id, &msg_id)
+            .get_message_proof(&tx_id, &msg_id, None, Some(2))
             .await?
             .expect("Failed to retrieve message proof.");
 

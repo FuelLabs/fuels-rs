@@ -6,12 +6,13 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullTypeDeclaration,
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         utils::Component,
     },
 };
+
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the
@@ -60,7 +61,7 @@ fn struct_decl(
             ::fuels::macros::TryFrom
         )]
         #maybe_disable_std
-        pub struct #struct_ident <#(#generic_parameters: ::fuels::types::traits::Tokenizable + ::fuels::types::traits::Parameterize, )*> {
+        pub struct #struct_ident <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*> {
             #(#fields),*
         }
     }

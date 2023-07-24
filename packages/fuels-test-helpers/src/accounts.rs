@@ -3,8 +3,10 @@ use std::{mem::size_of, net::SocketAddr};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
-use fuels_accounts::{fuel_crypto::SecretKey, provider::Provider, ViewOnlyAccount, WalletUnlocked};
-use fuels_types::{coin::Coin, message::Message};
+use fuels_accounts::{
+    fuel_crypto::SecretKey, provider::Provider, wallet::WalletUnlocked, ViewOnlyAccount,
+};
+use fuels_core::types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
@@ -104,14 +106,18 @@ pub async fn setup_test_provider(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> (Provider, SocketAddr) {
-    let (client, addr) = setup_test_client(coins, messages, node_config, chain_config, None).await;
-    (Provider::new(client), addr)
+    let (client, addr, consensus_parameters) =
+        setup_test_client(coins, messages, node_config, chain_config).await;
+    (Provider::new(client, consensus_parameters), addr)
 }
 
 #[cfg(test)]
 mod tests {
     use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
-    use fuels_types::{constants::BASE_ASSET_ID, errors::Result, resource::Resource};
+    use fuels_core::{
+        constants::BASE_ASSET_ID,
+        types::{coin_type::CoinType, errors::Result},
+    };
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
@@ -183,10 +189,10 @@ mod tests {
                 for resource in resources {
                     assert_eq!(resource.amount(), asset.coin_amount);
                     match resource {
-                        Resource::Coin(coin) => {
+                        CoinType::Coin(coin) => {
                             assert_eq!(&coin.owner, wallet.address())
                         }
-                        Resource::Message(_) => panic!("Resources contained messages."),
+                        CoinType::Message(_) => panic!("Resources contained messages."),
                     }
                 }
             }
@@ -239,8 +245,7 @@ mod tests {
                     .chain_info()
                     .await?
                     .consensus_parameters
-                    .max_gas_per_tx
-                    .0,
+                    .max_gas_per_tx,
                 10_000_000_000
             );
             assert_eq!(wallet.get_coins(AssetId::default()).await?.len(), 3);
@@ -248,7 +253,7 @@ mod tests {
                 wallet
                     .get_balances()
                     .await?
-                    .get("0x0000000000000000000000000000000000000000000000000000000000000000")
+                    .get("0000000000000000000000000000000000000000000000000000000000000000")
                     .expect("Failed to get value"),
                 &6_000_000_000
             );

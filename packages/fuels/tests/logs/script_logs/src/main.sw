@@ -2,32 +2,38 @@ script;
 
 use std::logging::log;
 
+#[allow(dead_code)]
 struct TestStruct {
     field_1: bool,
     field_2: b256,
     field_3: u64,
 }
 
+#[allow(dead_code)]
 enum TestEnum {
     VariantOne: (),
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 enum EnumWithGeneric<D> {
     VariantOne: D,
     VariantTwo: (),
 }
 
+#[allow(dead_code)]
 struct StructWithNestedGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
+#[allow(dead_code)]
 struct StructDeeplyNestedGeneric<D> {
     field_1: D,
     field_2: u64,

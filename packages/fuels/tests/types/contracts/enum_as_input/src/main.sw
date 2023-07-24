@@ -1,11 +1,13 @@
 contract;
 
+#[allow(dead_code)]
 enum StandardEnum {
     One: b256,
     Two: u32,
     Three: bool,
 }
 
+#[allow(dead_code)]
 enum UnitEnum {
     One: (),
     Two: (),
@@ -22,7 +24,7 @@ abi EnumTesting {
 
 impl EnumTesting for Contract {
     fn get_standard_enum() -> StandardEnum {
-        StandardEnum::Two(12345)
+        StandardEnum::Two(12345u32)
     }
     fn check_standard_enum_integrity(arg: StandardEnum) -> bool {
         match arg {

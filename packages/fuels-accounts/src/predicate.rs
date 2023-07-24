@@ -1,11 +1,14 @@
 use std::{fmt::Debug, fs};
 
-use fuel_tx::Contract;
-use fuel_types::{Address, AssetId};
-use fuels_core::Configurables;
-use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, errors::Result, input::Input,
-    transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
+use fuel_tx::ConsensusParameters;
+use fuel_types::AssetId;
+use fuels_core::{
+    constants::BASE_ASSET_ID,
+    types::{
+        bech32::Bech32Address, errors::Result, input::Input,
+        transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
+    },
+    Configurables,
 };
 
 use crate::{
@@ -40,24 +43,33 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.address =
+            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
         self.provider = Some(provider);
         self
     }
 
+    pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(code, &chain_id.into()).into()
+    }
+
+    fn consensus_parameters(&self) -> ConsensusParameters {
+        self.provider()
+            .map(|p| p.consensus_parameters())
+            .unwrap_or_default()
+    }
+
+    /// Uses default `ConsensusParameters`
     pub fn from_code(code: Vec<u8>) -> Self {
         Self {
-            address: Self::calculate_address(&code),
+            address: Self::calculate_address(&code, ConsensusParameters::default().chain_id.into()),
             code,
             data: Default::default(),
             provider: None,
         }
     }
 
-    fn calculate_address(code: &[u8]) -> Bech32Address {
-        let address: Address = (*Contract::root_from_code(code)).into();
-        address.into()
-    }
-
+    /// Uses default `ConsensusParameters`
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
         Ok(Self::from_code(code))
@@ -69,27 +81,31 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
+        let address = Self::calculate_address(&code, self.consensus_parameters().chain_id.into());
         Self {
-            data: self.data,
-            provider: self.provider,
-            ..Self::from_code(code)
+            code,
+            address,
+            ..self
         }
     }
 
-    pub fn with_provider(mut self, provider: Provider) -> Predicate {
-        self.set_provider(provider);
-        self
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address =
+            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
+        Self {
+            address,
+            provider: Some(provider),
+            ..self
+        }
     }
 
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-
-        Self {
-            data: self.data,
-            provider: self.provider,
-            ..Self::from_code(self.code)
-        }
+        let address =
+            Self::calculate_address(&self.code, self.consensus_parameters().chain_id.into());
+        self.address = address;
+        self
     }
 }
 
@@ -100,10 +116,6 @@ impl ViewOnlyAccount for Predicate {
 
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
-    }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        (self as &mut Predicate).set_provider(provider)
     }
 }
 
@@ -138,11 +150,7 @@ impl Account for Predicate {
         previous_base_amount: u64,
         _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
 
         tb = tb.set_consensus_parameters(consensus_parameters);
 

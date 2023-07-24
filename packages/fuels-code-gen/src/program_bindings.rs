@@ -1,4 +1,3 @@
-mod abi_types;
 mod abigen;
 mod custom_types;
 mod generated_code;

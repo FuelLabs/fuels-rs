@@ -6,12 +6,11 @@ use quote::{quote, ToTokens};
 
 use crate::{
     error::Result,
-    program_bindings::{
-        abi_types::FullTypeApplication,
-        resolved_type::{ResolvedType, TypeResolver},
-    },
+    program_bindings::resolved_type::{ResolvedType, TypeResolver},
     utils::{safe_ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::FullTypeApplication;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -62,16 +61,16 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
         .collect::<Vec<_>>();
 
     if parameters.is_empty() {
-        quote! { <#type_name as ::fuels::types::traits::Parameterize>::param_type() }
+        quote! { <#type_name as ::fuels::core::traits::Parameterize>::param_type() }
     } else {
-        quote! { <#type_name::<#(#parameters),*> as ::fuels::types::traits::Parameterize>::param_type() }
+        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::traits::Parameterize>::param_type() }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
+    use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
@@ -128,6 +127,7 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ("std::option::Option", "::core::option::Option"),
         ("std::result::Result", "::core::result::Result"),
         ("std::u128::U128", "u128"),
+        ("std::u256::U256", "::fuels::types::U256"),
         ("std::vec::Vec", "::std::vec::Vec"),
         (
             "std::vm::evm::evm_address::EvmAddress",
@@ -154,4 +154,14 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ]
     })
     .collect()
+}
+
+pub(crate) fn get_equivalent_bech32_type(ttype: &str) -> Option<TokenStream> {
+    match ttype {
+        ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        ":: fuels :: types :: ContractId" => {
+            Some(quote! {::fuels::types::bech32::Bech32ContractId})
+        }
+        _ => None,
+    }
 }

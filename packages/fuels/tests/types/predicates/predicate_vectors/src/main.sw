@@ -51,7 +51,7 @@ fn main(
 
     result = result && (tuple_in_vec.get(1).unwrap().0 == 128u32);
 
-    let (tuple_a, tuple_b) = vec_in_tuple;
+    let (tuple_a, _) = vec_in_tuple;
     result = result && (tuple_a.get(1).unwrap() == 64u32);
 
     result = result && (vec_in_a_vec_in_a_struct_in_a_vec.get(1).unwrap().a.get(1).unwrap().get(1).unwrap() == 32u32);

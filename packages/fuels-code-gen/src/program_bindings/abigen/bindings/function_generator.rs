@@ -4,12 +4,13 @@ use quote::{quote, ToTokens};
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::{FullABIFunction, FullTypeApplication},
         resolved_type::TypeResolver,
-        utils::{param_type_calls, Component},
+        utils::{get_equivalent_bech32_type, param_type_calls, Component},
     },
     utils::{safe_ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {
@@ -62,12 +63,21 @@ impl FunctionGenerator {
         let param_type_calls = param_type_calls(&self.args);
 
         let name = &self.name;
-        quote! {::fuels::core::function_selector::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
+        quote! {::fuels::core::codec::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|component| &component.field_name);
-        quote! {[#(::fuels::types::traits::Tokenizable::into_token(#arg_names)),*]}
+        let arg_names = self.args.iter().map(|component| {
+            let field_name = &component.field_name;
+            let field_type = &component.field_type;
+
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
+                .map(|_| {
+                    quote! {#field_type::from(#field_name.into())}
+                })
+                .unwrap_or(quote! {#field_name})
+        });
+        quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
     pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {
@@ -108,7 +118,12 @@ impl From<&FunctionGenerator> for TokenStream {
         let arg_declarations = fun.args.iter().map(|component| {
             let name = &component.field_name;
             let field_type = &component.field_type;
-            quote! { #name: #field_type }
+
+            get_equivalent_bech32_type(&field_type.type_name.to_string())
+                .map(|new_type| {
+                    quote! { #name: impl ::core::convert::Into<#new_type> }
+                })
+                .unwrap_or(quote! { #name: #field_type })
         });
 
         let output_type = fun.output_type();
@@ -137,10 +152,12 @@ impl From<FunctionGenerator> for TokenStream {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{ABIFunction, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullTypeDeclaration,
+        program::{ABIFunction, TypeApplication, TypeDeclaration},
+    };
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     #[test]
     fn test_expand_fn_arguments() -> Result<()> {
@@ -314,7 +331,7 @@ mod tests {
 
         assert_eq!(
             fn_selector_code.to_string(),
-            r#":: fuels :: core :: function_selector :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: types :: traits :: Parameterize > :: param_type ()])"#
+            r#":: fuels :: core :: codec :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
         );
 
         Ok(())
@@ -329,7 +346,7 @@ mod tests {
 
         assert_eq!(
             tokenized_args.to_string(),
-            "[:: fuels :: types :: traits :: Tokenizable :: into_token (arg_0)]"
+            "[:: fuels :: core :: traits :: Tokenizable :: into_token (arg_0)]"
         );
 
         Ok(())

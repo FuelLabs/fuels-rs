@@ -1,11 +1,10 @@
 use std::path::Path;
 
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId},
+    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, U256},
 };
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::unresolved_bytes::UnresolvedBytes;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,
@@ -83,15 +82,7 @@ fn get_test_coins_and_messages(
     let asset_id = AssetId::default();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
-        .map(|i| {
-            setup_single_message(
-                &Bech32Address::default(),
-                address,
-                amount,
-                i,
-                [104, 97, 108, 51, 101].to_vec(),
-            )
-        })
+        .map(|i| setup_single_message(&Bech32Address::default(), address, amount, i.into(), vec![]))
         .collect();
 
     (coins, messages, asset_id)
@@ -223,7 +214,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_vector").await?;
 
@@ -327,8 +318,8 @@ async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
     Ok(())
 }
 
-fn u128_from_parts(upper: u64, lower: u64) -> u128 {
-    let bytes: [u8; 16] = [upper.to_be_bytes(), lower.to_be_bytes()]
+fn u128_from(parts: (u64, u64)) -> u128 {
+    let bytes: [u8; 16] = [parts.0.to_be_bytes(), parts.1.to_be_bytes()]
         .concat()
         .try_into()
         .unwrap();
@@ -342,8 +333,34 @@ async fn predicate_handles_u128() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_u128/out/debug/predicate_u128-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(u128_from_parts(8, 2));
+    let data = MyPredicateEncoder::encode_data(u128_from((8, 2)));
     assert_predicate_spendable(data, "tests/types/predicates/predicate_u128").await?;
+
+    Ok(())
+}
+
+fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
+    let bytes: [u8; 32] = [
+        parts.0.to_be_bytes(),
+        parts.1.to_be_bytes(),
+        parts.2.to_be_bytes(),
+        parts.3.to_be_bytes(),
+    ]
+    .concat()
+    .try_into()
+    .unwrap();
+    U256::from(bytes)
+}
+
+#[tokio::test]
+async fn predicate_handles_u256() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_u256/out/debug/predicate_u256-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::encode_data(u256_from((10, 11, 12, 13)));
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_u256").await?;
 
     Ok(())
 }

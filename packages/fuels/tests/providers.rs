@@ -1,16 +1,17 @@
+use std::ops::Add;
 use std::{iter, str::FromStr, vec};
 
-use chrono::{Duration, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
+use fuel_core_types::tai64::Tai64;
 use fuels::{
-    accounts::fuel_crypto::SecretKey,
+    accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
+    test_helpers::Config,
     tx::Receipt,
-    types::{block::Block, errors::error, message::Message},
+    types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
-use fuels_accounts::Account;
-use fuels_types::resource::Resource;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -112,7 +113,7 @@ async fn test_input_message() -> Result<()> {
         &Bech32Address::default(),
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
-        0,
+        0.into(),
         vec![1, 2],
     )];
 
@@ -156,7 +157,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         },
         wallet.address(),
         DEFAULT_COIN_AMOUNT,
-        0,
+        0.into(),
         vec![],
     );
 
@@ -204,11 +205,11 @@ async fn can_increase_block_height() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
 
     provider.produce_blocks(3, None).await?;
 
-    assert_eq!(provider.latest_block_height().await?, 3);
+    assert_eq!(provider.latest_block_height().await?, 3u32);
     // ANCHOR_END: use_produce_blocks_to_increase_block_height
     Ok(())
 }
@@ -216,8 +217,13 @@ async fn can_increase_block_height() -> Result<()> {
 #[tokio::test]
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
+    let block_time = 20u32; // seconds
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
+        // This is how you specify the time between blocks
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
         ..Config::local_node()
     };
     let wallets =
@@ -225,15 +231,22 @@ async fn can_set_custom_block_time() -> Result<()> {
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
-    assert_eq!(provider.latest_block_height().await?, 0);
+    assert_eq!(provider.latest_block_height().await?, 0u32);
+    let origin_block_time = provider.latest_block_time().await?.unwrap();
+    let blocks_to_produce = 3u32;
 
-    let time = TimeParameters {
-        start_time: Utc.timestamp_opt(100, 0).unwrap(),
-        block_time_interval: Duration::seconds(10),
-    };
-    provider.produce_blocks(3, Some(time)).await?;
-
-    assert_eq!(provider.latest_block_height().await?, 3);
+    provider
+        .produce_blocks(blocks_to_produce.into(), None)
+        .await?;
+    assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
+    let expected_latest_block_time = origin_block_time
+        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .unwrap();
+    assert_eq!(
+        provider.latest_block_time().await?.unwrap(),
+        expected_latest_block_time
+    );
+    // ANCHOR_END: use_produce_blocks_custom_time
 
     let req = PaginationRequest {
         cursor: None,
@@ -242,10 +255,9 @@ async fn can_set_custom_block_time() -> Result<()> {
     };
     let blocks: Vec<Block> = provider.get_blocks(req).await?.results;
 
-    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 100);
-    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 110);
-    assert_eq!(blocks[3].header.time.unwrap().timestamp(), 120);
-    // ANCHOR_END: use_produce_blocks_custom_time
+    assert_eq!(blocks[1].header.time.unwrap().timestamp(), 20);
+    assert_eq!(blocks[2].header.time.unwrap().timestamp(), 40);
+    assert_eq!(blocks[3].header.time.unwrap().timestamp(), 60);
     Ok(())
 }
 
@@ -255,11 +267,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     let since_epoch = 1676039910;
 
     let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
-    let time = TimeParameters {
-        start_time: latest_timestamp,
-        block_time_interval: Duration::seconds(1),
-    };
-    provider.produce_blocks(1, Some(time)).await?;
+    provider.produce_blocks(1, Some(latest_timestamp)).await?;
 
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
@@ -302,14 +310,14 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         })
     };
 
-    let err = deploy_w_maturity(1)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
+    let err = deploy_w_maturity(1u32)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
         Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1)?
+    deploy_w_maturity(1u32)?
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
     Ok(())
@@ -369,7 +377,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let mut balance_response = contract_methods
-        .get_balance(contract_id.into(), contract_id.into())
+        .get_balance(contract_id, contract_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -377,7 +385,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     contract_methods.mint_coins(5_000_000).call().await?;
 
     balance_response = contract_methods
-        .get_balance(contract_id.into(), contract_id.into())
+        .get_balance(contract_id, contract_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -410,7 +418,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, contract_id.into(), address.into())
+        .transfer_coins_to_output(1_000_000, contract_id, address)
         .append_variable_outputs(1)
         .call()
         .await?;
@@ -503,7 +511,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough resources to fit the target";
+    let expected = "Provider error: Response errors; not enough coins to fit the target";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }
@@ -577,9 +585,8 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-// TODO: currently skipping this test because the testnet isn't running
-// the latest version of fuel-core. Once the testnet is updated, this test
-// should be re-enabled.
+/// This test will not work for as no endpoint supports the new `fuel-core` release yet
+/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
@@ -595,7 +602,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("node-beta-2.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =
@@ -650,7 +657,7 @@ async fn test_parse_block_time() -> Result<()> {
     let tx_response = wallet
         .try_provider()
         .unwrap()
-        .get_transaction_by_id(tx_id.as_str())
+        .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
@@ -658,7 +665,7 @@ async fn test_parse_block_time() -> Result<()> {
     let block = wallet
         .try_provider()
         .unwrap()
-        .block(tx_response.block_id.unwrap().to_string().as_str())
+        .block(&tx_response.block_id.unwrap())
         .await?
         .unwrap();
     assert!(block.header.time.is_some());
@@ -685,7 +692,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let coin_1_utxo_id = coins[0].utxo_id;
     let coin_2_utxo_id = coins[1].utxo_id;
 
-    let message_id = message.message_id();
+    let message_nonce = message.nonce;
 
     let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
 
@@ -705,13 +712,13 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
             from: wallet.address().clone(),
             amount: coin_amount_1,
             excluded_utxos: vec![coin_2_utxo_id],
-            excluded_message_ids: vec![message_id],
+            excluded_message_nonces: vec![message_nonce],
             ..Default::default()
         };
         let resources = provider.get_spendable_resources(filter).await.unwrap();
 
         match resources.as_slice() {
-            [Resource::Coin(coin)] => {
+            [CoinType::Coin(coin)] => {
                 assert_eq!(coin.utxo_id, coin_1_utxo_id);
             }
             _ => {
@@ -728,7 +735,74 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
         &Bech32Address::default(),
         &address,
         message_amount,
-        0,
+        0.into(),
         vec![],
     )
+}
+
+fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
+    let unix = Tai64(timestamp).to_unix();
+    DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
+}
+
+/// This test is here in addition to `can_set_custom_block_time` because even though this test
+/// passed, the Sway `timestamp` function didn't take into account the block time change. This
+/// was fixed and this test is here to demonstrate the fix.
+#[tokio::test]
+async fn test_sway_timestamp() -> Result<()> {
+    let block_time = 1u32; // seconds
+    let provider_config = Config {
+        manual_blocks_enabled: true,
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
+        ..Config::local_node()
+    };
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(1), Some(100)),
+        Some(provider_config),
+        None,
+    )
+    .await;
+    let wallet = wallets.pop().unwrap();
+    let provider = wallet.try_provider()?;
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/block_timestamp"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let origin_timestamp = provider.latest_block_time().await?.unwrap();
+    let methods = contract_instance.methods();
+
+    let response = methods.return_timestamp().call().await?;
+    let mut expected_datetime = origin_timestamp.add(Duration::seconds(block_time as i64));
+    assert_eq!(convert_to_datetime(response.value), expected_datetime);
+
+    let blocks_to_produce = 600;
+    provider
+        .produce_blocks(blocks_to_produce.into(), None)
+        .await?;
+
+    let response = methods.return_timestamp().call().await?;
+
+    // `produce_blocks` call
+    expected_datetime =
+        expected_datetime.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    // method call
+    expected_datetime = expected_datetime.add(Duration::seconds(block_time as i64));
+
+    assert_eq!(convert_to_datetime(response.value), expected_datetime);
+    assert_eq!(
+        provider.latest_block_time().await?.unwrap(),
+        expected_datetime
+    );
+    Ok(())
 }

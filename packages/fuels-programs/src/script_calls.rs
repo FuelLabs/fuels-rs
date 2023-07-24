@@ -1,26 +1,32 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{ContractId, Output, Receipt};
+use fuel_tx::{Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_types::{
-    bech32::Bech32ContractId,
-    errors::Result,
-    input::Input,
+use fuels_core::{
+    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
-    transaction::{Transaction, TxParameters},
-    transaction_builders::ScriptTransactionBuilder,
-    unresolved_bytes::UnresolvedBytes,
+    types::{
+        bech32::Bech32ContractId,
+        errors::Result,
+        input::Input,
+        transaction::{Transaction, TxParameters},
+        transaction_builders::ScriptTransactionBuilder,
+        unresolved_bytes::UnresolvedBytes,
+    },
 };
 use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{generate_contract_inputs, generate_contract_outputs},
+    call_utils::{
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        TxDependencyExtension,
+    },
     contract::SettableContract,
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
@@ -34,6 +40,7 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
+    pub variable_outputs: Vec<Output>,
 }
 
 impl ScriptCall {
@@ -53,6 +60,15 @@ impl ScriptCall {
             ..self
         }
     }
+
+    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
+        self.external_contracts.push(contract_id)
+    }
+
+    pub fn append_variable_outputs(&mut self, num: u64) {
+        self.variable_outputs
+            .extend(new_variable_outputs(num as usize));
+    }
 }
 
 #[derive(Debug)]
@@ -61,6 +77,8 @@ impl ScriptCall {
 pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
@@ -84,10 +102,12 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
+            variable_outputs: vec![],
         };
         Self {
             script_call,
             tx_parameters: TxParameters::default(),
+            cached_tx_id: None,
             account,
             provider,
             datatype: PhantomData,
@@ -132,7 +152,7 @@ where
 
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
-        let consensus_parameters = self.provider.consensus_parameters().await?;
+        let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(&consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
 
@@ -161,6 +181,7 @@ where
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
+            self.script_call.variable_outputs.clone(),
         )
         .collect();
 
@@ -171,20 +192,36 @@ where
         Ok(tb)
     }
 
+    fn calculate_base_asset_sum(&self) -> u64 {
+        self.script_call
+            .inputs
+            .iter()
+            .map(|input| match input {
+                Input::ResourceSigned { resource, .. }
+                | Input::ResourcePredicate { resource, .. }
+                    if resource.asset_id() == BASE_ASSET_ID =>
+                {
+                    resource.amount()
+                }
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Call a script on the node. If `simulate == true`, then the call is done in a
     /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let chain_info = self.provider.chain_info().await?;
+    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
-
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
+        let base_amount = self.calculate_base_asset_sum();
+        let tx = self
+            .account
+            .add_fee_resources(tb, base_amount, None)
+            .await?;
+        let consensus_parameters = self.provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
@@ -195,7 +232,7 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>> {
+    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -206,7 +243,7 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -236,6 +273,30 @@ where
             D::from_token(token)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         ))
+    }
+}
+
+#[async_trait::async_trait]
+impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
+where
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
+{
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate().await?;
+
+        Ok(())
+    }
+
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.script_call.append_variable_outputs(num);
+        self
+    }
+
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.script_call.append_external_contracts(contract_id);
+        self
     }
 }

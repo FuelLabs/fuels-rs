@@ -17,11 +17,8 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
     let call_handler = contract_instance.methods().initialize_counter(42);
 
-    let tx = call_handler.build_tx().await?;
-    let provider = wallet.try_provider()?;
-    let receipts = provider.send_transaction(&tx).await?;
-
-    let response = call_handler.get_response(receipts)?;
+    let response = call_handler.call().await?;
+    assert!(response.tx_id.is_some());
     assert_eq!(response.value, 42);
     Ok(())
 }
@@ -51,13 +48,9 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let provider = wallet.try_provider()?;
-    let tx = multi_call_handler.build_tx().await?;
-    let receipts = provider.send_transaction(&tx).await?;
-    let (counter, array) = multi_call_handler
-        .get_response::<(u64, [u64; 2])>(receipts)?
-        .value;
-
+    let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
+    assert!(response.tx_id.is_some());
+    let (counter, array) = response.value;
     assert_eq!(counter, 42);
     assert_eq!(array, [42; 2]);
     Ok(())
@@ -156,10 +149,13 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels::{tx::ConsensusParameters, types::coin::Coin};
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+    let chain_config = ChainConfig {
+        transaction_parameters: consensus_parameters_config,
+        ..ChainConfig::default()
+    };
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -170,9 +166,10 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
+    let (fuel_client, _, consensus_parameters) =
+        setup_test_client(coins, vec![], None, Some(chain_config)).await;
+    let provider = Provider::new(fuel_client, consensus_parameters);
+    assert_eq!(consensus_parameters, consensus_parameters_config);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(
@@ -226,6 +223,44 @@ async fn test_script_signing() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "hello");
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_output_variable_estimation() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "transfer_script",
+            project = "packages/fuels/tests/scripts/transfer_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "transfer_script",
+            wallet = "wallet"
+        )
+    );
+
+    let provider = wallet.try_provider()?.clone();
+    let mut receiver = WalletUnlocked::new_random(None);
+    receiver.set_provider(provider);
+
+    let amount = 1000;
+    let asset_id = ContractId::from(*BASE_ASSET_ID);
+    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+        .await?;
+    let _ = script_call
+        .with_inputs(inputs)
+        .estimate_tx_dependencies(None)
+        .await?
+        .call()
+        .await?;
+
+    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    assert_eq!(receiver_balance, amount);
 
     Ok(())
 }

@@ -57,7 +57,7 @@ mod tests {
             .set_asset_id(base_asset_id);
 
         contract_methods
-            .deposit(wallet.address().into())
+            .deposit(wallet.address())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
@@ -73,7 +73,7 @@ mod tests {
             .set_asset_id(lp_asset_id);
 
         contract_methods
-            .withdraw(wallet.address().into())
+            .withdraw(wallet.address())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
@@ -89,6 +89,7 @@ mod tests {
     async fn custom_chain() -> Result<()> {
         use fuels::prelude::*;
         // ANCHOR: custom_chain_import
+        use fuels::fuel_node::ChainConfig;
         use fuels::tx::ConsensusParameters;
         // ANCHOR_END: custom_chain_import
 
@@ -97,6 +98,10 @@ mod tests {
             .with_max_gas_per_tx(1000)
             .with_gas_price_factor(10)
             .with_max_inputs(2);
+        let chain_config = ChainConfig {
+            transaction_parameters: consensus_parameters_config,
+            ..ChainConfig::default()
+        };
         // ANCHOR_END: custom_chain_consensus
 
         // ANCHOR: custom_chain_coins
@@ -109,18 +114,11 @@ mod tests {
         );
         // ANCHOR_END: custom_chain_coins
 
-        // ANCHOR: custom_chain_client
+        // ANCHOR: custom_chain_provider
         let node_config = Config::local_node();
-        let (client, _) = setup_test_client(
-            coins,
-            vec![],
-            Some(node_config),
-            None,
-            Some(consensus_parameters_config),
-        )
-        .await;
-        let _provider = Provider::new(client);
-        // ANCHOR_END: custom_chain_client
+        let (_provider, _bound_address) =
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
+        // ANCHOR_END: custom_chain_provider
         Ok(())
     }
 
@@ -129,7 +127,6 @@ mod tests {
         use std::str::FromStr;
 
         use fuels::prelude::*;
-
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None);
@@ -184,6 +181,26 @@ mod tests {
             assert_eq!(balance, AMOUNT);
         }
         // ANCHOR_END: transfer_multiple_transaction
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
+    async fn create_or_use_rocksdb() -> Result<()> {
+        use fuels::prelude::*;
+        use std::path::PathBuf;
+
+        // ANCHOR: create_or_use_rocksdb
+        let provider_config = Config {
+            database_path: PathBuf::from("/tmp/.spider/db"),
+            database_type: DbType::RocksDb,
+            ..Config::local_node()
+        };
+        // ANCHOR_END: create_or_use_rocksdb
+
+        launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
+            .await;
 
         Ok(())
     }

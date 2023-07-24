@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.17.11
-  RUST_VERSION: 1.68.0
-  FORC_VERSION: 0.38.0
+  FUEL_CORE_VERSION: 0.19.1
+  RUST_VERSION: 1.70.0
+  FORC_VERSION: 0.40.1
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -161,14 +161,18 @@ jobs:
             args: --all-targets
             download_sway_artifacts: sway-examples
           - cargo_command: clippy
-            args: --all-targets --all-features
+            args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
-          - cargo_command: test
-            args: --all-targets --all-features --workspace
+          - cargo_command: nextest
+            args: run --all-targets --features "default fuel-core-lib test-type-paths" --workspace
             download_sway_artifacts: sway-examples-w-type-paths
-          - cargo_command: test
-            args: --all-targets --workspace
+            install_fuel_core: true
+          - cargo_command: nextest
+            args: run --all-targets --workspace
             download_sway_artifacts: sway-examples
+            install_fuel_core: true
+          - cargo_command: test
+            args: --doc --workspace
           - command: test_wasm
             args:
           - command: check_doc_anchors_valid
@@ -193,7 +197,7 @@ jobs:
           key: "${{ matrix.cargo_command }} ${{ matrix.args }} ${{ matrix.package }}"
 
       - name: Install Fuel Core
-        if: ${{ matrix.cargo_command == 'test' }}
+        if: ${{ matrix.install_fuel_core }}
         run: |
           curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
           tar -xvf fuel-core.tar.gz
@@ -206,6 +210,10 @@ jobs:
         with:
           name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
+
+      - name: Install nextest
+        if: ${{ matrix.cargo_command == 'nextest' }}
+        uses: taiki-e/install-action@nextest
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}

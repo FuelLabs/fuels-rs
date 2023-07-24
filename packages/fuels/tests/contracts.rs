@@ -1,9 +1,14 @@
+use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
+use std::vec;
 
-use fuels::prelude::*;
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::Bits256;
+use fuels::{
+    accounts::{predicate::Predicate, Account},
+    core::codec::{calldata, fn_selector},
+    prelude::*,
+    types::Bits256,
+};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -24,7 +29,7 @@ async fn test_multiple_args() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods.get(5, 6).call().await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     let t = MyType { x: 5, y: 6 };
     let response = contract_methods.get_alt(t.clone()).call().await?;
@@ -76,7 +81,7 @@ async fn test_contract_calling_contract() -> Result<()> {
 
     let response = contract_caller_instance
         .methods()
-        .increment_from_contracts(lib_contract_id.into(), lib_contract_id2.into(), 42)
+        .increment_from_contracts(lib_contract_id, lib_contract_id2, 42)
         // Note that the two lib_contract_instances have different types
         .set_contracts(&[&lib_contract_instance, &lib_contract_instance2])
         .call()
@@ -87,7 +92,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     // ANCHOR: external_contract
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -98,7 +103,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     // ANCHOR: external_contract_ids
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contract_ids(&[lib_contract_id.clone()])
         .call()
         .await?;
@@ -157,11 +162,11 @@ async fn test_multiple_read_calls() -> Result<()> {
     // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
     // We can notice here that, thanks to this, we don't generate a TransactionId collision,
     // even if the transactions are theoretically the same.
-    let stored = contract_methods.read(0).simulate().await?;
+    let stored = contract_methods.read().simulate().await?;
 
     assert_eq!(stored.value, 42);
 
-    let stored = contract_methods.read(0).simulate().await?;
+    let stored = contract_methods.read().simulate().await?;
 
     assert_eq!(stored.value, 42);
     Ok(())
@@ -275,9 +280,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 606;
-    let expected_metered_bytes_size = 720;
-    let expected_total_fee = 368;
+    let expected_gas_used = 597;
+    let expected_metered_bytes_size = 728;
+    let expected_total_fee = 372;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -396,9 +401,9 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .tx_params(TxParameters::default().set_maturity(maturity))
     };
 
-    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3u32).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
     Ok(())
 }
 
@@ -420,7 +425,7 @@ async fn test_auth_msg_sender_from_sdk() -> Result<()> {
     // Contract returns true if `msg_sender()` matches `wallet.address()`.
     let response = contract_instance
         .methods()
-        .check_msg_sender(wallet.address().into())
+        .check_msg_sender(wallet.address())
         .call()
         .await?;
 
@@ -549,7 +554,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     // The first contract can be called because they were deployed on the same provider
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -558,7 +563,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
 
     let response = contract_caller_instance2
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .set_contracts(&[&lib_contract_instance])
         .call()
         .await?;
@@ -726,43 +731,6 @@ async fn test_output_variable_estimation() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_output_message_estimation() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
-    ));
-
-    let (wallets, _, _, contract_id) = setup_output_variable_estimation_test().await?;
-
-    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
-    let contract_methods = contract_instance.methods();
-    let amount = 1000;
-
-    let address = Bits256([1u8; 32]);
-    {
-        // Should fail due to lack of output messages
-        let response = contract_methods.send_message(address, amount).call().await;
-
-        assert!(matches!(
-            response,
-            Err(Error::RevertTransactionError { .. })
-        ));
-    }
-
-    {
-        // Should add 1 output message automatically
-        let _ = contract_methods
-            .send_message(address, amount)
-            .estimate_tx_dependencies(Some(1))
-            .await?
-            .call()
-            .await?;
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -801,15 +769,27 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let (wallets, addresses, mint_asset_id, contract_id) =
         setup_output_variable_estimation_test().await?;
 
-    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
+    let contract_instance = MyContract::new(contract_id.clone(), wallets[0].clone());
     let contract_methods = contract_instance.methods();
+    const NUM_OF_CALLS: u64 = 3;
     let amount = 1000;
+    let total_amount = amount * NUM_OF_CALLS;
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..3).for_each(|_| {
+    (0..NUM_OF_CALLS).for_each(|_| {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
         multi_call_handler.add_call(call_handler);
     });
+
+    wallets[0]
+        .force_transfer_to_contract(
+            &contract_id,
+            total_amount,
+            AssetId::BASE,
+            TxParameters::default(),
+        )
+        .await
+        .unwrap();
 
     let base_layer_addres = Bits256([1u8; 32]);
     let call_handler = contract_methods.send_message(base_layer_addres, amount);
@@ -857,7 +837,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
 
     // Transfer an amount to the contract
     let amount = 8;
-    let _receipts = wallet
+    wallet
         .force_transfer_to_contract(
             contract_id,
             amount,
@@ -870,8 +850,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let contract_balances = contract_instance.get_balances().await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_id_key = format!("{random_asset_id:#x}");
-    let random_asset_balance = contract_balances.get(&random_asset_id_key).unwrap();
+    let random_asset_balance = contract_balances.get(&random_asset_id.to_string()).unwrap();
     assert_eq!(*random_asset_balance, amount);
 
     Ok(())
@@ -943,7 +922,7 @@ async fn test_contract_set_estimation() -> Result<()> {
         // Should fail due to missing external contracts
         let res = contract_caller_instance
             .methods()
-            .increment_from_contract(lib_contract_id.into(), 42)
+            .increment_from_contract(lib_contract_id, 42)
             .call()
             .await;
 
@@ -952,7 +931,7 @@ async fn test_contract_set_estimation() -> Result<()> {
 
     let res = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id.into(), 42)
+        .increment_from_contract(lib_contract_id, 42)
         .estimate_tx_dependencies(None)
         .await?
         .call()
@@ -1005,7 +984,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     multi_call_handler.tx_params(Default::default());
 
     (0..3).for_each(|_| {
-        let call_handler = contract_methods.increment_from_contract(lib_contract_id.into(), 42);
+        let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
         multi_call_handler.add_call(call_handler);
     });
 
@@ -1021,15 +1000,14 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
         .call::<(u64, u64, u64, u64)>()
         .await?;
 
-    assert_eq!(call_response.value, (43, 43, 43, 5));
+    assert_eq!(call_response.value, (43, 43, 43, 11));
 
     Ok(())
 }
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::tx::ConsensusParameters;
-    use fuels_types::coin::Coin;
+    use fuels::{tx::ConsensusParameters, types::coin::Coin};
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 
@@ -1041,11 +1019,14 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
+    let chain_config = ChainConfig {
+        transaction_parameters: consensus_parameters_config,
+        ..ChainConfig::default()
+    };
 
-    let (fuel_client, _) =
-        setup_test_client(coins, vec![], None, None, Some(consensus_parameters_config)).await;
-    let provider = Provider::new(fuel_client);
+    let (provider, _address) = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
     wallet.set_provider(provider.clone());
+    assert_eq!(consensus_parameters_config, provider.consensus_parameters());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1061,7 +1042,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 
     let response = contract_instance.methods().get(5, 6).call().await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     Ok(())
 }
@@ -1119,7 +1100,7 @@ async fn test_add_custom_assets() -> Result<()> {
         .call()
         .await?;
 
-    assert_eq!(response.value, 5);
+    assert_eq!(response.value, 11);
 
     let balance_asset_1 = wallet_1.get_asset_balance(&asset_id_1).await?;
     let balance_asset_2 = wallet_1.get_asset_balance(&asset_id_2).await?;

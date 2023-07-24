@@ -1,10 +1,14 @@
 use fuel_tx::Output;
 use fuels::{
+    accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, AssetId},
+    types::{
+        coin::Coin,
+        message::Message,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        AssetId,
+    },
 };
-use fuels_accounts::{predicate::Predicate, Account};
-use fuels_types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -24,6 +28,7 @@ fn get_test_coins_and_messages(
     num_coins: u64,
     num_messages: u64,
     amount: u64,
+    start_nonce: u64,
 ) -> (Vec<Coin>, Vec<Message>, AssetId) {
     let asset_id = AssetId::default();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
@@ -33,8 +38,8 @@ fn get_test_coins_and_messages(
                 &Bech32Address::default(),
                 address,
                 amount,
-                i,
-                [104, 97, 108, 51, 101].to_vec(),
+                (start_nonce + i).into(),
+                vec![],
             )
         })
         .collect();
@@ -58,7 +63,7 @@ async fn setup_predicate_test(
     let mut receiver = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =
-        get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount);
+        get_test_coins_and_messages(predicate_address, num_coins, num_messages, amount, 0);
 
     coins.extend(setup_single_asset_coins(
         receiver.address(),
@@ -74,7 +79,11 @@ async fn setup_predicate_test(
         amount,
     ));
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -96,7 +105,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let (coins, messages, asset_id) =
-        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount);
+        get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
 
     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
 
@@ -231,7 +240,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(12, 30, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -280,7 +289,7 @@ async fn predicate_contract_transfer() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -309,7 +318,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     assert!(contract_balances.is_empty());
 
     let amount = 300;
-    let (_tx_id, _receipts) = predicate
+    predicate
         .force_transfer_to_contract(
             &contract_id,
             amount,
@@ -325,7 +334,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     assert_eq!(contract_balances.len(), 1);
 
     let random_asset_balance = contract_balances
-        .get(format!("{:#?}", AssetId::default()).as_str())
+        .get(&AssetId::default().to_string())
         .unwrap();
     assert_eq!(*random_asset_balance, 300);
 
@@ -344,7 +353,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(22, 20, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -369,9 +378,12 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
         .await?;
 
+    // Create the next commit block to be able generate the proof
+    provider.produce_blocks(1, None).await?;
+
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id)
+        .get_message_proof(&tx_id, &msg_id, None, Some(2))
         .await?
         .expect("Failed to retrieve message proof.");
 
@@ -388,7 +400,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -411,12 +423,14 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         predicate_num_coins,
         predicate_num_messages,
         predicate_amount,
+        0,
     );
     let (wallet_coins, wallet_messages, _) = get_test_coins_and_messages(
         wallet.address(),
         wallet_num_coins,
         wallet_num_messages,
         wallet_amount,
+        predicate_num_messages,
     );
 
     coins.extend(wallet_coins);
@@ -436,7 +450,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
-    let params = provider.consensus_parameters().await?;
+    let params = provider.consensus_parameters();
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
         .set_consensus_parameters(params)
         .build()?;
@@ -472,7 +486,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(22, 20, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
@@ -549,7 +563,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         )
     );
 
-    let predicate_data = MyPredicateEncoder::encode_data(2, 4, vec![2, 4, 42]);
+    let predicate_data = MyPredicateEncoder::encode_data(28, 14, vec![2, 4, 42]);
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",

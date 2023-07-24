@@ -13,3 +13,7 @@ description = "Fuel Rust SDK cookbook examples."
 fuels = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+
+[features]
+rocksdb = ["fuels/rocksdb"]
+fuel-core-lib = ["fuels/fuel-core-lib"]

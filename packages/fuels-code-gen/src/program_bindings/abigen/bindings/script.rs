@@ -4,7 +4,6 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullProgramABI,
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constants,
@@ -14,6 +13,8 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::FullProgramABI;
 
 pub(crate) fn script_bindings(
     name: &Ident,
@@ -67,6 +68,10 @@ pub(crate) fn script_bindings(
                 self
             }
 
+            pub fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+                self.log_decoder.clone()
+            }
+
             #main_function
         }
 
@@ -88,7 +93,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let encoded_args = ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
+            let encoded_args = ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(

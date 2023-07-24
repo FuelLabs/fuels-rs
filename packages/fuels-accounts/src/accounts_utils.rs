@@ -1,11 +1,11 @@
 use fuel_tx::{ConsensusParameters, Output, Receipt};
 use fuel_types::MessageId;
-use fuels_types::{
-    bech32::Bech32Address, constants::BASE_ASSET_ID, input::Input,
-    transaction_builders::TransactionBuilder,
+use fuels_core::{
+    constants::BASE_ASSET_ID,
+    types::{bech32::Bech32Address, input::Input, transaction_builders::TransactionBuilder},
 };
 
-pub fn extract_message_id(receipts: &[Receipt]) -> Option<&MessageId> {
+pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
     receipts.iter().find_map(|m| m.message_id())
 }
 
@@ -18,7 +18,7 @@ pub fn calculate_base_amount_with_fee(
         .fee_checked_from_tx(consensus_params)
         .expect("Error calculating TransactionFee");
 
-    let mut new_base_amount = transaction_fee.total() + previous_base_amount;
+    let mut new_base_amount = transaction_fee.max_fee() + previous_base_amount;
 
     // If the tx doesn't consume any UTXOs, attempting to repeat it will lead to an
     // error due to non unique tx ids (e.g. repeated contract call with configured gas cost of 0).

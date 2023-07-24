@@ -4,7 +4,6 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        abi_types::FullProgramABI,
         abigen::{
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constants,
@@ -13,6 +12,8 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
+
+use fuel_abi_types::abi::full_program::FullProgramABI;
 
 pub(crate) fn predicate_bindings(
     name: &Ident,
@@ -55,7 +56,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
 
     let body = quote! {
-        ::fuels::core::abi_encoder::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data")
+        ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data")
     };
 
     generator

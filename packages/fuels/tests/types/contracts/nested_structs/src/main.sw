@@ -15,6 +15,7 @@ pub struct CallData {
     amount_of_gas_to_forward: u64,
 }
 
+#[allow(dead_code)]
 struct MemoryAddress {
     contract_id: ContractId,
     function_selector: u64,

@@ -1,18 +1,12 @@
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
-use fuel_abi_types::error_codes::{FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL};
 use fuel_tx::{
-    Address, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt,
-    StorageSlot,
+    AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
-use fuel_vm::fuel_asm::PanicReason;
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::{abi_encoder::ABIEncoder, Configurables};
-use fuels_types::{
-    bech32::{Bech32Address, Bech32ContractId},
+use fuels_core::{
+    codec::ABIEncoder,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
-    errors::{error, Error, Result},
-    param_types::ParamType,
     traits::{Parameterize, Tokenizable},
     transaction::{ScriptTransaction, Transaction, TxParameters},
     transaction_builders::CreateTransactionBuilder,
@@ -23,7 +17,7 @@ use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::build_tx_from_contract_calls,
+    call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
@@ -81,9 +75,6 @@ impl Default for CallParameters {
         }
     }
 }
-
-/// How many times to attempt to resolve missing tx dependencies.
-pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
 // Trait implemented by contract instances so that
 // they can be passed to the `set_contracts` method
@@ -253,12 +244,6 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        let chain_info = provider.chain_info().await?;
-
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &chain_info.consensus_parameters,
-        )?;
         provider.send_transaction(&tx).await?;
 
         Ok(self.contract_id.into())
@@ -309,8 +294,7 @@ pub struct ContractCall {
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
-    pub variable_outputs: Option<Vec<Output>>,
-    pub message_outputs: Option<Vec<Output>>,
+    pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
@@ -337,14 +321,7 @@ impl ContractCall {
 
     pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
         ContractCall {
-            variable_outputs: Some(variable_outputs),
-            ..self
-        }
-    }
-
-    pub fn with_message_outputs(self, message_outputs: Vec<Output>) -> ContractCall {
-        ContractCall {
-            message_outputs: Some(message_outputs),
+            variable_outputs,
             ..self
         }
     }
@@ -357,56 +334,12 @@ impl ContractCall {
     }
 
     pub fn append_variable_outputs(&mut self, num: u64) {
-        let new_variable_outputs = vec![
-            Output::Variable {
-                amount: 0,
-                to: Address::zeroed(),
-                asset_id: AssetId::default(),
-            };
-            num as usize
-        ];
-
-        match self.variable_outputs {
-            Some(ref mut outputs) => outputs.extend(new_variable_outputs),
-            None => self.variable_outputs = Some(new_variable_outputs),
-        }
+        self.variable_outputs
+            .extend(new_variable_outputs(num as usize));
     }
 
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
         self.external_contracts.push(contract_id)
-    }
-
-    pub fn append_message_outputs(&mut self, num: u64) {
-        let new_message_outputs = vec![
-            Output::Message {
-                recipient: Address::zeroed(),
-                amount: 0,
-            };
-            num as usize
-        ];
-
-        match self.message_outputs {
-            Some(ref mut outputs) => outputs.extend(new_message_outputs),
-            None => self.message_outputs = Some(new_message_outputs),
-        }
-    }
-
-    fn is_missing_output_variables(receipts: &[Receipt]) -> bool {
-        receipts.iter().any(
-            |r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_TRANSFER_TO_ADDRESS_SIGNAL),
-        )
-    }
-
-    fn is_missing_message_output(receipts: &[Receipt]) -> bool {
-        receipts
-            .iter()
-            .any(|r| matches!(r, Receipt::Revert { ra, .. } if *ra == FAILED_SEND_MESSAGE_SIGNAL))
-    }
-
-    fn find_contract_not_in_inputs(receipts: &[Receipt]) -> Option<&Receipt> {
-        receipts.iter().find(
-            |r| matches!(r, Receipt::Panic { reason, .. } if *reason.reason() == PanicReason::ContractNotInInputs ),
-        )
     }
 
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
@@ -420,6 +353,8 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
@@ -428,7 +363,7 @@ pub struct ContractCallHandler<T: Account, D> {
 impl<T, D> ContractCallHandler<T, D>
 where
     T: Account,
-    D: Tokenizable + Debug,
+    D: Tokenizable + Parameterize + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
@@ -487,23 +422,6 @@ where
         self
     }
 
-    /// Appends additional external contracts as dependencies to this contract's
-    /// call. Effectively, this will be used to create additional
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).append_contracts(additional_contract_id).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_call.append_external_contracts(contract_id);
-        self
-    }
-
     pub fn is_payable(&self) -> bool {
         self.contract_call.is_payable
     }
@@ -535,32 +453,6 @@ where
         Ok(self)
     }
 
-    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).add_variable_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Variable`]: fuel_tx::Output::Variable
-    pub fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_variable_outputs(num);
-        self
-    }
-
-    /// Appends `num` [`fuel_tx::Output::Message`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).add_message_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Message`]: fuel_tx::Output::Message
-    pub fn append_message_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_message_outputs(num);
-        self
-    }
-
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
@@ -572,7 +464,7 @@ where
     }
 
     /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(self) -> Result<FuelCallResponse<D>> {
+    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -581,15 +473,18 @@ where
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
-    pub async fn simulate(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    async fn call_or_simulate(&self, simulate: bool) -> Result<FuelCallResponse<D>> {
+    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
+
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -598,45 +493,6 @@ where
         };
 
         self.get_response(receipts)
-    }
-
-    /// Simulates the call and attempts to resolve missing tx dependencies.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
-
-        for _ in 0..attempts {
-            match self.simulate().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_deps(receipts);
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        self.simulate().await.map(|_| self)
-    }
-
-    fn append_missing_deps(mut self, receipts: &[Receipt]) -> Self {
-        if ContractCall::is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1)
-        }
-        if ContractCall::is_missing_message_output(receipts) {
-            self = self.append_message_outputs(1);
-        }
-        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self = self.append_contract(contract_id);
-        }
-
-        self
     }
 
     /// Get a contract's estimated cost
@@ -664,6 +520,7 @@ where
             D::from_token(token)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         ))
     }
 
@@ -674,6 +531,28 @@ where
         payload.extend(&self.contract_call.encoded_args.resolve(0));
 
         Bytes(payload)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
+where
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
+{
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate().await?;
+        Ok(())
+    }
+
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.contract_call.append_variable_outputs(num);
+        self
+    }
+
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_call.append_external_contracts(contract_id);
+        self
     }
 }
 
@@ -718,8 +597,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         encoded_args: unresolved_bytes,
         call_parameters,
         compute_custom_input_offset,
-        variable_outputs: None,
-        message_outputs: None,
+        variable_outputs: vec![],
         external_contracts: vec![],
         output_param: D::param_type(),
         is_payable,
@@ -729,6 +607,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     Ok(ContractCallHandler {
         contract_call,
         tx_parameters,
+        cached_tx_id: None,
         account,
         datatype: PhantomData,
         log_decoder,
@@ -751,8 +630,10 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
                     | Token::Struct(_)
                     | Token::Tuple(_)
                     | Token::U128(_)
+                    | Token::U256(_)
                     | Token::Vector(_)
-                    | Token::String(_)
+                    | Token::StringArray(_)
+                    | Token::StringSlice(_)
             )
         })
 }
@@ -764,6 +645,8 @@ pub struct MultiContractCallHandler<T: Account> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
     pub tx_parameters: TxParameters,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
+    cached_tx_id: Option<Bytes32>,
     pub account: T,
 }
 
@@ -772,6 +655,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         Self {
             contract_calls: vec![],
             tx_parameters: TxParameters::default(),
+            cached_tx_id: None,
             account,
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
@@ -807,7 +691,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
@@ -818,18 +702,20 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
     /// [call]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
-        &self,
+        &mut self,
         simulate: bool,
     ) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
@@ -848,58 +734,6 @@ impl<T: Account> MultiContractCallHandler<T> {
         provider.checked_dry_run(&tx).await?;
 
         Ok(())
-    }
-
-    /// Simulates the call and attempts to resolve missing tx dependencies.
-    /// Forwards the received error if it cannot be fixed.
-    pub async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
-
-        for _ in 0..attempts {
-            match self.simulate_without_decode().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::RevertTransactionError { ref receipts, .. }) => {
-                    self = self.append_missing_dependencies(receipts);
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        Ok(self)
-    }
-
-    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
-        // Append to any call, they will be merged to a single script tx
-        // At least 1 call should exist at this point, otherwise simulate would have failed
-        if ContractCall::is_missing_output_variables(receipts) {
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_variable_outputs(1));
-        }
-
-        if ContractCall::is_missing_message_output(receipts) {
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_message_outputs(1));
-        }
-
-        if let Some(panic_receipt) = ContractCall::find_contract_not_in_inputs(receipts) {
-            let contract_id = Bech32ContractId::from(
-                *panic_receipt
-                    .contract_id()
-                    .expect("Panic receipt must contain contract id."),
-            );
-            self.contract_calls
-                .iter_mut()
-                .take(1)
-                .for_each(|call| call.append_external_contracts(contract_id.clone()));
-        }
-
-        self
     }
 
     /// Get a contract's estimated cost
@@ -936,8 +770,37 @@ impl<T: Account> MultiContractCallHandler<T> {
             D::from_token(tokens_as_tuple)?,
             receipts,
             self.log_decoder.clone(),
+            self.cached_tx_id,
         );
 
         Ok(response)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T> TxDependencyExtension for MultiContractCallHandler<T>
+where
+    T: Account,
+{
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate_without_decode().await?;
+        Ok(())
+    }
+
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.contract_calls
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_variable_outputs(num));
+
+        self
+    }
+
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.contract_calls
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+        self
     }
 }

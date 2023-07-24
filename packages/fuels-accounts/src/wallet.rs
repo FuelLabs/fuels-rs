@@ -5,20 +5,22 @@ use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuel_tx::{AssetId, Witness};
-use fuels_types::{
-    bech32::{Bech32Address, FUEL_BECH32_HRP},
+use fuels_core::{
     constants::BASE_ASSET_ID,
-    errors::{Error, Result},
-    input::Input,
-    transaction::Transaction,
-    transaction_builders::TransactionBuilder,
+    types::{
+        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        errors::{Error, Result},
+        input::Input,
+        transaction::Transaction,
+        transaction_builders::TransactionBuilder,
+    },
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
+    provider::{Provider, ProviderError},
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
@@ -38,6 +40,10 @@ pub enum WalletError {
     KeystoreError(#[from] KeystoreError),
     #[error(transparent)]
     FuelCrypto(#[from] fuel_crypto::Error),
+    #[error(transparent)]
+    ProviderError(#[from] ProviderError),
+    #[error("Called `try_provider` method on wallet where no provider was set up")]
+    NoProviderError,
 }
 
 impl From<WalletError> for Error {
@@ -111,10 +117,6 @@ impl ViewOnlyAccount for Wallet {
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
     }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
-        self.set_provider(provider)
-    }
 }
 
 impl WalletUnlocked {
@@ -182,7 +184,8 @@ impl WalletUnlocked {
     {
         let (secret, uuid) = eth_keystore::new(dir, rng, password, None)?;
 
-        let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
+        let secret_key =
+            SecretKey::try_from(secret.as_slice()).expect("A new secret should be correct size");
 
         let wallet = Self::new_from_private_key(secret_key, provider);
 
@@ -218,7 +221,8 @@ impl WalletUnlocked {
         S: AsRef<[u8]>,
     {
         let secret = eth_keystore::decrypt_key(keypath, password)?;
-        let secret_key = unsafe { SecretKey::from_slice_unchecked(&secret) };
+        let secret_key = SecretKey::try_from(secret.as_slice())
+            .expect("Decrypted key should have a correct size");
         Ok(Self::new_from_private_key(secret_key, provider))
     }
 }
@@ -230,11 +234,6 @@ impl ViewOnlyAccount for WalletUnlocked {
 
     fn try_provider(&self) -> AccountResult<&Provider> {
         self.provider.as_ref().ok_or(AccountError::no_provider())
-    }
-
-    fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        self.wallet.set_provider(provider);
-        self
     }
 }
 
@@ -264,11 +263,7 @@ impl Account for WalletUnlocked {
         previous_base_amount: u64,
         witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
-        let consensus_parameters = self
-            .try_provider()?
-            .chain_info()
-            .await?
-            .consensus_parameters;
+        let consensus_parameters = self.try_provider()?.consensus_parameters();
         tb = tb.set_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
@@ -303,14 +298,13 @@ impl Signer for WalletUnlocked {
     }
 
     fn sign_transaction(&self, tx: &mut impl Transaction) -> WalletResult<Signature> {
-        let id = tx.id();
+        let consensus_parameters = self
+            .try_provider()
+            .map_err(|_| WalletError::NoProviderError)?
+            .consensus_parameters();
+        let id = tx.id(consensus_parameters.chain_id.into());
 
-        // Safety: `Message::from_bytes_unchecked` is unsafe because
-        // it can't guarantee that the provided bytes will be the product
-        // of a cryptographically secure hash. However, the bytes are
-        // coming from `tx.id()`, which already uses `Hasher::hash()`
-        // to hash it using a secure hash mechanism.
-        let message = unsafe { Message::from_bytes_unchecked(*id) };
+        let message = Message::from_bytes(*id);
         let sig = Signature::sign(&self.private_key, &message);
 
         let witness = vec![Witness::from(sig.as_ref())];
@@ -346,9 +340,7 @@ impl ops::Deref for WalletUnlocked {
 /// Generates a random mnemonic phrase given a random number generator and the number of words to
 /// generate, `count`.
 pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> WalletResult<String> {
-    Ok(fuel_crypto::FuelMnemonic::generate_mnemonic_phrase(
-        rng, count,
-    )?)
+    Ok(fuel_crypto::generate_mnemonic_phrase(rng, count)?)
 }
 
 #[cfg(test)]

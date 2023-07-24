@@ -1,14 +1,15 @@
 use std::fmt::{Display, Formatter};
 
-use fuel_abi_types::utils::{
-    extract_array_len, extract_generic_name, extract_str_len, has_tuple_format,
+use fuel_abi_types::{
+    abi::full_program::FullTypeApplication,
+    utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
 use crate::{
     error::{error, Result},
-    program_bindings::{abi_types::FullTypeApplication, utils::sdk_provided_custom_types_lookup},
+    program_bindings::utils::sdk_provided_custom_types_lookup,
     utils::{safe_ident, TypePath},
 };
 
@@ -73,6 +74,7 @@ impl TypeResolver {
             Self::to_generic,
             Self::to_array,
             Self::to_sized_ascii_string,
+            Self::to_ascii_string,
             Self::to_tuple,
             Self::to_bytes,
             Self::to_raw_slice,
@@ -164,6 +166,20 @@ impl TypeResolver {
         }))
     }
 
+    fn to_ascii_string(
+        &self,
+        type_application: &FullTypeApplication,
+    ) -> Result<Option<ResolvedType>> {
+        if type_application.type_decl.type_field == "str" {
+            Ok(Some(ResolvedType {
+                type_name: quote! { ::fuels::types::AsciiString },
+                generic_params: vec![],
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn to_tuple(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
         let type_decl = &type_application.type_decl;
         if !has_tuple_format(&type_decl.type_field) {
@@ -251,10 +267,12 @@ impl TypeResolver {
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::program_abi::{TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullTypeDeclaration,
+        program::{TypeApplication, TypeDeclaration},
+    };
 
     use super::*;
-    use crate::program_bindings::abi_types::FullTypeDeclaration;
 
     fn test_resolve_first_type(
         expected: &str,
@@ -409,6 +427,69 @@ mod tests {
                 TypeDeclaration {
                     type_id: 5,
                     type_field: "u8".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_bytes() -> Result<()> {
+        test_resolve_first_type(
+            ":: fuels :: types :: Bytes",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct String".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "bytes".to_string(),
+                        type_id: 1,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct std::bytes::Bytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "buf".to_string(),
+                            type_id: 1,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "len".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "struct std::bytes::RawBytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "ptr".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "cap".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "raw untyped ptr".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "u64".to_string(),
                     ..Default::default()
                 },
             ],
