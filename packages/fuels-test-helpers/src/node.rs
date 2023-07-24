@@ -12,11 +12,13 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_types::BlockHeight;
 use fuel_types::Word;
-use fuel_vm::consts::WORD_SIZE;
-use fuels_core::types::{
-    coin::Coin,
-    errors::{error, Error},
-    message::Message,
+use fuels_core::{
+    constants::WORD_SIZE,
+    types::{
+        coin::Coin,
+        errors::{error, Error},
+        message::Message,
+    },
 };
 use portpicker::{is_free, pick_unused_port};
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
