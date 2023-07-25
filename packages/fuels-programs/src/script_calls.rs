@@ -1,4 +1,3 @@
-use std::time::Duration;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{Bytes32, ContractId, Output, Receipt};
@@ -7,7 +6,6 @@ use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_core::types::errors::Error::ProviderError;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
@@ -22,9 +20,8 @@ use fuels_core::{
     },
 };
 use itertools::chain;
-use tokio::time::sleep;
 
-use crate::call_utils::RetryOptions;
+use crate::retry::{retry, RetryOptions};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
@@ -45,6 +42,19 @@ pub struct ScriptCall {
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub variable_outputs: Vec<Output>,
+}
+
+impl Clone for ScriptCall {
+    fn clone(&self) -> Self {
+        ScriptCall {
+            script_binary: self.script_binary.clone(),
+            encoded_args: self.encoded_args.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            external_contracts: self.external_contracts.clone(),
+            variable_outputs: self.variable_outputs.clone(),
+        }
+    }
 }
 
 impl ScriptCall {
@@ -87,7 +97,22 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_options: RetryOptions,
+    pub retry_options: Option<RetryOptions>,
+}
+
+impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
+    fn clone(&self) -> Self {
+        ScriptCallHandler {
+            script_call: self.script_call.clone(),
+            tx_parameters: self.tx_parameters,
+            cached_tx_id: self.cached_tx_id,
+            account: self.account.clone(),
+            provider: self.provider.clone(),
+            datatype: self.datatype,
+            log_decoder: self.log_decoder.clone(),
+            retry_options: self.retry_options.clone(),
+        }
+    }
 }
 
 impl<T: Account, D> ScriptCallHandler<T, D>
@@ -117,12 +142,12 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
-            retry_options: Default::default(),
+            retry_options: None,
         }
     }
 
     pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
-        self.retry_options = retry_options;
+        self.retry_options = Some(retry_options);
         self
     }
 
@@ -244,29 +269,36 @@ where
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
+        if self.retry_options.is_some() {
+            retry(
+                || async { self.clone().call_or_simulate(false).await },
+                self.retry_options.as_ref().unwrap(),
+            )
             .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
-    }
-
-    pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
-        let mut delay = Duration::from_secs(1);
-
-        for _ in 0..self.retry_options.max_attempts {
-            match self.call_or_simulate(false).await {
-                Ok(response) => return Ok(response),
-                Err(ProviderError(description))
-                    if description.starts_with("Client request error") =>
-                {
-                    sleep(delay).await;
-                    delay *= 2;
-                }
-                Err(error) => return Err(error),
-            }
+        } else {
+            self.call_or_simulate(false).await
         }
-
-        self.call().await
+        .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
+
+    // pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
+    //     let mut delay = Duration::from_secs(1);
+    //
+    //     for _ in 0..self.retry_options.max_attempts.into() {
+    //         match self.call_or_simulate(false).await {
+    //             Ok(response) => return Ok(response),
+    //             Err(ProviderError(description))
+    //                 if description.starts_with("Client request error") =>
+    //             {
+    //                 sleep(delay).await;
+    //                 delay *= 2;
+    //             }
+    //             Err(error) => return Err(error),
+    //         }
+    //     }
+    //
+    //     self.call().await
+    // }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.

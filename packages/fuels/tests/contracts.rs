@@ -1,6 +1,8 @@
 use fuel_core::chain_config::ChainConfig;
+use fuel_core::service::ServiceTrait;
 #[allow(unused_imports)]
 use std::future::Future;
+use std::time::Duration;
 use std::vec;
 
 use fuels::{
@@ -9,6 +11,8 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
+use fuels_core::types::coin::Coin;
+use fuels_programs::retry::RetryOptions;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1444,97 +1448,79 @@ fn db_rocksdb() {
 
 #[tokio::test]
 async fn test_retry_mechanism() -> Result<()> {
-    // setup_program_test!(Abigen(Contract(
-    //     name = "TestContract",
-    //     project = "packages/fuels/tests/contracts/contract_test"
-    // )),);
-    //
-    // let mut wallet = WalletUnlocked::new_random(None);
-    //
-    // let number_of_assets = 2;
-    // let coins_per_asset = 2;
-    // let amount_per_coin = 2;
-    // //
-    // let (coins, asset_ids) = setup_multiple_assets_coins(
-    //     wallet.address(),
-    //     number_of_assets,
-    //     coins_per_asset,
-    //     amount_per_coin,
-    // );
-    //
-    // let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
+    setup_program_test!(Abigen(Contract(
+        name = "TestContract",
+        project = "packages/fuels/tests/contracts/contract_test"
+    )),);
 
-    // Error: ProviderError("Account error: No provider was setup: make sure to set_provider in your account!")
-    // Error: ProviderError("Provider error: Response errors; not enough coins to fit the target")
-    // ProviderError::ClientRequestError
+    let mut wallet = WalletUnlocked::new_random(None);
 
-    // wallet.set_provider(provider);
+    let number_of_assets = 2;
+    let coins_per_asset = 2;
+    let amount_per_coin = 2;
+    //
+    let (coins, _) = setup_multiple_assets_coins(
+        wallet.address(),
+        number_of_assets,
+        coins_per_asset,
+        amount_per_coin,
+    );
 
-    // let contract_id = Contract::load_from(
-    //     "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-    //     LoadConfiguration::default(),
-    // )?
-    //     .deploy(&wallet, TxParameters::default())
-    //     .await?;
+    pub fn into_coin_configs(coins: Vec<Coin>) -> Vec<fuel_core::chain_config::CoinConfig> {
+        coins
+            .into_iter()
+            .map(Into::into)
+            .collect::<Vec<fuel_core::chain_config::CoinConfig>>()
+    }
 
-    // let contract_instance = TestContract::new(contract_id, wallet);
-    // let contract_methods = contract_instance.methods();
-    // let _response = contract_methods.get(5, 6).call_with_retry(None).await?;
+    let mut _config = Config::local_node();
+    let coin_configs = into_coin_configs(coins);
 
-    // pub fn into_coin_configs(coins: Vec<Coin>) -> Vec<fuel_core::chain_config::CoinConfig> {
-    //     coins
-    //         .into_iter()
-    //         .map(Into::into)
-    //         .collect::<Vec<fuel_core::chain_config::CoinConfig>>()
-    // }
-    //
-    // let mut _config = Config::local_node();
-    // let coin_configs = into_coin_configs(coins);
-    //
-    // let mut state_config = fuel_core::chain_config::StateConfig::default();
-    // state_config.coins = Some(coin_configs);
-    //
-    // let mut config = Config::local_node();
-    // config.chain_conf.initial_state = Some(state_config);
-    //
-    // let service = FuelService::new_node(config)
-    //     .await
-    //     .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
-    //
-    // let provider = Provider::connect(service.bound_address.to_string()).await?;
-    //
-    // wallet.set_provider(provider);
-    //
-    // let contract_id = Contract::load_from(
-    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
-    //     LoadConfiguration::default(),
-    // )?
-    // .deploy(&wallet, TxParameters::default())
-    // .await?;
-    //
-    // service.stop_and_await().await.unwrap();
-    //
-    // async fn example_callback(x: usize) {
-    //     println!("Callback function executed! {x}");
-    // }
-    //
-    // let retry_options = RetryOptions::new(0);
-    //
-    // let contract_instance = TestContract::new(contract_id, wallet);
-    //
-    // let contract_methods = contract_instance.methods();
-    //
-    // // let retry_options = RetryOptions::new(2, |x, | Box::pin(
-    // //     example_callback(x)
-    // // ));
-    //
-    // let _response = contract_methods
-    //     .get(5, 6)
-    //     .set_retry_options(retry_options)
-    //     .call_with_retry()
-    //     .await?;
-    //
-    // assert!(false);
+    let state_config = fuel_core::chain_config::StateConfig {
+        coins: Some(coin_configs),
+        ..Default::default()
+    };
+
+    let mut config = Config::local_node();
+    config.chain_conf.initial_state = Some(state_config);
+
+    let service = FuelService::new_node(config)
+        .await
+        .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
+
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
+
+    wallet.set_provider(provider);
+
+    let contract_id = Contract::load_from(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
+
+    service.stop_and_await().await.unwrap();
+
+    let retry_options = RetryOptions::new(3.try_into().unwrap(), Duration::from_millis(10))
+        .set_retry_on(|err| {
+            if err
+                .to_string()
+                .contains("Provider error: Client request error:")
+            {
+                return true;
+            }
+            false
+        });
+
+    let contract_instance = TestContract::new(contract_id, wallet);
+
+    let contract_methods = contract_instance.methods();
+
+    let _response = contract_methods
+        .get(5, 6)
+        .set_retry_options(retry_options)
+        .call()
+        .await;
 
     Ok(())
 }

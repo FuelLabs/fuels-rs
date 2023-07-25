@@ -1,11 +1,9 @@
-use std::time::Duration;
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::types::errors::Error::ProviderError;
 use fuels_core::{
     codec::ABIEncoder,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -22,9 +20,8 @@ use fuels_core::{
     Configurables,
 };
 use itertools::Itertools;
-use tokio::time::sleep;
 
-use crate::call_utils::RetryOptions;
+use crate::retry::{retry, RetryOptions};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
@@ -368,7 +365,39 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_options: RetryOptions,
+    pub retry_options: Option<RetryOptions>,
+}
+
+// Implement Clone for ContractCallHandler once all types are provided.
+impl<T: Account, D> Clone for ContractCallHandler<T, D> {
+    fn clone(&self) -> Self {
+        ContractCallHandler {
+            contract_call: self.contract_call.clone(),
+            tx_parameters: self.tx_parameters,
+            cached_tx_id: self.cached_tx_id,
+            account: self.account.clone(),
+            datatype: self.datatype,
+            log_decoder: self.log_decoder.clone(),
+            retry_options: self.retry_options.clone(),
+        }
+    }
+}
+
+impl Clone for ContractCall {
+    fn clone(&self) -> Self {
+        ContractCall {
+            contract_id: self.contract_id.clone(),
+            encoded_args: self.encoded_args.clone(),
+            encoded_selector: self.encoded_selector,
+            call_parameters: self.call_parameters.clone(),
+            compute_custom_input_offset: self.compute_custom_input_offset,
+            variable_outputs: self.variable_outputs.clone(),
+            external_contracts: self.external_contracts.clone(),
+            output_param: self.output_param.clone(),
+            is_payable: self.is_payable,
+            custom_assets: self.custom_assets.clone(),
+        }
+    }
 }
 
 impl<T, D> ContractCallHandler<T, D>
@@ -377,7 +406,7 @@ where
     D: Tokenizable + Parameterize + Debug,
 {
     pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
-        self.retry_options = retry_options;
+        self.retry_options = Some(retry_options);
         self
     }
 
@@ -481,28 +510,16 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
+        if self.retry_options.is_some() {
+            retry(
+                || async { self.clone().call_or_simulate(false).await },
+                self.retry_options.as_ref().unwrap(),
+            )
             .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
-    }
-
-    pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
-        let mut delay = Duration::from_secs(1);
-
-        for _ in 0..self.retry_options.max_attempts {
-            match self.call_or_simulate(false).await {
-                Ok(response) => return Ok(response),
-                Err(ProviderError(description))
-                    if description.starts_with("Client request error") =>
-                {
-                    sleep(delay).await;
-                    delay *= 2;
-                }
-                Err(error) => return Err(error),
-            }
+        } else {
+            self.call_or_simulate(false).await
         }
-
-        self.call().await
+        .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -637,7 +654,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         account,
         datatype: PhantomData,
         log_decoder,
-        retry_options: Default::default(),
+        retry_options: None,
     })
 }
 
@@ -674,7 +691,20 @@ pub struct MultiContractCallHandler<T: Account> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
-    pub retry_options: RetryOptions,
+    pub retry_options: Option<RetryOptions>,
+}
+
+impl<T: Account> Clone for MultiContractCallHandler<T> {
+    fn clone(&self) -> Self {
+        MultiContractCallHandler {
+            contract_calls: self.contract_calls.clone(),
+            log_decoder: self.log_decoder.clone(),
+            tx_parameters: self.tx_parameters,
+            cached_tx_id: self.cached_tx_id,
+            account: self.account.clone(),
+            retry_options: self.retry_options.clone(),
+        }
+    }
 }
 
 impl<T: Account> MultiContractCallHandler<T> {
@@ -687,12 +717,12 @@ impl<T: Account> MultiContractCallHandler<T> {
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
             },
-            retry_options: Default::default(),
+            retry_options: None,
         }
     }
 
     pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
-        self.retry_options = retry_options;
+        self.retry_options = Some(retry_options);
         self
     }
 
@@ -725,28 +755,16 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
+        if self.retry_options.is_some() {
+            retry(
+                || async { self.clone().call_or_simulate(false).await },
+                self.retry_options.as_ref().unwrap(),
+            )
             .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
-    }
-
-    pub async fn call_with_retry<D: Tokenizable + Debug>(mut self) -> Result<FuelCallResponse<D>> {
-        let mut delay = Duration::from_secs(1);
-
-        for _ in 0..self.retry_options.max_attempts {
-            match self.call_or_simulate(false).await {
-                Ok(response) => return Ok(response),
-                Err(ProviderError(description))
-                    if description.starts_with("Client request error") =>
-                {
-                    sleep(delay).await;
-                    delay *= 2;
-                }
-                Err(error) => return Err(error),
-            }
+        } else {
+            self.call_or_simulate(false).await
         }
-
-        self.call().await
+        .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
