@@ -1,5 +1,6 @@
 use std::{convert::TryFrom, path::PathBuf, str::FromStr};
 
+use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::Ident;
 
 use crate::{
@@ -7,8 +8,6 @@ use crate::{
     error::{Error, Result},
     utils::Source,
 };
-
-use fuel_abi_types::abi::full_program::FullProgramABI;
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {

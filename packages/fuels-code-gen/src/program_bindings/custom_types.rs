@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use itertools::Itertools;
 use quote::quote;
 
@@ -12,8 +13,6 @@ use crate::{
     },
     utils::TypePath,
 };
-
-use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 mod enums;
 mod structs;

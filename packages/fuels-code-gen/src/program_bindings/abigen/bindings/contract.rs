@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
@@ -8,14 +9,12 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constants,
-            logs::log_formatters_instantiation_code, abigen_target::ABI,
+            logs::log_formatters_instantiation_code,
         },
         generated_code::GeneratedCode,
     },
     utils::{ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 
 pub(crate) fn contract_bindings(
     name: &Ident,

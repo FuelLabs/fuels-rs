@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 pub use abigen_target::{AbigenTarget, ProgramType};
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use inflector::Inflector;
 use itertools::Itertools;
 use proc_macro2::TokenStream;
@@ -16,8 +17,6 @@ use crate::{
     },
     utils::ident,
 };
-
-use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 mod abigen_target;
 mod bindings;

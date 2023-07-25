@@ -318,9 +318,9 @@ pub trait Account: ViewOnlyAccount {
 
 #[cfg(test)]
 mod tests {
-    use fuel_core_client::client::FuelClient;
     use std::str::FromStr;
 
+    use fuel_core_client::client::FuelClient;
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{Address, ConsensusParameters, Output};
     use fuels_core::types::transaction::Transaction;

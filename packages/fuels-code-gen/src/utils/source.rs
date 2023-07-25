@@ -76,7 +76,7 @@ impl Source {
     pub fn path(&self) -> Option<PathBuf> {
         match self {
             Source::Local(path) => Some(path.clone()),
-            _ => None
+            _ => None,
         }
     }
 }
