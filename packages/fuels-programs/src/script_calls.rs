@@ -281,25 +281,6 @@ where
         .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    // pub async fn call_with_retry(mut self) -> Result<FuelCallResponse<D>> {
-    //     let mut delay = Duration::from_secs(1);
-    //
-    //     for _ in 0..self.retry_options.max_attempts.into() {
-    //         match self.call_or_simulate(false).await {
-    //             Ok(response) => return Ok(response),
-    //             Err(ProviderError(description))
-    //                 if description.starts_with("Client request error") =>
-    //             {
-    //                 sleep(delay).await;
-    //                 delay *= 2;
-    //             }
-    //             Err(error) => return Err(error),
-    //         }
-    //     }
-    //
-    //     self.call().await
-    // }
-
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
