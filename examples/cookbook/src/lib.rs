@@ -88,8 +88,7 @@ mod tests {
     #[tokio::test]
     async fn custom_chain() -> Result<()> {
         // ANCHOR: custom_chain_import
-        use fuels::fuel_node::ChainConfig;
-        use fuels::{prelude::*, tx::ConsensusParameters};
+        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus

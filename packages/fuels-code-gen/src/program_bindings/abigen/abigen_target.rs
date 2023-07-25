@@ -16,14 +16,14 @@ pub struct AbigenTarget {
     pub program_type: ProgramType,
 }
 
-pub(crate) struct ABI {
+pub(crate) struct Abi {
     pub(crate) path: Option<PathBuf>,
     pub(crate) abi: FullProgramABI,
 }
 
 pub(crate) struct ParsedAbigenTarget {
     pub name: String,
-    pub source: ABI,
+    pub source: Abi,
     pub program_type: ProgramType,
 }
 
@@ -39,13 +39,13 @@ impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
     }
 }
 
-fn parse_program_abi(abi_source: &str) -> Result<ABI> {
+fn parse_program_abi(abi_source: &str) -> Result<Abi> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
     let abi = FullProgramABI::from_json_abi(&json_abi_str)?;
     let path = source.path();
-    Ok(ABI { path, abi })
+    Ok(Abi { path, abi })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
