@@ -47,7 +47,7 @@ impl CoinType {
     pub fn owner(&self) -> &Bech32Address {
         match self {
             CoinType::Coin(coin) => &coin.owner,
-            CoinType::Message(message) => &message.sender,
+            CoinType::Message(message) => &message.recipient,
         }
     }
 }
