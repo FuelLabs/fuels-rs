@@ -103,10 +103,27 @@ impl Abigen {
     ) -> Result<GeneratedCode> {
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
-        let types = generate_types(&target.source.types, shared_types, no_std)?;
-        let bindings = generate_bindings(target, no_std)?;
+        let recompile_trigger = {
+            let code = target
+                .source
+                .path
+                .as_ref()
+                .map(|path| {
+                    let stringified_path = path.display().to_string();
+                    quote! {
+                        const _: &[u8] = include_bytes!(#stringified_path);
+                    }
+                })
+                .unwrap_or_default();
+            GeneratedCode::new(code, Default::default(), no_std)
+        };
 
-        Ok(types.merge(bindings).wrap_in_mod(mod_name))
+        let types = generate_types(&target.source.abi.types, shared_types, no_std)?;
+        let bindings = generate_bindings(target, no_std)?;
+        Ok(recompile_trigger
+            .merge(types)
+            .merge(bindings)
+            .wrap_in_mod(mod_name))
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
@@ -135,7 +152,7 @@ impl Abigen {
     ) -> impl Iterator<Item = &FullTypeDeclaration> {
         all_types
             .iter()
-            .flat_map(|target| &target.source.types)
+            .flat_map(|target| &target.source.abi.types)
             .filter(|ttype| ttype.is_custom_type())
     }
 

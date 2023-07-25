@@ -71,6 +71,14 @@ impl Source {
             Source::String(abi) => Ok(abi.clone()),
         }
     }
+
+    /// If the abigen is given a path, will return it here.
+    pub fn path(&self) -> Option<PathBuf> {
+        match self {
+            Source::Local(path) => Some(path.clone()),
+            _ => None
+        }
+    }
 }
 
 fn get_local_contract(path: &Path) -> Result<String> {

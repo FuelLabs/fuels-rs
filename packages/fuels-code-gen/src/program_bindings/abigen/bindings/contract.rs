@@ -8,7 +8,7 @@ use crate::{
         abigen::{
             bindings::function_generator::FunctionGenerator,
             configurables::generate_code_for_configurable_constants,
-            logs::log_formatters_instantiation_code,
+            logs::log_formatters_instantiation_code, abigen_target::ABI,
         },
         generated_code::GeneratedCode,
     },

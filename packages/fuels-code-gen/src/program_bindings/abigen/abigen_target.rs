@@ -1,4 +1,4 @@
-use std::{convert::TryFrom, str::FromStr};
+use std::{convert::TryFrom, path::PathBuf, str::FromStr};
 
 use proc_macro2::Ident;
 
@@ -17,9 +17,14 @@ pub struct AbigenTarget {
     pub program_type: ProgramType,
 }
 
+pub(crate) struct ABI {
+    pub(crate) path: Option<PathBuf>,
+    pub(crate) abi: FullProgramABI,
+}
+
 pub(crate) struct ParsedAbigenTarget {
     pub name: String,
-    pub source: FullProgramABI,
+    pub source: ABI,
     pub program_type: ProgramType,
 }
 
@@ -35,10 +40,13 @@ impl TryFrom<AbigenTarget> for ParsedAbigenTarget {
     }
 }
 
-fn parse_program_abi(abi_source: &str) -> Result<FullProgramABI> {
+fn parse_program_abi(abi_source: &str) -> Result<ABI> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
+
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
-    FullProgramABI::from_json_abi(&json_abi_str).map_err(|e| e.into())
+    let abi = FullProgramABI::from_json_abi(&json_abi_str)?;
+    let path = source.path();
+    Ok(ABI { path, abi })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

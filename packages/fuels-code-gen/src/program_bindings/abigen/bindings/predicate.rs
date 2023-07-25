@@ -5,6 +5,7 @@ use crate::{
     error::Result,
     program_bindings::{
         abigen::{
+            abigen_target::ABI,
             bindings::{function_generator::FunctionGenerator, utils::extract_main_fn},
             configurables::generate_code_for_configurable_constants,
         },
@@ -15,11 +16,7 @@ use crate::{
 
 use fuel_abi_types::abi::full_program::FullProgramABI;
 
-pub(crate) fn predicate_bindings(
-    name: &Ident,
-    abi: FullProgramABI,
-    no_std: bool,
-) -> Result<GeneratedCode> {
+pub(crate) fn predicate_bindings(name: &Ident, abi: FullProgramABI, no_std: bool) -> Result<GeneratedCode> {
     if no_std {
         return Ok(GeneratedCode::default());
     }
@@ -28,8 +25,10 @@ pub(crate) fn predicate_bindings(
     let encoder_struct_name = ident(&format!("{name}Encoder"));
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
-    let constant_configuration_code =
-        generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
+    let constant_configuration_code = generate_code_for_configurable_constants(
+        &configuration_struct_name,
+        &abi.configurables,
+    )?;
 
     let code = quote! {
         pub struct #encoder_struct_name;
