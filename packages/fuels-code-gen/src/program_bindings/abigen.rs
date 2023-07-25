@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, path::PathBuf};
 
 pub use abigen_target::{AbigenTarget, ProgramType};
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
@@ -102,27 +102,30 @@ impl Abigen {
     ) -> Result<GeneratedCode> {
         let mod_name = ident(&format!("{}_mod", &target.name.to_snake_case()));
 
-        let recompile_trigger = {
-            let code = target
-                .source
-                .path
-                .as_ref()
-                .map(|path| {
-                    let stringified_path = path.display().to_string();
-                    quote! {
-                        const _: &[u8] = include_bytes!(#stringified_path);
-                    }
-                })
-                .unwrap_or_default();
-            GeneratedCode::new(code, Default::default(), no_std)
-        };
-
+        let recompile_trigger =
+            Self::generate_macro_recompile_trigger(target.source.path.as_ref(), no_std);
         let types = generate_types(&target.source.abi.types, shared_types, no_std)?;
         let bindings = generate_bindings(target, no_std)?;
         Ok(recompile_trigger
             .merge(types)
             .merge(bindings)
             .wrap_in_mod(mod_name))
+    }
+
+    /// Any changes to the file pointed to by `path` will cause the reevaluation of the current
+    /// procedural macro. This is a hack until https://github.com/rust-lang/rust/issues/99515
+    /// lands.
+    fn generate_macro_recompile_trigger(path: Option<&PathBuf>, no_std: bool) -> GeneratedCode {
+        let code = path
+            .as_ref()
+            .map(|path| {
+                let stringified_path = path.display().to_string();
+                quote! {
+                    const _: &[u8] = include_bytes!(#stringified_path);
+                }
+            })
+            .unwrap_or_default();
+        GeneratedCode::new(code, Default::default(), no_std)
     }
 
     fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
