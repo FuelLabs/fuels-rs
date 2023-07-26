@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use fuel_abi_types::abi::full_program::FullTypeApplication;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
@@ -9,8 +10,6 @@ use crate::{
     program_bindings::resolved_type::{ResolvedType, TypeResolver},
     utils::{safe_ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::FullTypeApplication;
 
 // Represents a component of either a struct(field name) or an enum(variant
 // name).
@@ -69,8 +68,9 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use fuel_abi_types::abi::full_program::FullTypeDeclaration;
+
+    use super::*;
 
     #[test]
     fn respects_snake_case_flag() -> Result<()> {
