@@ -3071,8 +3071,7 @@ should point to root of the <code>forc</code> project.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
 <p>First, we have to import <code>ConsensusParameters</code> and <code>ChainConfig</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::fuel_node::ChainConfig;
-        use fuels::tx::ConsensusParameters;
+<pre><code class="language-rust ignore">        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
 </code></pre>
 <p>Next, we can define some values for the consensus parameters:</p>
 <pre><code class="language-rust ignore">        let consensus_parameters_config = ConsensusParameters::DEFAULT
