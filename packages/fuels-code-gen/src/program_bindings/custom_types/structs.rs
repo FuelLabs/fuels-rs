@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -11,8 +12,6 @@ use crate::{
         utils::Component,
     },
 };
-
-use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 
 /// Returns a TokenStream containing the declaration, `Parameterize`,
 /// `Tokenizable` and `TryFrom` implementations for the struct described by the

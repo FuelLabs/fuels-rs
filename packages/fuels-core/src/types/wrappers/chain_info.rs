@@ -1,8 +1,10 @@
 #![cfg(feature = "std")]
 
+use fuel_core_client::client::types::{
+    chain_info::ChainInfo as ClientChainInfo, ConsensusParameters,
+};
+
 use crate::types::block::Block;
-use fuel_core_client::client::types::chain_info::ChainInfo as ClientChainInfo;
-use fuel_core_client::client::types::ConsensusParameters;
 
 #[derive(Debug)]
 pub struct ChainInfo {

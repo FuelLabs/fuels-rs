@@ -1,8 +1,7 @@
 #![cfg(feature = "std")]
 
-use fuel_core_client::client::types::primitives::Nonce;
 use fuel_core_client::client::types::{
-    MerkleProof as ClientMerkleProof, MessageProof as ClientMessageProof,
+    primitives::Nonce, MerkleProof as ClientMerkleProof, MessageProof as ClientMessageProof,
 };
 use fuel_types::Bytes32;
 

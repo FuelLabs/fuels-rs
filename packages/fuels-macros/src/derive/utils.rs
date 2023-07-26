@@ -13,11 +13,21 @@ pub(crate) fn get_path_from_attr_or(
     };
 
     let Meta::NameValue(name_value) = &attr.meta else {
-        return Err(Error::new_spanned(attr.meta.path(), "Expected name='value'"));
+        return Err(Error::new_spanned(
+            attr.meta.path(),
+            "Expected name='value'",
+        ));
     };
 
-    let Expr::Lit(ExprLit{lit: Lit::Str(lit_str),..}) = &name_value.value else {
-        return Err(Error::new_spanned(&name_value.value, "Expected string literal"));
+    let Expr::Lit(ExprLit {
+        lit: Lit::Str(lit_str),
+        ..
+    }) = &name_value.value
+    else {
+        return Err(Error::new_spanned(
+            &name_value.value,
+            "Expected string literal",
+        ));
     };
 
     TypePath::new(lit_str.value())
