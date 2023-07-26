@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -9,8 +10,6 @@ use crate::{
     },
     utils::{safe_ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
 
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {
