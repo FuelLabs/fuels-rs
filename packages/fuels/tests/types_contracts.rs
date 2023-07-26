@@ -1988,14 +1988,16 @@ async fn test_contract_std_lib_string() -> Result<()> {
         ),
     );
     let contract_methods = contract_instance.methods();
-    let resp = contract_methods.return_dynamic_string().call().await?;
-    let expected = String::from("hello world");
-    assert_eq!(resp.value, expected);
 
-    let resp = contract_methods
-        .accepts_dynamic_string("world".to_string())
+    let resp = contract_methods.return_dynamic_string().call().await?.value;
+    assert_eq!(resp, "hello world");
+
+    let logs = contract_methods
+        .accepts_dynamic_string("hello world".to_string())
         .call()
-        .await?;
-    assert!(resp.value);
+        .await?
+        .decode_logs();
+
+    dbg!(logs.filter_succeeded());
     Ok(())
 }

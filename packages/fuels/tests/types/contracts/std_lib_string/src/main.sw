@@ -1,13 +1,12 @@
 contract;
 
 use std::string::String;
+use std::assert::assert_eq;
+use std::bytes::Bytes;
 
 abi MyContract {
     fn return_dynamic_string() -> String;
-    // The content of the `String` passed as argument is not tested because it doesn't seem like
-    // it is stable (https://github com/FuelLabs/sway/issues/4788). We just check that the
-    // function can be called.
-    fn accepts_dynamic_string(s: String) -> bool;
+    fn accepts_dynamic_string(s: String);
 }
 
 impl MyContract for Contract {
@@ -15,10 +14,10 @@ impl MyContract for Contract {
         String::from_ascii_str("hello world")
     }
 
-    fn accepts_dynamic_string(s: String) -> bool {
-        assert(s.capacity() == 0); // this is true even when `s` is not empty
-        assert(s.as_bytes().len() == 1_000_000); // this is true as well and contr
-        assert(s.as_bytes().capacity() == 0); // this is also true and seems not coherent
-        true
+    fn accepts_dynamic_string(s: String) {
+        let inner = String::from_ascii_str("hello wol");
+        log(inner.bytes.len());
+        log(s.bytes.len());
+        assert_eq(inner.as_bytes(), s.as_bytes());
     }
 }
