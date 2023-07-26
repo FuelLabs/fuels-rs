@@ -64,7 +64,7 @@ impl Source {
 
     /// Retrieves the source JSON of the artifact this will either read the JSON
     /// from the file system or retrieve a contract ABI from the network
-    /// dependending on the source type.
+    /// depending on the source type.
     pub fn get(&self) -> Result<String> {
         match self {
             Source::Local(path) => get_local_contract(path),
@@ -72,7 +72,6 @@ impl Source {
         }
     }
 
-    /// If the abigen is given a path, will return it here.
     pub fn path(&self) -> Option<PathBuf> {
         match self {
             Source::Local(path) => Some(path.clone()),
