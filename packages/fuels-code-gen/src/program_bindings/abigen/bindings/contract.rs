@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, TokenStreamExt};
@@ -14,8 +15,6 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 
 pub(crate) fn contract_bindings(
     name: &Ident,

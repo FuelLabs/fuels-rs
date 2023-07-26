@@ -7,9 +7,9 @@ use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
 use fuel_tx::Transaction;
+use fuel_types::Bytes32;
 
 use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
-use fuel_types::Bytes32;
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {

@@ -1,9 +1,8 @@
+use fuel_abi_types::abi::full_program::FullLoggedType;
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::program_bindings::resolved_type::TypeResolver;
-
-use fuel_abi_types::abi::full_program::FullLoggedType;
 
 pub(crate) fn log_formatters_instantiation_code(
     contract_id: TokenStream,

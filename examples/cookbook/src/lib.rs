@@ -87,10 +87,8 @@ mod tests {
 
     #[tokio::test]
     async fn custom_chain() -> Result<()> {
-        use fuels::prelude::*;
         // ANCHOR: custom_chain_import
-        use fuels::fuel_node::ChainConfig;
-        use fuels::tx::ConsensusParameters;
+        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
@@ -188,8 +186,9 @@ mod tests {
     #[tokio::test]
     #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
     async fn create_or_use_rocksdb() -> Result<()> {
-        use fuels::prelude::*;
         use std::path::PathBuf;
+
+        use fuels::prelude::*;
 
         // ANCHOR: create_or_use_rocksdb
         let provider_config = Config {

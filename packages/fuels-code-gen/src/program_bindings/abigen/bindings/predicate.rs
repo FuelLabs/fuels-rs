@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -12,8 +13,6 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::FullProgramABI;
 
 pub(crate) fn predicate_bindings(
     name: &Ident,

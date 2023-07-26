@@ -1,8 +1,8 @@
-use fuel_core::chain_config::ChainConfig;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::vec;
 
+use fuel_core::chain_config::ChainConfig;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -1324,13 +1324,13 @@ async fn low_level_call() -> Result<()> {
 #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
 #[test]
 fn db_rocksdb() {
-    use fuels::accounts::fuel_crypto::SecretKey;
-    use fuels::accounts::wallet::WalletUnlocked;
-    use fuels::client::{PageDirection, PaginationRequest};
-    use fuels::prelude::DEFAULT_COIN_AMOUNT;
-    use fuels::prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount};
-    use std::fs;
-    use std::str::FromStr;
+    use std::{fs, str::FromStr};
+
+    use fuels::{
+        accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
+        client::{PageDirection, PaginationRequest},
+        prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+    };
 
     let temp_dir = tempfile::tempdir()
         .expect("Failed to make tempdir")
