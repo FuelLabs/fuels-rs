@@ -23,7 +23,7 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct StringToken {
     data: String,
     expected_len: Option<usize>,
@@ -70,7 +70,7 @@ impl TryFrom<StringToken> for String {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.
