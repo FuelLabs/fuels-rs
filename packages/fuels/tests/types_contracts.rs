@@ -1,12 +1,9 @@
-#![allow(unused_imports, unused_variables)]
 use std::{result::Result as StdResult, str::FromStr};
 
-use fuel_tx::Receipt;
 use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
-use fuels_core::{codec::ABIDecoder, fn_selector, types::param_types::ParamType};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

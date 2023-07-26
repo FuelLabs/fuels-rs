@@ -75,7 +75,6 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::RawSlice => "rawslice".to_string(),
         ParamType::Bytes => "s(s(rawptr,u64),u64)".to_string(),
-        // `String` in Sway has the same memory layout as the bytes type
         ParamType::StdString => "s(s(s(rawptr,u64),u64))".to_string(),
     }
 }
@@ -144,6 +143,15 @@ mod tests {
     }
 
     #[test]
+    fn handles_std_strings() {
+        let inputs = [ParamType::StdString];
+
+        let signature = resolve_fn_signature("some_fn", &inputs);
+
+        assert_eq!(signature, "some_fn(s(s(s(rawptr,u64),u64)))");
+    }
+
+    #[test]
     fn handles_arrays() {
         let inputs = [ParamType::Array(Box::new(ParamType::U8), 1)];
 
@@ -182,12 +190,12 @@ mod tests {
     }
 
     #[test]
-    fn handles_std_string() {
-        let inputs = [ParamType::StdString];
+    fn handles_bytes() {
+        let inputs = [ParamType::Bytes];
 
         let selector = resolve_fn_signature("some_fun", &inputs);
 
-        assert_eq!(selector, "some_fun(s(s(s(rawptr,u64),u64)))");
+        assert_eq!(selector, "some_fun(s(s(rawptr,u64),u64))")
     }
 
     #[test]

@@ -5,5 +5,3 @@ license = "Apache-2.0"
 name = "std_lib_string"
 
 [dependencies]
-
-std = { git = "https://github.com/FuelLabs/sway/", branch = "master" }
