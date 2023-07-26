@@ -5,7 +5,7 @@ use crate::{
     types::{
         errors::{error, Error, Result},
         param_types::ParamType,
-        Bits256, Bytes, RawSlice, SizedAsciiString, StringToken, Token,
+        AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StringToken, Token,
     },
 };
 
@@ -474,21 +474,41 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
         Self: Sized,
     {
         match token {
-            Token::String(contents) => {
+            Token::StringArray(contents) => {
                 let expected_len = contents.get_encodable_str()?.len() ;
                 if expected_len!= LEN {
-                    return Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token got a Token::String whose expected length({}) is != {LEN}", expected_len))
+                    return Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token got a Token::StringArray whose expected length({}) is != {LEN}", expected_len))
                 }
                 Self::new(contents.try_into()?)
             },
             _ => {
-                Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::String, got: {token}"))
+                Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::StringArray, got: {token}"))
             }
         }
     }
 
     fn into_token(self) -> Token {
-        Token::String(StringToken::new(self.into(), LEN))
+        Token::StringArray(StringToken::new(self.into(), Some(LEN)))
+    }
+}
+
+impl Tokenizable for AsciiString {
+    fn from_token(token: Token) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::StringSlice(contents) => {
+                Self::new(contents.try_into()?)
+            },
+            _ => {
+                Err(error!(InvalidData,"AsciiString::from_token expected a token of the variant Token::StringSlice, got: {token}"))
+            }
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::StringArray(StringToken::new(self.into(), None))
     }
 }
 
@@ -547,7 +567,7 @@ mod tests {
         let token = sut.into_token();
 
         match token {
-            Token::String(string_token) => {
+            Token::StringArray(string_token) => {
                 let contents = string_token.get_encodable_str()?;
                 assert_eq!(contents, "abc");
             }
@@ -561,7 +581,7 @@ mod tests {
 
     #[test]
     fn sized_ascii_string_is_detokenized_correctly() -> Result<()> {
-        let token = Token::String(StringToken::new("abc".to_string(), 3));
+        let token = Token::StringArray(StringToken::new("abc".to_string(), Some(3)));
 
         let sized_ascii_string =
             SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
