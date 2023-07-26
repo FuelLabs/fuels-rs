@@ -8,17 +8,6 @@ use std::sync::Arc;
 
 type RetryOn = Option<Arc<dyn Fn(&dyn Error) -> bool + Send + Sync>>;
 
-#[derive(Debug)]
-struct CustomError(String);
-
-impl fmt::Display for CustomError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl Error for CustomError {}
-
 #[derive(Clone)]
 pub struct RetryOptions {
     pub max_attempts: NonZeroUsize,
