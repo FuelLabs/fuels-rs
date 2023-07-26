@@ -42,7 +42,8 @@ impl ABIEncoder {
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
             Token::Vector(data) => Self::encode_vector(data)?,
-            Token::String(arg_string) => vec![Self::encode_string(arg_string)?],
+            Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
+            Token::StringArray(arg_string) => vec![Self::encode_string_array(arg_string)?],
             Token::Struct(arg_struct) => Self::encode_struct(arg_struct)?,
             Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
@@ -68,10 +69,6 @@ impl ABIEncoder {
 
     fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>> {
         Self::encode_tokens(arg_array)
-    }
-
-    fn encode_string(arg_string: &StringToken) -> Result<Data> {
-        Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
     fn encode_b256(arg_bits256: &[u8; 32]) -> Data {
@@ -158,6 +155,18 @@ impl ABIEncoder {
 
         let len = Self::encode_u64(num_bytes as u64);
         Ok(vec![Data::Dynamic(encoded_data), len])
+    }
+
+    fn encode_string_slice(arg_string: &StringToken) -> Result<Vec<Data>> {
+        let encoded_data = Data::Inline(arg_string.get_encodable_str()?.as_bytes().to_vec());
+
+        let num_bytes = arg_string.get_encodable_str()?.len();
+        let len = Self::encode_u64(num_bytes as u64);
+        Ok(vec![Data::Dynamic(vec![encoded_data]), len])
+    }
+
+    fn encode_string_array(arg_string: &StringToken) -> Result<Data> {
+        Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
@@ -475,7 +484,7 @@ mod tests {
     }
 
     #[test]
-    fn encode_function_with_string_type() -> Result<()> {
+    fn encode_function_with_string_array_type() -> Result<()> {
         // let json_abi =
         // r#"
         // [
@@ -490,9 +499,9 @@ mod tests {
 
         let fn_signature = "takes_string(str[23])";
 
-        let args: Vec<Token> = vec![Token::String(StringToken::new(
+        let args: Vec<Token> = vec![Token::StringArray(StringToken::new(
             "This is a full sentence".into(),
-            23,
+            Some(23),
         ))];
 
         let expected_encoded_abi = [
@@ -501,6 +510,48 @@ mod tests {
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+
+        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
+
+        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
+        assert_eq!(encoded_function_selector, expected_function_selector);
+        Ok(())
+    }
+
+    #[test]
+    fn encode_function_with_string_slice_type() -> Result<()> {
+        // let json_abi =
+        // r#"
+        // [
+        //     {
+        //         "type":"function",
+        //         "inputs": [{"name":"arg","type":"str"}],
+        //         "name":"takes_string",
+        //         "outputs": []
+        //     }
+        // ]
+        // "#;
+
+        let fn_signature = "takes_string(str)";
+
+        let args: Vec<Token> = vec![Token::StringSlice(StringToken::new(
+            "This is a full sentence".into(),
+            None,
+        ))];
+
+        let expected_encoded_abi = [
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, // str at data index 16
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, // str of lenght 23
+            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, //
+            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, //
+            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, //
+        ];
+
+        let expected_function_selector = [0, 0, 0, 0, 239, 77, 222, 230];
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
@@ -644,7 +695,7 @@ mod tests {
          */
         let types = vec![ParamType::Bool, ParamType::String(10)];
         let deeper_enum_variants = EnumVariants::new(types)?;
-        let deeper_enum_token = Token::String(StringToken::new("0123456789".into(), 10));
+        let deeper_enum_token = Token::StringArray(StringToken::new("0123456789".into(), Some(10)));
 
         let str_enc = vec![
             b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -817,7 +868,7 @@ mod tests {
 
         let b256 = Token::B256(hasher.finalize().into());
 
-        let s = Token::String(StringToken::new("This is a full sentence".into(), 23));
+        let s = Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23)));
 
         let args: Vec<Token> = vec![foo, u8_arr, b256, s];
 
