@@ -46,7 +46,7 @@ impl ABIDecoder {
     /// ```
     pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         for param_type in param_types {
-            Self::check_for_nested_heap_types(param_type)?;
+            Self::is_type_decodable(param_type)?;
         }
         let (tokens, _) = Self::decode_multiple(param_types, bytes)?;
 
@@ -56,15 +56,20 @@ impl ABIDecoder {
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        Self::check_for_nested_heap_types(param_type)?;
+        Self::is_type_decodable(param_type)?;
         Ok(Self::decode_param(param_type, bytes)?.token)
     }
 
-    fn check_for_nested_heap_types(param_type: &ParamType) -> Result<()> {
+    fn is_type_decodable(param_type: &ParamType) -> Result<()> {
         if param_type.contains_nested_heap_types() {
             Err(error!(
-                InvalidData,
+                InvalidType,
                 "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
+            ))
+        } else if param_type.uses_collections_of_zero_sized_types() {
+            Err(error!(
+                InvalidType,
+                "Type {param_type:?} contains collections of zero-sized types. Decoding is not supported!"
             ))
         } else {
             Ok(())
@@ -804,5 +809,22 @@ mod tests {
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
+    }
+
+    #[test]
+    fn decoding_zero_sized_types_is_prohibited() {
+        // given
+        let zero_vec = ParamType::Vector(Box::new(ParamType::String(0)));
+
+        // when
+        let err = ABIDecoder::decode_single(&zero_vec, &[]).expect_err("Should have failed");
+
+        // then
+        let Error::InvalidType(msg) = err else {
+                panic!("Expected error {err} to be of type InvalidType!")
+            };
+        assert!(
+            msg.contains("contains collections of zero-sized types. Decoding is not supported!")
+        );
     }
 }

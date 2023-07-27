@@ -87,6 +87,25 @@ impl ParamType {
         }
     }
 
+    pub fn uses_collections_of_zero_sized_types(&self) -> bool {
+        match self {
+            ParamType::Array(inner_type, _) | ParamType::Vector(inner_type) => {
+                inner_type.uses_collections_of_zero_sized_types()
+                    || inner_type.compute_encoding_width() == 0
+            }
+            ParamType::Struct { fields, .. } | ParamType::Tuple(fields) => fields
+                .into_iter()
+                .any(|param_type| param_type.uses_collections_of_zero_sized_types()),
+            ParamType::Enum { variants, .. } => {
+                let param_types = variants.param_types();
+                param_types
+                    .into_iter()
+                    .any(|param_type| param_type.uses_collections_of_zero_sized_types())
+            }
+            _ => false,
+        }
+    }
+
     fn uses_heap_types(&self) -> bool {
         match &self {
             ParamType::Vector(..) | ParamType::Bytes => true,
@@ -489,8 +508,13 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 
 #[cfg(test)]
 mod tests {
+    use fuels_macros::Parameterize;
+
     use super::*;
-    use crate::types::param_types::ParamType;
+    use crate::{
+        traits::Parameterize,
+        types::{param_types::ParamType, Bits256, Bytes, RawSlice, SizedAsciiString},
+    };
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
@@ -1450,6 +1474,66 @@ mod tests {
         let param_type = try_raw_slice(&the_type).unwrap().unwrap();
 
         assert_eq!(param_type, ParamType::RawSlice);
+    }
+
+    #[test]
+    fn detects_zero_size_type_collections() {
+        macro_rules! parameterize {
+            ($($arg: ty,)+) => {
+                [ $( <$arg>::param_type()),* ]
+            };
+        }
+
+        #[derive(Parameterize)]
+        #[FuelsCorePath = "crate"]
+        #[FuelsTypesPath = "crate::types"]
+        struct EmptyStruct {}
+
+        #[derive(Parameterize)]
+        #[FuelsCorePath = "crate"]
+        #[FuelsTypesPath = "crate::types"]
+        enum SomeEnum<T: Parameterize> {
+            _A(T),
+        }
+
+        let w_zst_collections = parameterize!(
+            [SizedAsciiString<0>; 10],
+            [EmptyStruct; 3],
+            ([EmptyStruct; 1], [EmptyStruct; 2]),
+            [SomeEnum<[EmptyStruct; 1]>; 3],
+            SomeEnum<[EmptyStruct; 3]>,
+            Vec<SizedAsciiString<0>>,
+            Vec<EmptyStruct>,
+        );
+
+        for param_type in w_zst_collections {
+            if !param_type.uses_collections_of_zero_sized_types() {
+                panic!("{param_type:?} is doesn't seem to contain a zero size type collection!")
+            }
+        }
+
+        let wo_zst_collections = parameterize!(
+            u8,
+            u16,
+            u32,
+            u64,
+            u128,
+            Bits256,
+            bool,
+            (),
+            [u8; 0],
+            Vec<u8>,
+            (u8, u8),
+            RawSlice,
+            Bytes,
+            EmptyStruct,
+            SomeEnum<EmptyStruct>,
+            [SomeEnum<EmptyStruct>; 3],
+        );
+
+        for param_type in wo_zst_collections {
+            assert!(!param_type.uses_collections_of_zero_sized_types());
+        }
     }
 
     fn given_type_with_path(path: &str) -> Type {
