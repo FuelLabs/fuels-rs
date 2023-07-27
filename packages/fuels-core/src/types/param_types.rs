@@ -94,12 +94,12 @@ impl ParamType {
                     || inner_type.compute_encoding_width() == 0
             }
             ParamType::Struct { fields, .. } | ParamType::Tuple(fields) => fields
-                .into_iter()
+                .iter()
                 .any(|param_type| param_type.uses_collections_of_zero_sized_types()),
             ParamType::Enum { variants, .. } => {
                 let param_types = variants.param_types();
                 param_types
-                    .into_iter()
+                    .iter()
                     .any(|param_type| param_type.uses_collections_of_zero_sized_types())
             }
             _ => false,

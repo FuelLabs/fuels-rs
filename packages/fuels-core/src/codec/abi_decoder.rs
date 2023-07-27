@@ -821,8 +821,8 @@ mod tests {
 
         // then
         let Error::InvalidType(msg) = err else {
-                panic!("Expected error {err} to be of type InvalidType!")
-            };
+            panic!("Expected error {err} to be of type InvalidType!")
+        };
         assert!(
             msg.contains("contains collections of zero-sized types. Decoding is not supported!")
         );

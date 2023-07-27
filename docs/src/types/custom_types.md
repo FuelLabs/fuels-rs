@@ -73,3 +73,6 @@ Your Rust code would look like this:
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/types_contracts.rs:generic}}
 ```
+
+## Zero-sized types
+Decoding a custom type containing zero-sized-type collections (e.g. `[str[0]; 10]` or `Vec<MyEmptyStruct>`) is prohibited to prevent infinite/long running loops.
