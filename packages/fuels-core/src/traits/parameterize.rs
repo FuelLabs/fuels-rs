@@ -1,7 +1,8 @@
 use fuel_types::{Address, AssetId, ContractId};
 
 use crate::types::{
-    enum_variants::EnumVariants, param_types::ParamType, Bits256, Bytes, RawSlice, SizedAsciiString,
+    enum_variants::EnumVariants, param_types::ParamType, AsciiString, Bits256, Bytes, RawSlice,
+    SizedAsciiString,
 };
 
 /// `abigen` requires `Parameterized` to construct nested types. It is also used by `try_from_bytes`
@@ -143,6 +144,12 @@ where
 impl<const LEN: usize> Parameterize for SizedAsciiString<LEN> {
     fn param_type() -> ParamType {
         ParamType::String(LEN)
+    }
+}
+
+impl Parameterize for AsciiString {
+    fn param_type() -> ParamType {
+        ParamType::StringSlice
     }
 }
 

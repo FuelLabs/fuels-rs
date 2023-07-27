@@ -1,13 +1,11 @@
-use fuel_abi_types::utils::extract_generic_name;
+use fuel_abi_types::{
+    abi::full_program::FullTypeDeclaration,
+    utils::{extract_generic_name, ident, TypePath},
+};
 use proc_macro2::TokenStream;
 use quote::quote;
 
 use crate::{error::Result, program_bindings::utils::Component};
-
-use fuel_abi_types::{
-    abi::full_program::FullTypeDeclaration,
-    utils::{ident, TypePath},
-};
 
 /// Transforms components from inside the given `FullTypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.

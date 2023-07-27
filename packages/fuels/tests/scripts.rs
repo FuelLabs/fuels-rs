@@ -1,4 +1,4 @@
-use fuels::prelude::*;
+use fuels::{prelude::*, types::Bits256};
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
@@ -262,5 +262,96 @@ async fn test_output_variable_estimation() -> Result<()> {
     let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
     assert_eq!(receiver_balance, amount);
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_struct() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_struct"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_struct = MyStruct {
+        number: 42,
+        boolean: true,
+    };
+    let response = script_instance.main(my_struct).call().await?;
+
+    assert_eq!(response.value, 42);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_enum() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_enum"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_enum = MyEnum::Two;
+    let response = script_instance.main(my_enum).call().await?;
+
+    assert_eq!(response.value, 2);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_array() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_array"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_array: [u64; 4] = [1, 2, 3, 4];
+    let response = script_instance.main(my_array).call().await?;
+
+    assert_eq!(response.value, 10);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_b256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_b256"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_b256 = Bits256([1; 32]);
+    let response = script_instance.main(my_b256).call().await?;
+
+    assert!(response.value);
     Ok(())
 }

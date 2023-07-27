@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -13,8 +14,6 @@ use crate::{
     },
     utils::{ident, TypePath},
 };
-
-use fuel_abi_types::abi::full_program::FullProgramABI;
 
 pub(crate) fn script_bindings(
     name: &Ident,
@@ -66,6 +65,10 @@ pub(crate) fn script_bindings(
                 let configurables: ::fuels::core::Configurables = configurables.into();
                 configurables.update_constants_in(&mut self.binary);
                 self
+            }
+
+            pub fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+                self.log_decoder.clone()
             }
 
             #main_function

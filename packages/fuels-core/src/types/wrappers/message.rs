@@ -1,10 +1,10 @@
 #![cfg(feature = "std")]
 
 use fuel_core_chain_config::MessageConfig;
-use fuel_core_client::client::schema::coins::MessageCoin as ClientMessageCoin;
-use fuel_core_client::client::schema::message::Message as ClientMessage;
+use fuel_core_client::client::types::{
+    coins::MessageCoin as ClientMessageCoin, message::Message as ClientMessage, primitives::Nonce,
+};
 use fuel_tx::{Input, MessageId};
-use fuel_types::Nonce;
 
 use crate::types::bech32::Bech32Address;
 
@@ -41,12 +41,12 @@ impl Message {
 impl From<ClientMessage> for Message {
     fn from(message: ClientMessage) -> Self {
         Self {
-            amount: message.amount.0,
-            sender: message.sender.0 .0.into(),
-            recipient: message.recipient.0 .0.into(),
-            nonce: message.nonce.into(),
-            data: message.data.0 .0,
-            da_height: message.da_height.0,
+            amount: message.amount,
+            sender: message.sender.into(),
+            recipient: message.recipient.into(),
+            nonce: message.nonce,
+            data: message.data,
+            da_height: message.da_height,
             status: MessageStatus::Unspent,
         }
     }
@@ -55,12 +55,12 @@ impl From<ClientMessage> for Message {
 impl From<ClientMessageCoin> for Message {
     fn from(message: ClientMessageCoin) -> Self {
         Self {
-            amount: message.amount.0,
-            sender: message.sender.0 .0.into(),
-            recipient: message.recipient.0 .0.into(),
-            nonce: message.nonce.into(),
+            amount: message.amount,
+            sender: message.sender.into(),
+            recipient: message.recipient.into(),
+            nonce: message.nonce,
             data: Default::default(),
-            da_height: message.da_height.0,
+            da_height: message.da_height,
             status: MessageStatus::Unspent,
         }
     }

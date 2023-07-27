@@ -87,10 +87,8 @@ mod tests {
 
     #[tokio::test]
     async fn custom_chain() -> Result<()> {
-        use fuels::prelude::*;
         // ANCHOR: custom_chain_import
-        use fuels::fuel_node::ChainConfig;
-        use fuels::tx::ConsensusParameters;
+        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
@@ -127,7 +125,6 @@ mod tests {
         use std::str::FromStr;
 
         use fuels::prelude::*;
-
         // ANCHOR: transfer_multiple_setup
         let mut wallet_1 = WalletUnlocked::new_random(None);
         let mut wallet_2 = WalletUnlocked::new_random(None);
@@ -182,6 +179,27 @@ mod tests {
             assert_eq!(balance, AMOUNT);
         }
         // ANCHOR_END: transfer_multiple_transaction
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
+    async fn create_or_use_rocksdb() -> Result<()> {
+        use std::path::PathBuf;
+
+        use fuels::prelude::*;
+
+        // ANCHOR: create_or_use_rocksdb
+        let provider_config = Config {
+            database_path: PathBuf::from("/tmp/.spider/db"),
+            database_type: DbType::RocksDb,
+            ..Config::local_node()
+        };
+        // ANCHOR_END: create_or_use_rocksdb
+
+        launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
+            .await;
 
         Ok(())
     }

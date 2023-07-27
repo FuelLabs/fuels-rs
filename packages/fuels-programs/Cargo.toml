@@ -15,7 +15,7 @@ bytes = { workspace = true, features = ["serde"] }
 fuel-abi-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
-fuel-vm = { workspace = true }
+fuel-asm = { workspace = true }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }

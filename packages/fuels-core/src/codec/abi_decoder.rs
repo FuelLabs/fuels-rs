@@ -9,11 +9,12 @@ use crate::{
         enum_variants::EnumVariants,
         errors::{error, Error, Result},
         param_types::ParamType,
-        StringToken, Token,
+        StringToken, Token, U256,
     },
 };
 
 const U128_BYTES_SIZE: usize = 2 * WORD_SIZE;
+const U256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 #[derive(Debug, Clone)]
@@ -69,10 +70,12 @@ impl ABIDecoder {
             ParamType::U32 => Self::decode_u32(bytes),
             ParamType::U64 => Self::decode_u64(bytes),
             ParamType::U128 => Self::decode_u128(bytes),
+            ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
             ParamType::RawSlice => Self::decode_raw_slice(bytes),
-            ParamType::String(length) => Self::decode_string(bytes, *length),
+            ParamType::StringSlice => Self::decode_string_slice(bytes),
+            ParamType::String(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
             ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
@@ -161,17 +164,24 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_string(bytes: &[u8], length: usize) -> Result<DecodeResult> {
+    fn decode_string_slice(bytes: &[u8]) -> Result<DecodeResult> {
+        let decoded = str::from_utf8(bytes)?;
+
+        Ok(DecodeResult {
+            token: Token::StringSlice(StringToken::new(decoded.into(), None)),
+            bytes_read: decoded.len(),
+        })
+    }
+
+    fn decode_string_array(bytes: &[u8], length: usize) -> Result<DecodeResult> {
         let encoded_len = padded_len_usize(length);
         let encoded_str = peek(bytes, encoded_len)?;
 
         let decoded = str::from_utf8(&encoded_str[..length])?;
-
         let result = DecodeResult {
-            token: Token::String(StringToken::new(decoded.into(), length)),
+            token: Token::StringArray(StringToken::new(decoded.into(), Some(length))),
             bytes_read: encoded_len,
         };
-
         Ok(result)
     }
 
@@ -198,6 +208,13 @@ impl ABIDecoder {
         Ok(DecodeResult {
             token: Token::U128(peek_u128(bytes)?),
             bytes_read: U128_BYTES_SIZE,
+        })
+    }
+
+    fn decode_u256(bytes: &[u8]) -> Result<DecodeResult> {
+        Ok(DecodeResult {
+            token: Token::U256(peek_u256(bytes)?),
+            bytes_read: U256_BYTES_SIZE,
         })
     }
 
@@ -284,6 +301,11 @@ impl ABIDecoder {
 fn peek_u128(bytes: &[u8]) -> Result<u128> {
     let slice = peek_fixed::<U128_BYTES_SIZE>(bytes)?;
     Ok(u128::from_be_bytes(*slice))
+}
+
+fn peek_u256(bytes: &[u8]) -> Result<U256> {
+    let slice = peek_fixed::<U256_BYTES_SIZE>(bytes)?;
+    Ok(U256::from(*slice))
 }
 
 fn peek_u64(bytes: &[u8]) -> Result<u64> {
@@ -423,20 +445,41 @@ mod tests {
     }
 
     #[test]
-    fn decode_string() -> Result<()> {
+    fn decode_string_array() -> Result<()> {
         let types = vec![ParamType::String(23), ParamType::String(5)];
         let data = [
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c,
-            0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, 0x48, 0x65, 0x6c, 0x6c,
-            0x6f, 0x0, 0x0, 0x0,
+            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
+            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
+            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, // entence
+            0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, // Hello
         ];
 
         let decoded = ABIDecoder::decode(&types, &data)?;
 
         let expected = vec![
-            Token::String(StringToken::new("This is a full sentence".into(), 23)),
-            Token::String(StringToken::new("Hello".into(), 5)),
+            Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23))),
+            Token::StringArray(StringToken::new("Hello".into(), Some(5))),
         ];
+
+        assert_eq!(decoded, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn decode_string_slice() -> Result<()> {
+        let types = vec![ParamType::StringSlice];
+        let data = [
+            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
+            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
+            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // entence
+        ];
+
+        let decoded = ABIDecoder::decode(&types, &data)?;
+
+        let expected = vec![Token::StringSlice(StringToken::new(
+            "This is a full sentence".into(),
+            None,
+        ))];
 
         assert_eq!(decoded, expected);
         Ok(())
@@ -475,6 +518,17 @@ mod tests {
         let decoded = ABIDecoder::decode_single(&param_type, &data)?;
 
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
+
+        assert_eq!(decoded, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn decode_bytes() -> Result<()> {
+        let data = [0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
+        let decoded = ABIDecoder::decode_single(&ParamType::Bytes, &data)?;
+
+        let expected = Token::Bytes(data.to_vec());
 
         assert_eq!(decoded, expected);
         Ok(())
@@ -538,7 +592,7 @@ mod tests {
         // this padding is due to the biggest variant of MyEnum being 3 WORDs bigger than the chosen variant
         let enum_padding_enc = vec![0x0; 3 * WORD_SIZE];
         let struct_par2_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xD4, 0x31];
-        let bytes: Vec<u8> = vec![
+        let data: Vec<u8> = vec![
             enum_discriminant_enc,
             enum_padding_enc,
             enum_data_enc,
@@ -548,7 +602,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode_single(&struct_type, &bytes)?;
+        let decoded = ABIDecoder::decode_single(&struct_type, &data)?;
 
         let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
@@ -616,7 +670,7 @@ mod tests {
         //     b: u8[2],
         // }
 
-        // fn: long_function(Foo,u8[2],b256,str[23])
+        // fn: long_function(Foo,u8[2],b256,str[3],str)
 
         // Parameters
         let fields = vec![
@@ -636,11 +690,12 @@ mod tests {
 
         let u8_arr = ParamType::Array(Box::new(ParamType::U8), 2);
         let b256 = ParamType::B256;
-        let s = ParamType::String(23);
+        let s = ParamType::String(3);
+        let ss = ParamType::StringSlice;
 
-        let types = [nested_struct, u8_arr, b256, s];
+        let types = [nested_struct, u8_arr, b256, s, ss];
 
-        let data = [
+        let bytes = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // foo.x == 10u16
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // foo.y.a == true
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // foo.b.0 == 1u8
@@ -651,12 +706,13 @@ mod tests {
             0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44, 0xe4, 0xcb, // b256
             0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, // b256
             0xa8, 0xf8, 0x27, 0x43, 0xf3, 0x1e, 0x93, 0xb, // b256
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // str[23]
-            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // str[23]
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0, // str[23]
+            0x66, 0x6f, 0x6f, 0x00, 0x00, 0x00, 0x00, 0x00, // str[3]
+            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // str data
+            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // str data
+            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // str data
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = ABIDecoder::decode(&types, &bytes)?;
 
         // Expected tokens
         let foo = Token::Struct(vec![
@@ -675,9 +731,11 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let s = Token::String(StringToken::new("This is a full sentence".into(), 23));
+        let ss = Token::StringSlice(StringToken::new("This is a full sentence".into(), None));
 
-        let expected: Vec<Token> = vec![foo, u8_arr, b256, s];
+        let s = Token::StringArray(StringToken::new("foo".into(), Some(3)));
+
+        let expected: Vec<Token> = vec![foo, u8_arr, b256, s, ss];
 
         assert_eq!(decoded, expected);
         Ok(())

@@ -245,8 +245,7 @@ mod tests {
                     .chain_info()
                     .await?
                     .consensus_parameters
-                    .max_gas_per_tx
-                    .0,
+                    .max_gas_per_tx,
                 10_000_000_000
             );
             assert_eq!(wallet.get_coins(AssetId::default()).await?.len(), 3);
@@ -254,7 +253,7 @@ mod tests {
                 wallet
                     .get_balances()
                     .await?
-                    .get("0x0000000000000000000000000000000000000000000000000000000000000000")
+                    .get("0000000000000000000000000000000000000000000000000000000000000000")
                     .expect("Failed to get value"),
                 &6_000_000_000
             );
