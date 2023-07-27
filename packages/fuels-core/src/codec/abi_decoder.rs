@@ -45,6 +45,9 @@ impl ABIDecoder {
     /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
     /// ```
     pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
+        for param_type in param_types {
+            Self::check_for_nested_heap_types(param_type)?;
+        }
         let (tokens, _) = Self::decode_multiple(param_types, bytes)?;
 
         Ok(tokens)
@@ -53,16 +56,22 @@ impl ABIDecoder {
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+        Self::check_for_nested_heap_types(param_type)?;
         Ok(Self::decode_param(param_type, bytes)?.token)
     }
 
-    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+    fn check_for_nested_heap_types(param_type: &ParamType) -> Result<()> {
         if param_type.contains_nested_heap_types() {
-            return Err(error!(
+            Err(error!(
                 InvalidData,
                 "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
-            ));
+            ))
+        } else {
+            Ok(())
         }
+    }
+
+    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -94,7 +103,8 @@ impl ABIDecoder {
 
     fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
-        let (tokens, bytes_read) = Self::decode_multiple(vec![param_type; num_of_elements], bytes)?;
+        let (tokens, bytes_read) =
+            Self::decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
         Ok(DecodeResult {
             token: Token::Vector(tokens),
@@ -138,7 +148,8 @@ impl ABIDecoder {
     }
 
     fn decode_array(param_type: &ParamType, bytes: &[u8], length: usize) -> Result<DecodeResult> {
-        let (tokens, bytes_read) = Self::decode_multiple(&vec![param_type.clone(); length], bytes)?;
+        let (tokens, bytes_read) =
+            Self::decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
 
         Ok(DecodeResult {
             token: Token::Array(tokens),
@@ -150,8 +161,9 @@ impl ABIDecoder {
         let raw_slice_element = ParamType::U64;
         let num_of_elements =
             ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
+        let param_type = ParamType::U64;
         let (tokens, bytes_read) =
-            Self::decode_multiple(&vec![ParamType::U64; num_of_elements], bytes)?;
+            Self::decode_multiple(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
         let elements = tokens
             .into_iter()
             .map(u64::from_token)
