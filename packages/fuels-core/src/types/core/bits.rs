@@ -1,3 +1,4 @@
+use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
 use crate::types::errors::{error, Error, Result};
@@ -26,6 +27,12 @@ impl Bits256 {
             )
         })?;
         Ok(Bits256(bytes))
+    }
+}
+
+impl From<AssetId> for Bits256 {
+    fn from(value: AssetId) -> Self {
+        Self(value.into())
     }
 }
 

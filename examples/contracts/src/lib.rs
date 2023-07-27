@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::tx::{Bytes32, ContractIdExt};
     use fuels::types::errors::{error, Error, Result};
 
     #[tokio::test]
@@ -344,10 +345,13 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
+        let asset_id = ContractId::from(contract_id)
+            .asset_id(&Bytes32::zeroed())
+            .into();
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, asset_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;

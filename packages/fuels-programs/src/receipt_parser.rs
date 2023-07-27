@@ -70,13 +70,21 @@ impl ReceiptParser {
     }
 
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        self.receipts
-            .iter_mut()
-            .position(|receipt| receipt.id() == Some(contract_id))
-            .and_then(|index| match self.receipts.remove(index) {
-                Receipt::ReturnData { data, .. } => data,
-                _ => None,
-            })
+        for (index, receipt) in self.receipts.iter_mut().enumerate() {
+            if let Receipt::ReturnData {
+                id,
+                data: Some(data),
+                ..
+            } = receipt
+            {
+                if id == contract_id {
+                    let data = std::mem::take(data);
+                    self.receipts.remove(index);
+                    return Some(data);
+                }
+            }
+        }
+        None
     }
 
     fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {

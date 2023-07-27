@@ -3,6 +3,7 @@ use std::{iter, ops::Add, str::FromStr, vec};
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
 use fuel_core_types::tai64::Tai64;
+use fuel_tx::{Bytes32, ContractIdExt};
 use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
@@ -374,9 +375,12 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
+    let asset_id = ContractId::from(contract_id)
+        .asset_id(&Bytes32::zeroed())
+        .into();
 
     let mut balance_response = contract_methods
-        .get_balance(contract_id, contract_id)
+        .get_balance(contract_id, asset_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -384,7 +388,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     contract_methods.mint_coins(5_000_000).call().await?;
 
     balance_response = contract_methods
-        .get_balance(contract_id, contract_id)
+        .get_balance(contract_id, asset_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -417,7 +421,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, contract_id, address)
+        .transfer_coins_to_output(1_000_000, asset_id, address)
         .append_variable_outputs(1)
         .call()
         .await?;
