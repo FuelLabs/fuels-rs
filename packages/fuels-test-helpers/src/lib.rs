@@ -166,11 +166,7 @@ pub async fn setup_test_client(
     });
 
     let client = FuelClient::from(address);
-    let consensus_parameters = client
-        .chain_info()
-        .await?
-        .consensus_parameters
-        .into();
+    let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
 
     Ok((client, address, consensus_parameters))
 }
@@ -207,11 +203,7 @@ pub async fn setup_test_client(
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
 
-    let consensus_parameters = client
-        .chain_info()
-        .await?
-        .consensus_parameters
-        .into();
+    let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
 
     Ok((client, bound_address, consensus_parameters))
 }
