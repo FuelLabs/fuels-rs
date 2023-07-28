@@ -4,11 +4,12 @@
 With low-level calls, you can specify the parameters of your calls at runtime and make indirect calls through other contracts.
 
 Your caller contract should call `std::low_level_call::call_with_function_selector`, providing:
-  - target contract ID
-  - function selector encoded as `Bytes`
-  - calldata encoded as `Bytes`
-  - whether the calldata contains only a single value argument (e.g. a `u64`)
-  - `std::low_level_call::CallParams`
+
+- target contract ID
+- function selector encoded as `Bytes`
+- calldata encoded as `Bytes`
+- whether the calldata contains only a single value argument (e.g. a `u64`)
+- `std::low_level_call::CallParams`
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/contracts/low_level_caller/src/main.sw:low_level_call_contract}}
