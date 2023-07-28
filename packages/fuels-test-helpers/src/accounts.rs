@@ -6,6 +6,7 @@ use fuel_core_chain_config::ChainConfig;
 use fuels_accounts::{
     fuel_crypto::SecretKey, provider::Provider, wallet::WalletUnlocked, ViewOnlyAccount,
 };
+use fuels_core::types::errors::Error;
 use fuels_core::types::{coin::Coin, message::Message};
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -21,17 +22,17 @@ use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 /// use fuels_accounts::Signer;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
-///   let wallet = launch_provider_and_get_wallet().await;
+///   let wallet = launch_provider_and_get_wallet().await?;
 ///   dbg!(wallet.address());
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
+pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked, Error> {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
-            .await;
+            .await?;
 
-    wallets.pop().unwrap()
+    Ok(wallets.pop().unwrap())
 }
 
 /// Launches a custom node and provider, along with a configurable number of wallets.
@@ -48,7 +49,7 @@ pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
 ///   let amount = 1;
 ///   let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 ///
-///   let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+///   let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 ///   let first_wallet = wallets.pop().unwrap();
 ///   dbg!(first_wallet.address());
 ///   Ok(())
@@ -58,7 +59,7 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Vec<WalletUnlocked> {
+) -> Result<Vec<WalletUnlocked>, Error> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
     let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
@@ -80,13 +81,14 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let (provider, _) = setup_test_provider(all_coins, vec![], provider_config, chain_config).await;
+    let (provider, _) =
+        setup_test_provider(all_coins, vec![], provider_config, chain_config).await?;
 
     for wallet in &mut wallets {
         wallet.set_provider(provider.clone());
     }
 
-    wallets
+    Ok(wallets)
 }
 
 /// Setup a test provider with the given coins. We return the SocketAddr so the launched node
@@ -96,7 +98,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 /// use fuels_test_helpers::setup_test_provider;
 ///
 /// async fn test_provider() -> Result<(), Box<dyn std::error::Error>> {
-///   let (_provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
+///   let (_provider, _address) = setup_test_provider(vec![], vec![], None, None).await?;
 ///   Ok(())
 /// }
 /// ```
@@ -105,10 +107,10 @@ pub async fn setup_test_provider(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> (Provider, SocketAddr) {
+) -> Result<(Provider, SocketAddr), Error> {
     let (client, addr, consensus_parameters) =
-        setup_test_client(coins, messages, node_config, chain_config).await;
-    (Provider::new(client, consensus_parameters), addr)
+        setup_test_client(coins, messages, node_config, chain_config).await?;
+    Ok((Provider::new(client, consensus_parameters), addr))
 }
 
 #[cfg(test)]
@@ -129,7 +131,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
@@ -176,7 +178,7 @@ mod tests {
         let assets = vec![asset_base, asset_1, asset_2];
 
         let config = WalletsConfig::new_multiple_assets(num_wallets, assets.clone());
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for asset in assets {
@@ -207,7 +209,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 
         assert_eq!(
             wallets.get(31).unwrap().address().to_string(),
@@ -233,7 +235,7 @@ mod tests {
             None,
             Some(chain_config),
         )
-        .await;
+        .await?;
 
         assert_eq!(wallets.len(), 4);
 

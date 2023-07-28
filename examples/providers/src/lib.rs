@@ -59,7 +59,7 @@ mod tests {
         );
         // ANCHOR_END: setup_single_asset
 
-        let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+        let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await?;
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins

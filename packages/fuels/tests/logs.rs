@@ -616,7 +616,7 @@ async fn test_script_decode_logs() -> Result<()> {
         abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
@@ -726,7 +726,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
 #[tokio::test]
 #[allow(unused_variables)]
 async fn test_script_logs_with_contract_logs() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     abigen!(
         Contract(
@@ -1040,7 +1040,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_require_from_contract() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
             Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
@@ -1265,7 +1265,7 @@ async fn test_log_results() -> Result<()> {
         abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "tests/logs/contract_logs/out/debug/contract_logs.bin",

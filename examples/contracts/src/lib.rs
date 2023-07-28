@@ -28,7 +28,7 @@ mod tests {
 
         // ANCHOR: deploy_contract
         // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
@@ -84,7 +84,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -104,7 +104,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 498);
+        assert_eq!(transaction_cost.gas_used, 499);
 
         Ok(())
     }
@@ -117,7 +117,7 @@ mod tests {
         };
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id_1 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -204,7 +204,7 @@ mod tests {
         ));
 
         let wallets =
-            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
 
         let contract_id_1 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -255,7 +255,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -325,7 +325,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
@@ -364,7 +364,7 @@ mod tests {
             abi="packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let called_contract_id: ContractId = Contract::load_from(
             "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
@@ -435,7 +435,7 @@ mod tests {
                 abi =
                     "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
-            let wallet = launch_provider_and_get_wallet().await;
+            let wallet = launch_provider_and_get_wallet().await?;
 
             let contract_id = Contract::load_from(
                 "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -480,7 +480,7 @@ mod tests {
                 abi =
                     "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
-            let wallet_original = launch_provider_and_get_wallet().await;
+            let wallet_original = launch_provider_and_get_wallet().await?;
 
             let wallet = wallet_original.clone();
             // Your bech32m encoded contract ID.
@@ -515,7 +515,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -553,7 +553,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -601,7 +601,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -628,7 +628,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 783);
+        assert_eq!(transaction_cost.gas_used, 786);
 
         Ok(())
     }
@@ -643,7 +643,7 @@ mod tests {
         ));
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
-        let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         let wallet_1 = wallets.pop().unwrap();
         let wallet_2 = wallets.pop().unwrap();
 

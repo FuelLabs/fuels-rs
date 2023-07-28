@@ -7,7 +7,7 @@ async fn contract_uses_default_configurables() -> Result<()> {
         abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/debug/configurables.bin",
@@ -83,7 +83,7 @@ async fn contract_configurables() -> Result<()> {
         abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let new_str: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
@@ -132,7 +132,7 @@ async fn script_configurables() -> Result<()> {
     // ANCHOR: script_configurables
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "../fuels/tests/scripts/script_configurables/out/debug/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 

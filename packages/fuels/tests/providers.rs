@@ -27,7 +27,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
+    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await?;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
     wallet.set_provider(connected_provider);
@@ -116,7 +116,7 @@ async fn test_input_message() -> Result<()> {
         vec![1, 2],
     )];
 
-    let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
+    let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await?;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -160,7 +160,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         vec![],
     );
 
-    let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await;
+    let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await?;
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -200,7 +200,8 @@ async fn can_increase_block_height() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -226,7 +227,8 @@ async fn can_set_custom_block_time() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -281,8 +283,10 @@ async fn given_a_provider() -> Provider {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
     };
+
     setup_test_provider(vec![], vec![], Some(config), None)
         .await
+        .unwrap()
         .0
 }
 
@@ -295,7 +299,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -464,7 +469,7 @@ async fn test_gas_errors() -> Result<()> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -644,7 +649,7 @@ async fn testnet_hello_world() -> Result<()> {
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
     let tx_parameters = TxParameters::default().set_gas_price(1).set_gas_limit(2000);
 
@@ -693,7 +698,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let message_nonce = message.nonce;
 
-    let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
+    let (provider, _) = setup_test_provider(coins, vec![message], None, None).await?;
 
     wallet.set_provider(provider.clone());
 
@@ -762,7 +767,7 @@ async fn test_sway_timestamp() -> Result<()> {
         Some(provider_config),
         None,
     )
-    .await;
+    .await?;
     let wallet = wallets.pop().unwrap();
     let provider = wallet.try_provider()?;
 

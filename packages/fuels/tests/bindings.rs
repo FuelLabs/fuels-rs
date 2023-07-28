@@ -14,7 +14,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_contract_file() {
+async fn compile_bindings_from_contract_file() -> Result<()> {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
     setup_program_test!(
@@ -42,6 +42,8 @@ async fn compile_bindings_from_contract_file() {
     );
 
     assert_eq!("000000005f68ee3d000000000000002a", encoded);
+
+    Ok(())
 }
 
 #[tokio::test]
@@ -87,7 +89,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -105,7 +107,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 }
 
 #[tokio::test]
-async fn compile_bindings_array_input() {
+async fn compile_bindings_array_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -159,7 +161,7 @@ async fn compile_bindings_array_input() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -177,10 +179,12 @@ async fn compile_bindings_array_input() {
         "00000000101cbeb5000000000000000100000000000000020000000000000003",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_bool_array_input() {
+async fn compile_bindings_bool_array_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -234,7 +238,7 @@ async fn compile_bindings_bool_array_input() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -252,10 +256,12 @@ async fn compile_bindings_bool_array_input() {
         "000000000c228226000000000000000100000000000000000000000000000001",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_string_input() {
+async fn compile_bindings_string_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -297,7 +303,7 @@ async fn compile_bindings_string_input() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -320,10 +326,12 @@ async fn compile_bindings_string_input() {
         "00000000d56e76515468697320697320612066756c6c2073656e74656e636500",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_b256_input() {
+async fn compile_bindings_b256_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -365,7 +373,7 @@ async fn compile_bindings_b256_input() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -389,10 +397,12 @@ async fn compile_bindings_b256_input() {
         "0000000054992852d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_evm_address_input() {
+async fn compile_bindings_evm_address_input() -> Result<()> {
     abigen!(Contract(
         name = "SimpleContract",
         abi = r#"
@@ -432,7 +442,7 @@ async fn compile_bindings_evm_address_input() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -457,10 +467,12 @@ async fn compile_bindings_evm_address_input() {
         "000000006ef3f9a50000000000000000000000005b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_struct_input() {
+async fn compile_bindings_struct_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -543,7 +555,7 @@ async fn compile_bindings_struct_input() {
         bar: "fuel".try_into().unwrap(),
     };
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -560,10 +572,12 @@ async fn compile_bindings_struct_input() {
         "000000008d4ab9b0000000000000000a00000000000000026675656c00000000",
         encoded
     );
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_nested_struct_input() {
+async fn compile_bindings_nested_struct_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -647,7 +661,7 @@ async fn compile_bindings_nested_struct_input() {
         foo: inner_struct,
     };
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -665,10 +679,12 @@ async fn compile_bindings_nested_struct_input() {
     );
 
     assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
+
+    Ok(())
 }
 
 #[tokio::test]
-async fn compile_bindings_enum_input() {
+async fn compile_bindings_enum_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
@@ -735,7 +751,7 @@ async fn compile_bindings_enum_input() {
 
     let variant = MyEnum::X(42);
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -750,6 +766,8 @@ async fn compile_bindings_enum_input() {
 
     let expected = "0000000021b2784f0000000000000000000000000000002a";
     assert_eq!(encoded, expected);
+
+    Ok(())
 }
 
 #[tokio::test]

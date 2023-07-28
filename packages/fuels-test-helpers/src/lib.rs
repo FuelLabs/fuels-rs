@@ -17,6 +17,7 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
+use fuels_core::types::errors::Error;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -142,7 +143,7 @@ pub async fn setup_test_client(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> (FuelClient, SocketAddr, ConsensusParameters) {
+) -> Result<(FuelClient, SocketAddr, ConsensusParameters), Error> {
     let coin_configs = into_coin_configs(coins);
     let message_configs = into_message_configs(messages);
     let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
@@ -167,12 +168,11 @@ pub async fn setup_test_client(
     let client = FuelClient::from(address);
     let consensus_parameters = client
         .chain_info()
-        .await
-        .expect("Could not retrieve consensus parameters of running client, should not happen")
+        .await?
         .consensus_parameters
         .into();
 
-    (client, address, consensus_parameters)
+    Ok((client, address, consensus_parameters))
 }
 
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -181,7 +181,7 @@ pub async fn setup_test_client(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> (FuelClient, SocketAddr, ConsensusParameters) {
+) -> Result<(FuelClient, SocketAddr, ConsensusParameters), Error> {
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
@@ -209,12 +209,11 @@ pub async fn setup_test_client(
 
     let consensus_parameters = client
         .chain_info()
-        .await
-        .expect("Could not retrieve consensus parameters of running client should not happen")
+        .await?
         .consensus_parameters
         .into();
 
-    (client, bound_address, consensus_parameters)
+    Ok((client, bound_address, consensus_parameters))
 }
 
 #[cfg(test)]
@@ -336,7 +335,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_custom_config() -> Result<(), rand::Error> {
+    async fn test_setup_test_client_custom_config() -> Result<(), Error> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
         let config = Config {
             addr: socket,
@@ -346,7 +345,7 @@ mod tests {
         };
 
         let (client, bound_addr, _consensus_parameters) =
-            setup_test_client(vec![], vec![], Some(config.clone()), None).await;
+            setup_test_client(vec![], vec![], Some(config.clone()), None).await?;
         let node_info = client
             .node_info()
             .await
@@ -359,7 +358,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_consensus_parameters_config() {
+    async fn test_setup_test_client_consensus_parameters_config() -> Result<(), Error> {
         let configured_parameters = ConsensusParameters::DEFAULT
             .with_max_gas_per_tx(2)
             .with_gas_per_byte(2)
@@ -371,7 +370,7 @@ mod tests {
             ..ChainConfig::default()
         };
         let (client, _, client_consensus_parameters) =
-            setup_test_client(vec![], vec![], None, Some(chain_config)).await;
+            setup_test_client(vec![], vec![], None, Some(chain_config)).await?;
 
         let retrieved_parameters: ConsensusParameters = client
             .chain_info()
@@ -381,11 +380,13 @@ mod tests {
             .into();
 
         assert_eq!(retrieved_parameters, configured_parameters);
-        assert_eq!(client_consensus_parameters, configured_parameters)
+        assert_eq!(client_consensus_parameters, configured_parameters);
+
+        Ok(())
     }
 
     #[tokio::test]
-    async fn test_chain_config_and_consensus_parameters() {
+    async fn test_chain_config_and_consensus_parameters() -> Result<(), Error> {
         let consensus_parameters_config = ConsensusParameters::DEFAULT
             .with_max_inputs(123)
             .with_gas_per_byte(456);
@@ -397,7 +398,7 @@ mod tests {
         };
 
         let (fuel_client, _, client_consensus_parameters) =
-            setup_test_client(vec![], vec![], None, Some(chain_config)).await;
+            setup_test_client(vec![], vec![], None, Some(chain_config)).await?;
 
         let chain_info = fuel_client.chain_info().await.unwrap();
 
@@ -406,5 +407,7 @@ mod tests {
         assert_eq!(chain_info.consensus_parameters.gas_per_byte, 456);
         assert_eq!(client_consensus_parameters.gas_per_byte, 456);
         assert_eq!(client_consensus_parameters.max_inputs, 123);
+
+        Ok(())
     }
 }

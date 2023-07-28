@@ -83,7 +83,7 @@ async fn setup_predicate_test(
         manual_blocks_enabled: true,
         ..Config::local_node()
     };
-    let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await;
+    let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -107,7 +107,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let (coins, messages, asset_id) =
         get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let (provider, _address) = setup_test_provider(coins, messages, None, None).await?;
 
     wallet.set_provider(provider.clone());
 
@@ -436,7 +436,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     coins.extend(wallet_coins);
     messages.extend(wallet_messages);
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let (provider, _address) = setup_test_provider(coins, messages, None, None).await?;
     wallet.set_provider(provider.clone());
     predicate.set_provider(provider.clone());
 

@@ -64,7 +64,7 @@ async fn main_function_arguments() -> Result<()> {
         name = "MyScript",
         abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
     ));
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
@@ -167,7 +167,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     );
 
     let (fuel_client, _, consensus_parameters) =
-        setup_test_client(coins, vec![], None, Some(chain_config)).await;
+        setup_test_client(coins, vec![], None, Some(chain_config)).await?;
     let provider = Provider::new(fuel_client, consensus_parameters);
     assert_eq!(consensus_parameters, consensus_parameters_config);
     wallet.set_provider(provider.clone());
@@ -202,7 +202,7 @@ async fn test_script_signing() -> Result<()> {
     };
 
     let wallets =
-        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await;
+        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await?;
     let wallet = wallets.first().unwrap();
 
     setup_program_test!(
