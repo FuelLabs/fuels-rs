@@ -137,7 +137,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .unwrap();
 
     let tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
-    let tx = wallet.add_fee_resources(tb, 0, None).await?;
+    let tx = wallet.add_fee_resources(tb, 0).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -167,13 +167,13 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let base_amount = 30;
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, None)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
-    let tx = wallet.add_fee_resources(tb, base_amount, None).await?;
+    let tx = wallet.add_fee_resources(tb, base_amount).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(

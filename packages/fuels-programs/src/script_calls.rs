@@ -216,17 +216,13 @@ where
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tb = self.prepare_builder().await?;
         let base_amount = self.calculate_base_asset_sum();
-        let tx = self
-            .account
-            .add_fee_resources(tb, base_amount, None)
-            .await?;
-        let consensus_parameters = self.provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        let tx = self.account.add_fee_resources(tb, base_amount).await?;
+        self.cached_tx_id = Some(tx.id());
 
         let receipts = if simulate {
-            self.provider.checked_dry_run(&tx).await?
+            self.provider.checked_dry_run(tx).await?
         } else {
-            self.provider.send_transaction(&tx).await?
+            self.provider.send_transaction(tx).await?
         };
         self.get_response(receipts)
     }
@@ -255,11 +251,11 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        let tx = self.account.add_fee_resources(tb, 0).await?;
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(&tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance)
             .await?;
 
         Ok(transaction_cost)

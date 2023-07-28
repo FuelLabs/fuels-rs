@@ -441,10 +441,10 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance)
         .await?;
     inputs.extend(predicate_inputs);
 
@@ -454,9 +454,9 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
         .set_consensus_parameters(params)
         .build()?;
-    wallet.sign_transaction(&mut tx)?;
+    wallet.sign_transaction(&mut tx);
 
-    provider.send_transaction(&tx).await?;
+    provider.send_transaction(tx).await?;
 
     assert_address_balance(
         predicate.address(),

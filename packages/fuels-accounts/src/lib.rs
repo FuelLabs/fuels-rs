@@ -44,10 +44,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    fn sign_transaction(
-        &self,
-        message: &mut impl Transaction,
-    ) -> std::result::Result<Signature, Self::Error>;
+    fn sign_transaction(&self, message: &mut impl Transaction);
 }
 
 #[derive(Debug)]
@@ -155,7 +152,6 @@ pub trait Account: ViewOnlyAccount {
         &self,
         asset_id: AssetId,
         amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Vec<Input>>;
 
     /// Returns a vector containing the output coin and change output given an asset and amount
@@ -177,7 +173,6 @@ pub trait Account: ViewOnlyAccount {
         &self,
         tb: Tb,
         previous_base_amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Tb::TxType>;
 
     /// Transfer funds from this account to another `Address`.
@@ -190,9 +185,7 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(TxId, Vec<Receipt>)> {
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, None)
-            .await?;
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -209,12 +202,13 @@ pub trait Account: ViewOnlyAccount {
         };
 
         let tx = self
-            .add_fee_resources(tx_builder, previous_base_amount, None)
+            .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
+        let tx_id = tx.id();
 
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(tx).await?;
 
-        Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
+        Ok((tx_id, receipts))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -232,7 +226,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+    ) -> std::result::Result<(TxId, Vec<Receipt>), Error> {
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -244,10 +238,7 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, None)
-                .await?,
-        );
+        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -274,12 +265,12 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let tx = self.add_fee_resources(tb, base_amount, None).await?;
+        let tx = self.add_fee_resources(tb, base_amount).await?;
+        let tx_id = tx.id();
 
-        let tx_id = tx.id(params.chain_id.into());
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(tx).await?;
 
-        Ok((tx_id.to_string(), receipts))
+        Ok((tx_id, receipts))
     }
 
     /// Withdraws an amount of the base asset to
@@ -291,10 +282,8 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
-        let params = self.try_provider()?.consensus_parameters();
-        let chain_id = params.chain_id;
         let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
         let tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -304,10 +293,10 @@ pub trait Account: ViewOnlyAccount {
             tx_parameters,
         );
 
-        let tx = self.add_fee_resources(tb, amount, None).await?;
+        let tx = self.add_fee_resources(tb, amount).await?;
+        let tx_id = tx.id();
 
-        let tx_id = tx.id(chain_id.into());
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let receipts = self.try_provider()?.send_transaction(tx).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -379,7 +368,6 @@ mod tests {
         };
         let input_coin = Input::ResourceSigned {
             resource: CoinType::Coin(coin),
-            witness_index: 0,
         };
 
         let output_coin = Output::coin(
@@ -390,7 +378,7 @@ mod tests {
             Default::default(),
         );
 
-        let mut tx = ScriptTransactionBuilder::prepare_transfer(
+        let tx = ScriptTransactionBuilder::prepare_transfer(
             vec![input_coin],
             vec![output_coin],
             Default::default(),
@@ -401,8 +389,8 @@ mod tests {
         let consensus_parameters = ConsensusParameters::default();
         let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
         wallet.set_provider(test_provider);
-        let signature = wallet.sign_transaction(&mut tx)?;
-        let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
+        let message = Message::from_bytes(*tx.id());
+        let signature = Signature::sign(&wallet.private_key, &message);
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("13ce336c5f239a748f20f39323e3df3237ccfe104b04f128be66f26a49abd09d3b4b19c7f07efbb708c442371feb5fc6545f2b614e1f9f336702cca3e62d0cc8")?);

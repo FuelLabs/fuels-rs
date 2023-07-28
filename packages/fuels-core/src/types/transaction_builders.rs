@@ -2,7 +2,7 @@
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_tx::{
-    ConsensusParameters, FormatValidityChecks, Input as FuelInput, Output, StorageSlot,
+    ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Address, AssetId, Bytes32, ContractId, Salt};
@@ -24,15 +24,7 @@ pub trait TransactionBuilder: Send {
     type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
-
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
-
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        parameters: &ConsensusParameters,
-    ) -> Result<()>;
-
     fn set_maturity(self, maturity: u32) -> Self;
     fn set_gas_price(self, gas_price: u64) -> Self;
     fn set_gas_limit(self, gas_limit: u64) -> Self;
@@ -50,12 +42,12 @@ pub trait TransactionBuilder: Send {
 }
 
 macro_rules! impl_tx_trait {
-    ($ty: ty, $tx_ty: ty) => {
+    ($ty: ty, $tx_ty: ident) => {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
                 let uses_predicates = self.is_using_predicates();
-                let (base_offset, consensus_params) = if uses_predicates {
+                let (base_offset, consensus_parameters) = if uses_predicates {
                     let consensus_params = self
                         .consensus_parameters
                         .ok_or(error!(
@@ -67,31 +59,17 @@ macro_rules! impl_tx_trait {
                     // erroring out since the tx doesn't use predicates
                     (0, self.consensus_parameters.unwrap_or_default())
                 };
-                let mut fuel_tx = self.convert_to_fuel_tx(base_offset);
-                // the transaction was just created, so it's not precomputed
-                fuel_tx.precompute(consensus_params.chain_id.into())?;
-                if uses_predicates {
-                    fuel_tx.estimate_predicates(&consensus_params)?;
-                };
-                Ok(fuel_tx)
+
+                Ok($tx_ty {
+                    tx: self.convert_to_fuel_type(base_offset),
+                    unresolved_signatures: vec![],
+                    consensus_parameters
+                })
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 let tx = &self.clone().build().expect("error in build").tx;
                 TransactionFee::checked_from_tx(params, tx)
-            }
-
-            fn check_without_signatures(
-                &self,
-                block_height: u32,
-                parameters: &ConsensusParameters,
-            ) -> Result<()> {
-                Ok(self
-                    .clone()
-                    .build()
-                    .expect("error in build")
-                    .tx
-                    .check_without_signatures(block_height.into(), parameters)?)
             }
 
             fn set_maturity(mut self, maturity: u32) -> Self {
@@ -205,7 +183,7 @@ impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
-    fn convert_to_fuel_tx(self, base_offset: usize) -> ScriptTransaction {
+    fn convert_to_fuel_type(self, base_offset: usize) -> Script {
         FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
@@ -216,7 +194,6 @@ impl ScriptTransactionBuilder {
             self.outputs,
             self.witnesses,
         )
-        .into()
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
@@ -328,7 +305,7 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    fn convert_to_fuel_tx(self, base_offset: usize) -> CreateTransaction {
+    fn convert_to_fuel_type(self, base_offset: usize) -> Create {
         FuelTransaction::create(
             self.gas_price,
             self.gas_limit,
@@ -340,7 +317,6 @@ impl CreateTransactionBuilder {
             self.outputs,
             self.witnesses,
         )
-        .into()
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
@@ -423,17 +399,14 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
 
                 create_coin_message_predicate(message.clone(), code.clone(), data)
             }
-            Input::ResourceSigned {
-                resource,
-                witness_index,
-            } => match resource {
+            Input::ResourceSigned { resource } => match resource {
                 CoinType::Coin(coin) => {
                     new_offset += offsets::coin_signed_data_offset();
-                    create_coin_input(coin.clone(), *witness_index)
+                    create_coin_input(coin.clone())
                 }
                 CoinType::Message(message) => {
                     new_offset += offsets::message_signed_data_offset(message.data.len());
-                    create_coin_message_input(message.clone(), *witness_index)
+                    create_coin_message_input(message.clone())
                 }
             },
             Input::Contract {
@@ -456,26 +429,26 @@ fn convert_to_fuel_inputs(inputs: &[Input], offset: usize) -> Vec<FuelInput> {
         .collect::<Vec<FuelInput>>()
 }
 
-pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
+pub fn create_coin_input(coin: Coin) -> FuelInput {
     FuelInput::coin_signed(
         coin.utxo_id,
         coin.owner.into(),
         coin.amount,
         coin.asset_id,
         TxPointer::default(),
-        witness_index,
+        0,
         0u32.into(),
     )
 }
 
-pub fn create_coin_message_input(message: Message, witness_index: u8) -> FuelInput {
+pub fn create_coin_message_input(message: Message) -> FuelInput {
     if message.data.is_empty() {
         FuelInput::message_coin_signed(
             message.sender.into(),
             message.recipient.into(),
             message.amount,
             message.nonce,
-            witness_index,
+            0,
         )
     } else {
         FuelInput::message_data_signed(
@@ -483,7 +456,7 @@ pub fn create_coin_message_input(message: Message, witness_index: u8) -> FuelInp
             message.recipient.into(),
             message.amount,
             message.nonce,
-            witness_index,
+            0,
             message.data,
         )
     }
@@ -562,7 +535,7 @@ mod tests {
     #[test]
     fn create_message_coin_signed_if_data_is_empty() {
         assert!(matches!(
-            create_coin_message_input(given_a_message(vec![]), 0),
+            create_coin_message_input(given_a_message(vec![])),
             FuelInput::MessageCoinSigned(_)
         ));
     }
@@ -570,7 +543,7 @@ mod tests {
     #[test]
     fn create_message_data_signed_if_data_is_not_empty() {
         assert!(matches!(
-            create_coin_message_input(given_a_message(vec![42]), 0),
+            create_coin_message_input(given_a_message(vec![42])),
             FuelInput::MessageDataSigned(_)
         ));
     }

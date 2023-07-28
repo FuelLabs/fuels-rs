@@ -1,10 +1,11 @@
 use std::fmt::Debug;
 
+use fuel_crypto::{Message, SecretKey, Signature};
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
     Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
 };
@@ -12,7 +13,7 @@ use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    types::errors::Error,
+    types::{bech32::Bech32Address, Address, Result},
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -67,36 +68,28 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
-pub trait Transaction: Into<FuelTransaction> + Send {
+pub trait Transaction: Into<FuelTransaction> + Clone {
+    fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey);
+
+    fn resolve_transaction(&mut self) -> Result<()>;
+
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
 
     fn check_without_signatures(
         &self,
         block_height: u32,
         parameters: &ConsensusParameters,
-    ) -> Result<(), Error>;
+    ) -> Result<()>;
 
-    fn precompute(&mut self, chain_id: u64) -> Result<(), Error>;
+    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self;
 
-    fn is_computed(&self) -> bool;
-
-    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error>;
-
-    fn id(&self, chain_id: u64) -> Bytes32;
+    fn id(&self) -> Bytes32;
 
     fn maturity(&self) -> u32;
 
-    fn with_maturity(self, maturity: u32) -> Self;
-
     fn gas_price(&self) -> u64;
 
-    fn with_gas_price(self, gas_price: u64) -> Self;
-
     fn gas_limit(&self) -> u64;
-
-    fn with_gas_limit(self, gas_limit: u64) -> Self;
-
-    fn with_tx_params(self, tx_params: TxParameters) -> Self;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -105,10 +98,6 @@ pub trait Transaction: Into<FuelTransaction> + Send {
     fn outputs(&self) -> &Vec<Output>;
 
     fn witnesses(&self) -> &Vec<Witness>;
-
-    fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-
-    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -121,6 +110,20 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
+    fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey) {
+        match self {
+            TransactionType::Script(tx) => tx.add_unresolved_signature(owner, secret_key),
+            TransactionType::Create(tx) => tx.add_unresolved_signature(owner, secret_key),
+        }
+    }
+
+    fn resolve_transaction(&mut self) -> Result<()> {
+        match self {
+            TransactionType::Script(tx) => tx.resolve_transaction(),
+            TransactionType::Create(tx) => tx.resolve_transaction(),
+        }
+    }
+
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
         match self {
             TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
@@ -128,44 +131,32 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn is_computed(&self) -> bool {
-        match self {
-            TransactionType::Script(tx) => tx.is_computed(),
-            TransactionType::Create(tx) => tx.is_computed(),
-        }
-    }
-
-    fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
-        match self {
-            TransactionType::Script(tx) => tx.precompute(chain_id)?,
-            TransactionType::Create(tx) => tx.precompute(chain_id)?,
-        }
-        Ok(())
-    }
-
-    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error> {
-        match self {
-            TransactionType::Script(tx) => tx.estimate_predicates(parameters)?,
-            TransactionType::Create(tx) => tx.estimate_predicates(parameters)?,
-        };
-        Ok(())
-    }
-
     fn check_without_signatures(
         &self,
         block_height: u32,
         parameters: &ConsensusParameters,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         match self {
             TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
             TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
         }
     }
 
-    fn id(&self, chain_id: u64) -> Bytes32 {
+    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self {
         match self {
-            TransactionType::Script(tx) => tx.id(chain_id),
-            TransactionType::Create(tx) => tx.id(chain_id),
+            TransactionType::Script(tx) => {
+                TransactionType::Script(tx.to_dry_run_tx(gas_price, gas_limit))
+            }
+            TransactionType::Create(tx) => {
+                TransactionType::Create(tx.to_dry_run_tx(gas_price, gas_limit))
+            }
+        }
+    }
+
+    fn id(&self) -> Bytes32 {
+        match self {
+            TransactionType::Script(tx) => tx.id(),
+            TransactionType::Create(tx) => tx.id(),
         }
     }
 
@@ -176,13 +167,6 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn with_maturity(self, maturity: u32) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
-        }
-    }
-
     fn gas_price(&self) -> u64 {
         match self {
             TransactionType::Script(tx) => tx.gas_price(),
@@ -190,31 +174,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn with_gas_price(self, gas_price: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
-        }
-    }
-
     fn gas_limit(&self) -> u64 {
         match self {
             TransactionType::Script(tx) => tx.gas_limit(),
             TransactionType::Create(tx) => tx.gas_limit(),
-        }
-    }
-
-    fn with_gas_limit(self, gas_limit: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
-        }
-    }
-
-    fn with_tx_params(self, tx_params: TxParameters) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_tx_params(tx_params)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_tx_params(tx_params)),
         }
     }
 
@@ -245,32 +208,30 @@ impl Transaction for TransactionType {
             TransactionType::Create(tx) => tx.witnesses(),
         }
     }
+}
 
-    fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
-        match self {
-            TransactionType::Script(tx) => tx.witnesses_mut(),
-            TransactionType::Create(tx) => tx.witnesses_mut(),
-        }
-    }
-
-    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_witnesses(witnesses)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_witnesses(witnesses)),
-        }
-    }
+#[derive(Debug, Clone)]
+pub(crate) struct UnresolvedSignature {
+    owner: Address,
+    secret_key: SecretKey,
 }
 
 macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
-            pub tx: $wrapped,
+            pub(crate) tx: $wrapped,
+            pub(crate) unresolved_signatures: Vec<UnresolvedSignature>,
+            pub(crate) consensus_parameters: ConsensusParameters,
         }
 
         impl From<$wrapped> for $wrapper {
             fn from(tx: $wrapped) -> Self {
-                $wrapper { tx }
+                $wrapper {
+                    tx,
+                    unresolved_signatures: Default::default(),
+                    consensus_parameters: Default::default(),
+                }
             }
         }
 
@@ -298,7 +259,75 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl $wrapper {
+            fn update_witness_indexes(&mut self) {
+                let current_index = self.tx.witnesses().len();
+
+                for (new_index, UnresolvedSignature { owner, .. }) in
+                    self.unresolved_signatures.iter().enumerate()
+                {
+                    for input in self.tx.inputs_mut() {
+                        Self::update_witness_index_if_owner(
+                            input,
+                            owner,
+                            (current_index + new_index) as u8,
+                        );
+                    }
+                }
+            }
+
+            fn update_witness_index_if_owner(input: &mut Input, owner: &Address, index: u8) {
+                match input {
+                    FuelInput::CoinSigned(ref mut cs) if cs.owner == *owner => {
+                        cs.witness_index = index
+                    }
+                    FuelInput::MessageCoinSigned(ref mut mcs) if mcs.recipient == *owner => {
+                        mcs.witness_index = index
+                    }
+                    FuelInput::MessageDataSigned(ref mut mds) if mds.recipient == *owner => {
+                        mds.witness_index = index
+                    }
+                    _ => (),
+                }
+            }
+
+            fn add_missing_witnesses(&mut self) {
+                let id = self.id();
+                let new_witnesses = self.unresolved_signatures.iter().map(
+                    |UnresolvedSignature { secret_key, .. }| {
+                        let message = Message::from_bytes(*id);
+                        let signature = Signature::sign(secret_key, &message);
+
+                        Witness::from(signature.as_ref())
+                    },
+                );
+
+                self.tx.witnesses_mut().extend(new_witnesses);
+            }
+        }
+
         impl Transaction for $wrapper {
+            fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey) {
+                self.unresolved_signatures.push(UnresolvedSignature {
+                    owner: owner.into(),
+                    secret_key,
+                })
+            }
+
+            fn resolve_transaction(&mut self) -> Result<()> {
+                self.update_witness_indexes();
+                self.add_missing_witnesses();
+
+                self.tx.precompute(&self.consensus_parameters.chain_id)?;
+
+                // TODO: Fetch `GasCosts` from the `fuel-core`:
+                //  https://github.com/FuelLabs/fuel-core/issues/1221
+                self.tx
+                    .estimate_predicates(&self.consensus_parameters, &GasCosts::default())?;
+
+                Ok(())
+            }
+
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(params, &self.tx)
             }
@@ -307,66 +336,33 @@ macro_rules! impl_tx_wrapper {
                 &self,
                 block_height: u32,
                 parameters: &ConsensusParameters,
-            ) -> Result<(), Error> {
+            ) -> Result<()> {
                 Ok(self
                     .tx
                     .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn is_computed(&self) -> bool {
-                self.tx.is_computed()
+            fn to_dry_run_tx(mut self, gas_price: u64, gas_limit: u64) -> Self {
+                *self.tx.gas_price_mut() = gas_price;
+                *self.tx.gas_limit_mut() = gas_limit;
+
+                self
             }
 
-            // TODO: Fetch `GasCosts` from the `fuel-core`:
-            //  https://github.com/FuelLabs/fuel-core/issues/1221
-            fn estimate_predicates(
-                &mut self,
-                parameters: &ConsensusParameters,
-            ) -> Result<(), Error> {
-                self.tx
-                    .estimate_predicates(parameters, &GasCosts::default())
-                    .map_err(Error::ValidationError)
-            }
-
-            fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
-                Ok(self.tx.precompute(&chain_id.into())?)
-            }
-
-            fn id(&self, chain_id: u64) -> Bytes32 {
-                self.tx.id(&chain_id.into())
+            fn id(&self) -> Bytes32 {
+                self.tx.id(&self.consensus_parameters.chain_id.into())
             }
 
             fn maturity(&self) -> u32 {
                 (*self.tx.maturity()).into()
             }
 
-            fn with_maturity(mut self, maturity: u32) -> Self {
-                *self.tx.maturity_mut() = maturity.into();
-                self
-            }
-
             fn gas_price(&self) -> u64 {
                 *self.tx.gas_price()
             }
 
-            fn with_gas_price(mut self, gas_price: u64) -> Self {
-                *self.tx.gas_price_mut() = gas_price;
-                self
-            }
-
             fn gas_limit(&self) -> u64 {
                 *self.tx.gas_limit()
-            }
-
-            fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-                *self.tx.gas_limit_mut() = gas_limit;
-                self
-            }
-
-            fn with_tx_params(self, tx_params: TxParameters) -> Self {
-                self.with_gas_limit(tx_params.gas_limit)
-                    .with_gas_price(tx_params.gas_price)
-                    .with_maturity(tx_params.maturity)
             }
 
             fn metered_bytes_size(&self) -> usize {
@@ -383,15 +379,6 @@ macro_rules! impl_tx_wrapper {
 
             fn witnesses(&self) -> &Vec<Witness> {
                 self.tx.witnesses()
-            }
-
-            fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
-                self.tx.witnesses_mut()
-            }
-
-            fn with_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
-                *self.tx.witnesses_mut() = witnesses;
-                self
             }
         }
     };
