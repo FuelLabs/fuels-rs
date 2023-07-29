@@ -1,7 +1,7 @@
 contract;
 
 use std::constants::BASE_ASSET_ID;
-use std::low_level_call::{call_with_function_selector, CallParams};
+use std::low_level_call::{call_with_function_selector_vec, CallParams};
 use std::bytes::Bytes;
 
 abi MyCallerContract {
@@ -19,10 +19,13 @@ impl MyCallerContract for Contract {
         let call_params = CallParams {
             coins: 0,
             asset_id: BASE_ASSET_ID,
-            gas: 10_000,
+            gas: 1_000_000,
         };
 
-        call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
+        let function_selector: Vec<u8> = function_selector.into();
+        let calldata: Vec<u8> = calldata.into();
+
+        call_with_function_selector_vec(target, function_selector, calldata, single_value_type_arg, call_params);
     }
     // ANCHOR_END: low_level_call_contract
 }
