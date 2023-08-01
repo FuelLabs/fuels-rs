@@ -1,8 +1,10 @@
 #![cfg(feature = "std")]
 
 use chrono::{DateTime, NaiveDateTime, Utc};
-use fuel_core_client::client::types::block::{Block as ClientBlock, Header as ClientHeader};
-use fuel_core_client::client::types::primitives::Bytes32;
+use fuel_core_client::client::types::{
+    block::{Block as ClientBlock, Header as ClientHeader},
+    primitives::Bytes32,
+};
 
 #[derive(Debug)]
 pub struct Header {

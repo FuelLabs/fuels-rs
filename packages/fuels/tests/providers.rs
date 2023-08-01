@@ -1,5 +1,4 @@
-use std::ops::Add;
-use std::{iter, str::FromStr, vec};
+use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};

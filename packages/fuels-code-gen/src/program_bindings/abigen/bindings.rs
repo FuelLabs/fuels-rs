@@ -27,6 +27,6 @@ pub(crate) fn generate_bindings(target: ParsedAbigenTarget, no_std: bool) -> Res
     };
 
     let name = ident(&target.name);
-    let abi = target.source;
+    let abi = target.source.abi;
     bindings_generator(&name, abi, no_std)
 }

@@ -1,3 +1,4 @@
+use fuel_abi_types::abi::full_program::FullConfigurable;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -6,8 +7,6 @@ use crate::{
     program_bindings::resolved_type::{ResolvedType, TypeResolver},
     utils::safe_ident,
 };
-
-use fuel_abi_types::abi::full_program::FullConfigurable;
 
 #[derive(Debug)]
 pub(crate) struct ResolvedConfigurable {

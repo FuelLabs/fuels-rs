@@ -10,8 +10,7 @@ use std::{
 pub use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
-use fuel_types::BlockHeight;
-use fuel_types::Word;
+use fuel_types::{BlockHeight, Word};
 use fuels_core::{
     constants::WORD_SIZE,
     types::{
