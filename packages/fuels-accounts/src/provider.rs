@@ -564,7 +564,7 @@ impl Provider {
         let new_tx = new_tx.to_dry_run_tx(gas_price, gas_used);
 
         let transaction_fee = new_tx
-            .fee_checked_from_tx(&self.consensus_parameters())
+            .fee_checked_from_tx()
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {

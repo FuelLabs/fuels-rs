@@ -73,7 +73,7 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
 
     fn resolve_transaction(&mut self) -> Result<()>;
 
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+    fn fee_checked_from_tx(&self) -> Option<TransactionFee>;
 
     fn check_without_signatures(
         &self,
@@ -124,10 +124,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+    fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
         match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(params),
+            TransactionType::Script(tx) => tx.fee_checked_from_tx(),
+            TransactionType::Create(tx) => tx.fee_checked_from_tx(),
         }
     }
 
@@ -328,8 +328,8 @@ macro_rules! impl_tx_wrapper {
                 Ok(())
             }
 
-            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(params, &self.tx)
+            fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
+                TransactionFee::checked_from_tx(&self.consensus_parameters, &self.tx)
             }
 
             fn check_without_signatures(
