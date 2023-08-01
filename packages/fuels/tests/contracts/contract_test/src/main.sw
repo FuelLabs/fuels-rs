@@ -29,8 +29,10 @@ abi TestContract {
     fn increment_counter(value: u64) -> u64;
     #[storage(read)]
     fn get_counter() -> u64;
+    // ANCHOR: low_level_call
     #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
+    // ANCHOR_END: low_level_call
     #[storage(read)]
     fn get_str_value() -> str[4];
     #[storage(read)]
