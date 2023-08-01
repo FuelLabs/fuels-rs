@@ -135,7 +135,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     // ANCHOR: script_with_tx_params
     let parameters = TxParameters::default()
         .set_gas_price(1)
-        .set_gas_limit(10_000);
+        .set_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)

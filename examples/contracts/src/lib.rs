@@ -105,7 +105,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 498);
+        assert_eq!(transaction_cost.gas_used, 445437);
 
         Ok(())
     }
@@ -410,7 +410,7 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = AssetId::from(*caller_contract_id.hash());
+        let asset_id = ContractId::from(*caller_contract_id.hash()).asset_id(&Bytes32::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
         assert_eq!(balance, amount);
 
@@ -534,7 +534,7 @@ mod tests {
         // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 10_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
         let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
@@ -632,7 +632,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 783);
+        assert_eq!(transaction_cost.gas_used, 890958);
 
         Ok(())
     }

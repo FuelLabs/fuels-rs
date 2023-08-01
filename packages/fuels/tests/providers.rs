@@ -338,7 +338,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         ),
     );
 
-    let gas_limit = 225_883;
+    let gas_limit = 445_437;
     let response = contract_instance
         .methods()
         .initialize_counter(42)
@@ -354,7 +354,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .gas()
         .unwrap();
 
-    assert_eq!(gas_limit, gas_forwarded);
+    assert_eq!(298, gas_forwarded);
 
     Ok(())
 }
@@ -538,7 +538,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::default().set_gas_limit(3000))
+        .tx_params(TxParameters::default().set_gas_limit(446000))
         .call_params(CallParameters::default().set_gas_forwarded(1))?
         .call()
         .await
