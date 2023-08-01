@@ -190,13 +190,15 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(TxId, Vec<Receipt>)> {
+        let provider = self.try_provider()?;
+
         let inputs = self
             .get_asset_inputs_for_amount(asset_id, amount, None)
             .await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self.try_provider()?.consensus_parameters();
+        let consensus_parameters = provider.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -212,7 +214,8 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount, None)
             .await?;
 
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let tx_id = provider.send_transaction(&tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
     }
@@ -233,6 +236,8 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+        let provider = self.try_provider()?;
+
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -255,7 +260,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.try_provider()?.consensus_parameters();
+        let params = provider.consensus_parameters();
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -276,8 +281,8 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount, None).await?;
 
-        let tx_id = tx.id(params.chain_id.into());
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let tx_id = self.try_provider()?.send_transaction(&tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -291,8 +296,8 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
-        let params = self.try_provider()?.consensus_parameters();
-        let chain_id = params.chain_id;
+        let provider = self.try_provider()?;
+
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
             .await?;
@@ -305,9 +310,8 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let tx = self.add_fee_resources(tb, amount, None).await?;
-
-        let tx_id = tx.id(chain_id.into());
-        let receipts = self.try_provider()?.send_transaction(&tx).await?;
+        let tx_id = provider.send_transaction(&tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

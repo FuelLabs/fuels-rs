@@ -226,8 +226,10 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
         } else {
-            self.provider.send_transaction(&tx).await?
+            let tx_id = self.provider.send_transaction(&tx).await?;
+            self.provider.get_receipts(&tx_id).await?
         };
+
         self.get_response(receipts)
     }
 

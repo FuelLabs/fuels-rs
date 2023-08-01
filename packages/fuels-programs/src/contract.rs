@@ -495,7 +495,8 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
         } else {
-            provider.send_transaction(&tx).await?
+            let tx_id = provider.send_transaction(&tx).await?;
+            provider.get_receipts(&tx_id).await?
         };
 
         self.get_response(receipts)
@@ -717,7 +718,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
         } else {
-            provider.send_transaction(&tx).await?
+            let tx_id = provider.send_transaction(&tx).await?;
+            provider.get_receipts(&tx_id).await?
         };
 
         self.get_response(receipts)
