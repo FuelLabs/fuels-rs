@@ -65,6 +65,18 @@ impl Input {
         }
     }
 
+    pub fn contains_data(&self) -> bool {
+        match self {
+            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
+                match resource {
+                    CoinType::Message(msg) => !msg.data.is_empty(),
+                    _ => false,
+                }
+            },
+            _ => false,
+        }
+    }
+
     pub const fn contract(
         utxo_id: UtxoId,
         balance_root: Bytes32,

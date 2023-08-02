@@ -151,7 +151,6 @@ impl Account for Predicate {
         _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-
         tb = tb.set_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
