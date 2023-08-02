@@ -21,16 +21,16 @@ enum State {
 }
 
 abi TestContract {
-    // ANCHOR: initialize_counter
     #[storage(write)]
     fn initialize_counter(value: u64) -> u64;
-    // ANCHOR_END: initialize_counter
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64;
     #[storage(read)]
     fn get_counter() -> u64;
+    // ANCHOR: low_level_call
     #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
+    // ANCHOR_END: low_level_call
     #[storage(read)]
     fn get_str_value() -> str[4];
     #[storage(read)]
