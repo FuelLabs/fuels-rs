@@ -14,7 +14,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 }
 
 #[tokio::test]
-async fn compile_bindings_from_contract_file() -> Result<()> {
+async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
     // The generated bindings can be accessed through `SimpleContract`.
     setup_program_test!(
@@ -42,8 +42,6 @@ async fn compile_bindings_from_contract_file() -> Result<()> {
     );
 
     assert_eq!("000000005f68ee3d000000000000002a", encoded);
-
-    Ok(())
 }
 
 #[tokio::test]
