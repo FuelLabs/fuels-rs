@@ -17,15 +17,16 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
-use fuels_core::types::errors::Error;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::Bech32Address,
         coin::{Coin, CoinStatus},
+        errors::Result,
         message::{Message, MessageStatus},
     },
 };
+
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
@@ -59,7 +60,9 @@ pub fn setup_multiple_assets_coins(
     let asset_ids = (0..(num_asset - 1))
         .map(|_| {
             let mut random_asset_id = AssetId::zeroed();
-            random_asset_id.try_fill(&mut rng).unwrap();
+            random_asset_id
+                .try_fill(&mut rng)
+                .expect("failed to fill with random data");
             random_asset_id
         })
         .chain([BASE_ASSET_ID].into_iter())
@@ -98,7 +101,8 @@ pub fn setup_single_asset_coins(
     let coins: Vec<Coin> = (1..=num_coins)
         .map(|_i| {
             let mut r = Bytes32::zeroed();
-            r.try_fill(&mut rng).unwrap();
+            r.try_fill(&mut rng)
+                .expect("failed to fill with random data");
             let utxo_id = UtxoId::new(r, 0);
 
             Coin {
@@ -143,7 +147,7 @@ pub async fn setup_test_client(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Result<(FuelClient, SocketAddr, ConsensusParameters), Error> {
+) -> Result<(FuelClient, SocketAddr, ConsensusParameters)> {
     let coin_configs = into_coin_configs(coins);
     let message_configs = into_message_configs(messages);
     let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
@@ -158,7 +162,10 @@ pub async fn setup_test_client(
     let mut config = node_config.unwrap_or_else(Config::local_node);
     config.chain_conf = chain_conf;
 
-    let srv = FuelService::new_node(config).await.unwrap();
+    let srv = FuelService::new_node(config)
+        .await
+        .map_err(|err| fuels_core::types::errors::Error::InfrastructureError(err.to_string()))?;
+
     let address = srv.bound_address;
     tokio::spawn(async move {
         let _own_the_handle = srv;
@@ -177,7 +184,7 @@ pub async fn setup_test_client(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Result<(FuelClient, SocketAddr, ConsensusParameters), Error> {
+) -> Result<(FuelClient, SocketAddr, ConsensusParameters)> {
     let config = node_config.unwrap_or_else(Config::local_node);
     let requested_port = config.addr.port();
 
@@ -186,7 +193,9 @@ pub async fn setup_test_client(
     } else if is_free(requested_port) {
         config.addr
     } else {
-        panic!("Error: Address already in use");
+        return Err(fuels_core::types::errors::Error::IOError(
+            std::io::ErrorKind::AddrInUse.into(),
+        ));
     };
 
     new_fuel_node(
@@ -217,14 +226,18 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_setup_single_asset_coins() -> Result<(), rand::Error> {
+    async fn test_setup_single_asset_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
         let mut addr_data = Bytes32::new([0u8; 32]);
-        addr_data.try_fill(&mut rng)?;
+        addr_data
+            .try_fill(&mut rng)
+            .expect("failed to fill with random data");
         let address = Bech32Address::new("test", addr_data);
 
         let mut asset_id = AssetId::zeroed();
-        asset_id.try_fill(&mut rng)?;
+        asset_id
+            .try_fill(&mut rng)
+            .expect("failed to fill with random data");
 
         let number_of_coins = 11;
         let amount_per_coin = 10;
@@ -241,10 +254,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_multiple_assets_coins() -> Result<(), rand::Error> {
+    async fn test_setup_multiple_assets_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
         let mut addr_data = Bytes32::new([0u8; 32]);
-        addr_data.try_fill(&mut rng)?;
+        addr_data
+            .try_fill(&mut rng)
+            .expect("failed to fill with random data");
         let address = Bech32Address::new("test", addr_data);
 
         let number_of_assets = 7;
@@ -280,10 +295,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_custom_assets_coins() -> Result<(), rand::Error> {
+    async fn test_setup_custom_assets_coins() -> Result<()> {
         let mut rng = rand::thread_rng();
         let mut hash = [0u8; 32];
-        hash.try_fill(&mut rng)?;
+        hash.try_fill(&mut rng)
+            .expect("failed to fill with random data");
         let address = Bech32Address::new(FUEL_BECH32_HRP, hash);
 
         let asset_base = AssetConfig {
@@ -293,7 +309,9 @@ mod tests {
         };
 
         let mut asset_id_1 = AssetId::zeroed();
-        asset_id_1.try_fill(&mut rng)?;
+        asset_id_1
+            .try_fill(&mut rng)
+            .expect("failed to fill with random data");
         let asset_1 = AssetConfig {
             id: asset_id_1,
             num_coins: 6,
@@ -301,7 +319,9 @@ mod tests {
         };
 
         let mut asset_id_2 = AssetId::zeroed();
-        asset_id_2.try_fill(&mut rng)?;
+        asset_id_2
+            .try_fill(&mut rng)
+            .expect("failed to fill with random data");
         let asset_2 = AssetConfig {
             id: asset_id_2,
             num_coins: 10,
@@ -327,7 +347,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_custom_config() -> Result<(), Error> {
+    async fn test_setup_test_client_custom_config() -> Result<()> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
         let config = Config {
             addr: socket,
@@ -350,7 +370,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_setup_test_client_consensus_parameters_config() -> Result<(), Error> {
+    async fn test_setup_test_client_consensus_parameters_config() -> Result<()> {
         let configured_parameters = ConsensusParameters::DEFAULT
             .with_max_gas_per_tx(2)
             .with_gas_per_byte(2)
@@ -378,7 +398,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_chain_config_and_consensus_parameters() -> Result<(), Error> {
+    async fn test_chain_config_and_consensus_parameters() -> Result<()> {
         let consensus_parameters_config = ConsensusParameters::DEFAULT
             .with_max_inputs(123)
             .with_gas_per_byte(456);
@@ -392,7 +412,7 @@ mod tests {
         let (fuel_client, _, client_consensus_parameters) =
             setup_test_client(vec![], vec![], None, Some(chain_config)).await?;
 
-        let chain_info = fuel_client.chain_info().await.unwrap();
+        let chain_info = fuel_client.chain_info().await?;
 
         assert_eq!(chain_info.name, "Solo_Munib");
         assert_eq!(chain_info.consensus_parameters.max_inputs, 123);

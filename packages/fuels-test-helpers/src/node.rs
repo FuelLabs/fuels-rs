@@ -13,11 +13,7 @@ use fuel_core_client::client::FuelClient;
 use fuel_types::{BlockHeight, Word};
 use fuels_core::{
     constants::WORD_SIZE,
-    types::{
-        coin::Coin,
-        errors::{error, Error},
-        message::Message,
-    },
+    types::{coin::Coin, errors::Error, message::Message},
 };
 use portpicker::{is_free, pick_unused_port};
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
@@ -395,7 +391,7 @@ impl FuelService {
         } else if is_free(requested_port) {
             config.addr
         } else {
-            return Err(error!(InfrastructureError, "Error: Address already in use"));
+            return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()));
         };
 
         new_fuel_node(

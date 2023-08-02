@@ -1,17 +1,16 @@
 use std::{mem::size_of, net::SocketAddr};
 
+#[cfg(not(feature = "fuel-core-lib"))]
+use crate::node::Config;
+use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
 use fuels_accounts::{
     fuel_crypto::SecretKey, provider::Provider, wallet::WalletUnlocked, ViewOnlyAccount,
 };
-use fuels_core::types::errors::Error;
+use fuels_core::types::errors::Result;
 use fuels_core::types::{coin::Coin, message::Message};
-
-#[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::Config;
-use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
 /// The provider and the wallets are instantiated with the default configs.
@@ -27,7 +26,7 @@ use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked, Error> {
+pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
             .await?;
@@ -59,7 +58,7 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Result<Vec<WalletUnlocked>, Error> {
+) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
     let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
@@ -107,7 +106,7 @@ pub async fn setup_test_provider(
     messages: Vec<Message>,
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Result<(Provider, SocketAddr), Error> {
+) -> Result<(Provider, SocketAddr)> {
     let (client, addr, consensus_parameters) =
         setup_test_client(coins, messages, node_config, chain_config).await?;
     Ok((Provider::new(client, consensus_parameters), addr))

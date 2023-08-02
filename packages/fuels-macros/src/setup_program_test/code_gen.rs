@@ -87,7 +87,7 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) ->
             None,
             None,
         )
-        .await?
+        .await.unwrap()
         .try_into()
         .expect("Should have the exact number of wallets");
     }
