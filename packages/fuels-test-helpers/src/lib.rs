@@ -17,12 +17,15 @@ use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
+
+#[allow(unused_imports)]
 use fuels_core::{
     constants::BASE_ASSET_ID,
+    error,
     types::{
         bech32::Bech32Address,
         coin::{Coin, CoinStatus},
-        errors::Result,
+        errors::{Error, Result},
         message::{Message, MessageStatus},
     },
 };
@@ -164,7 +167,7 @@ pub async fn setup_test_client(
 
     let srv = FuelService::new_node(config)
         .await
-        .map_err(|err| fuels_core::types::errors::Error::InfrastructureError(err.to_string()))?;
+        .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
     let address = srv.bound_address;
     tokio::spawn(async move {
@@ -193,9 +196,7 @@ pub async fn setup_test_client(
     } else if is_free(requested_port) {
         config.addr
     } else {
-        return Err(fuels_core::types::errors::Error::IOError(
-            std::io::ErrorKind::AddrInUse.into(),
-        ));
+        return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()));
     };
 
     new_fuel_node(
