@@ -1282,8 +1282,9 @@ async fn test_log_results() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err = format!(
-        "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`. Consider adding external contracts with `set_contracts()`",
-        contract_id.hash
+        "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
+         Consider adding external contracts with `set_contracts()`",
+        contract_id.hash, [0u8; 8]
     );
 
     let succeeded = log.filter_succeeded();
