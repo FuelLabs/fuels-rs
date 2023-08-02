@@ -5,7 +5,7 @@ use fuel_types::AssetId;
 
 use crate::{
     constants::BASE_ASSET_ID,
-    types::{coin::Coin, message::Message},
+    types::{bech32::Bech32Address, coin::Coin, message::Message},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -41,6 +41,13 @@ impl CoinType {
         match self {
             CoinType::Coin(coin) => coin.asset_id,
             CoinType::Message(_) => BASE_ASSET_ID,
+        }
+    }
+
+    pub fn owner(&self) -> &Bech32Address {
+        match self {
+            CoinType::Coin(coin) => &coin.owner,
+            CoinType::Message(message) => &message.recipient,
         }
     }
 }
