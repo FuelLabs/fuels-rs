@@ -76,7 +76,6 @@ impl TypeResolver {
             Self::to_sized_ascii_string,
             Self::to_ascii_string,
             Self::to_tuple,
-            Self::to_bytes,
             Self::to_raw_slice,
             Self::to_custom_type,
         ];
@@ -111,18 +110,6 @@ impl TypeResolver {
             type_name,
             generic_params: vec![],
         }))
-    }
-
-    fn to_bytes(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
-        if &type_application.type_decl.type_field == "struct Bytes" {
-            let type_name = quote! {::fuels::types::Bytes};
-            Ok(Some(ResolvedType {
-                type_name,
-                generic_params: vec![],
-            }))
-        } else {
-            Ok(None)
-        }
     }
 
     fn to_array(&self, type_application: &FullTypeApplication) -> Result<Option<ResolvedType>> {
@@ -497,7 +484,70 @@ mod tests {
     }
 
     #[test]
-    fn test_resolve_string() -> Result<()> {
+    fn test_resolve_std_string() -> Result<()> {
+        test_resolve_first_type(
+            ":: std :: string :: String",
+            &[
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: "struct String".to_string(),
+                    components: Some(vec![TypeApplication {
+                        name: "bytes".to_string(),
+                        type_id: 1,
+                        ..Default::default()
+                    }]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: "struct std::bytes::Bytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "buf".to_string(),
+                            type_id: 2,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "len".to_string(),
+                            type_id: 4,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 2,
+                    type_field: "struct std::bytes::RawBytes".to_string(),
+                    components: Some(vec![
+                        TypeApplication {
+                            name: "ptr".to_string(),
+                            type_id: 3,
+                            ..Default::default()
+                        },
+                        TypeApplication {
+                            name: "cap".to_string(),
+                            type_id: 4,
+                            ..Default::default()
+                        },
+                    ]),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 3,
+                    type_field: "raw untyped ptr".to_string(),
+                    ..Default::default()
+                },
+                TypeDeclaration {
+                    type_id: 4,
+                    type_field: "u64".to_string(),
+                    ..Default::default()
+                },
+            ],
+        )
+    }
+
+    #[test]
+    fn test_resolve_static_str() -> Result<()> {
         test_resolve_primitive_type("str[3]", ":: fuels :: types :: SizedAsciiString < 3usize >")
     }
 
