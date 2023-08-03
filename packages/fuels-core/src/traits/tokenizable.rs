@@ -210,6 +210,25 @@ impl Tokenizable for Bytes {
     }
 }
 
+impl Tokenizable for String {
+    fn from_token(token: Token) -> Result<Self>
+    where
+        Self: Sized,
+    {
+        match token {
+            Token::StdString(string) => Ok(string),
+            _ => Err(error!(
+                InvalidData,
+                "String::from_token expected a token of the variant Token::String, got: {token}"
+            )),
+        }
+    }
+
+    fn into_token(self) -> Token {
+        Token::StdString(self)
+    }
+}
+
 // Here we implement `Tokenizable` for a given tuple of a given length.
 // This is done this way because we can't use `impl<T> Tokenizable for (T,)`.
 // So we implement `Tokenizable` for each tuple length, covering
@@ -587,6 +606,17 @@ mod tests {
             SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
 
         assert_eq!(sized_ascii_string, "abc");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_into_token_std_string() -> Result<()> {
+        let expected = String::from("hello");
+        let token = Token::StdString(expected.clone());
+        let detokenized = String::from_token(token.into_token())?;
+
+        assert_eq!(detokenized, expected);
 
         Ok(())
     }
