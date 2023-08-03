@@ -425,13 +425,13 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         );
     }
 
-    let amount_to_recieve = amount_to_transfer * wallets.len() as u64;
+    let amount_to_receive = amount_to_transfer * wallets.len() as u64;
 
     // all change goes to the first wallet
     let outputs = wallets[0].get_asset_outputs_for_amount(
         receiver.address(),
         BASE_ASSET_ID,
-        amount_to_recieve,
+        amount_to_receive,
     );
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
@@ -445,7 +445,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
 
     assert_eq!(
         receiver.get_asset_balance(&BASE_ASSET_ID).await?,
-        amount_to_recieve,
+        amount_to_receive,
     );
 
     Ok(())
