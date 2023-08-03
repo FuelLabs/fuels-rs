@@ -699,7 +699,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(CoinType::Message(message.clone()), predicate.code().clone(), predicate.data().clone());
 
-    let (provider, _address) = setup_test_provider(coins, vec![message.clone()], None, None).await;
+    let (provider, _) = setup_test_provider(coins, vec![message.clone()], None, None).await;
     predicate.set_provider(provider.clone());
 
     let params = provider.consensus_parameters();
