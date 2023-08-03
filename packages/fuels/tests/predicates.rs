@@ -1,5 +1,3 @@
-use std::default;
-
 use fuel_tx::Output;
 use fuels::{
     accounts::{predicate::Predicate, Account},
@@ -11,7 +9,7 @@ use fuels::{
         AssetId,
     },
 };
-use fuels_core::types::{input::Input, coin_type::CoinType};
+use fuels_core::types::{coin_type::CoinType, input::Input};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -50,18 +48,14 @@ fn get_test_coins_and_messages(
     (coins, messages, asset_id)
 }
 
-fn get_test_message_w_data(
-    address: &Bech32Address,
-    amount: u64,
-    nonce: u64,
-) -> Message {
-            setup_single_message(
-                &Bech32Address::default(),
-                address,
-                amount,
-                nonce.into(),
-                vec![1, 2, 3],
-            )
+fn get_test_message_w_data(address: &Bech32Address, amount: u64, nonce: u64) -> Message {
+    setup_single_message(
+        &Bech32Address::default(),
+        address,
+        amount,
+        nonce.into(),
+        vec![1, 2, 3],
+    )
 }
 
 // Setup function used to assign coins and messages to a predicate address
@@ -690,21 +684,24 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
             .with_data(predicate_data);
 
     let amount = 1000;
-    let coins = setup_single_asset_coins(
-        predicate.address(),
-        BASE_ASSET_ID,
-        1,
-        amount,
-    );
+    let coins = setup_single_asset_coins(predicate.address(), BASE_ASSET_ID, 1, amount);
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
-    let message_input = Input::resource_predicate(CoinType::Message(message.clone()), predicate.code().clone(), predicate.data().clone());
+    let message_input = Input::resource_predicate(
+        CoinType::Message(message.clone()),
+        predicate.code().clone(),
+        predicate.data().clone(),
+    );
 
     let (provider, _) = setup_test_provider(coins, vec![message.clone()], None, None).await;
     predicate.set_provider(provider.clone());
 
     let params = provider.consensus_parameters();
-    let tb = ScriptTransactionBuilder::prepare_transfer(vec![message_input.clone()], vec![], Default::default())
-        .set_consensus_parameters(params);
+    let tb = ScriptTransactionBuilder::prepare_transfer(
+        vec![message_input.clone()],
+        vec![],
+        Default::default(),
+    )
+    .set_consensus_parameters(params);
     let tx = predicate.add_fee_resources(tb, 1000, None).await?;
 
     assert_eq!(tx.inputs().len(), 2);

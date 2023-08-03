@@ -46,7 +46,7 @@ pub fn adjust_inputs(
         .iter()
         .filter(|input| {
             input.contains_data()
-            || !matches!(input , Input::ResourceSigned { resource , .. }
+                || !matches!(input , Input::ResourceSigned { resource , .. }
                 | Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
         })
         .cloned()
