@@ -465,7 +465,9 @@ impl Provider {
         &self,
         tx_id: &TxId,
     ) -> ProviderResult<Option<TransactionResponse>> {
-        Ok(self.client.transaction(tx_id).await?.map(Into::into))
+        Ok(self.client.transaction(tx_id).await?.map(|fuel_tr| {
+            TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
+        }))
     }
 
     // - Get transaction(s)
@@ -475,9 +477,17 @@ impl Provider {
     ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
         let pr = self.client.transactions(request).await?;
 
+        let results = pr
+            .results
+            .into_iter()
+            .map(|fuel_tr| {
+                TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
+            })
+            .collect();
+
         Ok(PaginatedResult {
             cursor: pr.cursor,
-            results: pr.results.into_iter().map(Into::into).collect(),
+            results,
             has_next_page: pr.has_next_page,
             has_previous_page: pr.has_previous_page,
         })
@@ -494,9 +504,17 @@ impl Provider {
             .transactions_by_owner(&owner.into(), request)
             .await?;
 
+        let results = pr
+            .results
+            .into_iter()
+            .map(|fuel_tr| {
+                TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
+            })
+            .collect();
+
         Ok(PaginatedResult {
             cursor: pr.cursor,
-            results: pr.results.into_iter().map(Into::into).collect(),
+            results,
             has_next_page: pr.has_next_page,
             has_previous_page: pr.has_previous_page,
         })

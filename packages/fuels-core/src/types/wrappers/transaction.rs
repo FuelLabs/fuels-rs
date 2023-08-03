@@ -225,19 +225,13 @@ macro_rules! impl_tx_wrapper {
             pub(crate) consensus_parameters: ConsensusParameters,
         }
 
-        impl From<$wrapped> for $wrapper {
-            fn from(tx: $wrapped) -> Self {
+        impl Default for $wrapper {
+            fn default() -> Self {
                 $wrapper {
-                    tx,
+                    tx: $wrapped::default(),
                     unresolved_signatures: Default::default(),
                     consensus_parameters: Default::default(),
                 }
-            }
-        }
-
-        impl Default for $wrapper {
-            fn default() -> Self {
-                $wrapped::default().into()
             }
         }
 
@@ -260,49 +254,12 @@ macro_rules! impl_tx_wrapper {
         }
 
         impl $wrapper {
-            fn update_witness_indexes(&mut self) {
-                let current_index = self.tx.witnesses().len();
-
-                for (new_index, UnresolvedSignature { owner, .. }) in
-                    self.unresolved_signatures.iter().enumerate()
-                {
-                    for input in self.tx.inputs_mut() {
-                        Self::update_witness_index_if_owner(
-                            input,
-                            owner,
-                            (current_index + new_index) as u8,
-                        );
-                    }
+            pub fn from_fuel_tx(tx: $wrapped, consensus_parameters: ConsensusParameters) -> Self {
+                $wrapper {
+                    tx,
+                    unresolved_signatures: Default::default(),
+                    consensus_parameters,
                 }
-            }
-
-            fn update_witness_index_if_owner(input: &mut Input, owner: &Address, index: u8) {
-                match input {
-                    FuelInput::CoinSigned(ref mut cs) if cs.owner == *owner => {
-                        cs.witness_index = index
-                    }
-                    FuelInput::MessageCoinSigned(ref mut mcs) if mcs.recipient == *owner => {
-                        mcs.witness_index = index
-                    }
-                    FuelInput::MessageDataSigned(ref mut mds) if mds.recipient == *owner => {
-                        mds.witness_index = index
-                    }
-                    _ => (),
-                }
-            }
-
-            fn add_missing_witnesses(&mut self) {
-                let id = self.id();
-                let new_witnesses = self.unresolved_signatures.iter().map(
-                    |UnresolvedSignature { secret_key, .. }| {
-                        let message = Message::from_bytes(*id);
-                        let signature = Signature::sign(secret_key, &message);
-
-                        Witness::from(signature.as_ref())
-                    },
-                );
-
-                self.tx.witnesses_mut().extend(new_witnesses);
             }
         }
 
@@ -315,8 +272,15 @@ macro_rules! impl_tx_wrapper {
             }
 
             fn resolve_transaction(&mut self) -> Result<()> {
-                self.update_witness_indexes();
-                self.add_missing_witnesses();
+                update_witness_indexes(
+                    self.tx.witnesses().len(),
+                    self.tx.inputs_mut(),
+                    &self.unresolved_signatures,
+                );
+
+                let missing_witnesses =
+                    generate_missing_witnesses(self.id(), &self.unresolved_signatures);
+                self.tx.witnesses_mut().extend(missing_witnesses);
 
                 self.tx.precompute(&self.consensus_parameters.chain_id)?;
 
@@ -412,4 +376,44 @@ impl ScriptTransaction {
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
     }
+}
+
+fn update_witness_indexes(
+    current_index: usize,
+    inputs: &mut [Input],
+    unresolved_signatures: &[UnresolvedSignature],
+) {
+    for (new_index, UnresolvedSignature { owner, .. }) in unresolved_signatures.iter().enumerate() {
+        for input in inputs.iter_mut() {
+            update_witness_index_if_owner(input, owner, (current_index + new_index) as u8);
+        }
+    }
+}
+
+fn update_witness_index_if_owner(input: &mut Input, owner: &Address, index: u8) {
+    match input {
+        FuelInput::CoinSigned(ref mut cs) if cs.owner == *owner => cs.witness_index = index,
+        FuelInput::MessageCoinSigned(ref mut mcs) if mcs.recipient == *owner => {
+            mcs.witness_index = index
+        }
+        FuelInput::MessageDataSigned(ref mut mds) if mds.recipient == *owner => {
+            mds.witness_index = index
+        }
+        _ => (),
+    }
+}
+
+fn generate_missing_witnesses(
+    id: Bytes32,
+    unresolved_signatures: &[UnresolvedSignature],
+) -> Vec<Witness> {
+    unresolved_signatures
+        .iter()
+        .map(|UnresolvedSignature { secret_key, .. }| {
+            let message = Message::from_bytes(*id);
+            let signature = Signature::sign(secret_key, &message);
+
+            Witness::from(signature.as_ref())
+        })
+        .collect()
 }
