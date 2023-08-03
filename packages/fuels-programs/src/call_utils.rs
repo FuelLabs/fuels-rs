@@ -146,26 +146,28 @@ pub(crate) async fn build_tx_from_contract_calls(
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
-/// Use placeholder for `call_param_offsets` and `output_param_type`, because the length of the
-/// calling script doesn't depend on the underlying type, just on whether or not the contract call
-/// output type is a heap type.
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
-    let n_heap_data_calls = calls
+    let n_heap_type_calls = calls
         .iter()
         .filter(|c| c.output_param.is_vm_heap_type())
         .count();
+    let n_stack_type_calls = calls.len() - n_heap_type_calls;
 
-    let calls_instructions_len_stack_data =
+    let total_instructions_len_stack_data =
+        // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
+        // the calling script doesn't depend on the underlying type, just on whether or not the
+        // contract call output type is a heap type.
         get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
-            * (calls.len() - n_heap_data_calls);
-    let calls_instructions_len_heap_data = get_single_call_instructions(
+            * n_stack_type_calls;
+
+    let total_instructions_len_heap_data = get_single_call_instructions(
         &CallOpcodeParamsOffset::default(),
         &ParamType::Vector(Box::from(ParamType::U64)),
     )
     .len()
-        * n_heap_data_calls;
+        * n_heap_type_calls;
 
-    calls_instructions_len_stack_data + calls_instructions_len_heap_data
+    total_instructions_len_stack_data + total_instructions_len_heap_data
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -339,14 +341,16 @@ pub(crate) fn get_single_call_instructions(
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).
-            // The RETL register contains the length of the `CALL` return (=24 because the Vec/Bytes
-            // struct takes 3 WORDs). We don't actually need it unless the Vec/Bytes struct encoding
-            // changes in the compiler.
+            // The RETL register contains the length of the `CALL` return (=24 because the
+            // Vec/Bytes/String struct takes 3 WORDs).
+            // We don't actually need it unless the Vec/Bytes/String struct encoding changes in the
+            // compiler.
             // Load the word located at the address contained in RET, it's a word that
             // translates to a heap address. 0x15 is a free register.
             op::lw(0x15, RegId::RET, 0),
-            // We know a Vec/Bytes struct has its third WORD contain the length of the underlying
-            // vector, so use a 2 offset to store the length in 0x16, which is a free register.
+            // We know a Vec/Bytes/String struct has its third WORD contain the length of the
+            // underlying vector, so use a 2 offset to store the length in 0x16, which is a free
+            // register.
             op::lw(0x16, RegId::RET, 2),
             // The in-memory size of the type is (in-memory size of the inner type) * length
             op::muli(0x16, 0x16, inner_type_byte_size as u16),

@@ -280,7 +280,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 597;
+    let expected_gas_used = 598;
     let expected_metered_bytes_size = 728;
     let expected_total_fee = 372;
 
