@@ -50,6 +50,8 @@ impl ABIEncoder {
             Token::Unit => vec![Self::encode_unit()],
             Token::RawSlice(data) => Self::encode_raw_slice(data)?,
             Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
+            // `String` in Sway has the same memory layout as the bytes type
+            Token::StdString(string) => Self::encode_bytes(string.clone().into_bytes())?,
         };
 
         Ok(encoded_token)
@@ -1168,6 +1170,29 @@ mod tests {
         let expected_encoded_bytes = [ptr, len, data].concat();
 
         assert_eq!(expected_encoded_bytes, encoded_bytes);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_std_string() -> Result<()> {
+        // arrange
+        let string = String::from("This ");
+        let token = Token::StdString(string);
+        let offset = 40;
+
+        // act
+        let encoded_std_string = ABIEncoder::encode(&[token])?.resolve(offset);
+
+        // assert
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
+        let cap = [0, 0, 0, 0, 0, 0, 0, 8];
+        let len = [0, 0, 0, 0, 0, 0, 0, 5];
+        let data = [0x54, 0x68, 0x69, 0x73, 0x20, 0, 0, 0];
+
+        let expected_encoded_std_string = [ptr, cap, len, data].concat();
+
+        assert_eq!(expected_encoded_std_string, encoded_std_string);
 
         Ok(())
     }

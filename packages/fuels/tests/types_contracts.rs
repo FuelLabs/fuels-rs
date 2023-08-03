@@ -1967,3 +1967,33 @@ async fn test_contract_raw_slice() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_contract_std_lib_string() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "StdLibString",
+            project = "packages/fuels/tests/types/contracts/std_lib_string"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "StdLibString",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let resp = contract_methods.return_dynamic_string().call().await?.value;
+        assert_eq!(resp, "Hello World");
+    }
+    {
+        let _resp = contract_methods
+            .accepts_dynamic_string(String::from("Hello World"))
+            .call()
+            .await?;
+    }
+
+    Ok(())
+}
