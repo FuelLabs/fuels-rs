@@ -82,12 +82,20 @@ impl ABIDecoder {
             ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
             ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
             ParamType::Bytes => Self::decode_bytes(bytes),
+            ParamType::StdString => Self::decode_std_string(bytes),
         }
     }
 
     fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
         Ok(DecodeResult {
             token: Token::Bytes(bytes.to_vec()),
+            bytes_read: bytes.len(),
+        })
+    }
+
+    fn decode_std_string(bytes: &[u8]) -> Result<DecodeResult> {
+        Ok(DecodeResult {
+            token: Token::StdString(str::from_utf8(bytes)?.to_string()),
             bytes_read: bytes.len(),
         })
     }
