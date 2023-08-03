@@ -67,12 +67,14 @@ impl Input {
 
     pub fn contains_data(&self) -> bool {
         match self {
-            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
-                match resource {
-                    CoinType::Message(msg) => !msg.data.is_empty(),
-                    _ => false,
-                }
-            },
+            Self::ResourceSigned {
+                resource: CoinType::Message(msg),
+                ..
+            }
+            | Self::ResourcePredicate {
+                resource: CoinType::Message(msg),
+                ..
+            } => !msg.data.is_empty(),
             _ => false,
         }
     }
