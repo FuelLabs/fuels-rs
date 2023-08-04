@@ -14,14 +14,15 @@ pub use fuel_core::service::{config::Trigger, Config};
 use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_chain_config::StateConfig;
+#[cfg(feature = "fuel-core-lib")]
+use fuels_core::error;
+
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
 
-#[allow(unused_imports)]
 use fuels_core::{
     constants::BASE_ASSET_ID,
-    error,
     types::{
         bech32::Bech32Address,
         coin::{Coin, CoinStatus},
