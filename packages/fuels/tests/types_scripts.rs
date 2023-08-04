@@ -288,3 +288,24 @@ async fn script_handles_u256() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn script_handles_std_string() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_std_lib_string",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let arg = String::from("Hello World");
+    script_instance.main(arg).call().await?;
+
+    Ok(())
+}
