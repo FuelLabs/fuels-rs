@@ -1970,7 +1970,7 @@ async fn test_contract_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_std_lib_string() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "StdLibString",
