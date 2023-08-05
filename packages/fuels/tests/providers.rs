@@ -338,7 +338,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         ),
     );
 
-    let gas_limit = 445_437;
+    let gas_limit = 225_883;
     let response = contract_instance
         .methods()
         .initialize_counter(42)
@@ -354,7 +354,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .gas()
         .unwrap();
 
-    assert_eq!(298, gas_forwarded);
+    assert_eq!(gas_limit, gas_forwarded + 161);
 
     Ok(())
 }
