@@ -364,3 +364,16 @@ async fn predicate_handles_u256() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn predicate_handles_std_string() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_std_lib_string/out/debug/predicate_std_lib_string-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::encode_data(10, 11, String::from("Hello World"));
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_std_lib_string").await?;
+
+    Ok(())
+}

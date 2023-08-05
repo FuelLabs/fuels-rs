@@ -99,7 +99,13 @@ impl LogDecoder {
         self.log_formatters
             .get(log_id)
             .ok_or_else(|| {
-                error!(InvalidData,"missing log formatter for log_id: `{:?}`. Consider adding external contracts with `set_contracts()`", log_id)
+                error!(
+                    InvalidData,
+                    "missing log formatter for log_id: `{:?}`, data: `{:?}`. \
+                     Consider adding external contracts with `set_contracts()`",
+                    log_id,
+                    data
+                )
             })
             .and_then(|log_formatter| log_formatter.format(data))
     }
