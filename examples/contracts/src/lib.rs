@@ -529,8 +529,8 @@ mod tests {
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
-        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
-        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
         let tx_params = TxParameters::default().set_gas_limit(1_000_000);
         let call_params = CallParameters::default().set_gas_forwarded(4300);

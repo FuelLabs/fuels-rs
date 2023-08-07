@@ -692,7 +692,6 @@ async fn test_output_variable_estimation() -> Result<()> {
             .mint_to_addresses(amount, addresses)
             .call()
             .await;
-        println!("{:?}", response);
 
         assert!(matches!(
             response,
