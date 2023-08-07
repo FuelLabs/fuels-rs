@@ -158,17 +158,17 @@
 <!-- rs_uses:example:end -->
 <h2 id="creating-a-new-project-with-forc"><a class="header" href="#creating-a-new-project-with-forc">Creating a new project with Forc</a></h2>
 <p>You can create a new Sway project with</p>
-<pre><code>forc new &lt;Project name&gt;
+<pre><code class="language-shell">forc new &lt;Project name&gt;
 </code></pre>
 <p>Or you can initialize a project within an existing folder with</p>
-<pre><code>forc init
+<pre><code class="language-shell">forc init
 </code></pre>
 <h3 id="adding-a-rust-integration-test-to-the-sway-project"><a class="header" href="#adding-a-rust-integration-test-to-the-sway-project">Adding a Rust integration test to the Sway project</a></h3>
 <p>Now that we have a new project, we can add a Rust integration test using a <code>cargo generate</code> template.
 If <code>cargo generate</code> is not already installed, you can instal it with:</p>
 <!-- This section should have the command to install cargo generate -->
 <!-- cargo_gen_install:example:start -->
-<pre><code>cargo install cargo-generate
+<pre><code class="language-shell">cargo install cargo-generate
 </code></pre>
 <!-- cargo_gen_install:example:end -->
 <blockquote>
@@ -177,7 +177,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p>Let's generate the default test harness with the following command:</p>
 <!-- This section should have the command to cargo generate a test harness -->
 <!-- cargo_gen:example:start -->
-<pre><code>cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
+<pre><code class="language-shell">cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
 </code></pre>
 <!-- cargo_gen:example:end -->
 <!-- This section should explain the `--force` flag -->
@@ -185,12 +185,12 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p><code>--force</code> forces your <code>--name</code> input to retain your desired casing for the <code>{{project-name}}</code> placeholder in the template. Otherwise, <code>cargo-generate</code> automatically converts it to kebab-case. With <code>--force</code>, this means that both <code>my_fuel_project</code> and <code>my-fuel-project</code> are valid project names, depending on your needs.</p>
 <!-- force_flag:example:end -->
 <p>Before running test, we need to build the Sway project with:</p>
-<pre><code>forc build
+<pre><code class="language-shell">forc build
 </code></pre>
 <p>Afterwards, we can run the test with:</p>
 <!-- This section should have the command to run a test -->
 <!-- run_test:example:start -->
-<pre><code>cargo test
+<pre><code class="language-shell">cargo test
 </code></pre>
 <!-- run_test:example:end -->
 <blockquote>
@@ -198,7 +198,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 </blockquote>
 <!-- This section should have the command to run a test with no capture -->
 <!-- run_test_nocap:example:start -->
-<pre><code>cargo test -- --nocapture
+<pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
@@ -217,21 +217,21 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The file <code>packages/fuels/Forc.toml</code> contains a `[workspace], which members are the paths to all integration tests.
 To build these tests, run the following command:</p>
 </blockquote>
-<pre><code>forc build --path packages/fuels
+<pre><code class="language-shell">forc build --path packages/fuels
 </code></pre>
 <blockquote>
 <p><code>forc</code> can also be used to clean and format the test projects. Check the <code>help</code> output for more info.</p>
 </blockquote>
 <p>After building the projects, we can run the tests with</p>
-<pre><code>cargo test
+<pre><code class="language-shell">cargo test
 </code></pre>
 <p>If you need all targets and all features, you can run</p>
-<pre><code>cargo test --all-targets --all-features
+<pre><code class="language-shell">cargo test --all-targets --all-features
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> If you need to capture output from the tests, you can run</p>
 </blockquote>
-<pre><code>cargo test -- --nocapture
+<pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
 <p>Read <a href="https://fuellabs.github.io/sway/master/book/introduction/index.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>

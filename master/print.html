@@ -171,17 +171,17 @@
 <!-- rs_uses:example:end -->
 <h2 id="creating-a-new-project-with-forc"><a class="header" href="#creating-a-new-project-with-forc">Creating a new project with Forc</a></h2>
 <p>You can create a new Sway project with</p>
-<pre><code>forc new &lt;Project name&gt;
+<pre><code class="language-shell">forc new &lt;Project name&gt;
 </code></pre>
 <p>Or you can initialize a project within an existing folder with</p>
-<pre><code>forc init
+<pre><code class="language-shell">forc init
 </code></pre>
 <h3 id="adding-a-rust-integration-test-to-the-sway-project"><a class="header" href="#adding-a-rust-integration-test-to-the-sway-project">Adding a Rust integration test to the Sway project</a></h3>
 <p>Now that we have a new project, we can add a Rust integration test using a <code>cargo generate</code> template.
 If <code>cargo generate</code> is not already installed, you can instal it with:</p>
 <!-- This section should have the command to install cargo generate -->
 <!-- cargo_gen_install:example:start -->
-<pre><code>cargo install cargo-generate
+<pre><code class="language-shell">cargo install cargo-generate
 </code></pre>
 <!-- cargo_gen_install:example:end -->
 <blockquote>
@@ -190,7 +190,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p>Let's generate the default test harness with the following command:</p>
 <!-- This section should have the command to cargo generate a test harness -->
 <!-- cargo_gen:example:start -->
-<pre><code>cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
+<pre><code class="language-shell">cargo generate --init fuellabs/sway templates/sway-test-rs --name &lt;Project name&gt; --force
 </code></pre>
 <!-- cargo_gen:example:end -->
 <!-- This section should explain the `--force` flag -->
@@ -198,12 +198,12 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p><code>--force</code> forces your <code>--name</code> input to retain your desired casing for the <code>{{project-name}}</code> placeholder in the template. Otherwise, <code>cargo-generate</code> automatically converts it to kebab-case. With <code>--force</code>, this means that both <code>my_fuel_project</code> and <code>my-fuel-project</code> are valid project names, depending on your needs.</p>
 <!-- force_flag:example:end -->
 <p>Before running test, we need to build the Sway project with:</p>
-<pre><code>forc build
+<pre><code class="language-shell">forc build
 </code></pre>
 <p>Afterwards, we can run the test with:</p>
 <!-- This section should have the command to run a test -->
 <!-- run_test:example:start -->
-<pre><code>cargo test
+<pre><code class="language-shell">cargo test
 </code></pre>
 <!-- run_test:example:end -->
 <blockquote>
@@ -211,7 +211,7 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 </blockquote>
 <!-- This section should have the command to run a test with no capture -->
 <!-- run_test_nocap:example:start -->
-<pre><code>cargo test -- --nocapture
+<pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
@@ -230,21 +230,21 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The file <code>packages/fuels/Forc.toml</code> contains a `[workspace], which members are the paths to all integration tests.
 To build these tests, run the following command:</p>
 </blockquote>
-<pre><code>forc build --path packages/fuels
+<pre><code class="language-shell">forc build --path packages/fuels
 </code></pre>
 <blockquote>
 <p><code>forc</code> can also be used to clean and format the test projects. Check the <code>help</code> output for more info.</p>
 </blockquote>
 <p>After building the projects, we can run the tests with</p>
-<pre><code>cargo test
+<pre><code class="language-shell">cargo test
 </code></pre>
 <p>If you need all targets and all features, you can run</p>
-<pre><code>cargo test --all-targets --all-features
+<pre><code class="language-shell">cargo test --all-targets --all-features
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> If you need to capture output from the tests, you can run</p>
 </blockquote>
-<pre><code>cargo test -- --nocapture
+<pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
 <p>Read <a href="https://fuellabs.github.io/sway/master/book/introduction/index.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
@@ -326,16 +326,16 @@ To build these tests, run the following command:</p>
 <p>You can also use <code>launch_provider_and_get_wallet()</code>, which abstracts away the <code>setup_test_provider()</code> and the wallet creation, all in one single method:</p>
 <pre><code class="language-rust ignore">let wallet = launch_provider_and_get_wallet().await;
 </code></pre>
-<h1 id="features"><a class="header" href="#features">Features</a></h1>
-<h2 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h2>
+<h2 id="features"><a class="header" href="#features">Features</a></h2>
+<h3 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h3>
 <p>The <code>fuel-core-lib</code> feature allows us to run a <code>fuel-core</code> node without installing the <code>fuel-core</code> binary on the local machine. Using the <code>fuel-core-lib</code> feature flag entails downloading all the dependencies needed to run the fuel-core node.</p>
 <pre><code class="language-rust ignore">fuels = { version = &quot;0.44.0&quot;, features = [&quot;fuel-core-lib&quot;] }
 </code></pre>
-<h2 id="rocksdb"><a class="header" href="#rocksdb">RocksDb</a></h2>
+<h3 id="rocksdb"><a class="header" href="#rocksdb">RocksDb</a></h3>
 <p>The <code>rocksdb</code> is an additional feature that, when combined with <code>fuel-core-lib</code>, provides persistent storage capabilities while using <code>fuel-core</code> as a library.</p>
 <pre><code class="language-rust ignore">fuels = { version = &quot;0.44.0&quot;, features = [&quot;rocksdb&quot;] }
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h2 id="rocksdb-1"><a class="header" href="#rocksdb-1">RocksDb</a></h2>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="rocksdb-1"><a class="header" href="#rocksdb-1">RocksDb</a></h1>
 <p>RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
 <p>To create or use a local database, follow these instructions:</p>
 <pre><code class="language-rust ignore">        let provider_config = Config {
@@ -345,15 +345,7 @@ To build these tests, run the following command:</p>
         };
 </code></pre>
 <blockquote>
-<p>Note 1: If the specified database does not exist, a new database will be created at that path.</p>
-</blockquote>
-<blockquote>
-<p>Note 2: To utilize the code snippets above, either:</p>
-<ul>
-<li>the <code>fuel-core</code> binary must be present
-or</li>
-<li>both the <code>fuel-core-lib</code> and <code>rocksdb</code> features need to be enabled.</li>
-</ul>
+<p>Note: If the specified database does not exist, a new database will be created at that path. To utilize the code snippets above, either the <code>fuel-core</code> binary must be present, or both the <code>fuel-core-lib</code> and <code>rocksdb</code> features need to be enabled.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="querying-the-blockchain"><a class="header" href="#querying-the-blockchain">Querying the blockchain</a></h1>
 <p>Once you set up a provider, you can interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the <a href="https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html">official provider API documentation</a>.</p>
@@ -416,7 +408,7 @@ or</li>
 <pre><code class="language-rust ignore">        let _balances = provider.get_balances(wallet.address()).await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="accounts"><a class="header" href="#accounts">Accounts</a></h1>
-<p>The <code>ViewOnlyAccount</code> trait provides a common interface to query balances. </p>
+<p>The <code>ViewOnlyAccount</code> trait provides a common interface to query balances.</p>
 <p>The <code>Account</code> trait, in addition to the above, also provides a common interface to retrieve spendable resources or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.</p>
 <p>Both traits are implemented by the following types:</p>
 <ul>
@@ -932,7 +924,7 @@ coins and coin amount</p>
         signature.verify(&amp;recovered_address, &amp;message)?;
         Ok(())
 </code></pre>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="generating-bindings-with-abigen"><a class="header" href="#generating-bindings-with-abigen">Generating bindings with abigen!</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="generating-bindings-with-abigen"><a class="header" href="#generating-bindings-with-abigen">Generating bindings with abigen</a></h1>
 <p>You might have noticed this snippet in the previous sections:</p>
 <pre><code class="language-rust ignore">        abigen!(Contract(
             name = &quot;MyContract&quot;,
@@ -942,7 +934,7 @@ coins and coin amount</p>
 <!-- This section should explain the purpose of the abigen -->
 <!-- abigen:example:start -->
 <p>The SDK lets you transform ABI methods of a smart contract, specified as JSON objects (which you can get from <a href="https://github.com/FuelLabs/sway/tree/master/forc">Forc</a>), into Rust structs and methods that are type-checked at compile time.
-In order to call your contracts, scripts or predicates, you first need to generate the Rust bindings for them. </p>
+In order to call your contracts, scripts or predicates, you first need to generate the Rust bindings for them.</p>
 <!-- abigen:example:end -->
 <p>The following subsections contain more details about the <code>abigen!</code> syntax and the code generated from it.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-json-abi-file"><a class="header" href="#the-json-abi-file">The JSON ABI file</a></h1>
@@ -981,7 +973,7 @@ impl MyContract for Contract {
 ]
 </code></pre>
 <p>The Fuel Rust SDK will take this file as input and generate equivalent methods (and custom types if applicable) that you can call from your Rust code.</p>
-<div style="break-before: page; page-break-before: always;"></div><h1 id="abigen"><a class="header" href="#abigen">abigen!</a></h1>
+<div style="break-before: page; page-break-before: always;"></div><h1 id="abigen"><a class="header" href="#abigen">abigen</a></h1>
 <!-- This section explain the `abigen!` macro -->
 <!-- abigen:example:start -->
 <p><code>abigen!</code> is a procedural macro -- it generates code. It accepts inputs in the format of:</p>
@@ -1051,7 +1043,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 <p>Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main <code>mod</code> of your program bindings, i.e. a type in a contract binding <code>MyContract</code> imported from a library <code>some_library</code> would be generated under <code>abigen_bindings::my_contract_mod::SomeLibraryType</code>.</p>
 <p>This can cause problems if you happen to have two types with the same name in different libraries of your program.</p>
 <p>This behavior can be changed to include the library path by compiling your Sway project with the following:</p>
-<pre><code>forc build --json-abi-with-callpaths
+<pre><code class="language-shell">forc build --json-abi-with-callpaths
 </code></pre>
 <p>Now the type from the previous example will be generated under <code>abigen_bindings::my_contract_mod::some_library::SomeLibraryType</code>.</p>
 <p>This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one <code>abigen!</code> call. You'll then need to fully qualify the access to it.</p>
@@ -1312,7 +1304,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <blockquote>
 <p>Note: Read <a href="https://fuellabs.github.io/sway/master/book/introduction/sway_quickstart.html">here</a> for more on how to work with Sway.</p>
 </blockquote>
-<p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="deploying/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="deploying/../contracts/the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="deploying/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
+<p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="deploying/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="deploying/./the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="deploying/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
 <!-- This section should explain how to load and deploy a contract  -->
 <!-- deploy:example:start -->
 <p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
@@ -1511,7 +1503,7 @@ impl MyContract for Contract {
 G4]�]D`I]C�As@
            6]C�$@!QK%
 </code></pre>
-<p>This seems very unreadable! But, <code>forc</code> has a nice interpreter for this bytecode: <code>forc </code>parse-bytecode`, which will interpret that binary data and output the equivalent FuelVM assembly:</p>
+<p>This seems very unreadable! But, <code>forc</code> has a nice interpreter for this bytecode: <code>forc parse-bytecode</code>, which will interpret that binary data and output the equivalent FuelVM assembly:</p>
 <pre><code class="language-terminal">$ forc parse-bytecode out/debug/my-test.bin
 half-word   byte   op                raw           notes
         0   0      JI(4)             90 00 00 04   jump to byte 16
@@ -1826,7 +1818,7 @@ let is_error = response.is_err();
 <div style="break-before: page; page-break-before: always;"></div><h1 id="output-variables"><a class="header" href="#output-variables">Output variables</a></h1>
 <!-- This section should explain variable outputs  -->
 <!-- variable_outputs:example:start -->
-<p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://github.com/FuelLabs/fuel-specs/blob/master/src/protocol/tx_format/output.md#outputvariable">variable outputs</a> to succeed.</p>
+<p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://specs.fuel.network/master/tx-format/output.html#outputvariable">variable outputs</a> to succeed.</p>
 <!-- variable_outputs:example:end -->
 <p>Let's say you deployed a contract with the following method:</p>
 <pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
@@ -1942,13 +1934,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>The minimal number of attempts corresponds to the number of external contracts and output variables needed and defaults to 10.</p>
 <blockquote>
-<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with script calls or multi calls.</p>
-</blockquote>
-<blockquote>
-<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="calling-contracts/./logs.html">here</a>.</p>
-</blockquote>
-<blockquote>
-<p><strong>Note:</strong> if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
+<p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with script calls or multi calls. <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="calling-contracts/./logs.html">here</a>. If no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
 <p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
@@ -2042,7 +2028,7 @@ let is_error = response.is_err();
             .await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
-<p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="../abigen/the-abigen-macro.html">previously</a>.</p>
+<p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="./abigen/the-abigen-macro.html">previously</a>.</p>
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = &quot;MyScript&quot;,
@@ -2064,7 +2050,7 @@ let is_error = response.is_err();
     assert_eq!(result.value, expected);
 </code></pre>
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
-<p>The method for passing transaction parameters is the same as <a href="../calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
+<p>The method for passing transaction parameters is the same as <a href="./calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters::default()
         .set_gas_price(1)
         .set_gas_limit(10_000);
@@ -2091,7 +2077,7 @@ let is_error = response.is_err();
     let log_u64 = response.decode_logs_with_type::&lt;u64&gt;()?;
 </code></pre>
 <h2 id="calling-contracts-from-scripts"><a class="header" href="#calling-contracts-from-scripts">Calling contracts from scripts</a></h2>
-<p>Scripts use the same interfaces for setting external contracts as <a href="../calling-contracts/other-contracts.html">contract methods</a>.</p>
+<p>Scripts use the same interfaces for setting external contracts as <a href="./calling-contracts/other-contracts.html">contract methods</a>.</p>
 <p>Below is an example that uses <code>set_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
@@ -2106,7 +2092,7 @@ let is_error = response.is_err();
         .call()
         .await?;
 </code></pre>
-<h1 id="configurable-constants-1"><a class="header" href="#configurable-constants-1">Configurable constants</a></h1>
+<h2 id="configurable-constants-1"><a class="header" href="#configurable-constants-1">Configurable constants</a></h2>
 <p>Same as contracts, you can define <code>configurable</code> constants in <code>scripts</code> which can be changed during the script execution. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">script;
 
@@ -2535,7 +2521,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bech32"><a class="header" href="#bech32">Bech32</a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract ids in the bech32 format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
-<p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>: </p>
+<p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>:</p>
 <pre><code class="language-rust ignore">        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
 
         // New from HRP string and a hash
@@ -2758,7 +2744,9 @@ impl MyContract for Contract {
 <pre><code class="language-rust ignore">    let response = contract_methods.u8_in_vec(10).call().await?;
     assert_eq!(response.value, (0..10).collect::&lt;Vec&lt;_&gt;&gt;());
 </code></pre>
-<p>** &gt;Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves **</p>
+<blockquote>
+<p><strong>Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves</strong></p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h1>
 <p>For a more in-depth look at the APIs provided by the Fuel Rust SDK, head over to the <a href="https://docs.rs/fuels/latest/fuels/">official documentation</a>. In the actual Rust docs, you can see the most up-to-date information about the API, which is synced with the code as it changes.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-testing"><a class="header" href="#fuels-rs-testing"><code>fuels-rs</code> Testing</a></h1>
@@ -2767,7 +2755,7 @@ impl MyContract for Contract {
 </blockquote>
 <ul>
 <li><a href="testing/./basics.html">Testing Basics</a></li>
-<li><a href="testing/./the-setup-contract-test-macro.html"><code>setup_program_test!</code> Macro</a></li>
+<li><a href="testing/./the-setup-program-test-macro.html"><code>setup_program_test!</code> Macro</a></li>
 <li><a href="testing/./chains.html">Tweaking the Blockchain</a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-basics"><a class="header" href="#testing-basics">Testing Basics</a></h1>
@@ -2850,13 +2838,13 @@ println!(&quot;POINT: {}&quot;, p);
 <!--fmt_code:example:end -->
 <h2 id="run-commands"><a class="header" href="#run-commands">Run Commands</a></h2>
 <p>You can run your tests to see if they pass or fail with</p>
-<pre><code>cargo test
+<pre><code class="language-shell">cargo test
 </code></pre>
 <!-- This section should when outputs are hidden and what the `nocapture` flag does -->
 <!--outputs:example:start -->
 <p>Outputs will be hidden if the test passes. If you want to see outputs printed from your tests regardless of whether they pass or fail, use the <code>nocapture</code> flag.</p>
 <!--outputs:example:end -->
-<pre><code>cargo test -- --nocapture
+<pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-setup_program_test-macro"><a class="header" href="#the-setup_program_test-macro">The setup_program_test! macro</a></h1>
 <p>When deploying contracts with the <code>abigen!</code> macro, as shown in the previous sections, the user can:</p>
@@ -3066,7 +3054,7 @@ should point to root of the <code>forc</code> project.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="cookbook"><a class="header" href="#cookbook">Cookbook</a></h1>
 <p>This section covers more advanced use cases that can be satisfied by combining various features of the Rust SDK. As such, it assumes that you have already made yourself familiar with the previous chapters of this book.</p>
 <blockquote>
-<p><strong>note</strong> This section is still a work in progress and more recipes may be added in the future. </p>
+<p><strong>Note</strong> This section is still a work in progress and more recipes may be added in the future.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
@@ -3341,7 +3329,7 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="integration-tests-structure-in-fuels-rs"><a class="header" href="#integration-tests-structure-in-fuels-rs">Integration tests structure in <code>fuels-rs</code></a></h1>
 <p>The integration tests of <code>fuels-rs</code> cover almost all aspects of the SDK and have grown significantly as more functionality was added. To make the tests and associated <code>Sway</code> projects more manageable they were split into several categories. A category consist of a <code>.rs</code> file for the tests and, if needed, a separate directory for the <code>Sway</code> projects.</p>
 <p>Currently have the following structure:</p>
-<pre><code>  .
+<pre><code class="language-shell">  .
   ├─  bindings/
   ├─  contracts/
   ├─  logs/
@@ -3371,7 +3359,7 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:</p>
 <li><a href="cli/./fuels-abi-cli.html"><code>fuels-abi-cli</code></a></li>
 </ul>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-abi-cli"><a class="header" href="#fuels-abi-cli"><code>fuels-abi-cli</code></a></h1>
-<p>Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified <a href="https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md">here</a>.</p>
+<p>Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified <a href="https://specs.fuel.network/master/abi/index.html">here</a>.</p>
 <h2 id="usage"><a class="header" href="#usage">Usage</a></h2>
 <pre><code class="language-plaintext">sway-abi-cli 0.1.0
 FuelVM ABI coder

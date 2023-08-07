@@ -149,7 +149,9 @@
 <pre><code class="language-rust ignore">    let response = contract_methods.u8_in_vec(10).call().await?;
     assert_eq!(response.value, (0..10).collect::&lt;Vec&lt;_&gt;&gt;());
 </code></pre>
-<p>** &gt;Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves **</p>
+<blockquote>
+<p><strong>Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves</strong></p>
+</blockquote>
 
                     </main>
 

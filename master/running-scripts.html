@@ -138,7 +138,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
-<p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="../abigen/the-abigen-macro.html">previously</a>.</p>
+<p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="./abigen/the-abigen-macro.html">previously</a>.</p>
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = &quot;MyScript&quot;,
@@ -160,7 +160,7 @@
     assert_eq!(result.value, expected);
 </code></pre>
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
-<p>The method for passing transaction parameters is the same as <a href="../calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
+<p>The method for passing transaction parameters is the same as <a href="./calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters::default()
         .set_gas_price(1)
         .set_gas_limit(10_000);
@@ -187,7 +187,7 @@
     let log_u64 = response.decode_logs_with_type::&lt;u64&gt;()?;
 </code></pre>
 <h2 id="calling-contracts-from-scripts"><a class="header" href="#calling-contracts-from-scripts">Calling contracts from scripts</a></h2>
-<p>Scripts use the same interfaces for setting external contracts as <a href="../calling-contracts/other-contracts.html">contract methods</a>.</p>
+<p>Scripts use the same interfaces for setting external contracts as <a href="./calling-contracts/other-contracts.html">contract methods</a>.</p>
 <p>Below is an example that uses <code>set_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
@@ -202,7 +202,7 @@
         .call()
         .await?;
 </code></pre>
-<h1 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h1>
+<h2 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h2>
 <p>Same as contracts, you can define <code>configurable</code> constants in <code>scripts</code> which can be changed during the script execution. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">script;
 

@@ -137,7 +137,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h2 id="rocksdb"><a class="header" href="#rocksdb">RocksDb</a></h2>
+                        <h1 id="rocksdb"><a class="header" href="#rocksdb">RocksDb</a></h1>
 <p>RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
 <p>To create or use a local database, follow these instructions:</p>
 <pre><code class="language-rust ignore">        let provider_config = Config {
@@ -147,15 +147,7 @@
         };
 </code></pre>
 <blockquote>
-<p>Note 1: If the specified database does not exist, a new database will be created at that path.</p>
-</blockquote>
-<blockquote>
-<p>Note 2: To utilize the code snippets above, either:</p>
-<ul>
-<li>the <code>fuel-core</code> binary must be present
-or</li>
-<li>both the <code>fuel-core-lib</code> and <code>rocksdb</code> features need to be enabled.</li>
-</ul>
+<p>Note: If the specified database does not exist, a new database will be created at that path. To utilize the code snippets above, either the <code>fuel-core</code> binary must be present, or both the <code>fuel-core-lib</code> and <code>rocksdb</code> features need to be enabled.</p>
 </blockquote>
 
                     </main>

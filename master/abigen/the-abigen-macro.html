@@ -137,7 +137,7 @@
 
                 <div id="content" class="content">
                     <main>
-                        <h1 id="abigen"><a class="header" href="#abigen">abigen!</a></h1>
+                        <h1 id="abigen"><a class="header" href="#abigen">abigen</a></h1>
 <!-- This section explain the `abigen!` macro -->
 <!-- abigen:example:start -->
 <p><code>abigen!</code> is a procedural macro -- it generates code. It accepts inputs in the format of:</p>
@@ -207,7 +207,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 <p>Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main <code>mod</code> of your program bindings, i.e. a type in a contract binding <code>MyContract</code> imported from a library <code>some_library</code> would be generated under <code>abigen_bindings::my_contract_mod::SomeLibraryType</code>.</p>
 <p>This can cause problems if you happen to have two types with the same name in different libraries of your program.</p>
 <p>This behavior can be changed to include the library path by compiling your Sway project with the following:</p>
-<pre><code>forc build --json-abi-with-callpaths
+<pre><code class="language-shell">forc build --json-abi-with-callpaths
 </code></pre>
 <p>Now the type from the previous example will be generated under <code>abigen_bindings::my_contract_mod::some_library::SomeLibraryType</code>.</p>
 <p>This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one <code>abigen!</code> call. You'll then need to fully qualify the access to it.</p>

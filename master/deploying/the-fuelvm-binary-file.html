@@ -156,7 +156,7 @@ impl MyContract for Contract {
 G4]�]D`I]C�As@
            6]C�$@!QK%
 </code></pre>
-<p>This seems very unreadable! But, <code>forc</code> has a nice interpreter for this bytecode: <code>forc </code>parse-bytecode`, which will interpret that binary data and output the equivalent FuelVM assembly:</p>
+<p>This seems very unreadable! But, <code>forc</code> has a nice interpreter for this bytecode: <code>forc parse-bytecode</code>, which will interpret that binary data and output the equivalent FuelVM assembly:</p>
 <pre><code class="language-terminal">$ forc parse-bytecode out/debug/my-test.bin
 half-word   byte   op                raw           notes
         0   0      JI(4)             90 00 00 04   jump to byte 16
