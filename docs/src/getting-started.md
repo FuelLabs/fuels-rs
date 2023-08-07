@@ -15,6 +15,7 @@ The dependencies for using the Fuel Rust SDK are:
 <!-- This section should list the main ways developers can use the Fuel Rust SDK -->
 <!-- rs_uses:example:start -->
 There are two main ways you can use the Fuel Rust SDK:
+
 1. Creating a new Sway project with `forc` and running the tests
 2. Creating a standalone project and importing the `fuels-rs` crate
 <!-- rs_uses:example:end -->
@@ -23,13 +24,13 @@ There are two main ways you can use the Fuel Rust SDK:
 
 You can create a new Sway project with
 
-```
+```shell
 forc new <Project name>
 ```
 
 Or you can initialize a project within an existing folder with
 
-```
+```shell
 forc init
 ```
 
@@ -40,7 +41,7 @@ If `cargo generate` is not already installed, you can instal it with:
 
 <!-- This section should have the command to install cargo generate -->
 <!-- cargo_gen_install:example:start -->
-```
+```shell
 cargo install cargo-generate
 ```
 <!-- cargo_gen_install:example:end -->
@@ -51,7 +52,7 @@ Let's generate the default test harness with the following command:
 
 <!-- This section should have the command to cargo generate a test harness -->
 <!-- cargo_gen:example:start -->
-```
+```shell
 cargo generate --init fuellabs/sway templates/sway-test-rs --name <Project name> --force
 ```
 <!-- cargo_gen:example:end -->
@@ -63,7 +64,7 @@ cargo generate --init fuellabs/sway templates/sway-test-rs --name <Project name>
 
 Before running test, we need to build the Sway project with:
 
-```
+```shell
 forc build
 ```
 
@@ -71,7 +72,7 @@ Afterwards, we can run the test with:
 
 <!-- This section should have the command to run a test -->
 <!-- run_test:example:start -->
-```
+```shell
 cargo test
 ```
 <!-- run_test:example:end -->
@@ -80,7 +81,7 @@ cargo test
 
 <!-- This section should have the command to run a test with no capture -->
 <!-- run_test_nocap:example:start -->
-```
+```shell
 cargo test -- --nocapture
 ```
 <!-- run_test_nocap:example:end -->
@@ -108,26 +109,27 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 > **Note** Before running the tests, we need to build all the Sway test projects. The file `packages/fuels/Forc.toml` contains a `[workspace], which members are the paths to all integration tests.
 > To build these tests, run the following command:
 
-```
+```shell
 forc build --path packages/fuels
 ```
+
 > `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
 
 After building the projects, we can run the tests with
 
-```
+```shell
 cargo test
 ```
 
 If you need all targets and all features, you can run
 
-```
+```shell
 cargo test --all-targets --all-features
 ```
 
 > **Note** If you need to capture output from the tests, you can run
 
-```
+```shell
 cargo test -- --nocapture
 ```
 
