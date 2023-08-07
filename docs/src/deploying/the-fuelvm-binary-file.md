@@ -24,7 +24,7 @@ G4]�]D`I]C�As@
            6]C�$@!QK%
 ```
 
-This seems very unreadable! But, `forc` has a nice interpreter for this bytecode: `forc `parse-bytecode`, which will interpret that binary data and output the equivalent FuelVM assembly:
+This seems very unreadable! But, `forc` has a nice interpreter for this bytecode: `forc parse-bytecode`, which will interpret that binary data and output the equivalent FuelVM assembly:
 
 ```terminal
 $ forc parse-bytecode out/debug/my-test.bin
