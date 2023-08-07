@@ -4,7 +4,7 @@ The integration tests of `fuels-rs` cover almost all aspects of the SDK and have
 
 Currently have the following structure:
 
-```
+```shell
   .
   ├─  bindings/
   ├─  contracts/
@@ -25,7 +25,8 @@ Currently have the following structure:
 ```
 
 Even though test organization is subjective, please consider these guidelines before adding a new category:
- - Add a new category when creating a new section in the `Fuels Rust SDK` book - e.g. `Types`
- - Add a new category if there are more than 3 test and more than 100 lines of code and they form a group of tests - e.g. `storage.rs`
+
+- Add a new category when creating a new section in the `Fuels Rust SDK` book - e.g. `Types`
+- Add a new category if there are more than 3 test and more than 100 lines of code and they form a group of tests - e.g. `storage.rs`
 
  Otherwise, we recommend putting the integration test inside the existing categories above.

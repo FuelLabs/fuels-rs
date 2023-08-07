@@ -18,14 +18,13 @@ of `COMMAND(ARG...)...`
 
 `ARG` is either a:
 
-* name-value (e.g. `name="MyContract"`), or,
-* a literal (e.g. `"some_str_literal"`, `true`, `5`, ...)
-* a sub-command (e.g. `Abigen(Contract(name="MyContract", project="some_project"))`)
+- name-value (e.g. `name="MyContract"`), or,
+- a literal (e.g. `"some_str_literal"`, `true`, `5`, ...)
+- a sub-command (e.g. `Abigen(Contract(name="MyContract", project="some_project"))`)
 
 Available `COMMAND`s:
 
-Wallets
----
+## Wallets
 
 Example: `Wallets("a_wallet", "another_wallet"...)`
 
@@ -33,10 +32,10 @@ Description: Launches a local provider and generates wallets with names taken fr
 
 Cardinality: 0 or 1.
 
-Abigen
----
+## Abigen
 
 Example:
+
 ```rust,ignore
 Abigen(
     Contract(
@@ -59,8 +58,7 @@ should point to root of the `forc` project.
 
 Cardinality: 0 or N.
 
-Deploy
----
+## Deploy
 
 Example: `Deploy(name="instance_name", contract="MyContract", wallet="a_wallet")`
 
@@ -68,8 +66,7 @@ Description: Deploys the `contract` (with salt) using `wallet`. Will create a co
 
 Cardinality: 0 or N.
 
-LoadScript
----
+## LoadScript
 
 Example: `LoadScript(name = "script_instance", script = "MyScript", wallet = "wallet")`
 

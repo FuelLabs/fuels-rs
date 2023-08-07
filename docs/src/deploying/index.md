@@ -10,7 +10,7 @@ Once you've written a contract in Sway and compiled it with `forc build`, you'll
 <!-- build:example:end -->
 > Note: Read [here](https://fuellabs.github.io/sway/master/book/introduction/sway_quickstart.html) for more on how to work with Sway.
 
-Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read [The abigen macro](../abigen/the-abigen-macro.md), [The FuelVM binary file](../contracts/the-fuelvm-binary-file.md), and [The JSON ABI file](../abigen/the-json-abi-file.md).
+Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read [The abigen macro](../abigen/the-abigen-macro.md), [The FuelVM binary file](./the-fuelvm-binary-file.md), and [The JSON ABI file](../abigen/the-json-abi-file.md).
 
 <!-- This section should explain how to load and deploy a contract  -->
 <!-- deploy:example:start -->
@@ -22,6 +22,7 @@ First, the `Contract::load_from` function is used to load a contract binary with
 ```
 
 Alternatively, you can use `LoadConfiguration` to configure how the contract is loaded. `LoadConfiguration` let's you:
+
 - Load the same contract binary with `Salt` to get a new `contract_id`
 - Change the contract's storage slots
 - Update the contract's configurables
@@ -38,4 +39,3 @@ After the contract is deployed, you can use the contract's methods like this:
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
 ```
-
