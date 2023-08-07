@@ -476,6 +476,25 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
+    pub async fn submit(mut self) -> Result<ContractCallHandler<T, D>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        provider.send_transaction(&tx).await?;
+        Ok(self)
+    }
+
+    pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
+    }
+
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
@@ -694,6 +713,25 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn submit(mut self) -> Result<MultiContractCallHandler<T>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        let consensus_parameters = provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        provider.send_transaction(&tx).await?;
+        Ok(self)
+    }
+
+    pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
