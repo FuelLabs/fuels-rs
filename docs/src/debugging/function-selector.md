@@ -17,7 +17,3 @@ selector, but you have to jump through an extra hoop to get the ParamTypes:
 ```rust,ignore
 {{#include ../../../examples/debugging/src/lib.rs:example_fn_selector_json}}
 ```
-
-
-
-
