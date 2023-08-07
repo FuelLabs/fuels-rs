@@ -22,6 +22,10 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::{process::Command, sync::oneshot};
 
+use fuel_core_services::Service as ServiceTrait;
+use fuel_core_services::State;
+use fuel_core_services::StateWatcher;
+
 use crate::utils::{into_coin_configs, into_message_configs};
 // Set the cache for tests to 10MB, which is the default size in `fuel-core`.
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
@@ -408,3 +412,50 @@ impl FuelService {
         Ok(FuelService { bound_address })
     }
 }
+
+#[async_trait::async_trait]
+impl ServiceTrait for FuelService {
+    fn start(&self) -> anyhow::Result<()> {
+        unimplemented!()
+        // self.runner.start()
+    }
+
+    async fn start_and_await(&self) -> anyhow::Result<State> {
+        unimplemented!()
+        // self.runner.start_and_await().await
+    }
+
+    async fn await_start_or_stop(&self) -> anyhow::Result<State> {
+        unimplemented!()
+
+        // self.runner.await_start_or_stop().await
+    }
+
+    fn stop(&self) -> bool {
+        unimplemented!()
+        // self.runner.stop()
+    }
+
+    async fn stop_and_await(&self) -> anyhow::Result<State> {
+        unimplemented!()
+        // self.runner.stop_and_await().await
+    }
+
+    async fn await_stop(&self) -> anyhow::Result<State> {
+        unimplemented!()
+        // self.runner.await_stop().await
+    }
+
+    fn state(&self) -> State {
+        unimplemented!()
+        // self.runner.state()
+    }
+
+    fn state_watcher(&self) -> StateWatcher {
+        unimplemented!()
+        // self.runner.state_watcher()
+    }
+}
+
+
+

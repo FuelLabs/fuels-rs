@@ -29,6 +29,11 @@ tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
 
+fuel-core-services = "0.19.1"
+async-trait = { version = "0.1.68", default-features = false }
+anyhow = "1.0.62"
+
+
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std"]
