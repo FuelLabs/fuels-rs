@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use fuels::tx::{Bytes32, ContractIdExt};
     use fuels::types::errors::{error, Error, Result};
+    use fuels::types::Bits256;
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -345,9 +345,7 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
-        let asset_id = ContractId::from(contract_id)
-            .asset_id(&Bytes32::zeroed())
-            .into();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -410,7 +408,7 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = ContractId::from(*caller_contract_id.hash()).asset_id(&Bytes32::zeroed());
+        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
         assert_eq!(balance, amount);
 

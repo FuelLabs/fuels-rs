@@ -1,7 +1,5 @@
-use fuel_tx::ContractIdExt;
 use std::fmt::Debug;
 
-use fuels::tx::Bytes32;
 use fuels::{
     prelude::*,
     tx::Receipt,
@@ -1246,9 +1244,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = ContractId::from(contract_id)
-            .asset_id(&Bytes32::zeroed())
-            .into();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
         let address = wallet.address();
 
         let error = contract_methods

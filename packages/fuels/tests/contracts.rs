@@ -3,7 +3,6 @@ use std::future::Future;
 use std::vec;
 
 use fuel_core::chain_config::ChainConfig;
-use fuel_tx::{Bytes32, ContractIdExt};
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -662,7 +661,7 @@ async fn setup_output_variable_estimation_test(
     .deploy(&wallets[0], TxParameters::default())
     .await?;
 
-    let mint_asset_id = ContractId::from(&contract_id).asset_id(&Bytes32::zeroed());
+    let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
     let addresses: [Address; 3] = wallets
         .iter()
         .map(|wallet| wallet.address().into())
