@@ -1,6 +1,6 @@
 # Summary
 
-[The Fuel Rust SDK](./README.md)
+[The Fuel Rust SDK](./index.md)
 
 - [Getting Started](./getting-started.md)
 - [Connecting to a Fuel node](./connecting/index.md)
