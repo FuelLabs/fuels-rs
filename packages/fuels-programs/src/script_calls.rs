@@ -208,7 +208,7 @@ where
             .sum()
     }
 
-    /// Returns the script that executes the script call
+    /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         let tb = self.prepare_builder().await?;
         let base_amount = self.calculate_base_asset_sum();
