@@ -45,17 +45,6 @@ chrono = "0.4.24"
 elliptic-curve = { version = "0.13.4", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-fuel-core = { version = "0.19.1", default-features = false }
-fuel-core-chain-config = { version = "0.19.1", default-features = false }
-fuel-core-client = { version = "0.19.1", default-features = false }
-fuel-core-types = { version = "0.19.1", default-features = false }
-fuel-asm = "0.34.0"
-fuel-crypto = "0.34.0"
-fuel-merkle = "0.34.0"
-fuel-storage = "0.34.0"
-fuel-tx = "0.34.0"
-fuel-types = { version = "0.34.0", default-features = false }
-fuel-vm = "0.34.0"
 fuels = { version = "0.44.0", path = "./packages/fuels" }
 fuels-accounts = { version = "0.44.0", path = "./packages/fuels-accounts", default-features = false }
 fuels-code-gen = { version = "0.44.0", path = "./packages/fuels-code-gen", default-features = false }
@@ -84,3 +73,18 @@ thiserror = { version = "1.0.40", default-features = false }
 tokio = { version = "1.27.0", default-features = false }
 trybuild = "1.0.80"
 which = { version = "4.4", default-features = false }
+
+# Dependencies from the `fuel-core` repository:
+fuel-core = { version = "0.20.3", default-features = false }
+fuel-core-chain-config = { version = "0.20.3", default-features = false }
+fuel-core-client = { version = "0.20.3", default-features = false }
+fuel-core-types = { version = "0.20.3", default-features = false }
+
+# Dependencies from the `fuel-vm` repository:
+fuel-asm = "0.35.3"
+fuel-crypto = "0.35.3"
+fuel-merkle = "0.35.3"
+fuel-storage = "0.35.3"
+fuel-tx = "0.35.3"
+fuel-types = { version = "0.35.3", default-features = false }
+fuel-vm = "0.35.3"
