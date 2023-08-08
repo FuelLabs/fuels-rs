@@ -20,9 +20,9 @@ You can also use `launch_provider_and_get_wallet()`, which abstracts away the `s
 let wallet = launch_provider_and_get_wallet().await;
 ```
 
-# Features
+## Features
 
-## Fuel-core lib
+### Fuel-core lib
 
 The `fuel-core-lib` feature allows us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine. Using the `fuel-core-lib` feature flag entails downloading all the dependencies needed to run the fuel-core node.
 
@@ -30,7 +30,7 @@ The `fuel-core-lib` feature allows us to run a `fuel-core` node without installi
 fuels = { version = "0.44.0", features = ["fuel-core-lib"] }
 ```
 
-## RocksDb
+### RocksDb
 
 The `rocksdb` is an additional feature that, when combined with `fuel-core-lib`, provides persistent storage capabilities while using `fuel-core` as a library.
 

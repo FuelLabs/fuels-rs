@@ -2,7 +2,6 @@
 
 With the function `estimate_transaction_cost(tolerance: Option<f64>)` provided by `ContractCallHandler` and `ContractMultiCallHandler`, you can get a cost estimation for a specific call. The return type, `TransactionCost`, is a struct that contains relevant information for the estimation:
 
-
 ```rust,ignore
 TransactionCost {
     min_gas_price: u64,
