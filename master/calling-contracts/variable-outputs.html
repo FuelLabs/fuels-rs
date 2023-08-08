@@ -143,16 +143,17 @@
 <p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://specs.fuel.network/master/tx-format/output.html#outputvariable">variable outputs</a> to succeed.</p>
 <!-- variable_outputs:example:end -->
 <p>Let's say you deployed a contract with the following method:</p>
-<pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_address(coins, asset_id, recipient);
+<pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: AssetId, recipient: Address) {
+        transfer_to_address(recipient, asset_id, coins);
     }
 </code></pre>
 <p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs by chaining <code>append_variable_outputs(amount)</code> to your call. Like this:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
+        let asset_id = contract_id.asset_id(&amp;Bits256::zeroed()).into();
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, asset_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;

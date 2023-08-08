@@ -913,7 +913,7 @@ coins and coin amount</p>
         let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
         // Check if signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;13ce336c5f239a748f20f39323e3df3237ccfe104b04f128be66f26a49abd09d3b4b19c7f07efbb708c442371feb5fc6545f2b614e1f9f336702cca3e62d0cc8&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;df91e8ae723165f9a28b70910e3da41300da413607065618522f3084c9f051114acb1b51a836bd63c3d84a1ac904bf37b82ef03973c19026b266d04872f170a6&quot;)?);
 
         // Recover address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;
@@ -1611,7 +1611,7 @@ half-word   byte   op                raw           notes
 <p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
 <!-- tx_params_default:example:end -->
 <pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_GAS_LIMIT: u64 = 1_000_000;
+pub const DEFAULT_GAS_LIMIT: u64 = 100_000_000;
 pub const DEFAULT_MATURITY: u32 = 0;
 </code></pre>
 <p>This way:</p>
@@ -1691,10 +1691,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <!-- gas:example:start -->
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
 <!-- gas:example:end -->
-<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
-        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
         let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
@@ -1821,16 +1821,17 @@ let is_error = response.is_err();
 <p>Sometimes, the contract you call might transfer funds to a specific address, depending on its execution. The underlying transaction for such a contract call has to have the appropriate number of <a href="https://specs.fuel.network/master/tx-format/output.html#outputvariable">variable outputs</a> to succeed.</p>
 <!-- variable_outputs:example:end -->
 <p>Let's say you deployed a contract with the following method:</p>
-<pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: ContractId, recipient: Address) {
-        transfer_to_address(coins, asset_id, recipient);
+<pre><code class="language-rust ignore">    fn transfer_coins_to_output(coins: u64, asset_id: AssetId, recipient: Address) {
+        transfer_to_address(recipient, asset_id, coins);
     }
 </code></pre>
 <p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs by chaining <code>append_variable_outputs(amount)</code> to your call. Like this:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
+        let asset_id = contract_id.asset_id(&amp;Bits256::zeroed()).into();
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, asset_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -2053,7 +2054,7 @@ let is_error = response.is_err();
 <p>The method for passing transaction parameters is the same as <a href="./calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters::default()
         .set_gas_price(1)
-        .set_gas_limit(10_000);
+        .set_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)
@@ -2156,7 +2157,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
 <pre><code class="language-rust ignore">predicate;
 
 fn main(a: u32, b: u64) -&gt; bool {
-    b == a
+    b == a.as_u64()
 }
 </code></pre>
 <p>We will look at a complete example of using the SDK to send and receive funds from a predicate.</p>
@@ -3101,6 +3102,7 @@ use std::{
         transfer_to_address,
     },
 };
+use std::constants::ZERO_B256;
 
 abi LiquidityPool {
     #[payable]
@@ -3114,26 +3116,25 @@ const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33
 impl LiquidityPool for Contract {
     #[payable]
     fn deposit(recipient: Address) {
-        assert(ContractId::from(BASE_TOKEN) == msg_asset_id());
+        assert(BASE_TOKEN == msg_asset_id());
         assert(0 &lt; msg_amount());
 
         // Mint two times the amount.
         let amount_to_mint = msg_amount() * 2;
 
         // Mint some LP token based upon the amount of the base token.
-        mint_to_address(amount_to_mint, recipient);
+        mint_to_address(recipient, ZERO_B256, amount_to_mint);
     }
 
     #[payable]
     fn withdraw(recipient: Address) {
-        assert(contract_id() == msg_asset_id());
         assert(0 &lt; msg_amount());
 
         // Amount to withdraw.
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_address(amount_to_transfer, ContractId::from(BASE_TOKEN), recipient);
+        transfer_to_address(recipient, BASE_TOKEN, amount_to_transfer);
     }
 }
 </code></pre>
@@ -3187,7 +3188,7 @@ impl LiquidityPool for Contract {
             .await?;
 </code></pre>
 <p>As a final demonstration, let's use all our liquidity asset balance to withdraw from the pool and confirm we retrieved the initial amount. For this, we get our liquidity asset balance and supply it to the <code>withdraw()</code> call via <code>CallParameters</code>.</p>
-<pre><code class="language-rust ignore">        let lp_asset_id = AssetId::from(*contract_id.hash());
+<pre><code class="language-rust ignore">        let lp_asset_id = contract_id.asset_id(&amp;Bits256::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::default()

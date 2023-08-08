@@ -144,7 +144,7 @@
 <pre><code class="language-rust ignore">predicate;
 
 fn main(a: u32, b: u64) -&gt; bool {
-    b == a
+    b == a.as_u64()
 }
 </code></pre>
 <p>We will look at a complete example of using the SDK to send and receive funds from a predicate.</p>

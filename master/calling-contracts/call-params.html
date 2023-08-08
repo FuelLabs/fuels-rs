@@ -202,10 +202,10 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <!-- gas:example:start -->
 <p>The <code>gas_forwarded</code> parameter defines the limit for the actual contract call as opposed to the gas limit for the whole transaction. This means that it is constrained by the transaction limit. If it is set to an amount greater than the available gas, all available gas will be forwarded.</p>
 <!-- gas:example:end -->
-<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
-        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+<pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
         let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
