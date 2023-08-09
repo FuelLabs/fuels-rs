@@ -23,9 +23,35 @@ struct DecodeResult {
     bytes_read: usize,
 }
 
-pub struct ABIDecoder;
+pub struct DecoderConfig {
+    max_depth: usize,
+}
 
-impl ABIDecoder {
+impl Default for DecoderConfig {
+    fn default() -> Self {
+        // TODO: revisit this when we have a normal value in mind
+        Self { max_depth: 10 }
+    }
+}
+
+pub struct KaroDecoder {
+    config: DecoderConfig,
+    current_depth: usize,
+}
+
+impl Default for KaroDecoder {
+    fn default() -> Self {
+        Self::new(DecoderConfig::default())
+    }
+}
+
+impl KaroDecoder {
+    pub fn new(config: DecoderConfig) -> Self {
+        Self {
+            config,
+            current_depth: 0,
+        }
+    }
     /// Decodes types described by `param_types` into their respective `Token`s
     /// using the data in `bytes` and `receipts`.
     ///
@@ -44,20 +70,20 @@ impl ABIDecoder {
     ///
     /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
     /// ```
-    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
+    pub fn decode(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         for param_type in param_types {
             Self::is_type_decodable(param_type)?;
         }
-        let (tokens, _) = Self::decode_multiple(param_types, bytes)?;
+        let (tokens, _) = self.decode_multiple(param_types, bytes)?;
 
         Ok(tokens)
     }
 
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
-    pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub fn decode_single(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         Self::is_type_decodable(param_type)?;
-        Ok(Self::decode_param(param_type, bytes)?.token)
+        Ok(self.decode_param(param_type, bytes)?.token)
     }
 
     fn is_type_decodable(param_type: &ParamType) -> Result<()> {
@@ -76,7 +102,7 @@ impl ABIDecoder {
         }
     }
 
-    fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -87,14 +113,14 @@ impl ABIDecoder {
             ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
-            ParamType::RawSlice => Self::decode_raw_slice(bytes),
+            ParamType::RawSlice => self.decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::String(len) => Self::decode_string_array(bytes, *len),
-            ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
-            ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
-            ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
-            ParamType::Tuple(types) => Self::decode_tuple(types, bytes),
-            ParamType::Vector(param_type) => Self::decode_vector(param_type, bytes),
+            ParamType::Array(ref t, length) => self.decode_array(t, bytes, *length),
+            ParamType::Struct { fields, .. } => self.decode_struct(fields, bytes),
+            ParamType::Enum { variants, .. } => self.decode_enum(bytes, variants),
+            ParamType::Tuple(types) => self.decode_tuple(types, bytes),
+            ParamType::Vector(param_type) => self.decode_vector(param_type, bytes),
             ParamType::Bytes => Self::decode_bytes(bytes),
             ParamType::StdString => Self::decode_std_string(bytes),
         }
@@ -114,10 +140,10 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_vector(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
         let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) =
-            Self::decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
+            self.decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
         Ok(DecodeResult {
             token: Token::Vector(tokens),
@@ -125,25 +151,50 @@ impl ABIDecoder {
         })
     }
 
-    fn decode_tuple(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
+    fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
+        self.increase_depth()?;
+        let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
-        Ok(DecodeResult {
+        let decode_result = DecodeResult {
             token: Token::Tuple(tokens),
             bytes_read,
-        })
+        };
+        self.decrease_depth();
+        Ok(decode_result)
     }
 
-    fn decode_struct(param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        let (tokens, bytes_read) = Self::decode_multiple(param_types, bytes)?;
+    fn increase_depth(&mut self) -> Result<()> {
+        self.current_depth += 1;
+        if self.current_depth > self.config.max_depth {
+            Err(error!(
+                InvalidType,
+                "Depth limit ({}) reached while decoding!", self.config.max_depth
+            ))
+        } else {
+            Ok(())
+        }
+    }
+    fn decrease_depth(&mut self) {
+        if self.current_depth > 0 {
+            self.current_depth -= 1;
+        }
+    }
 
-        Ok(DecodeResult {
+    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
+        self.increase_depth()?;
+        let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
+
+        let decode_result = DecodeResult {
             token: Token::Struct(tokens),
             bytes_read,
-        })
+        };
+
+        self.decrease_depth();
+        Ok(decode_result)
     }
 
     fn decode_multiple<'a>(
+        &mut self,
         param_types: impl IntoIterator<Item = &'a ParamType>,
         bytes: &[u8],
     ) -> Result<(Vec<Token>, usize)> {
@@ -152,7 +203,7 @@ impl ABIDecoder {
         let mut bytes_read = 0;
 
         for param_type in param_types {
-            let res = Self::decode_param(param_type, skip(bytes, bytes_read)?)?;
+            let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
             results.push(res.token);
         }
@@ -160,23 +211,31 @@ impl ABIDecoder {
         Ok((results, bytes_read))
     }
 
-    fn decode_array(param_type: &ParamType, bytes: &[u8], length: usize) -> Result<DecodeResult> {
+    fn decode_array(
+        &mut self,
+        param_type: &ParamType,
+        bytes: &[u8],
+        length: usize,
+    ) -> Result<DecodeResult> {
+        self.increase_depth()?;
         let (tokens, bytes_read) =
-            Self::decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
+            self.decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
 
-        Ok(DecodeResult {
+        let decode_result = DecodeResult {
             token: Token::Array(tokens),
             bytes_read,
-        })
+        };
+        self.decrease_depth();
+        Ok(decode_result)
     }
 
-    fn decode_raw_slice(bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<DecodeResult> {
         let raw_slice_element = ParamType::U64;
         let num_of_elements =
             ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
         let param_type = ParamType::U64;
         let (tokens, bytes_read) =
-            Self::decode_multiple(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
+            self.decode_multiple(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
         let elements = tokens
             .into_iter()
             .map(u64::from_token)
@@ -288,7 +347,8 @@ impl ABIDecoder {
     ///
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
-    fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
+    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
+        self.increase_depth()?;
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
@@ -296,16 +356,20 @@ impl ABIDecoder {
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
-        let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
+        let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));
-        Ok(DecodeResult {
+        let decode_result = DecodeResult {
             token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,
-        })
+        };
+
+        self.decrease_depth();
+        Ok(decode_result)
     }
 
     fn decode_token_in_enum(
+        &mut self,
         bytes: &[u8],
         variants: &EnumVariants,
         selected_variant: &ParamType,
@@ -318,8 +382,40 @@ impl ABIDecoder {
                 bytes_read: 0,
             })
         } else {
-            Self::decode_param(selected_variant, bytes)
+            self.decode_param(selected_variant, bytes)
         }
+    }
+}
+
+pub struct ABIDecoder;
+
+impl ABIDecoder {
+    /// Decodes types described by `param_types` into their respective `Token`s
+    /// using the data in `bytes` and `receipts`.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_types`: The ParamType's of the types we expect are encoded
+    ///                  inside `bytes` and `receipts`.
+    /// * `bytes`:       The bytes to be used in the decoding process.
+    /// # Examples
+    ///
+    /// ```
+    /// use fuels_core::codec::ABIDecoder;
+    /// use fuels_core::types::{param_types::ParamType, Token};
+    ///
+    /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
+    ///
+    /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
+    /// ```
+    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
+        KaroDecoder::default().decode(param_types, bytes)
+    }
+
+    /// The same as `decode` just for a single type. Used in most cases since
+    /// contract functions can only return one type.
+    pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+        KaroDecoder::default().decode_single(param_type, bytes)
     }
 }
 
@@ -401,6 +497,8 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 #[cfg(test)]
 mod tests {
     use std::vec;
+
+    use fuel_tx::field;
 
     use super::*;
 
@@ -834,5 +932,174 @@ mod tests {
         assert!(
             msg.contains("contains collections of zero-sized types. Decoding is not supported!")
         );
+    }
+
+    #[test]
+    fn limiting_structs_nested_too_deep() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let level_3 = ParamType::Struct {
+            fields: vec![],
+            generics: vec![],
+        };
+        let level_2 = ParamType::Struct {
+            fields: vec![level_3],
+            generics: vec![],
+        };
+        let level_1 = ParamType::Struct {
+            fields: vec![level_2],
+            generics: vec![],
+        };
+
+        let err = decoder.decode_single(&level_1, &[]);
+
+        let Err(Error::InvalidType(msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+    }
+
+    #[test]
+    fn limiting_structs_acceptably_nested() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let child_1 = ParamType::Struct {
+            fields: vec![],
+            generics: vec![],
+        };
+        let child_2 = child_1.clone();
+        let parent = ParamType::Struct {
+            fields: vec![child_1, child_2],
+            generics: vec![],
+        };
+
+        let result = decoder.decode_single(&parent, &[]);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn limiting_enums_nested_too_deep() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let level_3 = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
+            generics: vec![],
+        };
+        let level_2 = ParamType::Enum {
+            variants: EnumVariants::new(vec![level_3]).unwrap(),
+            generics: vec![],
+        };
+        let level_1 = ParamType::Enum {
+            variants: EnumVariants::new(vec![level_2]).unwrap(),
+            generics: vec![],
+        };
+
+        let discriminants = [0; 16];
+        let err = decoder.decode_single(&level_1, &discriminants);
+
+        let Err(Error::InvalidType(msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+    }
+
+    // TODO: enums of ZST structs, how does Sway encode them?
+
+    #[test]
+    fn limiting_enums_nested_acceptably() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let child_1 = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
+            generics: vec![],
+        };
+        let child_2 = child_1.clone();
+
+        let parent = ParamType::Struct {
+            fields: vec![child_1, child_2],
+            generics: vec![],
+        };
+
+        let discriminant_1 = [0; 8];
+        let data_1 = [0; 8];
+        let discriminant_2 = [0; 8];
+        let data_2 = [0; 8];
+
+        let data = [discriminant_1, data_1, discriminant_2, data_2].concat();
+
+        let result = decoder.decode_single(&parent, &data);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn limiting_arrays_nested_too_deeply() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let level_3 = ParamType::Array(Box::new(ParamType::U8), 1);
+        let level_2 = ParamType::Array(Box::new(level_3), 1);
+        let level_1 = ParamType::Array(Box::new(level_2), 1);
+
+        let u8_data = [0; 8];
+        let err = decoder.decode_single(&level_1, &u8_data);
+
+        let Err(Error::InvalidType(msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+    }
+
+    #[test]
+    fn limiting_arrays_nested_acceptably() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let child_1 = ParamType::Array(Box::new(ParamType::U8), 1);
+        let child_2 = child_1.clone();
+
+        let parent = ParamType::Struct {
+            fields: vec![child_1, child_2],
+            generics: vec![],
+        };
+
+        let u8_data = [0; 16];
+        let result = decoder.decode_single(&parent, &u8_data);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn limiting_tuples_nested_too_deeply() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let level_3 = ParamType::Tuple(vec![ParamType::U8]);
+        let level_2 = ParamType::Tuple(vec![level_3]);
+        let level_1 = ParamType::Tuple(vec![level_2]);
+
+        let u8_data = [0; 8];
+        let err = decoder.decode_single(&level_1, &u8_data);
+
+        let Err(Error::InvalidType(msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+    }
+
+    #[test]
+    fn limiting_tuples_nested_acceptably() {
+        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+
+        let child_1 = ParamType::Tuple(vec![ParamType::U8]);
+        let child_2 = child_1.clone();
+
+        let parent = ParamType::Struct {
+            fields: vec![child_1, child_2],
+            generics: vec![],
+        };
+
+        let u8_data = [0; 16];
+        let result = decoder.decode_single(&parent, &u8_data);
+
+        assert!(result.is_ok());
     }
 }
