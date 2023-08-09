@@ -11,6 +11,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
+use fuels_core::types::Bits256;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -337,6 +338,8 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         ),
     );
 
+    // The gas used by the script to call a contract and forward remaining gas limit.
+    let gas_used_by_script = 161;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -353,7 +356,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .gas()
         .unwrap();
 
-    assert_eq!(gas_limit, gas_forwarded);
+    assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
 
     Ok(())
 }
@@ -374,9 +377,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
+    let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
 
     let mut balance_response = contract_methods
-        .get_balance(contract_id, contract_id)
+        .get_balance(contract_id, asset_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 0);
@@ -384,7 +388,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     contract_methods.mint_coins(5_000_000).call().await?;
 
     balance_response = contract_methods
-        .get_balance(contract_id, contract_id)
+        .get_balance(contract_id, asset_id)
         .call()
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
@@ -417,7 +421,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, contract_id, address)
+        .transfer_coins_to_output(1_000_000, asset_id, address)
         .append_variable_outputs(1)
         .call()
         .await?;
@@ -534,7 +538,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::default().set_gas_limit(3000))
+        .tx_params(TxParameters::default().set_gas_limit(446000))
         .call_params(CallParameters::default().set_gas_forwarded(1))?
         .call()
         .await
