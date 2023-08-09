@@ -34,9 +34,40 @@ impl Default for DecoderConfig {
     }
 }
 
-pub struct KaroDecoder {
-    config: DecoderConfig,
+struct DepthTracker {
     current_depth: usize,
+    max_depth: usize,
+}
+
+impl DepthTracker {
+    fn new(max_depth: usize) -> Self {
+        Self {
+            current_depth: 0,
+            max_depth,
+        }
+    }
+
+    fn increase_depth(&mut self) -> Result<()> {
+        self.current_depth += 1;
+        if self.current_depth > self.max_depth {
+            Err(error!(
+                InvalidType,
+                "Depth limit ({}) reached while decoding!", self.max_depth
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn decrease_depth(&mut self) {
+        if self.current_depth > 0 {
+            self.current_depth -= 1;
+        }
+    }
+}
+
+pub struct KaroDecoder {
+    depth_tracker: DepthTracker,
 }
 
 impl Default for KaroDecoder {
@@ -47,9 +78,9 @@ impl Default for KaroDecoder {
 
 impl KaroDecoder {
     pub fn new(config: DecoderConfig) -> Self {
+        let depth_guard = DepthTracker::new(config.max_depth);
         Self {
-            config,
-            current_depth: 0,
+            depth_tracker: depth_guard,
         }
     }
     /// Decodes types described by `param_types` into their respective `Token`s
@@ -152,36 +183,19 @@ impl KaroDecoder {
     }
 
     fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.increase_depth()?;
+        self.depth_tracker.increase_depth()?;
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
         let decode_result = DecodeResult {
             token: Token::Tuple(tokens),
             bytes_read,
         };
-        self.decrease_depth();
+        self.depth_tracker.decrease_depth();
         Ok(decode_result)
     }
 
-    fn increase_depth(&mut self) -> Result<()> {
-        self.current_depth += 1;
-        if self.current_depth > self.config.max_depth {
-            Err(error!(
-                InvalidType,
-                "Depth limit ({}) reached while decoding!", self.config.max_depth
-            ))
-        } else {
-            Ok(())
-        }
-    }
-    fn decrease_depth(&mut self) {
-        if self.current_depth > 0 {
-            self.current_depth -= 1;
-        }
-    }
-
     fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.increase_depth()?;
+        self.depth_tracker.increase_depth()?;
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
         let decode_result = DecodeResult {
@@ -189,7 +203,7 @@ impl KaroDecoder {
             bytes_read,
         };
 
-        self.decrease_depth();
+        self.depth_tracker.decrease_depth();
         Ok(decode_result)
     }
 
@@ -217,7 +231,7 @@ impl KaroDecoder {
         bytes: &[u8],
         length: usize,
     ) -> Result<DecodeResult> {
-        self.increase_depth()?;
+        self.depth_tracker.increase_depth()?;
         let (tokens, bytes_read) =
             self.decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
 
@@ -225,7 +239,7 @@ impl KaroDecoder {
             token: Token::Array(tokens),
             bytes_read,
         };
-        self.decrease_depth();
+        self.depth_tracker.decrease_depth();
         Ok(decode_result)
     }
 
@@ -348,7 +362,7 @@ impl KaroDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
-        self.increase_depth()?;
+        self.depth_tracker.increase_depth()?;
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
@@ -364,7 +378,7 @@ impl KaroDecoder {
             bytes_read: enum_width * WORD_SIZE,
         };
 
-        self.decrease_depth();
+        self.depth_tracker.decrease_depth();
         Ok(decode_result)
     }
 
