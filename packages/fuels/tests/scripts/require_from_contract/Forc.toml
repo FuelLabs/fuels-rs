@@ -6,3 +6,4 @@ name = "require_from_contract"
 
 [dependencies]
 library = { path = "../../contracts/lib_contract_abi", package = "lib_contract_abi" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "upgrade/fuel-core-v0.20.1" }
