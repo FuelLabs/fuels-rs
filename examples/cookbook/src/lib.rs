@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::types::Bits256;
     use fuels::{
         prelude::Result,
         types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
@@ -65,7 +66,7 @@ mod tests {
         // ANCHOR_END: liquidity_deposit
 
         // ANCHOR: liquidity_withdraw
-        let lp_asset_id = AssetId::from(*contract_id.hash());
+        let lp_asset_id = contract_id.asset_id(&Bits256::zeroed());
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::default()

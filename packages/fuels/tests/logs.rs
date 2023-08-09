@@ -1244,10 +1244,11 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
         let address = wallet.address();
 
         let error = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, asset_id, address)
             .call()
             .await
             .expect_err("should return a revert error");
