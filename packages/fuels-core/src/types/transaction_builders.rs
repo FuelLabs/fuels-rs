@@ -33,7 +33,7 @@ struct UnresolvedSignatures {
     secret_keys: Vec<SecretKey>,
 }
 
-pub trait TransactionBuilder: Send + std::fmt::Debug {
+pub trait TransactionBuilder: Send {
     type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
@@ -185,7 +185,7 @@ macro_rules! impl_tx_trait {
                     .len();
 
                 if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
-                    return Err(error!(InvalidData, "tx can not have more that 256 witnesses"));
+                    return Err(error!(InvalidData, "tx can not have more than 256 witnesses"));
                 }
 
                 Ok(num_witnesses as u8)
