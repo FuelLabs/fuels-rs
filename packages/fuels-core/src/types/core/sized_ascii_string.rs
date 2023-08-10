@@ -1,6 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 use crate::types::errors::{error, Error, Result};
+use serde::{Deserialize, Serialize};
 
 // To be used when interacting with contracts which have string slices in their ABI.
 // The FuelVM strings only support ascii characters.
@@ -72,7 +73,7 @@ impl PartialEq<AsciiString> for &str {
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a
 // different type from str[3]. The FuelVM strings only support ascii characters.
-#[derive(Debug, PartialEq, Clone, Eq)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash)]
 pub struct SizedAsciiString<const LEN: usize> {
     data: String,
 }
@@ -151,9 +152,28 @@ impl<const LEN: usize> PartialEq<&str> for SizedAsciiString<LEN> {
         self.data == *other
     }
 }
+
 impl<const LEN: usize> PartialEq<SizedAsciiString<LEN>> for &str {
     fn eq(&self, other: &SizedAsciiString<LEN>) -> bool {
         *self == other.data
+    }
+}
+
+impl<const LEN: usize> Serialize for SizedAsciiString<LEN> {
+    fn serialize<S: serde::Serializer>(
+        &self,
+        serializer: S,
+    ) -> core::result::Result<S::Ok, S::Error> {
+        self.data.serialize(serializer)
+    }
+}
+
+impl<'de, const LEN: usize> Deserialize<'de> for SizedAsciiString<LEN> {
+    fn deserialize<D: serde::Deserializer<'de>>(
+        deserializer: D,
+    ) -> core::result::Result<Self, D::Error> {
+        let data = String::deserialize(deserializer)?;
+        Self::new(data).map_err(serde::de::Error::custom)
     }
 }
 
@@ -244,5 +264,24 @@ mod tests {
         assert_eq!("victor      ", padded);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_can_serialize_sized_ascii() {
+        let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
+
+        let serialized = serde_json::to_string(&sized_str).unwrap();
+        assert_eq!(serialized, "\"abc\"");
+    }
+
+    #[test]
+    fn test_can_deserialize_sized_ascii() {
+        let serialized = "\"abc\"";
+
+        let deserialized: SizedAsciiString<3> = serde_json::from_str(serialized).unwrap();
+        assert_eq!(
+            deserialized,
+            SizedAsciiString::<3>::new("abc".to_string()).unwrap()
+        );
     }
 }
