@@ -66,33 +66,23 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
-//TODO: remove unnecessary stuff from Trait and move to impl
 pub trait Transaction: Into<FuelTransaction> + Clone {
+    fn id(&self) -> Bytes32;
+    fn maturity(&self) -> u32;
+    fn gas_price(&self) -> u64;
+    fn gas_limit(&self) -> u64;
+    fn inputs(&self) -> &Vec<Input>;
+    fn outputs(&self) -> &Vec<Output>;
+    fn witnesses(&self) -> &Vec<Witness>;
+    fn append_witness(&mut self, witness: Witness) -> usize;
+    fn metered_bytes_size(&self) -> usize;
+    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self;
     fn fee_checked_from_tx(&self) -> Option<TransactionFee>;
-
     fn check_without_signatures(
         &self,
         block_height: u32,
         parameters: &ConsensusParameters,
     ) -> Result<()>;
-
-    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self;
-
-    fn id(&self) -> Bytes32;
-
-    fn maturity(&self) -> u32;
-
-    fn gas_price(&self) -> u64;
-
-    fn gas_limit(&self) -> u64;
-
-    fn metered_bytes_size(&self) -> usize;
-
-    fn inputs(&self) -> &Vec<Input>;
-
-    fn outputs(&self) -> &Vec<Output>;
-
-    fn witnesses(&self) -> &Vec<Witness>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -105,35 +95,6 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
-    fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
-        match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(),
-        }
-    }
-
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        parameters: &ConsensusParameters,
-    ) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
-            TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
-        }
-    }
-
-    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => {
-                TransactionType::Script(tx.to_dry_run_tx(gas_price, gas_limit))
-            }
-            TransactionType::Create(tx) => {
-                TransactionType::Create(tx.to_dry_run_tx(gas_price, gas_limit))
-            }
-        }
-    }
-
     fn id(&self) -> Bytes32 {
         match self {
             TransactionType::Script(tx) => tx.id(),
@@ -162,13 +123,6 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn metered_bytes_size(&self) -> usize {
-        match self {
-            TransactionType::Script(tx) => tx.metered_bytes_size(),
-            TransactionType::Create(tx) => tx.metered_bytes_size(),
-        }
-    }
-
     fn inputs(&self) -> &Vec<Input> {
         match self {
             TransactionType::Script(tx) => tx.inputs(),
@@ -187,6 +141,49 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.witnesses(),
             TransactionType::Create(tx) => tx.witnesses(),
+        }
+    }
+
+    fn append_witness(&mut self, witness: Witness) -> usize {
+        match self {
+            TransactionType::Script(tx) => tx.append_witness(witness),
+            TransactionType::Create(tx) => tx.append_witness(witness),
+        }
+    }
+
+    fn metered_bytes_size(&self) -> usize {
+        match self {
+            TransactionType::Script(tx) => tx.metered_bytes_size(),
+            TransactionType::Create(tx) => tx.metered_bytes_size(),
+        }
+    }
+
+    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self {
+        match self {
+            TransactionType::Script(tx) => {
+                TransactionType::Script(tx.to_dry_run_tx(gas_price, gas_limit))
+            }
+            TransactionType::Create(tx) => {
+                TransactionType::Create(tx.to_dry_run_tx(gas_price, gas_limit))
+            }
+        }
+    }
+
+    fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
+        match self {
+            TransactionType::Script(tx) => tx.fee_checked_from_tx(),
+            TransactionType::Create(tx) => tx.fee_checked_from_tx(),
+        }
+    }
+
+    fn check_without_signatures(
+        &self,
+        block_height: u32,
+        parameters: &ConsensusParameters,
+    ) -> Result<()> {
+        match self {
+            TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
+            TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
         }
     }
 }
@@ -221,27 +218,6 @@ macro_rules! impl_tx_wrapper {
         }
 
         impl Transaction for $wrapper {
-            fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(&self.consensus_parameters, &self.tx)
-            }
-
-            fn check_without_signatures(
-                &self,
-                block_height: u32,
-                parameters: &ConsensusParameters,
-            ) -> Result<()> {
-                Ok(self
-                    .tx
-                    .check_without_signatures(block_height.into(), parameters)?)
-            }
-
-            fn to_dry_run_tx(mut self, gas_price: u64, gas_limit: u64) -> Self {
-                *self.tx.gas_price_mut() = gas_price;
-                *self.tx.gas_limit_mut() = gas_limit;
-
-                self
-            }
-
             fn id(&self) -> Bytes32 {
                 self.tx.id(&self.consensus_parameters.chain_id.into())
             }
@@ -258,10 +234,6 @@ macro_rules! impl_tx_wrapper {
                 *self.tx.gas_limit()
             }
 
-            fn metered_bytes_size(&self) -> usize {
-                self.tx.metered_bytes_size()
-            }
-
             fn inputs(&self) -> &Vec<Input> {
                 self.tx.inputs()
             }
@@ -272,6 +244,38 @@ macro_rules! impl_tx_wrapper {
 
             fn witnesses(&self) -> &Vec<Witness> {
                 self.tx.witnesses()
+            }
+
+            fn append_witness(&mut self, witness: Witness) -> usize {
+                let idx = self.tx.witnesses().len();
+                self.tx.witnesses_mut().push(witness);
+
+                idx
+            }
+
+            fn metered_bytes_size(&self) -> usize {
+                self.tx.metered_bytes_size()
+            }
+
+            fn to_dry_run_tx(mut self, gas_price: u64, gas_limit: u64) -> Self {
+                *self.tx.gas_price_mut() = gas_price;
+                *self.tx.gas_limit_mut() = gas_limit;
+
+                self
+            }
+
+            fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
+                TransactionFee::checked_from_tx(&self.consensus_parameters, &self.tx)
+            }
+
+            fn check_without_signatures(
+                &self,
+                block_height: u32,
+                parameters: &ConsensusParameters,
+            ) -> Result<()> {
+                Ok(self
+                    .tx
+                    .check_without_signatures(block_height.into(), parameters)?)
             }
         }
     };
@@ -302,6 +306,7 @@ impl ScriptTransaction {
     pub fn script(&self) -> &Vec<u8> {
         self.tx.script()
     }
+
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
     }

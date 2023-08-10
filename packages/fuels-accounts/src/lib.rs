@@ -378,12 +378,13 @@ mod tests {
             Default::default(),
         );
 
-        let tx = ScriptTransactionBuilder::prepare_transfer(
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
             vec![input_coin],
             vec![output_coin],
             Default::default(),
-        )
-        .build()?;
+        );
+        wallet.sign_transaction(&mut tb);
+        let tx = tb.build()?;
 
         // Sign the transaction.
         let consensus_parameters = ConsensusParameters::default();

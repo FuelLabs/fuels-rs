@@ -5,13 +5,12 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::{Inputs, Witnesses},
-    Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    field::Witnesses, Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
-use itertools::Itertools;
 
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -28,15 +27,13 @@ use crate::{
     },
 };
 
-type UnresolvedSignatures = HashMap<Bech32Address, UnresolvedSignature>;
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-struct UnresolvedSignature {
-    index_offset: u8,
-    secret_key: SecretKey,
+#[derive(Debug, Clone, Default)]
+struct UnresolvedSignatures {
+    addr_idx_offset_map: HashMap<Bech32Address, u8>,
+    secret_keys: Vec<SecretKey>,
 }
 
-pub trait TransactionBuilder: Send {
+pub trait TransactionBuilder: Send + std::fmt::Debug {
     type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
@@ -77,7 +74,9 @@ macro_rules! impl_tx_trait {
                     (0, self.consensus_parameters.unwrap_or_default())
                 };
 
-                let mut tx = self.convert_to_fuel_type(base_offset, &consensus_parameters);
+                let num_witnesses = self.num_witnesses()?;
+                let mut tx =
+                    self.resolve_fuel_tx(base_offset, num_witnesses, &consensus_parameters)?;
 
                 tx.precompute(&consensus_parameters.chain_id)?;
 
@@ -94,11 +93,9 @@ macro_rules! impl_tx_trait {
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
-                let index_offset = self.unresolved_signatures.len() as u8;
-                self.unresolved_signatures.insert(owner, UnresolvedSignature {
-                    index_offset,
-                    secret_key,
-                });
+                let index_offset = self.unresolved_signatures.secret_keys.len() as u8;
+                self.unresolved_signatures.secret_keys.push(secret_key);
+                self.unresolved_signatures.addr_idx_offset_map.insert(owner, index_offset);
             }
 
             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
@@ -181,6 +178,18 @@ macro_rules! impl_tx_trait {
                     .iter()
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
+
+            fn num_witnesses(&self) -> Result<u8> {
+                let num_witnesses = self
+                    .witnesses()
+                    .len();
+
+                if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
+                    return Err(error!(InvalidData, "tx can not have more that 256 witnesses"));
+                }
+
+                Ok(num_witnesses as u8)
+            }
         }
     };
 }
@@ -218,27 +227,25 @@ pub struct CreateTransactionBuilder {
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
-//TODO: use HashMap<Address, UnresolvedSignature>
-//UresolvedSignature{Key, idx}
 impl ScriptTransactionBuilder {
-    fn convert_to_fuel_type(
+    fn resolve_fuel_tx(
         self,
         base_offset: usize,
+        num_witnesses: u8,
         consensus_parameters: &ConsensusParameters,
-    ) -> Script {
-        let num_witnesses = self.witnesses().len() as u8;
+    ) -> Result<Script> {
         let mut tx = FuelTransaction::script(
             self.gas_price,
             self.gas_limit,
             self.maturity.into(),
             self.script,
             self.script_data,
-            convert_to_fuel_inputs(
-                &self.inputs,
+            resolve_fuel_inputs(
+                self.inputs,
                 base_offset,
                 num_witnesses,
                 &self.unresolved_signatures,
-            ),
+            )?,
             self.outputs,
             self.witnesses,
         );
@@ -247,9 +254,9 @@ impl ScriptTransactionBuilder {
             tx.id(&consensus_parameters.chain_id),
             &self.unresolved_signatures,
         );
-
         tx.witnesses_mut().extend(missing_witnesses);
-        tx
+
+        Ok(tx)
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
@@ -361,12 +368,12 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    fn convert_to_fuel_type(
+    fn resolve_fuel_tx(
         self,
         base_offset: usize,
+        num_witnesses: u8,
         consensus_parameters: &ConsensusParameters,
-    ) -> Create {
-        let num_witnesses = self.witnesses().len() as u8;
+    ) -> Result<Create> {
         let mut tx = FuelTransaction::create(
             self.gas_price,
             self.gas_limit,
@@ -374,12 +381,12 @@ impl CreateTransactionBuilder {
             self.bytecode_witness_index,
             self.salt,
             self.storage_slots,
-            convert_to_fuel_inputs(
-                &self.inputs,
+            resolve_fuel_inputs(
+                self.inputs,
                 base_offset,
                 num_witnesses,
                 &self.unresolved_signatures,
-            ),
+            )?,
             self.outputs,
             self.witnesses,
         );
@@ -390,7 +397,8 @@ impl CreateTransactionBuilder {
         );
 
         tx.witnesses_mut().extend(missing_witnesses);
-        tx
+
+        Ok(tx)
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
@@ -442,14 +450,16 @@ impl CreateTransactionBuilder {
     }
 }
 
-fn convert_to_fuel_inputs(
-    inputs: &[Input],
+/// Resolve SDK Inputs to fuel_tx Inputs. This function will calculate the right
+/// data offsets for predicates and set witness indexes for signed coins.
+fn resolve_fuel_inputs(
+    inputs: Vec<Input>,
     mut data_offset: usize,
     num_witnesses: u8,
     unresolved_signatures: &UnresolvedSignatures,
-) -> Vec<FuelInput> {
+) -> Result<Vec<FuelInput>> {
     inputs
-        .iter()
+        .into_iter()
         .map(|input| match input {
             Input::ResourcePredicate {
                 resource: CoinType::Coin(coin),
@@ -458,10 +468,11 @@ fn convert_to_fuel_inputs(
             } => {
                 data_offset += offsets::coin_predicate_data_offset(code.len());
 
-                let data = data.clone().resolve(data_offset as u64);
+                let data = data.resolve(data_offset as u64);
                 data_offset += data.len();
 
-                create_coin_predicate(coin.clone(), coin.asset_id, code.clone(), data)
+                let asset_id = coin.asset_id;
+                Ok(create_coin_predicate(coin, asset_id, code, data))
             }
             Input::ResourcePredicate {
                 resource: CoinType::Message(message),
@@ -471,29 +482,44 @@ fn convert_to_fuel_inputs(
                 data_offset +=
                     offsets::message_predicate_data_offset(message.data.len(), code.len());
 
-                let data = data.clone().resolve(data_offset as u64);
+                let data = data.resolve(data_offset as u64);
                 data_offset += data.len();
 
-                create_coin_message_predicate(message.clone(), code.clone(), data)
+                Ok(create_coin_message_predicate(message, code, data))
             }
             Input::ResourceSigned { resource } => match resource {
                 CoinType::Coin(coin) => {
                     data_offset += offsets::coin_signed_data_offset();
-                    let witness_idx_offset = unresolved_signatures
-                        .get(&coin.owner)
-                        .map(|UnresolvedSignature { index_offset, .. }| *index_offset)
-                        .unwrap_or_default();
+                    let owner = &coin.owner;
 
-                    create_coin_input(coin.clone(), num_witnesses + witness_idx_offset)
+                    unresolved_signatures
+                        .addr_idx_offset_map
+                        .get(owner)
+                        .ok_or(error!(
+                            InvalidData,
+                            "signature missing for coin with owner: `{owner:?}`"
+                        ))
+                        .map(|witness_idx_offset| {
+                            create_coin_input(coin.clone(), num_witnesses + *witness_idx_offset)
+                        })
                 }
                 CoinType::Message(message) => {
                     data_offset += offsets::message_signed_data_offset(message.data.len());
-                    let witness_idx_offset = unresolved_signatures
-                        .get(&message.recipient)
-                        .map(|UnresolvedSignature { index_offset, .. }| *index_offset)
-                        .unwrap_or_default();
+                    let recipient = &message.recipient;
 
-                    create_coin_message_input(message.clone(), num_witnesses + witness_idx_offset)
+                    unresolved_signatures
+                        .addr_idx_offset_map
+                        .get(recipient)
+                        .ok_or(error!(
+                            InvalidData,
+                            "signature missing for message with recipient: `{recipient:?}`"
+                        ))
+                        .map(|witness_idx_offset| {
+                            create_coin_message_input(
+                                message.clone(),
+                                num_witnesses + *witness_idx_offset,
+                            )
+                        })
                 }
             },
             Input::Contract {
@@ -504,16 +530,16 @@ fn convert_to_fuel_inputs(
                 contract_id,
             } => {
                 data_offset += offsets::contract_input_offset();
-                FuelInput::contract(
-                    *utxo_id,
-                    *balance_root,
-                    *state_root,
-                    *tx_pointer,
-                    *contract_id,
-                )
+                Ok(FuelInput::contract(
+                    utxo_id,
+                    balance_root,
+                    state_root,
+                    tx_pointer,
+                    contract_id,
+                ))
             }
         })
-        .collect::<Vec<FuelInput>>()
+        .collect::<Result<Vec<FuelInput>>>()
 }
 
 pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
@@ -602,9 +628,9 @@ fn generate_missing_witnesses(
     unresolved_signatures: &UnresolvedSignatures,
 ) -> Vec<Witness> {
     unresolved_signatures
-        .values()
-        .sorted()
-        .map(|UnresolvedSignature { secret_key, .. }| {
+        .secret_keys
+        .iter()
+        .map(|secret_key| {
             let message = CryptoMessage::from_bytes(*id);
             let signature = Signature::sign(secret_key, &message);
 

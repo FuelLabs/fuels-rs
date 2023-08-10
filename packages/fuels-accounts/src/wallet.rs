@@ -263,6 +263,8 @@ impl Account for WalletUnlocked {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
         tb = tb.set_consensus_parameters(consensus_parameters);
 
+        self.sign_transaction(&mut tb);
+
         let new_base_amount =
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
 
@@ -272,10 +274,6 @@ impl Account for WalletUnlocked {
 
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
-
-        // let mut tx = tb.build()?;
-
-        self.sign_transaction(&mut tb);
 
         tb.build()
     }
