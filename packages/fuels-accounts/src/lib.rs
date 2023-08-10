@@ -44,7 +44,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    fn sign_transaction(&self, message: &mut impl Transaction);
+    fn sign_transaction(&self, message: &mut impl TransactionBuilder);
 }
 
 #[derive(Debug)]

@@ -434,14 +434,14 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         amount_to_receive,
     );
 
-    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
-    let mut tx = tb.build()?;
+    let mut tb =
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
 
     for wallet in wallets.iter() {
-        wallet.sign_transaction(&mut tx);
+        wallet.sign_transaction(&mut tb);
     }
 
-    provider.send_transaction(tx).await?;
+    provider.send_transaction(tb.build()?).await?;
 
     assert_eq!(
         receiver.get_asset_balance(&BASE_ASSET_ID).await?,

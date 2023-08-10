@@ -164,10 +164,10 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
-                .build()?;
-        wallet_1.sign_transaction(&mut tx);
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+        wallet_1.sign_transaction(&mut tb);
+        let tx = tb.build()?;
 
         let _receipts = provider.send_transaction(tx).await?;
 

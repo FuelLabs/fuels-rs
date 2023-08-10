@@ -1,19 +1,17 @@
 use std::fmt::Debug;
 
-use fuel_crypto::{Message, SecretKey, Signature};
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
-    Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output,
+    Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
-use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    types::{bech32::Bech32Address, Address, Result},
+    types::Result,
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -68,11 +66,8 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
+//TODO: remove unnecessary stuff from Trait and move to impl
 pub trait Transaction: Into<FuelTransaction> + Clone {
-    fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey);
-
-    fn resolve_transaction(&mut self) -> Result<()>;
-
     fn fee_checked_from_tx(&self) -> Option<TransactionFee>;
 
     fn check_without_signatures(
@@ -93,7 +88,7 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
 
     fn metered_bytes_size(&self) -> usize;
 
-    fn inputs(&self) -> &Vec<FuelInput>;
+    fn inputs(&self) -> &Vec<Input>;
 
     fn outputs(&self) -> &Vec<Output>;
 
@@ -110,20 +105,6 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
-    fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey) {
-        match self {
-            TransactionType::Script(tx) => tx.add_unresolved_signature(owner, secret_key),
-            TransactionType::Create(tx) => tx.add_unresolved_signature(owner, secret_key),
-        }
-    }
-
-    fn resolve_transaction(&mut self) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.resolve_transaction(),
-            TransactionType::Create(tx) => tx.resolve_transaction(),
-        }
-    }
-
     fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
         match self {
             TransactionType::Script(tx) => tx.fee_checked_from_tx(),
@@ -188,7 +169,7 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn inputs(&self) -> &Vec<FuelInput> {
+    fn inputs(&self) -> &Vec<Input> {
         match self {
             TransactionType::Script(tx) => tx.inputs(),
             TransactionType::Create(tx) => tx.inputs(),
@@ -210,29 +191,12 @@ impl Transaction for TransactionType {
     }
 }
 
-#[derive(Debug, Clone)]
-pub(crate) struct UnresolvedSignature {
-    owner: Address,
-    secret_key: SecretKey,
-}
-
 macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
             pub(crate) tx: $wrapped,
-            pub(crate) unresolved_signatures: Vec<UnresolvedSignature>,
             pub(crate) consensus_parameters: ConsensusParameters,
-        }
-
-        impl Default for $wrapper {
-            fn default() -> Self {
-                $wrapper {
-                    tx: $wrapped::default(),
-                    unresolved_signatures: Default::default(),
-                    consensus_parameters: Default::default(),
-                }
-            }
         }
 
         impl From<$wrapper> for $wrapped {
@@ -247,51 +211,16 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
-        impl AsMut<$wrapped> for $wrapper {
-            fn as_mut(&mut self) -> &mut $wrapped {
-                &mut self.tx
-            }
-        }
-
         impl $wrapper {
             pub fn from_fuel_tx(tx: $wrapped, consensus_parameters: ConsensusParameters) -> Self {
                 $wrapper {
                     tx,
-                    unresolved_signatures: Default::default(),
                     consensus_parameters,
                 }
             }
         }
 
         impl Transaction for $wrapper {
-            fn add_unresolved_signature(&mut self, owner: &Bech32Address, secret_key: SecretKey) {
-                self.unresolved_signatures.push(UnresolvedSignature {
-                    owner: owner.into(),
-                    secret_key,
-                })
-            }
-
-            fn resolve_transaction(&mut self) -> Result<()> {
-                update_witness_indexes(
-                    self.tx.witnesses().len(),
-                    self.tx.inputs_mut(),
-                    &self.unresolved_signatures,
-                );
-
-                let missing_witnesses =
-                    generate_missing_witnesses(self.id(), &self.unresolved_signatures);
-                self.tx.witnesses_mut().extend(missing_witnesses);
-
-                self.tx.precompute(&self.consensus_parameters.chain_id)?;
-
-                // TODO: Fetch `GasCosts` from the `fuel-core`:
-                //  https://github.com/FuelLabs/fuel-core/issues/1221
-                self.tx
-                    .estimate_predicates(&self.consensus_parameters, &GasCosts::default())?;
-
-                Ok(())
-            }
-
             fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(&self.consensus_parameters, &self.tx)
             }
@@ -333,7 +262,7 @@ macro_rules! impl_tx_wrapper {
                 self.tx.metered_bytes_size()
             }
 
-            fn inputs(&self) -> &Vec<FuelInput> {
+            fn inputs(&self) -> &Vec<Input> {
                 self.tx.inputs()
             }
 
@@ -376,44 +305,4 @@ impl ScriptTransaction {
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
     }
-}
-
-fn update_witness_indexes(
-    current_index: usize,
-    inputs: &mut [Input],
-    unresolved_signatures: &[UnresolvedSignature],
-) {
-    for (new_index, UnresolvedSignature { owner, .. }) in unresolved_signatures.iter().enumerate() {
-        for input in inputs.iter_mut() {
-            update_witness_index_if_owner(input, owner, (current_index + new_index) as u8);
-        }
-    }
-}
-
-fn update_witness_index_if_owner(input: &mut Input, owner: &Address, index: u8) {
-    match input {
-        FuelInput::CoinSigned(ref mut cs) if cs.owner == *owner => cs.witness_index = index,
-        FuelInput::MessageCoinSigned(ref mut mcs) if mcs.recipient == *owner => {
-            mcs.witness_index = index
-        }
-        FuelInput::MessageDataSigned(ref mut mds) if mds.recipient == *owner => {
-            mds.witness_index = index
-        }
-        _ => (),
-    }
-}
-
-fn generate_missing_witnesses(
-    id: Bytes32,
-    unresolved_signatures: &[UnresolvedSignature],
-) -> Vec<Witness> {
-    unresolved_signatures
-        .iter()
-        .map(|UnresolvedSignature { secret_key, .. }| {
-            let message = Message::from_bytes(*id);
-            let signature = Signature::sign(secret_key, &message);
-
-            Witness::from(signature.as_ref())
-        })
-        .collect()
 }

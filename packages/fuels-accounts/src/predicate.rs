@@ -161,8 +161,6 @@ impl Account for Predicate {
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
-        let tx = tb.build()?;
-
-        Ok(tx)
+        tb.build()
     }
 }

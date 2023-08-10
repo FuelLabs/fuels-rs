@@ -169,7 +169,7 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<Vec<Receipt>> {
+    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -194,8 +194,6 @@ impl Provider {
                 min_gas_price
             ));
         }
-
-        tx.resolve_transaction()?;
 
         let chain_info = self.chain_info().await?;
         tx.check_without_signatures(
@@ -298,17 +296,13 @@ impl Provider {
             .unwrap_or(Ok(()))
     }
 
-    pub async fn dry_run<T: Transaction>(&self, mut tx: T) -> Result<Vec<Receipt>> {
-        tx.resolve_transaction()?;
-
+    pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
         let receipts = self.client.dry_run(&tx.into()).await?;
 
         Ok(receipts)
     }
 
-    pub async fn dry_run_no_validation<T: Transaction>(&self, mut tx: T) -> Result<Vec<Receipt>> {
-        tx.resolve_transaction()?;
-
+    pub async fn dry_run_no_validation<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
         let receipts = self.client.dry_run_opt(&tx.into(), Some(false)).await?;
 
         Ok(receipts)
@@ -563,11 +557,9 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        mut tx: T,
+        tx: T,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        tx.resolve_transaction()?;
-
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);

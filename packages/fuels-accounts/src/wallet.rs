@@ -10,7 +10,6 @@ use fuels_core::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
         errors::{Error, Result},
         input::Input,
-        transaction::Transaction,
         transaction_builders::TransactionBuilder,
         AssetId,
     },
@@ -274,11 +273,11 @@ impl Account for WalletUnlocked {
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
-        let mut tx = tb.build()?;
+        // let mut tx = tb.build()?;
 
-        self.sign_transaction(&mut tx);
+        self.sign_transaction(&mut tb);
 
-        Ok(tx)
+        tb.build()
     }
 }
 
@@ -295,8 +294,8 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    fn sign_transaction(&self, tx: &mut impl Transaction) {
-        tx.add_unresolved_signature(self.address(), self.private_key);
+    fn sign_transaction(&self, tb: &mut impl TransactionBuilder) {
+        tb.add_unresolved_signature(self.address().clone(), self.private_key);
     }
 }
 

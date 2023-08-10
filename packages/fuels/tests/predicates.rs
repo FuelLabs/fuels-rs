@@ -462,10 +462,10 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let params = provider.consensus_parameters();
-    let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .set_consensus_parameters(params)
-        .build()?;
-    wallet.sign_transaction(&mut tx);
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
+        .set_consensus_parameters(params);
+    wallet.sign_transaction(&mut tb);
+    let tx = tb.build()?;
 
     provider.send_transaction(tx).await?;
 
