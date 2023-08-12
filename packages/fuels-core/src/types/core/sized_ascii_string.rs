@@ -177,6 +177,12 @@ impl<'de, const LEN: usize> Deserialize<'de> for SizedAsciiString<LEN> {
     }
 }
 
+impl<const LEN: usize> AsRef<[u8]> for SizedAsciiString<LEN> {
+    fn as_ref(&self) -> &[u8] {
+        self.data.as_bytes()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,5 +289,13 @@ mod tests {
             deserialized,
             SizedAsciiString::<3>::new("abc".to_string()).unwrap()
         );
+    }
+
+    #[test]
+    fn test_can_convert_sized_ascii_to_bytes() {
+        let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
+
+        let bytes: &[u8] = sized_str.as_ref();
+        assert_eq!(bytes, &[97, 98, 99]);
     }
 }
