@@ -522,8 +522,6 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 mod tests {
     use std::vec;
 
-    use fuel_tx::field;
-
     use super::*;
 
     #[test]
@@ -958,13 +956,42 @@ mod tests {
         );
     }
 
+    fn assert_decoding_ok(config: DecoderConfig, param_type: &ParamType) {
+        assert_decoding_ok_w_data(config, param_type, &[]);
+    }
+
+    fn assert_decoding_ok_w_data(config: DecoderConfig, param_type: &ParamType, data: &[u8]) {
+        let mut decoder = NewDecoder::new(config);
+
+        assert!(decoder.decode_single(param_type, &data).is_ok());
+    }
+
+    fn assert_decoding_failed(config: DecoderConfig, param_type: &ParamType, msg: &str) {
+        assert_decoding_failed_w_data(config, param_type, msg, &[])
+    }
+
+    fn assert_decoding_failed_w_data(
+        config: DecoderConfig,
+        param_type: &ParamType,
+        msg: &str,
+        data: &[u8],
+    ) {
+        let mut decoder = NewDecoder::new(config);
+
+        let err = decoder.decode_single(param_type, &data);
+
+        let Err(Error::InvalidType(actual_msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(actual_msg, msg);
+    }
+
     #[test]
     fn limiting_structs_nested_too_deep() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
-
+        };
         let level_3 = ParamType::Struct {
             fields: vec![],
             generics: vec![],
@@ -978,21 +1005,15 @@ mod tests {
             generics: vec![],
         };
 
-        let err = decoder.decode_single(&level_1, &[]);
-
-        let Err(Error::InvalidType(msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
-        };
-        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+        assert_decoding_failed(config, &level_1, "Depth limit (2) reached while decoding!");
     }
 
     #[test]
     fn limiting_struct_fields_by_elements() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_elements: 3,
             ..Default::default()
-        });
-
+        };
         let child_1 = ParamType::Struct {
             fields: vec![],
             generics: vec![],
@@ -1005,20 +1026,15 @@ mod tests {
             generics: vec![],
         };
 
-        let err = decoder.decode_single(&parent, &[]);
-
-        let Err(Error::InvalidType(msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
-        };
-        assert_eq!(msg, "Element limit (3) reached while decoding!");
+        assert_decoding_failed(config, &parent, "Element limit (3) reached while decoding!");
     }
 
     #[test]
     fn limiting_structs_acceptably_nested() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let child_1 = ParamType::Struct {
             fields: vec![],
@@ -1030,17 +1046,15 @@ mod tests {
             generics: vec![],
         };
 
-        let result = decoder.decode_single(&parent, &[]);
-
-        assert!(result.is_ok());
+        assert_decoding_ok(config, &parent);
     }
 
     #[test]
     fn limiting_enums_nested_too_deep() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let level_3 = ParamType::Enum {
             variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
@@ -1056,22 +1070,22 @@ mod tests {
         };
 
         let discriminants = [0; 16];
-        let err = decoder.decode_single(&level_1, &discriminants);
-
-        let Err(Error::InvalidType(msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
-        };
-        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+        assert_decoding_failed_w_data(
+            config,
+            &level_1,
+            "Depth limit (2) reached while decoding!",
+            &discriminants,
+        );
     }
 
     // TODO: enums of ZST structs, how does Sway encode them?
 
     #[test]
     fn limiting_enums_nested_acceptably() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let child_1 = ParamType::Enum {
             variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
@@ -1091,37 +1105,35 @@ mod tests {
 
         let data = [discriminant_1, data_1, discriminant_2, data_2].concat();
 
-        let result = decoder.decode_single(&parent, &data);
-
-        assert!(result.is_ok());
+        assert_decoding_ok_w_data(config, &parent, &data);
     }
 
     #[test]
     fn limiting_arrays_nested_too_deeply() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let level_3 = ParamType::Array(Box::new(ParamType::U8), 1);
         let level_2 = ParamType::Array(Box::new(level_3), 1);
         let level_1 = ParamType::Array(Box::new(level_2), 1);
 
         let u8_data = [0; 8];
-        let err = decoder.decode_single(&level_1, &u8_data);
-
-        let Err(Error::InvalidType(msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
-        };
-        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+        assert_decoding_failed_w_data(
+            config,
+            &level_1,
+            "Depth limit (2) reached while decoding!",
+            &u8_data,
+        );
     }
 
     #[test]
     fn limiting_arrays_nested_acceptably() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let child_1 = ParamType::Array(Box::new(ParamType::U8), 1);
         let child_2 = child_1.clone();
@@ -1132,38 +1144,35 @@ mod tests {
         };
 
         let u8_data = [0; 16];
-        let result = decoder.decode_single(&parent, &u8_data);
-
-        assert!(result.is_ok());
+        assert_decoding_ok_w_data(config, &parent, &u8_data)
     }
 
     #[test]
     fn limiting_tuples_nested_too_deeply() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
+        };
 
         let level_3 = ParamType::Tuple(vec![ParamType::U8]);
         let level_2 = ParamType::Tuple(vec![level_3]);
         let level_1 = ParamType::Tuple(vec![level_2]);
 
         let u8_data = [0; 8];
-        let err = decoder.decode_single(&level_1, &u8_data);
-
-        let Err(Error::InvalidType(msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
-        };
-        assert_eq!(msg, "Depth limit (2) reached while decoding!");
+        assert_decoding_failed_w_data(
+            config,
+            &level_1,
+            "Depth limit (2) reached while decoding!",
+            &u8_data,
+        );
     }
 
     #[test]
     fn limiting_tuples_nested_acceptably() {
-        let mut decoder = NewDecoder::new(DecoderConfig {
+        let config = DecoderConfig {
             max_depth: 2,
             ..Default::default()
-        });
-
+        };
         let child_1 = ParamType::Tuple(vec![ParamType::U8]);
         let child_2 = child_1.clone();
 
@@ -1173,8 +1182,6 @@ mod tests {
         };
 
         let u8_data = [0; 16];
-        let result = decoder.decode_single(&parent, &u8_data);
-
-        assert!(result.is_ok());
+        assert_decoding_ok_w_data(config, &parent, &u8_data);
     }
 }
