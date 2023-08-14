@@ -9,7 +9,7 @@ use fuel_core_client::client::{
     FuelClient,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
-use fuel_types::{Address, Bytes32, MessageId, Nonce};
+use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
@@ -262,6 +262,10 @@ impl Provider {
         self.consensus_parameters
     }
 
+    pub fn chain_id(&self) -> ChainId {
+        self.consensus_parameters.chain_id
+    }
+
     pub async fn node_info(&self) -> ProviderResult<NodeInfo> {
         Ok(self.client.node_info().await?.into())
     }
@@ -432,7 +436,7 @@ impl Provider {
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> ProviderResult<HashMap<String, u64>> {
+    ) -> ProviderResult<HashMap<AssetId, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -453,7 +457,7 @@ impl Provider {
                      contract: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount),
+                 }| (asset_id, amount),
             )
             .collect();
         Ok(balances)

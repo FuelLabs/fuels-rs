@@ -43,8 +43,7 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
-        self.address =
-            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
+        self.address = Self::calculate_address(&self.code, provider.chain_id().into());
         self.provider = Some(provider);
         self
     }
@@ -90,8 +89,7 @@ impl Predicate {
     }
 
     pub fn with_provider(self, provider: Provider) -> Self {
-        let address =
-            Self::calculate_address(&self.code, provider.consensus_parameters().chain_id.into());
+        let address = Self::calculate_address(&self.code, provider.chain_id().into());
         Self {
             address,
             provider: Some(provider),
