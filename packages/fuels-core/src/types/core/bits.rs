@@ -1,3 +1,4 @@
+use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
 use crate::types::errors::{error, Error, Result};
@@ -9,6 +10,11 @@ use crate::types::errors::{error, Error, Result};
 pub struct Bits256(pub [u8; 32]);
 
 impl Bits256 {
+    /// Returns `Self` with zeroes inside.
+    pub fn zeroed() -> Self {
+        Self([0; 32])
+    }
+
     /// Create a new `Bits256` from a string representation of a hex.
     /// Accepts both `0x` prefixed and non-prefixed hex strings.
     pub fn from_hex_str(hex: &str) -> Result<Self> {
@@ -26,6 +32,12 @@ impl Bits256 {
             )
         })?;
         Ok(Bits256(bytes))
+    }
+}
+
+impl From<AssetId> for Bits256 {
+    fn from(value: AssetId) -> Self {
+        Self(value.into())
     }
 }
 

@@ -179,7 +179,12 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
     type Output = FilterMap<Self, fn(&Receipt) -> Option<(LogId, Vec<u8>)>>;
     fn extract_log_id_and_data(self) -> Self::Output {
         self.filter_map(|r| match r {
-            Receipt::LogData { rb, data, id, .. } => Some((LogId(*id, *rb), data.clone())),
+            Receipt::LogData {
+                rb,
+                data: Some(data),
+                id,
+                ..
+            } => Some((LogId(*id, *rb), data.clone())),
             Receipt::Log { ra, rb, id, .. } => Some((LogId(*id, *rb), ra.to_be_bytes().to_vec())),
             _ => None,
         })

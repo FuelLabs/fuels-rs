@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::types::errors::{error, Error, Result};
+    use fuels::types::Bits256;
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -104,7 +105,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 499);
+        assert_eq!(transaction_cost.gas_used, 333);
 
         Ok(())
     }
@@ -344,10 +345,11 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, contract_id, address)
+            .transfer_coins_to_output(1_000_000, asset_id, address)
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -406,7 +408,7 @@ mod tests {
             .await?;
         // ANCHOR_END: dependency_estimation_manual
 
-        let asset_id = AssetId::from(*caller_contract_id.hash());
+        let asset_id = caller_contract_id.asset_id(&Bits256::zeroed());
         let balance = wallet.get_asset_balance(&asset_id).await?;
         assert_eq!(balance, amount);
 
@@ -527,10 +529,10 @@ mod tests {
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: call_params_gas
-        // Set the transaction `gas_limit` to 10_000 and `gas_forwarded` to 4300 to specify that
-        // the contract call transaction may consume up to 10_000 gas, while the actual call may
+        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
+        // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(10_000);
+        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
         let call_params = CallParameters::default().set_gas_forwarded(4300);
 
         let response = contract_methods
@@ -628,7 +630,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 786);
+        assert_eq!(transaction_cost.gas_used, 546);
 
         Ok(())
     }

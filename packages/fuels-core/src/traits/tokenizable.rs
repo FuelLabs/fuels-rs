@@ -527,7 +527,7 @@ impl Tokenizable for AsciiString {
     }
 
     fn into_token(self) -> Token {
-        Token::StringArray(StringToken::new(self.into(), None))
+        Token::StringSlice(StringToken::new(self.into(), None))
     }
 }
 
