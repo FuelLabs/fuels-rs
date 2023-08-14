@@ -25,62 +25,71 @@ struct DecodeResult {
 
 pub struct DecoderConfig {
     max_depth: usize,
+    max_elements: usize,
 }
 
 impl Default for DecoderConfig {
     fn default() -> Self {
         // TODO: revisit this when we have a normal value in mind
-        Self { max_depth: 10 }
+        Self {
+            max_depth: 10,
+            max_elements: 500,
+        }
     }
 }
 
-struct DepthTracker {
-    current_depth: usize,
-    max_depth: usize,
+struct CounterWithLimit {
+    count: usize,
+    max: usize,
+    name: String,
 }
 
-impl DepthTracker {
-    fn new(max_depth: usize) -> Self {
+impl CounterWithLimit {
+    fn new(max: usize, name: impl Into<String>) -> Self {
         Self {
-            current_depth: 0,
-            max_depth,
+            count: 0,
+            max,
+            name: name.into(),
         }
     }
 
-    fn increase_depth(&mut self) -> Result<()> {
-        self.current_depth += 1;
-        if self.current_depth > self.max_depth {
+    fn increase(&mut self) -> Result<()> {
+        self.count += 1;
+        if self.count > self.max {
             Err(error!(
                 InvalidType,
-                "Depth limit ({}) reached while decoding!", self.max_depth
+                "{} limit ({}) reached while decoding!", self.name, self.max
             ))
         } else {
             Ok(())
         }
     }
 
-    fn decrease_depth(&mut self) {
-        if self.current_depth > 0 {
-            self.current_depth -= 1;
+    fn decrease(&mut self) {
+        if self.count > 0 {
+            self.count -= 1;
         }
     }
 }
 
-pub struct KaroDecoder {
-    depth_tracker: DepthTracker,
+pub struct NewDecoder {
+    depth_tracker: CounterWithLimit,
+    element_tracker: CounterWithLimit,
 }
 
-impl Default for KaroDecoder {
+impl Default for NewDecoder {
     fn default() -> Self {
         Self::new(DecoderConfig::default())
     }
 }
 
-impl KaroDecoder {
+impl NewDecoder {
     pub fn new(config: DecoderConfig) -> Self {
-        let depth_guard = DepthTracker::new(config.max_depth);
+        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
+        let element_tracker = CounterWithLimit::new(config.max_elements, "Element");
         Self {
-            depth_tracker: depth_guard,
+            depth_tracker,
+            element_tracker,
         }
     }
     /// Decodes types described by `param_types` into their respective `Token`s
@@ -134,6 +143,7 @@ impl KaroDecoder {
     }
 
     fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        self.element_tracker.increase()?;
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -183,19 +193,19 @@ impl KaroDecoder {
     }
 
     fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.depth_tracker.increase_depth()?;
+        self.depth_tracker.increase()?;
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
         let decode_result = DecodeResult {
             token: Token::Tuple(tokens),
             bytes_read,
         };
-        self.depth_tracker.decrease_depth();
+        self.depth_tracker.decrease();
         Ok(decode_result)
     }
 
     fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.depth_tracker.increase_depth()?;
+        self.depth_tracker.increase()?;
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
         let decode_result = DecodeResult {
@@ -203,7 +213,7 @@ impl KaroDecoder {
             bytes_read,
         };
 
-        self.depth_tracker.decrease_depth();
+        self.depth_tracker.decrease();
         Ok(decode_result)
     }
 
@@ -231,7 +241,7 @@ impl KaroDecoder {
         bytes: &[u8],
         length: usize,
     ) -> Result<DecodeResult> {
-        self.depth_tracker.increase_depth()?;
+        self.depth_tracker.increase()?;
         let (tokens, bytes_read) =
             self.decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
 
@@ -239,7 +249,7 @@ impl KaroDecoder {
             token: Token::Array(tokens),
             bytes_read,
         };
-        self.depth_tracker.decrease_depth();
+        self.depth_tracker.decrease();
         Ok(decode_result)
     }
 
@@ -362,7 +372,7 @@ impl KaroDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
-        self.depth_tracker.increase_depth()?;
+        self.depth_tracker.increase()?;
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
@@ -378,7 +388,7 @@ impl KaroDecoder {
             bytes_read: enum_width * WORD_SIZE,
         };
 
-        self.depth_tracker.decrease_depth();
+        self.depth_tracker.decrease();
         Ok(decode_result)
     }
 
@@ -423,13 +433,13 @@ impl ABIDecoder {
     /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
     /// ```
     pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
-        KaroDecoder::default().decode(param_types, bytes)
+        NewDecoder::default().decode(param_types, bytes)
     }
 
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        KaroDecoder::default().decode_single(param_type, bytes)
+        NewDecoder::default().decode_single(param_type, bytes)
     }
 }
 
@@ -950,7 +960,10 @@ mod tests {
 
     #[test]
     fn limiting_structs_nested_too_deep() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let level_3 = ParamType::Struct {
             fields: vec![],
@@ -974,8 +987,38 @@ mod tests {
     }
 
     #[test]
+    fn limiting_struct_fields_by_elements() {
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_elements: 3,
+            ..Default::default()
+        });
+
+        let child_1 = ParamType::Struct {
+            fields: vec![],
+            generics: vec![],
+        };
+        let child_2 = child_1.clone();
+        let child_3 = child_1.clone();
+
+        let parent = ParamType::Struct {
+            fields: vec![child_1, child_2, child_3],
+            generics: vec![],
+        };
+
+        let err = decoder.decode_single(&parent, &[]);
+
+        let Err(Error::InvalidType(msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(msg, "Element limit (3) reached while decoding!");
+    }
+
+    #[test]
     fn limiting_structs_acceptably_nested() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let child_1 = ParamType::Struct {
             fields: vec![],
@@ -994,7 +1037,10 @@ mod tests {
 
     #[test]
     fn limiting_enums_nested_too_deep() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let level_3 = ParamType::Enum {
             variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
@@ -1022,7 +1068,10 @@ mod tests {
 
     #[test]
     fn limiting_enums_nested_acceptably() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let child_1 = ParamType::Enum {
             variants: EnumVariants::new(vec![ParamType::U8]).unwrap(),
@@ -1049,7 +1098,10 @@ mod tests {
 
     #[test]
     fn limiting_arrays_nested_too_deeply() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let level_3 = ParamType::Array(Box::new(ParamType::U8), 1);
         let level_2 = ParamType::Array(Box::new(level_3), 1);
@@ -1066,7 +1118,10 @@ mod tests {
 
     #[test]
     fn limiting_arrays_nested_acceptably() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let child_1 = ParamType::Array(Box::new(ParamType::U8), 1);
         let child_2 = child_1.clone();
@@ -1084,7 +1139,10 @@ mod tests {
 
     #[test]
     fn limiting_tuples_nested_too_deeply() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let level_3 = ParamType::Tuple(vec![ParamType::U8]);
         let level_2 = ParamType::Tuple(vec![level_3]);
@@ -1101,7 +1159,10 @@ mod tests {
 
     #[test]
     fn limiting_tuples_nested_acceptably() {
-        let mut decoder = KaroDecoder::new(DecoderConfig { max_depth: 2 });
+        let mut decoder = NewDecoder::new(DecoderConfig {
+            max_depth: 2,
+            ..Default::default()
+        });
 
         let child_1 = ParamType::Tuple(vec![ParamType::U8]);
         let child_2 = child_1.clone();
