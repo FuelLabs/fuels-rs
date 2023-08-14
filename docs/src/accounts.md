@@ -1,6 +1,6 @@
 # Accounts
 
-The `ViewOnlyAccount` trait provides a common interface to query balances. 
+The `ViewOnlyAccount` trait provides a common interface to query balances.
 
 The `Account` trait, in addition to the above, also provides a common interface to retrieve spendable resources or transfer assets. When performing actions in the SDK that lead to a transaction, you will typically need to provide an account that will be used to allocate resources required by the transaction, including transaction fees.
 
@@ -12,6 +12,7 @@ Both traits are implemented by the following types:
 ## Transferring assets
 
 An account implements the following methods for transferring assets:
+
 - `transfer`
 - `force_transfer_to_contract`
 - `withdraw_to_base_layer`

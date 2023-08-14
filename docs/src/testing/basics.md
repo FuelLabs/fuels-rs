@@ -105,7 +105,7 @@ println!("POINT: {}", p);
 
 You can run your tests to see if they pass or fail with
 
-```
+```shell
 cargo test
 ```
 
@@ -114,6 +114,6 @@ cargo test
 Outputs will be hidden if the test passes. If you want to see outputs printed from your tests regardless of whether they pass or fail, use the `nocapture` flag.
 <!--outputs:example:end -->
 
-```
+```shell
 cargo test -- --nocapture
 ```

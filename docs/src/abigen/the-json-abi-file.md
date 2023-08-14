@@ -42,4 +42,3 @@ $ cat out/debug/my-test-abi.json
 ```
 
 The Fuel Rust SDK will take this file as input and generate equivalent methods (and custom types if applicable) that you can call from your Rust code.
-

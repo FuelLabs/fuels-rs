@@ -34,6 +34,9 @@ pub fn calculate_base_amount_with_fee(
     new_base_amount
 }
 
+// Replace the current base asset inputs of a tx builder with the provided ones.
+// Only signed resources and coin predicates are replaced, the remaining inputs are kept.
+// Messages that contain data are also kept since we don't know who will consume the data.
 pub fn adjust_inputs(
     tb: &mut impl TransactionBuilder,
     new_base_inputs: impl IntoIterator<Item = Input>,
@@ -42,7 +45,8 @@ pub fn adjust_inputs(
         .inputs()
         .iter()
         .filter(|input| {
-            !matches!(input , Input::ResourceSigned { resource , .. }
+            input.contains_data()
+                || !matches!(input , Input::ResourceSigned { resource , .. }
                 | Input::ResourcePredicate { resource, .. } if resource.asset_id() == BASE_ASSET_ID)
         })
         .cloned()

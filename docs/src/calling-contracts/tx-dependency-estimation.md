@@ -22,8 +22,4 @@ But this requires you to know the contract id of the external contract and the n
 
 The minimal number of attempts corresponds to the number of external contracts and output variables needed and defaults to 10.
 
-> **Note:** `estimate_tx_dependencies()` can also be used when working with script calls or multi calls.
-
-> **Note:** `estimate_tx_dependencies()` does not currently resolve the dependencies needed for logging from an external contract. For more information, see [here](./logs.md).
-
-> **Note:** if no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.
+> **Note:** `estimate_tx_dependencies()` can also be used when working with script calls or multi calls. `estimate_tx_dependencies()` does not currently resolve the dependencies needed for logging from an external contract. For more information, see [here](./logs.md). If no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.
