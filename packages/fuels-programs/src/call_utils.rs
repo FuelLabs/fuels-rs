@@ -137,9 +137,7 @@ pub(crate) async fn build_tx_from_contract_calls(
         .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
         .unwrap_or_default();
 
-    let tx = account.add_fee_resources(tb, base_asset_amount).await?;
-
-    Ok(tx)
+    account.add_fee_resources(tb, base_asset_amount).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
