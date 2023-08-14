@@ -23,6 +23,7 @@ struct DecodeResult {
     bytes_read: usize,
 }
 
+#[derive(Debug, Clone)]
 pub struct DecoderConfig {
     max_depth: usize,
     max_elements: usize,
@@ -520,7 +521,7 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
+    use std::{i8::MAX, vec};
 
     use super::*;
 
@@ -986,11 +987,11 @@ mod tests {
         assert_eq!(actual_msg, msg);
     }
 
-    fn given_nested_struct(depth: usize) -> ParamType {
+    fn nested_struct(depth: usize) -> ParamType {
         let fields = if depth == 1 {
             vec![]
         } else {
-            vec![given_nested_struct(depth - 1)]
+            vec![nested_struct(depth - 1)]
         };
 
         ParamType::Struct {
@@ -999,11 +1000,11 @@ mod tests {
         }
     }
 
-    fn given_nested_enum(depth: usize) -> ParamType {
+    fn nested_enum(depth: usize) -> ParamType {
         let fields = if depth == 1 {
             vec![ParamType::U8]
         } else {
-            vec![given_nested_enum(depth - 1)]
+            vec![nested_enum(depth - 1)]
         };
 
         ParamType::Enum {
@@ -1012,21 +1013,21 @@ mod tests {
         }
     }
 
-    fn given_nested_array(depth: usize) -> ParamType {
+    fn nested_array(depth: usize) -> ParamType {
         let field = if depth == 1 {
             ParamType::U8
         } else {
-            given_nested_array(depth - 1)
+            nested_array(depth - 1)
         };
 
         ParamType::Array(Box::new(field), 1)
     }
 
-    fn given_nested_tuple(depth: usize) -> ParamType {
+    fn nested_tuple(depth: usize) -> ParamType {
         let fields = if depth == 1 {
             vec![ParamType::U8]
         } else {
-            vec![given_nested_tuple(depth - 1)]
+            vec![nested_tuple(depth - 1)]
         };
 
         ParamType::Tuple(fields)
@@ -1040,15 +1041,19 @@ mod tests {
     }
 
     #[test]
-    fn limiting_structs_nested_too_deep() {
-        let config = given_config_w_depth(2);
-        let param_type = given_nested_struct(3);
+    fn limiting_max_depth_reached() {
+        const MAX_DEPTH: usize = 2;
+        let config = given_config_w_depth(MAX_DEPTH);
+        let msg = format!("Depth limit ({MAX_DEPTH}) reached while decoding!");
+        // for each nested enum so that it may read the discriminant
+        let data = [0; MAX_DEPTH * WORD_SIZE];
 
-        assert_decoding_failed(
-            config,
-            &param_type,
-            "Depth limit (2) reached while decoding!",
-        );
+        [nested_struct, nested_enum, nested_tuple, nested_array]
+            .iter()
+            .map(|fun| fun(MAX_DEPTH + 1))
+            .for_each(|param_type| {
+                assert_decoding_failed_w_data(config.clone(), &param_type, &msg, &data);
+            })
     }
 
     #[test]
@@ -1073,102 +1078,29 @@ mod tests {
     }
 
     #[test]
-    fn limiting_structs_acceptably_nested() {
-        let config = given_config_w_depth(3);
+    fn limiting_depth_is_not_reached() {
+        const MAX_DEPTH: usize = 3;
+        const ACTUAL_DEPTH: usize = MAX_DEPTH - 1;
 
-        // multiple structs on same level to test if depth is decreased correctly
-        let param_type = ParamType::Struct {
-            fields: vec![given_nested_struct(2), given_nested_struct(2)],
-            generics: vec![],
-        };
+        // enough data to decode 2*ACTUAL_DEPTH enums (discriminant + u8 = 2*WORD_SIZE)
+        let data = [0; 2 * ACTUAL_DEPTH * (WORD_SIZE * 2)];
+        let config = given_config_w_depth(MAX_DEPTH);
 
-        assert_decoding_ok(config, &param_type);
-    }
-
-    #[test]
-    fn limiting_enums_nested_too_deep() {
-        let config = given_config_w_depth(2);
-
-        let param_type = given_nested_enum(3);
-
-        let discriminants = [0; 16];
-        assert_decoding_failed_w_data(
-            config,
-            &param_type,
-            "Depth limit (2) reached while decoding!",
-            &discriminants,
-        );
+        [nested_struct, nested_enum, nested_tuple, nested_array]
+            .into_iter()
+            .map(|fun| fun(ACTUAL_DEPTH))
+            .map(|param_type| {
+                // Wrapping everything in a structure so that we may check whether the depth is
+                // decremented after finishing every struct field.
+                ParamType::Struct {
+                    fields: vec![param_type.clone(), param_type],
+                    generics: vec![],
+                }
+            })
+            .for_each(|param_type| {
+                assert_decoding_ok_w_data(config.clone(), &param_type, &data);
+            })
     }
 
     // TODO: enums of ZST structs, how does Sway encode them?
-
-    #[test]
-    fn limiting_enums_nested_acceptably() {
-        let config = given_config_w_depth(3);
-        // multiple enums on the same level to test whether depth is correctly decreased
-        let parent = ParamType::Struct {
-            fields: vec![given_nested_enum(2), given_nested_enum(2)],
-            generics: vec![],
-        };
-        let discriminant = [0; 8];
-        let u8_data = [0; 8];
-        let enum_enc = [discriminant, u8_data].concat();
-        let data = std::iter::repeat(enum_enc)
-            .take(4)
-            .flatten()
-            .collect::<Vec<_>>();
-
-        assert_decoding_ok_w_data(config, &parent, &data);
-    }
-
-    #[test]
-    fn limiting_arrays_nested_too_deeply() {
-        let config = given_config_w_depth(2);
-        let param_type = given_nested_array(3);
-
-        let u8_data = [0; 8];
-        assert_decoding_failed_w_data(
-            config,
-            &param_type,
-            "Depth limit (2) reached while decoding!",
-            &u8_data,
-        );
-    }
-
-    #[test]
-    fn limiting_arrays_nested_acceptably() {
-        let config = given_config_w_depth(3);
-
-        let parent = ParamType::Struct {
-            fields: vec![given_nested_array(2), given_nested_array(2)],
-            generics: vec![],
-        };
-        let u8_data = [0; 16];
-        assert_decoding_ok_w_data(config, &parent, &u8_data)
-    }
-
-    #[test]
-    fn limiting_tuples_nested_too_deeply() {
-        let config = given_config_w_depth(2);
-        let param_type = given_nested_tuple(3);
-        let u8_data = [0; 8];
-        assert_decoding_failed_w_data(
-            config,
-            &param_type,
-            "Depth limit (2) reached while decoding!",
-            &u8_data,
-        );
-    }
-
-    #[test]
-    fn limiting_tuples_nested_acceptably() {
-        let config = given_config_w_depth(3);
-        let parent = ParamType::Struct {
-            fields: vec![given_nested_tuple(2), given_nested_tuple(2)],
-            generics: vec![],
-        };
-
-        let u8_data = [0; 16];
-        assert_decoding_ok_w_data(config, &parent, &u8_data);
-    }
 }
