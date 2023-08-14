@@ -15,7 +15,7 @@ fn main(
     generic_enum: GenericEnum<u16, u32>,
 ) -> bool {
     if let GenericEnum::Generic(other_struct) = generic_enum {
-        return other_struct.value == generic_struct.value;
+        return other_struct.value == generic_struct.value.as_u16();
     }
 
     false

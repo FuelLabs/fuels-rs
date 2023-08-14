@@ -280,7 +280,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 598;
+    let expected_gas_used = 399;
     let expected_metered_bytes_size = 728;
     let expected_total_fee = 372;
 
@@ -620,7 +620,7 @@ async fn test_connect_wallet() -> Result<()> {
     // pay for call with wallet
     let tx_params = TxParameters::default()
         .set_gas_price(10)
-        .set_gas_limit(10000);
+        .set_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)
@@ -661,7 +661,7 @@ async fn setup_output_variable_estimation_test(
     .deploy(&wallets[0], TxParameters::default())
     .await?;
 
-    let mint_asset_id = AssetId::from(*contract_id.hash());
+    let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
     let addresses: [Address; 3] = wallets
         .iter()
         .map(|wallet| wallet.address().into())

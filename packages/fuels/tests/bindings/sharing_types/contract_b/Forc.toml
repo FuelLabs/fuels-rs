@@ -6,3 +6,4 @@ name = "contract_b"
 
 [dependencies]
 shared_lib = { path = "../shared_lib" }
+std = { git = "https://github.com/FuelLabs/sway", branch = "upgrade/fuel-core-v0.20.1" }
