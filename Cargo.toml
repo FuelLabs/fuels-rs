@@ -33,46 +33,39 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.70.0"
+rust-version = "1.71.1"
 version = "0.45.1"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
-async-trait = { version = "0.1.68", default-features = false }
+async-trait = { version = "0.1.73", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.4.0", default-features = false }
-chrono = "0.4.24"
-elliptic-curve = { version = "0.13.4", default-features = false }
+chrono = "0.4.26"
+elliptic-curve = { version = "0.13.5", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-fuels = { version = "0.45.1", path = "./packages/fuels" }
-fuels-accounts = { version = "0.45.1", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.45.1", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.45.1", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.45.1", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.45.1", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.45.1", path = "./packages/fuels-test-helpers", default-features = false }
-futures = "0.3.26"
+futures = "0.3.28"
 hex = { version = "0.4.3", default-features = false }
-itertools = "0.10"
+itertools = "0.11.0"
 portpicker = "0.1.1"
-proc-macro2 = "1.0"
-quote = "1.0"
-rand = { version = "0.8", default-features = false, features = ["std_rng", "getrandom"] }
-regex = "1.8.1"
-serde = { version = "1.0", default-features = false }
-serde_json = "1.0.96"
-serde_with = { version = "2.3.2", default-features = false }
-sha2 = { version = "0.10.6", default-features = false }
-strum = "0.24"
-strum_macros = "0.24"
-syn = "2.0.15"
-tai64 = { version = "4.0", default-features = false }
-tempfile = { version = "3.5.0", default-features = false }
-thiserror = { version = "1.0.40", default-features = false }
-tokio = { version = "1.27.0", default-features = false }
-trybuild = "1.0.80"
-which = { version = "4.4", default-features = false }
+proc-macro2 = "1.0.66"
+quote = "1.0.32"
+rand = { version = "0.8.5", default-features = false, features = ["std_rng", "getrandom"] }
+regex = "1.9.3"
+serde = { version = "1.0.183", default-features = false }
+serde_json = "1.0.104"
+serde_with = { version = "3.2.0", default-features = false }
+sha2 = { version = "0.10.7", default-features = false }
+strum = "0.25.0"
+strum_macros = "0.25.2"
+syn = "2.0.28"
+tai64 = { version = "4.0.0", default-features = false }
+tempfile = { version = "3.7.1", default-features = false }
+thiserror = { version = "1.0.45", default-features = false }
+tokio = { version = "1.31.0", default-features = false }
+trybuild = "1.0.82"
+which = { version = "4.4.0", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.20.3", default-features = false }
@@ -88,3 +81,12 @@ fuel-storage = "0.35.3"
 fuel-tx = "0.35.3"
 fuel-types = { version = "0.35.3", default-features = false }
 fuel-vm = "0.35.3"
+
+# Workspace projects
+fuels = { version = "0.45.1", path = "./packages/fuels" }
+fuels-accounts = { version = "0.45.1", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.45.1", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.45.1", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.45.1", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.45.1", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.45.1", path = "./packages/fuels-test-helpers", default-features = false }
