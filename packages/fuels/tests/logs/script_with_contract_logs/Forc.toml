@@ -6,4 +6,3 @@ name = "script_with_contract_logs"
 
 [dependencies]
 library = { path = "../contract_logs_abi/", package = "contract_logs_abi" }
-std = { git = "https://github.com/FuelLabs/sway", branch = "upgrade/fuel-core-v0.20.1" }
