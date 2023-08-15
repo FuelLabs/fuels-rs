@@ -66,7 +66,7 @@ pub(crate) fn contract_bindings(
                 ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
             }
 
-            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::std::string::String, u64>> {
+            pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> {
                 ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?
                                   .get_contract_balances(&self.contract_id)
                                   .await
