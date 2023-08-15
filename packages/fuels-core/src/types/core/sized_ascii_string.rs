@@ -73,7 +73,7 @@ impl PartialEq<AsciiString> for &str {
 // To be used when interacting with contracts which have strings in their ABI.
 // The length of a string is part of its type -- i.e. str[2] is a
 // different type from str[3]. The FuelVM strings only support ascii characters.
-#[derive(Debug, PartialEq, Clone, Eq, Hash)]
+#[derive(Debug, PartialEq, Clone, Eq, Hash, Default)]
 pub struct SizedAsciiString<const LEN: usize> {
     data: String,
 }
