@@ -133,11 +133,6 @@ impl NewDecoder {
                 InvalidType,
                 "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
             ))
-        } else if param_type.uses_collections_of_zero_sized_types() {
-            Err(error!(
-                InvalidType,
-                "Type {param_type:?} contains collections of zero-sized types. Decoding is not supported!"
-            ))
         } else {
             Ok(())
         }
@@ -183,10 +178,12 @@ impl NewDecoder {
     }
 
     fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+        self.depth_tracker.increase()?;
         let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) =
             self.decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
+        self.depth_tracker.decrease();
         Ok(DecodeResult {
             token: Token::Vector(tokens),
             bytes_read,
@@ -940,23 +937,6 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn decoding_zero_sized_types_is_prohibited() {
-        // given
-        let zero_vec = ParamType::Vector(Box::new(ParamType::String(0)));
-
-        // when
-        let err = ABIDecoder::decode_single(&zero_vec, &[]).expect_err("Should have failed");
-
-        // then
-        let Error::InvalidType(msg) = err else {
-            panic!("Expected error {err} to be of type InvalidType!")
-        };
-        assert!(
-            msg.contains("contains collections of zero-sized types. Decoding is not supported!")
-        );
-    }
-
     fn assert_decoding_ok(config: DecoderConfig, param_type: &ParamType) {
         assert_decoding_ok_w_data(config, param_type, &[]);
     }
@@ -1057,24 +1037,34 @@ mod tests {
     }
 
     #[test]
-    fn limiting_struct_fields_by_elements() {
+    fn fails_if_too_many_elements() {
         let config = DecoderConfig {
             max_elements: 3,
             ..Default::default()
         };
-        let child_1 = ParamType::Struct {
+
+        let empty_struct = ParamType::Struct {
             fields: vec![],
             generics: vec![],
         };
-        let child_2 = child_1.clone();
-        let child_3 = child_1.clone();
 
-        let parent = ParamType::Struct {
-            fields: vec![child_1, child_2, child_3],
-            generics: vec![],
-        };
-
-        assert_decoding_failed(config, &parent, "Element limit (3) reached while decoding!");
+        for param_type in [
+            ParamType::Struct {
+                fields: vec![empty_struct.clone(); 3],
+                generics: vec![],
+            },
+            ParamType::Tuple(vec![empty_struct.clone(); 3]),
+            ParamType::Array(Box::new(empty_struct.clone()), 3),
+            // TODO: Fail if vector element is zero-sized
+            // ParamType::Vector(Box::new(empty_struct)),
+        ] {
+            assert_decoding_failed_w_data(
+                config.clone(),
+                &param_type,
+                "Element limit (3) reached while decoding!",
+                &[],
+            );
+        }
     }
 
     #[test]
