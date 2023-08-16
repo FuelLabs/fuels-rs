@@ -15,7 +15,7 @@ pub fn try_from_bytes<T>(bytes: &[u8]) -> Result<T>
 where
     T: Parameterize + Tokenizable,
 {
-    let token = ABIDecoder::decode_single(&T::param_type(), bytes)?;
+    let token = AbiDecoder::default().decode(&T::param_type(), bytes)?;
 
     T::from_token(token)
 }

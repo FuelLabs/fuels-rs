@@ -435,7 +435,7 @@ impl ABIDecoder {
     /// use fuels_core::codec::ABIDecoder;
     /// use fuels_core::types::{param_types::ParamType, Token};
     ///
-    /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
+    /// let tokens = AbiDecoder::default().decode_multiple(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
     ///
     /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
     /// ```
@@ -537,7 +537,7 @@ mod tests {
     fn decode_int() -> Result<()> {
         let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
 
-        let decoded = ABIDecoder::decode_single(&ParamType::U32, &data)?;
+        let decoded = AbiDecoder::default().decode(&ParamType::U32, &data)?;
 
         assert_eq!(decoded, Token::U32(u32::MAX));
         Ok(())
@@ -557,7 +557,7 @@ mod tests {
             0xff,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
             Token::U32(u32::MAX),
@@ -576,7 +576,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
 
@@ -592,7 +592,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ];
 
-        let decoded = ABIDecoder::decode_single(&ParamType::B256, &data)?;
+        let decoded = AbiDecoder::default().decode(&ParamType::B256, &data)?;
 
         assert_eq!(decoded, Token::B256(data));
         Ok(())
@@ -608,7 +608,7 @@ mod tests {
             0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, // Hello
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
             Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23))),
@@ -628,7 +628,7 @@ mod tests {
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // entence
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::StringSlice(StringToken::new(
             "This is a full sentence".into(),
@@ -647,7 +647,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
@@ -669,7 +669,7 @@ mod tests {
             generics: vec![],
         };
 
-        let decoded = ABIDecoder::decode_single(&param_type, &data)?;
+        let decoded = AbiDecoder::default().decode(&param_type, &data)?;
 
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
 
@@ -680,7 +680,7 @@ mod tests {
     #[test]
     fn decode_bytes() -> Result<()> {
         let data = [0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
-        let decoded = ABIDecoder::decode_single(&ParamType::Bytes, &data)?;
+        let decoded = AbiDecoder::default().decode(&ParamType::Bytes, &data)?;
 
         let expected = Token::Bytes(data.to_vec());
 
@@ -707,7 +707,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = ABIDecoder::decode(&types, &data)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
@@ -756,7 +756,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = ABIDecoder::decode_single(&struct_type, &data)?;
+        let decoded = AbiDecoder::default().decode(&struct_type, &data)?;
 
         let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
@@ -798,7 +798,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
         ];
 
-        let decoded = ABIDecoder::decode_single(&nested_struct, &data)?;
+        let decoded = AbiDecoder::default().decode(&nested_struct, &data)?;
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -866,7 +866,7 @@ mod tests {
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // str data
         ];
 
-        let decoded = ABIDecoder::decode(&types, &bytes)?;
+        let decoded = AbiDecoder::default().decode_multiple(&types, &bytes)?;
 
         // Expected tokens
         let foo = Token::Struct(vec![
@@ -905,7 +905,7 @@ mod tests {
             generics: vec![],
         };
 
-        let actual = ABIDecoder::decode_single(&struct_type, &data)?;
+        let actual = AbiDecoder::default().decode(&struct_type, &data)?;
 
         let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
         assert_eq!(actual, expected);
@@ -922,7 +922,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = ABIDecoder::decode_single(&enum_w_only_units, &data)?;
+        let result = AbiDecoder::default().decode(&enum_w_only_units, &data)?;
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
         assert_eq!(result, expected_enum);
@@ -939,7 +939,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = ABIDecoder::decode_single(&enum_type, &data);
+        let result = AbiDecoder::default().decode(&enum_type, &data);
 
         let error = result.expect_err("Should have resulted in an error");
 

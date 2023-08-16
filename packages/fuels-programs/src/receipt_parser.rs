@@ -1,6 +1,6 @@
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
-    codec::ABIDecoder,
+    codec::AbiDecoder,
     types::{
         bech32::Bech32ContractId,
         errors::{error, Error, Result},
@@ -45,7 +45,7 @@ impl ReceiptParser {
             .extract_raw_data(output_param, &contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        ABIDecoder::decode_single(output_param, &data)
+        AbiDecoder::default().decode(output_param, &data)
     }
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {
