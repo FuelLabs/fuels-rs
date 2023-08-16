@@ -209,10 +209,10 @@ pub async fn setup_test_client(
         },
         chain_config,
     )
-    .await;
+    .await?;
 
     let client = FuelClient::from(bound_address);
-    server_health_check(&client).await;
+    server_health_check(&client).await?;
 
     let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
 

@@ -77,6 +77,8 @@ async fn test_network_error() -> Result<()> {
 
     wallet.set_provider(provider);
 
+    // service.
+
     // Simulate an unreachable node
     service.stop_and_await().await.unwrap();
 

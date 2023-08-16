@@ -28,6 +28,7 @@ hex = { workspace = true, default-features = false }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true }
+fuels-test-helpers = { workspace = true }
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts"]
