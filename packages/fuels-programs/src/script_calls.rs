@@ -233,8 +233,10 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
         } else {
-            self.provider.send_transaction(&tx).await?
+            let tx_id = self.provider.send_transaction(&tx).await?;
+            self.provider.get_receipts(&tx_id).await?
         };
+
         self.get_response(receipts)
     }
 
@@ -243,6 +245,29 @@ where
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
+        let tb = self.prepare_builder().await?;
+        let base_amount = self.calculate_base_asset_sum();
+        let tx = self
+            .account
+            .add_fee_resources(tb, base_amount, None)
+            .await?;
+        let consensus_parameters = self.provider.consensus_parameters();
+        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+
+        self.provider.send_transaction(&tx).await?;
+        Ok(self)
+    }
+
+    pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the

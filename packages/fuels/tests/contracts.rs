@@ -1441,3 +1441,43 @@ fn db_rocksdb() {
         })
         .unwrap();
 }
+
+#[tokio::test]
+async fn test_contract_submit_and_response() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+    let handle = contract_methods.get(5, 6).submit().await?;
+    let response = handle.response().await?;
+
+    assert_eq!(response.value, 11);
+
+    let contract_methods = contract_instance.methods();
+    let call_handler_1 = contract_methods.get_single(7);
+    let call_handler_2 = contract_methods.get_single(42);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let handle = multi_call_handler.submit().await?;
+    let (val_1, val_2): (u64, u64) = handle.response().await?.value;
+
+    assert_eq!(val_1, 7);
+    assert_eq!(val_2, 42);
+
+    Ok(())
+}
