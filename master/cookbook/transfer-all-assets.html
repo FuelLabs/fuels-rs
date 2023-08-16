@@ -184,7 +184,7 @@
                 .build()?;
         wallet_1.sign_transaction(&amp;mut tx)?;
 
-        let _receipts = provider.send_transaction(&amp;tx).await?;
+        provider.send_transaction(&amp;tx).await?;
 
         let balances = wallet_2.get_balances().await?;
 
