@@ -23,59 +23,30 @@ struct Decoded {
     bytes_read: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct DecoderConfig {
+    // Entering a struct, array, tuple, enum or vector increases the depth. Decoding will fail if
+    // the current depth becomes greater than `max_depth` configured here.
     max_depth: usize,
-    max_elements: usize,
+    // Every decoded Token will increase the token count. Decoding will fail if the current
+    // token count becomes greater than `max_tokens` configured here.
+    max_tokens: usize,
 }
 
 impl Default for DecoderConfig {
     fn default() -> Self {
-        // TODO: revisit this when we have a normal value in mind
         Self {
-            max_depth: 10,
-            max_elements: 500,
+            max_depth: 45,
+            max_tokens: 1000,
         }
     }
 }
 
-struct CounterWithLimit {
-    count: usize,
-    max: usize,
-    name: String,
-}
-
-impl CounterWithLimit {
-    fn new(max: usize, name: impl Into<String>) -> Self {
-        Self {
-            count: 0,
-            max,
-            name: name.into(),
-        }
-    }
-
-    fn increase(&mut self) -> Result<()> {
-        self.count += 1;
-        if self.count > self.max {
-            Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding!", self.name, self.max
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn decrease(&mut self) {
-        if self.count > 0 {
-            self.count -= 1;
-        }
-    }
-}
-
+/// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
+/// instantiated. Implements decoding limits to control resource usage.
 pub struct AbiDecoder {
     depth_tracker: CounterWithLimit,
-    element_tracker: CounterWithLimit,
+    token_tracker: CounterWithLimit,
 }
 
 impl Default for AbiDecoder {
@@ -87,32 +58,53 @@ impl Default for AbiDecoder {
 impl AbiDecoder {
     pub fn new(config: DecoderConfig) -> Self {
         let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let element_tracker = CounterWithLimit::new(config.max_elements, "Element");
+        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
         Self {
             depth_tracker,
-            element_tracker,
+            token_tracker,
         }
     }
 
-    /// Decodes type described by `param_type` into its respective `Token`s
-    /// using the data in `bytes`.
+    /// Decodes `bytes` following the schema described in `param_type` into its respective `Token`.
     ///
     /// # Arguments
     ///
-    /// * `param_type`: The ParamType of the type we expect is encoded
+    /// * `param_type`: The `ParamType` of the type we expect is encoded
     ///                  inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
     /// # Examples
     ///
     /// ```
-    /// TODO: add example here
+    /// use fuels_core::codec::AbiDecoder;
+    /// use fuels_core::traits::Tokenizable;
+    /// use fuels_core::types::param_types::ParamType;
+    ///
+    /// let mut decoder = AbiDecoder::default();
+    ///
+    /// let token = decoder.decode(&ParamType::U8,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    ///
+    /// assert_eq!(u8::from_token(token).unwrap(), 7u8);
     /// ```
     pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         Self::is_type_decodable(param_type)?;
         Ok(self.decode_param(param_type, bytes)?.token)
     }
 
-    // TODO: add docs here
+    /// Same as `decode` but decodes multiple `ParamType`s in one go.
+    ///
+    /// # Examples
+    /// ```
+    /// use fuels_core::codec::AbiDecoder;
+    /// use fuels_core::types::param_types::ParamType;
+    /// use fuels_core::types::Token;
+    ///
+    /// let mut decoder = AbiDecoder::default();
+    /// let data: &[u8] = &[0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 8];
+    ///
+    /// let tokens = decoder.decode_multiple(&[ParamType::U8, ParamType::U8], &data).unwrap();
+    ///
+    /// assert_eq!(tokens, vec![Token::U8(7), Token::U8(8)]);
+    /// ```
     pub fn decode_multiple(
         &mut self,
         param_types: &[ParamType],
@@ -150,7 +142,7 @@ impl AbiDecoder {
     }
 
     fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
-        self.element_tracker.increase()?;
+        self.token_tracker.increase()?;
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -416,39 +408,61 @@ impl AbiDecoder {
     }
 }
 
+struct CounterWithLimit {
+    count: usize,
+    max: usize,
+    name: String,
+}
+
+impl CounterWithLimit {
+    fn new(max: usize, name: impl Into<String>) -> Self {
+        Self {
+            count: 0,
+            max,
+            name: name.into(),
+        }
+    }
+
+    fn increase(&mut self) -> Result<()> {
+        self.count += 1;
+        if self.count > self.max {
+            Err(error!(
+                InvalidType,
+                "{} limit ({}) reached while decoding!", self.name, self.max
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn decrease(&mut self) {
+        if self.count > 0 {
+            self.count -= 1;
+        }
+    }
+}
+
 #[deprecated(note = "Use AbiDecoder instead.")]
 pub struct ABIDecoder;
 
 #[allow(deprecated)]
 impl ABIDecoder {
-    /// Decodes types described by `param_types` into their respective `Token`s
-    /// using the data in `bytes` and `receipts`.
+    /// Decodes `bytes` following the schema described in `param_type` into its respective `Token`.
     ///
     /// # Arguments
     ///
-    /// * `param_types`: The ParamType's of the types we expect are encoded
-    ///                  inside `bytes` and `receipts`.
+    /// * `param_type`: The `ParamType` of the type we expect is encoded
+    ///                  inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
-    /// # Examples
-    ///
-    /// ```
-    /// use fuels_core::codec::ABIDecoder;
-    /// use fuels_core::types::{param_types::ParamType, Token};
-    ///
-    /// let tokens = AbiDecoder::default().decode_multiple(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
-    ///
-    /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
-    /// ```
-    #[deprecated(note = "Use AbiDecoder::default().decode_multiple(param_types, bytes) instead.")]
-    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
-        AbiDecoder::default().decode_multiple(param_types, bytes)
-    }
-
-    /// The same as `decode` just for a single type. Used in most cases since
-    /// contract functions can only return one type.
     #[deprecated(note = "Use AbiDecoder::default().decode(param_type, bytes) instead.")]
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         AbiDecoder::default().decode(param_type, bytes)
+    }
+
+    /// Same as `decode_single` but decodes multiple `ParamType`s in one go.
+    #[deprecated(note = "Use AbiDecoder::default().decode_multiple(param_types, bytes) instead.")]
+    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
+        AbiDecoder::default().decode_multiple(param_types, bytes)
     }
 }
 
@@ -1029,14 +1043,14 @@ mod tests {
             .iter()
             .map(|fun| fun(MAX_DEPTH + 1))
             .for_each(|param_type| {
-                assert_decoding_failed_w_data(config.clone(), &param_type, &msg, &data);
+                assert_decoding_failed_w_data(config, &param_type, &msg, &data);
             })
     }
 
     #[test]
-    fn fails_if_too_many_elements() {
+    fn fails_if_too_many_tokens() {
         let config = DecoderConfig {
-            max_elements: 3,
+            max_tokens: 3,
             ..Default::default()
         };
 
@@ -1052,9 +1066,9 @@ mod tests {
             ParamType::Vector(Box::new(el)),
         ] {
             assert_decoding_failed_w_data(
-                config.clone(),
+                config,
                 &param_type,
-                "Element limit (3) reached while decoding!",
+                "Token limit (3) reached while decoding!",
                 &data,
             );
         }
@@ -1081,12 +1095,7 @@ mod tests {
                 }
             })
             .for_each(|param_type| {
-                let config = config.clone();
-                let param_type = &param_type;
-                let data: &[u8] = &data;
-                let mut decoder = AbiDecoder::new(config);
-
-                decoder.decode(param_type, data).unwrap();
+                AbiDecoder::new(config).decode(&param_type, &data).unwrap();
             })
     }
 
@@ -1106,6 +1115,4 @@ mod tests {
             "Cannot calculate the number of elements because the type is zero-sized."
         );
     }
-
-    // TODO: enums of ZST structs, how does Sway encode them?
 }
