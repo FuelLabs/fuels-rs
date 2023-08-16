@@ -526,7 +526,7 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
 
 #[cfg(test)]
 mod tests {
-    use std::{i8::MAX, vec};
+    use std::vec;
 
     use super::*;
 
@@ -945,20 +945,6 @@ mod tests {
         Ok(())
     }
 
-    fn assert_decoding_ok(config: DecoderConfig, param_type: &ParamType) {
-        assert_decoding_ok_w_data(config, param_type, &[]);
-    }
-
-    fn assert_decoding_ok_w_data(config: DecoderConfig, param_type: &ParamType, data: &[u8]) {
-        let mut decoder = NewDecoder::new(config);
-
-        let _ = decoder.decode_single(param_type, &data).unwrap();
-    }
-
-    fn assert_decoding_failed(config: DecoderConfig, param_type: &ParamType, msg: &str) {
-        assert_decoding_failed_w_data(config, param_type, msg, &[])
-    }
-
     fn assert_decoding_failed_w_data(
         config: DecoderConfig,
         param_type: &ParamType,
@@ -967,7 +953,7 @@ mod tests {
     ) {
         let mut decoder = NewDecoder::new(config);
 
-        let err = decoder.decode_single(param_type, &data);
+        let err = decoder.decode_single(param_type, data);
 
         let Err(Error::InvalidType(actual_msg)) = err else {
             panic!("Unexpected an InvalidType error! Got: {err:?}");
@@ -1092,7 +1078,12 @@ mod tests {
                 }
             })
             .for_each(|param_type| {
-                assert_decoding_ok_w_data(config.clone(), &param_type, &data);
+                let config = config.clone();
+                let param_type = &param_type;
+                let data: &[u8] = &data;
+                let mut decoder = NewDecoder::new(config);
+
+                decoder.decode_single(param_type, data).unwrap();
             })
     }
 
