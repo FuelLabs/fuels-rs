@@ -73,18 +73,18 @@ impl CounterWithLimit {
     }
 }
 
-pub struct NewDecoder {
+pub struct AbiDecoder {
     depth_tracker: CounterWithLimit,
     element_tracker: CounterWithLimit,
 }
 
-impl Default for NewDecoder {
+impl Default for AbiDecoder {
     fn default() -> Self {
         Self::new(DecoderConfig::default())
     }
 }
 
-impl NewDecoder {
+impl AbiDecoder {
     pub fn new(config: DecoderConfig) -> Self {
         let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
         let element_tracker = CounterWithLimit::new(config.max_elements, "Element");
@@ -93,38 +93,37 @@ impl NewDecoder {
             element_tracker,
         }
     }
-    /// Decodes types described by `param_types` into their respective `Token`s
-    /// using the data in `bytes` and `receipts`.
+
+    /// Decodes type described by `param_type` into its respective `Token`s
+    /// using the data in `bytes`.
     ///
     /// # Arguments
     ///
-    /// * `param_types`: The ParamType's of the types we expect are encoded
-    ///                  inside `bytes` and `receipts`.
+    /// * `param_type`: The ParamType of the type we expect is encoded
+    ///                  inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
     /// # Examples
     ///
     /// ```
-    /// use fuels_core::codec::ABIDecoder;
-    /// use fuels_core::types::{param_types::ParamType, Token};
-    ///
-    /// let tokens = ABIDecoder::decode(&[ParamType::U8, ParamType::U8], &[0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,2]).unwrap();
-    ///
-    /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
+    /// TODO: add example here
     /// ```
-    pub fn decode(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
+    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+        Self::is_type_decodable(param_type)?;
+        Ok(self.decode_param(param_type, bytes)?.token)
+    }
+
+    // TODO: add docs here
+    pub fn decode_multiple(
+        &mut self,
+        param_types: &[ParamType],
+        bytes: &[u8],
+    ) -> Result<Vec<Token>> {
         for param_type in param_types {
             Self::is_type_decodable(param_type)?;
         }
-        let (tokens, _) = self.decode_multiple(param_types, bytes)?;
+        let (tokens, _) = self.decode_params(param_types, bytes)?;
 
         Ok(tokens)
-    }
-
-    /// The same as `decode` just for a single type. Used in most cases since
-    /// contract functions can only return one type.
-    pub fn decode_single(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        Self::is_type_decodable(param_type)?;
-        Ok(self.decode_param(param_type, bytes)?.token)
     }
 
     fn is_type_decodable(param_type: &ParamType) -> Result<()> {
@@ -204,7 +203,7 @@ impl NewDecoder {
     fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
         let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) =
-            self.decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
+            self.decode_params(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
         Ok(Decoded {
             token: Token::Vector(tokens),
@@ -213,7 +212,7 @@ impl NewDecoder {
     }
 
     fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
+        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
 
         Ok(Decoded {
             token: Token::Tuple(tokens),
@@ -222,7 +221,7 @@ impl NewDecoder {
     }
 
     fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
+        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
 
         Ok(Decoded {
             token: Token::Struct(tokens),
@@ -230,7 +229,7 @@ impl NewDecoder {
         })
     }
 
-    fn decode_multiple<'a>(
+    fn decode_params<'a>(
         &mut self,
         param_types: impl IntoIterator<Item = &'a ParamType>,
         bytes: &[u8],
@@ -255,7 +254,7 @@ impl NewDecoder {
         length: usize,
     ) -> Result<Decoded> {
         let (tokens, bytes_read) =
-            self.decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
+            self.decode_params(std::iter::repeat(param_type).take(length), bytes)?;
 
         Ok(Decoded {
             token: Token::Array(tokens),
@@ -269,7 +268,7 @@ impl NewDecoder {
             ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
         let param_type = ParamType::U64;
         let (tokens, bytes_read) =
-            self.decode_multiple(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
+            self.decode_params(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
         let elements = tokens
             .into_iter()
             .map(u64::from_token)
@@ -417,8 +416,10 @@ impl NewDecoder {
     }
 }
 
+#[deprecated(note = "Use AbiDecoder instead.")]
 pub struct ABIDecoder;
 
+#[allow(deprecated)]
 impl ABIDecoder {
     /// Decodes types described by `param_types` into their respective `Token`s
     /// using the data in `bytes` and `receipts`.
@@ -438,14 +439,16 @@ impl ABIDecoder {
     ///
     /// assert_eq!(tokens, vec![Token::U8(1), Token::U8(2)])
     /// ```
+    #[deprecated(note = "Use AbiDecoder::default().decode_multiple(param_types, bytes) instead.")]
     pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
-        NewDecoder::default().decode(param_types, bytes)
+        AbiDecoder::default().decode_multiple(param_types, bytes)
     }
 
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
+    #[deprecated(note = "Use AbiDecoder::default().decode(param_type, bytes) instead.")]
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        NewDecoder::default().decode_single(param_type, bytes)
+        AbiDecoder::default().decode(param_type, bytes)
     }
 }
 
@@ -951,9 +954,9 @@ mod tests {
         msg: &str,
         data: &[u8],
     ) {
-        let mut decoder = NewDecoder::new(config);
+        let mut decoder = AbiDecoder::new(config);
 
-        let err = decoder.decode_single(param_type, data);
+        let err = decoder.decode(param_type, data);
 
         let Err(Error::InvalidType(actual_msg)) = err else {
             panic!("Unexpected an InvalidType error! Got: {err:?}");
@@ -1081,9 +1084,9 @@ mod tests {
                 let config = config.clone();
                 let param_type = &param_type;
                 let data: &[u8] = &data;
-                let mut decoder = NewDecoder::new(config);
+                let mut decoder = AbiDecoder::new(config);
 
-                decoder.decode_single(param_type, data).unwrap();
+                decoder.decode(param_type, data).unwrap();
             })
     }
 
@@ -1091,8 +1094,8 @@ mod tests {
     fn vectors_of_zst_are_not_supported() {
         let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
 
-        let err = NewDecoder::default()
-            .decode_single(&param_type, &[])
+        let err = AbiDecoder::default()
+            .decode(&param_type, &[])
             .expect_err("Vectors of ZST should be prohibited");
 
         let Error::InvalidType(msg) = err else {
