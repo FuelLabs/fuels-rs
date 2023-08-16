@@ -18,7 +18,7 @@ const U256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 #[derive(Debug, Clone)]
-struct DecodeResult {
+struct Decoded {
     token: Token,
     bytes_read: usize,
 }
@@ -138,7 +138,19 @@ impl NewDecoder {
         }
     }
 
-    fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
+    fn run_w_depth_tracking(
+        &mut self,
+        decoder: impl FnOnce(&mut Self) -> Result<Decoded>,
+    ) -> Result<Decoded> {
+        self.depth_tracker.increase()?;
+
+        let res = decoder(self);
+
+        self.depth_tracker.decrease();
+        res
+    }
+
+    fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
         self.element_tracker.increase()?;
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
@@ -153,66 +165,69 @@ impl NewDecoder {
             ParamType::RawSlice => self.decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::String(len) => Self::decode_string_array(bytes, *len),
-            ParamType::Array(ref t, length) => self.decode_array(t, bytes, *length),
-            ParamType::Struct { fields, .. } => self.decode_struct(fields, bytes),
-            ParamType::Enum { variants, .. } => self.decode_enum(bytes, variants),
-            ParamType::Tuple(types) => self.decode_tuple(types, bytes),
-            ParamType::Vector(param_type) => self.decode_vector(param_type, bytes),
+            ParamType::Array(ref t, length) => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_array(t, bytes, *length))
+            }
+            ParamType::Struct { fields, .. } => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_struct(fields, bytes))
+            }
+            ParamType::Enum { variants, .. } => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, variants))
+            }
+            ParamType::Tuple(types) => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_tuple(types, bytes))
+            }
+            ParamType::Vector(param_type) => {
+                // although nested vectors cannot be decoded yet, depth tracking still occurrs for future
+                // proofing
+                self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
+            }
             ParamType::Bytes => Self::decode_bytes(bytes),
             ParamType::StdString => Self::decode_std_string(bytes),
         }
     }
 
-    fn decode_bytes(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_bytes(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::Bytes(bytes.to_vec()),
             bytes_read: bytes.len(),
         })
     }
 
-    fn decode_std_string(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_std_string(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::StdString(str::from_utf8(bytes)?.to_string()),
             bytes_read: bytes.len(),
         })
     }
 
-    fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        self.depth_tracker.increase()?;
+    fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
         let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
         let (tokens, bytes_read) =
             self.decode_multiple(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
-        self.depth_tracker.decrease();
-        Ok(DecodeResult {
+        Ok(Decoded {
             token: Token::Vector(tokens),
             bytes_read,
         })
     }
 
-    fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.depth_tracker.increase()?;
+    fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
-        let decode_result = DecodeResult {
+        Ok(Decoded {
             token: Token::Tuple(tokens),
             bytes_read,
-        };
-        self.depth_tracker.decrease();
-        Ok(decode_result)
+        })
     }
 
-    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<DecodeResult> {
-        self.depth_tracker.increase()?;
+    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
         let (tokens, bytes_read) = self.decode_multiple(param_types, bytes)?;
 
-        let decode_result = DecodeResult {
+        Ok(Decoded {
             token: Token::Struct(tokens),
             bytes_read,
-        };
-
-        self.depth_tracker.decrease();
-        Ok(decode_result)
+        })
     }
 
     fn decode_multiple<'a>(
@@ -238,20 +253,17 @@ impl NewDecoder {
         param_type: &ParamType,
         bytes: &[u8],
         length: usize,
-    ) -> Result<DecodeResult> {
-        self.depth_tracker.increase()?;
+    ) -> Result<Decoded> {
         let (tokens, bytes_read) =
             self.decode_multiple(std::iter::repeat(param_type).take(length), bytes)?;
 
-        let decode_result = DecodeResult {
+        Ok(Decoded {
             token: Token::Array(tokens),
             bytes_read,
-        };
-        self.depth_tracker.decrease();
-        Ok(decode_result)
+        })
     }
 
-    fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<Decoded> {
         let raw_slice_element = ParamType::U64;
         let num_of_elements =
             ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
@@ -264,45 +276,45 @@ impl NewDecoder {
             .collect::<Result<Vec<u64>>>()
             .map_err(|e| error!(InvalidData, "{e}"))?;
 
-        Ok(DecodeResult {
+        Ok(Decoded {
             token: Token::RawSlice(elements),
             bytes_read,
         })
     }
 
-    fn decode_string_slice(bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_string_slice(bytes: &[u8]) -> Result<Decoded> {
         let decoded = str::from_utf8(bytes)?;
 
-        Ok(DecodeResult {
+        Ok(Decoded {
             token: Token::StringSlice(StringToken::new(decoded.into(), None)),
             bytes_read: decoded.len(),
         })
     }
 
-    fn decode_string_array(bytes: &[u8], length: usize) -> Result<DecodeResult> {
+    fn decode_string_array(bytes: &[u8], length: usize) -> Result<Decoded> {
         let encoded_len = padded_len_usize(length);
         let encoded_str = peek(bytes, encoded_len)?;
 
         let decoded = str::from_utf8(&encoded_str[..length])?;
-        let result = DecodeResult {
+        let result = Decoded {
             token: Token::StringArray(StringToken::new(decoded.into(), Some(length))),
             bytes_read: encoded_len,
         };
         Ok(result)
     }
 
-    fn decode_b256(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_b256(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::B256(*peek_fixed::<32>(bytes)?),
             bytes_read: B256_BYTES_SIZE,
         })
     }
 
-    fn decode_bool(bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_bool(bytes: &[u8]) -> Result<Decoded> {
         // Grab last byte of the word and compare it to 0x00
         let b = peek_u8(bytes)? != 0u8;
 
-        let result = DecodeResult {
+        let result = Decoded {
             token: Token::Bool(b),
             bytes_read: WORD_SIZE,
         };
@@ -310,53 +322,53 @@ impl NewDecoder {
         Ok(result)
     }
 
-    fn decode_u128(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u128(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U128(peek_u128(bytes)?),
             bytes_read: U128_BYTES_SIZE,
         })
     }
 
-    fn decode_u256(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u256(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U256(peek_u256(bytes)?),
             bytes_read: U256_BYTES_SIZE,
         })
     }
 
-    fn decode_u64(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u64(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U64(peek_u64(bytes)?),
             bytes_read: WORD_SIZE,
         })
     }
 
-    fn decode_u32(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u32(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U32(peek_u32(bytes)?),
             bytes_read: WORD_SIZE,
         })
     }
 
-    fn decode_u16(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u16(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U16(peek_u16(bytes)?),
             bytes_read: WORD_SIZE,
         })
     }
 
-    fn decode_u8(bytes: &[u8]) -> Result<DecodeResult> {
-        Ok(DecodeResult {
+    fn decode_u8(bytes: &[u8]) -> Result<Decoded> {
+        Ok(Decoded {
             token: Token::U8(peek_u8(bytes)?),
             bytes_read: WORD_SIZE,
         })
     }
 
-    fn decode_unit(bytes: &[u8]) -> Result<DecodeResult> {
+    fn decode_unit(bytes: &[u8]) -> Result<Decoded> {
         // We don't need the data, we're doing this purely as a bounds
         // check.
         peek_fixed::<WORD_SIZE>(bytes)?;
-        Ok(DecodeResult {
+        Ok(Decoded {
             token: Token::Unit,
             bytes_read: WORD_SIZE,
         })
@@ -369,8 +381,7 @@ impl NewDecoder {
     ///
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
-    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
-        self.depth_tracker.increase()?;
+    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(bytes)? as u8;
@@ -381,13 +392,10 @@ impl NewDecoder {
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));
-        let decode_result = DecodeResult {
+        Ok(Decoded {
             token: Token::Enum(selector),
             bytes_read: enum_width * WORD_SIZE,
-        };
-
-        self.depth_tracker.decrease();
-        Ok(decode_result)
+        })
     }
 
     fn decode_token_in_enum(
@@ -395,11 +403,11 @@ impl NewDecoder {
         bytes: &[u8],
         variants: &EnumVariants,
         selected_variant: &ParamType,
-    ) -> Result<DecodeResult> {
+    ) -> Result<Decoded> {
         // Enums that contain only Units as variants have only their discriminant encoded.
         // Because of this we construct the Token::Unit rather than calling `decode_param`
         if variants.only_units_inside() {
-            Ok(DecodeResult {
+            Ok(Decoded {
                 token: Token::Unit,
                 bytes_read: 0,
             })
@@ -1043,26 +1051,22 @@ mod tests {
             ..Default::default()
         };
 
-        let empty_struct = ParamType::Struct {
-            fields: vec![],
-            generics: vec![],
-        };
-
+        let data = [0; 3 * WORD_SIZE];
+        let el = ParamType::U8;
         for param_type in [
             ParamType::Struct {
-                fields: vec![empty_struct.clone(); 3],
+                fields: vec![el.clone(); 3],
                 generics: vec![],
             },
-            ParamType::Tuple(vec![empty_struct.clone(); 3]),
-            ParamType::Array(Box::new(empty_struct.clone()), 3),
-            // TODO: Fail if vector element is zero-sized
-            // ParamType::Vector(Box::new(empty_struct)),
+            ParamType::Tuple(vec![el.clone(); 3]),
+            ParamType::Array(Box::new(el.clone()), 3),
+            ParamType::Vector(Box::new(el)),
         ] {
             assert_decoding_failed_w_data(
                 config.clone(),
                 &param_type,
                 "Element limit (3) reached while decoding!",
-                &[],
+                &data,
             );
         }
     }
@@ -1090,6 +1094,23 @@ mod tests {
             .for_each(|param_type| {
                 assert_decoding_ok_w_data(config.clone(), &param_type, &data);
             })
+    }
+
+    #[test]
+    fn vectors_of_zst_are_not_supported() {
+        let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
+
+        let err = NewDecoder::default()
+            .decode_single(&param_type, &[])
+            .expect_err("Vectors of ZST should be prohibited");
+
+        let Error::InvalidType(msg) = err else {
+            panic!("Expected error of type InvalidType")
+        };
+        assert_eq!(
+            msg,
+            "Cannot calculate the number of elements because the type is zero-sized."
+        );
     }
 
     // TODO: enums of ZST structs, how does Sway encode them?
