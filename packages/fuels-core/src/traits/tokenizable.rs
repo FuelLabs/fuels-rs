@@ -216,7 +216,7 @@ impl Tokenizable for String {
         Self: Sized,
     {
         match token {
-            Token::StdString(string) => Ok(string),
+            Token::String(string) => Ok(string),
             _ => Err(error!(
                 InvalidData,
                 "String::from_token expected a token of the variant Token::String, got: {token}"
@@ -225,7 +225,7 @@ impl Tokenizable for String {
     }
 
     fn into_token(self) -> Token {
-        Token::StdString(self)
+        Token::String(self)
     }
 }
 
@@ -613,7 +613,7 @@ mod tests {
     #[test]
     fn test_into_token_std_string() -> Result<()> {
         let expected = String::from("hello");
-        let token = Token::StdString(expected.clone());
+        let token = Token::String(expected.clone());
         let detokenized = String::from_token(token.into_token())?;
 
         assert_eq!(detokenized, expected);

@@ -43,7 +43,7 @@ impl Parameterize for Bytes {
 
 impl Parameterize for String {
     fn param_type() -> ParamType {
-        ParamType::StdString
+        ParamType::String
     }
 }
 

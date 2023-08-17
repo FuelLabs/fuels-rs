@@ -51,7 +51,7 @@ impl ABIEncoder {
             Token::RawSlice(data) => Self::encode_raw_slice(data)?,
             Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
             // `String` in Sway has the same memory layout as the bytes type
-            Token::StdString(string) => Self::encode_bytes(string.clone().into_bytes())?,
+            Token::String(string) => Self::encode_bytes(string.clone().into_bytes())?,
         };
 
         Ok(encoded_token)
@@ -1178,7 +1178,7 @@ mod tests {
     fn encoding_std_string() -> Result<()> {
         // arrange
         let string = String::from("This ");
-        let token = Token::StdString(string);
+        let token = Token::String(string);
         let offset = 40;
 
         // act

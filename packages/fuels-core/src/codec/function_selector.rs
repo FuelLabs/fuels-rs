@@ -75,7 +75,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::RawSlice => "rawslice".to_string(),
         ParamType::Bytes => "s(s(rawptr,u64),u64)".to_string(),
-        ParamType::StdString => "s(s(s(rawptr,u64),u64))".to_string(),
+        ParamType::String => "s(s(s(rawptr,u64),u64))".to_string(),
     }
 }
 
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn handles_std_strings() {
-        let inputs = [ParamType::StdString];
+        let inputs = [ParamType::String];
 
         let signature = resolve_fn_signature("some_fn", &inputs);
 

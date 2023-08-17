@@ -42,7 +42,7 @@ pub enum ParamType {
     Tuple(Vec<ParamType>),
     RawSlice,
     Bytes,
-    StdString,
+    String,
 }
 
 pub enum ReturnLocation {
@@ -84,17 +84,17 @@ impl ParamType {
         match &self {
             ParamType::Vector(param_type) => param_type.uses_heap_types(),
             ParamType::Bytes => false,
-            // Here, we return false because even though the `StdString` type has an underlying
+            // Here, we return false because even though the `Token::String` type has an underlying
             // `Bytes` type nested, it is an exception that will be generalized as part of
             // https://github.com/FuelLabs/fuels-rs/discussions/944
-            ParamType::StdString => false,
+            ParamType::String => false,
             _ => self.uses_heap_types(),
         }
     }
 
     fn uses_heap_types(&self) -> bool {
         match &self {
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::StdString => true,
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => true,
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
             ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
             ParamType::Enum {
@@ -119,7 +119,7 @@ impl ParamType {
     pub fn is_vm_heap_type(&self) -> bool {
         matches!(
             self,
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::StdString
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String
         )
     }
 
@@ -130,7 +130,7 @@ impl ParamType {
                 Some(inner_param_type.compute_encoding_width() * WORD_SIZE)
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes | ParamType::StdString => Some(std::mem::size_of::<u8>()),
+            ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
             _ => None,
         }
     }
@@ -154,7 +154,7 @@ impl ParamType {
             | ParamType::U64
             | ParamType::Bool => 1,
             ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => 2,
-            ParamType::Vector(_) | ParamType::Bytes | ParamType::StdString => 3,
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => 3,
             ParamType::U256 | ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
             ParamType::StringArray(len) => count_words(*len),
@@ -417,7 +417,7 @@ fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
 fn try_std_string(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(["struct std::string::String", "struct String"]
         .contains(&the_type.type_field.as_str())
-        .then_some(ParamType::StdString))
+        .then_some(ParamType::String))
 }
 
 fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
@@ -1310,7 +1310,7 @@ mod tests {
         assert!(!ParamType::StringArray(10).contains_nested_heap_types());
         assert!(!ParamType::RawSlice.contains_nested_heap_types());
         assert!(!ParamType::Bytes.contains_nested_heap_types());
-        assert!(!ParamType::StdString.contains_nested_heap_types());
+        assert!(!ParamType::String.contains_nested_heap_types());
         Ok(())
     }
 
@@ -1474,7 +1474,7 @@ mod tests {
 
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
-        assert_eq!(param_type, ParamType::StdString);
+        assert_eq!(param_type, ParamType::String);
     }
 
     #[test]
@@ -1484,7 +1484,7 @@ mod tests {
 
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
-        assert_eq!(param_type, ParamType::StdString);
+        assert_eq!(param_type, ParamType::String);
     }
 
     fn given_type_with_path(path: &str) -> Type {
