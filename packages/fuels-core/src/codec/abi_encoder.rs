@@ -695,7 +695,7 @@ mod tests {
             v2: str[10]
         }
          */
-        let types = vec![ParamType::Bool, ParamType::String(10)];
+        let types = vec![ParamType::Bool, ParamType::StringArray(10)];
         let deeper_enum_variants = EnumVariants::new(types)?;
         let deeper_enum_token = Token::StringArray(StringToken::new("0123456789".into(), Some(10)));
 

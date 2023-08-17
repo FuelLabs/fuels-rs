@@ -75,7 +75,7 @@ impl ABIDecoder {
             ParamType::B256 => Self::decode_b256(bytes),
             ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
-            ParamType::String(len) => Self::decode_string_array(bytes, *len),
+            ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => Self::decode_array(t, bytes, *length),
             ParamType::Struct { fields, .. } => Self::decode_struct(fields, bytes),
             ParamType::Enum { variants, .. } => Self::decode_enum(bytes, variants),
@@ -454,7 +454,7 @@ mod tests {
 
     #[test]
     fn decode_string_array() -> Result<()> {
-        let types = vec![ParamType::String(23), ParamType::String(5)];
+        let types = vec![ParamType::StringArray(23), ParamType::StringArray(5)];
         let data = [
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
             0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
@@ -698,7 +698,7 @@ mod tests {
 
         let u8_arr = ParamType::Array(Box::new(ParamType::U8), 2);
         let b256 = ParamType::B256;
-        let s = ParamType::String(3);
+        let s = ParamType::StringArray(3);
         let ss = ParamType::StringSlice;
 
         let types = [nested_struct, u8_arr, b256, s, ss];
