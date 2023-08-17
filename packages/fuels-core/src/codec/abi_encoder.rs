@@ -7,7 +7,7 @@ use crate::{
         errors::Result,
         pad_string, pad_u16, pad_u32, pad_u8,
         unresolved_bytes::{Data, UnresolvedBytes},
-        EnumSelector, StringToken, Token, U256,
+        EnumSelector, StaticStringToken, Token, U256,
     },
 };
 
@@ -159,7 +159,7 @@ impl ABIEncoder {
         Ok(vec![Data::Dynamic(encoded_data), len])
     }
 
-    fn encode_string_slice(arg_string: &StringToken) -> Result<Vec<Data>> {
+    fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {
         let encoded_data = Data::Inline(arg_string.get_encodable_str()?.as_bytes().to_vec());
 
         let num_bytes = arg_string.get_encodable_str()?.len();
@@ -167,7 +167,7 @@ impl ABIEncoder {
         Ok(vec![Data::Dynamic(vec![encoded_data]), len])
     }
 
-    fn encode_string_array(arg_string: &StringToken) -> Result<Data> {
+    fn encode_string_array(arg_string: &StaticStringToken) -> Result<Data> {
         Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
     }
 
@@ -501,7 +501,7 @@ mod tests {
 
         let fn_signature = "takes_string(str[23])";
 
-        let args: Vec<Token> = vec![Token::StringArray(StringToken::new(
+        let args: Vec<Token> = vec![Token::StringArray(StaticStringToken::new(
             "This is a full sentence".into(),
             Some(23),
         ))];
@@ -540,7 +540,7 @@ mod tests {
 
         let fn_signature = "takes_string(str)";
 
-        let args: Vec<Token> = vec![Token::StringSlice(StringToken::new(
+        let args: Vec<Token> = vec![Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
         ))];
@@ -697,7 +697,8 @@ mod tests {
          */
         let types = vec![ParamType::Bool, ParamType::StringArray(10)];
         let deeper_enum_variants = EnumVariants::new(types)?;
-        let deeper_enum_token = Token::StringArray(StringToken::new("0123456789".into(), Some(10)));
+        let deeper_enum_token =
+            Token::StringArray(StaticStringToken::new("0123456789".into(), Some(10)));
 
         let str_enc = vec![
             b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
@@ -870,7 +871,10 @@ mod tests {
 
         let b256 = Token::B256(hasher.finalize().into());
 
-        let s = Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23)));
+        let s = Token::StringArray(StaticStringToken::new(
+            "This is a full sentence".into(),
+            Some(23),
+        ));
 
         let args: Vec<Token> = vec![foo, u8_arr, b256, s];
 

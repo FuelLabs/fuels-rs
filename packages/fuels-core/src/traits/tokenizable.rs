@@ -5,7 +5,7 @@ use crate::{
     types::{
         errors::{error, Error, Result},
         param_types::ParamType,
-        AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StringToken, Token,
+        AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StaticStringToken, Token,
     },
 };
 
@@ -507,7 +507,7 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
     }
 
     fn into_token(self) -> Token {
-        Token::StringArray(StringToken::new(self.into(), Some(LEN)))
+        Token::StringArray(StaticStringToken::new(self.into(), Some(LEN)))
     }
 }
 
@@ -527,7 +527,7 @@ impl Tokenizable for AsciiString {
     }
 
     fn into_token(self) -> Token {
-        Token::StringSlice(StringToken::new(self.into(), None))
+        Token::StringSlice(StaticStringToken::new(self.into(), None))
     }
 }
 
@@ -600,7 +600,7 @@ mod tests {
 
     #[test]
     fn sized_ascii_string_is_detokenized_correctly() -> Result<()> {
-        let token = Token::StringArray(StringToken::new("abc".to_string(), Some(3)));
+        let token = Token::StringArray(StaticStringToken::new("abc".to_string(), Some(3)));
 
         let sized_ascii_string =
             SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");

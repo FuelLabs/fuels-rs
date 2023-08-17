@@ -9,7 +9,7 @@ use crate::{
         enum_variants::EnumVariants,
         errors::{error, Error, Result},
         param_types::ParamType,
-        StringToken, Token, U256,
+        StaticStringToken, Token, U256,
     },
 };
 
@@ -176,7 +176,7 @@ impl ABIDecoder {
         let decoded = str::from_utf8(bytes)?;
 
         Ok(DecodeResult {
-            token: Token::StringSlice(StringToken::new(decoded.into(), None)),
+            token: Token::StringSlice(StaticStringToken::new(decoded.into(), None)),
             bytes_read: decoded.len(),
         })
     }
@@ -187,7 +187,7 @@ impl ABIDecoder {
 
         let decoded = str::from_utf8(&encoded_str[..length])?;
         let result = DecodeResult {
-            token: Token::StringArray(StringToken::new(decoded.into(), Some(length))),
+            token: Token::StringArray(StaticStringToken::new(decoded.into(), Some(length))),
             bytes_read: encoded_len,
         };
         Ok(result)
@@ -465,8 +465,11 @@ mod tests {
         let decoded = ABIDecoder::decode(&types, &data)?;
 
         let expected = vec![
-            Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23))),
-            Token::StringArray(StringToken::new("Hello".into(), Some(5))),
+            Token::StringArray(StaticStringToken::new(
+                "This is a full sentence".into(),
+                Some(23),
+            )),
+            Token::StringArray(StaticStringToken::new("Hello".into(), Some(5))),
         ];
 
         assert_eq!(decoded, expected);
@@ -484,7 +487,7 @@ mod tests {
 
         let decoded = ABIDecoder::decode(&types, &data)?;
 
-        let expected = vec![Token::StringSlice(StringToken::new(
+        let expected = vec![Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
         ))];
@@ -739,9 +742,12 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let ss = Token::StringSlice(StringToken::new("This is a full sentence".into(), None));
+        let ss = Token::StringSlice(StaticStringToken::new(
+            "This is a full sentence".into(),
+            None,
+        ));
 
-        let s = Token::StringArray(StringToken::new("foo".into(), Some(3)));
+        let s = Token::StringArray(StaticStringToken::new("foo".into(), Some(3)));
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s, ss];
 
