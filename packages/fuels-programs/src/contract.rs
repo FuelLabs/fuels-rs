@@ -359,8 +359,8 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    pub decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
+    decoder_config: DecoderConfig,
     cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub datatype: PhantomData<D>,
@@ -447,6 +447,7 @@ where
 
     pub fn decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
         self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
         self
     }
 
@@ -524,7 +525,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts).parse(
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -610,11 +611,11 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     Ok(ContractCallHandler {
         contract_call,
         tx_parameters,
-        decoder_config: DecoderConfig::default(),
         cached_tx_id: None,
         account,
         datatype: PhantomData,
         log_decoder,
+        decoder_config: Default::default(),
     })
 }
 
@@ -662,9 +663,10 @@ impl<T: Account> MultiContractCallHandler<T> {
             tx_parameters: TxParameters::default(),
             cached_tx_id: None,
             account,
-            log_decoder: LogDecoder {
-                log_formatters: Default::default(),
-            },
+            // TODO: maybe we need a default here?
+            // or maybe to not save the decoder config inside log decoder at all? but rather pass
+            // it every time you wish to decode? that might impact ux
+            log_decoder: LogDecoder::new(Default::default()),
         }
     }
 
@@ -762,7 +764,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         &self,
         receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts);
+        // TODO: propagate decoder config
+        let mut receipt_parser = ReceiptParser::new(&receipts, Default::default());
 
         let final_tokens = self
             .contract_calls

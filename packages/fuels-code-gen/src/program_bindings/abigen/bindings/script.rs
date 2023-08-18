@@ -51,7 +51,7 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
-                    log_decoder: ::fuels::programs::logs::LogDecoder {log_formatters: #log_formatters_lookup}
+                    log_decoder: ::fuels::programs::logs::LogDecoder::new(#log_formatters_lookup)
                 }
             }
 

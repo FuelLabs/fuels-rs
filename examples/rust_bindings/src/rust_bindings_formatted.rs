@@ -1,3 +1,4 @@
+// TODO: regenerate this file
 pub mod abigen_bindings {
     pub mod my_contract_mod {
         pub struct MyContract<T: Account> {
@@ -7,9 +8,7 @@ pub mod abigen_bindings {
         }
         impl<T: Account> MyContract<T> {
             pub fn new(contract_id: Bech32ContractId, account: T) -> Self {
-                let log_decoder = LogDecoder {
-                    type_lookup: logs::log_type_lookup(&[], contract_id.clone().into()),
-                };
+                let log_decoder = LogDecoder::new(logs::log_type_lookup(&[], contract_id.clone().into()),
                 Self {
                     contract_id,
                     account,

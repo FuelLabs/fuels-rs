@@ -274,7 +274,9 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts).parse(None, &D::param_type())?;
+        // TODO: replace the decoder config with user provided one
+        let token =
+            ReceiptParser::new(&receipts, Default::default()).parse(None, &D::param_type())?;
 
         Ok(FuelCallResponse::new(
             D::from_token(token)?,

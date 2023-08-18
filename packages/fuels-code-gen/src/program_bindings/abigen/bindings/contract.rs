@@ -50,7 +50,7 @@ pub(crate) fn contract_bindings(
                 account: T,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
-                let log_decoder = ::fuels::programs::logs::LogDecoder { log_formatters: #log_formatters };
+                let log_decoder = ::fuels::programs::logs::LogDecoder::new(#log_formatters);
                 Self { contract_id, account, log_decoder }
             }
 
