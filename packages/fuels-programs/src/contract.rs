@@ -5,7 +5,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::ABIEncoder,
+    codec::{ABIEncoder, DecoderConfig},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -359,6 +359,7 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
+    pub decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
@@ -441,6 +442,11 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    pub fn decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
         self
     }
 
@@ -604,6 +610,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     Ok(ContractCallHandler {
         contract_call,
         tx_parameters,
+        decoder_config: DecoderConfig::default(),
         cached_tx_id: None,
         account,
         datatype: PhantomData,

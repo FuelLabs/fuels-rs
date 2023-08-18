@@ -9,6 +9,7 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1440,4 +1441,42 @@ fn db_rocksdb() {
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .unwrap();
+}
+
+#[tokio::test]
+async fn can_configure_decoder() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+        ),),
+    );
+
+    let vec_elements_to_add = DecoderConfig::default().max_tokens;
+
+    let configurables = MyContractConfigurables::new().set_NUM_ELEMENTS(vec_elements_to_add as u64);
+
+    let contract_id = Contract::load_from(
+        "tests/contracts/needs_custom_decoder/out/debug/needs_custom_decoder.bin",
+        LoadConfiguration::default().set_configurables(configurables),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let result = contract_instance
+        .methods()
+        .i_return_a_big_type()
+        .decoder_config(DecoderConfig {
+            max_tokens: vec_elements_to_add + 1,
+            ..Default::default()
+        })
+        .call()
+        .await?
+        .value;
+
+    assert_eq!(result, vec![0; vec_elements_to_add]);
+    Ok(())
 }
