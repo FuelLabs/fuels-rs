@@ -1374,3 +1374,51 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    {
+        // Cannot decode the produced log with the default decoder config
+        let response = script_instance.main().call().await.unwrap();
+
+        response
+            .decode_logs_with_type::<[u8; 1000]>()
+            .expect_err("Cannot decode the log with default decoder config");
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty())
+    }
+    {
+        // When the token limit is bumped log decoding succeeds
+        let response = script_instance
+            .main()
+            .decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .unwrap();
+
+        let logs = response.decode_logs_with_type::<[u8; 1000]>().unwrap();
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_succeeded().is_empty())
+    }
+
+    Ok(())
+}
