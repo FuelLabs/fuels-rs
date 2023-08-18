@@ -34,7 +34,7 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
-        Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
+        Ok(format!("{:?}", try_from_bytes::<T>(bytes, decoder_config)?))
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
@@ -177,7 +177,7 @@ impl LogDecoder {
             .filter_map(|(log_id, data)| {
                 target_ids
                     .contains(&log_id)
-                    .then_some(try_from_bytes(&data))
+                    .then_some(try_from_bytes(&data, self.decoder_config))
             })
             .collect()
     }

@@ -1444,7 +1444,7 @@ fn db_rocksdb() {
 }
 
 #[tokio::test]
-async fn can_configure_decoder() -> Result<()> {
+async fn can_configure_decoder_for_contract_return_decoding() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1465,18 +1465,27 @@ async fn can_configure_decoder() -> Result<()> {
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
-
-    let result = contract_instance
+    {
+        contract_instance
         .methods()
         .i_return_a_big_type()
-        .decoder_config(DecoderConfig {
-            max_tokens: vec_elements_to_add + 1,
-            ..Default::default()
-        })
         .call()
-        .await?
-        .value;
+        .await.expect_err("Should have failed because there are more tokens than what is supported by default.");
+    }
+    {
+        let result = contract_instance
+            .methods()
+            .i_return_a_big_type()
+            .decoder_config(DecoderConfig {
+                max_tokens: vec_elements_to_add + 1,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .value;
 
-    assert_eq!(result, vec![0; vec_elements_to_add]);
+        assert_eq!(result, vec![0; vec_elements_to_add]);
+    }
+
     Ok(())
 }

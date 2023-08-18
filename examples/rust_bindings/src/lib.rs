@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::codec::try_from_bytes,
+        core::codec::{try_from_bytes, DecoderConfig},
         prelude::{AssetId, ContractId, Result},
     };
 
@@ -86,7 +86,7 @@ mod tests {
         let asset_id = AssetId::new(asset_id_bytes);
 
         let bytes: Vec<u8> = [contract_id_bytes, asset_id_bytes].concat();
-        let expected: (ContractId, AssetId) = try_from_bytes(&bytes)?;
+        let expected: (ContractId, AssetId) = try_from_bytes(&bytes, DecoderConfig::default())?;
 
         assert_eq!(expected, (contract_id, asset_id));
         // ANCHOR_END: manual_decode_native

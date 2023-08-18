@@ -5,6 +5,7 @@ use fuels::{
     tx::Receipt,
     types::{Bits256, SizedAsciiString},
 };
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
@@ -1292,6 +1293,65 @@ async fn test_log_results() -> Result<()> {
     let failed = log.filter_failed();
     assert_eq!(succeeded, vec!["123".to_string()]);
     assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+    {
+        let response = contract_instance
+            .methods()
+            .i_log_a_1000_el_array()
+            .call()
+            .await?;
+
+        response.decode_logs_with_type::<[u8; 1000]>().expect_err(
+            "Should have failed since there are more tokens than what is supported by default.",
+        );
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+    }
+    {
+        let logs = contract_instance
+            .methods()
+            .i_log_a_1000_el_array()
+            .decoder_config(DecoderConfig {
+                max_tokens: 10001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .decode_logs_with_type::<[u8; 1000]>()?;
+
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = contract_instance
+            .methods()
+            .i_log_a_1000_el_array()
+            .decoder_config(DecoderConfig {
+                max_tokens: 10001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .decode_logs();
+
+        assert!(!logs.filter_succeeded().is_empty());
+    }
 
     Ok(())
 }
