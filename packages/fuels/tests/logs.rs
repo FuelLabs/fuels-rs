@@ -1311,11 +1311,40 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
             wallet = "wallet"
         )
     );
+    let methods = contract_instance.methods();
     {
-        let response = contract_instance
-            .methods()
+        // Single call: decoding defaults will fail
+        let response = methods.i_log_a_1000_el_array().call().await?;
+
+        response.decode_logs_with_type::<[u8; 1000]>().expect_err(
+            "Should have failed since there are more tokens than what is supported by default.",
+        );
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+    }
+    {
+        // Single call: increasing limits makes the test pass
+        let response = methods
             .i_log_a_1000_el_array()
+            .decoder_config(DecoderConfig {
+                max_tokens: 10001,
+                ..Default::default()
+            })
             .call()
+            .await?;
+
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_succeeded().is_empty());
+    }
+    {
+        // Multi call: decoding defaults will fail
+        let response = MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_log_a_1000_el_array())
+            .call::<((),)>()
             .await?;
 
         response.decode_logs_with_type::<[u8; 1000]>().expect_err(
@@ -1326,30 +1355,20 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
     }
     {
-        let logs = contract_instance
-            .methods()
-            .i_log_a_1000_el_array()
+        // Multi call: increasing limits makes the test pass
+        let response = MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_log_a_1000_el_array())
             .decoder_config(DecoderConfig {
                 max_tokens: 10001,
                 ..Default::default()
             })
-            .call()
-            .await?
-            .decode_logs_with_type::<[u8; 1000]>()?;
+            .call::<((),)>()
+            .await?;
 
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
         assert_eq!(logs, vec![[0u8; 1000]]);
 
-        let logs = contract_instance
-            .methods()
-            .i_log_a_1000_el_array()
-            .decoder_config(DecoderConfig {
-                max_tokens: 10001,
-                ..Default::default()
-            })
-            .call()
-            .await?
-            .decode_logs();
-
+        let logs = response.decode_logs();
         assert!(!logs.filter_succeeded().is_empty());
     }
 

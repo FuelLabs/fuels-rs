@@ -653,8 +653,11 @@ pub struct MultiContractCallHandler<T: Account> {
     pub tx_parameters: TxParameters,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
+    decoder_config: DecoderConfig,
     pub account: T,
 }
+// TODO: script call decoding config
+// TODO multicall decoding config
 
 impl<T: Account> MultiContractCallHandler<T> {
     pub fn new(account: T) -> Self {
@@ -663,11 +666,15 @@ impl<T: Account> MultiContractCallHandler<T> {
             tx_parameters: TxParameters::default(),
             cached_tx_id: None,
             account,
-            // TODO: maybe we need a default here?
-            // or maybe to not save the decoder config inside log decoder at all? but rather pass
-            // it every time you wish to decode? that might impact ux
             log_decoder: LogDecoder::new(Default::default()),
+            decoder_config: DecoderConfig::default(),
         }
+    }
+
+    pub fn decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
+        self
     }
 
     /// Adds a contract call to be bundled in the transaction
@@ -764,8 +771,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         &self,
         receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>> {
-        // TODO: propagate decoder config
-        let mut receipt_parser = ReceiptParser::new(&receipts, Default::default());
+        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
         let final_tokens = self
             .contract_calls

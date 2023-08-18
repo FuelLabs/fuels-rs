@@ -1444,7 +1444,7 @@ fn db_rocksdb() {
 }
 
 #[tokio::test]
-async fn can_configure_decoder_for_contract_return_decoding() -> Result<()> {
+async fn can_configure_decoding_of_contract_return() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1454,27 +1454,29 @@ async fn can_configure_decoder_for_contract_return_decoding() -> Result<()> {
     );
 
     let vec_elements_to_add = DecoderConfig::default().max_tokens;
+    let contract_instance = {
+        let configurables =
+            MyContractConfigurables::new().set_NUM_ELEMENTS(vec_elements_to_add as u64);
 
-    let configurables = MyContractConfigurables::new().set_NUM_ELEMENTS(vec_elements_to_add as u64);
+        let contract_id = Contract::load_from(
+            "tests/contracts/needs_custom_decoder/out/debug/needs_custom_decoder.bin",
+            LoadConfiguration::default().set_configurables(configurables),
+        )?
+        .deploy(&wallet, TxParameters::default())
+        .await?;
+        MyContract::new(contract_id, wallet.clone())
+    };
 
-    let contract_id = Contract::load_from(
-        "tests/contracts/needs_custom_decoder/out/debug/needs_custom_decoder.bin",
-        LoadConfiguration::default().set_configurables(configurables),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
+    let methods = contract_instance.methods();
     {
-        contract_instance
-        .methods()
-        .i_return_a_big_type()
-        .call()
-        .await.expect_err("Should have failed because there are more tokens than what is supported by default.");
+        // Single call: Will not work by default
+        methods.i_return_a_big_type().call().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default.",
+        );
     }
     {
-        let result = contract_instance
-            .methods()
+        // Single call: Works when configured
+        let result = methods
             .i_return_a_big_type()
             .decoder_config(DecoderConfig {
                 max_tokens: vec_elements_to_add + 1,
@@ -1485,6 +1487,26 @@ async fn can_configure_decoder_for_contract_return_decoding() -> Result<()> {
             .value;
 
         assert_eq!(result, vec![0; vec_elements_to_add]);
+    }
+    {
+        // Multi call: Will not work by default
+        MultiContractCallHandler::new(wallet.clone())
+        .add_call(methods.i_return_a_big_type())
+        .call::<(Vec<u8>,)>().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default",
+        );
+    }
+    {
+        // Multi call: Works when configured
+        MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_return_a_big_type())
+            .decoder_config(DecoderConfig {
+                max_tokens: vec_elements_to_add + 1,
+                ..Default::default()
+            })
+            .call::<(Vec<u8>,)>()
+            .await
+            .unwrap();
     }
 
     Ok(())
