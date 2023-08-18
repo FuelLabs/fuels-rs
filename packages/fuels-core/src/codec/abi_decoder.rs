@@ -7,11 +7,11 @@ use self::bounded_decoder::BoundedDecoder;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecoderConfig {
-    // Entering a struct, array, tuple, enum or vector increases the depth. Decoding will fail if
-    // the current depth becomes greater than `max_depth` configured here.
+    /// Entering a struct, array, tuple, enum or vector increases the depth. Decoding will fail if
+    /// the current depth becomes greater than `max_depth` configured here.
     pub max_depth: usize,
-    // Every decoded Token will increase the token count. Decoding will fail if the current
-    // token count becomes greater than `max_tokens` configured here.
+    /// Every decoded Token will increase the token count. Decoding will fail if the current
+    /// token count becomes greater than `max_tokens` configured here.
     pub max_tokens: usize,
 }
 
@@ -82,7 +82,7 @@ impl AbiDecoder {
     }
 }
 
-#[deprecated(note = "Use AbiDecoder instead.")]
+#[deprecated(note = "Use `AbiDecoder` instead.")]
 pub struct ABIDecoder;
 
 #[allow(deprecated)]
@@ -94,13 +94,13 @@ impl ABIDecoder {
     /// * `param_type`: The `ParamType` of the type we expect is encoded
     ///                  inside `bytes`.
     /// * `bytes`:       The bytes to be used in the decoding process.
-    #[deprecated(note = "Use AbiDecoder::default().decode(param_type, bytes) instead.")]
+    #[deprecated(note = "Use `AbiDecoder::default().decode(param_type, bytes)` instead.")]
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         AbiDecoder::default().decode(param_type, bytes)
     }
 
     /// Same as `decode_single` but decodes multiple `ParamType`s in one go.
-    #[deprecated(note = "Use AbiDecoder::default().decode_multiple(param_types, bytes) instead.")]
+    #[deprecated(note = "Use `AbiDecoder::default().decode_multiple(param_types, bytes)` instead.")]
     pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         AbiDecoder::default().decode_multiple(param_types, bytes)
     }
