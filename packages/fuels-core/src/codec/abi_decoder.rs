@@ -27,10 +27,10 @@ struct Decoded {
 pub struct DecoderConfig {
     // Entering a struct, array, tuple, enum or vector increases the depth. Decoding will fail if
     // the current depth becomes greater than `max_depth` configured here.
-    max_depth: usize,
+    pub max_depth: usize,
     // Every decoded Token will increase the token count. Decoding will fail if the current
     // token count becomes greater than `max_tokens` configured here.
-    max_tokens: usize,
+    pub max_tokens: usize,
 }
 
 impl Default for DecoderConfig {
@@ -87,7 +87,9 @@ impl AbiDecoder {
     /// ```
     pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         Self::is_type_decodable(param_type)?;
-        Ok(self.decode_param(param_type, bytes)?.token)
+        let token = self.decode_param(param_type, bytes)?.token;
+        self.token_tracker.reset();
+        Ok(token)
     }
 
     /// Same as `decode` but decodes multiple `ParamType`s in one go.
@@ -115,6 +117,7 @@ impl AbiDecoder {
         }
         let (tokens, _) = self.decode_params(param_types, bytes)?;
 
+        self.token_tracker.reset();
         Ok(tokens)
     }
 
@@ -439,6 +442,10 @@ impl CounterWithLimit {
         if self.count > 0 {
             self.count -= 1;
         }
+    }
+
+    fn reset(&mut self) {
+        self.count = 0;
     }
 }
 
@@ -1114,5 +1121,25 @@ mod tests {
             msg,
             "Cannot calculate the number of elements because the type is zero-sized."
         );
+    }
+
+    #[test]
+    fn token_count_is_being_reset_between_decodings() {
+        // given
+        let config = DecoderConfig {
+            max_tokens: 3,
+            ..Default::default()
+        };
+
+        let param_type = ParamType::Array(Box::new(ParamType::String(0)), 2);
+
+        let mut decoder = AbiDecoder::new(config);
+        decoder.decode(&param_type, &[]).unwrap();
+
+        // when
+        let result = decoder.decode(&param_type, &[]);
+
+        // then
+        result.expect("Element count to be reset");
     }
 }
