@@ -69,18 +69,18 @@ jobs:
           name: sway-examples
           # cache only the sway build artifacts, skip all src files
           path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+            packages/fuels-e2e-tests/tests
+            !packages/fuels-e2e-tests/tests/*.rs
+            !packages/fuels-e2e-tests/tests/**/*.rs
+            !packages/fuels-e2e-tests/tests/**/*.sw
+            !packages/fuels-e2e-tests/tests/**/Forc.toml
+            !packages/fuels-e2e-tests/tests/**/Forc.lock
+            !packages/fuels-e2e-tests/tests/.gitignore
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
         run: forc build --terse --json-abi-with-callpaths
-        working-directory: packages/fuels
+        working-directory: packages/fuels-e2e-tests
 
       - uses: actions/upload-artifact@v2
         with:
@@ -88,13 +88,13 @@ jobs:
           name: sway-examples-w-type-paths
           # cache only the sway build artifacts, skip all src files
           path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+            packages/fuels-e2e-tests/tests
+            !packages/fuels-e2e-tests/tests/*.rs
+            !packages/fuels-e2e-tests/tests/**/*.rs
+            !packages/fuels-e2e-tests/tests/**/*.sw
+            !packages/fuels-e2e-tests/tests/**/Forc.toml
+            !packages/fuels-e2e-tests/tests/**/Forc.lock
+            !packages/fuels-e2e-tests/tests/.gitignore
 
   get-workspace-members:
     runs-on: ubuntu-latest
