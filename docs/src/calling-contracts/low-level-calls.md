@@ -12,7 +12,7 @@ Your caller contract should call `std::low_level_call::call_with_function_select
 - `std::low_level_call::CallParams`
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/contracts/low_level_caller/src/main.sw:low_level_call_contract}}
+{{#include ../../../packages/fuels-e2e-tests/tests/contracts/low_level_caller/src/main.sw:low_level_call_contract}}
 ```
 
 On the SDK side, you can construct an encoded function selector using the `fuels::core::fn_selector` macro, and encoded calldata using the `fuels::core::calldata` macro.
@@ -20,7 +20,7 @@ On the SDK side, you can construct an encoded function selector using the `fuels
 E.g. to call the following function on the target contract:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/contracts/contract_test/src/main.sw:low_level_call}}
+{{#include ../../../packages/fuels-e2e-tests/tests/contracts/contract_test/src/main.sw:low_level_call}}
 ```
 
 you would construct the function selector and the calldata as such, and provide them to the caller contract (like the one above):

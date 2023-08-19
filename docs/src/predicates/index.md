@@ -7,7 +7,7 @@ Predicates, in Sway, are programs that return a Boolean value and do not have an
 Let's consider the following predicate example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/basic_predicate/src/main.sw}}
+{{#include ../../../packages/fuels-e2e-tests/tests/predicates/basic_predicate/src/main.sw}}
 ```
 
 We will look at a complete example of using the SDK to send and receive funds from a predicate.
@@ -46,10 +46,10 @@ Then we can transfer assets owned by the predicate via the [Account](../accounts
 Same as contracts and scripts, you can define configurable constants in `predicates`, which can be changed during the predicate execution. Here is an example of how the constants are defined.
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates/predicate_configurables/src/main.sw:predicate_configurables}}
+{{#include ../../../packages/fuels-e2e-tests/tests/predicates/predicate_configurables/src/main.sw:predicate_configurables}}
 ```
 
 Each configurable constant will get a dedicated `set` method in the SDK. For example, the constant `U8` will get the `set_U8` method which accepts the same type defined in sway. Below is an example where we chain several `set` methods and update the predicate with the new constants.
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/predicates.rs:predicate_configurables}}
+{{#include ../../../packages/fuels-e2e-tests/tests/predicates.rs:predicate_configurables}}
