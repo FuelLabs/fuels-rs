@@ -13,16 +13,16 @@ Cargo.lock
 docs/book/
 
 # Don't add lock files in the fuels tests directory.
-packages/fuels/tests/**/**/Forc.lock
+packages/fuels-e2e-tests/tests/**/**/Forc.lock
 
 # Don't add out/ files from test Sway projects.
-packages/fuels/tests/**/**/out/
+packages/fuels-e2e-tests/tests/**/**/out/
 
 # Don't add target/ files from test Sway projects.
-packages/fuels/tests/**/**/target/
+packages/fuels-e2e-tests/tests/**/**/target/
 
 # Don't add .gitignore files from test Sway projects.
-packages/fuels/tests/**/**/.gitignore
+packages/fuels-e2e-tests/tests/**/**/.gitignore
 
 # Don't add lock files in the fuels directory.
-packages/fuels/Forc.lock
+packages/fuels-e2e-tests/Forc.lock

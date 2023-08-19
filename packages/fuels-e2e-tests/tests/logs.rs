@@ -12,7 +12,7 @@ async fn test_parse_logged_variables() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -50,7 +50,7 @@ async fn test_parse_logs_values() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -84,7 +84,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -122,7 +122,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -174,7 +174,7 @@ async fn test_decode_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -228,7 +228,7 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -255,7 +255,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -305,7 +305,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -359,11 +359,11 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/logs/contract_logs"
+                project = "packages/fuels-e2e-tests/tests/logs/contract_logs"
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/logs/contract_with_contract_logs"
+                project = "packages/fuels-e2e-tests/tests/logs/contract_with_contract_logs"
             )
         ),
         Deploy(
@@ -379,7 +379,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        "../../packages/fuels-e2e-tests/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -437,7 +437,7 @@ async fn test_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels-e2e-tests/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -493,7 +493,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels-e2e-tests/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -550,7 +550,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "packages/fuels-e2e-tests/tests/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -613,11 +613,11 @@ async fn test_script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "log_script",
-        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/logs/script_logs/out/debug/script_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
+    let bin_path = "../fuels-e2e-tests/tests/logs/script_logs/out/debug/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
@@ -680,11 +680,11 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/logs/contract_logs",
+                project = "packages/fuels-e2e-tests/tests/logs/contract_logs",
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/logs/contract_with_contract_logs",
+                project = "packages/fuels-e2e-tests/tests/logs/contract_with_contract_logs",
             )
         ),
         Deploy(
@@ -695,7 +695,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        "../../packages/fuels-e2e-tests/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -731,15 +731,15 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     abigen!(
         Contract(
         name="MyContract",
-        abi="packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json",
+        abi="packages/fuels-e2e-tests/tests/logs/contract_logs/out/debug/contract_logs-abi.json",
     ),Script(
         name="log_script",
-        abi="packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
+        abi="packages/fuels-e2e-tests/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
     )
     );
 
     let contract_id: ContractId = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        "../../packages/fuels-e2e-tests/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -749,7 +749,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     let contract_instance = MyContract::new(contract_id, wallet.clone());
 
     let bin_path =
-        "../fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
+        "../fuels-e2e-tests/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let expected_num_contract_logs = 4;
@@ -807,7 +807,7 @@ async fn test_script_decode_logs_with_type() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            project = "packages/fuels/tests/logs/script_logs"
+            project = "packages/fuels-e2e-tests/tests/logs/script_logs"
         )),
         LoadScript(
             name = "script_instance",
@@ -884,7 +884,7 @@ async fn test_script_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            project = "packages/fuels/tests/scripts/script_require"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_require"
         )),
         LoadScript(
             name = "script_instance",
@@ -940,11 +940,11 @@ async fn test_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/lib_contract",
+                project = "packages/fuels-e2e-tests/tests/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "packages/fuels-e2e-tests/tests/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -955,7 +955,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        "../../packages/fuels-e2e-tests/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -983,15 +983,15 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/lib_contract",
+                project = "packages/fuels-e2e-tests/tests/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractLogs",
-                project = "packages/fuels/tests/logs/contract_logs",
+                project = "packages/fuels-e2e-tests/tests/logs/contract_logs",
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "packages/fuels-e2e-tests/tests/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -1007,7 +1007,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        "../../packages/fuels-e2e-tests/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -1042,11 +1042,11 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
 async fn test_script_require_from_contract() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
 
-    abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
-            Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
+    abigen!(Contract(name = "MyContract", abi = "packages/fuels-e2e-tests/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
+            Script(name = "log_script", abi = "packages/fuels-e2e-tests/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        "../../packages/fuels-e2e-tests/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
@@ -1055,7 +1055,7 @@ async fn test_script_require_from_contract() -> Result<()> {
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
 
     let bin_path =
-        "../fuels/tests/scripts/require_from_contract/out/debug/require_from_contract.bin";
+        "../fuels-e2e-tests/tests/scripts/require_from_contract/out/debug/require_from_contract.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let error = instance
@@ -1081,7 +1081,7 @@ async fn test_contract_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/contracts/asserts"
+            project = "packages/fuels-e2e-tests/tests/contracts/asserts"
         )),
         Deploy(
             name = "contract_instance",
@@ -1152,7 +1152,7 @@ async fn test_script_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "log_script",
-            project = "packages/fuels/tests/scripts/script_asserts"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_asserts"
         )),
         LoadScript(
             name = "script_instance",
@@ -1232,7 +1232,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/token_ops"
+            project = "packages/fuels-e2e-tests/tests/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",
@@ -1263,7 +1263,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 async fn test_log_results() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await;

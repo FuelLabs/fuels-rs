@@ -34,7 +34,7 @@ mod tests {
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -55,7 +55,7 @@ mod tests {
             Wallets("wallet"),
             Abigen(Contract(
                 name = "TestContract",
-                project = "packages/fuels/tests/contracts/contract_test"
+                project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
             )),
             Deploy(
                 name = "contract_instance",
@@ -82,13 +82,13 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -121,7 +121,7 @@ mod tests {
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id_1 = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -150,7 +150,7 @@ mod tests {
             .set_maturity(0);
 
         let contract_id_2 = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             configuration,
         )?
         .deploy(&wallet, tx_parameters)
@@ -168,7 +168,7 @@ mod tests {
         // ANCHOR: abigen_example
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
         // ANCHOR_END: abigen_example
 
@@ -201,14 +201,14 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallets =
             launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
 
         let contract_id_1 = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallets[0], TxParameters::default())
@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(42, response.value);
 
         let contract_id_2 = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default().set_salt([1; 32]),
         )?
         .deploy(&wallets[1], TxParameters::default())
@@ -253,13 +253,13 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -323,13 +323,13 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/token_ops/out/debug/token_ops-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
+            "../../packages/fuels-e2e-tests/tests/contracts/token_ops/out/debug/token_ops\
         .bin",
             LoadConfiguration::default(),
         )?
@@ -363,20 +363,20 @@ mod tests {
         use fuels::prelude::*;
         abigen!(
             Contract(name="MyContract",
-            abi="packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller-abi.json"
+            abi="packages/fuels-e2e-tests/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let called_contract_id: ContractId = Contract::load_from(
-            "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/lib_contract/out/debug/lib_contract.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
         .await?
         .into();
 
-        let bin_path = "../../packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller.bin";
+        let bin_path = "../../packages/fuels-e2e-tests/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller.bin";
         let caller_contract_id = Contract::load_from(bin_path, LoadConfiguration::default())?
             .deploy(&wallet, TxParameters::default())
             .await?;
@@ -435,12 +435,12 @@ mod tests {
             abigen!(Contract(
                 name = "TestContract",
                 abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+                    "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
             let wallet = launch_provider_and_get_wallet().await;
 
             let contract_id = Contract::load_from(
-                "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+                "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
                 LoadConfiguration::default(),
             )?
             .deploy(&wallet, TxParameters::default())
@@ -480,7 +480,7 @@ mod tests {
                 name = "MyContract",
                 // Replace with your contract ABI.json path
                 abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+                    "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
             let wallet_original = launch_provider_and_get_wallet().await;
 
@@ -514,13 +514,13 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -552,13 +552,13 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -600,13 +600,13 @@ mod tests {
 
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let wallet = launch_provider_and_get_wallet().await;
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxParameters::default())
@@ -641,7 +641,7 @@ mod tests {
         use fuels::prelude::*;
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
@@ -650,7 +650,7 @@ mod tests {
         let wallet_2 = wallets.pop().unwrap();
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet_1, TxParameters::default())
@@ -680,7 +680,7 @@ mod tests {
             Wallets("wallet"),
             Abigen(Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/contract_test"
+                project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
             )),
             Deploy(
                 name = "contract_instance",
@@ -717,11 +717,11 @@ mod tests {
             Abigen(
                 Contract(
                     name = "MyCallerContract",
-                    project = "packages/fuels/tests/contracts/low_level_caller"
+                    project = "packages/fuels-e2e-tests/tests/contracts/low_level_caller"
                 ),
                 Contract(
                     name = "MyTargetContract",
-                    project = "packages/fuels/tests/contracts/contract_test"
+                    project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
                 ),
             ),
             Deploy(

@@ -1,0 +1,24 @@
+[package]
+name = "fuels-e2e-tests"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+readme = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+description = "E2E tests for Fuel Rust SDK."
+
+[dev-dependencies]
+chrono = { workspace = true }
+fuels = { workspace = true }
+hex = { workspace = true, default-features = false }
+sha2 = { workspace = true }
+tai64 = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = []
+fuel-core-lib = ["fuels/fuel-core-lib"]

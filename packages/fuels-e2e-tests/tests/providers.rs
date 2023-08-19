@@ -1,23 +1,26 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-use fuel_core_types::tai64::Tai64;
 use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
     test_helpers::Config,
-    tx::Receipt,
-    types::{block::Block, coin_type::CoinType, errors::error, message::Message},
+    tx::{CheckError, Receipt},
+    types::{block::Block, coin_type::CoinType, message::Message, Bits256},
 };
-use fuels_core::types::Bits256;
+#[cfg(feature = "fuel-core-lib")]
+use fuels::{
+    fuel_node::{Config as CoreConfig, FuelService, ServiceTrait},
+    types::errors::error,
+};
+use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -61,11 +64,12 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "fuel-core-lib")]
 #[tokio::test]
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -123,7 +127,7 @@ async fn test_input_message() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -166,7 +170,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
     let contract_id = Contract::load_from(
@@ -289,7 +293,7 @@ async fn given_a_provider() -> Provider {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
+    abigen!(Contract(name="MyContract", abi="packages/fuels-e2e-tests/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
     let config = Config {
         manual_blocks_enabled: true,
@@ -313,7 +317,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let err = deploy_w_maturity(1u32)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
     assert!(matches!(
         err,
-        Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
+        Error::ValidationError(CheckError::TransactionMaturity)
     ));
 
     provider.produce_blocks(1, None).await?;
@@ -329,7 +333,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -367,7 +371,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
-            project = "packages/fuels/tests/contracts/token_ops"
+            project = "packages/fuels-e2e-tests/tests/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",
@@ -474,7 +478,7 @@ async fn test_gas_errors() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -525,7 +529,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -567,7 +571,7 @@ async fn test_get_gas_used() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -601,7 +605,7 @@ async fn testnet_hello_world() -> Result<()> {
     // the testnet. But, if it becomes too problematic, we should remove it.
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
     // Create a provider pointing to the testnet.
@@ -773,7 +777,7 @@ async fn test_sway_timestamp() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/block_timestamp"
+            project = "packages/fuels-e2e-tests/tests/contracts/block_timestamp"
         )),
         Deploy(
             name = "contract_instance",

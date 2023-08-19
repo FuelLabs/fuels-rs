@@ -6,7 +6,7 @@ async fn test_transaction_script_workflow() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -29,7 +29,7 @@ async fn test_multi_call_script_workflow() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -62,10 +62,10 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/scripts/arguments/out/debug/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
+    let bin_path = "../fuels-e2e-tests/tests/scripts/arguments/out/debug/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -88,7 +88,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -119,7 +119,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -175,7 +175,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -208,7 +208,7 @@ async fn test_script_signing() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "BimBamScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -233,7 +233,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "transfer_script",
-            project = "packages/fuels/tests/scripts/transfer_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/transfer_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -271,7 +271,7 @@ async fn test_script_struct() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",
@@ -296,7 +296,7 @@ async fn test_script_enum() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_enum"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_enum"
         )),
         LoadScript(
             name = "script_instance",
@@ -318,7 +318,7 @@ async fn test_script_array() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_array"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_array"
         )),
         LoadScript(
             name = "script_instance",
@@ -340,7 +340,7 @@ async fn test_script_b256() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_b256"
         )),
         LoadScript(
             name = "script_instance",
@@ -362,7 +362,7 @@ async fn test_script_submit_and_response() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",

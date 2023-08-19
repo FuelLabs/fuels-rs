@@ -14,8 +14,11 @@
 
 pub mod tx {
     pub use fuel_tx::{
-        field, Bytes32, ConsensusParameters, ContractIdExt, Receipt, Salt, ScriptExecutionResult,
-        StorageSlot, Transaction as FuelTransaction, TxId,
+        field,
+        input::{coin::CoinSigned, Input},
+        Bytes32, CheckError, ConsensusParameters, ContractIdExt, Receipt, Salt,
+        ScriptExecutionResult, StorageSlot, Transaction as FuelTransaction, TxId, TxPointer,
+        UtxoId,
     };
 }
 
@@ -59,7 +62,7 @@ pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
     pub use fuel_core::chain_config::ChainConfig;
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::{config::Trigger, Config, DbType, FuelService};
+    pub use fuel_core::service::{config::Trigger, Config, DbType, FuelService, ServiceTrait};
     #[cfg(not(feature = "fuel-core-lib"))]
     pub use fuels_test_helpers::node::{ChainConfig, Config, DbType, FuelService, Trigger};
 }
