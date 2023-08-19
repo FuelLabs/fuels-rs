@@ -126,31 +126,6 @@ impl From<ProviderError> for Error {
     }
 }
 
-/// Extends the functionality of the [`FuelClient`].
-#[async_trait::async_trait]
-pub trait ClientExt {
-    // TODO: It should be part of the `fuel-core-client`. See https://github.com/FuelLabs/fuel-core/issues/1178
-    /// Submits transaction, await confirmation and return receipts.
-    async fn submit_and_await_commit_with_receipts(
-        &self,
-        tx: &fuel_tx::Transaction,
-    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)>;
-}
-
-#[async_trait::async_trait]
-impl ClientExt for FuelClient {
-    async fn submit_and_await_commit_with_receipts(
-        &self,
-        tx: &fuel_tx::Transaction,
-    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)> {
-        let tx_id = self.submit(tx).await?;
-        let status = self.await_transaction_commit(&tx_id).await?;
-        let receipts = self.receipts(&tx_id).await?;
-
-        Ok((status, receipts))
-    }
-}
-
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which provides a broader API.
@@ -169,7 +144,7 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+    pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<TxId> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -199,10 +174,15 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
-        let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
-        let receipts = receipts.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&status, &receipts)?;
+        let tx_id = self.submit_tx(tx.clone()).await?;
 
+        Ok(tx_id)
+    }
+
+    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+        let tx_status = self.client.transaction_status(tx_id).await?;
+        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
+        Self::if_failure_generate_error(&tx_status, &receipts)?;
         Ok(receipts)
     }
 
@@ -230,14 +210,10 @@ impl Provider {
         Ok(())
     }
 
-    async fn submit_with_feedback(
-        &self,
-        tx: impl Transaction,
-    ) -> ProviderResult<(TransactionStatus, Option<Vec<Receipt>>)> {
-        self.client
-            .submit_and_await_commit_with_receipts(&tx.into())
-            .await
-            .map_err(Into::into)
+    async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
+        let tx_id = self.client.submit(&tx.into()).await?;
+        self.client.await_transaction_commit(&tx_id).await?;
+        Ok(tx_id)
     }
 
     #[cfg(feature = "fuel-core-lib")]
