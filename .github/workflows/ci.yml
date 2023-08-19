@@ -57,11 +57,11 @@ jobs:
 
       - name: Check format of Sway test projects
         run: forc fmt --check
-        working-directory: packages/fuels
+        working-directory: packages/fuels-e2e-tests
 
       - name: Build Sway test projects
         run: forc build --terse
-        working-directory: packages/fuels
+        working-directory: packages/fuels-e2e-tests
 
       - uses: actions/upload-artifact@v2
         with:
