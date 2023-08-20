@@ -417,7 +417,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let amount_to_transfer = 20;
 
     let mut inputs = vec![];
-    for wallet in wallets.iter() {
+    for wallet in &wallets {
         inputs.extend(
             wallet
                 .get_asset_inputs_for_amount(BASE_ASSET_ID, amount_to_transfer)

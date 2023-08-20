@@ -27,6 +27,8 @@ use crate::{
     },
 };
 
+use super::unresolved_bytes::UnresolvedBytes;
+
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
     addr_idx_offset_map: HashMap<Bech32Address, u8>,
@@ -462,66 +464,16 @@ fn resolve_fuel_inputs(
         .into_iter()
         .map(|input| match input {
             Input::ResourcePredicate {
-                resource: CoinType::Coin(coin),
+                resource,
                 code,
                 data,
-            } => {
-                data_offset += offsets::coin_predicate_data_offset(code.len());
-
-                let data = data.resolve(data_offset as u64);
-                data_offset += data.len();
-
-                let asset_id = coin.asset_id;
-                Ok(create_coin_predicate(coin, asset_id, code, data))
-            }
-            Input::ResourcePredicate {
-                resource: CoinType::Message(message),
-                code,
-                data,
-            } => {
-                data_offset +=
-                    offsets::message_predicate_data_offset(message.data.len(), code.len());
-
-                let data = data.resolve(data_offset as u64);
-                data_offset += data.len();
-
-                Ok(create_coin_message_predicate(message, code, data))
-            }
-            Input::ResourceSigned { resource } => match resource {
-                CoinType::Coin(coin) => {
-                    data_offset += offsets::coin_signed_data_offset();
-                    let owner = &coin.owner;
-
-                    unresolved_signatures
-                        .addr_idx_offset_map
-                        .get(owner)
-                        .ok_or(error!(
-                            InvalidData,
-                            "signature missing for coin with owner: `{owner:?}`"
-                        ))
-                        .map(|witness_idx_offset| {
-                            create_coin_input(coin.clone(), num_witnesses + *witness_idx_offset)
-                        })
-                }
-                CoinType::Message(message) => {
-                    data_offset += offsets::message_signed_data_offset(message.data.len());
-                    let recipient = &message.recipient;
-
-                    unresolved_signatures
-                        .addr_idx_offset_map
-                        .get(recipient)
-                        .ok_or(error!(
-                            InvalidData,
-                            "signature missing for message with recipient: `{recipient:?}`"
-                        ))
-                        .map(|witness_idx_offset| {
-                            create_coin_message_input(
-                                message.clone(),
-                                num_witnesses + *witness_idx_offset,
-                            )
-                        })
-                }
-            },
+            } => resolve_predicate_resource(resource, code, data, &mut data_offset),
+            Input::ResourceSigned { resource } => resolve_signed_resource(
+                resource,
+                &mut data_offset,
+                num_witnesses,
+                unresolved_signatures,
+            ),
             Input::Contract {
                 utxo_id,
                 balance_root,
@@ -539,7 +491,74 @@ fn resolve_fuel_inputs(
                 ))
             }
         })
-        .collect::<Result<Vec<FuelInput>>>()
+        .collect()
+}
+
+fn resolve_signed_resource(
+    resource: CoinType,
+    data_offset: &mut usize,
+    num_witnesses: u8,
+    unresolved_signatures: &UnresolvedSignatures,
+) -> Result<FuelInput> {
+    match resource {
+        CoinType::Coin(coin) => {
+            *data_offset += offsets::coin_signed_data_offset();
+            let owner = &coin.owner;
+
+            unresolved_signatures
+                .addr_idx_offset_map
+                .get(owner)
+                .ok_or(error!(
+                    InvalidData,
+                    "signature missing for coin with owner: `{owner:?}`"
+                ))
+                .map(|witness_idx_offset| {
+                    create_coin_input(coin.clone(), num_witnesses + *witness_idx_offset)
+                })
+        }
+        CoinType::Message(message) => {
+            *data_offset += offsets::message_signed_data_offset(message.data.len());
+            let recipient = &message.recipient;
+
+            unresolved_signatures
+                .addr_idx_offset_map
+                .get(recipient)
+                .ok_or(error!(
+                    InvalidData,
+                    "signature missing for message with recipient: `{recipient:?}`"
+                ))
+                .map(|witness_idx_offset| {
+                    create_coin_message_input(message.clone(), num_witnesses + *witness_idx_offset)
+                })
+        }
+    }
+}
+
+fn resolve_predicate_resource(
+    resource: CoinType,
+    code: Vec<u8>,
+    data: UnresolvedBytes,
+    data_offset: &mut usize,
+) -> Result<FuelInput> {
+    match resource {
+        CoinType::Coin(coin) => {
+            *data_offset += offsets::coin_predicate_data_offset(code.len());
+
+            let data = data.resolve(*data_offset as u64);
+            *data_offset += data.len();
+
+            let asset_id = coin.asset_id;
+            Ok(create_coin_predicate(coin, asset_id, code, data))
+        }
+        CoinType::Message(message) => {
+            *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len());
+
+            let data = data.resolve(*data_offset as u64);
+            *data_offset += data.len();
+
+            Ok(create_coin_message_predicate(message, code, data))
+        }
+    }
 }
 
 pub fn create_coin_input(coin: Coin, witness_index: u8) -> FuelInput {
