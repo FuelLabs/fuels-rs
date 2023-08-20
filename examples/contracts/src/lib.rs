@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::errors::{error, Error, Result};
-    use fuels::types::Bits256;
+    use fuels::types::{
+        errors::{error, Error, Result},
+        Bits256,
+    };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {

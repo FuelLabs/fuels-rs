@@ -1,9 +1,9 @@
 mod bounded_decoder;
 
-use crate::types::{errors::Result, param_types::ParamType, Token};
-
-// TODO: replace all self imports
-use self::bounded_decoder::BoundedDecoder;
+use crate::{
+    codec::abi_decoder::bounded_decoder::BoundedDecoder,
+    types::{errors::Result, param_types::ParamType, Token},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecoderConfig {
@@ -110,12 +110,11 @@ impl ABIDecoder {
 mod tests {
     use std::vec;
 
+    use super::*;
     use crate::{
         constants::WORD_SIZE,
         types::{enum_variants::EnumVariants, errors::Error, StringToken},
     };
-
-    use super::*;
 
     #[test]
     fn decode_int() -> Result<()> {
@@ -532,6 +531,118 @@ mod tests {
         Ok(())
     }
 
+    #[test]
+    fn max_depth_surpassed() {
+        // ti is n expl
+        const MAX_DEPTH: usize = 2;
+        let config = DecoderConfig {
+            max_depth: MAX_DEPTH,
+            ..Default::default()
+        };
+        let msg = format!("Depth limit ({MAX_DEPTH}) reached while decoding!");
+        // for each nested enum so that it may read the discriminant
+        let data = [0; MAX_DEPTH * WORD_SIZE];
+
+        [nested_struct, nested_enum, nested_tuple, nested_array]
+            .iter()
+            .map(|fun| fun(MAX_DEPTH + 1))
+            .for_each(|param_type| {
+                assert_decoding_failed_w_data(config, &param_type, &msg, &data);
+            })
+    }
+
+    #[test]
+    fn depth_is_not_reached() {
+        const MAX_DEPTH: usize = 3;
+        const ACTUAL_DEPTH: usize = MAX_DEPTH - 1;
+
+        // enough data to decode 2*ACTUAL_DEPTH enums (discriminant + u8 = 2*WORD_SIZE)
+        let data = [0; 2 * ACTUAL_DEPTH * (WORD_SIZE * 2)];
+        let config = DecoderConfig {
+            max_depth: MAX_DEPTH,
+            ..Default::default()
+        };
+
+        [nested_struct, nested_enum, nested_tuple, nested_array]
+            .into_iter()
+            .map(|fun| fun(ACTUAL_DEPTH))
+            .map(|param_type| {
+                // Wrapping everything in a structure so that we may check whether the depth is
+                // decremented after finishing every struct field.
+                ParamType::Struct {
+                    fields: vec![param_type.clone(), param_type],
+                    generics: vec![],
+                }
+            })
+            .for_each(|param_type| {
+                AbiDecoder::new(config).decode(&param_type, &data).unwrap();
+            })
+    }
+
+    #[test]
+    fn too_many_tokens() {
+        let config = DecoderConfig {
+            max_tokens: 3,
+            ..Default::default()
+        };
+
+        let data = [0; 3 * WORD_SIZE];
+        let el = ParamType::U8;
+        for param_type in [
+            ParamType::Struct {
+                fields: vec![el.clone(); 3],
+                generics: vec![],
+            },
+            ParamType::Tuple(vec![el.clone(); 3]),
+            ParamType::Array(Box::new(el.clone()), 3),
+            ParamType::Vector(Box::new(el)),
+        ] {
+            assert_decoding_failed_w_data(
+                config,
+                &param_type,
+                "Token limit (3) reached while decoding!",
+                &data,
+            );
+        }
+    }
+
+    #[test]
+    fn vectors_of_zst_are_not_supported() {
+        let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
+
+        let err = AbiDecoder::default()
+            .decode(&param_type, &[])
+            .expect_err("Vectors of ZST should be prohibited");
+
+        let Error::InvalidType(msg) = err else {
+            panic!("Expected error of type InvalidType")
+        };
+        assert_eq!(
+            msg,
+            "Cannot calculate the number of elements because the type is zero-sized."
+        );
+    }
+
+    #[test]
+    fn token_count_is_being_reset_between_decodings() {
+        // given
+        let config = DecoderConfig {
+            max_tokens: 3,
+            ..Default::default()
+        };
+
+        let param_type = ParamType::Array(Box::new(ParamType::String(0)), 2);
+
+        let decoder = AbiDecoder::new(config);
+        decoder.decode(&param_type, &[]).unwrap();
+
+        // when
+        let result = decoder.decode(&param_type, &[]);
+
+        // then
+        result.expect("Element count to be reset");
+    }
+
     fn assert_decoding_failed_w_data(
         config: DecoderConfig,
         param_type: &ParamType,
@@ -592,117 +703,5 @@ mod tests {
         };
 
         ParamType::Tuple(fields)
-    }
-
-    fn given_config_w_depth(max_depth: usize) -> DecoderConfig {
-        DecoderConfig {
-            max_depth,
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn limiting_max_depth_reached() {
-        const MAX_DEPTH: usize = 2;
-        let config = given_config_w_depth(MAX_DEPTH);
-        let msg = format!("Depth limit ({MAX_DEPTH}) reached while decoding!");
-        // for each nested enum so that it may read the discriminant
-        let data = [0; MAX_DEPTH * WORD_SIZE];
-
-        [nested_struct, nested_enum, nested_tuple, nested_array]
-            .iter()
-            .map(|fun| fun(MAX_DEPTH + 1))
-            .for_each(|param_type| {
-                assert_decoding_failed_w_data(config, &param_type, &msg, &data);
-            })
-    }
-
-    #[test]
-    fn fails_if_too_many_tokens() {
-        let config = DecoderConfig {
-            max_tokens: 3,
-            ..Default::default()
-        };
-
-        let data = [0; 3 * WORD_SIZE];
-        let el = ParamType::U8;
-        for param_type in [
-            ParamType::Struct {
-                fields: vec![el.clone(); 3],
-                generics: vec![],
-            },
-            ParamType::Tuple(vec![el.clone(); 3]),
-            ParamType::Array(Box::new(el.clone()), 3),
-            ParamType::Vector(Box::new(el)),
-        ] {
-            assert_decoding_failed_w_data(
-                config,
-                &param_type,
-                "Token limit (3) reached while decoding!",
-                &data,
-            );
-        }
-    }
-
-    #[test]
-    fn limiting_depth_is_not_reached() {
-        const MAX_DEPTH: usize = 3;
-        const ACTUAL_DEPTH: usize = MAX_DEPTH - 1;
-
-        // enough data to decode 2*ACTUAL_DEPTH enums (discriminant + u8 = 2*WORD_SIZE)
-        let data = [0; 2 * ACTUAL_DEPTH * (WORD_SIZE * 2)];
-        let config = given_config_w_depth(MAX_DEPTH);
-
-        [nested_struct, nested_enum, nested_tuple, nested_array]
-            .into_iter()
-            .map(|fun| fun(ACTUAL_DEPTH))
-            .map(|param_type| {
-                // Wrapping everything in a structure so that we may check whether the depth is
-                // decremented after finishing every struct field.
-                ParamType::Struct {
-                    fields: vec![param_type.clone(), param_type],
-                    generics: vec![],
-                }
-            })
-            .for_each(|param_type| {
-                AbiDecoder::new(config).decode(&param_type, &data).unwrap();
-            })
-    }
-
-    #[test]
-    fn vectors_of_zst_are_not_supported() {
-        let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
-
-        let err = AbiDecoder::default()
-            .decode(&param_type, &[])
-            .expect_err("Vectors of ZST should be prohibited");
-
-        let Error::InvalidType(msg) = err else {
-            panic!("Expected error of type InvalidType")
-        };
-        assert_eq!(
-            msg,
-            "Cannot calculate the number of elements because the type is zero-sized."
-        );
-    }
-
-    #[test]
-    fn token_count_is_being_reset_between_decodings() {
-        // given
-        let config = DecoderConfig {
-            max_tokens: 3,
-            ..Default::default()
-        };
-
-        let param_type = ParamType::Array(Box::new(ParamType::String(0)), 2);
-
-        let decoder = AbiDecoder::new(config);
-        decoder.decode(&param_type, &[]).unwrap();
-
-        // when
-        let result = decoder.decode(&param_type, &[]);
-
-        // then
-        result.expect("Element count to be reset");
     }
 }

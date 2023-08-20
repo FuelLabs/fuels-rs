@@ -49,9 +49,6 @@ pub enum ReturnLocation {
 }
 
 impl ParamType {
-    // TODO: what about a struct of size 1 WORD, where would its return location be expected? Test
-    // this.
-    //
     // Depending on the type, the returned value will be stored
     // either in `Return` or `ReturnData`.
     pub fn get_return_location(&self) -> ReturnLocation {

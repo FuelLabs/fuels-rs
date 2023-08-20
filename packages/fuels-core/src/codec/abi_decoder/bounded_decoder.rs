@@ -2,6 +2,7 @@ use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
 
+use super::DecoderConfig;
 use crate::{
     constants::WORD_SIZE,
     traits::Tokenizable,
@@ -12,8 +13,6 @@ use crate::{
         StringToken, Token, U256,
     },
 };
-
-use super::DecoderConfig;
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
@@ -105,7 +104,7 @@ impl BoundedDecoder {
                 self.run_w_depth_tracking(|ctx| ctx.decode_tuple(types, bytes))
             }
             ParamType::Vector(param_type) => {
-                // although nested vectors cannot be decoded yet, depth tracking still occurrs for future
+                // although nested vectors cannot be decoded yet, depth tracking still occurs for future
                 // proofing
                 self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
             }

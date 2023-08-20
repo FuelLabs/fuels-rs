@@ -676,7 +676,6 @@ pub struct MultiContractCallHandler<T: Account> {
     decoder_config: DecoderConfig,
     pub account: T,
 }
-// TODO: script call decoding config
 
 impl<T: Account> MultiContractCallHandler<T> {
     pub fn new(account: T) -> Self {
