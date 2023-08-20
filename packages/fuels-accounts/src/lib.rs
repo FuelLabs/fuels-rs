@@ -314,9 +314,8 @@ pub trait Account: ViewOnlyAccount {
 mod tests {
     use std::str::FromStr;
 
-    use fuel_core_client::client::FuelClient;
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{Address, ConsensusParameters, Output};
+    use fuel_tx::{Address, Output};
     use fuels_core::types::transaction::Transaction;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -353,8 +352,9 @@ mod tests {
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
-        Ok(())
         // ANCHOR_END: sign_message
+
+        Ok(())
     }
 
     #[tokio::test]
@@ -363,52 +363,60 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        // Set up a dummy transaction.
-        let coin = Coin {
-            amount: 10000000,
-            owner: wallet.address().clone(),
-            ..Default::default()
+        // Set up a transaction
+        let mut tb = {
+            let input_coin = Input::ResourceSigned {
+                resource: CoinType::Coin(Coin {
+                    amount: 10000000,
+                    owner: wallet.address().clone(),
+                    ..Default::default()
+                }),
+            };
+
+            let output_coin = Output::coin(
+                Address::from_str(
+                    "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
+                )?,
+                1,
+                Default::default(),
+            );
+
+            ScriptTransactionBuilder::prepare_transfer(
+                vec![input_coin],
+                vec![output_coin],
+                Default::default(),
+            )
         };
-        let input_coin = Input::ResourceSigned {
-            resource: CoinType::Coin(coin),
-        };
 
-        let output_coin = Output::coin(
-            Address::from_str(
-                "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
-            )?,
-            1,
-            Default::default(),
-        );
+        // Sign the transaction
+        wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
+        let tx = tb.build()?; // Resolve signatures and add corresponding witness indexes
 
-        let mut tb = ScriptTransactionBuilder::prepare_transfer(
-            vec![input_coin],
-            vec![output_coin],
-            Default::default(),
-        );
-        wallet.sign_transaction(&mut tb);
-        let tx = tb.build()?;
+        // Extract the signature from the tx witnesses
+        let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
+        let tx_signature = Signature::from_bytes(bytes);
 
-        // Sign the transaction.
-        let consensus_parameters = ConsensusParameters::default();
-        let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
-        wallet.set_provider(test_provider);
+        // Sign the transaction manually
         let message = Message::from_bytes(*tx.id());
         let signature = Signature::sign(&wallet.private_key, &message);
 
-        // Check if signature is what we expect it to be
+        // Check if the signatures are the same
+        assert_eq!(signature, tx_signature);
+
+        // Check if the signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("df91e8ae723165f9a28b70910e3da41300da413607065618522f3084c9f051114acb1b51a836bd63c3d84a1ac904bf37b82ef03973c19026b266d04872f170a6")?);
 
-        // Recover address that signed the transaction
+        // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
 
-        // Verify signature
+        // Verify the signature
         signature.verify(&recovered_address, &message)?;
-        Ok(())
         // ANCHOR_END: sign_tx
+
+        Ok(())
     }
 }

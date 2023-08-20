@@ -463,17 +463,17 @@ fn resolve_fuel_inputs(
     inputs
         .into_iter()
         .map(|input| match input {
-            Input::ResourcePredicate {
-                resource,
-                code,
-                data,
-            } => resolve_predicate_resource(resource, code, data, &mut data_offset),
             Input::ResourceSigned { resource } => resolve_signed_resource(
                 resource,
                 &mut data_offset,
                 num_witnesses,
                 unresolved_signatures,
             ),
+            Input::ResourcePredicate {
+                resource,
+                code,
+                data,
+            } => resolve_predicate_resource(resource, code, data, &mut data_offset),
             Input::Contract {
                 utxo_id,
                 balance_root,
