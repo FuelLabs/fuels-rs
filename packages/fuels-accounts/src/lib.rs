@@ -16,7 +16,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::{Transaction, TxParameters},
+        transaction::TxParameters,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
@@ -185,11 +185,13 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> Result<(TxId, Vec<Receipt>)> {
+        let provider = self.try_provider()?;
+
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = self.try_provider()?.consensus_parameters();
+        let consensus_parameters = provider.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
             .set_consensus_parameters(consensus_parameters);
@@ -204,9 +206,9 @@ pub trait Account: ViewOnlyAccount {
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
-        let tx_id = tx.id();
 
-        let receipts = self.try_provider()?.send_transaction(tx).await?;
+        let tx_id = provider.send_transaction(tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id, receipts))
     }
@@ -226,7 +228,9 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(TxId, Vec<Receipt>), Error> {
+    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+        let provider = self.try_provider()?;
+
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
 
@@ -246,7 +250,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = self.try_provider()?.consensus_parameters();
+        let params = provider.consensus_parameters();
 
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
@@ -266,11 +270,11 @@ pub trait Account: ViewOnlyAccount {
         };
 
         let tx = self.add_fee_resources(tb, base_amount).await?;
-        let tx_id = tx.id();
 
-        let receipts = self.try_provider()?.send_transaction(tx).await?;
+        let tx_id = provider.send_transaction(tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
-        Ok((tx_id, receipts))
+        Ok((tx_id.to_string(), receipts))
     }
 
     /// Withdraws an amount of the base asset to
@@ -282,6 +286,8 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
+        let provider = self.try_provider()?;
+
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
@@ -294,9 +300,8 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let tx = self.add_fee_resources(tb, amount).await?;
-        let tx_id = tx.id();
-
-        let receipts = self.try_provider()?.send_transaction(tx).await?;
+        let tx_id = provider.send_transaction(tx).await?;
+        let receipts = provider.get_receipts(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
