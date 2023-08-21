@@ -1,5 +1,5 @@
 [project]
-authors = ["segfault_magnet"]
+authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "main.sw"
 license = "Apache-2.0"
 name = "script_needs_custom_decoder"
