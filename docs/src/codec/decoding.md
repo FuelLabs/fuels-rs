@@ -1,18 +1,18 @@
 # Decoding
 Be sure to read the [prerequisites](./index.md#prerequisites-for-decodingencoding) to decoding.
 
-Decoding is done via the `AbiDecoder`:
+Decoding is done via the [`ABIDecoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html):
 
 ```rust,ignore
 {{#include ../../../examples/codec/src/lib.rs:decoding_example}}
 ```
-First into a `Token`, then via the `Tokenizable` trait, into the desired type.
+First into a [`Token`](https://docs.rs/fuels/0.46.0/fuels/types/enum.Token.html), then via the [`Tokenizable`](https://docs.rs/fuels/0.46.0/fuels/core/traits/trait.Tokenizable.html) trait, into the desired type.
 
-If the type came from `abigen!` (or uses the `::fuels::macros::TryFrom` derivation) then you can also use `try_into` to convert bytes into a type that implements both `Parameterize` and `Tokenizable`:
+If the type came from [`abigen!`](../abigen/index.md) (or uses the [`::fuels::macros::TryFrom`](https://docs.rs/fuels/0.46.0/fuels/macros/derive.TryFrom.html) derivation) then you can also use `try_into` to convert bytes into a type that implements both [`Parameterize`](https://docs.rs/fuels/0.46.0/fuels/core/traits/trait.Parameterize.html) and [`Tokenizable`](https://docs.rs/fuels/0.46.0/fuels/core/traits/trait.Tokenizable.html):
 ```rust,ignore
 {{#include ../../../examples/codec/src/lib.rs:decoding_example_try_into}}
 ```
-Under the hood `try_from_bytes` is being called which basically does what the preceding example did.
+Under the hood [`try_from_bytes`](https://docs.rs/fuels/0.46.0/fuels/core/codec/fn.try_from_bytes.html) is being called which basically does what the preceding example did.
 
 ## Configuring the decoder
 The decoder can be configured to limit its resource expenditure:
@@ -20,9 +20,9 @@ The decoder can be configured to limit its resource expenditure:
 {{#include ../../../examples/codec/src/lib.rs:configuring_the_decoder}}
 ```
 
-For explanation of each configuration value visit the `DecoderConfig` docs.rs page.
+For explanation of each configuration value visit the [`DecoderConfig` docs.rs page](https://docs.rs/fuels/0.46.0/fuels/core/codec/struct.DecoderConfig.html).
 
-The default values for the `DecoderConfig` are:
+The default values for the [`DecoderConfig`](https://docs.rs/fuels/0.46.0/fuels/core/codec/struct.DecoderConfig.html) are:
 ```rust,ignore
 {{#include ../../../packages/fuels-core/src/codec/abi_decoder.rs:default_decoder_config}}
 ```
