@@ -42,10 +42,20 @@ impl Predicate {
         self.provider.as_ref()
     }
 
+    #[deprecated(note = "please use `with_provider` instead")]
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
         self.address = Self::calculate_address(&self.code, provider.chain_id().into());
         self.provider = Some(provider);
         self
+    }
+
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address = Self::calculate_address(&self.code, provider.chain_id().into());
+        Self {
+            address,
+            provider: Some(provider),
+            ..self
+        }
     }
 
     pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
@@ -84,15 +94,6 @@ impl Predicate {
         Self {
             code,
             address,
-            ..self
-        }
-    }
-
-    pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, provider.chain_id().into());
-        Self {
-            address,
-            provider: Some(provider),
             ..self
         }
     }

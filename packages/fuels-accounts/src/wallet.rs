@@ -88,7 +88,13 @@ impl Wallet {
         self.provider.as_ref()
     }
 
+    #[deprecated(note = "please use `with_provider` instead")]
     pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.provider = Some(provider);
+        self
+    }
+
+    pub fn with_provider(&mut self, provider: Provider) -> &mut Self {
         self.provider = Some(provider);
         self
     }
@@ -129,8 +135,17 @@ impl WalletUnlocked {
     // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
     // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
     // private key doesn't match the inner wallet's public key).
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
-        self.wallet.set_provider(provider)
+    #[deprecated(note = "please use `with_provider` instead")]
+    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+        self.wallet.with_provider(provider)
+    }
+
+    // NOTE: Rather than providing a `DerefMut` implementation, we wrap the `set_provider` method
+    // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
+    // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
+    // private key doesn't match the inner wallet's public key).
+    pub fn with_provider(&mut self, provider: Provider) -> &mut Wallet {
+        self.wallet.with_provider(provider)
     }
 
     /// Creates a new wallet with a random private key.

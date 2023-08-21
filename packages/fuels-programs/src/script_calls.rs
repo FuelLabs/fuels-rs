@@ -137,12 +137,27 @@ where
         self
     }
 
+    #[deprecated(note = "please use `with_contract_ids` instead")]
     pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.script_call.external_contracts = contract_ids.to_vec();
         self
     }
 
+    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+        self.script_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    #[deprecated(note = "please use `with_contracts` instead")]
     pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+        self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
+        for c in contracts {
+            self.log_decoder.merge(c.log_decoder());
+        }
+        self
+    }
+
+    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
         self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());

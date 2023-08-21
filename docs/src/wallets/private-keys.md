@@ -13,5 +13,5 @@ Alternatively, you can create a wallet from a predefined `SecretKey`.
 ```
 
 > Note: if `None` is supplied instead of a provider, any transaction related to the wallet will result
-> in an error until a provider is linked with `set_provider()`. The optional parameter
+> in an error until a provider is linked with `with_provider()`. The optional parameter
 > enables defining owners (wallet addresses) of genesis coins before a provider is launched.

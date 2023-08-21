@@ -170,7 +170,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         setup_test_client(coins, vec![], None, Some(chain_config)).await;
     let provider = Provider::new(fuel_client, consensus_parameters);
     assert_eq!(consensus_parameters, consensus_parameters_config);
-    wallet.set_provider(provider.clone());
+    wallet.with_provider(provider.clone());
 
     setup_program_test!(
         Abigen(Script(
@@ -244,7 +244,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let provider = wallet.try_provider()?.clone();
     let mut receiver = WalletUnlocked::new_random(None);
-    receiver.set_provider(provider);
+    receiver.with_provider(provider);
 
     let amount = 1000;
     let asset_id = BASE_ASSET_ID;

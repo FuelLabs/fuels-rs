@@ -847,8 +847,8 @@ mod test {
         ]
         .map(|(asset_id, amount)| {
             CallParameters::default()
-                .set_amount(amount)
-                .set_asset_id(asset_id)
+                .with_amount(amount)
+                .with_asset_id(asset_id)
         })
         .map(|call_parameters| {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)

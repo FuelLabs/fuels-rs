@@ -404,7 +404,7 @@ mod tests {
         // Sign the transaction.
         let consensus_parameters = ConsensusParameters::default();
         let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
-        wallet.set_provider(test_provider);
+        wallet.with_provider(test_provider);
         let signature = wallet.sign_transaction(&mut tx)?;
         let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
