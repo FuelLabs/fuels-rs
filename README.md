@@ -86,7 +86,7 @@ In order to make the SDK for Fuel feel familiar with those coming from the [ethe
 Install `mdbook` by running:
 
 ```shell
-cargo install mdbook
+cargo install mdbook mdbook-variables
 ```
 
 Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
