@@ -20,7 +20,7 @@ impl Default for DecoderConfig {
     fn default() -> Self {
         Self {
             max_depth: 45,
-            max_tokens: 1000,
+            max_tokens: 10_000,
         }
     }
 }
