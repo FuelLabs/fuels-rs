@@ -2,7 +2,7 @@ contract;
 
 abi MyContract {
     fn i_return_a_big_type() -> Vec<u8>;
-    fn i_log_a_1000_el_array() ;
+    fn i_log_a_1000_el_array();
 }
 
 configurable {
@@ -11,8 +11,8 @@ configurable {
 
 impl MyContract for Contract {
     fn i_log_a_1000_el_array() {
-      let arr: [u8; 1000] = [0; 1000];
-      log(arr);
+        let arr: [u8; 1000] = [0; 1000];
+        log(arr);
     }
 
     fn i_return_a_big_type() -> Vec<u8> {
