@@ -26,15 +26,15 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn u32_vec(arg: Vec<u32>) {
-        let expected = vec_from([0u8, 1u8, 2u8]);
+        let expected = vec_from([0, 1, 2]);
 
         assert(arg == expected);
     }
 
     fn vec_in_vec(arg: Vec<Vec<u32>>) {
         let mut expected = Vec::new();
-        expected.push(vec_from([0u8, 1u8, 2u8]));
-        expected.push(vec_from([0u8, 1u8, 2u8]));
+        expected.push(vec_from([0, 1, 2]));
+        expected.push(vec_from([0, 1, 2]));
 
         assert(expected == arg);
     }
@@ -48,7 +48,7 @@ impl MyContract for Contract {
     }
     fn vec_in_struct(arg: SomeStruct<Vec<u32>>) {
         let expected = SomeStruct {
-            a: vec_from([0u8, 1u8, 2u8]),
+            a: vec_from([0, 1, 2]),
         };
 
         assert(arg.a == expected.a);
@@ -62,13 +62,13 @@ impl MyContract for Contract {
     }
 
     fn vec_in_array(arg: [Vec<u32>; 2]) {
-        let expected = [vec_from([0u8, 1u8, 2u8]), vec_from([0u8, 1u8, 2u8])];
+        let expected = [vec_from([0, 1, 2]), vec_from([0, 1, 2])];
 
         assert(expected == arg);
     }
 
     fn vec_in_enum(arg: SomeEnum<Vec<u32>>) {
-        let vec = vec_from([0u8, 1u8, 2u8]);
+        let vec = vec_from([0, 1, 2]);
         let expected = SomeEnum::a(vec);
 
         assert(expected == arg);
@@ -90,7 +90,7 @@ impl MyContract for Contract {
     }
 
     fn vec_in_tuple(arg: (Vec<u32>, Vec<u32>)) {
-        let expected = (vec_from([0u8, 1u8, 2u8]), vec_from([0u8, 1u8, 2u8]));
+        let expected = (vec_from([0, 1, 2]), vec_from([0, 1, 2]));
 
         assert(arg == expected);
     }
@@ -99,20 +99,20 @@ impl MyContract for Contract {
 
         let mut inner_vec_1 = Vec::new();
 
-        let inner_inner_vec_1 = vec_from([0u8, 1u8, 2u8]);
+        let inner_inner_vec_1 = vec_from([0, 1, 2]);
         inner_vec_1.push(inner_inner_vec_1);
 
-        let inner_inner_vec_2 = vec_from([3u8, 4u8, 5u8]);
+        let inner_inner_vec_2 = vec_from([3, 4, 5]);
         inner_vec_1.push(inner_inner_vec_2);
 
         expected.push(SomeStruct { a: inner_vec_1 });
 
         let mut inner_vec_2 = Vec::new();
 
-        let inner_inner_vec_3 = vec_from([6u8, 7u8, 8u8]);
+        let inner_inner_vec_3 = vec_from([6, 7, 8]);
         inner_vec_2.push(inner_inner_vec_3);
 
-        let inner_inner_vec_4 = vec_from([9u8, 10u8, 11u8]);
+        let inner_inner_vec_4 = vec_from([9, 10, 11]);
         inner_vec_2.push(inner_inner_vec_4);
 
         expected.push(SomeStruct { a: inner_vec_2 });

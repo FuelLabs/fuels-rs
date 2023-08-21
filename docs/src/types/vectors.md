@@ -18,4 +18,4 @@ Returning vectors from contract methods is supported transparently, with the cav
 {{#include ../../../packages/fuels/tests/types_contracts.rs:returning_vec}}
 ```
 
-** >Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves **
+> **Note: you can still interact with contracts containing methods that return vectors nested inside another type, just not interact with the methods themselves**
