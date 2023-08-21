@@ -201,7 +201,7 @@ mod tests {
             .await?;
         assert_eq!(contract_balances.len(), 1);
 
-        let random_asset_balance = contract_balances.get(&random_asset_id.to_string()).unwrap();
+        let random_asset_balance = contract_balances.get(&random_asset_id).unwrap();
         assert_eq!(*random_asset_balance, 300);
         // ANCHOR_END: wallet_contract_transfer
 

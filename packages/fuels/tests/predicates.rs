@@ -6,7 +6,6 @@ use fuels::{
         coin::Coin,
         message::Message,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-        AssetId,
     },
 };
 use fuels_core::types::{coin_type::CoinType, input::Input};
@@ -344,9 +343,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         .await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_balance = contract_balances
-        .get(&AssetId::default().to_string())
-        .unwrap();
+    let random_asset_balance = contract_balances.get(&AssetId::default()).unwrap();
     assert_eq!(*random_asset_balance, 300);
 
     Ok(())

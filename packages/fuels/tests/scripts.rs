@@ -355,3 +355,30 @@ async fn test_script_b256() -> Result<()> {
     assert!(response.value);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_submit_and_response() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_struct"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_struct = MyStruct {
+        number: 42,
+        boolean: true,
+    };
+
+    let handle = script_instance.main(my_struct).submit().await?;
+    let response = handle.response().await?;
+
+    assert_eq!(response.value, 42);
+    Ok(())
+}
