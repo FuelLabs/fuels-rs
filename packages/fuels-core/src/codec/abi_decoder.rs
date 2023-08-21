@@ -75,11 +75,7 @@ impl ABIDecoder {
     ///
     /// assert_eq!(tokens, vec![Token::U8(7), Token::U8(8)]);
     /// ```
-    pub fn decode_multiple(
-        &mut self,
-        param_types: &[ParamType],
-        bytes: &[u8],
-    ) -> Result<Vec<Token>> {
+    pub fn decode_multiple(&self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
     }
 }
