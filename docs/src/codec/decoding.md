@@ -20,7 +20,7 @@ The decoder can be configured to limit its resource expenditure:
 {{#include ../../../examples/codec/src/lib.rs:configuring_the_decoder}}
 ```
 
-For explanation of each configuration value visit the [`DecoderConfig` docs.rs page](https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html).
+For an explanation of each configuration value visit the [`DecoderConfig` docs.rs page](https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html).
 
 The default values for the [`DecoderConfig`](https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html) are:
 ```rust,ignore
