@@ -44,7 +44,7 @@ mod tests {
         // ANCHOR: decoding_example
         use fuels::{
             core::{
-                codec::AbiDecoder,
+                codec::ABIDecoder,
                 traits::{Parameterize, Tokenizable},
             },
             macros::{Parameterize, Tokenizable},
@@ -58,7 +58,7 @@ mod tests {
 
         let bytes: &[u8] = &[0, 0, 0, 0, 0, 0, 0, 101];
 
-        let token: Token = AbiDecoder::default().decode(&MyStruct::param_type(), bytes)?;
+        let token: Token = ABIDecoder::default().decode(&MyStruct::param_type(), bytes)?;
 
         let _: MyStruct = MyStruct::from_token(token)?;
         // ANCHOR_END: decoding_example
@@ -88,9 +88,9 @@ mod tests {
     fn configuring_the_decoder() -> Result<()> {
         // ANCHOR: configuring_the_decoder
 
-        use fuels::core::codec::AbiDecoder;
+        use fuels::core::codec::ABIDecoder;
 
-        AbiDecoder::new(DecoderConfig {
+        ABIDecoder::new(DecoderConfig {
             max_depth: 5,
             max_tokens: 100,
         });

@@ -27,11 +27,11 @@ impl Default for DecoderConfig {
 // ANCHOR_END: default_decoder_config
 
 #[derive(Default)]
-pub struct AbiDecoder {
+pub struct ABIDecoder {
     config: DecoderConfig,
 }
 
-impl AbiDecoder {
+impl ABIDecoder {
     pub fn new(config: DecoderConfig) -> Self {
         Self { config }
     }
@@ -46,11 +46,11 @@ impl AbiDecoder {
     /// # Examples
     ///
     /// ```
-    /// use fuels_core::codec::AbiDecoder;
+    /// use fuels_core::codec::ABIDecoder;
     /// use fuels_core::traits::Tokenizable;
     /// use fuels_core::types::param_types::ParamType;
     ///
-    /// let decoder = AbiDecoder::default();
+    /// let decoder = ABIDecoder::default();
     ///
     /// let token = decoder.decode(&ParamType::U8,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
     ///
@@ -64,11 +64,11 @@ impl AbiDecoder {
     ///
     /// # Examples
     /// ```
-    /// use fuels_core::codec::AbiDecoder;
+    /// use fuels_core::codec::ABIDecoder;
     /// use fuels_core::types::param_types::ParamType;
     /// use fuels_core::types::Token;
     ///
-    /// let decoder = AbiDecoder::default();
+    /// let decoder = ABIDecoder::default();
     /// let data: &[u8] = &[0, 0, 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 0, 8];
     ///
     /// let tokens = decoder.decode_multiple(&[ParamType::U8, ParamType::U8], &data).unwrap();
@@ -81,30 +81,6 @@ impl AbiDecoder {
         bytes: &[u8],
     ) -> Result<Vec<Token>> {
         BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
-    }
-}
-
-#[deprecated(note = "Use `AbiDecoder` instead.")]
-pub struct ABIDecoder;
-
-#[allow(deprecated)]
-impl ABIDecoder {
-    /// Decodes `bytes` following the schema described in `param_type` into its respective `Token`.
-    ///
-    /// # Arguments
-    ///
-    /// * `param_type`: The `ParamType` of the type we expect is encoded
-    ///                  inside `bytes`.
-    /// * `bytes`:       The bytes to be used in the decoding process.
-    #[deprecated(note = "Use `AbiDecoder::default().decode(param_type, bytes)` instead.")]
-    pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        AbiDecoder::default().decode(param_type, bytes)
-    }
-
-    /// Same as `decode_single` but decodes multiple `ParamType`s in one go.
-    #[deprecated(note = "Use `AbiDecoder::default().decode_multiple(param_types, bytes)` instead.")]
-    pub fn decode(param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
-        AbiDecoder::default().decode_multiple(param_types, bytes)
     }
 }
 
@@ -122,7 +98,7 @@ mod tests {
     fn decode_int() -> Result<()> {
         let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
 
-        let decoded = AbiDecoder::default().decode(&ParamType::U32, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::U32, &data)?;
 
         assert_eq!(decoded, Token::U32(u32::MAX));
         Ok(())
@@ -142,7 +118,7 @@ mod tests {
             0xff,
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
             Token::U32(u32::MAX),
@@ -161,7 +137,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x00,
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Bool(true), Token::Bool(false)];
 
@@ -177,7 +153,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ];
 
-        let decoded = AbiDecoder::default().decode(&ParamType::B256, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::B256, &data)?;
 
         assert_eq!(decoded, Token::B256(data));
         Ok(())
@@ -193,7 +169,7 @@ mod tests {
             0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, // Hello
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
             Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23))),
@@ -213,7 +189,7 @@ mod tests {
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // entence
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::StringSlice(StringToken::new(
             "This is a full sentence".into(),
@@ -232,7 +208,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
@@ -254,7 +230,7 @@ mod tests {
             generics: vec![],
         };
 
-        let decoded = AbiDecoder::default().decode(&param_type, &data)?;
+        let decoded = ABIDecoder::default().decode(&param_type, &data)?;
 
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
 
@@ -265,7 +241,7 @@ mod tests {
     #[test]
     fn decode_bytes() -> Result<()> {
         let data = [0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
-        let decoded = AbiDecoder::default().decode(&ParamType::Bytes, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
 
         let expected = Token::Bytes(data.to_vec());
 
@@ -292,7 +268,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
@@ -341,7 +317,7 @@ mod tests {
         .flatten()
         .collect();
 
-        let decoded = AbiDecoder::default().decode(&struct_type, &data)?;
+        let decoded = ABIDecoder::default().decode(&struct_type, &data)?;
 
         let expected = Token::Struct(vec![
             Token::Enum(Box::new((1, Token::U32(12345), inner_enum_types))),
@@ -383,7 +359,7 @@ mod tests {
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
         ];
 
-        let decoded = AbiDecoder::default().decode(&nested_struct, &data)?;
+        let decoded = ABIDecoder::default().decode(&nested_struct, &data)?;
 
         let my_nested_struct = vec![
             Token::U16(10),
@@ -451,7 +427,7 @@ mod tests {
             0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // str data
         ];
 
-        let decoded = AbiDecoder::default().decode_multiple(&types, &bytes)?;
+        let decoded = ABIDecoder::default().decode_multiple(&types, &bytes)?;
 
         // Expected tokens
         let foo = Token::Struct(vec![
@@ -490,7 +466,7 @@ mod tests {
             generics: vec![],
         };
 
-        let actual = AbiDecoder::default().decode(&struct_type, &data)?;
+        let actual = ABIDecoder::default().decode(&struct_type, &data)?;
 
         let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
         assert_eq!(actual, expected);
@@ -507,7 +483,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = AbiDecoder::default().decode(&enum_w_only_units, &data)?;
+        let result = ABIDecoder::default().decode(&enum_w_only_units, &data)?;
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
         assert_eq!(result, expected_enum);
@@ -524,7 +500,7 @@ mod tests {
             generics: vec![],
         };
 
-        let result = AbiDecoder::default().decode(&enum_type, &data);
+        let result = ABIDecoder::default().decode(&enum_type, &data);
 
         let error = result.expect_err("Should have resulted in an error");
 
@@ -577,7 +553,7 @@ mod tests {
                 }
             })
             .for_each(|param_type| {
-                AbiDecoder::new(config).decode(&param_type, &data).unwrap();
+                ABIDecoder::new(config).decode(&param_type, &data).unwrap();
             })
     }
 
@@ -612,7 +588,7 @@ mod tests {
     fn vectors_of_zst_are_not_supported() {
         let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
 
-        let err = AbiDecoder::default()
+        let err = ABIDecoder::default()
             .decode(&param_type, &[])
             .expect_err("Vectors of ZST should be prohibited");
 
@@ -635,7 +611,7 @@ mod tests {
 
         let param_type = ParamType::Array(Box::new(ParamType::String(0)), 2);
 
-        let decoder = AbiDecoder::new(config);
+        let decoder = ABIDecoder::new(config);
         decoder.decode(&param_type, &[]).unwrap();
 
         // when
@@ -651,7 +627,7 @@ mod tests {
         msg: &str,
         data: &[u8],
     ) {
-        let decoder = AbiDecoder::new(config);
+        let decoder = ABIDecoder::new(config);
 
         let err = decoder.decode(param_type, data);
 

@@ -1,6 +1,6 @@
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
-    codec::{AbiDecoder, DecoderConfig},
+    codec::{ABIDecoder, DecoderConfig},
     types::{
         bech32::Bech32ContractId,
         errors::{error, Error, Result},
@@ -12,7 +12,7 @@ use itertools::Itertools;
 
 pub struct ReceiptParser {
     receipts: Vec<Receipt>,
-    decoder: AbiDecoder,
+    decoder: ABIDecoder,
 }
 
 impl ReceiptParser {
@@ -27,7 +27,7 @@ impl ReceiptParser {
 
         Self {
             receipts: relevant_receipts,
-            decoder: AbiDecoder::new(decoder_config),
+            decoder: ABIDecoder::new(decoder_config),
         }
     }
 
