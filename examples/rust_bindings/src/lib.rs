@@ -78,6 +78,7 @@ mod tests {
 
     #[test]
     fn manual_decode_of_native_types() -> Result<()> {
+        // TODO: move this to somewhere sensible
         // ANCHOR: manual_decode_native
         let contract_id_bytes = [0xFF; 32];
         let contract_id = ContractId::new(contract_id_bytes);

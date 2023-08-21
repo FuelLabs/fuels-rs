@@ -6,24 +6,25 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-    "examples/abigen",
-    "examples/contracts",
-    "examples/cookbook",
-    "examples/debugging",
-    "examples/predicates",
-    "examples/providers",
-    "examples/rust_bindings",
-    "examples/types",
-    "examples/wallets",
-    "packages/fuels",
-    "packages/fuels-accounts",
-    "packages/fuels-code-gen",
-    "packages/fuels-core",
-    "packages/fuels-macros",
-    "packages/fuels-programs",
-    "packages/fuels-test-helpers",
-    "packages/wasm-tests",
-    "scripts/check-docs",
+  "examples/codec",
+  "examples/contracts",
+  "examples/cookbook",
+  "examples/debugging",
+  "examples/macros",
+  "examples/predicates",
+  "examples/providers",
+  "examples/rust_bindings",
+  "examples/types",
+  "examples/wallets",
+  "packages/fuels",
+  "packages/fuels-accounts",
+  "packages/fuels-code-gen",
+  "packages/fuels-core",
+  "packages/fuels-macros",
+  "packages/fuels-programs",
+  "packages/fuels-test-helpers",
+  "packages/wasm-tests",
+  "scripts/check-docs",
 ]
 
 [workspace.package]
@@ -51,7 +52,10 @@ itertools = "0.11.0"
 portpicker = "0.1.1"
 proc-macro2 = "1.0.66"
 quote = "1.0.32"
-rand = { version = "0.8.5", default-features = false, features = ["std_rng", "getrandom"] }
+rand = { version = "0.8.5", default-features = false, features = [
+  "std_rng",
+  "getrandom",
+] }
 regex = "1.9.3"
 serde = { version = "1.0.183", default-features = false }
 serde_json = "1.0.104"

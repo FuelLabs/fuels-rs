@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
+    use fuels::{
+        core::codec::DecoderConfig,
+        types::{
+            errors::{error, Error, Result},
+            Bits256,
+        },
     };
 
     #[tokio::test]
@@ -790,6 +793,38 @@ mod tests {
         assert_eq!(result_uint, 2);
         assert!(result_bool);
         assert_eq!(result_str, "fuel");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn configure_the_return_value_decoder() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "MyContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        // ANCHOR: contract_decoder_config
+        let _ = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .decoder_config(DecoderConfig {
+                max_depth: 10,
+                max_tokens: 20_00,
+            })
+            .call()
+            .await?;
+        // ANCHOR_END: contract_decoder_config
 
         Ok(())
     }
