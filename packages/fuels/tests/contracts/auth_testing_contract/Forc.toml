@@ -6,4 +6,3 @@ name = "auth_testing_contract"
 
 [dependencies]
 auth_testing_abi = { path = "../auth_testing_abi" }
-std = { git = "https://github.com/FuelLabs/sway", branch = "upgrade/fuel-core-v0.20.1" }

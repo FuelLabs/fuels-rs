@@ -3,6 +3,3 @@ authors = ["Fuel Labs <contact@fuel.sh>"]
 entry = "lib.sw"
 license = "Apache-2.0"
 name = "shared_lib"
-
-[dependencies]
-std = { git = "https://github.com/FuelLabs/sway", branch = "upgrade/fuel-core-v0.20.1" }
