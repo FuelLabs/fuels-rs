@@ -26,9 +26,13 @@ The decoder can be configured to limit its resource expenditure:
 {{#include ../../../examples/codec/src/lib.rs:configuring_the_decoder}}
 ```
 
-For an explanation of each configuration value visit the [`DecoderConfig` docs.rs page](https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html).
+<!-- TODO: Add a link once a release is made -->
+<!-- https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html -->
+For an explanation of each configuration value visit the `DecoderConfig`.
 
-The default values for the [`DecoderConfig`](https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html) are:
+<!-- TODO: add a link once a release is made -->
+<!-- https://docs.rs/fuels/latest/fuels/core/codec/struct.DecoderConfig.html -->
+The default values for the `DecoderConfig` are:
 
 ```rust,ignore
 {{#include ../../../packages/fuels-core/src/codec/abi_decoder.rs:default_decoder_config}}
