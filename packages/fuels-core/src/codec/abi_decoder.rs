@@ -15,6 +15,7 @@ pub struct DecoderConfig {
     pub max_tokens: usize,
 }
 
+// ANCHOR: default_decoder_config
 impl Default for DecoderConfig {
     fn default() -> Self {
         Self {
@@ -23,6 +24,7 @@ impl Default for DecoderConfig {
         }
     }
 }
+// ANCHOR_END: default_decoder_config
 
 #[derive(Default)]
 pub struct AbiDecoder {

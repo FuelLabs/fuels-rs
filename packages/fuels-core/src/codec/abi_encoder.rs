@@ -2,7 +2,7 @@ use fuel_types::bytes::padded_len_usize;
 use itertools::Itertools;
 
 use crate::{
-    constants::{WORD_SIZE},
+    constants::WORD_SIZE,
     types::{
         errors::Result,
         pad_string, pad_u16, pad_u32, pad_u8,
