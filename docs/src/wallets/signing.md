@@ -8,11 +8,11 @@ Once you've instantiated your wallet in an unlocked state using one of the previ
 
 ## Signing a transaction
 
-- what it means and how it is done - every signed resource needs to have a witness index and witness
-- what we do for the user - save the signing intention, resolve all indexes and signatures
-- add comments in code
+Every signed resource in the inputs needs to have a witness index that points to a valid witness. Changing the witness index inside an input will change the transaction id. This means that we need to set all witness indexes before finally signing the tx. Previously, the user had to make sure that the witness indexes and the order of the witnesses are correct. To automate this process, the SDK will keep track of the signatures in the transaction builder and resolve the final transaction automatically. This is done by storing the secret keys of all signers until the final transaction is built.
 
-You can also sign a _transaction builder_ by using `wallet.sign_transaction`. Below is a full example of how to sign and recover a transaction.
+To sign a _transaction builder_ use the `wallet.sign_transaction`. Below is a full example of how to create a transaction and sign it.
+
+> Note: When you sign a transaction builder the secret key is stored inside it and will not be resolved until you call `build()`!
 
 ```rust,ignore
 {{#include ../../../packages/fuels-accounts/src/lib.rs:sign_tx}}
