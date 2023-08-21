@@ -44,12 +44,6 @@ impl CallParameters {
         }
     }
 
-    #[deprecated(note = "please use `with_amount` instead")]
-    pub fn set_amount(mut self, amount: u64) -> Self {
-        self.amount = amount;
-        self
-    }
-
     pub fn with_amount(mut self, amount: u64) -> Self {
         self.amount = amount;
         self
@@ -59,12 +53,6 @@ impl CallParameters {
         self.amount
     }
 
-    #[deprecated(note = "please use `with_asset_id` instead")]
-    pub fn set_asset_id(mut self, asset_id: AssetId) -> Self {
-        self.asset_id = asset_id;
-        self
-    }
-
     pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
         self.asset_id = asset_id;
         self
@@ -72,12 +60,6 @@ impl CallParameters {
 
     pub fn asset_id(&self) -> AssetId {
         self.asset_id
-    }
-
-    #[deprecated(note = "please use `with_gas_forwarded` instead")]
-    pub fn set_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
-        self.gas_forwarded = Some(gas_forwarded);
-        self
     }
 
     pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
@@ -168,24 +150,6 @@ impl LoadConfiguration {
             configurables: configurables.into(),
             salt: salt.into(),
         }
-    }
-
-    #[deprecated(note = "please use `with_storage_configuration` instead")]
-    pub fn set_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
-        self.storage = storage;
-        self
-    }
-
-    #[deprecated(note = "please use `with_configurables` instead")]
-    pub fn set_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
-        self.configurables = configurables.into();
-        self
-    }
-
-    #[deprecated(note = "please use `with_salt` instead")]
-    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
-        self.salt = salt.into();
-        self
     }
 
     pub fn with_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
@@ -413,47 +377,13 @@ where
     /// method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    #[deprecated(note = "please use `with_contract_ids` instead")]
-    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-        self.contract_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
-    /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
+    /// my_contract_instance.my_method(...).with_contract_ids(&[another_contract_id]).call()
     /// ```
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
     /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
-    /// Sets external contract instances as dependencies to this contract's call.
-    /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
-    /// ```
-    #[deprecated(note = "please use `with_contracts` instead")]
-    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
-        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
-        for c in contracts {
-            self.log_decoder.merge(c.log_decoder());
-        }
         self
     }
 

@@ -138,8 +138,8 @@ mod tests {
 
         let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
 
-        wallet_1.with_provider(provider.clone());
-        wallet_2.with_provider(provider.clone());
+        wallet_1.set_provider(provider.clone());
+        wallet_2.set_provider(provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
         // ANCHOR: transfer_multiple_inout

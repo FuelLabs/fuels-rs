@@ -10,7 +10,7 @@ use crate::{
 
 #[derive(Debug)]
 pub(crate) struct ResolvedConfigurable {
-    pub name: String,
+    pub name: Ident,
     pub ttype: ResolvedType,
     pub offset: u64,
 }
@@ -19,7 +19,7 @@ impl ResolvedConfigurable {
     pub fn new(configurable: &FullConfigurable) -> Result<ResolvedConfigurable> {
         let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
-            name: configurable.name.clone(),
+            name: safe_ident(&format!("with_{}", configurable.name)),
             ttype: TypeResolver::default().resolve(type_application)?,
             offset: configurable.offset,
         })
@@ -80,17 +80,8 @@ fn generate_setter_methods(resolved_configurables: &[ResolvedConfigurable]) -> T
              offset,
          }| {
             let encoder_code = generate_encoder_code(ttype);
-            let name_set = safe_ident(&format!("set_{}", name));
-            let name_with = safe_ident(&format!("with_{}", name));
-            let deprecated_msg = format!("please use `with_{}` instead", name);
             quote! {
-                #[deprecated(note=#deprecated_msg)]
-                pub fn #name_set(mut self, value: #ttype) -> Self{
-                    self.offsets_with_data.push((#offset, #encoder_code));
-                    self
-                }
-
-                pub fn #name_with(mut self, value: #ttype) -> Self{
+                pub fn #name(mut self, value: #ttype) -> Self{
                     self.offsets_with_data.push((#offset, #encoder_code));
                     self
                 }

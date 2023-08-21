@@ -94,7 +94,7 @@ async fn setup_predicate_test(
         ..Config::local_node()
     };
     let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await;
-    receiver.with_provider(provider.clone());
+    receiver.set_provider(provider.clone());
 
     Ok((
         provider,
@@ -119,12 +119,11 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 
     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
 
-    wallet.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
 
-    let mut predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?;
-
-    predicate.with_provider(provider.clone());
+    let predicate =
+        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+            .with_provider(provider.clone());
 
     wallet
         .transfer(
@@ -159,7 +158,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     predicate
         .transfer(
@@ -210,7 +209,7 @@ async fn pay_with_predicate() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -263,7 +262,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -312,7 +311,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -374,7 +373,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let amount = 1000;
     let base_layer_address =
@@ -445,8 +444,8 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     messages.extend(wallet_messages);
 
     let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
-    wallet.with_provider(provider.clone());
-    predicate.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
         .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
@@ -460,7 +459,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let params = provider.consensus_parameters();
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .set_consensus_parameters(params)
+        .with_consensus_parameters(params)
         .build()?;
     wallet.sign_transaction(&mut tx)?;
 
@@ -507,7 +506,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -518,7 +517,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::default().set_gas_price(1);
+    let my_tx_params = TxParameters::default().with_gas_price(1);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
@@ -584,7 +583,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let (provider, _predicate_balance, _receiver, _receiver_balance, _asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -641,7 +640,7 @@ async fn predicate_configurables() -> Result<()> {
     let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
         setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
 
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     predicate
         .transfer(
@@ -690,7 +689,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     );
 
     let (provider, _) = setup_test_provider(coins, vec![message.clone()], None, None).await;
-    predicate.with_provider(provider.clone());
+    predicate.set_provider(provider.clone());
 
     let params = provider.consensus_parameters();
     let tb = ScriptTransactionBuilder::prepare_transfer(
@@ -698,7 +697,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         vec![],
         Default::default(),
     )
-    .set_consensus_parameters(params);
+    .with_consensus_parameters(params);
     let tx = predicate.add_fee_resources(tb, 1000, None).await?;
 
     assert_eq!(tx.inputs().len(), 2);

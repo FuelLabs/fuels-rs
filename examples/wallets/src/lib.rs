@@ -253,7 +253,7 @@ mod tests {
         );
         // ANCHOR_END: multiple_assets_coins
         let (provider, _socket_addr) = setup_test_provider(coins.clone(), vec![], None, None).await;
-        wallet.with_provider(provider);
+        wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
         Ok(())
     }
@@ -294,7 +294,7 @@ mod tests {
 
         let coins = setup_custom_assets_coins(wallet.address(), &assets);
         let (provider, _socket_addr) = setup_test_provider(coins, vec![], None, None).await;
-        wallet.with_provider(provider);
+        wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
         // ANCHOR: custom_assets_wallet_short
         let num_wallets = 1;

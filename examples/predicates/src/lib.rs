@@ -49,7 +49,7 @@ mod tests {
         [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
             .iter_mut()
             .for_each(|wallet| {
-                wallet.with_provider(provider.clone());
+                wallet.set_provider(provider.clone());
             });
         // ANCHOR_END: predicate_coins
 

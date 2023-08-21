@@ -107,11 +107,11 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let original_output_type = generator.output_type();
 
     generator
-        .set_output_type(
+        .with_output_type(
             quote! {::fuels::programs::script_calls::ScriptCallHandler<T, #original_output_type> },
         )
-        .set_doc("Run the script's `main` function with the provided arguments".to_string())
-        .set_body(body);
+        .with_doc("Run the script's `main` function with the provided arguments".to_string())
+        .with_body(body);
 
     Ok(generator.into())
 }

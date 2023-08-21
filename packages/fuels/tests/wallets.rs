@@ -19,7 +19,7 @@ async fn test_wallet_balance_api_multi_asset() -> Result<()> {
     );
 
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
     let balances = wallet.get_balances().await?;
     assert_eq!(balances.len() as u64, number_of_assets);
 
@@ -50,7 +50,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
     );
 
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
 
     for coin in coins {
         let balance = wallet.get_asset_balance(&coin.asset_id).await;
@@ -213,8 +213,8 @@ async fn test_transfer() -> Result<()> {
     let (provider, _) = setup_test_provider(coins_1, vec![], None, None).await;
 
     // Set provider for wallets
-    wallet_1.with_provider(provider.clone());
-    wallet_2.with_provider(provider);
+    wallet_1.set_provider(provider.clone());
+    wallet_2.set_provider(provider);
 
     // Transfer 1 from wallet 1 to wallet 2
     let _receipts = wallet_1
@@ -320,7 +320,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, NUM_COINS, AMOUNT);
 
     let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
-    wallet.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
 
     let wallet_initial_coins = wallet.get_coins(BASE_ASSET_ID).await?;
     let total_amount: u64 = wallet_initial_coins.iter().map(|c| c.amount).sum();
@@ -339,8 +339,8 @@ async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
 
     let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
 
-    wallet_1.with_provider(provider.clone());
-    wallet_2.with_provider(provider);
+    wallet_1.set_provider(provider.clone());
+    wallet_2.set_provider(provider);
 
     (wallet_1, wallet_2)
 }
@@ -380,8 +380,8 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
     let (provider, _address) = setup_test_provider(coins, vec![], None, None).await;
 
-    wallet_1.with_provider(provider.clone());
-    wallet_2.with_provider(provider);
+    wallet_1.set_provider(provider.clone());
+    wallet_2.set_provider(provider);
 
     const SEND_AMOUNT: u64 = 200;
     let _receipts = wallet_1

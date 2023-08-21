@@ -398,7 +398,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxParameters::default().set_maturity(maturity))
+            .tx_params(TxParameters::default().with_maturity(maturity))
     };
 
     call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -816,7 +816,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
 
     let random_asset_id = &asset_ids[1];
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
-    wallet.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1025,7 +1025,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     };
 
     let (provider, _address) = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
-    wallet.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
     assert_eq!(consensus_parameters_config, provider.consensus_parameters());
 
     setup_program_test!(
@@ -1408,7 +1408,7 @@ fn db_rocksdb() {
                 None,
             );
 
-            wallet.with_provider(provider.clone());
+            wallet.set_provider(provider.clone());
 
             let blocks = provider
                 .get_blocks(PaginationRequest {

@@ -33,14 +33,14 @@ pub trait TransactionBuilder: Send {
         parameters: &ConsensusParameters,
     ) -> Result<()>;
 
-    fn set_maturity(self, maturity: u32) -> Self;
-    fn set_gas_price(self, gas_price: u64) -> Self;
-    fn set_gas_limit(self, gas_limit: u64) -> Self;
-    fn set_tx_params(self, tx_params: TxParameters) -> Self;
-    fn set_inputs(self, inputs: Vec<Input>) -> Self;
-    fn set_outputs(self, outputs: Vec<Output>) -> Self;
-    fn set_witnesses(self, witnesses: Vec<Witness>) -> Self;
-    fn set_consensus_parameters(self, consensus_parameters: ConsensusParameters) -> Self;
+    fn with_maturity(self, maturity: u32) -> Self;
+    fn with_gas_price(self, gas_price: u64) -> Self;
+    fn with_gas_limit(self, gas_limit: u64) -> Self;
+    fn with_tx_params(self, tx_params: TxParameters) -> Self;
+    fn with_inputs(self, inputs: Vec<Input>) -> Self;
+    fn with_outputs(self, outputs: Vec<Output>) -> Self;
+    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
+    fn with_consensus_parameters(self, consensus_parameters: ConsensusParameters) -> Self;
     fn inputs(&self) -> &Vec<Input>;
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
     fn outputs(&self) -> &Vec<Output>;
@@ -94,43 +94,43 @@ macro_rules! impl_tx_trait {
                     .check_without_signatures(block_height.into(), parameters)?)
             }
 
-            fn set_maturity(mut self, maturity: u32) -> Self {
+            fn with_maturity(mut self, maturity: u32) -> Self {
                 self.maturity = maturity.into();
                 self
             }
 
-            fn set_gas_price(mut self, gas_price: u64) -> Self {
+            fn with_gas_price(mut self, gas_price: u64) -> Self {
                 self.gas_price = gas_price;
                 self
             }
 
-            fn set_gas_limit(mut self, gas_limit: u64) -> Self {
+            fn with_gas_limit(mut self, gas_limit: u64) -> Self {
                 self.gas_limit = gas_limit;
                 self
             }
 
-            fn set_tx_params(self, tx_params: TxParameters) -> Self {
-                self.set_gas_limit(tx_params.gas_limit())
-                    .set_gas_price(tx_params.gas_price())
-                    .set_maturity(tx_params.maturity().into())
+            fn with_tx_params(self, tx_params: TxParameters) -> Self {
+                self.with_gas_limit(tx_params.gas_limit())
+                    .with_gas_price(tx_params.gas_price())
+                    .with_maturity(tx_params.maturity().into())
             }
 
-            fn set_inputs(mut self, inputs: Vec<Input>) -> Self {
+            fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
                 self.inputs = inputs;
                 self
             }
 
-            fn set_outputs(mut self, outputs: Vec<Output>) -> Self {
+            fn with_outputs(mut self, outputs: Vec<Output>) -> Self {
                 self.outputs = outputs;
                 self
             }
 
-            fn set_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
+            fn with_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
                 self.witnesses = witnesses;
                 self
             }
 
-            fn set_consensus_parameters(
+            fn with_consensus_parameters(
                 mut self,
                 consensus_parameters: ConsensusParameters,
             ) -> Self {
@@ -225,12 +225,12 @@ impl ScriptTransactionBuilder {
             + padded_len_usize(self.script.len())
     }
 
-    pub fn set_script(mut self, script: Vec<u8>) -> Self {
+    pub fn with_script(mut self, script: Vec<u8>) -> Self {
         self.script = script;
         self
     }
 
-    pub fn set_script_data(mut self, script_data: Vec<u8>) -> Self {
+    pub fn with_script_data(mut self, script_data: Vec<u8>) -> Self {
         self.script_data = script_data;
         self
     }
@@ -241,9 +241,9 @@ impl ScriptTransactionBuilder {
         params: TxParameters,
     ) -> Self {
         ScriptTransactionBuilder::default()
-            .set_inputs(inputs)
-            .set_outputs(outputs)
-            .set_tx_params(params)
+            .with_inputs(inputs)
+            .with_outputs(outputs)
+            .with_tx_params(params)
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -282,11 +282,11 @@ impl ScriptTransactionBuilder {
         .collect();
 
         ScriptTransactionBuilder::default()
-            .set_tx_params(params)
-            .set_script(script)
-            .set_script_data(script_data)
-            .set_inputs(inputs)
-            .set_outputs(outputs)
+            .with_tx_params(params)
+            .with_script(script)
+            .with_script_data(script_data)
+            .with_inputs(inputs)
+            .with_outputs(outputs)
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
@@ -319,11 +319,11 @@ impl ScriptTransactionBuilder {
         let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
 
         ScriptTransactionBuilder::default()
-            .set_tx_params(params)
-            .set_script(script)
-            .set_script_data(script_data)
-            .set_inputs(inputs)
-            .set_outputs(outputs)
+            .with_tx_params(params)
+            .with_script(script)
+            .with_script_data(script_data)
+            .with_inputs(inputs)
+            .with_outputs(outputs)
     }
 }
 
@@ -347,17 +347,17 @@ impl CreateTransactionBuilder {
         offsets::base_offset_create(consensus_parameters)
     }
 
-    pub fn set_bytecode_length(mut self, bytecode_length: u64) -> Self {
+    pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {
         self.bytecode_length = bytecode_length;
         self
     }
 
-    pub fn set_bytecode_witness_index(mut self, bytecode_witness_index: u8) -> Self {
+    pub fn with_bytecode_witness_index(mut self, bytecode_witness_index: u8) -> Self {
         self.bytecode_witness_index = bytecode_witness_index;
         self
     }
 
-    pub fn set_storage_slots(mut self, mut storage_slots: Vec<StorageSlot>) -> Self {
+    pub fn with_storage_slots(mut self, mut storage_slots: Vec<StorageSlot>) -> Self {
         // Storage slots have to be sorted otherwise we'd get a `TransactionCreateStorageSlotOrder`
         // error.
         storage_slots.sort();
@@ -365,7 +365,7 @@ impl CreateTransactionBuilder {
         self
     }
 
-    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
+    pub fn with_salt(mut self, salt: impl Into<Salt>) -> Self {
         self.salt = salt.into();
         self
     }
@@ -383,12 +383,12 @@ impl CreateTransactionBuilder {
         let witnesses = vec![binary.into()];
 
         CreateTransactionBuilder::default()
-            .set_tx_params(params)
-            .set_bytecode_witness_index(bytecode_witness_index)
-            .set_salt(salt)
-            .set_storage_slots(storage_slots)
-            .set_outputs(outputs)
-            .set_witnesses(witnesses)
+            .with_tx_params(params)
+            .with_bytecode_witness_index(bytecode_witness_index)
+            .with_salt(salt)
+            .with_storage_slots(storage_slots)
+            .with_outputs(outputs)
+            .with_witnesses(witnesses)
     }
 }
 
@@ -547,7 +547,8 @@ mod tests {
         let unsorted_storage_slots = [2, 1].map(given_a_storage_slot).to_vec();
         let sorted_storage_slots = [1, 2].map(given_a_storage_slot).to_vec();
 
-        let builder = CreateTransactionBuilder::default().set_storage_slots(unsorted_storage_slots);
+        let builder =
+            CreateTransactionBuilder::default().with_storage_slots(unsorted_storage_slots);
 
         assert_eq!(builder.storage_slots, sorted_storage_slots);
     }

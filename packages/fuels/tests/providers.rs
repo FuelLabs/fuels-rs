@@ -31,7 +31,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
     let connected_provider = Provider::connect(address.to_string()).await?;
 
-    wallet.with_provider(connected_provider);
+    wallet.set_provider(connected_provider);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -49,7 +49,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         .await?;
     assert_eq!(42, response.value);
 
-    wallet.with_provider(launched_provider);
+    wallet.set_provider(launched_provider);
     let contract_instance_launched = MyContract::new(contract_id, wallet);
 
     let response = contract_instance_launched
@@ -76,7 +76,7 @@ async fn test_network_error() -> Result<()> {
         .map_err(|err| error!(InfrastructureError, "{err}"))?;
     let provider = Provider::connect(service.bound_address.to_string()).await?;
 
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
 
     // Simulate an unreachable node
     service.stop_and_await().await.unwrap();
@@ -118,7 +118,7 @@ async fn test_input_message() -> Result<()> {
     )];
 
     let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
 
     setup_program_test!(
         Abigen(Contract(
@@ -162,7 +162,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
     );
 
     let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await;
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
 
     abigen!(Contract(
         name = "MyContract",
@@ -306,7 +306,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
-            loaded_contract.deploy(wallet, TxParameters::default().set_maturity(maturity))
+            loaded_contract.deploy(wallet, TxParameters::default().with_maturity(maturity))
         })
     };
 
@@ -344,7 +344,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(TxParameters::default().set_gas_limit(gas_limit))
+        .tx_params(TxParameters::default().with_gas_limit(gas_limit))
         .call()
         .await?;
 
@@ -393,7 +393,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         .await?;
     assert_eq!(balance_response.value, 5_000_000);
 
-    let tx_params = TxParameters::default().set_gas_limit(1_000_000);
+    let tx_params = TxParameters::default().with_gas_limit(1_000_000);
     // Forward 1_000_000 coin amount of base asset_id
     // this is a big number for checking that amount can be a u64
     let call_params = CallParameters::default().with_amount(1_000_000);
@@ -430,7 +430,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     let call_params = CallParameters::default()
         .with_amount(0)
         .with_asset_id(asset_id);
-    let tx_params = TxParameters::default().set_gas_limit(1_000_000);
+    let tx_params = TxParameters::default().with_gas_limit(1_000_000);
 
     let response = contract_methods
         .get_msg_amount()
@@ -469,7 +469,7 @@ async fn test_gas_errors() -> Result<()> {
     );
 
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
-    wallet.with_provider(provider);
+    wallet.set_provider(provider);
 
     setup_program_test!(
         Abigen(Contract(
@@ -488,7 +488,7 @@ async fn test_gas_errors() -> Result<()> {
     let contract_instance_call = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::default().set_gas_limit(gas_limit));
+        .tx_params(TxParameters::default().with_gas_limit(gas_limit));
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
@@ -509,7 +509,7 @@ async fn test_gas_errors() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .tx_params(TxParameters::default().set_gas_price(100_000_000_000))
+        .tx_params(TxParameters::default().with_gas_price(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
@@ -538,7 +538,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     let contract_methods = contract_instance.methods();
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::default().set_gas_limit(446000))
+        .tx_params(TxParameters::default().with_gas_limit(446000))
         .call_params(CallParameters::default().with_gas_forwarded(1))?
         .call()
         .await
@@ -550,7 +550,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
     // Call params gas_forwarded exceeds transaction limit
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(TxParameters::default().set_gas_limit(1))
+        .tx_params(TxParameters::default().with_gas_limit(1))
         .call_params(CallParameters::default().with_gas_forwarded(1_000))?
         .call()
         .await
@@ -651,8 +651,10 @@ async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
-    wallet.with_provider(provider);
-    let tx_parameters = TxParameters::default().set_gas_price(1).set_gas_limit(2000);
+    wallet.set_provider(provider);
+    let tx_parameters = TxParameters::default()
+        .with_gas_price(1)
+        .with_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
@@ -701,7 +703,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
 
-    wallet.with_provider(provider.clone());
+    wallet.set_provider(provider.clone());
 
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {

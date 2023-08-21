@@ -59,11 +59,11 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     };
 
     generator
-        .set_doc("Run the predicate's encode function with the provided arguments".to_string())
-        .set_name("encode_data".to_string())
-        .set_output_type(quote! { ::fuels::types::unresolved_bytes::UnresolvedBytes})
+        .with_doc("Run the predicate's encode function with the provided arguments".to_string())
+        .with_name("encode_data".to_string())
+        .with_output_type(quote! { ::fuels::types::unresolved_bytes::UnresolvedBytes})
         .make_fn_associated()
-        .set_body(body);
+        .with_body(body);
 
     Ok(generator.into())
 }

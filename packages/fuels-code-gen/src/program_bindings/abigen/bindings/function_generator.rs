@@ -38,7 +38,7 @@ impl FunctionGenerator {
         })
     }
 
-    pub fn set_name(&mut self, name: String) -> &mut Self {
+    pub fn with_name(&mut self, name: String) -> &mut Self {
         self.name = name;
         self
     }
@@ -48,12 +48,12 @@ impl FunctionGenerator {
         self
     }
 
-    pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
+    pub fn with_body(&mut self, body: TokenStream) -> &mut Self {
         self.body = body;
         self
     }
 
-    pub fn set_doc(&mut self, text: String) -> &mut Self {
+    pub fn with_doc(&mut self, text: String) -> &mut Self {
         self.doc = Some(text);
         self
     }
@@ -79,7 +79,7 @@ impl FunctionGenerator {
         quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
 
-    pub fn set_output_type(&mut self, output_type: TokenStream) -> &mut Self {
+    pub fn with_output_type(&mut self, output_type: TokenStream) -> &mut Self {
         self.output_type = output_type;
         self
     }
@@ -357,8 +357,8 @@ mod tests {
         let function = given_a_fun();
         let mut sut = FunctionGenerator::new(&function)?;
 
-        sut.set_doc("This is a doc".to_string())
-            .set_body(quote! {this is ze body});
+        sut.with_doc("This is a doc".to_string())
+            .with_body(quote! {this is ze body});
 
         // when
         let tokenized: TokenStream = sut.into();

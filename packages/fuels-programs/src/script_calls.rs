@@ -137,23 +137,8 @@ where
         self
     }
 
-    #[deprecated(note = "please use `with_contract_ids` instead")]
-    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-        self.script_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
     pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.script_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
-    #[deprecated(note = "please use `with_contracts` instead")]
-    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
-        self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
-        for c in contracts {
-            self.log_decoder.merge(c.log_decoder());
-        }
         self
     }
 
@@ -201,8 +186,8 @@ where
         .collect();
 
         let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-            .set_script(self.script_call.script_binary.clone())
-            .set_script_data(self.compute_script_data().await?);
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?);
 
         Ok(tb)
     }
