@@ -18,6 +18,12 @@ jobs:
         with:
           mdbook-version: "0.4.15"
 
+      - name: Install mdbook-variables preprocessor
+        uses: baptiste0928/cargo-install@v2
+        with:
+          crate: mdbook-variables
+          version: "0.2.2"
+
       - run: mdbook build docs
 
       - name: Deploy master
