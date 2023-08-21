@@ -369,7 +369,7 @@ impl CounterWithLimit {
         if self.count > self.max {
             Err(error!(
                 InvalidType,
-                "{} limit ({}) reached while decoding!", self.name, self.max
+                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
             ))
         } else {
             Ok(())
