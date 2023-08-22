@@ -1313,8 +1313,15 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     );
     let methods = contract_instance.methods();
     {
-        // Single call: decoding defaults will fail
-        let response = methods.i_log_a_1000_el_array().call().await?;
+        // Single call: decoding with too low max_tokens fails
+        let response = methods
+            .i_log_a_1k_el_array()
+            .decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
+            .call()
+            .await?;
 
         response.decode_logs_with_type::<[u8; 1000]>().expect_err(
             "Should have failed since there are more tokens than what is supported by default.",
@@ -1326,9 +1333,9 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     {
         // Single call: increasing limits makes the test pass
         let response = methods
-            .i_log_a_1000_el_array()
+            .i_log_a_1k_el_array()
             .decoder_config(DecoderConfig {
-                max_tokens: 10001,
+                max_tokens: 1001,
                 ..Default::default()
             })
             .call()
@@ -1341,9 +1348,13 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         assert!(!logs.filter_succeeded().is_empty());
     }
     {
-        // Multi call: decoding defaults will fail
+        // Multi call: decoding with too low max_tokens will fail
         let response = MultiContractCallHandler::new(wallet.clone())
-            .add_call(methods.i_log_a_1000_el_array())
+            .add_call(methods.i_log_a_1k_el_array())
+            .decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
             .call::<((),)>()
             .await?;
 
@@ -1357,9 +1368,9 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     {
         // Multi call: increasing limits makes the test pass
         let response = MultiContractCallHandler::new(wallet.clone())
-            .add_call(methods.i_log_a_1000_el_array())
+            .add_call(methods.i_log_a_1k_el_array())
             .decoder_config(DecoderConfig {
-                max_tokens: 10001,
+                max_tokens: 1001,
                 ..Default::default()
             })
             .call::<((),)>()
@@ -1391,8 +1402,16 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     );
 
     {
-        // Cannot decode the produced log with the default decoder config
-        let response = script_instance.main().call().await.unwrap();
+        // Cannot decode the produced log with too low max_tokens
+        let response = script_instance
+            .main()
+            .decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .unwrap();
 
         response
             .decode_logs_with_type::<[u8; 1000]>()

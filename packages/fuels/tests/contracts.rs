@@ -1451,60 +1451,52 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
             name = "MyContract",
             project = "packages/fuels/tests/contracts/needs_custom_decoder"
         ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
     );
-
-    let vec_elements_to_add = DecoderConfig::default().max_tokens;
-    let contract_instance = {
-        let configurables =
-            MyContractConfigurables::new().set_NUM_ELEMENTS(vec_elements_to_add as u64);
-
-        let contract_id = Contract::load_from(
-            "tests/contracts/needs_custom_decoder/out/debug/needs_custom_decoder.bin",
-            LoadConfiguration::default().set_configurables(configurables),
-        )?
-        .deploy(&wallet, TxParameters::default())
-        .await?;
-        MyContract::new(contract_id, wallet.clone())
-    };
 
     let methods = contract_instance.methods();
     {
-        // Single call: Will not work by default
-        methods.i_return_a_big_type().call().await.expect_err(
+        // Single call: Will not work if max_tokens not big enough
+        methods.i_return_a_1k_el_array().decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default.",
         );
     }
     {
-        // Single call: Works when configured
+        // Single call: Works when limit is bumped
         let result = methods
-            .i_return_a_big_type()
+            .i_return_a_1k_el_array()
             .decoder_config(DecoderConfig {
-                max_tokens: vec_elements_to_add + 1,
+                max_tokens: 1001,
                 ..Default::default()
             })
             .call()
             .await?
             .value;
 
-        assert_eq!(result, vec![0; vec_elements_to_add]);
+        assert_eq!(result, [0; 1000]);
     }
     {
-        // Multi call: Will not work by default
+        // Multi call: Will not work if max_tokens not big enough
         MultiContractCallHandler::new(wallet.clone())
-        .add_call(methods.i_return_a_big_type())
-        .call::<(Vec<u8>,)>().await.expect_err(
+        .add_call(methods.i_return_a_1k_el_array())
+        .decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
+        .call::<([u8; 1000],)>().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default",
         );
     }
     {
         // Multi call: Works when configured
         MultiContractCallHandler::new(wallet.clone())
-            .add_call(methods.i_return_a_big_type())
+            .add_call(methods.i_return_a_1k_el_array())
             .decoder_config(DecoderConfig {
-                max_tokens: vec_elements_to_add + 1,
+                max_tokens: 1001,
                 ..Default::default()
             })
-            .call::<(Vec<u8>,)>()
+            .call::<([u8; 1000],)>()
             .await
             .unwrap();
     }

@@ -373,10 +373,18 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
     );
 
     {
-        // Will fail by default
-        script_instance.main().call().await.expect_err(
-            "Should fail because return type has more tokens than what is allowed by default",
-        );
+        // Will fail if max_tokens too low
+        script_instance
+            .main()
+            .decoder_config(DecoderConfig {
+                max_tokens: 101,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .expect_err(
+                "Should fail because return type has more tokens than what is allowed by default",
+            );
     }
     {
         // When the token limit is bumped should pass
