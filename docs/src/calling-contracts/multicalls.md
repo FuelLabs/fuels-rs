@@ -16,8 +16,6 @@ Next, you provide the prepared calls to your `MultiContractCallHandler` and opti
 
 > **Note:** any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to `MultiContractCallHandler`.
 
-> **Note:** The `MultiContractCallHandler` supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with `add_call`.
-
 ## Output values
 
 To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of `call()` or `simulate()` to a variable:
@@ -31,3 +29,5 @@ You can also interact with the `FuelCallResponse` by moving the type annotation 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:multi_contract_call_response}}
 ```
+
+> **Note:** The `MultiContractCallHandler` supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with `add_call`.
