@@ -707,36 +707,35 @@ impl<T: Account> MultiContractCallHandler<T> {
             ));
         }
 
-        let number_of_heap_type_calls: u64 = self
+        let number_of_heap_type_calls = self
             .contract_calls
             .iter()
-            .map(|cc| cc.output_param.is_vm_heap_type() as u64)
-            .sum();
+            .filter(|cc| cc.output_param.is_vm_heap_type())
+            .count() as u64;
 
-        if number_of_heap_type_calls > 1 {
-            return Err(error!(
+        match number_of_heap_type_calls {
+            0 => Ok(()),
+            1 => {
+                if self
+                    .contract_calls
+                    .last()
+                    .expect("is not empty")
+                    .output_param
+                    .is_vm_heap_type()
+                {
+                    Ok(())
+                } else {
+                    Err(error!(
+                        InvalidData,
+                        "The contract call with the heap type return must be at the last position"
+                    ))
+                }
+            }
+            _ => Err(error!(
                 InvalidData,
                 "`MultiContractCallHandler` can have only one call that returns a heap type"
-            ));
+            )),
         }
-
-        if number_of_heap_type_calls == 1 {
-            let last_call_return_is_heap = self
-                .contract_calls
-                .last()
-                .expect("is not empty")
-                .output_param
-                .is_vm_heap_type();
-
-            if !last_call_return_is_heap {
-                return Err(error!(
-                    InvalidData,
-                    "The contract call with the heap type return must be at the last position"
-                ));
-            }
-        }
-
-        Ok(())
     }
 
     /// Returns the script that executes the contract calls
