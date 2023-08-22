@@ -136,13 +136,13 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 
-    generator.doc(format!(
+    generator.set_doc(format!(
         "Calls the contract's `{}` function",
         abi_fun.name(),
     ));
 
     let original_output = generator.output_type();
-    generator.with_output_type(
+    generator.set_output_type(
         quote! {::fuels::programs::contract::ContractCallHandler<T, #original_output> },
     );
 
@@ -160,7 +160,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
             )
             .expect("method not found (this should never happen)")
     };
-    generator.body(body);
+    generator.set_body(body);
 
     Ok(generator.into())
 }
