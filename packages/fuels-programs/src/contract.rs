@@ -711,7 +711,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             .contract_calls
             .iter()
             .filter(|cc| cc.output_param.is_vm_heap_type())
-            .count() as u64;
+            .count();
 
         match number_of_heap_type_calls {
             0 => Ok(()),
