@@ -1481,3 +1481,89 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_heap_type_multicall() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Contract(
+                name = "VectorOutputContract",
+                project = "packages/fuels/tests/types/contracts/vector_output"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance_2",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+
+    {
+        // One heap type at the last position is allowed
+        let call_handler_1 = contract_instance.methods().get_single(7);
+        let call_handler_2 = contract_instance.methods().get_single(42);
+        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let handle = multi_call_handler.submit().await?;
+        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.response().await?.value;
+
+        assert_eq!(val_1, 7);
+        assert_eq!(val_2, 42);
+        assert_eq!(val_3, vec![0, 1, 2]);
+    }
+
+    {
+        let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_2 = contract_instance.methods().get_single(7);
+        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let error = multi_call_handler.submit().await.expect_err("Should error");
+        assert!(error.to_string().contains(
+            "`MultiContractCallHandler` can have only one call that returns a heap type"
+        ));
+    }
+
+    {
+        let call_handler_1 = contract_instance.methods().get_single(7);
+        let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_3 = contract_instance.methods().get_single(42);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let error = multi_call_handler.submit().await.expect_err("Should error");
+        assert!(error
+            .to_string()
+            .contains("The contract call with the heap type return must be at the last position"));
+    }
+
+    Ok(())
+}
