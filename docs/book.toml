@@ -13,4 +13,4 @@ edition = "2021"
 
 [preprocessor.variables.variables.versions]
 fuels = "0.46.0"
-types = "0.35.3"
+fuels_types = "0.35.3"
