@@ -12,5 +12,5 @@ git-repository-url = "https://github.com/FuelLabs/fuels-rs"
 edition = "2021"
 
 [preprocessor.variables.variables.versions]
-fuels = "0.46.0"
+fuels = "0.46"
 fuels_types = "0.35.3"
