@@ -136,7 +136,7 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 
-    generator.with_doc(format!(
+    generator.doc(format!(
         "Calls the contract's `{}` function",
         abi_fun.name(),
     ));
@@ -160,7 +160,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
             )
             .expect("method not found (this should never happen)")
     };
-    generator.with_body(body);
+    generator.body(body);
 
     Ok(generator.into())
 }

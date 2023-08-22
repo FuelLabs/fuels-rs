@@ -38,7 +38,7 @@ impl FunctionGenerator {
         })
     }
 
-    pub fn with_name(&mut self, name: String) -> &mut Self {
+    pub fn name(&mut self, name: String) -> &mut Self {
         self.name = name;
         self
     }
@@ -48,12 +48,12 @@ impl FunctionGenerator {
         self
     }
 
-    pub fn with_body(&mut self, body: TokenStream) -> &mut Self {
+    pub fn body(&mut self, body: TokenStream) -> &mut Self {
         self.body = body;
         self
     }
 
-    pub fn with_doc(&mut self, text: String) -> &mut Self {
+    pub fn doc(&mut self, text: String) -> &mut Self {
         self.doc = Some(text);
         self
     }
@@ -357,8 +357,8 @@ mod tests {
         let function = given_a_fun();
         let mut sut = FunctionGenerator::new(&function)?;
 
-        sut.with_doc("This is a doc".to_string())
-            .with_body(quote! {this is ze body});
+        sut.doc("This is a doc".to_string())
+            .body(quote! {this is ze body});
 
         // when
         let tokenized: TokenStream = sut.into();
