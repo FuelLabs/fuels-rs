@@ -227,7 +227,7 @@ jobs:
         if: ${{ matrix.command == 'test_wasm' }}
         uses: actions/setup-node@v3
         with:
-          node-version:  18
+          node-version: 18
 
       - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
@@ -244,7 +244,7 @@ jobs:
       - name: Check for unresolved documentation links
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
-          ! cargo doc |& grep -A 6  "warning: unresolved link to"
+          ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
   publish:
     needs:
