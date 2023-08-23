@@ -43,7 +43,7 @@ impl Parameterize for Bytes {
 
 impl Parameterize for String {
     fn param_type() -> ParamType {
-        ParamType::StdString
+        ParamType::String
     }
 }
 
@@ -149,7 +149,7 @@ where
 
 impl<const LEN: usize> Parameterize for SizedAsciiString<LEN> {
     fn param_type() -> ParamType {
-        ParamType::String(LEN)
+        ParamType::StringArray(LEN)
     }
 }
 
@@ -207,7 +207,7 @@ mod tests {
     fn sized_ascii_string_is_parameterized_correctly() {
         let param_type = SizedAsciiString::<3>::param_type();
 
-        assert!(matches!(param_type, ParamType::String(3)));
+        assert!(matches!(param_type, ParamType::StringArray(3)));
     }
 
     #[test]
