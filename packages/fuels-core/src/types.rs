@@ -2,7 +2,7 @@ use std::fmt;
 
 pub use fuel_tx::{Address, AssetId, ContractId, TxPointer, UtxoId};
 use fuel_types::bytes::padded_len;
-pub use fuel_types::{MessageId, Nonce};
+pub use fuel_types::{ChainId, MessageId, Nonce};
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{

@@ -88,10 +88,7 @@ macro_rules! impl_tx_trait {
                     tx.estimate_predicates(&consensus_parameters, &GasCosts::default())?;
                 };
 
-                Ok($tx_ty {
-                    tx,
-                    consensus_parameters
-                })
+                Ok($tx_ty { tx })
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {

@@ -8,6 +8,7 @@ use fuel_tx::{
     Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
+use fuel_types::ChainId;
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
@@ -67,23 +68,32 @@ pub enum TransactionType {
 }
 
 pub trait Transaction: Into<FuelTransaction> + Clone {
-    fn fee_checked_from_tx(&self) -> Option<TransactionFee>;
+    fn fee_checked_from_tx(
+        &self,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Option<TransactionFee>;
 
     fn check_without_signatures(
         &self,
         block_height: u32,
-        parameters: &ConsensusParameters,
+        consensus_parameters: &ConsensusParameters,
     ) -> Result<()>;
 
-    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self;
-
-    fn id(&self) -> Bytes32;
+    fn id(&self, chain_id: ChainId) -> Bytes32;
 
     fn maturity(&self) -> u32;
 
+    fn with_maturity(self, maturity: u32) -> Self;
+
     fn gas_price(&self) -> u64;
 
+    fn with_gas_price(self, gas_price: u64) -> Self;
+
     fn gas_limit(&self) -> u64;
+
+    fn with_gas_limit(self, gas_limit: u64) -> Self;
+
+    fn with_tx_params(self, tx_params: TxParameters) -> Self;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -107,39 +117,35 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
-    fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
+    fn fee_checked_from_tx(
+        &self,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Option<TransactionFee> {
         match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(),
+            TransactionType::Script(tx) => tx.fee_checked_from_tx(consensus_parameters),
+            TransactionType::Create(tx) => tx.fee_checked_from_tx(consensus_parameters),
         }
     }
 
     fn check_without_signatures(
         &self,
         block_height: u32,
-        parameters: &ConsensusParameters,
+        consensus_parameters: &ConsensusParameters,
     ) -> Result<()> {
         match self {
-            TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
-            TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
-        }
-    }
-
-    fn to_dry_run_tx(self, gas_price: u64, gas_limit: u64) -> Self {
-        match self {
             TransactionType::Script(tx) => {
-                TransactionType::Script(tx.to_dry_run_tx(gas_price, gas_limit))
+                tx.check_without_signatures(block_height, consensus_parameters)
             }
             TransactionType::Create(tx) => {
-                TransactionType::Create(tx.to_dry_run_tx(gas_price, gas_limit))
+                tx.check_without_signatures(block_height, consensus_parameters)
             }
         }
     }
 
-    fn id(&self) -> Bytes32 {
+    fn id(&self, chain_id: ChainId) -> Bytes32 {
         match self {
-            TransactionType::Script(tx) => tx.id(),
-            TransactionType::Create(tx) => tx.id(),
+            TransactionType::Script(tx) => tx.id(chain_id),
+            TransactionType::Create(tx) => tx.id(chain_id),
         }
     }
 
@@ -150,6 +156,13 @@ impl Transaction for TransactionType {
         }
     }
 
+    fn with_maturity(self, maturity: u32) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
+        }
+    }
+
     fn gas_price(&self) -> u64 {
         match self {
             TransactionType::Script(tx) => tx.gas_price(),
@@ -157,10 +170,31 @@ impl Transaction for TransactionType {
         }
     }
 
+    fn with_gas_price(self, gas_price: u64) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
+        }
+    }
+
     fn gas_limit(&self) -> u64 {
         match self {
             TransactionType::Script(tx) => tx.gas_limit(),
             TransactionType::Create(tx) => tx.gas_limit(),
+        }
+    }
+
+    fn with_gas_limit(self, gas_limit: u64) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
+        }
+    }
+
+    fn with_tx_params(self, tx_params: TxParameters) -> Self {
+        match self {
+            TransactionType::Script(tx) => TransactionType::Script(tx.with_tx_params(tx_params)),
+            TransactionType::Create(tx) => TransactionType::Create(tx.with_tx_params(tx_params)),
         }
     }
 
@@ -205,7 +239,6 @@ macro_rules! impl_tx_wrapper {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
             pub(crate) tx: $wrapped,
-            pub(crate) consensus_parameters: ConsensusParameters,
         }
 
         impl From<$wrapper> for $wrapped {
@@ -220,51 +253,65 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
-        impl $wrapper {
-            pub fn from_fuel_tx(tx: $wrapped, consensus_parameters: ConsensusParameters) -> Self {
-                $wrapper {
-                    tx,
-                    consensus_parameters,
-                }
+        impl From<$wrapped> for $wrapper {
+            fn from(tx: $wrapped) -> Self {
+                $wrapper { tx }
             }
         }
 
         impl Transaction for $wrapper {
-            fn fee_checked_from_tx(&self) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(&self.consensus_parameters, &self.tx)
+            fn fee_checked_from_tx(
+                &self,
+                consensus_parameters: &ConsensusParameters,
+            ) -> Option<TransactionFee> {
+                TransactionFee::checked_from_tx(consensus_parameters, &self.tx)
             }
 
             fn check_without_signatures(
                 &self,
                 block_height: u32,
-                parameters: &ConsensusParameters,
+                consensus_parameters: &ConsensusParameters,
             ) -> Result<()> {
                 Ok(self
                     .tx
-                    .check_without_signatures(block_height.into(), parameters)?)
+                    .check_without_signatures(block_height.into(), consensus_parameters)?)
             }
 
-            fn to_dry_run_tx(mut self, gas_price: u64, gas_limit: u64) -> Self {
-                *self.tx.gas_price_mut() = gas_price;
-                *self.tx.gas_limit_mut() = gas_limit;
-
-                self
-            }
-
-            fn id(&self) -> Bytes32 {
-                self.tx.id(&self.consensus_parameters.chain_id.into())
+            fn id(&self, chain_id: ChainId) -> Bytes32 {
+                self.tx.id(&chain_id)
             }
 
             fn maturity(&self) -> u32 {
                 (*self.tx.maturity()).into()
             }
 
+            fn with_maturity(mut self, maturity: u32) -> Self {
+                *self.tx.maturity_mut() = maturity.into();
+                self
+            }
+
             fn gas_price(&self) -> u64 {
                 *self.tx.gas_price()
             }
 
+            fn with_gas_price(mut self, gas_price: u64) -> Self {
+                *self.tx.gas_price_mut() = gas_price;
+                self
+            }
+
             fn gas_limit(&self) -> u64 {
                 *self.tx.gas_limit()
+            }
+
+            fn with_gas_limit(mut self, gas_limit: u64) -> Self {
+                *self.tx.gas_limit_mut() = gas_limit;
+                self
+            }
+
+            fn with_tx_params(self, tx_params: TxParameters) -> Self {
+                self.with_gas_limit(tx_params.gas_limit)
+                    .with_gas_price(tx_params.gas_price)
+                    .with_maturity(tx_params.maturity)
             }
 
             fn metered_bytes_size(&self) -> usize {

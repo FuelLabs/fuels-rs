@@ -506,7 +506,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id());
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
@@ -747,7 +747,8 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        self.cached_tx_id = Some(tx.id());
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?

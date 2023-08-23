@@ -399,7 +399,7 @@ mod tests {
         let tx_signature = Signature::from_bytes(bytes);
 
         // Sign the transaction manually
-        let message = Message::from_bytes(*tx.id());
+        let message = Message::from_bytes(*tx.id(0.into()));
         let signature = Signature::sign(&wallet.private_key, &message);
 
         // Check if the signatures are the same

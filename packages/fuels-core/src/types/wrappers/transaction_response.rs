@@ -6,7 +6,7 @@ use chrono::{DateTime, NaiveDateTime, Utc};
 use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
-use fuel_tx::{ConsensusParameters, Transaction};
+use fuel_tx::Transaction;
 use fuel_types::Bytes32;
 
 use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
@@ -27,11 +27,8 @@ pub enum TransactionStatus {
     SqueezedOut(),
 }
 
-impl TransactionResponse {
-    pub fn from_fuel_response(
-        client_response: ClientTransactionResponse,
-        consensus_parameters: ConsensusParameters,
-    ) -> Self {
+impl From<ClientTransactionResponse> for TransactionResponse {
+    fn from(client_response: ClientTransactionResponse) -> Self {
         let block_id = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }
             | ClientTransactionStatus::SqueezedOut { .. } => None,
@@ -53,12 +50,8 @@ impl TransactionResponse {
         };
 
         let transaction = match client_response.transaction {
-            Transaction::Script(tx) => {
-                TransactionType::Script(ScriptTransaction::from_fuel_tx(tx, consensus_parameters))
-            }
-            Transaction::Create(tx) => {
-                TransactionType::Create(CreateTransaction::from_fuel_tx(tx, consensus_parameters))
-            }
+            Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
+            Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
             Transaction::Mint(_) => unimplemented!(),
         };
 

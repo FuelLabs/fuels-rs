@@ -440,29 +440,18 @@ impl Provider {
         &self,
         tx_id: &TxId,
     ) -> ProviderResult<Option<TransactionResponse>> {
-        Ok(self.client.transaction(tx_id).await?.map(|fuel_tr| {
-            TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
-        }))
+        Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
-    // - Get transaction(s)
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
     ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
         let pr = self.client.transactions(request).await?;
 
-        let results = pr
-            .results
-            .into_iter()
-            .map(|fuel_tr| {
-                TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
-            })
-            .collect();
-
         Ok(PaginatedResult {
             cursor: pr.cursor,
-            results,
+            results: pr.results.into_iter().map(Into::into).collect(),
             has_next_page: pr.has_next_page,
             has_previous_page: pr.has_previous_page,
         })
@@ -479,17 +468,9 @@ impl Provider {
             .transactions_by_owner(&owner.into(), request)
             .await?;
 
-        let results = pr
-            .results
-            .into_iter()
-            .map(|fuel_tr| {
-                TransactionResponse::from_fuel_response(fuel_tr, self.consensus_parameters)
-            })
-            .collect();
-
         Ok(PaginatedResult {
             cursor: pr.cursor,
-            results,
+            results: pr.results.into_iter().map(Into::into).collect(),
             has_next_page: pr.has_next_page,
             has_previous_page: pr.has_previous_page,
         })
@@ -546,25 +527,33 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         // Remove limits from an existing Transaction for accurate gas estimation
-        let new_tx = tx.to_dry_run_tx(0, MAX_GAS_PER_TX);
+        let dry_run_tx = Self::generate_dry_run_tx(tx.clone());
         let gas_used = self
-            .get_gas_used_with_tolerance(new_tx.clone(), tolerance)
+            .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
             .await?;
 
         // Update the tx with estimated gas_used and correct gas price to calculate the total_fee
-        let new_tx = new_tx.to_dry_run_tx(gas_price, gas_used);
+        let dry_run_tx = dry_run_tx
+            .with_gas_price(gas_price)
+            .with_gas_limit(gas_used);
 
-        let transaction_fee = new_tx
-            .fee_checked_from_tx()
+        let transaction_fee = dry_run_tx
+            .fee_checked_from_tx(&self.consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
             min_gas_price,
             gas_price,
             gas_used,
-            metered_bytes_size: new_tx.metered_bytes_size() as u64,
+            metered_bytes_size: dry_run_tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.max_fee(),
         })
+    }
+
+    // Remove limits from an existing Transaction to get an accurate gas estimation
+    fn generate_dry_run_tx<T: Transaction>(tx: T) -> T {
+        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
+        tx.clone().with_gas_limit(MAX_GAS_PER_TX).with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance
