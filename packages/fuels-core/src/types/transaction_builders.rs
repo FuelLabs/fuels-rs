@@ -510,7 +510,7 @@ fn resolve_signed_resource(
                     "signature missing for coin with owner: `{owner:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_input(coin.clone(), num_witnesses + *witness_idx_offset)
+                    create_coin_input(coin, num_witnesses + *witness_idx_offset)
                 })
         }
         CoinType::Message(message) => {
@@ -525,7 +525,7 @@ fn resolve_signed_resource(
                     "signature missing for message with recipient: `{recipient:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_message_input(message.clone(), num_witnesses + *witness_idx_offset)
+                    create_coin_message_input(message, num_witnesses + *witness_idx_offset)
                 })
         }
     }
