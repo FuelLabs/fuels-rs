@@ -30,4 +30,4 @@ You can also interact with the `FuelCallResponse` by moving the type annotation 
 {{#include ../../../examples/contracts/src/lib.rs:multi_contract_call_response}}
 ```
 
-> **Note:** The `MultiContractCallHandler` supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with `add_call`. This is a temporary limitation that we hope to lift soon. in the meantime, If you have multiple calls handling heap types, split them across multiple regular, single calls.
+> **Note:** The `MultiContractCallHandler` supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with `add_call`. This is a temporary limitation that we hope to lift soon. In the meantime, if you have multiple calls handling heap types, split them across multiple regular, single calls.
