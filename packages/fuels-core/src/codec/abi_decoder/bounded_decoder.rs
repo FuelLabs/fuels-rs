@@ -10,7 +10,7 @@ use crate::{
         enum_variants::EnumVariants,
         errors::{error, Error, Result},
         param_types::ParamType,
-        StringToken, Token, U256,
+        StaticStringToken, Token, U256,
     },
 };
 
@@ -90,7 +90,7 @@ impl BoundedDecoder {
             ParamType::B256 => Self::decode_b256(bytes),
             ParamType::RawSlice => self.decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
-            ParamType::String(len) => Self::decode_string_array(bytes, *len),
+            ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_array(t, bytes, *length))
             }
@@ -109,7 +109,7 @@ impl BoundedDecoder {
                 self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
             }
             ParamType::Bytes => Self::decode_bytes(bytes),
-            ParamType::StdString => Self::decode_std_string(bytes),
+            ParamType::String => Self::decode_std_string(bytes),
         }
     }
 
@@ -122,7 +122,7 @@ impl BoundedDecoder {
 
     fn decode_std_string(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
-            token: Token::StdString(str::from_utf8(bytes)?.to_string()),
+            token: Token::String(str::from_utf8(bytes)?.to_string()),
             bytes_read: bytes.len(),
         })
     }
@@ -212,7 +212,7 @@ impl BoundedDecoder {
         let decoded = str::from_utf8(bytes)?;
 
         Ok(Decoded {
-            token: Token::StringSlice(StringToken::new(decoded.into(), None)),
+            token: Token::StringSlice(StaticStringToken::new(decoded.into(), None)),
             bytes_read: decoded.len(),
         })
     }
@@ -223,7 +223,7 @@ impl BoundedDecoder {
 
         let decoded = str::from_utf8(&encoded_str[..length])?;
         let result = Decoded {
-            token: Token::StringArray(StringToken::new(decoded.into(), Some(length))),
+            token: Token::StringArray(StaticStringToken::new(decoded.into(), Some(length))),
             bytes_read: encoded_len,
         };
         Ok(result)

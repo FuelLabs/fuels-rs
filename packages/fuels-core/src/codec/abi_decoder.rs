@@ -61,7 +61,6 @@ impl ABIDecoder {
     }
 
     /// Same as `decode` but decodes multiple `ParamType`s in one go.
-    ///
     /// # Examples
     /// ```
     /// use fuels_core::codec::ABIDecoder;
@@ -87,7 +86,7 @@ mod tests {
     use super::*;
     use crate::{
         constants::WORD_SIZE,
-        types::{enum_variants::EnumVariants, errors::Error, StringToken},
+        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken},
     };
 
     #[test]
@@ -157,7 +156,7 @@ mod tests {
 
     #[test]
     fn decode_string_array() -> Result<()> {
-        let types = vec![ParamType::String(23), ParamType::String(5)];
+        let types = vec![ParamType::StringArray(23), ParamType::StringArray(5)];
         let data = [
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
             0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
@@ -168,8 +167,11 @@ mod tests {
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
-            Token::StringArray(StringToken::new("This is a full sentence".into(), Some(23))),
-            Token::StringArray(StringToken::new("Hello".into(), Some(5))),
+            Token::StringArray(StaticStringToken::new(
+                "This is a full sentence".into(),
+                Some(23),
+            )),
+            Token::StringArray(StaticStringToken::new("Hello".into(), Some(5))),
         ];
 
         assert_eq!(decoded, expected);
@@ -187,7 +189,7 @@ mod tests {
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
-        let expected = vec![Token::StringSlice(StringToken::new(
+        let expected = vec![Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
         ))];
@@ -401,7 +403,7 @@ mod tests {
 
         let u8_arr = ParamType::Array(Box::new(ParamType::U8), 2);
         let b256 = ParamType::B256;
-        let s = ParamType::String(3);
+        let s = ParamType::StringArray(3);
         let ss = ParamType::StringSlice;
 
         let types = [nested_struct, u8_arr, b256, s, ss];
@@ -442,9 +444,12 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let ss = Token::StringSlice(StringToken::new("This is a full sentence".into(), None));
+        let ss = Token::StringSlice(StaticStringToken::new(
+            "This is a full sentence".into(),
+            None,
+        ));
 
-        let s = Token::StringArray(StringToken::new("foo".into(), Some(3)));
+        let s = Token::StringArray(StaticStringToken::new("foo".into(), Some(3)));
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256, s, ss];
 
@@ -582,7 +587,7 @@ mod tests {
 
     #[test]
     fn vectors_of_zst_are_not_supported() {
-        let param_type = ParamType::Vector(Box::new(ParamType::String(0)));
+        let param_type = ParamType::Vector(Box::new(ParamType::StringArray(0)));
 
         let err = ABIDecoder::default()
             .decode(&param_type, &[])
@@ -605,7 +610,7 @@ mod tests {
             ..Default::default()
         };
 
-        let param_type = ParamType::Array(Box::new(ParamType::String(0)), 2);
+        let param_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 2);
 
         let decoder = ABIDecoder::new(config);
         decoder.decode(&param_type, &[]).unwrap();

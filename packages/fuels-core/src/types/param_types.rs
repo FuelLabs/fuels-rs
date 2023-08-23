@@ -28,7 +28,7 @@ pub enum ParamType {
     Array(Box<ParamType>, usize),
     Vector(Box<ParamType>),
     StringSlice,
-    String(usize),
+    StringArray(usize),
     Struct {
         fields: Vec<ParamType>,
         generics: Vec<ParamType>,
@@ -40,7 +40,7 @@ pub enum ParamType {
     Tuple(Vec<ParamType>),
     RawSlice,
     Bytes,
-    StdString,
+    String,
 }
 
 pub enum ReturnLocation {
@@ -88,17 +88,17 @@ impl ParamType {
         match &self {
             ParamType::Vector(param_type) => param_type.uses_heap_types(),
             ParamType::Bytes => false,
-            // Here, we return false because even though the `StdString` type has an underlying
+            // Here, we return false because even though the `Token::String` type has an underlying
             // `Bytes` type nested, it is an exception that will be generalized as part of
             // https://github.com/FuelLabs/fuels-rs/discussions/944
-            ParamType::StdString => false,
+            ParamType::String => false,
             _ => self.uses_heap_types(),
         }
     }
 
     fn uses_heap_types(&self) -> bool {
         match &self {
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::StdString => true,
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => true,
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
             ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
             ParamType::Enum {
@@ -123,7 +123,7 @@ impl ParamType {
     pub fn is_vm_heap_type(&self) -> bool {
         matches!(
             self,
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::StdString
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String
         )
     }
 
@@ -134,7 +134,7 @@ impl ParamType {
                 Some(inner_param_type.compute_encoding_width() * WORD_SIZE)
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes | ParamType::StdString => Some(std::mem::size_of::<u8>()),
+            ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
             _ => None,
         }
     }
@@ -158,10 +158,10 @@ impl ParamType {
             | ParamType::U64
             | ParamType::Bool => 1,
             ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => 2,
-            ParamType::Vector(_) | ParamType::Bytes | ParamType::StdString => 3,
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => 3,
             ParamType::U256 | ParamType::B256 => 4,
             ParamType::Array(param, count) => param.compute_encoding_width() * count,
-            ParamType::String(len) => count_words(*len),
+            ParamType::StringArray(len) => count_words(*len),
             ParamType::Struct { fields, .. } => fields
                 .iter()
                 .map(|param_type| param_type.compute_encoding_width())
@@ -421,7 +421,7 @@ fn try_bytes(the_type: &Type) -> Result<Option<ParamType>> {
 fn try_std_string(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(["struct std::string::String", "struct String"]
         .contains(&the_type.type_field.as_str())
-        .then_some(ParamType::StdString))
+        .then_some(ParamType::String))
 }
 
 fn try_raw_slice(the_type: &Type) -> Result<Option<ParamType>> {
@@ -460,7 +460,7 @@ fn param_types(coll: &[Type]) -> Result<Vec<ParamType>> {
 }
 
 fn try_str_array(the_type: &Type) -> Result<Option<ParamType>> {
-    Ok(extract_str_len(&the_type.type_field).map(ParamType::String))
+    Ok(extract_str_len(&the_type.type_field).map(ParamType::StringArray))
 }
 
 fn try_str_slice(the_type: &Type) -> Result<Option<ParamType>> {
@@ -530,7 +530,7 @@ mod tests {
     #[test]
     fn string_size_dependent_on_num_of_elements() {
         const NUM_ASCII_CHARS: usize = 9;
-        let param = ParamType::String(NUM_ASCII_CHARS);
+        let param = ParamType::StringArray(NUM_ASCII_CHARS);
 
         let width = param.compute_encoding_width();
 
@@ -621,7 +621,7 @@ mod tests {
         assert_eq!(parse_param_type("bool")?, ParamType::Bool);
         assert_eq!(parse_param_type("b256")?, ParamType::B256);
         assert_eq!(parse_param_type("()")?, ParamType::Unit);
-        assert_eq!(parse_param_type("str[21]")?, ParamType::String(21));
+        assert_eq!(parse_param_type("str[21]")?, ParamType::StringArray(21));
         assert_eq!(parse_param_type("str")?, ParamType::StringSlice);
 
         Ok(())
@@ -928,7 +928,7 @@ mod tests {
         // then
         assert_eq!(
             result,
-            ParamType::Tuple(vec![ParamType::U8, ParamType::String(15)])
+            ParamType::Tuple(vec![ParamType::U8, ParamType::StringArray(15)])
         );
 
         Ok(())
@@ -1251,12 +1251,12 @@ mod tests {
         // then
         let expected_param_type = {
             let fields = vec![ParamType::Struct {
-                fields: vec![ParamType::String(2)],
-                generics: vec![ParamType::String(2)],
+                fields: vec![ParamType::StringArray(2)],
+                generics: vec![ParamType::StringArray(2)],
             }];
             let pass_the_generic_on = ParamType::Struct {
                 fields,
-                generics: vec![ParamType::String(2)],
+                generics: vec![ParamType::StringArray(2)],
             };
 
             let fields = vec![ParamType::Array(Box::from(pass_the_generic_on.clone()), 2)];
@@ -1278,7 +1278,7 @@ mod tests {
             let fields = vec![
                 ParamType::Tuple(vec![
                     ParamType::Array(Box::from(ParamType::B256), 2),
-                    ParamType::String(2),
+                    ParamType::StringArray(2),
                 ]),
                 ParamType::Vector(Box::from(ParamType::Tuple(vec![
                     ParamType::Array(
@@ -1293,7 +1293,7 @@ mod tests {
             ];
             ParamType::Struct {
                 fields,
-                generics: vec![ParamType::String(2), ParamType::B256],
+                generics: vec![ParamType::StringArray(2), ParamType::B256],
             }
         };
 
@@ -1312,10 +1312,10 @@ mod tests {
         assert!(!ParamType::U64.contains_nested_heap_types());
         assert!(!ParamType::Bool.contains_nested_heap_types());
         assert!(!ParamType::B256.contains_nested_heap_types());
-        assert!(!ParamType::String(10).contains_nested_heap_types());
+        assert!(!ParamType::StringArray(10).contains_nested_heap_types());
         assert!(!ParamType::RawSlice.contains_nested_heap_types());
         assert!(!ParamType::Bytes.contains_nested_heap_types());
-        assert!(!ParamType::StdString.contains_nested_heap_types());
+        assert!(!ParamType::String.contains_nested_heap_types());
         Ok(())
     }
 
@@ -1479,7 +1479,7 @@ mod tests {
 
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
-        assert_eq!(param_type, ParamType::StdString);
+        assert_eq!(param_type, ParamType::String);
     }
 
     #[test]
@@ -1489,7 +1489,7 @@ mod tests {
 
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
-        assert_eq!(param_type, ParamType::StdString);
+        assert_eq!(param_type, ParamType::String);
     }
 
     fn given_type_with_path(path: &str) -> Type {
