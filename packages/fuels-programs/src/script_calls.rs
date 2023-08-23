@@ -21,7 +21,7 @@ use fuels_core::{
 };
 use itertools::chain;
 
-use crate::retry::{retry, RetryOptions};
+use crate::retry::{retry, RetryConfig};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
@@ -97,7 +97,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_options: Option<RetryOptions>,
+    pub retry_options: Option<RetryConfig>,
 }
 
 impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
@@ -146,7 +146,7 @@ where
         }
     }
 
-    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+    pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
         self.retry_options = Some(retry_options);
         self
     }
@@ -278,6 +278,13 @@ where
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
+        self.call_or_simulate(false)
+            .await
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    /// Call a script on the node, in a state-modifying manner.
+    pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
         if self.retry_options.is_some() {
             retry(
                 || async { self.clone().call_or_simulate(false).await },

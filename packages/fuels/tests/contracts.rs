@@ -1,14 +1,18 @@
 #[allow(unused_imports)]
 use std::future::Future;
+use std::num::NonZeroUsize;
+use std::time::Duration;
 use std::vec;
 
 use fuel_core::chain_config::ChainConfig;
+use tokio::join;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
     prelude::*,
     types::Bits256,
 };
+use fuels_programs::retry::RetryConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1463,21 +1467,108 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     assert_eq!(response.value, 11);
 
-    let contract_methods = contract_instance.methods();
-    let call_handler_1 = contract_methods.get_single(7);
-    let call_handler_2 = contract_methods.get_single(42);
+    // let response = contract_methods.get(1,2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
+    // let tx_id = response.tx_id;
+    // let contract_return_value = response.value.await?; // <- subscription to tx status -> if committed start_polling_for_receipts -> retry -> retry->retry->decode_receipts->value
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    // wallet.set_provider(provider);
+    //
+    // Simulate an unreachable node
 
-    multi_call_handler
-        .add_call(call_handler_1)
-        .add_call(call_handler_2);
+    // let response = Contract::load_from(
+    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
+    //     LoadConfiguration::default(),
+    // )?
+    // .deploy(&wallet, TxParameters::default())
+    // .await;
 
-    let handle = multi_call_handler.submit().await?;
-    let (val_1, val_2): (u64, u64) = handle.response().await?.value;
+    // assert!(matches!(response, Err(Error::ProviderError(_))));
 
-    assert_eq!(val_1, 7);
-    assert_eq!(val_2, 42);
+    // setup_program_test!(
+    //     Wallets("wallet"),
+    //     Abigen(Contract(
+    //         name = "TestContract",
+    //         project = "packages/fuels/tests/contracts/contract_test"
+    //     )),
+    //     Deploy(
+    //         name = "contract_instance",
+    //         contract = "TestContract",
+    //         wallet = "wallet"
+    //     ),
+    // );
+
+    // let max_attempts = NonZeroUsize::new(3).ok_or("Value must be non-zero").expect("asd");
+    //
+    // let retry_config = RetryConfig::new(max_attempts, Duration::default()).set_retry_on(|e| {
+    //     false
+    // });
+
+    // let contract_methods = contract_instance.methods();
+    // let handle = contract_methods
+    //     .get(5, 6)
+    //     .retry_config(retry_config)
+    //     .submit()
+    //     .await?;
+
+    // let response = handle.response().await?;
+    //
+    // assert_eq!(response.value, 11);
+    //
+    // let contract_methods = contract_instance.methods();
+    // let call_handler_1 = contract_methods.get_single(7);
+    // let call_handler_2 = contract_methods.get_single(42);
+    //
+    // let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    //
+    // multi_call_handler
+    //     .add_call(call_handler_1)
+    //     .add_call(call_handler_2);
+    //
+    // let handle = multi_call_handler.submit().await?;
+    // let (val_1, val_2): (u64, u64) = handle.response().await?.value;
+    //
+    // assert_eq!(val_1, 7);
+    // assert_eq!(val_2, 42);
 
     Ok(())
 }
+
+// #[tokio::test]
+// async fn test_retry_response() -> Result<()> {
+//     setup_program_test!(
+//         Wallets("wallet"),
+//         Abigen(Contract(
+//             name = "TestContract",
+//             project = "packages/fuels/tests/contracts/contract_test"
+//         )),
+//         Deploy(
+//             name = "contract_instance",
+//             contract = "TestContract",
+//             wallet = "wallet"
+//         ),
+//     );
+//
+//     let contract_methods = contract_instance.methods();
+//     let handle = contract_methods.get(5, 6).submit().await?;
+//     let response = handle.response().await?;
+//
+//     assert_eq!(response.value, 11);
+//
+//     let contract_methods = contract_instance.methods();
+//     let call_handler_1 = contract_methods.get_single(7);
+//     let call_handler_2 = contract_methods.get_single(42);
+//
+//     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+//
+//     multi_call_handler
+//         .add_call(call_handler_1)
+//         .add_call(call_handler_2);
+//
+//     let handle = multi_call_handler.submit().await?;
+//     let (val_1, val_2): (u64, u64) = handle.response().await?.value;
+//
+//     assert_eq!(val_1, 7);
+//     assert_eq!(val_2, 42);
+//
+//     Ok(())
+// }

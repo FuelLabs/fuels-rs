@@ -21,7 +21,7 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::retry::{retry, RetryOptions};
+use crate::retry::{retry, RetryConfig};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
@@ -365,7 +365,7 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_options: Option<RetryOptions>,
+    pub retry_options: Option<RetryConfig>,
 }
 
 // Implement Clone for ContractCallHandler once all types are provided.
@@ -405,7 +405,7 @@ where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
 {
-    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+    pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
         self.retry_options = Some(retry_options);
         self
     }
@@ -510,6 +510,12 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
+        self.call_or_simulate(false)
+            .await
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
         if self.retry_options.is_some() {
             retry(
                 || async { self.clone().call_or_simulate(false).await },
@@ -528,7 +534,13 @@ where
 
         let consensus_parameters = provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
-        provider.send_transaction(&tx).await?;
+
+        if let Some(retry_options) = &self.retry_options {
+            retry(|| provider.send_transaction(&tx), retry_options).await?;
+        } else {
+            provider.send_transaction(&tx).await?;
+        }
+
         Ok(self)
     }
 
@@ -713,7 +725,7 @@ pub struct MultiContractCallHandler<T: Account> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
-    pub retry_options: Option<RetryOptions>,
+    pub retry_options: Option<RetryConfig>,
 }
 
 impl<T: Account> Clone for MultiContractCallHandler<T> {
@@ -743,7 +755,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         }
     }
 
-    pub fn set_retry_options(mut self, retry_options: RetryOptions) -> Self {
+    pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
         self.retry_options = Some(retry_options);
         self
     }
@@ -777,6 +789,12 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
+        self.call_or_simulate(false)
+            .await
+            .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn call_tw<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
         if self.retry_options.is_some() {
             retry(
                 || async { self.clone().call_or_simulate(false).await },

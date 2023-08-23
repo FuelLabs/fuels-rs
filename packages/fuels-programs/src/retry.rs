@@ -9,13 +9,13 @@ use std::sync::Arc;
 type RetryOn = Option<Arc<dyn Fn(&dyn Error) -> bool + Send + Sync>>;
 
 #[derive(Clone)]
-pub struct RetryOptions {
+pub struct RetryConfig {
     pub max_attempts: NonZeroUsize,
     pub interval: Duration,
     pub retry_on: RetryOn,
 }
 
-impl fmt::Debug for RetryOptions {
+impl fmt::Debug for RetryConfig {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -27,16 +27,16 @@ impl fmt::Debug for RetryOptions {
     }
 }
 
-impl RetryOptions {
+impl RetryConfig {
     pub fn new(max_attempts: NonZeroUsize, interval: Duration) -> Self {
-        RetryOptions {
+        RetryConfig {
             max_attempts,
             interval,
             retry_on: None,
         }
     }
 
-    pub fn set_retry_on<F>(&mut self, retry_on: F) -> RetryOptions
+    pub fn set_retry_on<F>(&mut self, retry_on: F) -> RetryConfig
     where
         F: Fn(&dyn Error) -> bool + Send + Sync + 'static,
     {
@@ -47,7 +47,7 @@ impl RetryOptions {
 
 pub async fn retry<Fut, T, K>(
     mut action: impl FnMut() -> Fut,
-    retry_options: &RetryOptions,
+    retry_options: &RetryConfig,
 ) -> Result<T, K>
 where
     Fut: Future<Output = Result<T, K>>,
@@ -79,7 +79,7 @@ where
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use crate::retry::{retry, RetryOptions};
+        use crate::retry::{retry, RetryConfig};
         use fuels_core::types::errors::Error;
         use std::time::{Duration, Instant};
         use tokio::sync::Mutex;
@@ -94,7 +94,7 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
             };
 
-            let retry_options = RetryOptions::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
             let _ = retry(will_always_fail, &retry_options).await;
 
@@ -115,7 +115,7 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData(msg.to_string()))
             };
 
-            let retry_options = RetryOptions::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
             let err = retry(will_always_fail, &retry_options)
                 .await
@@ -139,7 +139,7 @@ mod tests {
 
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
 
-            let retry_options = RetryOptions::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
             let ok = retry(will_always_fail, &retry_options).await?;
 
@@ -157,8 +157,7 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
             };
 
-            let retry_options =
-                RetryOptions::new(3.try_into().unwrap(), Duration::from_millis(100));
+            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(100));
 
             let _ = retry(will_fail_and_record_timestamp, &retry_options).await;
 

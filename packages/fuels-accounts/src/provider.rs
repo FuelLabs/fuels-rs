@@ -113,6 +113,8 @@ impl Default for ResourceFilter {
     }
 }
 
+struct SubmitResponse {}
+
 #[derive(Debug, Error)]
 pub enum ProviderError {
     // Every IO error in the context of Provider comes from the gql client
@@ -211,6 +213,12 @@ impl Provider {
     }
 
     async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
+        let tx_id = self.client.submit(&tx.into()).await?;
+        self.client.await_transaction_commit(&tx_id).await?;
+        Ok(tx_id)
+    }
+
+    async fn submit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
         self.client.await_transaction_commit(&tx_id).await?;
         Ok(tx_id)
