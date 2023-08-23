@@ -113,7 +113,7 @@ impl Abigen {
     }
 
     /// Any changes to the file pointed to by `path` will cause the reevaluation of the current
-    /// procedural macro. This is a hack until https://github.com/rust-lang/rust/issues/99515
+    /// procedural macro. This is a hack until <https://github.com/rust-lang/rust/issues/99515>
     /// lands.
     fn generate_macro_recompile_trigger(path: Option<&PathBuf>, no_std: bool) -> GeneratedCode {
         let code = path
