@@ -24,14 +24,14 @@ pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
-pub struct StringToken {
+pub struct StaticStringToken {
     data: String,
     expected_len: Option<usize>,
 }
 
-impl StringToken {
+impl StaticStringToken {
     pub fn new(data: String, expected_len: Option<usize>) -> Self {
-        StringToken { data, expected_len }
+        StaticStringToken { data, expected_len }
     }
 
     fn validate(&self) -> Result<()> {
@@ -62,9 +62,9 @@ impl StringToken {
     }
 }
 
-impl TryFrom<StringToken> for String {
+impl TryFrom<StaticStringToken> for String {
     type Error = Error;
-    fn try_from(string_token: StringToken) -> Result<String> {
+    fn try_from(string_token: StaticStringToken) -> Result<String> {
         string_token.validate()?;
         Ok(string_token.data)
     }
@@ -85,14 +85,14 @@ pub enum Token {
     B256([u8; 32]),
     Array(Vec<Token>),
     Vector(Vec<Token>),
-    StringSlice(StringToken),
-    StringArray(StringToken),
+    StringSlice(StaticStringToken),
+    StringArray(StaticStringToken),
     Struct(Vec<Token>),
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
     RawSlice(Vec<u64>),
     Bytes(Vec<u8>),
-    StdString(String),
+    String(String),
 }
 
 impl fmt::Display for Token {
