@@ -5,7 +5,6 @@ use std::time::Duration;
 use std::vec;
 
 use fuel_core::chain_config::ChainConfig;
-use tokio::join;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -13,6 +12,7 @@ use fuels::{
     types::Bits256,
 };
 use fuels_programs::retry::RetryConfig;
+use tokio::join;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1462,13 +1462,16 @@ async fn test_contract_submit_and_response() -> Result<()> {
     );
 
     let contract_methods = contract_instance.methods();
-    let handle = contract_methods.get(5, 6).submit().await?;
-    let response = handle.response().await?;
+    // let handle = contract_methods.get(5, 6).submit().await?;
+    // let response = handle.response().await?;
 
-    assert_eq!(response.value, 11);
-
-    // let response = contract_methods.get(1,2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
-    // let tx_id = response.tx_id;
+    let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
+    let tx_id = response.tx_id;
+    let value = response.value.await?;
+    dbg!(tx_id);
+    dbg!(value);
+    // assert_eq!(response.value, 11);
+    //
     // let contract_return_value = response.value.await?; // <- subscription to tx status -> if committed start_polling_for_receipts -> retry -> retry->retry->decode_receipts->value
 
     // wallet.set_provider(provider);

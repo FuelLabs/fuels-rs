@@ -1,4 +1,6 @@
+use std::future::Future;
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
+use std::pin::Pin;
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
@@ -251,7 +253,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction_and_wait_to_commit(&tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -383,6 +385,19 @@ impl<T: Account, D> Clone for ContractCallHandler<T, D> {
     }
 }
 
+type Ninja<D> = Pin<Box<dyn Future<Output = Result<D>>>>;
+
+pub struct SubmitResponse<D> {
+    pub tx_id: Option<Bytes32>,
+    pub value: Ninja<D>,
+}
+
+impl<D> SubmitResponse<D> {
+    pub fn new(tx_id: Option<Bytes32>, value: Ninja<D>) -> Self {
+        Self { tx_id, value }
+    }
+}
+
 impl Clone for ContractCall {
     fn clone(&self) -> Self {
         ContractCall {
@@ -402,8 +417,8 @@ impl Clone for ContractCall {
 
 impl<T, D> ContractCallHandler<T, D>
 where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug,
+    T: Account + 'static,
+    D: Tokenizable + Parameterize + Debug + 'static,
 {
     pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
         self.retry_options = Some(retry_options);
@@ -528,20 +543,17 @@ where
         .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn submit(mut self) -> Result<ContractCallHandler<T, D>> {
+    pub async fn submit(mut self) -> Result<SubmitResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         let consensus_parameters = provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
-        if let Some(retry_options) = &self.retry_options {
-            retry(|| provider.send_transaction(&tx), retry_options).await?;
-        } else {
-            provider.send_transaction(&tx).await?;
-        }
+        provider.send_transaction_and_wait_to_commit(&tx).await?;
 
-        Ok(self)
+        let future = Box::pin(self.clone().get_value());
+        Ok(SubmitResponse::new(self.cached_tx_id.clone(), future))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
@@ -551,6 +563,11 @@ where
             .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
             .await?;
         self.get_response(receipts)
+    }
+
+    pub async fn get_value(self) -> Result<D> {
+        let a = self.response().await?.value;
+        Ok(a)
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -572,7 +589,7 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
         } else {
-            let tx_id = provider.send_transaction(&tx).await?;
+            let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 
@@ -612,8 +629,8 @@ where
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
 where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug + Send + Sync,
+    T: Account + 'static,
+    D: Tokenizable + Parameterize + Debug + Send + Sync + 'static,
 {
     async fn simulate(&mut self) -> Result<()> {
         self.simulate().await?;
@@ -813,7 +830,7 @@ impl<T: Account> MultiContractCallHandler<T> {
 
         let consensus_parameters = provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction_and_wait_to_commit(&tx).await?;
         Ok(self)
     }
 
@@ -849,7 +866,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(&tx).await?
         } else {
-            let tx_id = provider.send_transaction(&tx).await?;
+            let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 

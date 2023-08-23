@@ -113,8 +113,6 @@ impl Default for ResourceFilter {
     }
 }
 
-struct SubmitResponse {}
-
 #[derive(Debug, Error)]
 pub enum ProviderError {
     // Every IO error in the context of Provider comes from the gql client
@@ -146,6 +144,16 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
+    pub async fn send_transaction_and_wait_to_commit<T: Transaction + Clone>(
+        &self,
+        tx: &T,
+    ) -> Result<TxId> {
+        self.send_transaction(tx).await?;
+        let tx_id = self.submit_and_wait_to_commit_tx(tx.clone()).await?;
+
+        Ok(tx_id)
+    }
+
     pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<TxId> {
         let tolerance = 0.0;
         let TransactionCost {
@@ -176,16 +184,8 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
-        let tx_id = self.submit_tx(tx.clone()).await?;
-
+        let tx_id = self.client.submit(&tx.clone().into()).await?;
         Ok(tx_id)
-    }
-
-    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&tx_status, &receipts)?;
-        Ok(receipts)
     }
 
     fn if_failure_generate_error(status: &TransactionStatus, receipts: &[Receipt]) -> Result<()> {
@@ -212,7 +212,21 @@ impl Provider {
         Ok(())
     }
 
-    async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
+    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+        let tx_status = self.client.transaction_status(tx_id).await?;
+        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
+        Self::if_failure_generate_error(&tx_status, &receipts)?;
+        Ok(receipts)
+    }
+
+    pub async fn get_value(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+        let tx_status = self.client.transaction_status(tx_id).await?;
+        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
+        Self::if_failure_generate_error(&tx_status, &receipts)?;
+        Ok(receipts)
+    }
+
+    async fn submit_and_wait_to_commit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
         self.client.await_transaction_commit(&tx_id).await?;
         Ok(tx_id)
@@ -220,7 +234,6 @@ impl Provider {
 
     async fn submit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
         Ok(tx_id)
     }
 

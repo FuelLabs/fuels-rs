@@ -269,7 +269,10 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(&tx).await?
         } else {
-            let tx_id = self.provider.send_transaction(&tx).await?;
+            let tx_id = self
+                .provider
+                .send_transaction_and_wait_to_commit(&tx)
+                .await?;
             self.provider.get_receipts(&tx_id).await?
         };
 
@@ -307,7 +310,9 @@ where
         let consensus_parameters = self.provider.consensus_parameters();
         self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
 
-        self.provider.send_transaction(&tx).await?;
+        self.provider
+            .send_transaction_and_wait_to_commit(&tx)
+            .await?;
         Ok(self)
     }
 
