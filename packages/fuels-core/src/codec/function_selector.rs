@@ -32,7 +32,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         ParamType::B256 => "b256".to_owned(),
         ParamType::Unit => "()".to_owned(),
         ParamType::StringSlice => "str".to_owned(),
-        ParamType::String(len) => {
+        ParamType::StringArray(len) => {
             format!("str[{len}]")
         }
         ParamType::Array(internal_type, len) => {
@@ -75,7 +75,7 @@ fn resolve_arg(arg: &ParamType) -> String {
         }
         ParamType::RawSlice => "rawslice".to_string(),
         ParamType::Bytes => "s(s(rawptr,u64),u64)".to_string(),
-        ParamType::StdString => "s(s(s(rawptr,u64),u64))".to_string(),
+        ParamType::String => "s(s(s(rawptr,u64),u64))".to_string(),
     }
 }
 
@@ -135,7 +135,7 @@ mod tests {
             (ParamType::Bool, "bool"),
             (ParamType::B256, "b256"),
             (ParamType::Unit, "()"),
-            (ParamType::String(15), "str[15]"),
+            (ParamType::StringArray(15), "str[15]"),
             (ParamType::StringSlice, "str"),
         ] {
             check_selector_for_type(param_type, expected_signature);
@@ -144,7 +144,7 @@ mod tests {
 
     #[test]
     fn handles_std_strings() {
-        let inputs = [ParamType::StdString];
+        let inputs = [ParamType::String];
 
         let signature = resolve_fn_signature("some_fn", &inputs);
 
@@ -213,12 +213,12 @@ mod tests {
     #[test]
     fn ultimate_test() {
         let fields = vec![ParamType::Struct {
-            fields: vec![ParamType::String(2)],
-            generics: vec![ParamType::String(2)],
+            fields: vec![ParamType::StringArray(2)],
+            generics: vec![ParamType::StringArray(2)],
         }];
         let struct_a = ParamType::Struct {
             fields,
-            generics: vec![ParamType::String(2)],
+            generics: vec![ParamType::StringArray(2)],
         };
 
         let fields = vec![ParamType::Array(Box::new(struct_a.clone()), 2)];
@@ -237,7 +237,7 @@ mod tests {
         let fields = vec![
             ParamType::Tuple(vec![
                 ParamType::Array(Box::new(ParamType::B256), 2),
-                ParamType::String(2),
+                ParamType::StringArray(2),
             ]),
             ParamType::Tuple(vec![
                 ParamType::Array(
@@ -253,7 +253,7 @@ mod tests {
 
         let inputs = [ParamType::Struct {
             fields,
-            generics: vec![ParamType::String(2), ParamType::B256],
+            generics: vec![ParamType::StringArray(2), ParamType::B256],
         }];
 
         let selector = resolve_fn_signature("complex_test", &inputs);
