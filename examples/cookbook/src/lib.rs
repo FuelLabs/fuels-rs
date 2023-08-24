@@ -155,9 +155,7 @@ mod tests {
                 continue;
             }
 
-            let input = wallet_1
-                .get_asset_inputs_for_amount(id, amount, None)
-                .await?;
+            let input = wallet_1.get_asset_inputs_for_amount(id, amount).await?;
             inputs.extend(input);
 
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
@@ -166,12 +164,12 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
-                .build()?;
-        wallet_1.sign_transaction(&mut tx)?;
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+        wallet_1.sign_transaction(&mut tb);
+        let tx = tb.build()?;
 
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction(tx).await?;
 
         let balances = wallet_2.get_balances().await?;
 

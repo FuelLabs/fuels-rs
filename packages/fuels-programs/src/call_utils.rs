@@ -121,7 +121,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     // Find the spendable resources required for those calls
     for (asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount, None)
+            .get_asset_inputs_for_amount(*asset_id, *amount)
             .await?;
         asset_inputs.extend(resources);
     }
@@ -137,11 +137,7 @@ pub(crate) async fn build_tx_from_contract_calls(
         .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
         .unwrap_or_default();
 
-    let tx = account
-        .add_fee_resources(tb, base_asset_amount, None)
-        .await?;
-
-    Ok(tx)
+    account.add_fee_resources(tb, base_asset_amount).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
@@ -782,7 +778,7 @@ mod test {
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
-                Input::resource_signed(coin, 0)
+                Input::resource_signed(coin)
             })
             .collect();
         let call = ContractCall::new_with_random_id();

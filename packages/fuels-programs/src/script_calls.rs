@@ -212,12 +212,8 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         let tb = self.prepare_builder().await?;
         let base_amount = self.calculate_base_asset_sum();
-        let tx = self
-            .account
-            .add_fee_resources(tb, base_amount, None)
-            .await?;
 
-        Ok(tx)
+        self.account.add_fee_resources(tb, base_amount).await
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -227,13 +223,12 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        let consensus_parameters = self.provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let receipts = if simulate {
-            self.provider.checked_dry_run(&tx).await?
+            self.provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = self.provider.send_transaction(&tx).await?;
+            let tx_id = self.provider.send_transaction(tx).await?;
             self.provider.get_receipts(&tx_id).await?
         };
 
@@ -248,16 +243,9 @@ where
     }
 
     pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
-        let tb = self.prepare_builder().await?;
-        let base_amount = self.calculate_base_asset_sum();
-        let tx = self
-            .account
-            .add_fee_resources(tb, base_amount, None)
-            .await?;
-        let consensus_parameters = self.provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        let tx = self.build_tx().await?;
+        self.cached_tx_id = Some(self.provider.send_transaction(tx).await?);
 
-        self.provider.send_transaction(&tx).await?;
         Ok(self)
     }
 
@@ -287,11 +275,11 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        let tx = self.account.add_fee_resources(tb, 0).await?;
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(&tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance)
             .await?;
 
         Ok(transaction_cost)

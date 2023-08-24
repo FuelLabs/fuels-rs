@@ -4,15 +4,14 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_tx::{AssetId, Witness};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
         errors::{Error, Result},
         input::Input,
-        transaction::Transaction,
         transaction_builders::TransactionBuilder,
+        AssetId,
     },
 };
 use rand::{CryptoRng, Rng};
@@ -246,13 +245,12 @@ impl Account for WalletUnlocked {
         &self,
         asset_id: AssetId,
         amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
             .await?
             .into_iter()
-            .map(|resource| Input::resource_signed(resource, witness_index.unwrap_or_default()))
+            .map(Input::resource_signed)
             .collect::<Vec<Input>>())
     }
 
@@ -260,26 +258,23 @@ impl Account for WalletUnlocked {
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
         tb = tb.with_consensus_parameters(consensus_parameters);
+
+        self.sign_transaction(&mut tb);
 
         let new_base_amount =
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
 
         let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, witness_index)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
             .await?;
 
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
-        let mut tx = tb.build()?;
-
-        self.sign_transaction(&mut tx)?;
-
-        Ok(tx)
+        tb.build()
     }
 }
 
@@ -296,28 +291,8 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    fn sign_transaction(&self, tx: &mut impl Transaction) -> WalletResult<Signature> {
-        let consensus_parameters = self
-            .try_provider()
-            .map_err(|_| WalletError::NoProviderError)?
-            .consensus_parameters();
-        let id = tx.id(consensus_parameters.chain_id.into());
-
-        let message = Message::from_bytes(*id);
-        let sig = Signature::sign(&self.private_key, &message);
-
-        let witness = vec![Witness::from(sig.as_ref())];
-
-        let witnesses: &mut Vec<Witness> = tx.witnesses_mut();
-
-        match witnesses.len() {
-            0 => *witnesses = witness,
-            _ => {
-                witnesses.extend(witness);
-            }
-        }
-
-        Ok(sig)
+    fn sign_transaction(&self, tb: &mut impl TransactionBuilder) {
+        tb.add_unresolved_signature(self.address().clone(), self.private_key);
     }
 }
 

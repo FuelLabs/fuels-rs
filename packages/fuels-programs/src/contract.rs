@@ -243,14 +243,14 @@ impl Contract {
         );
 
         let tx = account
-            .add_fee_resources(tb, 0, Some(1))
+            .add_fee_resources(tb, 0)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
 
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction(tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -480,9 +480,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
-        provider.send_transaction(&tx).await?;
+        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
         Ok(self)
     }
 
@@ -508,13 +506,12 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
+            provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction(&tx).await?;
+            let tx_id = provider.send_transaction(tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 
@@ -530,7 +527,7 @@ where
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
-            .estimate_transaction_cost(&script, tolerance)
+            .estimate_transaction_cost(script, tolerance)
             .await?;
 
         Ok(transaction_cost)
@@ -719,9 +716,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
-        provider.send_transaction(&tx).await?;
+        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+
         Ok(self)
     }
 
@@ -751,13 +747,13 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
+            provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction(&tx).await?;
+            let tx_id = provider.send_transaction(tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 
@@ -769,7 +765,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(&tx).await?;
+        provider.checked_dry_run(tx).await?;
 
         Ok(())
     }
@@ -784,7 +780,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let transaction_cost = self
             .account
             .try_provider()?
-            .estimate_transaction_cost(&script, tolerance)
+            .estimate_transaction_cost(script, tolerance)
             .await?;
 
         Ok(transaction_cost)

@@ -16,7 +16,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::{Transaction, TxParameters},
+        transaction::TxParameters,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
@@ -44,10 +44,7 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
     ) -> std::result::Result<Signature, Self::Error>;
 
     /// Signs the transaction
-    fn sign_transaction(
-        &self,
-        message: &mut impl Transaction,
-    ) -> std::result::Result<Signature, Self::Error>;
+    fn sign_transaction(&self, message: &mut impl TransactionBuilder);
 }
 
 #[derive(Debug)]
@@ -155,7 +152,6 @@ pub trait Account: ViewOnlyAccount {
         &self,
         asset_id: AssetId,
         amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Vec<Input>>;
 
     /// Returns a vector containing the output coin and change output given an asset and amount
@@ -177,7 +173,6 @@ pub trait Account: ViewOnlyAccount {
         &self,
         tb: Tb,
         previous_base_amount: u64,
-        witness_index: Option<u8>,
     ) -> Result<Tb::TxType>;
 
     /// Transfer funds from this account to another `Address`.
@@ -192,9 +187,7 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount, None)
-            .await?;
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -211,13 +204,13 @@ pub trait Account: ViewOnlyAccount {
         };
 
         let tx = self
-            .add_fee_resources(tx_builder, previous_base_amount, None)
+            .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
 
-        let tx_id = provider.send_transaction(&tx).await?;
+        let tx_id = provider.send_transaction(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
-        Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
+        Ok((tx_id, receipts))
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
@@ -249,10 +242,7 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(
-            self.get_asset_inputs_for_amount(asset_id, balance, None)
-                .await?,
-        );
+        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -279,9 +269,9 @@ pub trait Account: ViewOnlyAccount {
             0
         };
 
-        let tx = self.add_fee_resources(tb, base_amount, None).await?;
+        let tx = self.add_fee_resources(tb, base_amount).await?;
 
-        let tx_id = self.try_provider()?.send_transaction(&tx).await?;
+        let tx_id = provider.send_transaction(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id.to_string(), receipts))
@@ -299,7 +289,7 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
         let tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -309,8 +299,8 @@ pub trait Account: ViewOnlyAccount {
             tx_parameters,
         );
 
-        let tx = self.add_fee_resources(tb, amount, None).await?;
-        let tx_id = provider.send_transaction(&tx).await?;
+        let tx = self.add_fee_resources(tb, amount).await?;
+        let tx_id = provider.send_transaction(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
@@ -324,9 +314,8 @@ pub trait Account: ViewOnlyAccount {
 mod tests {
     use std::str::FromStr;
 
-    use fuel_core_client::client::FuelClient;
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{Address, ConsensusParameters, Output};
+    use fuel_tx::{Address, Output};
     use fuels_core::types::transaction::Transaction;
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -363,8 +352,9 @@ mod tests {
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
-        Ok(())
         // ANCHOR_END: sign_message
+
+        Ok(())
     }
 
     #[tokio::test]
@@ -373,53 +363,60 @@ mod tests {
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
-        let mut wallet = WalletUnlocked::new_from_private_key(secret, None);
+        let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        // Set up a dummy transaction.
-        let coin = Coin {
-            amount: 10000000,
-            owner: wallet.address().clone(),
-            ..Default::default()
+        // Set up a transaction
+        let mut tb = {
+            let input_coin = Input::ResourceSigned {
+                resource: CoinType::Coin(Coin {
+                    amount: 10000000,
+                    owner: wallet.address().clone(),
+                    ..Default::default()
+                }),
+            };
+
+            let output_coin = Output::coin(
+                Address::from_str(
+                    "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
+                )?,
+                1,
+                Default::default(),
+            );
+
+            ScriptTransactionBuilder::prepare_transfer(
+                vec![input_coin],
+                vec![output_coin],
+                Default::default(),
+            )
         };
-        let input_coin = Input::ResourceSigned {
-            resource: CoinType::Coin(coin),
-            witness_index: 0,
-        };
 
-        let output_coin = Output::coin(
-            Address::from_str(
-                "0xc7862855b418ba8f58878db434b21053a61a2025209889cc115989e8040ff077",
-            )?,
-            1,
-            Default::default(),
-        );
+        // Sign the transaction
+        wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
+        let tx = tb.build()?; // Resolve signatures and add corresponding witness indexes
 
-        let mut tx = ScriptTransactionBuilder::prepare_transfer(
-            vec![input_coin],
-            vec![output_coin],
-            Default::default(),
-        )
-        .build()?;
+        // Extract the signature from the tx witnesses
+        let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
+        let tx_signature = Signature::from_bytes(bytes);
 
-        // Sign the transaction.
-        let consensus_parameters = ConsensusParameters::default();
-        let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
-        wallet.set_provider(test_provider);
+        // Sign the transaction manually
+        let message = Message::from_bytes(*tx.id(0.into()));
+        let signature = Signature::sign(&wallet.private_key, &message);
 
-        let signature = wallet.sign_transaction(&mut tx)?;
-        let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
+        // Check if the signatures are the same
+        assert_eq!(signature, tx_signature);
 
-        // Check if signature is what we expect it to be
+        // Check if the signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("df91e8ae723165f9a28b70910e3da41300da413607065618522f3084c9f051114acb1b51a836bd63c3d84a1ac904bf37b82ef03973c19026b266d04872f170a6")?);
 
-        // Recover address that signed the transaction
+        // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
 
-        // Verify signature
+        // Verify the signature
         signature.verify(&recovered_address, &message)?;
-        Ok(())
         // ANCHOR_END: sign_tx
+
+        Ok(())
     }
 }

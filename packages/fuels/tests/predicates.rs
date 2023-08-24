@@ -448,22 +448,22 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance)
         .await?;
     inputs.extend(predicate_inputs);
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let params = provider.consensus_parameters();
-    let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .with_consensus_parameters(params)
-        .build()?;
-    wallet.sign_transaction(&mut tx)?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
+        .with_consensus_parameters(params);
+    wallet.sign_transaction(&mut tb);
+    let tx = tb.build()?;
 
-    provider.send_transaction(&tx).await?;
+    provider.send_transaction(tx).await?;
 
     assert_address_balance(
         predicate.address(),
@@ -698,7 +698,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         Default::default(),
     )
     .with_consensus_parameters(params);
-    let tx = predicate.add_fee_resources(tb, 1000, None).await?;
+    let tx = predicate.add_fee_resources(tb, 1000).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());

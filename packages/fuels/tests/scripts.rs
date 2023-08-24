@@ -250,7 +250,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     let asset_id = BASE_ASSET_ID;
     let script_call = script_instance.main(amount, asset_id.into(), receiver.address());
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
         .await?;
     let _ = script_call
         .with_inputs(inputs)
