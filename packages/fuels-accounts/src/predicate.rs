@@ -122,7 +122,6 @@ impl Account for Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
-        _witness_index: Option<u8>,
     ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
@@ -145,7 +144,6 @@ impl Account for Predicate {
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
-        _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
         tb = tb.with_consensus_parameters(consensus_parameters);
@@ -154,14 +152,12 @@ impl Account for Predicate {
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
 
         let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, None)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
             .await?;
 
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
-        let tx = tb.build()?;
-
-        Ok(tx)
+        tb.build()
     }
 }

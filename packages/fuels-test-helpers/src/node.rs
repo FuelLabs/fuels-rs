@@ -70,7 +70,7 @@ impl Config {
             max_database_cache_size: DEFAULT_CACHE_SIZE,
             database_path: Default::default(),
             database_type: DbType::InMemory,
-            utxo_validation: false,
+            utxo_validation: true,
             manual_blocks_enabled: false,
             block_production: Trigger::Instant,
             vm_backtrace: false,

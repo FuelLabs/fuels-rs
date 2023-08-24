@@ -4,15 +4,15 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output,
+    Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
-use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+use fuel_types::ChainId;
 
 use crate::{
     constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    types::errors::Error,
+    types::Result,
 };
 
 #[derive(Debug, Copy, Clone)]
@@ -67,22 +67,19 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
-pub trait Transaction: Into<FuelTransaction> + Send {
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+pub trait Transaction: Into<FuelTransaction> + Clone {
+    fn fee_checked_from_tx(
+        &self,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Option<TransactionFee>;
 
     fn check_without_signatures(
         &self,
         block_height: u32,
-        parameters: &ConsensusParameters,
-    ) -> Result<(), Error>;
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()>;
 
-    fn precompute(&mut self, chain_id: u64) -> Result<(), Error>;
-
-    fn is_computed(&self) -> bool;
-
-    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error>;
-
-    fn id(&self, chain_id: u64) -> Bytes32;
+    fn id(&self, chain_id: ChainId) -> Bytes32;
 
     fn maturity(&self) -> u32;
 
@@ -100,15 +97,14 @@ pub trait Transaction: Into<FuelTransaction> + Send {
 
     fn metered_bytes_size(&self) -> usize;
 
-    fn inputs(&self) -> &Vec<FuelInput>;
+    fn inputs(&self) -> &Vec<Input>;
 
     fn outputs(&self) -> &Vec<Output>;
 
     fn witnesses(&self) -> &Vec<Witness>;
 
-    fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-
-    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
+    /// Append witness and return the corresponding witness index
+    fn append_witness(&mut self, witness: Witness) -> usize;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -121,48 +117,32 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+    fn fee_checked_from_tx(
+        &self,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Option<TransactionFee> {
         match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(params),
+            TransactionType::Script(tx) => tx.fee_checked_from_tx(consensus_parameters),
+            TransactionType::Create(tx) => tx.fee_checked_from_tx(consensus_parameters),
         }
-    }
-
-    fn is_computed(&self) -> bool {
-        match self {
-            TransactionType::Script(tx) => tx.is_computed(),
-            TransactionType::Create(tx) => tx.is_computed(),
-        }
-    }
-
-    fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
-        match self {
-            TransactionType::Script(tx) => tx.precompute(chain_id)?,
-            TransactionType::Create(tx) => tx.precompute(chain_id)?,
-        }
-        Ok(())
-    }
-
-    fn estimate_predicates(&mut self, parameters: &ConsensusParameters) -> Result<(), Error> {
-        match self {
-            TransactionType::Script(tx) => tx.estimate_predicates(parameters)?,
-            TransactionType::Create(tx) => tx.estimate_predicates(parameters)?,
-        };
-        Ok(())
     }
 
     fn check_without_signatures(
         &self,
         block_height: u32,
-        parameters: &ConsensusParameters,
-    ) -> Result<(), Error> {
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()> {
         match self {
-            TransactionType::Script(tx) => tx.check_without_signatures(block_height, parameters),
-            TransactionType::Create(tx) => tx.check_without_signatures(block_height, parameters),
+            TransactionType::Script(tx) => {
+                tx.check_without_signatures(block_height, consensus_parameters)
+            }
+            TransactionType::Create(tx) => {
+                tx.check_without_signatures(block_height, consensus_parameters)
+            }
         }
     }
 
-    fn id(&self, chain_id: u64) -> Bytes32 {
+    fn id(&self, chain_id: ChainId) -> Bytes32 {
         match self {
             TransactionType::Script(tx) => tx.id(chain_id),
             TransactionType::Create(tx) => tx.id(chain_id),
@@ -225,7 +205,7 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn inputs(&self) -> &Vec<FuelInput> {
+    fn inputs(&self) -> &Vec<Input> {
         match self {
             TransactionType::Script(tx) => tx.inputs(),
             TransactionType::Create(tx) => tx.inputs(),
@@ -246,17 +226,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
+    fn append_witness(&mut self, witness: Witness) -> usize {
         match self {
-            TransactionType::Script(tx) => tx.witnesses_mut(),
-            TransactionType::Create(tx) => tx.witnesses_mut(),
-        }
-    }
-
-    fn with_witnesses(self, witnesses: Vec<Witness>) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_witnesses(witnesses)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_witnesses(witnesses)),
+            TransactionType::Script(tx) => tx.append_witness(witness),
+            TransactionType::Create(tx) => tx.append_witness(witness),
         }
     }
 }
@@ -265,19 +238,7 @@ macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
-            pub tx: $wrapped,
-        }
-
-        impl From<$wrapped> for $wrapper {
-            fn from(tx: $wrapped) -> Self {
-                $wrapper { tx }
-            }
-        }
-
-        impl Default for $wrapper {
-            fn default() -> Self {
-                $wrapped::default().into()
-            }
+            pub(crate) tx: $wrapped,
         }
 
         impl From<$wrapper> for $wrapped {
@@ -292,48 +253,32 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
-        impl AsMut<$wrapped> for $wrapper {
-            fn as_mut(&mut self) -> &mut $wrapped {
-                &mut self.tx
+        impl From<$wrapped> for $wrapper {
+            fn from(tx: $wrapped) -> Self {
+                $wrapper { tx }
             }
         }
 
         impl Transaction for $wrapper {
-            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(params, &self.tx)
+            fn fee_checked_from_tx(
+                &self,
+                consensus_parameters: &ConsensusParameters,
+            ) -> Option<TransactionFee> {
+                TransactionFee::checked_from_tx(consensus_parameters, &self.tx)
             }
 
             fn check_without_signatures(
                 &self,
                 block_height: u32,
-                parameters: &ConsensusParameters,
-            ) -> Result<(), Error> {
+                consensus_parameters: &ConsensusParameters,
+            ) -> Result<()> {
                 Ok(self
                     .tx
-                    .check_without_signatures(block_height.into(), parameters)?)
+                    .check_without_signatures(block_height.into(), consensus_parameters)?)
             }
 
-            fn is_computed(&self) -> bool {
-                self.tx.is_computed()
-            }
-
-            // TODO: Fetch `GasCosts` from the `fuel-core`:
-            //  https://github.com/FuelLabs/fuel-core/issues/1221
-            fn estimate_predicates(
-                &mut self,
-                parameters: &ConsensusParameters,
-            ) -> Result<(), Error> {
-                self.tx
-                    .estimate_predicates(parameters, &GasCosts::default())
-                    .map_err(Error::ValidationError)
-            }
-
-            fn precompute(&mut self, chain_id: u64) -> Result<(), Error> {
-                Ok(self.tx.precompute(&chain_id.into())?)
-            }
-
-            fn id(&self, chain_id: u64) -> Bytes32 {
-                self.tx.id(&chain_id.into())
+            fn id(&self, chain_id: ChainId) -> Bytes32 {
+                self.tx.id(&chain_id)
             }
 
             fn maturity(&self) -> u32 {
@@ -373,7 +318,7 @@ macro_rules! impl_tx_wrapper {
                 self.tx.metered_bytes_size()
             }
 
-            fn inputs(&self) -> &Vec<FuelInput> {
+            fn inputs(&self) -> &Vec<Input> {
                 self.tx.inputs()
             }
 
@@ -385,13 +330,11 @@ macro_rules! impl_tx_wrapper {
                 self.tx.witnesses()
             }
 
-            fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
-                self.tx.witnesses_mut()
-            }
+            fn append_witness(&mut self, witness: Witness) -> usize {
+                let idx = self.tx.witnesses().len();
+                self.tx.witnesses_mut().push(witness);
 
-            fn with_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
-                *self.tx.witnesses_mut() = witnesses;
-                self
+                idx
             }
         }
     };
@@ -422,6 +365,7 @@ impl ScriptTransaction {
     pub fn script(&self) -> &Vec<u8> {
         self.tx.script()
     }
+
     pub fn script_data(&self) -> &Vec<u8> {
         self.tx.script_data()
     }
