@@ -162,7 +162,7 @@
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::default().set_amount(1_000_000);
+        let call_params = CallParameters::default().with_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -178,7 +178,7 @@
 <p>In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
-        .call_params(CallParameters::default().set_amount(100))
+        .call_params(CallParameters::default().with_amount(100))
         .expect_err(&quot;Should return call params error.&quot;);
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
@@ -205,8 +205,8 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
-        let call_params = CallParameters::default().set_gas_forwarded(4300);
+        let tx_params = TxParameters::default().with_gas_limit(1_000_000);
+        let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.

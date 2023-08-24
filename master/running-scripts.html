@@ -162,8 +162,8 @@
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
 <p>The method for passing transaction parameters is the same as <a href="./calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(1_000_000);
+        .with_gas_price(1)
+        .with_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)
@@ -191,14 +191,14 @@
 <p>Below is an example that uses <code>set_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
-        .set_contracts(&amp;[&amp;contract_instance])
+        .with_contracts(&amp;[&amp;contract_instance])
         .call()
         .await?;
 </code></pre>
 <p>And this is an example that uses <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
-        .set_contract_ids(&amp;[contract_id.into()])
+        .with_contract_ids(&amp;[contract_id.into()])
         .call()
         .await?;
 </code></pre>
@@ -234,7 +234,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     (U8, BOOL, ARRAY, STR_4, STRUCT, ENUM)
 }
 </code></pre>
-<p>Each configurable constant will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>set</code> methods and execute the script with the new constants.</p>
+<p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json&quot;));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -249,9 +249,9 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyScriptConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let response = instance
         .with_configurables(configurables)

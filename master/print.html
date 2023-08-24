@@ -909,6 +909,7 @@ coins and coin amount</p>
         let consensus_parameters = ConsensusParameters::default();
         let test_provider = Provider::new(FuelClient::new(&quot;test&quot;)?, consensus_parameters);
         wallet.set_provider(test_provider);
+
         let signature = wallet.sign_transaction(&amp;mut tx)?;
         let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 
@@ -1344,14 +1345,14 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
         let storage_slot = StorageSlot::new(key, value);
         let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
         let configuration = LoadConfiguration::default()
-            .set_storage_configuration(storage_configuration)
-            .set_salt(salt);
+            .with_storage_configuration(storage_configuration)
+            .with_salt(salt);
 
         // Optional: Configure deployment parameters
         let tx_parameters = TxParameters::default()
-            .set_gas_price(0)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
+            .with_gas_price(0)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
 
         let contract_id_2 = Contract::load_from(
             &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
@@ -1427,7 +1428,7 @@ impl TestContract for Contract {
     }
 }
 </code></pre>
-<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
+<p>Each of the configurable constants will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>with</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
@@ -1443,13 +1444,13 @@ impl TestContract for Contract {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let contract_id = Contract::load_from(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
-        LoadConfiguration::default().set_configurables(configurables),
+        LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&amp;wallet, TxParameters::default())
     .await?;
@@ -1596,9 +1597,9 @@ half-word   byte   op                raw           notes
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let my_tx_parameters = TxParameters::default()
-            .set_gas_price(1)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
+            .with_gas_price(1)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
@@ -1651,7 +1652,7 @@ pub const DEFAULT_MATURITY: u32 = 0;
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
-        let call_params = CallParameters::default().set_amount(1_000_000);
+        let call_params = CallParameters::default().with_amount(1_000_000);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -1667,7 +1668,7 @@ pub const DEFAULT_MATURITY: u32 = 0;
 <p>In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
-        .call_params(CallParameters::default().set_amount(100))
+        .call_params(CallParameters::default().with_amount(100))
         .expect_err(&quot;Should return call params error.&quot;);
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
@@ -1694,8 +1695,8 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 <pre><code class="language-rust ignore">        // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().set_gas_limit(1_000_000);
-        let call_params = CallParameters::default().set_gas_forwarded(4300);
+        let tx_params = TxParameters::default().with_gas_limit(1_000_000);
+        let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
@@ -1859,20 +1860,20 @@ let is_error = response.is_err();
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
 <!-- simulate:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
-<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outpus for you. You have two methods that you can use: <code>set_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
-<p><code>set_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
+<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outpus for you. You have two methods that you can use: <code>with_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
+<p><code>with_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&amp;[&amp;lib_contract_instance])
+        .with_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
 </code></pre>
-<p>If however, you do not need do decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
+<p>If however, you do not need do decode logs or you do not have a contract instance that was generated using the <code>abigen</code> macro you can use <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code> and provide the required contract ids.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contract_ids(&amp;[lib_contract_id.clone()])
+        .with_contract_ids(&amp;[lib_contract_id.clone()])
         .call()
         .await?;
 </code></pre>
@@ -1917,11 +1918,11 @@ let is_error = response.is_err();
             Err(Error::RevertTransactionError { .. })
         ));
 </code></pre>
-<p>As mentioned in previous chapters, you can specify the external contract with <code>.set_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
+<p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
-            .set_contract_ids(&amp;[called_contract_id.into()])
+            .with_contract_ids(&amp;[called_contract_id.into()])
             .call()
             .await?;
 </code></pre>
@@ -2053,8 +2054,8 @@ let is_error = response.is_err();
 <h2 id="running-scripts-with-transaction-parameters"><a class="header" href="#running-scripts-with-transaction-parameters">Running scripts with transaction parameters</a></h2>
 <p>The method for passing transaction parameters is the same as <a href="./calling-contracts/tx-params.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
 <pre><code class="language-rust ignore">    let parameters = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(1_000_000);
+        .with_gas_price(1)
+        .with_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)
@@ -2082,14 +2083,14 @@ let is_error = response.is_err();
 <p>Below is an example that uses <code>set_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
-        .set_contracts(&amp;[&amp;contract_instance])
+        .with_contracts(&amp;[&amp;contract_instance])
         .call()
         .await?;
 </code></pre>
 <p>And this is an example that uses <code>set_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <pre><code class="language-rust ignore">    let response = instance
         .main(contract_id)
-        .set_contract_ids(&amp;[contract_id.into()])
+        .with_contract_ids(&amp;[contract_id.into()])
         .call()
         .await?;
 </code></pre>
@@ -2125,7 +2126,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     (U8, BOOL, ARRAY, STR_4, STRUCT, ENUM)
 }
 </code></pre>
-<p>Each configurable constant will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>set</code> methods and execute the script with the new constants.</p>
+<p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json&quot;));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -2140,9 +2141,9 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyScriptConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let response = instance
         .with_configurables(configurables)
@@ -2259,7 +2260,7 @@ fn main(
     u_8 == U8 &amp;&amp; switch == BOOL &amp;&amp; some_struct == STRUCT &amp;&amp; some_enum == ENUM
 }
 </code></pre>
-<p>Each configurable constant will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>set_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>set</code> methods and update the predicate with the new constants.</p>
+<p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>with_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and update the predicate with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Predicate(
         name = &quot;MyPredicate&quot;,
         abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json&quot;
@@ -2272,8 +2273,8 @@ fn main(
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::new()
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
 
@@ -2966,7 +2967,7 @@ should point to root of the <code>forc</code> project.</p>
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&amp;[&amp;lib_contract_instance])
+        .with_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
 
@@ -2975,7 +2976,7 @@ should point to root of the <code>forc</code> project.</p>
     let response = contract_caller_instance2
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&amp;[&amp;lib_contract_instance])
+        .with_contracts(&amp;[&amp;lib_contract_instance])
         .call()
         .await?;
 
@@ -3177,8 +3178,8 @@ impl LiquidityPool for Contract {
 <p>With the preparations out of the way, we can finally deposit to the liquidity pool by calling <code>deposit()</code> via the contract instance. Since we have to transfer assets to the contract, we create the appropriate <code>CallParameters</code> and chain them to the method call. To receive the minted liquidity pool asset, we have to append a variable output to our contract call.</p>
 <pre><code class="language-rust ignore">        let deposit_amount = 1_000_000;
         let call_params = CallParameters::default()
-            .set_amount(deposit_amount)
-            .set_asset_id(base_asset_id);
+            .with_amount(deposit_amount)
+            .with_asset_id(base_asset_id);
 
         contract_methods
             .deposit(wallet.address())
@@ -3192,8 +3193,8 @@ impl LiquidityPool for Contract {
         let lp_token_balance = wallet.get_asset_balance(&amp;lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .set_amount(lp_token_balance)
-            .set_asset_id(lp_asset_id);
+            .with_amount(lp_token_balance)
+            .with_asset_id(lp_asset_id);
 
         contract_methods
             .withdraw(wallet.address())

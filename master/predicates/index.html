@@ -246,7 +246,7 @@ fn main(
     u_8 == U8 &amp;&amp; switch == BOOL &amp;&amp; some_struct == STRUCT &amp;&amp; some_enum == ENUM
 }
 </code></pre>
-<p>Each configurable constant will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>set_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>set</code> methods and update the predicate with the new constants.</p>
+<p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>with_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and update the predicate with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Predicate(
         name = &quot;MyPredicate&quot;,
         abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json&quot;
@@ -259,8 +259,8 @@ fn main(
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::new()
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
 

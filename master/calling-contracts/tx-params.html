@@ -151,9 +151,9 @@
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let my_tx_parameters = TxParameters::default()
-            .set_gas_price(1)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
+            .with_gas_price(1)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.

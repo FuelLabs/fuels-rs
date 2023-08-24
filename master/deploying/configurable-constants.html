@@ -174,7 +174,7 @@ impl TestContract for Contract {
     }
 }
 </code></pre>
-<p>Each of the configurable constants will get a dedicated <code>set</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>set_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>set</code> methods and deploy the contract with the new constants.</p>
+<p>Each of the configurable constants will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>with</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
@@ -190,13 +190,13 @@ impl TestContract for Contract {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let contract_id = Contract::load_from(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
-        LoadConfiguration::default().set_configurables(configurables),
+        LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&amp;wallet, TxParameters::default())
     .await?;

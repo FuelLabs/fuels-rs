@@ -153,11 +153,11 @@
             Err(Error::RevertTransactionError { .. })
         ));
 </code></pre>
-<p>As mentioned in previous chapters, you can specify the external contract with <code>.set_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
+<p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .increment_from_contract_then_mint(called_contract_id, amount, address)
             .append_variable_outputs(1)
-            .set_contract_ids(&amp;[called_contract_id.into()])
+            .with_contract_ids(&amp;[called_contract_id.into()])
             .call()
             .await?;
 </code></pre>

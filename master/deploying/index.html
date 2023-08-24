@@ -187,14 +187,14 @@
         let storage_slot = StorageSlot::new(key, value);
         let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
         let configuration = LoadConfiguration::default()
-            .set_storage_configuration(storage_configuration)
-            .set_salt(salt);
+            .with_storage_configuration(storage_configuration)
+            .with_salt(salt);
 
         // Optional: Configure deployment parameters
         let tx_parameters = TxParameters::default()
-            .set_gas_price(0)
-            .set_gas_limit(1_000_000)
-            .set_maturity(0);
+            .with_gas_price(0)
+            .with_gas_limit(1_000_000)
+            .with_maturity(0);
 
         let contract_id_2 = Contract::load_from(
             &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
