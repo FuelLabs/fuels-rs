@@ -42,10 +42,18 @@ impl Predicate {
         self.provider.as_ref()
     }
 
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+    pub fn set_provider(&mut self, provider: Provider) {
         self.address = Self::calculate_address(&self.code, provider.chain_id().into());
         self.provider = Some(provider);
-        self
+    }
+
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address = Self::calculate_address(&self.code, provider.chain_id().into());
+        Self {
+            address,
+            provider: Some(provider),
+            ..self
+        }
     }
 
     pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
@@ -84,15 +92,6 @@ impl Predicate {
         Self {
             code,
             address,
-            ..self
-        }
-    }
-
-    pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, provider.chain_id().into());
-        Self {
-            address,
-            provider: Some(provider),
             ..self
         }
     }
@@ -149,7 +148,7 @@ impl Account for Predicate {
         _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-        tb = tb.set_consensus_parameters(consensus_parameters);
+        tb = tb.with_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);

@@ -121,10 +121,9 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 
     wallet.set_provider(provider.clone());
 
-    let mut predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?;
-
-    predicate.set_provider(provider.clone());
+    let predicate =
+        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+            .with_provider(provider.clone());
 
     wallet
         .transfer(
@@ -274,8 +273,8 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_params = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(1000000);
+        .with_gas_price(1)
+        .with_gas_limit(1000000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -460,7 +459,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let params = provider.consensus_parameters();
     let mut tx = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .set_consensus_parameters(params)
+        .with_consensus_parameters(params)
         .build()?;
     wallet.sign_transaction(&mut tx)?;
 
@@ -518,12 +517,12 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::default().set_gas_price(1);
+    let my_tx_params = TxParameters::default().with_gas_price(1);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
-        .set_amount(call_params_amount)
-        .set_asset_id(AssetId::default());
+        .with_amount(call_params_amount)
+        .with_asset_id(AssetId::default());
 
     {
         let response = contract_methods
@@ -596,8 +595,8 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
     let call_params = CallParameters::default()
-        .set_amount(1_000_000)
-        .set_asset_id(AssetId::from([1u8; 32]));
+        .with_amount(1_000_000)
+        .with_asset_id(AssetId::from([1u8; 32]));
 
     let response = contract_methods
         .get_msg_amount()
@@ -623,8 +622,8 @@ async fn predicate_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::new()
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
 
@@ -698,7 +697,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         vec![],
         Default::default(),
     )
-    .set_consensus_parameters(params);
+    .with_consensus_parameters(params);
     let tx = predicate.add_fee_resources(tb, 1000, None).await?;
 
     assert_eq!(tx.inputs().len(), 2);

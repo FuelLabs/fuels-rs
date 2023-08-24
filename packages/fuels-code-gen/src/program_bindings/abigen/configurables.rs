@@ -19,7 +19,7 @@ impl ResolvedConfigurable {
     pub fn new(configurable: &FullConfigurable) -> Result<ResolvedConfigurable> {
         let type_application = &configurable.application;
         Ok(ResolvedConfigurable {
-            name: safe_ident(&format!("set_{}", configurable.name)),
+            name: safe_ident(&format!("with_{}", configurable.name)),
             ttype: TypeResolver::default().resolve(type_application)?,
             offset: configurable.offset,
         })
