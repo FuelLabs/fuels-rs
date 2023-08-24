@@ -23,8 +23,8 @@ pub struct TxParameters {
 }
 
 macro_rules! impl_setter_getter {
-    ($setter_name: ident, $field: ident, $ty: ty) => {
-        pub fn $setter_name(mut self, $field: $ty) -> Self {
+    ($name: ident, $field: ident, $ty: ty) => {
+        pub fn $name(mut self, $field: $ty) -> Self {
             self.$field = $field;
             self
         }
@@ -44,9 +44,9 @@ impl TxParameters {
         }
     }
 
-    impl_setter_getter!(set_gas_price, gas_price, u64);
-    impl_setter_getter!(set_gas_limit, gas_limit, u64);
-    impl_setter_getter!(set_maturity, maturity, u32);
+    impl_setter_getter!(with_gas_price, gas_price, u64);
+    impl_setter_getter!(with_gas_limit, gas_limit, u64);
+    impl_setter_getter!(with_maturity, maturity, u32);
 }
 
 impl Default for TxParameters {

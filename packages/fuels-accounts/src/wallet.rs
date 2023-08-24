@@ -87,9 +87,8 @@ impl Wallet {
         self.provider.as_ref()
     }
 
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+    pub fn set_provider(&mut self, provider: Provider) {
         self.provider = Some(provider);
-        self
     }
 
     pub fn address(&self) -> &Bech32Address {
@@ -128,8 +127,8 @@ impl WalletUnlocked {
     // directly. This is because we should not allow the user a `&mut` handle to the inner `Wallet`
     // as this could lead to ending up with a `WalletUnlocked` in an inconsistent state (e.g. the
     // private key doesn't match the inner wallet's public key).
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Wallet {
-        self.wallet.set_provider(provider)
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.wallet.set_provider(provider);
     }
 
     /// Creates a new wallet with a random private key.
@@ -261,7 +260,7 @@ impl Account for WalletUnlocked {
         previous_base_amount: u64,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-        tb = tb.set_consensus_parameters(consensus_parameters);
+        tb = tb.with_consensus_parameters(consensus_parameters);
 
         self.sign_transaction(&mut tb);
 

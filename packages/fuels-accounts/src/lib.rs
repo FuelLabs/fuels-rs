@@ -194,7 +194,7 @@ pub trait Account: ViewOnlyAccount {
         let consensus_parameters = provider.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-            .set_consensus_parameters(consensus_parameters);
+            .with_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         let previous_base_amount = if asset_id == AssetId::default() {
@@ -260,7 +260,7 @@ pub trait Account: ViewOnlyAccount {
             outputs,
             tx_parameters,
         )
-        .set_consensus_parameters(params);
+        .with_consensus_parameters(params);
 
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
@@ -397,7 +397,7 @@ mod tests {
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
         let tx_signature = Signature::from_bytes(bytes);
-
+      
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
         let signature = Signature::sign(&wallet.private_key, &message);
