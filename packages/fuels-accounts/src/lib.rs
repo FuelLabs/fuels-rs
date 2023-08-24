@@ -201,7 +201,7 @@ pub trait Account: ViewOnlyAccount {
         let consensus_parameters = provider.consensus_parameters();
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-            .set_consensus_parameters(consensus_parameters);
+            .with_consensus_parameters(consensus_parameters);
 
         // if we are not transferring the base asset, previous base amount is 0
         let previous_base_amount = if asset_id == AssetId::default() {
@@ -270,7 +270,7 @@ pub trait Account: ViewOnlyAccount {
             outputs,
             tx_parameters,
         )
-        .set_consensus_parameters(params);
+        .with_consensus_parameters(params);
 
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
@@ -405,6 +405,7 @@ mod tests {
         let consensus_parameters = ConsensusParameters::default();
         let test_provider = Provider::new(FuelClient::new("test")?, consensus_parameters);
         wallet.set_provider(test_provider);
+
         let signature = wallet.sign_transaction(&mut tx)?;
         let message = Message::from_bytes(*tx.id(consensus_parameters.chain_id.into()));
 

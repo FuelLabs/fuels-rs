@@ -46,7 +46,7 @@ Same as contracts, you can define `configurable` constants in `scripts` which ca
 {{#include ../../packages/fuels/tests/scripts/script_configurables/src/main.sw}}
 ```
 
-Each configurable constant will get a dedicated `set` method in the SDK. For example, the constant `STR_4` will get the `set_STR_4` method which accepts the same type defined in sway. Below is an example where we chain several `set` methods and execute the script with the new constants.
+Each configurable constant will get a dedicated `with` method in the SDK. For example, the constant `STR_4` will get the `with_STR_4` method which accepts the same type defined in sway. Below is an example where we chain several `with` methods and execute the script with the new constants.
 
 ```rust,ignore
 {{#include ../../packages/fuels/tests/configurables.rs:script_configurables}}

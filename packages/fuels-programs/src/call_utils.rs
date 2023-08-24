@@ -129,8 +129,8 @@ pub(crate) async fn build_tx_from_contract_calls(
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-        .set_script(script)
-        .set_script_data(script_data.clone());
+        .with_script(script)
+        .with_script_data(script_data.clone());
 
     let base_asset_amount = required_asset_amounts
         .iter()
@@ -847,8 +847,8 @@ mod test {
         ]
         .map(|(asset_id, amount)| {
             CallParameters::default()
-                .set_amount(amount)
-                .set_asset_id(asset_id)
+                .with_amount(amount)
+                .with_asset_id(asset_id)
         })
         .map(|call_parameters| {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
