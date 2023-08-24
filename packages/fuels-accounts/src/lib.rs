@@ -397,7 +397,7 @@ mod tests {
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
         let tx_signature = Signature::from_bytes(bytes);
-      
+
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
         let signature = Signature::sign(&wallet.private_key, &message);
