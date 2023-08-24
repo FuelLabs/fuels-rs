@@ -1468,8 +1468,10 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
     let tx_id = response.tx_id;
     let value = response.value.await?;
+
     dbg!(tx_id);
     dbg!(value);
+
     // assert_eq!(response.value, 11);
     //
     // let contract_return_value = response.value.await?; // <- subscription to tx status -> if committed start_polling_for_receipts -> retry -> retry->retry->decode_receipts->value
