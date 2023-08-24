@@ -1461,7 +1461,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     let methods = contract_instance.methods();
     {
         // Single call: Will not work if max_tokens not big enough
-        methods.i_return_a_1k_el_array().decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default.",
         );
     }
@@ -1469,7 +1469,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         // Single call: Works when limit is bumped
         let result = methods
             .i_return_a_1k_el_array()
-            .decoder_config(DecoderConfig {
+            .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
                 ..Default::default()
             })
@@ -1483,7 +1483,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         // Multi call: Will not work if max_tokens not big enough
         MultiContractCallHandler::new(wallet.clone())
         .add_call(methods.i_return_a_1k_el_array())
-        .decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
+        .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
         .call::<([u8; 1000],)>().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default",
         );
@@ -1492,7 +1492,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         // Multi call: Works when configured
         MultiContractCallHandler::new(wallet.clone())
             .add_call(methods.i_return_a_1k_el_array())
-            .decoder_config(DecoderConfig {
+            .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
                 ..Default::default()
             })

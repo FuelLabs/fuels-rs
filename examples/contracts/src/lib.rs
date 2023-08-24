@@ -818,7 +818,7 @@ mod tests {
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .decoder_config(DecoderConfig {
+            .with_decoder_config(DecoderConfig {
                 max_depth: 10,
                 max_tokens: 20_00,
             })

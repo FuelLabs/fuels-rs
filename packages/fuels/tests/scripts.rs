@@ -376,7 +376,7 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
         // Will fail if max_tokens too low
         script_instance
             .main()
-            .decoder_config(DecoderConfig {
+            .with_decoder_config(DecoderConfig {
                 max_tokens: 101,
                 ..Default::default()
             })
@@ -390,7 +390,7 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
         // When the token limit is bumped should pass
         let response = script_instance
             .main()
-            .decoder_config(DecoderConfig {
+            .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
                 ..Default::default()
             })

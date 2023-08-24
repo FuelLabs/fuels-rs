@@ -130,7 +130,7 @@ where
         self
     }
 
-    pub fn decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
         self.decoder_config = decoder_config;
         self.log_decoder.set_decoder_config(decoder_config);
         self
