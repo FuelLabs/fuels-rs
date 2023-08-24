@@ -698,7 +698,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         Default::default(),
     )
     .with_consensus_parameters(params);
-    let tx = predicate.add_fee_resources(tb, 1000, None).await?;
+    let tx = predicate.add_fee_resources(tb, 1000).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
