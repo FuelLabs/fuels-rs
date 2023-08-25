@@ -138,14 +138,14 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
-<p>With <code>ContractMultiCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
+<p>With <code>MultiContractCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
 </code></pre>
 <p>You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.</p>
-<p>Next, you provide the prepared calls to your <code>ContractMultiCallHandler</code> and optionally configure transaction parameters:</p>
+<p>Next, you provide the prepared calls to your <code>MultiContractCallHandler</code> and optionally configure transaction parameters:</p>
 <pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
         multi_call_handler
@@ -153,7 +153,7 @@
             .add_call(call_handler_2);
 </code></pre>
 <blockquote>
-<p><strong>Note:</strong> any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to <code>ContractMultiCallHandler</code>.</p>
+<p><strong>Note:</strong> any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to <code>MultiContractCallHandler</code>.</p>
 </blockquote>
 <h2 id="output-values"><a class="header" href="#output-values">Output values</a></h2>
 <p>To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of <code>call()</code> or <code>simulate()</code> to a variable:</p>
@@ -162,6 +162,9 @@
 <p>You can also interact with the <code>FuelCallResponse</code> by moving the type annotation to the invoked method:</p>
 <pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, [u64; 2])&gt;().await?;
 </code></pre>
+<blockquote>
+<p><strong>Note:</strong> The <code>MultiContractCallHandler</code> supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with <code>add_call</code>. This is a temporary limitation that we hope to lift soon. In the meantime, if you have multiple calls handling heap types, split them across multiple regular, single calls.</p>
+</blockquote>
 
                     </main>
 
