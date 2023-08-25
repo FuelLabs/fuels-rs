@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
+use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path};
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
@@ -696,11 +696,48 @@ impl<T: Account> MultiContractCallHandler<T> {
         self
     }
 
+    fn validate_contract_calls(&self) -> Result<()> {
+        if self.contract_calls.is_empty() {
+            return Err(error!(
+                InvalidData,
+                "No calls added. Have you used '.add_calls()'?"
+            ));
+        }
+
+        let number_of_heap_type_calls = self
+            .contract_calls
+            .iter()
+            .filter(|cc| cc.output_param.is_vm_heap_type())
+            .count();
+
+        match number_of_heap_type_calls {
+            0 => Ok(()),
+            1 => {
+                if self
+                    .contract_calls
+                    .last()
+                    .expect("is not empty")
+                    .output_param
+                    .is_vm_heap_type()
+                {
+                    Ok(())
+                } else {
+                    Err(error!(
+                        InvalidData,
+                        "The contract call with the heap type return must be at the last position"
+                    ))
+                }
+            }
+            _ => Err(error!(
+                InvalidData,
+                "`MultiContractCallHandler` can have only one call that returns a heap type"
+            )),
+        }
+    }
+
     /// Returns the script that executes the contract calls
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        if self.contract_calls.is_empty() {
-            panic!("No calls added. Have you used '.add_calls()'?");
-        }
+        self.validate_contract_calls()?;
 
         build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
     }
