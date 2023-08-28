@@ -23,11 +23,10 @@ use crate::{
         input::Input,
         message::Message,
         transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+        unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
 };
-
-use super::unresolved_bytes::UnresolvedBytes;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
