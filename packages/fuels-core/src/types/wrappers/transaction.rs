@@ -1,12 +1,17 @@
-use std::fmt::Debug;
+use std::{collections::HashSet, fmt::Debug};
 
+use crate::types::{bech32::Bech32Address, coin::Coin, coin_type::CoinType};
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output,
+    input::{
+        coin::{CoinPredicate, CoinSigned},
+        message::{MessageCoinPredicate, MessageCoinSigned},
+    },
+    Address, Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output,
     Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
-    UniqueIdentifier, Witness,
+    UniqueIdentifier, UtxoId, Witness,
 };
 use fuel_types::ChainId;
 
@@ -61,13 +66,23 @@ impl Default for TxParameters {
 }
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
+use super::coin_type::CoinTypeId;
+
 #[derive(Debug, Clone)]
 pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
 }
 
+#[derive(Clone, Debug)]
+pub struct CachedTx {
+    pub resource_ids_used: HashSet<CoinTypeId>,
+    pub expected_resources: HashSet<CoinType>,
+}
+
 pub trait Transaction: Into<FuelTransaction> + Clone {
+    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx;
+
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
@@ -117,6 +132,13 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
+    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx {
+        match self {
+            TransactionType::Script(tx) => tx.compute_cached_tx(address, chain_id),
+            TransactionType::Create(tx) => tx.compute_cached_tx(address, chain_id),
+        }
+    }
+
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
@@ -234,6 +256,44 @@ impl Transaction for TransactionType {
     }
 }
 
+fn extract_input_id(input: &Input, from_owner: Address) -> Option<CoinTypeId> {
+    match input {
+        Input::CoinSigned(CoinSigned { utxo_id, owner, .. })
+        | Input::CoinPredicate(CoinPredicate { utxo_id, owner, .. })
+            if (*owner == from_owner) =>
+        {
+            Some(CoinTypeId::UtxoId(*utxo_id))
+        }
+        Input::MessageCoinSigned(MessageCoinSigned {
+            recipient, nonce, ..
+        })
+        | Input::MessageCoinPredicate(MessageCoinPredicate {
+            recipient, nonce, ..
+        }) if (*recipient == from_owner) => Some(CoinTypeId::Nonce(*nonce)),
+        _ => None,
+    }
+}
+
+fn extract_expected_coin(
+    output: &Output,
+    from_owner: Address,
+    tx_id: Bytes32,
+    idx: u8,
+) -> Option<CoinType> {
+    match output {
+        Output::Coin {
+            to,
+            amount,
+            asset_id,
+        } if (*to == from_owner) => {
+            let utxo_id = UtxoId::new(tx_id, idx);
+            let coin = Coin::new_unspent(*amount, *asset_id, utxo_id, (*to).into());
+            Some(CoinType::Coin(coin))
+        }
+        _ => None,
+    }
+}
+
 macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
@@ -260,6 +320,30 @@ macro_rules! impl_tx_wrapper {
         }
 
         impl Transaction for $wrapper {
+            fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx {
+                let plain_address: Address = address.into();
+                let resource_ids_used = self
+                    .inputs()
+                    .iter()
+                    .filter_map(|input| extract_input_id(input, plain_address))
+                    .collect();
+
+                let tx_id = self.id(chain_id);
+                let expected_resources = self
+                    .outputs()
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(idx, output)| {
+                        extract_expected_coin(output, plain_address, tx_id, idx as u8)
+                    })
+                    .collect();
+
+                CachedTx {
+                    resource_ids_used,
+                    expected_resources,
+                }
+            }
+
             fn fee_checked_from_tx(
                 &self,
                 consensus_parameters: &ConsensusParameters,

@@ -1,13 +1,19 @@
-use std::{fmt, ops, path::Path};
+use std::{
+    fmt, ops,
+    path::Path,
+    sync::{Arc, Mutex},
+};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+use fuel_types::ChainId;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
+        coin_type::{CoinType, CoinTypeId},
         errors::{Error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
@@ -20,8 +26,11 @@ use thiserror::Error;
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::{Provider, ProviderError},
+    resource_cache::ResourceCache,
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
+
+use fuels_core::types::transaction::Transaction;
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -66,6 +75,7 @@ pub struct Wallet {
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Bech32Address,
     provider: Option<Provider>,
+    cache: Arc<Mutex<ResourceCache>>,
 }
 
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
@@ -80,7 +90,11 @@ pub struct WalletUnlocked {
 impl Wallet {
     /// Construct a Wallet from its given public address.
     pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
-        Self { address, provider }
+        Self {
+            address,
+            provider,
+            cache: Default::default(),
+        }
     }
 
     pub fn provider(&self) -> Option<&Provider> {
@@ -275,6 +289,19 @@ impl Account for WalletUnlocked {
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
         tb.build()
+    }
+
+    fn cache(&self, tx: &impl Transaction, chain_id: ChainId) {
+        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
+        self.cache.lock().unwrap().save(cached_tx)
+    }
+
+    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
+        self.cache.lock().unwrap().get_used_resource_ids()
+    }
+
+    fn get_expected_resources(&self) -> Vec<CoinType> {
+        self.cache.lock().unwrap().get_expected_resources()
     }
 }
 

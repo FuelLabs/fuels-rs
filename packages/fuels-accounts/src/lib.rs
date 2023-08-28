@@ -5,18 +5,18 @@ use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
+use fuel_tx::{ConsensusParameters, Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId, MessageId, ChainId};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         coin::Coin,
-        coin_type::CoinType,
+        coin_type::{CoinType, CoinTypeId},
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::TxParameters,
+        transaction::{TxParameters, Transaction},
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
@@ -28,6 +28,7 @@ use crate::{accounts_utils::extract_message_id, provider::Provider};
 mod accounts_utils;
 pub mod predicate;
 pub mod provider;
+mod resource_cache;
 pub mod wallet;
 
 /// Trait for signing transactions and messages
@@ -53,6 +54,10 @@ pub struct AccountError(String);
 impl AccountError {
     pub fn no_provider() -> Self {
         Self("No provider was setup: make sure to set_provider in your account!".to_string())
+    }
+
+    pub fn no_resources() -> Self {
+        Self("Not enough resources could be found!".to_string())
     }
 }
 
@@ -120,40 +125,10 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             .await
             .map_err(Into::into)
     }
-
-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<CoinType>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: ViewOnlyAccount {
-    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
-    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
-    /// in the transaction's list of witnesses. In the validation process, the node will
-    /// use the witness at this index to validate the coins returned by this method.
-    async fn get_asset_inputs_for_amount(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<Input>>;
-
     /// Returns a vector containing the output coin and change output given an asset and amount
     fn get_asset_outputs_for_amount(
         &self,
@@ -167,6 +142,104 @@ pub trait Account: ViewOnlyAccount {
             // Here we only have to tell the node who will own the change and its asset ID.
             Output::change(self.address().into(), 0, asset_id),
         ]
+    }
+
+    // Create a change output with a fixed amount so that it can be used for
+    // caching and spending expected outputs optimistically
+    fn get_calculated_change_output(
+        &self,
+        tx_builder: &impl TransactionBuilder,
+        consensus_parameters: &ConsensusParameters,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Output {
+        let max_fee = tx_builder
+            .fee_checked_from_tx(consensus_parameters)
+            .unwrap()
+            .max_fee();
+        let total_input_amount = tx_builder
+            .inputs()
+            .iter()
+            .filter_map(|input| input.amount())
+            .sum();
+
+        let mut expected_amount = total_input_amount;
+        if asset_id == BASE_ASSET_ID {
+            expected_amount -= max_fee;
+        }
+        expected_amount -= amount;
+
+        Output::coin(self.address().into(), expected_amount, asset_id)
+    }
+
+    /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+    /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+    /// in the transaction's list of witnesses. In the validation process, the node will
+    /// use the witness at this index to validate the coins returned by this method.
+    async fn get_asset_inputs_for_amount(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<Input>>;
+
+    fn cache(&self, tx: &impl Transaction, chain_id: ChainId);
+
+    fn get_used_resource_ids(&self) -> Vec<CoinTypeId>;
+
+    fn get_expected_resources(&self) -> Vec<CoinType>;
+
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> AccountResult<Vec<CoinType>> {
+        let used_resource_ids = self.get_used_resource_ids();
+
+        let excluded_utxos = used_resource_ids
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        dbg!("==========================");
+        dbg!(&excluded_utxos);
+
+        let excluded_message_nonces = used_resource_ids
+            .iter()
+            .filter_map(|resource_id| match resource_id {
+                CoinTypeId::Nonce(nonce) => Some(nonce),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            excluded_utxos,
+            excluded_message_nonces,
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+            .or_else(|_: Error| {
+                let resources = self.get_expected_resources();
+                dbg!("*****************************");
+                dbg!(&resources);
+                if resources.iter().map(|c| c.amount()).sum::<u64>() < amount {
+                    return Err(AccountError::no_resources());
+                }
+                Ok(resources)
+            })
     }
 
     async fn add_fee_resources<Tb: TransactionBuilder>(
@@ -189,26 +262,38 @@ pub trait Account: ViewOnlyAccount {
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        //let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let consensus_parameters = provider.consensus_parameters();
 
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters)
             .with_consensus_parameters(consensus_parameters);
 
+        let mut outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let expected_change_output =
+            self.get_calculated_change_output(&tx_builder, &consensus_parameters, asset_id, amount);
+        outputs.push(expected_change_output);
+        let tx_builder = tx_builder.with_outputs(outputs);
+
         // if we are not transferring the base asset, previous base amount is 0
-        let previous_base_amount = if asset_id == AssetId::default() {
-            amount
-        } else {
-            0
+        let previous_base_amount = match asset_id {
+            BASE_ASSET_ID => amount,
+            _ => 0,
         };
 
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
-        let receipts = provider.get_receipts(&tx_id).await?;
+        let chain_id = consensus_parameters.chain_id.into();
+        dbg!(&tx.id(chain_id));
+        dbg!(&tx.inputs());
+        dbg!(&tx.outputs());
+
+        let tx_id = provider.send_transaction(tx.clone()).await?;
+        self.cache(&tx, chain_id);
+        //let receipts = provider.get_receipts(&tx_id).await?
+        let receipts = vec![];
 
         Ok((tx_id, receipts))
     }
@@ -271,7 +356,8 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
+        let tx_id = provider.send_transaction(tx.clone()).await?;
+        self.cache(&tx, params.chain_id);
         let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id.to_string(), receipts))

@@ -1,0 +1,888 @@
+diff --git a/packages/fuels-accounts/src/lib.rs b/packages/fuels-accounts/src/lib.rs
+index bb0c56b7..40723c42 100644
+--- a/packages/fuels-accounts/src/lib.rs
++++ b/packages/fuels-accounts/src/lib.rs
+@@ -5,14 +5,14 @@ use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
+ #[doc(no_inline)]
+ pub use fuel_crypto;
+ use fuel_crypto::Signature;
+-use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
++use fuel_tx::{ConsensusParameters, Output, Receipt, TxId, TxPointer, UtxoId};
+ use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
+ use fuels_core::{
+     constants::BASE_ASSET_ID,
+     types::{
+         bech32::{Bech32Address, Bech32ContractId},
+         coin::Coin,
+-        coin_type::CoinType,
++        coin_type::{CoinType, CoinTypeId},
+         errors::{Error, Result},
+         input::Input,
+         message::Message,
+@@ -28,6 +28,7 @@ use crate::{accounts_utils::extract_message_id, provider::Provider};
+ mod accounts_utils;
+ pub mod predicate;
+ pub mod provider;
++mod resource_cache;
+ pub mod wallet;
+ 
+ /// Trait for signing transactions and messages
+@@ -57,6 +58,10 @@ impl AccountError {
+     pub fn no_provider() -> Self {
+         Self("No provider was setup: make sure to set_provider in your account!".to_string())
+     }
++
++    pub fn no_resources() -> Self {
++        Self("Not enough resources could be found!".to_string())
++    }
+ }
+ 
+ impl Display for AccountError {
+@@ -123,30 +128,53 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
+             .await
+             .map_err(Into::into)
+     }
++}
+ 
+-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+-    async fn get_spendable_resources(
++#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
++pub trait Account: ViewOnlyAccount {
++    /// Returns a vector containing the output coin and change output given an asset and amount
++    fn get_asset_outputs_for_amount(
+         &self,
++        to: &Bech32Address,
+         asset_id: AssetId,
+         amount: u64,
+-    ) -> Result<Vec<CoinType>> {
+-        let filter = ResourceFilter {
+-            from: self.address().clone(),
+-            asset_id,
+-            amount,
+-            ..Default::default()
+-        };
+-        self.try_provider()?
+-            .get_spendable_resources(filter)
+-            .await
+-            .map_err(Into::into)
++    ) -> Vec<Output> {
++        vec![
++            Output::coin(to.into(), amount, asset_id),
++            // Note that the change will be computed by the node.
++            // Here we only have to tell the node who will own the change and its asset ID.
++            Output::change(self.address().into(), 0, asset_id),
++        ]
++    }
++
++    // Create a change output with a fixed amount so that it can be used for
++    // caching and spending expected outputs optimistically
++    fn get_calculated_change_output(
++        &self,
++        tx_builder: &impl TransactionBuilder,
++        consensus_parameters: &ConsensusParameters,
++        asset_id: AssetId,
++        amount: u64,
++    ) -> Output {
++        let max_fee = tx_builder
++            .fee_checked_from_tx(consensus_parameters)
++            .unwrap()
++            .max_fee();
++        let total_input_amount = tx_builder
++            .inputs()
++            .iter()
++            .filter_map(|input| input.amount())
++            .sum();
++
++        let mut expected_amount = total_input_amount;
++        if asset_id == BASE_ASSET_ID {
++            expected_amount -= max_fee;
++        }
++        expected_amount -= amount;
++
++        Output::coin(self.address().into(), expected_amount, asset_id)
+     }
+-}
+ 
+-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+-pub trait Account: ViewOnlyAccount {
+     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
+     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
+     /// in the transaction's list of witnesses. In the validation process, the node will
+@@ -158,19 +186,64 @@ pub trait Account: ViewOnlyAccount {
+         witness_index: Option<u8>,
+     ) -> Result<Vec<Input>>;
+ 
+-    /// Returns a vector containing the output coin and change output given an asset and amount
+-    fn get_asset_outputs_for_amount(
++    fn cache(&self, tx: &impl Transaction, chain_id: u64);
++
++    fn get_used_resource_ids(&self) -> Vec<CoinTypeId>;
++
++    fn get_expected_resources(&self) -> Vec<CoinType>;
++
++    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
++    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
++    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
++    async fn get_spendable_resources(
+         &self,
+-        to: &Bech32Address,
+         asset_id: AssetId,
+         amount: u64,
+-    ) -> Vec<Output> {
+-        vec![
+-            Output::coin(to.into(), amount, asset_id),
+-            // Note that the change will be computed by the node.
+-            // Here we only have to tell the node who will own the change and its asset ID.
+-            Output::change(self.address().into(), 0, asset_id),
+-        ]
++    ) -> AccountResult<Vec<CoinType>> {
++        let used_resource_ids = self.get_used_resource_ids();
++
++        let excluded_utxos = used_resource_ids
++            .iter()
++            .filter_map(|resource_id| match resource_id {
++                CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
++                _ => None,
++            })
++            .cloned()
++            .collect::<Vec<_>>();
++
++        dbg!("==========================");
++        dbg!(&excluded_utxos);
++
++        let excluded_message_nonces = used_resource_ids
++            .iter()
++            .filter_map(|resource_id| match resource_id {
++                CoinTypeId::Nonce(nonce) => Some(nonce),
++                _ => None,
++            })
++            .cloned()
++            .collect::<Vec<_>>();
++
++        let filter = ResourceFilter {
++            from: self.address().clone(),
++            asset_id,
++            amount,
++            excluded_utxos,
++            excluded_message_nonces,
++        };
++
++        self.try_provider()?
++            .get_spendable_resources(filter)
++            .await
++            .map_err(Into::into)
++            .or_else(|_: Error| {
++                let resources = self.get_expected_resources();
++                dbg!("*****************************");
++                dbg!(&resources);
++                if resources.iter().map(|c| c.amount()).sum::<u64>() < amount {
++                    return Err(AccountError::no_resources());
++                }
++                Ok(resources)
++            })
+     }
+ 
+     async fn add_fee_resources<Tb: TransactionBuilder>(
+@@ -196,28 +269,40 @@ pub trait Account: ViewOnlyAccount {
+             .get_asset_inputs_for_amount(asset_id, amount, None)
+             .await?;
+ 
+-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
++        //let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+ 
+         let consensus_parameters = provider.consensus_parameters();
+ 
+-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
++        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters)
+             .set_consensus_parameters(consensus_parameters);
+ 
++        let mut outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
++        let expected_change_output =
++            self.get_calculated_change_output(&tx_builder, &consensus_parameters, asset_id, amount);
++        outputs.push(expected_change_output);
++        let tx_builder = tx_builder.set_outputs(outputs);
++
+         // if we are not transferring the base asset, previous base amount is 0
+-        let previous_base_amount = if asset_id == AssetId::default() {
+-            amount
+-        } else {
+-            0
++        let previous_base_amount = match asset_id {
++            BASE_ASSET_ID => amount,
++            _ => 0,
+         };
+ 
+         let tx = self
+             .add_fee_resources(tx_builder, previous_base_amount, None)
+             .await?;
+ 
++        let chain_id = consensus_parameters.chain_id.into();
++        dbg!(&tx.id(chain_id));
++        dbg!(&tx.inputs());
++        dbg!(&tx.outputs());
++
+         let tx_id = provider.send_transaction(&tx).await?;
+-        let receipts = provider.get_receipts(&tx_id).await?;
++        self.cache(&tx, chain_id);
++        //let receipts = provider.get_receipts(&tx_id).await?
++        let receipts = vec![];
+ 
+-        Ok((tx.id(consensus_parameters.chain_id.into()), receipts))
++        Ok((tx.id(chain_id), receipts))
+     }
+ 
+     /// Unconditionally transfers `balance` of type `asset_id` to
+@@ -282,6 +367,7 @@ pub trait Account: ViewOnlyAccount {
+         let tx = self.add_fee_resources(tb, base_amount, None).await?;
+ 
+         let tx_id = self.try_provider()?.send_transaction(&tx).await?;
++        self.cache(&tx, *params.chain_id);
+         let receipts = provider.get_receipts(&tx_id).await?;
+ 
+         Ok((tx_id.to_string(), receipts))
+diff --git a/packages/fuels-accounts/src/predicate.rs b/packages/fuels-accounts/src/predicate.rs
+index 7fc02bf4..911eeca1 100644
+--- a/packages/fuels-accounts/src/predicate.rs
++++ b/packages/fuels-accounts/src/predicate.rs
+@@ -1,11 +1,15 @@
+-use std::{fmt::Debug, fs};
++use std::{
++    fmt::Debug,
++    fs,
++    sync::{Arc, Mutex},
++};
+ 
+ use fuel_tx::ConsensusParameters;
+ use fuel_types::AssetId;
+ use fuels_core::{
+     constants::BASE_ASSET_ID,
+     types::{
+-        bech32::Bech32Address, errors::Result, input::Input,
++        bech32::Bech32Address, errors::Result, input::Input, transaction::Transaction,
+         transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
+     },
+     Configurables,
+@@ -14,7 +18,8 @@ use fuels_core::{
+ use crate::{
+     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
+     provider::Provider,
+-    Account, AccountError, AccountResult, ViewOnlyAccount,
++    resource_cache::ResourceCache,
++    Account, AccountError, AccountResult, CoinType, CoinTypeId, ViewOnlyAccount,
+ };
+ 
+ #[derive(Debug, Clone)]
+@@ -23,6 +28,7 @@ pub struct Predicate {
+     code: Vec<u8>,
+     data: UnresolvedBytes,
+     provider: Option<Provider>,
++    cache: Arc<Mutex<ResourceCache>>,
+ }
+ 
+ impl Predicate {
+@@ -65,6 +71,7 @@ impl Predicate {
+             code,
+             data: Default::default(),
+             provider: None,
++            cache: Default::default(),
+         }
+     }
+ 
+@@ -135,6 +142,19 @@ impl Account for Predicate {
+             .collect::<Vec<Input>>())
+     }
+ 
++    fn cache(&self, tx: &impl Transaction, chain_id: u64) {
++        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
++        self.cache.lock().unwrap().save(cached_tx)
++    }
++
++    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
++        self.cache.lock().unwrap().get_used_resource_ids()
++    }
++
++    fn get_expected_resources(&self) -> Vec<CoinType> {
++        self.cache.lock().unwrap().get_expected_resources()
++    }
++
+     /// Add base asset inputs to the transaction to cover the estimated fee.
+     /// The original base asset amount cannot be calculated reliably from
+     /// the existing transaction inputs because the selected resources may exceed
+diff --git a/packages/fuels-accounts/src/provider.rs b/packages/fuels-accounts/src/provider.rs
+index e49f6169..116fd94f 100644
+--- a/packages/fuels-accounts/src/provider.rs
++++ b/packages/fuels-accounts/src/provider.rs
+@@ -212,7 +212,7 @@ impl Provider {
+ 
+     async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
+         let tx_id = self.client.submit(&tx.into()).await?;
+-        self.client.await_transaction_commit(&tx_id).await?;
++        //self.client.await_transaction_commit(&tx_id).await?;
+         Ok(tx_id)
+     }
+ 
+diff --git a/packages/fuels-accounts/src/wallet.rs b/packages/fuels-accounts/src/wallet.rs
+index 8d8fee36..b72c6495 100644
+--- a/packages/fuels-accounts/src/wallet.rs
++++ b/packages/fuels-accounts/src/wallet.rs
+@@ -1,4 +1,8 @@
+-use std::{fmt, ops, path::Path};
++use std::{
++    fmt, ops,
++    path::Path,
++    sync::{Arc, Mutex},
++};
+ 
+ use async_trait::async_trait;
+ use elliptic_curve::rand_core;
+@@ -9,6 +13,7 @@ use fuels_core::{
+     constants::BASE_ASSET_ID,
+     types::{
+         bech32::{Bech32Address, FUEL_BECH32_HRP},
++        coin_type::{CoinType, CoinTypeId},
+         errors::{Error, Result},
+         input::Input,
+         transaction::Transaction,
+@@ -21,6 +26,7 @@ use thiserror::Error;
+ use crate::{
+     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
+     provider::{Provider, ProviderError},
++    resource_cache::ResourceCache,
+     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
+ };
+ 
+@@ -67,6 +73,7 @@ pub struct Wallet {
+     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
+     pub(crate) address: Bech32Address,
+     provider: Option<Provider>,
++    cache: Arc<Mutex<ResourceCache>>,
+ }
+ 
+ /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
+@@ -81,7 +88,11 @@ pub struct WalletUnlocked {
+ impl Wallet {
+     /// Construct a Wallet from its given public address.
+     pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
+-        Self { address, provider }
++        Self {
++            address,
++            provider,
++            cache: Default::default(),
++        }
+     }
+ 
+     pub fn provider(&self) -> Option<&Provider> {
+@@ -282,6 +293,19 @@ impl Account for WalletUnlocked {
+ 
+         Ok(tx)
+     }
++
++    fn cache(&self, tx: &impl Transaction, chain_id: u64) {
++        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
++        self.cache.lock().unwrap().save(cached_tx)
++    }
++
++    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
++        self.cache.lock().unwrap().get_used_resource_ids()
++    }
++
++    fn get_expected_resources(&self) -> Vec<CoinType> {
++        self.cache.lock().unwrap().get_expected_resources()
++    }
+ }
+ 
+ #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+diff --git a/packages/fuels-core/src/types/wrappers/coin.rs b/packages/fuels-core/src/types/wrappers/coin.rs
+index 351917cc..3c24c028 100644
+--- a/packages/fuels-core/src/types/wrappers/coin.rs
++++ b/packages/fuels-core/src/types/wrappers/coin.rs
+@@ -26,6 +26,23 @@ pub struct Coin {
+     pub status: CoinStatus,
+ }
+ 
++impl Coin {
++    pub fn new_unspent(
++        amount: u64,
++        asset_id: AssetId,
++        utxo_id: UtxoId,
++        owner: Bech32Address,
++    ) -> Self {
++        Self {
++            amount,
++            asset_id,
++            utxo_id,
++            owner,
++            ..Default::default()
++        }
++    }
++}
++
+ impl From<ClientCoin> for Coin {
+     fn from(coin: ClientCoin) -> Self {
+         Self {
+diff --git a/packages/fuels-core/src/types/wrappers/coin_type.rs b/packages/fuels-core/src/types/wrappers/coin_type.rs
+index 201d2467..717d319c 100644
+--- a/packages/fuels-core/src/types/wrappers/coin_type.rs
++++ b/packages/fuels-core/src/types/wrappers/coin_type.rs
+@@ -1,13 +1,20 @@
+ #![cfg(feature = "std")]
+ 
+ use fuel_core_client::client::types::CoinType as ClientCoinType;
+-use fuel_types::AssetId;
++use fuel_tx::UtxoId;
++use fuel_types::{AssetId, Nonce};
+ 
+ use crate::{
+     constants::BASE_ASSET_ID,
+     types::{bech32::Bech32Address, coin::Coin, message::Message},
+ };
+ 
++#[derive(Debug, Clone, PartialEq, Eq, Hash)]
++pub enum CoinTypeId {
++    UtxoId(UtxoId),
++    Nonce(Nonce),
++}
++
+ #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+ pub enum CoinType {
+     Coin(Coin),
+@@ -30,6 +37,13 @@ impl TryFrom<ClientCoinType> for CoinType {
+ }
+ 
+ impl CoinType {
++    pub fn id(&self) -> CoinTypeId {
++        match self {
++            CoinType::Coin(coin) => CoinTypeId::UtxoId(coin.utxo_id),
++            CoinType::Message(message) => CoinTypeId::Nonce(message.nonce),
++        }
++    }
++
+     pub fn amount(&self) -> u64 {
+         match self {
+             CoinType::Coin(coin) => coin.amount,
+diff --git a/packages/fuels-core/src/types/wrappers/transaction.rs b/packages/fuels-core/src/types/wrappers/transaction.rs
+index e0bece46..46bdd79c 100644
+--- a/packages/fuels-core/src/types/wrappers/transaction.rs
++++ b/packages/fuels-core/src/types/wrappers/transaction.rs
+@@ -1,12 +1,17 @@
+-use std::fmt::Debug;
++use std::{collections::HashSet, fmt::Debug};
+ 
++use crate::types::{bech32::Bech32Address, coin::Coin, coin_type::CoinType};
+ use fuel_tx::{
+     field::{
+         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+     },
+-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
++    input::{
++        coin::{CoinPredicate, CoinSigned},
++        message::{MessageCoinPredicate, MessageCoinSigned},
++    },
++    Address, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
+     Input as FuelInput, Output, Salt as FuelSalt, Script, StorageSlot,
+-    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, Witness,
++    Transaction as FuelTransaction, TransactionFee, UniqueIdentifier, UtxoId, Witness,
+ };
+ use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+ 
+@@ -61,13 +66,23 @@ impl Default for TxParameters {
+ }
+ use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+ 
++use super::coin_type::CoinTypeId;
++
+ #[derive(Debug, Clone)]
+ pub enum TransactionType {
+     Script(ScriptTransaction),
+     Create(CreateTransaction),
+ }
+ 
++#[derive(Clone, Debug)]
++pub struct CachedTx {
++    pub resource_ids_used: HashSet<CoinTypeId>,
++    pub expected_resources: HashSet<CoinType>,
++}
++
+ pub trait Transaction: Into<FuelTransaction> + Send {
++    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: u64) -> CachedTx;
++
+     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee>;
+ 
+     fn check_without_signatures(
+@@ -121,6 +136,13 @@ impl From<TransactionType> for FuelTransaction {
+ }
+ 
+ impl Transaction for TransactionType {
++    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: u64) -> CachedTx {
++        match self {
++            TransactionType::Script(tx) => tx.compute_cached_tx(address, chain_id),
++            TransactionType::Create(tx) => tx.compute_cached_tx(address, chain_id),
++        }
++    }
++
+     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+         match self {
+             TransactionType::Script(tx) => tx.fee_checked_from_tx(params),
+@@ -261,6 +283,44 @@ impl Transaction for TransactionType {
+     }
+ }
+ 
++fn extract_input_id(input: &FuelInput, from_owner: Address) -> Option<CoinTypeId> {
++    match input {
++        FuelInput::CoinSigned(CoinSigned { utxo_id, owner, .. })
++        | FuelInput::CoinPredicate(CoinPredicate { utxo_id, owner, .. })
++            if (*owner == from_owner) =>
++        {
++            Some(CoinTypeId::UtxoId(*utxo_id))
++        }
++        FuelInput::MessageCoinSigned(MessageCoinSigned {
++            recipient, nonce, ..
++        })
++        | FuelInput::MessageCoinPredicate(MessageCoinPredicate {
++            recipient, nonce, ..
++        }) if (*recipient == from_owner) => Some(CoinTypeId::Nonce(*nonce)),
++        _ => None,
++    }
++}
++
++fn extract_expected_coin(
++    output: &Output,
++    from_owner: Address,
++    tx_id: Bytes32,
++    idx: u8,
++) -> Option<CoinType> {
++    match output {
++        Output::Coin {
++            to,
++            amount,
++            asset_id,
++        } if (*to == from_owner) => {
++            let utxo_id = UtxoId::new(tx_id, idx);
++            let coin = Coin::new_unspent(*amount, *asset_id, utxo_id, (*to).into());
++            Some(CoinType::Coin(coin))
++        }
++        _ => None,
++    }
++}
++
+ macro_rules! impl_tx_wrapper {
+     ($wrapper: ident, $wrapped: ident) => {
+         #[derive(Debug, Clone)]
+@@ -299,6 +359,30 @@ macro_rules! impl_tx_wrapper {
+         }
+ 
+         impl Transaction for $wrapper {
++            fn compute_cached_tx(&self, address: &Bech32Address, chain_id: u64) -> CachedTx {
++                let plain_address: Address = address.into();
++                let resource_ids_used = self
++                    .inputs()
++                    .iter()
++                    .filter_map(|input| extract_input_id(input, plain_address))
++                    .collect();
++
++                let tx_id = self.id(chain_id);
++                let expected_resources = self
++                    .outputs()
++                    .iter()
++                    .enumerate()
++                    .filter_map(|(idx, output)| {
++                        extract_expected_coin(output, plain_address, tx_id, idx as u8)
++                    })
++                    .collect();
++
++                CachedTx {
++                    resource_ids_used,
++                    expected_resources,
++                }
++            }
++
+             fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Option<TransactionFee> {
+                 TransactionFee::checked_from_tx(params, &self.tx)
+             }
+diff --git a/packages/fuels-programs/src/contract.rs b/packages/fuels-programs/src/contract.rs
+index b0f925da..e85ceb1c 100644
+--- a/packages/fuels-programs/src/contract.rs
++++ b/packages/fuels-programs/src/contract.rs
+@@ -250,7 +250,9 @@ impl Contract {
+         let provider = account
+             .try_provider()
+             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
++        let chain_id = provider.chain_id().into();
+         provider.send_transaction(&tx).await?;
++        account.cache(&tx, chain_id);
+ 
+         Ok(self.contract_id.into())
+     }
+@@ -508,14 +510,16 @@ where
+         let tx = self.build_tx().await?;
+         let provider = self.account.try_provider()?;
+ 
+-        let consensus_parameters = provider.consensus_parameters();
+-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
++        let chain_id = provider.chain_id().into();
++        self.cached_tx_id = Some(tx.id(chain_id));
+ 
+-        let receipts = if simulate {
+-            provider.checked_dry_run(&tx).await?
+-        } else {
+-            let tx_id = provider.send_transaction(&tx).await?;
+-            provider.get_receipts(&tx_id).await?
++        let receipts = match simulate {
++            true => provider.checked_dry_run(&tx).await?,
++            false => {
++                let tx_id = provider.send_transaction(&tx).await?;
++                self.account.cache(&tx, chain_id);
++                provider.get_receipts(&tx_id).await?
++            }
+         };
+ 
+         self.get_response(receipts)
+@@ -751,14 +755,16 @@ impl<T: Account> MultiContractCallHandler<T> {
+     ) -> Result<FuelCallResponse<D>> {
+         let tx = self.build_tx().await?;
+         let provider = self.account.try_provider()?;
+-        let consensus_parameters = provider.consensus_parameters();
+-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+-
+-        let receipts = if simulate {
+-            provider.checked_dry_run(&tx).await?
+-        } else {
+-            let tx_id = provider.send_transaction(&tx).await?;
+-            provider.get_receipts(&tx_id).await?
++        let chain_id = provider.chain_id().into();
++        self.cached_tx_id = Some(tx.id(chain_id));
++
++        let receipts = match simulate {
++            true => provider.checked_dry_run(&tx).await?,
++            false => {
++                let tx_id = provider.send_transaction(&tx).await?;
++                self.account.cache(&tx, chain_id);
++                provider.get_receipts(&tx_id).await?
++            }
+         };
+ 
+         self.get_response(receipts)
+diff --git a/packages/fuels-programs/src/script_calls.rs b/packages/fuels-programs/src/script_calls.rs
+index ca856638..8413c47c 100644
+--- a/packages/fuels-programs/src/script_calls.rs
++++ b/packages/fuels-programs/src/script_calls.rs
+@@ -227,14 +227,16 @@ where
+     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
+     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
+         let tx = self.build_tx().await?;
+-        let consensus_parameters = self.provider.consensus_parameters();
+-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+-
+-        let receipts = if simulate {
+-            self.provider.checked_dry_run(&tx).await?
+-        } else {
+-            let tx_id = self.provider.send_transaction(&tx).await?;
+-            self.provider.get_receipts(&tx_id).await?
++        let chain_id = self.provider.chain_id().into();
++        self.cached_tx_id = Some(tx.id(chain_id));
++
++        let receipts = match simulate {
++            true => self.provider.checked_dry_run(&tx).await?,
++            false => {
++                let tx_id = self.provider.send_transaction(&tx).await?;
++                self.account.cache(&tx, chain_id);
++                self.provider.get_receipts(&tx_id).await?
++            }
+         };
+ 
+         self.get_response(receipts)
+diff --git a/packages/fuels-test-helpers/src/accounts.rs b/packages/fuels-test-helpers/src/accounts.rs
+index 308b773e..789e1b54 100644
+--- a/packages/fuels-test-helpers/src/accounts.rs
++++ b/packages/fuels-test-helpers/src/accounts.rs
+@@ -113,14 +113,23 @@ pub async fn setup_test_provider(
+ 
+ #[cfg(test)]
+ mod tests {
+-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
++    use fuel_types::Address;
++    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
+     use fuels_core::{
+         constants::BASE_ASSET_ID,
+-        types::{coin_type::CoinType, errors::Result},
++        types::{
++            bech32::Bech32Address,
++            coin_type::CoinType,
++            errors::Result,
++            transaction::{Transaction, TransactionType, TxParameters},
++        },
+     };
+     use rand::Fill;
+ 
+-    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
++    use crate::{
++        launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet, AssetConfig,
++        WalletsConfig,
++    };
+ 
+     #[tokio::test]
+     async fn test_wallet_config() -> Result<()> {
+@@ -261,4 +270,32 @@ mod tests {
+ 
+         Ok(())
+     }
++
++    #[tokio::test]
++    async fn transfer_produces_predictable_output() -> Result<()> {
++        let wallet = launch_provider_and_get_wallet().await;
++        let provider = wallet.try_provider()?;
++        let sender_address: Address = wallet.address().into();
++
++        let (tx_id, _) = wallet
++            .transfer(
++                &Bech32Address::default(),
++                1000,
++                BASE_ASSET_ID,
++                TxParameters::default(),
++            )
++            .await?;
++
++        let tx_response = provider.get_transaction_by_id(&tx_id).await?.unwrap();
++        let outputs = match tx_response.transaction {
++            TransactionType::Script(script) => script.outputs().clone(),
++            _ => panic!("Transfers must be a Script transaction!"),
++        };
++
++        assert!(outputs.iter().any(|output| {
++        matches!(output, fuel_tx::Output::Coin { to, asset_id, .. } if to == &sender_address && asset_id == &BASE_ASSET_ID)
++    }));
++
++        Ok(())
++    }
+ }
+diff --git a/packages/fuels/tests/providers.rs b/packages/fuels/tests/providers.rs
+index 8f85a80f..a6c77899 100644
+--- a/packages/fuels/tests/providers.rs
++++ b/packages/fuels/tests/providers.rs
+@@ -11,7 +11,9 @@ use fuels::{
+     tx::Receipt,
+     types::{block::Block, coin_type::CoinType, errors::error, message::Message},
+ };
++use fuels_accounts::AccountError;
+ use fuels_core::types::Bits256;
++use tokio::time::sleep;
+ 
+ #[tokio::test]
+ async fn test_provider_launch_and_connect() -> Result<()> {
+@@ -514,8 +516,9 @@ async fn test_gas_errors() -> Result<()> {
+         .await
+         .expect_err("should error");
+ 
+-    let expected = "Provider error: Response errors; not enough coins to fit the target";
+-    assert!(response.to_string().starts_with(expected));
++    let expected: Error = AccountError::no_resources().into();
++    assert_eq!(response.to_string(), expected.to_string());
++
+     Ok(())
+ }
+ 
+@@ -809,3 +812,68 @@ async fn test_sway_timestamp() -> Result<()> {
+     );
+     Ok(())
+ }
++
++#[tokio::test]
++async fn test_caching() -> Result<()> {
++    let block_time = 7u32; // seconds
++    let provider_config = Config {
++        block_production: Trigger::Interval {
++            block_time: std::time::Duration::from_secs(block_time.into()),
++        },
++        ..Config::local_node()
++    };
++    let amount = 10000;
++    let mut wallets = launch_custom_provider_and_get_wallets(
++        WalletsConfig::new(Some(2), Some(1), Some(amount)),
++        Some(provider_config),
++        None,
++    )
++    .await;
++    let wallet_1 = wallets.pop().unwrap();
++    let wallet_2 = wallets.pop().unwrap();
++
++    let provider = wallet_1.try_provider()?;
++    let params = provider.consensus_parameters();
++
++    /*
++    setup_program_test!(
++        Abigen(Contract(
++            name = "TestContract",
++            project = "packages/fuels/tests/contracts/block_timestamp"
++        )),
++        Deploy(
++            name = "contract_instance",
++            contract = "TestContract",
++            wallet = "wallet_1"
++        ),
++    );
++
++    let methods = contract_instance.methods();
++    let response = methods.return_timestamp().call().await?;
++     */
++
++    let tx_id1 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
++    let tx_id2 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
++    let tx_id3 =wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
++
++    sleep(std::time::Duration::from_secs(30)).await;
++
++    let rec1 = provider.get_receipts(&tx_id1).await;
++    let stat = provider.client.transaction_status(&tx_id1).await;
++    dbg!(stat);
++    dbg!(rec1);
++
++    let rec2 = provider.get_receipts(&tx_id2).await;
++    let stat = provider.client.transaction_status(&tx_id2).await;
++    dbg!(stat);
++    dbg!(rec2);
++
++    let rec3 = provider.get_receipts(&tx_id3).await;
++    let stat = provider.client.transaction_status(&tx_id3).await;
++    dbg!(stat);
++    dbg!(rec3);
++
++    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);
++
++    Ok(())
++}
+diff --git a/packages/fuels/tests/wallets.rs b/packages/fuels/tests/wallets.rs
+index a576e2e7..20486335 100644
+--- a/packages/fuels/tests/wallets.rs
++++ b/packages/fuels/tests/wallets.rs
+@@ -331,9 +331,9 @@ async fn test_wallet_get_coins() -> Result<()> {
+     Ok(())
+ }
+ 
+-async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
++async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, WalletUnlocked) {
+     let mut wallet_1 = WalletUnlocked::new_random(None);
+-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
++    let mut wallet_2 = WalletUnlocked::new_random(None);
+ 
+     let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
+ 
+@@ -370,7 +370,7 @@ async fn transfer_more_than_owned() -> Result<()> {
+ async fn transfer_coins_of_non_base_asset() -> Result<()> {
+     const AMOUNT: u64 = 10000;
+     let mut wallet_1 = WalletUnlocked::new_random(None);
+-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
++    let mut wallet_2 = WalletUnlocked::new_random(None);
+ 
+     let asset_id: AssetId = AssetId::from([1; 32usize]);
+     let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
+@@ -389,7 +389,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
+             wallet_2.address(),
+             SEND_AMOUNT,
+             asset_id,
+-            TxParameters::default(),
++            TxParameters::default().set_gas_price(1),
+         )
+         .await?;
+ 

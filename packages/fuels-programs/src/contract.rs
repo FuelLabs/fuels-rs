@@ -250,7 +250,9 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction(tx).await?;
+        let chain_id = provider.chain_id().into();
+        provider.send_transaction(tx.clone()).await?;
+        account.cache(&tx, chain_id);
 
         Ok(self.contract_id.into())
     }
@@ -506,13 +508,16 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let chain_id = provider.chain_id().into();
+        self.cached_tx_id = Some(tx.id(chain_id));
 
-        let receipts = if simulate {
-            provider.checked_dry_run(tx).await?
-        } else {
-            let tx_id = provider.send_transaction(tx).await?;
-            provider.get_receipts(&tx_id).await?
+        let receipts = match simulate {
+            true => provider.checked_dry_run(tx).await?,
+            false => {
+                let tx_id = provider.send_transaction(tx.clone()).await?;
+                self.account.cache(&tx, chain_id);
+                provider.get_receipts(&tx_id).await?
+            }
         };
 
         self.get_response(receipts)
@@ -784,14 +789,16 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
+        let chain_id = provider.chain_id().into();
+        self.cached_tx_id = Some(tx.id(chain_id));
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
-        let receipts = if simulate {
-            provider.checked_dry_run(tx).await?
-        } else {
-            let tx_id = provider.send_transaction(tx).await?;
-            provider.get_receipts(&tx_id).await?
+        let receipts = match simulate {
+            true => provider.checked_dry_run(tx).await?,
+            false => {
+                let tx_id = provider.send_transaction(tx.clone()).await?;
+                self.account.cache(&tx, chain_id);
+                provider.get_receipts(&tx_id).await?
+            }
         };
 
         self.get_response(receipts)

@@ -214,8 +214,7 @@ impl Provider {
 
     async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
-
+        //self.client.await_transaction_commit(&tx_id).await?;
         Ok(tx_id)
     }
 

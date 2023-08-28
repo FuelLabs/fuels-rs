@@ -1,11 +1,15 @@
-use std::{fmt::Debug, fs};
+use std::{
+    fmt::Debug,
+    fs,
+    sync::{Arc, Mutex},
+};
 
 use fuel_tx::ConsensusParameters;
-use fuel_types::AssetId;
+use fuel_types::{AssetId, ChainId};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
-        bech32::Bech32Address, errors::Result, input::Input,
+        bech32::Bech32Address, errors::Result, input::Input, transaction::Transaction,
         transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
     },
     Configurables,
@@ -14,7 +18,8 @@ use fuels_core::{
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::Provider,
-    Account, AccountError, AccountResult, ViewOnlyAccount,
+    resource_cache::ResourceCache,
+    Account, AccountError, AccountResult, CoinType, CoinTypeId, ViewOnlyAccount,
 };
 
 #[derive(Debug, Clone)]
@@ -23,6 +28,7 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
+    cache: Arc<Mutex<ResourceCache>>,
 }
 
 impl Predicate {
@@ -73,6 +79,7 @@ impl Predicate {
             code,
             data: Default::default(),
             provider: None,
+            cache: Default::default(),
         }
     }
 
@@ -131,6 +138,19 @@ impl Account for Predicate {
                 Input::resource_predicate(resource, self.code.clone(), self.data.clone())
             })
             .collect::<Vec<Input>>())
+    }
+
+    fn cache(&self, tx: &impl Transaction, chain_id: ChainId) {
+        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
+        self.cache.lock().unwrap().save(cached_tx)
+    }
+
+    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
+        self.cache.lock().unwrap().get_used_resource_ids()
+    }
+
+    fn get_expected_resources(&self) -> Vec<CoinType> {
+        self.cache.lock().unwrap().get_expected_resources()
     }
 
     /// Add base asset inputs to the transaction to cover the estimated fee.

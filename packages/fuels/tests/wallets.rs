@@ -2,7 +2,7 @@ use std::iter::repeat;
 
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
-use fuels_accounts::wallet::{Wallet, WalletUnlocked};
+use fuels_accounts::wallet::WalletUnlocked;
 use fuels_core::types::transaction_builders::TransactionBuilder;
 use fuels_test_helpers::setup_test_provider;
 
@@ -332,9 +332,9 @@ async fn test_wallet_get_coins() -> Result<()> {
     Ok(())
 }
 
-async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, Wallet) {
+async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, WalletUnlocked) {
     let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallet_2 = WalletUnlocked::new_random(None);
 
     let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
 
@@ -371,7 +371,7 @@ async fn transfer_more_than_owned() -> Result<()> {
 async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallet_2 = WalletUnlocked::new_random(None);
 
     let asset_id: AssetId = AssetId::from([1; 32usize]);
     let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);
@@ -390,7 +390,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             asset_id,
-            TxParameters::default(),
+            TxParameters::default().with_gas_price(1),
         )
         .await?;
 

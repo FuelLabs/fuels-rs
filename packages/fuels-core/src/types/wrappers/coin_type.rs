@@ -1,12 +1,19 @@
 #![cfg(feature = "std")]
 
 use fuel_core_client::client::types::CoinType as ClientCoinType;
-use fuel_types::AssetId;
+use fuel_tx::UtxoId;
+use fuel_types::{AssetId, Nonce};
 
 use crate::{
     constants::BASE_ASSET_ID,
     types::{bech32::Bech32Address, coin::Coin, message::Message},
 };
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum CoinTypeId {
+    UtxoId(UtxoId),
+    Nonce(Nonce),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
@@ -30,6 +37,13 @@ impl TryFrom<ClientCoinType> for CoinType {
 }
 
 impl CoinType {
+    pub fn id(&self) -> CoinTypeId {
+        match self {
+            CoinType::Coin(coin) => CoinTypeId::UtxoId(coin.utxo_id),
+            CoinType::Message(message) => CoinTypeId::Nonce(message.nonce),
+        }
+    }
+
     pub fn amount(&self) -> u64 {
         match self {
             CoinType::Coin(coin) => coin.amount,

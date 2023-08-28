@@ -11,7 +11,9 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
+use fuels_accounts::AccountError;
 use fuels_core::types::Bits256;
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -514,8 +516,9 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough coins to fit the target";
-    assert!(response.to_string().starts_with(expected));
+    let expected: Error = AccountError::no_resources().into();
+    assert_eq!(response.to_string(), expected.to_string());
+
     Ok(())
 }
 
@@ -811,5 +814,70 @@ async fn test_sway_timestamp() -> Result<()> {
         provider.latest_block_time().await?.unwrap(),
         expected_datetime
     );
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_caching() -> Result<()> {
+    let block_time = 7u32; // seconds
+    let provider_config = Config {
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
+        ..Config::local_node()
+    };
+    let amount = 10000;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(2), Some(1), Some(amount)),
+        Some(provider_config),
+        None,
+    )
+    .await;
+    let wallet_1 = wallets.pop().unwrap();
+    let wallet_2 = wallets.pop().unwrap();
+
+    let provider = wallet_1.try_provider()?;
+    let params = provider.consensus_parameters();
+
+    /*
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/block_timestamp"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet_1"
+        ),
+    );
+
+    let methods = contract_instance.methods();
+    let response = methods.return_timestamp().call().await?;
+     */
+
+    let tx_id1 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
+    let tx_id2 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
+    let tx_id3 =wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
+
+    sleep(std::time::Duration::from_secs(30)).await;
+
+    let rec1 = provider.get_receipts(&tx_id1).await;
+    let stat = provider.client.transaction_status(&tx_id1).await;
+    dbg!(stat);
+    dbg!(rec1);
+
+    let rec2 = provider.get_receipts(&tx_id2).await;
+    let stat = provider.client.transaction_status(&tx_id2).await;
+    dbg!(stat);
+    dbg!(rec2);
+
+    let rec3 = provider.get_receipts(&tx_id3).await;
+    let stat = provider.client.transaction_status(&tx_id3).await;
+    dbg!(stat);
+    dbg!(rec3);
+
+    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);
+
     Ok(())
 }
