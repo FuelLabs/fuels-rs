@@ -1,9 +1,14 @@
+#![allow(unused_imports, unused_variables, unused_mut, dead_code)]
+use fuel_tx::Receipt;
 use std::{result::Result as StdResult, str::FromStr};
 
 use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
+use fuels_core::codec::ABIDecoder;
+use fuels_core::fn_selector;
+use fuels_core::types::param_types::ParamType;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -1995,5 +2000,61 @@ async fn test_contract_std_lib_string() -> Result<()> {
             .await?;
     }
 
+    Ok(())
+}
+
+fn treat_receipts(receipts: Vec<Receipt>) {
+    let filtered: Vec<Receipt> = receipts
+        .into_iter()
+        .clone()
+        .filter(|r| matches!(r, Receipt::ReturnData { .. }))
+        .collect();
+
+    match filtered.get(0).unwrap() {
+        Receipt::ReturnData { data, .. } => {
+            let decoded_bytes =
+                ABIDecoder::decode(&[ParamType::Bytes], &data.clone().unwrap()).unwrap();
+            println!("{:?}", decoded_bytes);
+        }
+        _ => (),
+    }
+    match filtered.get(1).unwrap() {
+        Receipt::ReturnData { data, .. } => {
+            let decoded_bytes =
+                ABIDecoder::decode(&[ParamType::Bytes], &data.clone().unwrap()).unwrap();
+            println!("{:?}", decoded_bytes);
+        }
+        _ => (),
+    }
+}
+
+#[tokio::test]
+async fn test_1_nested() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "NestedHeap",
+            project = "packages/fuels/tests/types/contracts/nested_heap_type"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "NestedHeap",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    let resp = contract_methods.returns_bytes_result(true).call().await?;
+    // treat_receipts(resp.receipts);
+    println!("{:?}", resp.value);
+    let resp = contract_methods.returns_bytes_result(false).call().await?;
+    // treat_receipts(resp.receipts);
+    println!("{:?}", resp.value);
+    let resp = contract_methods.returns_vec_result(true).call().await?;
+    // treat_receipts(resp.receipts);
+    println!("{:?}", resp.value);
+    let resp = contract_methods.returns_vec_result(false).call().await?;
+    // treat_receipts(resp.receipts);
+    println!("{:?}", resp.value);
     Ok(())
 }

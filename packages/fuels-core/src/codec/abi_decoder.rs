@@ -272,13 +272,23 @@ impl ABIDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
+        let mut data: Vec<u8> = bytes.clone().into();
         let enum_width = variants.compute_encoding_width_of_enum();
 
-        let discriminant = peek_u32(bytes)? as u8;
+        let discriminant = peek_u32(&data)? as u8;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
+        if selected_variant.uses_heap_types() {
+            // remove the 3 WORDS that represent (ptr, cap, len)
+            // those 3 WORDS are leftovers from the concatenation of the data from the two
+            // `ReturnData` receipts. We need to remove them only if the selected variant is a
+            // heap type, otherwise we are erasing relevant data.
+            for _ in 8..32 {
+                data.remove(8);
+            }
+        }
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width();
-        let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
+        let enum_content_bytes = skip(&data, words_to_skip * WORD_SIZE)?;
         let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));

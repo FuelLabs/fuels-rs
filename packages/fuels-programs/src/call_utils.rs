@@ -145,7 +145,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
     let n_heap_type_calls = calls
         .iter()
-        .filter(|c| c.output_param.is_vm_heap_type())
+        .filter(|c| c.output_param.heap_inner_element_size().is_some())
         .count();
     let n_stack_type_calls = calls.len() - n_heap_type_calls;
 
@@ -334,6 +334,19 @@ pub(crate) fn get_single_call_instructions(
     .to_vec();
     // The instructions are different if you want to return data that was on the heap
     if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
+        // This offset is here because if the variant type is an enum containing a heap type, then
+        // the first word must be skipped because it's the discriminant. The 3 words containing
+        // (ptr, cap, len) are at the end of the data of the enum, which depends on the encoding
+        // width. If the variant type does not contain a heap type, then the receipt generated will
+        // not be read anyway.
+        let offset = if matches!(output_param_type, ParamType::Enum { .. }) {
+            // 3 is not a "magic" number: skip 1 word for the discriminant, and the next 2 because
+            // we are looking left of the 3 words (ptr, cap, len), that are placed at the end
+            // of the data, on the right.
+            output_param_type.compute_encoding_width() - 3
+        } else {
+            0
+        };
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).

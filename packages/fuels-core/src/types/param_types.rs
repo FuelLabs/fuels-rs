@@ -88,11 +88,44 @@ impl ParamType {
             // `Bytes` type nested, it is an exception that will be generalized as part of
             // https://github.com/FuelLabs/fuels-rs/discussions/944
             ParamType::String => false,
+            // We are currently allowing enums that are wrapping around heap types to allow for
+            // `Result<Vec>` to be returned from a contract
+            ParamType::Enum { .. } => self.enum_contains_nested_heap_types(),
             _ => self.uses_heap_types(),
         }
     }
 
-    fn uses_heap_types(&self) -> bool {
+    pub fn enum_contains_nested_heap_types(&self) -> bool {
+        match &self {
+            ParamType::Enum { variants, generics } => {
+                let mut param_types = chain!(variants.param_types(), generics);
+                param_types.any(|p| p.param_type_has_wrong_format())
+            }
+            // This case should never happen because it is called on a match statement
+            _ => false,
+        }
+    }
+
+    // This is called inside the `enum_contains_nested_heap_types` on each type contained in the
+    // enum
+    fn param_type_has_wrong_format(&self) -> bool {
+        match self {
+            ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
+            ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
+            ParamType::Enum {
+                generics, variants, ..
+            } => {
+                let variants_types = variants.param_types();
+                Self::any_nested_heap_types(chain!(generics, variants_types))
+            }
+            ParamType::Struct {
+                fields, generics, ..
+            } => Self::any_nested_heap_types(chain!(fields, generics)),
+            _ => false,
+        }
+    }
+
+    pub fn uses_heap_types(&self) -> bool {
         match &self {
             ParamType::Vector(..) | ParamType::Bytes | ParamType::String => true,
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
@@ -131,6 +164,15 @@ impl ParamType {
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
+            ParamType::Enum { variants, generics } => {
+                let variants_types = variants.param_types();
+                for param in chain!(generics, variants_types) {
+                    if param.is_vm_heap_type() {
+                        return Some(param.heap_inner_element_size().unwrap());
+                    }
+                }
+                None
+            }
             _ => None,
         }
     }
@@ -1349,11 +1391,11 @@ mod tests {
             variants: EnumVariants::new(param_types_no_nested_vec.clone())?,
             generics: param_types_no_nested_vec.clone(),
         });
-        is_nested(ParamType::Enum {
+        not_nested(ParamType::Enum {
             variants: EnumVariants::new(param_types_nested_vec.clone())?,
             generics: param_types_no_nested_vec.clone(),
         });
-        is_nested(ParamType::Enum {
+        not_nested(ParamType::Enum {
             variants: EnumVariants::new(param_types_no_nested_vec)?,
             generics: param_types_nested_vec,
         });
@@ -1406,13 +1448,13 @@ mod tests {
             variants: EnumVariants::new(param_types_nested_bytes.clone())?,
             generics: param_types_no_nested_bytes.clone(),
         };
-        is_nested(nested_enum);
+        not_nested(nested_enum);
 
         let nested_enum = ParamType::Enum {
             variants: EnumVariants::new(param_types_no_nested_bytes)?,
             generics: param_types_nested_bytes,
         };
-        is_nested(nested_enum);
+        not_nested(nested_enum);
 
         Ok(())
     }
@@ -1485,6 +1527,34 @@ mod tests {
         let param_type = try_std_string(&the_type).unwrap().unwrap();
 
         assert_eq!(param_type, ParamType::String);
+    }
+
+    #[test]
+    fn my_function() -> Result<()> {
+        // Result<Bytes, Something> when `Something` does not contain heap type should work!
+        let enum_no_heap_types = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::U64, ParamType::Bool])?,
+            generics: vec![],
+        };
+        let r = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::Bytes, enum_no_heap_types])?,
+            generics: vec![],
+        };
+        println!("{}", r.enum_contains_nested_heap_types());
+
+        let enum_heap_types = ParamType::Enum {
+            variants: EnumVariants::new(vec![
+                ParamType::Vector(Box::from(ParamType::U64)),
+                ParamType::Bool,
+            ])?,
+            generics: vec![],
+        };
+        let r = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::Bytes, enum_heap_types])?,
+            generics: vec![],
+        };
+        println!("{}", r.enum_contains_nested_heap_types());
+        Ok(())
     }
 
     fn given_type_with_path(path: &str) -> Type {
