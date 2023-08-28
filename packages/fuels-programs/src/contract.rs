@@ -359,8 +359,8 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
-    // Initially `None`, gets set to the right tx id after the transaction is submitted
     decoder_config: DecoderConfig,
+    // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub datatype: PhantomData<D>,

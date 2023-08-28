@@ -73,7 +73,7 @@ mod tests {
         }
 
         test_decode!(Address, ContractId, AssetId);
-        
+
         Ok(())
     }
 }

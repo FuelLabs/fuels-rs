@@ -95,7 +95,6 @@ impl LogDecoder {
         }
     }
 
-    // Set the `DecoderConfig` to be used when decoding logs
     pub fn set_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
         self.decoder_config = decoder_config;
         self

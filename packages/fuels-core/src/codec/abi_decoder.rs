@@ -512,7 +512,6 @@ mod tests {
 
     #[test]
     fn max_depth_surpassed() {
-        // ti is n expl
         const MAX_DEPTH: usize = 2;
         let config = DecoderConfig {
             max_depth: MAX_DEPTH,
