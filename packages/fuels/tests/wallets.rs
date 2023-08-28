@@ -3,6 +3,7 @@ use std::iter::repeat;
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
 use fuels_accounts::wallet::{Wallet, WalletUnlocked};
+use fuels_core::types::transaction_builders::TransactionBuilder;
 use fuels_test_helpers::setup_test_provider;
 
 #[tokio::test]
@@ -119,7 +120,7 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
     return comparison_results.iter().all(|&r| r);
 }
 
-fn add_fee_resources_wallet_config(num_wallets: u64) -> WalletsConfig {
+fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
     let asset_configs = vec![AssetConfig {
         id: BASE_ASSET_ID,
         num_coins: 20,
@@ -130,14 +131,14 @@ fn add_fee_resources_wallet_config(num_wallets: u64) -> WalletsConfig {
 
 #[tokio::test]
 async fn add_fee_resources_empty_transaction() -> Result<()> {
-    let wallet_config = add_fee_resources_wallet_config(1);
+    let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await
         .pop()
         .unwrap();
 
     let tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
-    let tx = wallet.add_fee_resources(tb, 0, None).await?;
+    let tx = wallet.add_fee_resources(tb, 0).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -159,7 +160,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
 
 #[tokio::test]
 async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
-    let wallet_config = add_fee_resources_wallet_config(1);
+    let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await
         .pop()
@@ -167,13 +168,13 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
     let base_amount = 30;
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount, None)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, base_amount)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
-    let tx = wallet.add_fee_resources(tb, base_amount, None).await?;
+    let tx = wallet.add_fee_resources(tb, base_amount).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -401,5 +402,51 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 
     let total_amount: u64 = wallet_2_final_coins.iter().map(|c| c.amount).sum();
     assert_eq!(total_amount, SEND_AMOUNT);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_transfer_with_multiple_signatures() -> Result<()> {
+    let wallet_config = base_asset_wallet_config(5);
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let provider = wallets[0].try_provider()?;
+
+    let mut receiver = WalletUnlocked::new_random(None);
+    receiver.set_provider(provider.clone());
+
+    let amount_to_transfer = 20;
+
+    let mut inputs = vec![];
+    for wallet in &wallets {
+        inputs.extend(
+            wallet
+                .get_asset_inputs_for_amount(BASE_ASSET_ID, amount_to_transfer)
+                .await?,
+        );
+    }
+
+    let amount_to_receive = amount_to_transfer * wallets.len() as u64;
+
+    // all change goes to the first wallet
+    let outputs = wallets[0].get_asset_outputs_for_amount(
+        receiver.address(),
+        BASE_ASSET_ID,
+        amount_to_receive,
+    );
+
+    let mut tb =
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+
+    for wallet in wallets.iter() {
+        wallet.sign_transaction(&mut tb);
+    }
+
+    provider.send_transaction(tb.build()?).await?;
+
+    assert_eq!(
+        receiver.get_asset_balance(&BASE_ASSET_ID).await?,
+        amount_to_receive,
+    );
+
     Ok(())
 }
