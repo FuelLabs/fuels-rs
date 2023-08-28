@@ -1,9 +1,11 @@
+use std::any::Any;
 use std::error::Error;
 use std::future::Future;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use std::fmt;
+use std::fmt::Debug;
 use std::sync::Arc;
 
 type RetryOn = Option<Arc<dyn Fn(&dyn Error) -> bool + Send + Sync>>;
@@ -12,7 +14,8 @@ type RetryOn = Option<Arc<dyn Fn(&dyn Error) -> bool + Send + Sync>>;
 pub struct RetryConfig {
     pub max_attempts: NonZeroUsize,
     pub interval: Duration,
-    pub retry_on: RetryOn,
+    retry_on: RetryOn,
+    retry_on_none: bool
 }
 
 impl fmt::Debug for RetryConfig {
@@ -33,6 +36,7 @@ impl RetryConfig {
             max_attempts,
             interval,
             retry_on: None,
+            retry_on_none: false,
         }
     }
 
@@ -43,6 +47,15 @@ impl RetryConfig {
         self.retry_on = Some(Arc::new(retry_on));
         self.clone()
     }
+
+    pub fn retry_on_none(mut self) -> RetryConfig {
+        self.retry_on_none = true;
+        self
+    }
+}
+
+fn convert_to_string<T: ToString>(value: T) -> String {
+    value.to_string()
 }
 
 pub async fn retry<Fut, T, K>(
@@ -52,12 +65,16 @@ pub async fn retry<Fut, T, K>(
 where
     Fut: Future<Output = Result<T, K>>,
     K: Error + 'static,
+    T: Debug + Clone + PartialEq
 {
     let mut last_err = None;
 
+
     for _ in 0..retry_options.max_attempts.get() {
         match action().await {
-            Ok(value) => return Ok(value),
+            Ok(value) => {
+                return Ok(value)
+            },
             Err(error) => {
                 if let Some(retry_func) = &retry_options.retry_on {
                     if retry_func(&error) {
@@ -144,6 +161,20 @@ mod tests {
             let ok = retry(will_always_fail, &retry_options).await?;
 
             assert_eq!(ok, "Success");
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn retry_on_none_values() -> anyhow::Result<()> {
+            let values = Mutex::new(vec![Ok::<Option<String>, Error>(Some(String::from("Success"))), Ok(None), Ok(None)]);
+            let will_always_fail = || async { values.lock().await.pop().unwrap() };
+
+            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
+
+            let ok = retry(will_always_fail, &retry_options).await?;
+
+            assert_eq!(ok.unwrap(), "Success");
 
             Ok(())
         }

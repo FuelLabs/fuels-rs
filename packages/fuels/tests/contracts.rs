@@ -1465,9 +1465,15 @@ async fn test_contract_submit_and_response() -> Result<()> {
     // let handle = contract_methods.get(5, 6).submit().await?;
     // let response = handle.response().await?;
 
+    let max_attempts = NonZeroUsize::new(5)
+        .ok_or("Value must be non-zero")
+        .expect("asd");
+
+    let retry_config = RetryConfig::new(max_attempts, Duration::default()).set_retry_on(|e| true);
+
     let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
     let tx_id = response.tx_id;
-    let value = response.value.await?;
+    let value = response.retry_config(retry_config).value().await?;
 
     dbg!(tx_id);
     dbg!(value);

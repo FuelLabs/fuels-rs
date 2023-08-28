@@ -287,18 +287,18 @@ where
     }
 
     /// Call a script on the node, in a state-modifying manner.
-    pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
-        if self.retry_options.is_some() {
-            retry(
-                || async { self.clone().call_or_simulate(false).await },
-                self.retry_options.as_ref().unwrap(),
-            )
-            .await
-        } else {
-            self.call_or_simulate(false).await
-        }
-        .map_err(|err| map_revert_error(err, &self.log_decoder))
-    }
+    // pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
+    //     if self.retry_options.is_some() {
+    //         retry(
+    //             || async { self.clone().call_or_simulate(false).await },
+    //             self.retry_options.as_ref().unwrap(),
+    //         )
+    //         .await
+    //     } else {
+    //         self.call_or_simulate(false).await
+    //     }
+    //     .map_err(|err| map_revert_error(err, &self.log_decoder))
+    // }
 
     pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
         let tb = self.prepare_builder().await?;
