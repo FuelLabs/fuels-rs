@@ -598,9 +598,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(
-
-        provider.send_transaction(tx).await?);
+        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
 
         Ok(SubmitResponse::new(self.cached_tx_id, self))
     }

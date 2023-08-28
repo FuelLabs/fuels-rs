@@ -11,6 +11,7 @@ use fuel_core_client::client::{
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
+use fuels_core::types::transaction::Transaction;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
     types::{
@@ -28,7 +29,6 @@ use fuels_core::{
 };
 use tai64::Tai64;
 use thiserror::Error;
-use fuels_core::types::transaction::Transaction;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
