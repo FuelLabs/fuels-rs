@@ -1,15 +1,15 @@
-# Contributing To Fuel Rust SDK
+# Contributing to the Fuel Rust SDK
 
 Thanks for your interest in contributing to the Fuel Rust SDK!
 
-This document outlines the process for installing dependencies, setting up for development and conventions for contributing.
+This document outlines the process for installing dependencies, setting up for development, and conventions for contributing.`
 
 If you run into any difficulties getting started, you can always ask questions on our [Discourse](https://forum.fuel.network/).
 
 
-# Finding Something to Work On
+# Finding something to work on
 
-There are many ways in which you may contribute to the project, some of which involve coding knowledge and some which do not. A few examples include:
+You may contribute to the project in many ways, some of which involve coding knowledge and some which do not. A few examples include:
 
 - Reporting bugs
 - Adding new features or bugfixes for which there is already an open issue
@@ -28,15 +28,15 @@ This is a rough outline of what a contributor's workflow looks like:
 - Create a Git branch from where you want to base your work. This is usually master.
 - Write code, add test cases, and commit your work.
 - Run tests and make sure all tests pass.
-- If the PR contains any breaking changes, add the breaking label to your PR.
+- Add the breaking label to your PR if the PR contains any breaking changes.
 - Push your changes to a branch in your fork of the repository and submit a pull request.
-  - Make sure mention the issue, which is created at step 1, in the commit message.
-- Your PR will be reviewed and some changes may be requested.
-  - Once you've made changes, your PR must be re-reviewed and approved.
-  - If the PR becomes out of date, you can use GitHub's 'update branch' button.
+  - Make sure to mention the issue created in step 1 in the commit message.
+- Your PR will be reviewed, and some changes may be requested.
+  - Your PR must be re-reviewed and approved once you've made changes.
+  - Use GitHub's 'update branch' button if the PR becomes outdated.
   - If there are conflicts, you can merge and resolve them locally. Then push to your PR branch. Any changes to the branch will require a re-review.
 - Our CI system (Github Actions) automatically tests all authorized pull requests.
-- Use Github to merge the PR once approved.
+- Use GitHub to merge the PR once approved.
 
 Thanks for your contributions!
 
@@ -56,7 +56,7 @@ If the pull request links an issue but does not close it, you can use the keywor
 ref #456
 ```
 
-Multiple issues should use full syntax for each issue and separate by a comma, like:
+Multiple issues should use full syntax for each issue and be separated by a comma, like:
 
 ```sh
 close #123, ref #456
