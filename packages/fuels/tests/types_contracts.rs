@@ -2026,10 +2026,11 @@ fn treat_receipts(receipts: Vec<Receipt>) {
         }
         _ => (),
     }
+    println!("========================================")
 }
 
 #[tokio::test]
-async fn test_1_nested() -> Result<()> {
+async fn test_result_bytes_vec() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_program_test!(
         Abigen(Contract(
@@ -2045,16 +2046,17 @@ async fn test_1_nested() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let resp = contract_methods.returns_bytes_result(true).call().await?;
-    // treat_receipts(resp.receipts);
-    println!("{:?}", resp.value);
+    let expected = Ok(Bytes(vec![1, 1, 1, 1]));
+    assert_eq!(resp.value, expected);
     let resp = contract_methods.returns_bytes_result(false).call().await?;
-    // treat_receipts(resp.receipts);
-    println!("{:?}", resp.value);
+    let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
+    assert_eq!(resp.value, expected);
+
     let resp = contract_methods.returns_vec_result(true).call().await?;
-    // treat_receipts(resp.receipts);
-    println!("{:?}", resp.value);
+    let expected = Ok(vec![2, 2, 2, 2, 2]);
+    assert_eq!(resp.value, expected);
     let resp = contract_methods.returns_vec_result(false).call().await?;
-    // treat_receipts(resp.receipts);
-    println!("{:?}", resp.value);
+    let expected = Err(TestError::Else(7777));
+    assert_eq!(resp.value, expected);
     Ok(())
 }

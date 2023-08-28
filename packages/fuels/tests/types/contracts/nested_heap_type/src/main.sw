@@ -3,7 +3,7 @@ contract;
 use std::bytes::Bytes;
 
 pub enum TestError {
-    Something: [u8; 10],
+    Something: [u8; 5],
     Else: u64,
 }
 
@@ -27,18 +27,7 @@ impl MyContract for Contract {
             b.push(1u8);
             Result::Ok(b)
         } else {
-            Result::Err(TestError::Something([
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-                255u8,
-            ]))
+            Result::Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]))
         }
     }
 
@@ -52,7 +41,7 @@ impl MyContract for Contract {
             v.push(2);
             Result::Ok(v)
         } else {
-            Result::Err(TestError::Else(7987))
+            Result::Err(TestError::Else(7777))
         }
     }
 }

@@ -339,28 +339,28 @@ pub(crate) fn get_single_call_instructions(
         // (ptr, cap, len) are at the end of the data of the enum, which depends on the encoding
         // width. If the variant type does not contain a heap type, then the receipt generated will
         // not be read anyway.
-        let offset = if matches!(output_param_type, ParamType::Enum { .. }) {
+        let offset: u16 = if matches!(output_param_type, ParamType::Enum { .. }) {
             // 3 is not a "magic" number: skip 1 word for the discriminant, and the next 2 because
             // we are looking left of the 3 words (ptr, cap, len), that are placed at the end
             // of the data, on the right.
-            output_param_type.compute_encoding_width() - 3
+            (output_param_type.compute_encoding_width() - 3) as u16
         } else {
             0
         };
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).
-            // The RETL register contains the length of the `CALL` return (=24 because the
-            // Vec/Bytes/String struct takes 3 WORDs).
+            // The RETL register contains the length of the `CALL` return (=24 in the case of
+            // Vec/Bytes/String because their struct takes 3 WORDs).
             // We don't actually need it unless the Vec/Bytes/String struct encoding changes in the
             // compiler.
             // Load the word located at the address contained in RET, it's a word that
             // translates to a heap address. 0x15 is a free register.
-            op::lw(0x15, RegId::RET, 0),
+            op::lw(0x15, RegId::RET, offset),
             // We know a Vec/Bytes/String struct has its third WORD contain the length of the
             // underlying vector, so use a 2 offset to store the length in 0x16, which is a free
             // register.
-            op::lw(0x16, RegId::RET, 2),
+            op::lw(0x16, RegId::RET, offset + 2),
             // The in-memory size of the type is (in-memory size of the inner type) * length
             op::muli(0x16, 0x16, inner_type_byte_size as u16),
             op::retd(0x15, 0x16),

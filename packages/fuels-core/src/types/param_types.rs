@@ -90,24 +90,15 @@ impl ParamType {
             ParamType::String => false,
             // We are currently allowing enums that are wrapping around heap types to allow for
             // `Result<Vec>` to be returned from a contract
-            ParamType::Enum { .. } => self.enum_contains_nested_heap_types(),
-            _ => self.uses_heap_types(),
-        }
-    }
-
-    pub fn enum_contains_nested_heap_types(&self) -> bool {
-        match &self {
             ParamType::Enum { variants, generics } => {
                 let mut param_types = chain!(variants.param_types(), generics);
                 param_types.any(|p| p.param_type_has_wrong_format())
             }
-            // This case should never happen because it is called on a match statement
-            _ => false,
+            _ => self.uses_heap_types(),
         }
     }
 
-    // This is called inside the `enum_contains_nested_heap_types` on each type contained in the
-    // enum
+    // Called on each type contained in the enum
     fn param_type_has_wrong_format(&self) -> bool {
         match self {
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
@@ -1540,7 +1531,7 @@ mod tests {
             variants: EnumVariants::new(vec![ParamType::Bytes, enum_no_heap_types])?,
             generics: vec![],
         };
-        println!("{}", r.enum_contains_nested_heap_types());
+        assert_eq!(r.contains_nested_heap_types(), false);
 
         let enum_heap_types = ParamType::Enum {
             variants: EnumVariants::new(vec![
@@ -1553,7 +1544,7 @@ mod tests {
             variants: EnumVariants::new(vec![ParamType::Bytes, enum_heap_types])?,
             generics: vec![],
         };
-        println!("{}", r.enum_contains_nested_heap_types());
+        assert_eq!(r.contains_nested_heap_types(), true);
         Ok(())
     }
 
