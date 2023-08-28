@@ -46,12 +46,10 @@ mod tests {
 
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
-                $(
-                    assert_eq!(
+                $(assert_eq!(
                         try_from_bytes::<$for_type>(&bytes, DecoderConfig::default())?,
                         $for_type::MAX
-                    );
-                )*
+                );)*
             };
         }
 
