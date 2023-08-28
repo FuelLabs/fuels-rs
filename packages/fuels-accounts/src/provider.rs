@@ -23,12 +23,12 @@ use fuels_core::{
         message::Message,
         message_proof::MessageProof,
         node_info::NodeInfo,
-        transaction::Transaction,
         transaction_response::TransactionResponse,
     },
 };
 use tai64::Tai64;
 use thiserror::Error;
+use fuels_core::types::transaction::Transaction;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -148,7 +148,7 @@ impl Provider {
         &self,
         tx: &T,
     ) -> Result<TxId> {
-        self.send_transaction(tx).await?;
+        self.send_transaction(tx.clone()).await?;
         let tx_id = self.submit_and_wait_to_commit_tx(tx.clone()).await?;
 
         Ok(tx_id)

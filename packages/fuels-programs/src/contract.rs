@@ -251,7 +251,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction_and_wait_to_commit(tx).await?;
+        provider.send_transaction_and_wait_to_commit(&tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -637,7 +637,7 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
+            let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 
@@ -913,7 +913,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction_and_wait_to_commit(tx).await?);
+        self.cached_tx_id = Some(provider.send_transaction_and_wait_to_commit(&tx).await?);
         Ok(self)
     }
 
@@ -949,7 +949,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
+            let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
             provider.get_receipts(&tx_id).await?
         };
 

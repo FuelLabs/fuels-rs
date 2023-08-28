@@ -463,7 +463,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
-    provider.send_transaction_and_wait_to_commit(tx).await?;
+    provider.send_transaction_and_wait_to_commit(&tx).await?;
 
     assert_address_balance(
         predicate.address(),

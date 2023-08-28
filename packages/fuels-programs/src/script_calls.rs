@@ -266,7 +266,7 @@ where
         } else {
             let tx_id = self
                 .provider
-                .send_transaction_and_wait_to_commit(tx)
+                .send_transaction_and_wait_to_commit(&tx)
                 .await?;
             self.provider.get_receipts(&tx_id).await?
         };
@@ -297,7 +297,7 @@ where
 
     pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(self.provider.send_transaction(tx).await?);
+        self.cached_tx_id = Some(self.provider.send_transaction(tx.clone()).await?);
 
         self.provider
             .send_transaction_and_wait_to_commit(&tx)
