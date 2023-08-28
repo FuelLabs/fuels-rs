@@ -12,7 +12,6 @@ use fuels::{
     types::Bits256,
 };
 use fuels_programs::retry::RetryConfig;
-use tokio::join;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1469,7 +1468,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .ok_or("Value must be non-zero")
         .expect("asd");
 
-    let retry_config = RetryConfig::new(max_attempts, Duration::default()).set_retry_on(|e| true);
+    let retry_config = RetryConfig::new(max_attempts, Duration::default());
 
     let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
     let tx_id = response.tx_id;

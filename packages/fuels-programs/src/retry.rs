@@ -1,4 +1,3 @@
-use std::any::Any;
 use std::error::Error;
 use std::future::Future;
 use std::num::NonZeroUsize;
@@ -15,7 +14,7 @@ pub struct RetryConfig {
     pub max_attempts: NonZeroUsize,
     pub interval: Duration,
     retry_on: RetryOn,
-    retry_on_none: bool
+    retry_on_none: bool,
 }
 
 impl fmt::Debug for RetryConfig {
@@ -54,43 +53,42 @@ impl RetryConfig {
     }
 }
 
-fn convert_to_string<T: ToString>(value: T) -> String {
-    value.to_string()
-}
-
-pub async fn retry<Fut, T, K>(
+pub async fn retry<Fut, T, K, ShouldRetry>(
     mut action: impl FnMut() -> Fut,
     retry_options: &RetryConfig,
+    should_retry: ShouldRetry,
 ) -> Result<T, K>
 where
+    T: Clone + Debug,
     Fut: Future<Output = Result<T, K>>,
-    K: Error + 'static,
-    T: Debug + Clone + PartialEq
+    K: Clone + Error + 'static,
+    ShouldRetry: Fn(&Result<T, K>) -> bool,
 {
     let mut last_err = None;
+    let max_attempts = retry_options.max_attempts.get();
 
+    for _ in 0..max_attempts {
+        let result = action().await;
 
-    for _ in 0..retry_options.max_attempts.get() {
-        match action().await {
+        match result.clone() {
             Ok(value) => {
-                return Ok(value)
-            },
+                if !should_retry(&result) {
+                    return Ok(value);
+                }
+            }
             Err(error) => {
-                if let Some(retry_func) = &retry_options.retry_on {
-                    if retry_func(&error) {
-                        last_err = Some(error);
-                    } else {
-                        return Err(error);
-                    }
-                } else {
+                if should_retry(&result) {
                     last_err = Some(error);
+                } else {
+                    return Err(error);
                 }
             }
         }
+
         tokio::time::sleep(retry_options.interval).await;
     }
 
-    Err(last_err.expect("Must have failed"))
+    Err(last_err.expect("Retry Must have failed"))
 }
 
 #[cfg(test)]
@@ -111,9 +109,11 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
             };
 
+            let should_retry_fn = |_res: &_| -> bool { true };
+
             let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
-            let _ = retry(will_always_fail, &retry_options).await;
+            let _ = retry(will_always_fail, &retry_options, should_retry_fn).await;
 
             assert_eq!(*number_of_attempts.lock().await, 3);
 
@@ -132,9 +132,11 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData(msg.to_string()))
             };
 
+            let should_retry_fn = |_res: &_| -> bool { true };
+
             let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
-            let err = retry(will_always_fail, &retry_options)
+            let err = retry(will_always_fail, &retry_options, should_retry_fn)
                 .await
                 .expect_err("Should have failed");
 
@@ -156,9 +158,13 @@ mod tests {
 
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
 
+            let should_retry_fn = |res: &_| -> bool {
+                matches!(res, Err(err) if matches!(err, Error::InvalidData(_)))
+            };
+
             let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
-            let ok = retry(will_always_fail, &retry_options).await?;
+            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok, "Success");
 
@@ -167,12 +173,24 @@ mod tests {
 
         #[tokio::test]
         async fn retry_on_none_values() -> anyhow::Result<()> {
-            let values = Mutex::new(vec![Ok::<Option<String>, Error>(Some(String::from("Success"))), Ok(None), Ok(None)]);
+            let values = Mutex::new(vec![
+                Ok::<Option<String>, Error>(Some(String::from("Success"))),
+                Ok(None),
+                Ok(None),
+            ]);
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
+
+            let should_retry_fn = |res: &_| -> bool {
+                match res {
+                    Err(err) if matches!(err, Error::IOError(_)) => true,
+                    Ok(None) => true,
+                    _ => false,
+                }
+            };
 
             let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
 
-            let ok = retry(will_always_fail, &retry_options).await?;
+            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok.unwrap(), "Success");
 
@@ -188,9 +206,16 @@ mod tests {
                 Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
             };
 
+            let should_retry_fn = |_res: &_| -> bool { true };
+
             let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(100));
 
-            let _ = retry(will_fail_and_record_timestamp, &retry_options).await;
+            let _ = retry(
+                will_fail_and_record_timestamp,
+                &retry_options,
+                should_retry_fn,
+            )
+            .await;
 
             let timestamps_vec = timestamps.lock().await.clone();
 

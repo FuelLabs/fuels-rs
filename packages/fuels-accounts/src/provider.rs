@@ -232,6 +232,7 @@ impl Provider {
         Ok(tx_id)
     }
 
+    #[allow(dead_code)]
     async fn submit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
         Ok(tx_id)

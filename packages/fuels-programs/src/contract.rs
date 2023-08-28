@@ -1,5 +1,3 @@
-use std::future::Future;
-use std::pin::Pin;
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
 
 use fuel_tx::{
@@ -385,8 +383,6 @@ impl<T: Account, D> Clone for ContractCallHandler<T, D> {
     }
 }
 
-type Ninja<D> = Pin<Box<dyn Future<Output = Result<D>>>>;
-
 pub struct SubmitResponse<T: Account, D> {
     pub retry_config: Option<RetryConfig>, // Use RetryConfig<D> instead of RetryConfig
     pub tx_id: Option<Bytes32>,
@@ -410,6 +406,14 @@ impl<T: Account + 'static, D: Tokenizable + Parameterize + Debug + 'static> Subm
     pub async fn value(self) -> Result<D> {
         let provider = self.contract_call.account.try_provider()?;
 
+        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
+            match res {
+                Err(err) if matches!(err, Error::IOError(_)) => true,
+                Ok(None) => true,
+                _ => false,
+            }
+        };
+
         let receipts = if self.retry_config.is_some() {
             retry(
                 || async {
@@ -422,10 +426,12 @@ impl<T: Account + 'static, D: Tokenizable + Parameterize + Debug + 'static> Subm
                                 .expect("Cached tx_id is missing"),
                         )
                         .await
+                        .map_err(|e| e.into())
                 },
                 self.retry_config.as_ref().unwrap(), // Unwrap the retry_config Option
+                should_retry_fn,
             )
-            .await
+            .await?
         } else {
             provider
                 .client
@@ -435,10 +441,10 @@ impl<T: Account + 'static, D: Tokenizable + Parameterize + Debug + 'static> Subm
                         .cached_tx_id
                         .expect("Cached tx_id is missing"),
                 )
-                .await
+                .await?
         };
 
-        let value = self.contract_call.get_response(receipts?.unwrap())?.value;
+        let value = self.contract_call.get_response(receipts.unwrap())?.value;
         Ok(value)
     }
 }
@@ -597,7 +603,6 @@ where
 
         provider.send_transaction(&tx).await?;
 
-        let future = Box::pin(self.clone().get_value());
         Ok(SubmitResponse::new(self.cached_tx_id, self))
     }
 

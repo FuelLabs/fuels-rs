@@ -21,7 +21,7 @@ use fuels_core::{
 };
 use itertools::chain;
 
-use crate::retry::{retry, RetryConfig};
+use crate::retry::RetryConfig;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
