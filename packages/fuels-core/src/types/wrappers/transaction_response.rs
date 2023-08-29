@@ -45,7 +45,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             ClientTransactionStatus::Success { time, .. }
             | ClientTransactionStatus::Failure { time, .. } => {
                 let native = NaiveDateTime::from_timestamp_opt(time.to_unix(), 0);
-                native.map(|time| DateTime::<Utc>::from_utc(time, Utc))
+                native.map(|time| DateTime::<Utc>::from_naive_utc_and_offset(time, Utc))
             }
         };
 
