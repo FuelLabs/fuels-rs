@@ -13,10 +13,16 @@ pub struct EnumVariants {
 
 impl EnumVariants {
     pub fn new(param_types: Vec<ParamType>) -> Result<EnumVariants> {
-        if !param_types.is_empty() {
-            Ok(EnumVariants { param_types })
+        if param_types.is_empty() {
+            return Err(error!(InvalidData, "Enum variants can not be empty!"));
+        }
+        if param_types.iter().filter(|p| p.is_vm_heap_type()).count() > 1 {
+            Err(error!(
+                InvalidData,
+                "Enum variants can only contain one heap type"
+            ))
         } else {
-            Err(error!(InvalidData, "Enum variants can not be empty!"))
+            Ok(EnumVariants { param_types })
         }
     }
 
@@ -32,6 +38,18 @@ impl EnumVariants {
                 self.param_types()
             )
         })
+    }
+
+    pub fn get_heap_type_variant_discriminant(&self) -> Result<u8> {
+        for (discriminant, param) in self.param_types.iter().enumerate() {
+            if param.is_vm_heap_type() {
+                return Ok(discriminant as u8);
+            }
+        }
+        Err(error!(
+            InvalidData,
+            "There are no heap types inside {:?}", self
+        ))
     }
 
     pub fn only_units_inside(&self) -> bool {
