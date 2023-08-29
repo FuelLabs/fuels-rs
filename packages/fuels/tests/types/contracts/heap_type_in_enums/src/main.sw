@@ -12,6 +12,9 @@ abi MyContract {
     fn returns_bytes_result(return_ok: bool) -> Result<Bytes, TestError>;
     fn returns_vec_result(return_ok: bool) -> Result<Vec<u64>, TestError>;
     fn returns_string_result(return_ok: bool) -> Result<String, TestError>;
+    fn returns_bytes_option(return_some: bool) -> Option<Bytes>;
+    fn returns_vec_option(return_some: bool) -> Option<Vec<u64>>;
+    fn returns_string_option(return_some: bool) -> Option<String>;
 }
 
 impl MyContract for Contract {
@@ -48,6 +51,42 @@ impl MyContract for Contract {
             Result::Ok(s)
         } else {
             Result::Err(TestError::Else(3333))
+        }
+    }
+
+    fn returns_bytes_option(return_some: bool) -> Option<Bytes> {
+        return if return_some {
+            let mut b = Bytes::new();
+            b.push(1u8);
+            b.push(1u8);
+            b.push(1u8);
+            b.push(1u8);
+            Option::Some(b)
+        } else {
+            Option::None
+        }
+    }
+
+    fn returns_vec_option(return_some: bool) -> Option<Vec<u64>> {
+        return if return_some {
+            let mut v = Vec::new();
+            v.push(2);
+            v.push(2);
+            v.push(2);
+            v.push(2);
+            v.push(2);
+            Option::Some(v)
+        } else {
+            None
+        }
+    }
+
+    fn returns_string_option(return_some: bool) -> Option<String> {
+        return if return_some {
+            let s = String::from_ascii_str("Hello World");
+            Option::Some(s)
+        } else {
+            None
         }
     }
 }

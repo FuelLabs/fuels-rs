@@ -2030,7 +2030,7 @@ fn treat_receipts(receipts: Vec<Receipt>) {
 }
 
 #[tokio::test]
-async fn test_heap_type_in_result() -> Result<()> {
+async fn test_heap_type_in_enums() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_program_test!(
         Abigen(Contract(
@@ -2066,5 +2066,22 @@ async fn test_heap_type_in_result() -> Result<()> {
     let expected = Err(TestError::Else(3333));
     assert_eq!(resp.value, expected);
 
+    let resp = contract_methods.returns_bytes_option(true).call().await?;
+    let expected = Some(Bytes(vec![1, 1, 1, 1]));
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_bytes_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    let resp = contract_methods.returns_vec_option(true).call().await?;
+    let expected = Some(vec![2, 2, 2, 2, 2]);
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_vec_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    let resp = contract_methods.returns_string_option(true).call().await?;
+    let expected = Some("Hello World".to_string());
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_option(false).call().await?;
+    assert!(resp.value.is_none());
     Ok(())
 }
