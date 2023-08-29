@@ -10,6 +10,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
+        enum_variants::EnumVariants,
         errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
@@ -143,11 +144,31 @@ pub(crate) async fn build_tx_from_contract_calls(
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
+    let n_enum_heap_type_calls = calls
+        .iter()
+        .filter(|c| {
+            c.output_param.heap_inner_element_size().is_some()
+                && matches!(c.output_param, ParamType::Enum { .. })
+        })
+        .count();
+
     let n_heap_type_calls = calls
         .iter()
         .filter(|c| c.output_param.heap_inner_element_size().is_some())
-        .count();
-    let n_stack_type_calls = calls.len() - n_heap_type_calls;
+        .count()
+        - n_enum_heap_type_calls;
+
+    let n_stack_type_calls = calls.len() - n_heap_type_calls - n_enum_heap_type_calls;
+
+    let total_instructions_len_heap_enum_data = get_single_call_instructions(
+        &CallOpcodeParamsOffset::default(),
+        &ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::Bytes]).unwrap(),
+            generics: vec![],
+        },
+    )
+    .len()
+        * n_enum_heap_type_calls;
 
     let total_instructions_len_stack_data =
         // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
@@ -163,7 +184,9 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
     .len()
         * n_heap_type_calls;
 
-    total_instructions_len_stack_data + total_instructions_len_heap_data
+    total_instructions_len_stack_data
+        + total_instructions_len_heap_data
+        + total_instructions_len_heap_enum_data
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
