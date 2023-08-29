@@ -3,30 +3,12 @@ use std::future::Future;
 use std::num::NonZeroUsize;
 use std::time::Duration;
 
-use std::fmt;
 use std::fmt::Debug;
-use std::sync::Arc;
 
-type RetryOn = Option<Arc<dyn Fn(&dyn Error) -> bool + Send + Sync>>;
-
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RetryConfig {
     pub max_attempts: NonZeroUsize,
     pub interval: Duration,
-    retry_on: RetryOn,
-    retry_on_none: bool,
-}
-
-impl fmt::Debug for RetryConfig {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "RetryOptions {{ max_attempts: {:?}, interval: {:?}, retry_on_errors: {:?} }}",
-            self.max_attempts,
-            self.interval,
-            self.retry_on.as_ref().map(|_| "Some(...)")
-        )
-    }
 }
 
 impl RetryConfig {
@@ -34,22 +16,7 @@ impl RetryConfig {
         RetryConfig {
             max_attempts,
             interval,
-            retry_on: None,
-            retry_on_none: false,
         }
-    }
-
-    pub fn set_retry_on<F>(&mut self, retry_on: F) -> RetryConfig
-    where
-        F: Fn(&dyn Error) -> bool + Send + Sync + 'static,
-    {
-        self.retry_on = Some(Arc::new(retry_on));
-        self.clone()
-    }
-
-    pub fn retry_on_none(mut self) -> RetryConfig {
-        self.retry_on_none = true;
-        self
     }
 }
 
