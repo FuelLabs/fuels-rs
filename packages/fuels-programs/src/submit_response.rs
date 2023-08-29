@@ -1,16 +1,15 @@
-use fuel_tx::Receipt;
-use fuel_types::Bytes32;
-use fuels_accounts::{Account, ViewOnlyAccount};
-use fuels_accounts::provider::Provider;
-use fuels_core::traits::{Parameterize, Tokenizable};
-use fuels_core::types::errors::{Error, Result};
-use std::fmt::Debug;
-use fuels_core::types::errors;
 use crate::call_response::FuelCallResponse;
 use crate::contract::{ContractCallHandler, MultiContractCallHandler};
 use crate::retry::{retry, RetryConfig};
 use crate::script_calls::ScriptCallHandler;
-
+use fuel_tx::Receipt;
+use fuel_types::Bytes32;
+use fuels_accounts::provider::Provider;
+use fuels_accounts::Account;
+use fuels_core::traits::{Parameterize, Tokenizable};
+use fuels_core::types::errors;
+use fuels_core::types::errors::{Error, Result};
+use std::fmt::Debug;
 
 pub struct SubmitResponse<T: Account, D> {
     pub retry_config: RetryConfig, // Use RetryConfig<D> instead of RetryConfig
@@ -32,8 +31,8 @@ pub trait ResponseHandler<T, D> {
 
 impl<T, D> ResponseHandler<T, D> for CallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Parameterize + Debug + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug,
 {
     fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
         match self {
@@ -55,7 +54,7 @@ where
     }
 }
 
-impl<T: Account + 'static, D: Tokenizable + Parameterize + Debug + 'static> SubmitResponse<T, D> {
+impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     pub fn new(tx_id: Option<Bytes32>, call_handler: CallHandler<T, D>) -> Self {
         Self {
             retry_config: Default::default(),

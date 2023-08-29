@@ -377,9 +377,8 @@ async fn test_script_submit_and_response() -> Result<()> {
     };
 
     let handle = script_instance.main(my_struct).submit().await?;
-    // let response = handle.response().await?;
-    // let response = handle.response().await?;
-    //
-    // assert_eq!(response.value, 42);
+    let response = handle.value().await?;
+
+    assert_eq!(response, 42);
     Ok(())
 }

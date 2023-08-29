@@ -3,32 +3,32 @@ use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path}
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
-use fuels_accounts::{Account, provider::TransactionCost};
+use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::ABIEncoder,
-    Configurables,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::{error, Error, Result},
         param_types::ParamType,
-        Selector,
-        Token,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::CreateTransactionBuilder, unresolved_bytes::UnresolvedBytes,
+        transaction_builders::CreateTransactionBuilder,
+        unresolved_bytes::UnresolvedBytes,
+        Selector, Token,
     },
+    Configurables,
 };
 use itertools::Itertools;
 
 use crate::retry::RetryConfig;
+use crate::submit_response::{CallHandler, SubmitResponse};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
-    logs::{LogDecoder, map_revert_error},
+    logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
-use crate::submit_response::{CallHandler, SubmitResponse};
 
 #[derive(Debug, Clone)]
 pub struct CallParameters {
@@ -403,8 +403,8 @@ impl Clone for ContractCall {
 
 impl<T, D> ContractCallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Parameterize + Debug + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug,
 {
     pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
@@ -613,8 +613,8 @@ where
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Parameterize + Debug + Send + Sync + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
         self.simulate().await?;

@@ -1,10 +1,22 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
+use crate::retry::RetryConfig;
+use crate::submit_response::{CallHandler, SubmitResponse};
+use crate::{
+    call_response::FuelCallResponse,
+    call_utils::{
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        TxDependencyExtension,
+    },
+    contract::SettableContract,
+    logs::{map_revert_error, LogDecoder},
+    receipt_parser::ReceiptParser,
+};
 use fuel_tx::{Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
-    Account,
     provider::{Provider, TransactionCost},
+    Account,
 };
 use fuels_core::{
     constants::BASE_ASSET_ID,
@@ -20,18 +32,6 @@ use fuels_core::{
     },
 };
 use itertools::chain;
-use crate::retry::RetryConfig;
-use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{
-        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
-        TxDependencyExtension,
-    },
-    contract::SettableContract,
-    logs::{LogDecoder, map_revert_error},
-    receipt_parser::ReceiptParser,
-};
-use crate::submit_response::{CallHandler, SubmitResponse};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -115,9 +115,9 @@ impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
     }
 }
 
-impl<T: Account + 'static, D> ScriptCallHandler<T, D>
+impl<T: Account, D> ScriptCallHandler<T, D>
 where
-    D: Parameterize + Tokenizable + Debug + 'static,
+    D: Parameterize + Tokenizable + Debug,
 {
     pub fn new(
         script_binary: Vec<u8>,
@@ -299,19 +299,12 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        // self.cached_tx_id = Some(
-        //     self.provider
-        //         .send_transaction_and_wait_to_commit(tx)
-        //         .await?,
-        // );
-
         self.cached_tx_id = Some(provider.send_transaction(tx).await?);
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
             CallHandler::Script(self),
         ))
-        // Ok(self)
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
@@ -366,8 +359,8 @@ where
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
 where
-    T: Account + 'static,
-    D: Tokenizable + Parameterize + Debug + Send + Sync + 'static,
+    T: Account,
+    D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
         self.simulate().await?;
