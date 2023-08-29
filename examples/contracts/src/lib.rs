@@ -744,8 +744,8 @@ mod tests {
                 a: true,
                 b: [1, 2, 3],
             },
-            SizedAsciiString::<4>::try_from("fuel").unwrap()
-        );
+            SizedAsciiString::<4>::try_from("fuel")?
+        )?;
 
         caller_contract_instance
             .methods()

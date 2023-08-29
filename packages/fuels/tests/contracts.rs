@@ -1245,7 +1245,7 @@ async fn low_level_call() -> Result<()> {
     );
 
     let function_selector = fn_selector!(initialize_counter(u64));
-    let call_data = calldata!(42u64);
+    let call_data = calldata!(42u64)?;
 
     caller_contract_instance
         .methods()
@@ -1274,8 +1274,8 @@ async fn low_level_call() -> Result<()> {
             a: true,
             b: [1, 2, 3],
         },
-        SizedAsciiString::<4>::try_from("fuel").unwrap()
-    );
+        SizedAsciiString::<4>::try_from("fuel")?
+    )?;
 
     caller_contract_instance
         .methods()
