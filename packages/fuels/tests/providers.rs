@@ -749,7 +749,10 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
     let unix = Tai64(timestamp).to_unix();
-    DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
+    NaiveDateTime::from_timestamp_opt(unix, 0)
+        .unwrap()
+        .and_local_timezone(Utc)
+        .unwrap()
 }
 
 /// This test is here in addition to `can_set_custom_block_time` because even though this test
