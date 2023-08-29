@@ -1,20 +1,17 @@
 contract;
 
 use std::bytes::Bytes;
+use std::string::String;
 
 pub enum TestError {
     Something: [u8; 5],
     Else: u64,
 }
 
-pub enum Something {
-    a: (),
-    b: u64,
-}
-
 abi MyContract {
     fn returns_bytes_result(return_ok: bool) -> Result<Bytes, TestError>;
     fn returns_vec_result(return_ok: bool) -> Result<Vec<u64>, TestError>;
+    fn returns_string_result(return_ok: bool) -> Result<String, TestError>;
 }
 
 impl MyContract for Contract {
@@ -42,6 +39,15 @@ impl MyContract for Contract {
             Result::Ok(v)
         } else {
             Result::Err(TestError::Else(7777))
+        }
+    }
+
+    fn returns_string_result(return_ok: bool) -> Result<String, TestError> {
+        return if return_ok {
+            let s = String::from_ascii_str("Hello World");
+            Result::Ok(s)
+        } else {
+            Result::Err(TestError::Else(3333))
         }
     }
 }

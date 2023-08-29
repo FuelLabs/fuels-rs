@@ -2030,16 +2030,16 @@ fn treat_receipts(receipts: Vec<Receipt>) {
 }
 
 #[tokio::test]
-async fn test_result_bytes_vec() -> Result<()> {
+async fn test_heap_type_in_result() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_program_test!(
         Abigen(Contract(
-            name = "NestedHeap",
-            project = "packages/fuels/tests/types/contracts/nested_heap_type"
+            name = "HeapTypeInEnum",
+            project = "packages/fuels/tests/types/contracts/heap_type_in_enums"
         )),
         Deploy(
             name = "contract_instance",
-            contract = "NestedHeap",
+            contract = "HeapTypeInEnum",
             wallet = "wallet"
         ),
     );
@@ -2058,5 +2058,13 @@ async fn test_result_bytes_vec() -> Result<()> {
     let resp = contract_methods.returns_vec_result(false).call().await?;
     let expected = Err(TestError::Else(7777));
     assert_eq!(resp.value, expected);
+
+    let resp = contract_methods.returns_string_result(true).call().await?;
+    let expected = Ok("Hello World".to_string());
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_result(false).call().await?;
+    let expected = Err(TestError::Else(3333));
+    assert_eq!(resp.value, expected);
+
     Ok(())
 }
