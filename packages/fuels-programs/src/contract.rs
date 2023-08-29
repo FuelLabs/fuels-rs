@@ -22,7 +22,7 @@ use fuels_core::{
 use itertools::Itertools;
 
 use crate::retry::RetryConfig;
-use crate::submit_response::{CallHandler, SubmitResponse};
+use crate::submit_response::{CallHandler, SubmitResponse, SubmitResponseMultiple};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
@@ -845,13 +845,13 @@ impl<T: Account> MultiContractCallHandler<T> {
     //     .map_err(|err| map_revert_error(err, &self.log_decoder))
     // }
 
-    pub async fn submit(mut self) -> Result<MultiContractCallHandler<T>> {
+    pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         self.cached_tx_id = Some(provider.send_transaction_and_wait_to_commit(tx).await?);
 
-        Ok(self)
+        Ok(SubmitResponseMultiple::new(self.cached_tx_id, self))
     }
 
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
