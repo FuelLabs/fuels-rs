@@ -1465,8 +1465,8 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let retry_config = RetryConfig::new(max_attempts, Duration::default());
 
     let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
+    dbg!(response.tx_id);
     let value = response.retry_config(retry_config).value().await?;
-
     assert_eq!(value, 3);
 
     let contract_methods = contract_instance.methods();

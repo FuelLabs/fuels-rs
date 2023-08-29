@@ -1,6 +1,4 @@
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
-
-use crate::retry::RetryConfig;
+use crate::retry::{retry, RetryConfig};
 use crate::submit_response::{CallHandler, SubmitResponse};
 use crate::{
     call_response::FuelCallResponse,
@@ -12,7 +10,7 @@ use crate::{
     logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
 };
-use fuel_tx::{Bytes32, ContractId, Output, Receipt};
+use fuel_tx::{Bytes32, ContractId, Output, Receipt, TxId};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
@@ -24,7 +22,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
-        errors::Result,
+        errors::{Error, Result},
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxParameters},
         transaction_builders::ScriptTransactionBuilder,
@@ -32,6 +30,7 @@ use fuels_core::{
     },
 };
 use itertools::chain;
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 #[derive(Debug)]
 /// Contains all data relevant to a single script call
@@ -97,7 +96,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_options: Option<RetryConfig>,
+    pub retry_config: RetryConfig,
 }
 
 impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
@@ -110,7 +109,7 @@ impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
             provider: self.provider.clone(),
             datatype: self.datatype,
             log_decoder: self.log_decoder.clone(),
-            retry_options: self.retry_options.clone(),
+            retry_config: self.retry_config.clone(),
         }
     }
 }
@@ -142,12 +141,12 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
-            retry_options: None,
+            retry_config: Default::default(),
         }
     }
 
-    pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
-        self.retry_options = Some(retry_options);
+    pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
+        self.retry_config = retry_config;
         self
     }
 
@@ -281,25 +280,23 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    /// Call a script on the node, in a state-modifying manner.
-    // pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
-    //     if self.retry_options.is_some() {
-    //         retry(
-    //             || async { self.clone().call_or_simulate(false).await },
-    //             self.retry_options.as_ref().unwrap(),
-    //         )
-    //         .await
-    //     } else {
-    //         self.call_or_simulate(false).await
-    //     }
-    //     .map_err(|err| map_revert_error(err, &self.log_decoder))
-    // }
-
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+        let should_retry_fn =
+            |res: &Result<TxId>| -> bool { matches!(res, Err(Error::IOError(_))) };
+
+        self.cached_tx_id = Some(if self.retry_config.max_attempts != 0 {
+            retry(
+                || async { provider.send_transaction(tx.clone()).await },
+                &self.retry_config,
+                should_retry_fn,
+            )
+            .await?
+        } else {
+            provider.send_transaction(tx).await?
+        });
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,

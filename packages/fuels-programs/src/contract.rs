@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path}
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
+    TxId,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
@@ -21,7 +22,7 @@ use fuels_core::{
 };
 use itertools::Itertools;
 
-use crate::retry::RetryConfig;
+use crate::retry::{retry, RetryConfig};
 use crate::submit_response::{CallHandler, SubmitResponse, SubmitResponseMultiple};
 use crate::{
     call_response::FuelCallResponse,
@@ -516,24 +517,22 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    // pub async fn call_tw(mut self) -> Result<FuelCallResponse<D>> {
-    //     if self.retry_config.is_some() {
-    //         retry(
-    //             || async { self.clone().call_or_simulate(false).await },
-    //             self.retry_config.as_ref().unwrap(),
-    //         )
-    //         .await
-    //     } else {
-    //         self.call_or_simulate(false).await
-    //     }
-    //     .map_err(|err| map_revert_error(err, &self.log_decoder))
-    // }
-
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+        let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
+
+        self.cached_tx_id = Some(if self.retry_config.max_attempts != 0 {
+            retry(
+                || async { provider.send_transaction(tx.clone()).await },
+                &self.retry_config,
+                should_retry_fn,
+            )
+            .await?
+        } else {
+            provider.send_transaction(tx).await?
+        });
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
@@ -832,24 +831,22 @@ impl<T: Account> MultiContractCallHandler<T> {
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    // pub async fn call_tw<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-    //     if self.retry_config.is_some() {
-    //         retry(
-    //             || async { self.clone().call_or_simulate(false).await },
-    //             self.retry_config.as_ref().unwrap(),
-    //         )
-    //         .await
-    //     } else {
-    //         self.call_or_simulate(false).await
-    //     }
-    //     .map_err(|err| map_revert_error(err, &self.log_decoder))
-    // }
-
     pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction_and_wait_to_commit(tx).await?);
+        let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
+
+        self.cached_tx_id = Some(if self.retry_config.max_attempts != 0 {
+            retry(
+                || async { provider.send_transaction(tx.clone()).await },
+                &self.retry_config,
+                should_retry_fn,
+            )
+            .await?
+        } else {
+            provider.send_transaction(tx).await?
+        });
 
         Ok(SubmitResponseMultiple::new(self.cached_tx_id, self))
     }

@@ -60,7 +60,9 @@ where
 mod tests {
     mod retry_until {
         use crate::retry::{retry, RetryConfig};
+        use fuel_tx::TxId;
         use fuels_core::types::errors::Error;
+        use std::str::FromStr;
         use std::time::{Duration, Instant};
         use tokio::sync::Mutex;
 
@@ -158,6 +160,39 @@ mod tests {
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok.unwrap(), "Success");
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn retry_on_io_error() -> anyhow::Result<()> {
+            let values = Mutex::new(vec![
+                Ok(TxId::from_str(
+                    "0x98f01c73c2062b55bba70966917a0839995e86abfadfff24534262d1c8b7a64e",
+                )),
+                Err(Error::IOError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Failed".to_string(),
+                ))),
+                Err(Error::IOError(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    "Failed".to_string(),
+                ))),
+            ]);
+            let will_always_fail = || async { values.lock().await.pop().unwrap() };
+
+            let should_retry_fn = |res: &_| -> bool { matches!(res, Err(Error::IOError(_))) };
+
+            let retry_options = RetryConfig::new(3, Duration::from_millis(10));
+
+            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
+
+            assert_eq!(
+                ok,
+                TxId::from_str(
+                    "0x98f01c73c2062b55bba70966917a0839995e86abfadfff24534262d1c8b7a64e"
+                )
+            );
 
             Ok(())
         }
