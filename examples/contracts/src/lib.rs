@@ -389,7 +389,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -401,7 +401,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .with_contract_ids(&[called_contract_id.into()])
             .call()
@@ -414,7 +414,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
