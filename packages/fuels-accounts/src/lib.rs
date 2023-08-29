@@ -207,7 +207,7 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
 
-        let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
+        let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id, receipts))
@@ -273,7 +273,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_id = self
             .try_provider()?
-            .send_transaction_and_wait_to_commit(&tx)
+            .send_transaction_and_wait_to_commit(tx)
             .await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
@@ -303,7 +303,7 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let tx = self.add_fee_resources(tb, amount).await?;
-        let tx_id = provider.send_transaction_and_wait_to_commit(&tx).await?;
+        let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
@@ -416,10 +416,9 @@ mod tests {
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
 
-        // Verify the signature
+        // Verify signature
         signature.verify(&recovered_address, &message)?;
-        // ANCHOR_END: sign_tx
-
         Ok(())
+        // ANCHOR_END: sign_tx
     }
 }

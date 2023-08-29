@@ -262,11 +262,11 @@ where
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let receipts = if simulate {
-            self.provider.checked_dry_run(&tx).await?
+            self.provider.checked_dry_run(tx).await?
         } else {
             let tx_id = self
                 .provider
-                .send_transaction_and_wait_to_commit(&tx)
+                .send_transaction_and_wait_to_commit(tx)
                 .await?;
             self.provider.get_receipts(&tx_id).await?
         };
@@ -298,10 +298,10 @@ where
     pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
         let tx = self.build_tx().await?;
         self.cached_tx_id = Some(
-
-        self.provider
-            .send_transaction_and_wait_to_commit(&tx)
-            .await?);
+            self.provider
+                .send_transaction_and_wait_to_commit(tx)
+                .await?,
+        );
         Ok(self)
     }
 
@@ -335,7 +335,7 @@ where
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(&tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance)
             .await?;
 
         Ok(transaction_cost)
