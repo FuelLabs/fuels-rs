@@ -54,8 +54,8 @@ mod tests {
         // ANCHOR: liquidity_deposit
         let deposit_amount = 1_000_000;
         let call_params = CallParameters::default()
-            .set_amount(deposit_amount)
-            .set_asset_id(base_asset_id);
+            .with_amount(deposit_amount)
+            .with_asset_id(base_asset_id);
 
         contract_methods
             .deposit(wallet.address())
@@ -70,8 +70,8 @@ mod tests {
         let lp_token_balance = wallet.get_asset_balance(&lp_asset_id).await?;
 
         let call_params = CallParameters::default()
-            .set_amount(lp_token_balance)
-            .set_asset_id(lp_asset_id);
+            .with_amount(lp_token_balance)
+            .with_asset_id(lp_asset_id);
 
         contract_methods
             .withdraw(wallet.address())
@@ -155,9 +155,7 @@ mod tests {
                 continue;
             }
 
-            let input = wallet_1
-                .get_asset_inputs_for_amount(id, amount, None)
-                .await?;
+            let input = wallet_1.get_asset_inputs_for_amount(id, amount).await?;
             inputs.extend(input);
 
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
@@ -166,10 +164,10 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let mut tx =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
-                .build()?;
-        wallet_1.sign_transaction(&mut tx)?;
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+        wallet_1.sign_transaction(&mut tb);
+        let tx = tb.build()?;
 
         provider.send_transaction_and_wait_to_commit(&tx).await?;
 

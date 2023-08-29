@@ -128,8 +128,8 @@ fn contract_deploying_code(
                                             .expect("Failed to load storage slots from path");
                     let load_config =
                         LoadConfiguration::default()
-                            .set_storage_configuration(storage_config)
-                            .set_salt([#(#salt),*]);
+                            .with_storage_configuration(storage_config)
+                            .with_salt([#(#salt),*]);
 
                     let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
 

@@ -134,8 +134,8 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     assert_eq!(result.value, "hello");
     // ANCHOR: script_with_tx_params
     let parameters = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(1_000_000);
+        .with_gas_price(1)
+        .with_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)
@@ -250,7 +250,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     let asset_id = BASE_ASSET_ID;
     let script_call = script_instance.main(amount, asset_id.into(), receiver.address());
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
         .await?;
     let _ = script_call
         .with_inputs(inputs)

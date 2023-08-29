@@ -160,7 +160,9 @@ impl Provider {
             gas_used,
             min_gas_price,
             ..
-        } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
+        } = self
+            .estimate_transaction_cost(tx, Some(tolerance))
+            .await?;
 
         if gas_used > tx.gas_limit() {
             return Err(error!(
@@ -184,7 +186,7 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
-        let tx_id = self.client.submit(&tx.clone().into()).await?;
+        let tx_id = self.client.submit(tx).await?;
         Ok(tx_id)
     }
 
@@ -229,6 +231,7 @@ impl Provider {
     async fn submit_and_wait_to_commit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
         self.client.await_transaction_commit(&tx_id).await?;
+
         Ok(tx_id)
     }
 
@@ -469,7 +472,6 @@ impl Provider {
         Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
-    // - Get transaction(s)
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
@@ -550,29 +552,29 @@ impl Provider {
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
-
-        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
-        let dry_run_tx = Self::generate_dry_run_tx(tx);
-        let consensus_parameters = self.consensus_parameters();
-        let gas_used = self
-            .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
-            .await?;
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
+        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
-        // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
-        dry_run_tx
+        // Remove limits from an existing Transaction for accurate gas estimation
+        let dry_run_tx = Self::generate_dry_run_tx(tx);
+        let gas_used = self
+            .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
+            .await?;
+
+        // Update the tx with estimated gas_used and correct gas price to calculate the total_fee
+        let dry_run_tx = dry_run_tx
             .with_gas_price(gas_price)
             .with_gas_limit(gas_used);
 
-        let transaction_fee = tx
-            .fee_checked_from_tx(&consensus_parameters)
+        let transaction_fee = dry_run_tx
+            .fee_checked_from_tx(&self.consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
             min_gas_price,
             gas_price,
             gas_used,
-            metered_bytes_size: tx.metered_bytes_size() as u64,
+            metered_bytes_size: dry_run_tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.max_fee(),
         })
     }
