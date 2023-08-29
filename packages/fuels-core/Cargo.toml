@@ -10,8 +10,8 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
-bech32 = "0.9.0"
-chrono = "0.4.2"
+bech32 = { workspace = true }
+chrono = { workspace = true }
 fuel-abi-types = { workspace = true }
 fuel-asm = { workspace = true }
 fuel-core = { workspace = true, default-features = false, optional = true }
