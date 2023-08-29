@@ -2,7 +2,7 @@ use std::iter::repeat;
 
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
-use fuels_accounts::wallet::WalletUnlocked;
+use fuels_accounts::wallet::{WalletUnlocked, Wallet};
 use fuels_core::types::transaction_builders::TransactionBuilder;
 use fuels_test_helpers::setup_test_provider;
 
@@ -390,7 +390,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             asset_id,
-            TxParameters::default().with_gas_price(1),
+            TxParameters::default(),
         )
         .await?;
 

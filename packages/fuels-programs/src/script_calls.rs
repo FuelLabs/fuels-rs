@@ -223,7 +223,7 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        let chain_id = self.provider.chain_id().into();
+        let chain_id = self.provider.chain_id();
         self.cached_tx_id = Some(tx.id(chain_id));
 
         let receipts = match simulate {

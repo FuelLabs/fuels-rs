@@ -250,7 +250,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        let chain_id = provider.chain_id().into();
+        let chain_id = provider.chain_id();
         provider.send_transaction(tx.clone()).await?;
         account.cache(&tx, chain_id);
 
@@ -508,7 +508,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let chain_id = provider.chain_id().into();
+        let chain_id = provider.chain_id();
         self.cached_tx_id = Some(tx.id(chain_id));
 
         let receipts = match simulate {
@@ -789,7 +789,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        let chain_id = provider.chain_id().into();
+        let chain_id = provider.chain_id();
         self.cached_tx_id = Some(tx.id(chain_id));
 
         let receipts = match simulate {
