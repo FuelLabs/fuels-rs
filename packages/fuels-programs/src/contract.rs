@@ -3,31 +3,32 @@ use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path}
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
-use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_accounts::{Account, provider::TransactionCost};
 use fuels_core::{
     codec::ABIEncoder,
+    Configurables,
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::{error, Error, Result},
         param_types::ParamType,
+        Selector,
+        Token,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::CreateTransactionBuilder,
-        unresolved_bytes::UnresolvedBytes,
-        Selector, Token,
+        transaction_builders::CreateTransactionBuilder, unresolved_bytes::UnresolvedBytes,
     },
-    Configurables,
 };
 use itertools::Itertools;
 
-use crate::retry::{retry, RetryConfig};
+use crate::retry::RetryConfig;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
-    logs::{map_revert_error, LogDecoder},
+    logs::{LogDecoder, map_revert_error},
     receipt_parser::ReceiptParser,
 };
+use crate::submit_response::{CallHandler, SubmitResponse};
 
 #[derive(Debug, Clone)]
 pub struct CallParameters {
@@ -365,7 +366,7 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_config: Option<RetryConfig>,
+    pub retry_config: RetryConfig,
 }
 
 // Implement Clone for ContractCallHandler once all types are provided.
@@ -380,72 +381,6 @@ impl<T: Account, D> Clone for ContractCallHandler<T, D> {
             log_decoder: self.log_decoder.clone(),
             retry_config: self.retry_config.clone(),
         }
-    }
-}
-
-pub struct SubmitResponse<T: Account, D> {
-    pub retry_config: Option<RetryConfig>, // Use RetryConfig<D> instead of RetryConfig
-    pub tx_id: Option<Bytes32>,
-    pub contract_call: ContractCallHandler<T, D>,
-}
-
-impl<T: Account + 'static, D: Tokenizable + Parameterize + Debug + 'static> SubmitResponse<T, D> {
-    pub fn new(tx_id: Option<Bytes32>, contract_call: ContractCallHandler<T, D>) -> Self {
-        Self {
-            retry_config: Default::default(),
-            tx_id,
-            contract_call,
-        }
-    }
-
-    pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = Some(retry_config);
-        self
-    }
-
-    pub async fn value(self) -> Result<D> {
-        let provider = self.contract_call.account.try_provider()?;
-
-        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
-            match res {
-                Err(err) if matches!(err, Error::IOError(_)) => true,
-                Ok(None) => true,
-                _ => false,
-            }
-        };
-
-        let receipts = if self.retry_config.is_some() {
-            retry(
-                || async {
-                    provider
-                        .client
-                        .receipts(
-                            &self
-                                .contract_call
-                                .cached_tx_id
-                                .expect("Cached tx_id is missing"),
-                        )
-                        .await
-                        .map_err(|e| e.into())
-                },
-                self.retry_config.as_ref().unwrap(), // Unwrap the retry_config Option
-                should_retry_fn,
-            )
-            .await?
-        } else {
-            provider
-                .client
-                .receipts(
-                    &self
-                        .contract_call
-                        .cached_tx_id
-                        .expect("Cached tx_id is missing"),
-                )
-                .await?
-        };
-
-        let value = self.contract_call.get_response(receipts.unwrap())?.value;
-        Ok(value)
     }
 }
 
@@ -472,7 +407,7 @@ where
     D: Tokenizable + Parameterize + Debug + 'static,
 {
     pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = Some(retry_config);
+        self.retry_config = retry_config;
         self
     }
 
@@ -600,7 +535,10 @@ where
 
         self.cached_tx_id = Some(provider.send_transaction(tx).await?);
 
-        Ok(SubmitResponse::new(self.cached_tx_id, self))
+        Ok(SubmitResponse::new(
+            self.cached_tx_id,
+            CallHandler::Contract(self),
+        ))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
@@ -749,7 +687,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         account,
         datatype: PhantomData,
         log_decoder,
-        retry_config: None,
+        retry_config: Default::default(),
     })
 }
 
@@ -788,7 +726,7 @@ pub struct MultiContractCallHandler<T: Account> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
-    pub retry_config: Option<RetryConfig>,
+    pub retry_config: RetryConfig,
 }
 
 impl<T: Account> Clone for MultiContractCallHandler<T> {
@@ -814,12 +752,12 @@ impl<T: Account> MultiContractCallHandler<T> {
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
             },
-            retry_config: None,
+            retry_config: Default::default(),
         }
     }
 
     pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
-        self.retry_config = Some(retry_options);
+        self.retry_config = retry_options;
         self
     }
 
@@ -912,6 +850,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
 
         self.cached_tx_id = Some(provider.send_transaction_and_wait_to_commit(tx).await?);
+
         Ok(self)
     }
 

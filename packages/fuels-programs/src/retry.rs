@@ -1,18 +1,17 @@
 use std::error::Error;
 use std::future::Future;
-use std::num::NonZeroUsize;
 use std::time::Duration;
 
 use std::fmt::Debug;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RetryConfig {
-    pub max_attempts: NonZeroUsize,
+    pub max_attempts: usize,
     pub interval: Duration,
 }
 
 impl RetryConfig {
-    pub fn new(max_attempts: NonZeroUsize, interval: Duration) -> Self {
+    pub fn new(max_attempts: usize, interval: Duration) -> Self {
         RetryConfig {
             max_attempts,
             interval,
@@ -32,11 +31,10 @@ where
     ShouldRetry: Fn(&Result<T, K>) -> bool,
 {
     let mut last_err = None;
-    let max_attempts = retry_options.max_attempts.get();
+    let max_attempts = retry_options.max_attempts;
 
     for _ in 0..max_attempts {
         let result = action().await;
-
         match result.clone() {
             Ok(value) => {
                 if !should_retry(&result) {
@@ -55,7 +53,7 @@ where
         tokio::time::sleep(retry_options.interval).await;
     }
 
-    Err(last_err.expect("Retry Must have failed"))
+    Err(last_err.expect("Retry must have failed"))
 }
 
 #[cfg(test)]
@@ -78,7 +76,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3, Duration::from_millis(10));
 
             let _ = retry(will_always_fail, &retry_options, should_retry_fn).await;
 
@@ -101,7 +99,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3, Duration::from_millis(10));
 
             let err = retry(will_always_fail, &retry_options, should_retry_fn)
                 .await
@@ -129,7 +127,7 @@ mod tests {
                 matches!(res, Err(err) if matches!(err, Error::InvalidData(_)))
             };
 
-            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3, Duration::from_millis(10));
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -155,7 +153,7 @@ mod tests {
                 }
             };
 
-            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(10));
+            let retry_options = RetryConfig::new(3, Duration::from_millis(10));
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -175,7 +173,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(3.try_into().unwrap(), Duration::from_millis(100));
+            let retry_options = RetryConfig::new(3, Duration::from_millis(100));
 
             let _ = retry(
                 will_fail_and_record_timestamp,

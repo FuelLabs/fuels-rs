@@ -1,10 +1,9 @@
 use fuel_tx::{Bytes32, Receipt};
-use fuels_core::{
-    traits::{Parameterize, Tokenizable},
-    types::errors::Result,
-};
+use fuels_core::traits::{Parameterize, Tokenizable};
+use std::fmt::Debug;
 
 use crate::logs::{LogDecoder, LogResult};
+use fuels_core::types::errors::Result;
 
 /// [`FuelCallResponse`] is a struct that is returned by a call to the contract or script. Its value
 /// field holds the decoded typed value returned by the contract's method. The other field holds all
