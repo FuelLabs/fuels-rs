@@ -314,8 +314,7 @@ where
     }
 
     pub async fn get_value(self) -> Result<D> {
-        let a = self.response().await?.value;
-        Ok(a)
+        Ok(self.response().await?.value)
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the

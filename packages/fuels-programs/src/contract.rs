@@ -550,8 +550,7 @@ where
     }
 
     pub async fn get_value(self) -> Result<D> {
-        let a = self.response().await?.value;
-        Ok(a)
+        Ok(self.response().await?.value)
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -861,8 +860,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 
     pub async fn get_value<D: Tokenizable + Debug>(self) -> Result<D> {
-        let a = self.response().await?.value;
-        Ok(a)
+        Ok(self.response().await?.value)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
