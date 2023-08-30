@@ -358,13 +358,12 @@ pub(crate) fn get_single_call_instructions(
     // The instructions are different if you want to return data that was on the heap
     if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
         if let ParamType::Enum { variants, .. } = output_param_type {
-            // This offset is here because if the variant type is an enum containing a heap type, then
-            // the first word must be skipped because it's the discriminant. The 3 words containing
-            // (ptr, cap, len) are at the end of the data of the enum, which depends on the encoding
-            // width. If the variant type does not contain a heap type, then the receipt generated will
-            // not be read anyway, so we can generate a receipt with empty return data.
-            // 3 is not a "magic" number: we are looking left of the 3 words (ptr, cap, len),
-            // that are placed at the end of the data, on the right.
+            // This offset is here because if the variant type is an enum containing a heap type,
+            // the 3 words containing (ptr, cap, len) are at the end of the data of the enum, which
+            // depends on the encoding width. If the variant type does not contain a heap type, then
+            // the receipt generated will not be read anyway, so we can generate a receipt with
+            // empty return data. 3 is not a "magic" number: we are looking left of the 3 words
+            // (ptr, cap, len), that are placed at the end of the data, on the right.
             let offset = (output_param_type.compute_encoding_width() - 3) as u16;
             let selected_discriminant =
                 variants.get_heap_type_variant_discriminant().unwrap() as u16;
@@ -390,12 +389,13 @@ pub(crate) fn get_single_call_instructions(
                 // the first word of the CALL return is the enum discriminant
                 op::lw(0x18, RegId::RET, 0),
                 // If the discriminant is not the one from the heap type, then jump ahead and
+                // return an empty receipt. Otherwise return heap data with the right length.
                 op::jnef(0x17, 0x18, RegId::ZERO, 1),
                 op::retd(0x15, 0x16),
                 op::retd(0x15, RegId::ZERO),
             ]);
         } else {
-            // See above for explainations, no offset needed if the type is not an enum
+            // See above for explanations, no offset needed if the type is not an enum
             instructions.extend([
                 op::lw(0x15, RegId::RET, 0),
                 op::lw(0x16, RegId::RET, 2),

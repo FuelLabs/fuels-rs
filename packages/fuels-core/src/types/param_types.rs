@@ -92,15 +92,16 @@ impl ParamType {
             // `Result<Vec>` to be returned from a contract
             ParamType::Enum { variants, generics } => {
                 let mut param_types = chain!(variants.param_types(), generics);
-                param_types.any(|p| p.param_type_has_wrong_format())
+                param_types.any(|p| p.enum_param_types_use_heap_types())
             }
             _ => self.uses_heap_types(),
         }
     }
 
     // Called on each type contained in the enum
-    fn param_type_has_wrong_format(&self) -> bool {
+    fn enum_param_types_use_heap_types(&self) -> bool {
         match self {
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => false,
             ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
             ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
             ParamType::Enum {
@@ -157,6 +158,7 @@ impl ParamType {
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
             ParamType::Enum { variants, generics } => {
                 let variants_types = variants.param_types();
+                // There is at most one heap type per enum
                 for param in chain!(generics, variants_types) {
                     if param.is_vm_heap_type() {
                         return Some(param.heap_inner_element_size().unwrap());
@@ -1429,23 +1431,20 @@ mod tests {
         };
         is_nested(nested_struct);
 
-        let not_nested_enum = ParamType::Enum {
+        not_nested(ParamType::Enum {
             variants: EnumVariants::new(param_types_no_nested_bytes.clone())?,
             generics: param_types_no_nested_bytes.clone(),
-        };
-        not_nested(not_nested_enum);
+        });
 
-        let nested_enum = ParamType::Enum {
+        not_nested(ParamType::Enum {
             variants: EnumVariants::new(param_types_nested_bytes.clone())?,
             generics: param_types_no_nested_bytes.clone(),
-        };
-        not_nested(nested_enum);
+        });
 
-        let nested_enum = ParamType::Enum {
+        not_nested(ParamType::Enum {
             variants: EnumVariants::new(param_types_no_nested_bytes)?,
             generics: param_types_nested_bytes,
-        };
-        not_nested(nested_enum);
+        });
 
         Ok(())
     }
