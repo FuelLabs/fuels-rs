@@ -374,7 +374,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let retry_options = RetryConfig::new(2, Backoff::Linear(Duration::from_millis(100)));
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(100)));
 
             let _ = retry(
                 will_fail_and_record_timestamp,
@@ -388,9 +388,50 @@ mod tests {
             let timestamps_spaced_out_at_least_100_mills = timestamps_vec
                 .iter()
                 .zip(timestamps_vec.iter().skip(1))
-                .all(|(current_timestamp, the_next_timestamp)| {
+                .enumerate()
+                .all(|(attempt, (current_timestamp, the_next_timestamp))| {
                     the_next_timestamp.duration_since(*current_timestamp)
-                        >= Duration::from_millis(100)
+                        >= (Duration::from_millis(100) * attempt as u32)
+                });
+
+            assert!(
+                timestamps_spaced_out_at_least_100_mills,
+                "Retry did not wait for the specified time between attempts."
+            );
+
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn retry_respects_delay_between_attempts_exponential() -> anyhow::Result<()> {
+            let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
+
+            let will_fail_and_record_timestamp = || async {
+                timestamps.lock().await.push(Instant::now());
+                Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
+            };
+
+            let should_retry_fn = |_res: &_| -> bool { true };
+
+            let retry_options =
+                RetryConfig::new(3, Backoff::Exponential(Duration::from_millis(100)));
+
+            let _ = retry(
+                will_fail_and_record_timestamp,
+                &retry_options,
+                should_retry_fn,
+            )
+            .await;
+
+            let timestamps_vec = timestamps.lock().await.clone();
+
+            let timestamps_spaced_out_at_least_100_mills = timestamps_vec
+                .iter()
+                .zip(timestamps_vec.iter().skip(1))
+                .enumerate()
+                .all(|(attempt, (current_timestamp, the_next_timestamp))| {
+                    the_next_timestamp.duration_since(*current_timestamp)
+                        >= (Duration::from_millis(100) * (2_usize.pow((attempt) as u32)) as u32)
                 });
 
             assert!(
