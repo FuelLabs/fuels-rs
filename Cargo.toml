@@ -41,7 +41,7 @@ Inflector = "0.11.4"
 async-trait = { version = "0.1.73", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.4.0", default-features = false }
-chrono = "0.4.26"
+chrono = "0.4.27"
 elliptic-curve = { version = "0.13.5", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
