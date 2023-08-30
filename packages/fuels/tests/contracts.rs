@@ -1,6 +1,5 @@
 #[allow(unused_imports)]
 use std::future::Future;
-use std::time::Duration;
 use std::vec;
 
 use fuel_core::chain_config::ChainConfig;
@@ -10,7 +9,6 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
-use fuels_programs::retry::RetryConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1461,12 +1459,8 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
-    let max_attempts = 3;
-    let retry_config = RetryConfig::new(max_attempts, Duration::default());
-
     let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
-    dbg!(response.tx_id);
-    let value = response.retry_config(retry_config).value().await?;
+    let value = response.value().await?;
     assert_eq!(value, 3);
 
     let contract_methods = contract_instance.methods();
