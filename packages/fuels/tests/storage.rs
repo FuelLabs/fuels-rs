@@ -86,7 +86,7 @@ async fn test_init_storage_automatically() -> Result<()> {
 async fn storage_load_error_messages() {
     {
         let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
-        let expected_error = format!("Invalid data: file '{json_path}' does not exist");
+        let expected_error = format!("Invalid data: file \"{json_path}\" does not exist");
 
         let error = StorageConfiguration::default()
             .add_slot_overrides_from_file(json_path)
@@ -97,7 +97,7 @@ async fn storage_load_error_messages() {
     {
         let json_path = "tests/contracts/storage/out/debug/storage.bin";
         let expected_error =
-            format!("Invalid data: expected `{json_path}` to have '.json' extension");
+            format!("Invalid data: expected \"{json_path}\" to have '.json' extension");
 
         let error = StorageConfiguration::default()
             .add_slot_overrides_from_file(json_path)
