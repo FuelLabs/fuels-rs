@@ -154,8 +154,6 @@ impl Provider {
             .estimate_transaction_cost(tx.clone(), Some(tolerance))
             .await?;
 
-        dbg!("AHAA");
-
         if gas_used > tx.gas_limit() {
             return Err(error!(
                 ProviderError,
