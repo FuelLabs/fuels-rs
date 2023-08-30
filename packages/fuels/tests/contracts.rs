@@ -1119,7 +1119,7 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected_error = format!("Invalid data: file '{binary_path}' does not exist");
+        let expected_error = format!("Invalid data: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
@@ -1129,7 +1129,7 @@ async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let expected_error =
-            format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
+            format!("Invalid data: expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");

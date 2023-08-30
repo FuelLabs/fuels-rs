@@ -138,7 +138,8 @@ mod tests {
         let key = Bytes32::from([1u8; 32]);
         let value = Bytes32::from([2u8; 32]);
         let storage_slot = StorageSlot::new(key, value);
-        let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
+        let storage_configuration =
+            StorageConfiguration::default().add_slot_overrides([storage_slot]);
         let configuration = LoadConfiguration::default()
             .with_storage_configuration(storage_configuration)
             .with_salt(salt);
