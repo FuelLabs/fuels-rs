@@ -535,7 +535,7 @@ where
         });
 
         Ok(SubmitResponse::new(
-            self.cached_tx_id,  
+            self.cached_tx_id,
             CallHandler::Contract(self),
         ))
     }
