@@ -218,13 +218,6 @@ impl Provider {
         Ok(receipts)
     }
 
-    pub async fn get_value(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&tx_status, &receipts)?;
-        Ok(receipts)
-    }
-
     #[allow(dead_code)]
     async fn submit_and_wait_to_commit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
