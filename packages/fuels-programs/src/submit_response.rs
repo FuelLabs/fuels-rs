@@ -11,6 +11,23 @@ use fuels_core::types::errors;
 use fuels_core::types::errors::{Error, Result};
 use std::fmt::Debug;
 
+/// Represents the response of a submitted transaction with customizable retry behavior.
+///
+/// This struct holds information about the retry configuration, transaction ID (`tx_id`),
+/// and the call handler that manages the type of call (contract or script).
+///
+/// # Type Parameters
+///
+/// - `T`: The account type associated with the transaction.
+/// - `D`: The data type representing the response value.
+///
+/// # Fields
+///
+/// - `retry_config`: The retry configuration for the transaction.
+/// - `tx_id`: The optional transaction ID of the submitted transaction.
+/// - `call_handler`: The call handler that manages the type of call.
+///
+/// ```
 #[derive(Debug)]
 pub struct SubmitResponse<T: Account, D> {
     pub retry_config: RetryConfig,
