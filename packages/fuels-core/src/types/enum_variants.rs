@@ -40,7 +40,7 @@ impl EnumVariants {
         })
     }
 
-    pub fn get_heap_type_variant_discriminant(&self) -> Result<u8> {
+    pub fn heap_type_variant_discriminant(&self) -> Result<u8> {
         for (discriminant, param) in self.param_types.iter().enumerate() {
             if param.is_vm_heap_type() {
                 return Ok(discriminant as u8);
@@ -103,6 +103,37 @@ mod tests {
             "Invalid data: Enum variants can only contain one heap type".to_string();
         assert_eq!(error.to_string(), expected_error);
 
+        Ok(())
+    }
+
+    #[test]
+    fn test_get_heap_type_variant_discriminant() -> Result<()> {
+        let param_types = vec![
+            ParamType::U64,
+            ParamType::Bool,
+            ParamType::Vector(Box::from(ParamType::U64)),
+        ];
+        let variants = EnumVariants::new(param_types)?;
+        assert_eq!(variants.heap_type_variant_discriminant()?, 2);
+
+        let param_types = vec![
+            ParamType::Vector(Box::from(ParamType::U64)),
+            ParamType::U64,
+            ParamType::Bool,
+        ];
+        let variants = EnumVariants::new(param_types)?;
+        assert_eq!(variants.heap_type_variant_discriminant()?, 0);
+
+        let param_types = vec![ParamType::U64, ParamType::Bool];
+        let variants = EnumVariants::new(param_types)?;
+        let error = variants
+            .heap_type_variant_discriminant()
+            .expect_err("Should have failed");
+        let expected_error = format!(
+            "Invalid data: There are no heap types inside {:?}",
+            variants
+        );
+        assert_eq!(error.to_string(), expected_error);
         Ok(())
     }
 }
