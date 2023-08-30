@@ -62,7 +62,7 @@ impl ReceiptParser {
     ) -> Option<Vec<u8>> {
         match output_param.get_return_location() {
             ReturnLocation::ReturnData
-                if output_param.uses_heap_types()
+                if output_param.uses_heap_types(false)
                     && matches!(output_param, ParamType::Enum { .. }) =>
             {
                 self.extract_enum_heap_type_data(contract_id)

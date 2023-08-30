@@ -82,7 +82,7 @@ impl ParamType {
 
     pub fn contains_nested_heap_types(&self) -> bool {
         match &self {
-            ParamType::Vector(param_type) => param_type.uses_heap_types(),
+            ParamType::Vector(param_type) => param_type.uses_heap_types(false),
             ParamType::Bytes => false,
             // Here, we return false because even though the `Token::String` type has an underlying
             // `Bytes` type nested, it is an exception that will be generalized as part of
@@ -92,35 +92,18 @@ impl ParamType {
             // `Result<Vec>` to be returned from a contract
             ParamType::Enum { variants, generics } => {
                 let mut param_types = chain!(variants.param_types(), generics);
-                param_types.any(|p| p.enum_param_types_use_heap_types())
+                param_types.any(|p| p.uses_heap_types(true))
             }
-            _ => self.uses_heap_types(),
+            _ => self.uses_heap_types(false),
         }
     }
 
-    // Called on each type contained in the enum
-    fn enum_param_types_use_heap_types(&self) -> bool {
-        match self {
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => false,
-            ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
-            ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
-            ParamType::Enum {
-                generics, variants, ..
-            } => {
-                let variants_types = variants.param_types();
-                Self::any_nested_heap_types(chain!(generics, variants_types))
-            }
-            ParamType::Struct {
-                fields, generics, ..
-            } => Self::any_nested_heap_types(chain!(fields, generics)),
-            _ => false,
-        }
-    }
-
-    pub fn uses_heap_types(&self) -> bool {
+    pub fn uses_heap_types(&self, can_be_heap_type_itself: bool) -> bool {
         match &self {
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => true,
-            ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
+            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => {
+                !can_be_heap_type_itself
+            }
+            ParamType::Array(param_type, ..) => param_type.uses_heap_types(false),
             ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
             ParamType::Enum {
                 generics, variants, ..
@@ -138,7 +121,7 @@ impl ParamType {
     fn any_nested_heap_types<'a>(param_types: impl IntoIterator<Item = &'a ParamType>) -> bool {
         param_types
             .into_iter()
-            .any(|param_type| param_type.uses_heap_types())
+            .any(|param_type| param_type.uses_heap_types(false))
     }
 
     pub fn is_vm_heap_type(&self) -> bool {
