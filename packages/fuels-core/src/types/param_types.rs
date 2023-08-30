@@ -1503,8 +1503,7 @@ mod tests {
     }
 
     #[test]
-    fn my_function() -> Result<()> {
-        // Result<Bytes, Something> when `Something` does not contain heap type should work!
+    fn test_double_nested_heap_type_enum() -> Result<()> {
         let enum_no_heap_types = ParamType::Enum {
             variants: EnumVariants::new(vec![ParamType::U64, ParamType::Bool])?,
             generics: vec![],
