@@ -313,6 +313,11 @@ where
         self.get_response(receipts)
     }
 
+    pub async fn get_value(self) -> Result<D> {
+        let a = self.response().await?.value;
+        Ok(a)
+    }
+
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
