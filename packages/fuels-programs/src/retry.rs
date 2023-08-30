@@ -46,7 +46,7 @@ impl RetryConfig {
 
 pub async fn retry<Fut, T, K, ShouldRetry>(
     mut action: impl FnMut() -> Fut,
-    retry_options: &RetryConfig,
+    retry_config: &RetryConfig,
     should_retry: ShouldRetry,
 ) -> Result<T, K>
 where
@@ -56,7 +56,7 @@ where
     ShouldRetry: Fn(&Result<T, K>) -> bool,
 {
     let mut last_err = None;
-    let max_attempts = retry_options.max_attempts;
+    let max_attempts = retry_config.max_attempts;
 
     for attempt in 1..max_attempts + 1 {
         let result = action().await;
@@ -75,7 +75,7 @@ where
             }
         }
 
-        tokio::time::sleep(retry_options.interval.wait_duration(attempt)).await;
+        tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
     }
 
     Err(last_err.expect("Retry must have failed"))
