@@ -12,7 +12,7 @@ use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -527,7 +527,7 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         // Remove limits from an existing Transaction for accurate gas estimation
-        let dry_run_tx = Self::generate_dry_run_tx(tx.clone());
+        let dry_run_tx = self.generate_dry_run_tx(tx.clone());
         let gas_used = self
             .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
             .await?;
@@ -551,9 +551,10 @@ impl Provider {
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx<T: Transaction>(tx: T) -> T {
-        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
-        tx.clone().with_gas_limit(MAX_GAS_PER_TX).with_gas_price(0)
+    fn generate_dry_run_tx<T: Transaction>(&self, tx: T) -> T {
+        // Simulate the contract call with max gas to get the complete gas_used
+        let max_gas_per_tx = self.consensus_parameters.max_gas_per_tx;
+        tx.clone().with_gas_limit(max_gas_per_tx).with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance
