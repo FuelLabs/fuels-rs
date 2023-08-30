@@ -2003,32 +2003,6 @@ async fn test_contract_std_lib_string() -> Result<()> {
     Ok(())
 }
 
-fn treat_receipts(receipts: Vec<Receipt>) {
-    let filtered: Vec<Receipt> = receipts
-        .into_iter()
-        .clone()
-        .filter(|r| matches!(r, Receipt::ReturnData { .. }))
-        .collect();
-
-    match filtered.get(0).unwrap() {
-        Receipt::ReturnData { data, .. } => {
-            let decoded_bytes =
-                ABIDecoder::decode(&[ParamType::Bytes], &data.clone().unwrap()).unwrap();
-            println!("{:?}", decoded_bytes);
-        }
-        _ => (),
-    }
-    match filtered.get(1).unwrap() {
-        Receipt::ReturnData { data, .. } => {
-            let decoded_bytes =
-                ABIDecoder::decode(&[ParamType::Bytes], &data.clone().unwrap()).unwrap();
-            println!("{:?}", decoded_bytes);
-        }
-        _ => (),
-    }
-    println!("========================================")
-}
-
 #[tokio::test]
 async fn test_heap_type_in_enums() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;

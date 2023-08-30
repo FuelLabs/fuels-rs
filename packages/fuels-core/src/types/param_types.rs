@@ -1530,7 +1530,7 @@ mod tests {
             variants: EnumVariants::new(vec![ParamType::Bytes, enum_no_heap_types])?,
             generics: vec![],
         };
-        assert_eq!(r.contains_nested_heap_types(), false);
+        assert!(!r.contains_nested_heap_types());
 
         let enum_heap_types = ParamType::Enum {
             variants: EnumVariants::new(vec![
@@ -1543,7 +1543,7 @@ mod tests {
             variants: EnumVariants::new(vec![ParamType::Bytes, enum_heap_types])?,
             generics: vec![],
         };
-        assert_eq!(r.contains_nested_heap_types(), true);
+        assert!(r.contains_nested_heap_types());
         Ok(())
     }
 

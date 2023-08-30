@@ -99,7 +99,8 @@ mod tests {
         param_types.append(&mut vec![ParamType::Bytes]);
 
         let error = EnumVariants::new(param_types).expect_err("Should have failed");
-        let expected_error = format!("Invalid data: Enum variants can only contain one heap type");
+        let expected_error =
+            "Invalid data: Enum variants can only contain one heap type".to_string();
         assert_eq!(error.to_string(), expected_error);
 
         Ok(())
