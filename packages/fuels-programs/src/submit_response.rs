@@ -13,12 +13,11 @@ use std::fmt::Debug;
 
 #[derive(Debug)]
 pub struct SubmitResponse<T: Account, D> {
-    pub retry_config: RetryConfig, // Use RetryConfig<D> instead of RetryConfig
+    pub retry_config: RetryConfig,
     pub tx_id: Option<Bytes32>,
     pub call_handler: CallHandler<T, D>,
 }
 
-// Define the enum for different contract call handler types
 #[derive(Debug)]
 pub enum CallHandler<T: Account, D> {
     Contract(ContractCallHandler<T, D>),
@@ -31,9 +30,9 @@ pub trait ResponseHandler<T, D> {
 }
 
 impl<T, D> ResponseHandler<T, D> for CallHandler<T, D>
-where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug,
+    where
+        T: Account,
+        D: Tokenizable + Parameterize + Debug,
 {
     fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
         match self {
@@ -66,9 +65,13 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     }
 
     pub async fn value(self) -> Result<D> {
+        self.process_value().await
+    }
+
+    async fn process_value(self) -> Result<D> {
         let provider = self.call_handler.try_provider()?;
 
-        let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
+                let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
             match res {
                 Err(err) if matches!(err, Error::IOError(_)) => true,
                 Ok(None) => true,
@@ -88,7 +91,7 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
                 &self.retry_config,
                 should_retry_fn,
             )
-            .await?
+                .await?
         } else {
             provider
                 .client
@@ -123,9 +126,13 @@ impl<T: Account> SubmitResponseMultiple<T> {
     }
 
     pub async fn value<D: Tokenizable + Debug>(self) -> errors::Result<D> {
+        self.process_value().await
+    }
+
+    async fn process_value<D: Tokenizable + Debug>(self) -> errors::Result<D> {
         let provider = self.call_handler.account.try_provider()?;
 
-        let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
+                let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
             match res {
                 Err(err) if matches!(err, Error::IOError(_)) => true,
                 Ok(None) => true,
@@ -145,7 +152,7 @@ impl<T: Account> SubmitResponseMultiple<T> {
                 &self.retry_config,
                 should_retry_fn,
             )
-            .await?
+                .await?
         } else {
             provider
                 .client
@@ -157,3 +164,5 @@ impl<T: Account> SubmitResponseMultiple<T> {
         Ok(value)
     }
 }
+
+
