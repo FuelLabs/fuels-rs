@@ -121,6 +121,10 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     }
 }
 
+/// Represents the response of a submitted transaction with multiple contract calls.
+///
+/// This struct is similar to `SubmitResponse` but is designed to handle transactions
+/// with multiple contract calls.
 #[derive(Debug)]
 pub struct SubmitResponseMultiple<T: Account> {
     pub retry_config: RetryConfig,
