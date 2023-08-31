@@ -1,7 +1,8 @@
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::types::errors::{error, Error, Result};
 use serde::{Deserialize, Serialize};
+
+use crate::types::errors::{error, Error, Result};
 
 // To be used when interacting with contracts which have string slices in their ABI.
 // The FuelVM strings only support ascii characters.

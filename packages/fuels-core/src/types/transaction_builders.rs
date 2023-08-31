@@ -12,6 +12,7 @@ use fuel_tx::{
 use fuel_types::{bytes::padded_len_usize, Bytes32, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
+use super::unresolved_bytes::UnresolvedBytes;
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -26,8 +27,6 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
-
-use super::unresolved_bytes::UnresolvedBytes;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
