@@ -24,6 +24,7 @@ members = [
     "packages/fuels-test-helpers",
     "packages/wasm-tests",
     "scripts/check-docs",
+    "scripts/versions-replacer",
 ]
 
 [workspace.package]
@@ -90,3 +91,6 @@ fuels-core = { version = "0.46.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.46.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.46.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.46.0", path = "./packages/fuels-test-helpers", default-features = false }
+
+[workspace.metadata.versions-replacer.external-versions]
+fuels-types = "0.35.3"

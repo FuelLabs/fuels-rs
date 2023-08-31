@@ -1,0 +1,21 @@
+[package]
+name = "versions-replacer"
+publish = false
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+readme.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+argh = "0.1.12"
+cargo_metadata = "0.17.0"
+color-eyre = "0.6.2"
+once_cell = "1.18.0"
+regex = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+walkdir = "2.3.3"
