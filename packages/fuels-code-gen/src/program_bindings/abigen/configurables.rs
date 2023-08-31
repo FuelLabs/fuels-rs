@@ -59,7 +59,7 @@ fn generate_struct_impl(
     configurable_struct_name: &Ident,
     resolved_configurables: &[ResolvedConfigurable],
 ) -> TokenStream {
-    let setter_methods = generate_setter_methods(resolved_configurables);
+    let builder_methods = generate_builder_methods(resolved_configurables);
 
     quote! {
         impl #configurable_struct_name {
@@ -67,12 +67,12 @@ fn generate_struct_impl(
                 ::std::default::Default::default()
             }
 
-            #setter_methods
+            #builder_methods
         }
     }
 }
 
-fn generate_setter_methods(resolved_configurables: &[ResolvedConfigurable]) -> TokenStream {
+fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> TokenStream {
     let methods = resolved_configurables.iter().map(
         |ResolvedConfigurable {
              name,
@@ -81,6 +81,7 @@ fn generate_setter_methods(resolved_configurables: &[ResolvedConfigurable]) -> T
          }| {
             let encoder_code = generate_encoder_code(ttype);
             quote! {
+                #[allow(non_snake_case)]
                 pub fn #name(mut self, value: #ttype) -> Self{
                     self.offsets_with_data.push((#offset, #encoder_code));
                     self
