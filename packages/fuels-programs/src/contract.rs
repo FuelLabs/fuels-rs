@@ -995,14 +995,10 @@ mod tests {
         let contract_bin = temp_dir.path().join("my_contract.bin");
         std::fs::write(&contract_bin, "").unwrap();
 
-        let storage_json = temp_dir.path().join("my_contract-storage_slots.json");
+        let storage_file = temp_dir.path().join("my_contract-storage_slots.json");
 
         let expected_storage_slots = vec![StorageSlot::new([1; 32].into(), [2; 32].into())];
-        std::fs::write(
-            storage_json,
-            serde_json::to_string(&expected_storage_slots).unwrap(),
-        )
-        .unwrap();
+        save_slots(&expected_storage_slots, &storage_file);
 
         let storage_config = StorageConfiguration::new(true, vec![]);
         let load_config = LoadConfiguration::default().with_storage_configuration(storage_config);
@@ -1034,5 +1030,13 @@ mod tests {
             panic!("Expected an error of type InvalidData");
         };
         assert_eq!(msg, format!("Could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in StorageConfiguration"));
+    }
+
+    fn save_slots(slots: &Vec<StorageSlot>, path: &Path) {
+        std::fs::write(
+            path,
+            serde_json::to_string::<Vec<StorageSlot>>(slots).unwrap(),
+        )
+        .unwrap()
     }
 }
