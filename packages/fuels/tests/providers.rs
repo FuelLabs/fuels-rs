@@ -2,7 +2,10 @@ use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-use fuel_core_types::tai64::Tai64;
+use fuel_core_types::{
+    fuel_crypto::rand::{self, Rng},
+    tai64::Tai64,
+};
 use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
@@ -588,9 +591,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-/// This test will not work for as no endpoint supports the new `fuel-core` release yet
-/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
-#[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
     // This test depends on:
@@ -605,7 +605,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =
@@ -615,13 +615,17 @@ async fn testnet_hello_world() -> Result<()> {
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
+    let mut rng = rand::thread_rng();
+    let salt: [u8; 32] = rng.gen();
+    let configuration = LoadConfiguration::default().with_salt(salt);
+
     let tx_params = TxParameters::default()
         .with_gas_price(1)
         .with_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        LoadConfiguration::default(),
+        configuration,
     )?
     .deploy(&wallet, tx_params)
     .await?;
