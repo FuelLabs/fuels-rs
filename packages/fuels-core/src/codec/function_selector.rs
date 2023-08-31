@@ -108,7 +108,8 @@ pub use fn_selector;
 #[macro_export]
 macro_rules! calldata {
     ( $($arg: expr),* ) => {
-        ::fuels::core::codec::ABIEncoder::encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*]).unwrap().resolve(0)
+        ::fuels::core::codec::ABIEncoder::encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*])
+            .map(|ub| ub.resolve(0))
     }
 }
 
