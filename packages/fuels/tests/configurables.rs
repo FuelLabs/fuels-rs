@@ -129,7 +129,6 @@ async fn contract_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn script_configurables() -> Result<()> {
-    // ANCHOR: script_configurables
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -153,7 +152,6 @@ async fn script_configurables() -> Result<()> {
         .main()
         .call()
         .await?;
-    // ANCHOR_END: script_configurables
 
     let expected_value = (
         8u8,
