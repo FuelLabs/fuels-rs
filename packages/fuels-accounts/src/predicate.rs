@@ -42,10 +42,18 @@ impl Predicate {
         self.provider.as_ref()
     }
 
-    pub fn set_provider(&mut self, provider: Provider) -> &mut Self {
+    pub fn set_provider(&mut self, provider: Provider) {
         self.address = Self::calculate_address(&self.code, provider.chain_id().into());
         self.provider = Some(provider);
-        self
+    }
+
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address = Self::calculate_address(&self.code, provider.chain_id().into());
+        Self {
+            address,
+            provider: Some(provider),
+            ..self
+        }
     }
 
     pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
@@ -88,15 +96,6 @@ impl Predicate {
         }
     }
 
-    pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, provider.chain_id().into());
-        Self {
-            address,
-            provider: Some(provider),
-            ..self
-        }
-    }
-
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
@@ -123,7 +122,6 @@ impl Account for Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
-        _witness_index: Option<u8>,
     ) -> Result<Vec<Input>> {
         Ok(self
             .get_spendable_resources(asset_id, amount)
@@ -146,23 +144,20 @@ impl Account for Predicate {
         &self,
         mut tb: Tb,
         previous_base_amount: u64,
-        _witness_index: Option<u8>,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-        tb = tb.set_consensus_parameters(consensus_parameters);
+        tb = tb.with_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
 
         let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount, None)
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
             .await?;
 
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
 
-        let tx = tb.build()?;
-
-        Ok(tx)
+        tb.build()
     }
 }

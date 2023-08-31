@@ -3,9 +3,6 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
-    /// This test will not work for as no endpoint supports the new `fuel-core` release yet
-    /// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
-    #[ignore]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -15,7 +12,7 @@ mod tests {
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core
         // yet
-        let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
+        let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
@@ -29,8 +26,13 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
+        let (_, addr) = setup_test_provider(vec![], vec![], None, None).await;
+        let port = addr.port();
+
         // ANCHOR: local_node_address
-        let _provider = Provider::connect("127.0.0.1:4000").await.unwrap();
+        let _provider = Provider::connect(format!("127.0.0.1:{port}"))
+            .await
+            .unwrap();
         // ANCHOR_END: local_node_address
     }
 

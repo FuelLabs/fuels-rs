@@ -23,7 +23,7 @@ pub struct Header {
 impl From<ClientHeader> for Header {
     fn from(client_header: ClientHeader) -> Self {
         let naive = NaiveDateTime::from_timestamp_opt(client_header.time.to_unix(), 0);
-        let time = naive.map(|time| DateTime::<Utc>::from_utc(time, Utc));
+        let time = naive.map(|time| DateTime::<Utc>::from_naive_utc_and_offset(time, Utc));
 
         Self {
             id: client_header.id,

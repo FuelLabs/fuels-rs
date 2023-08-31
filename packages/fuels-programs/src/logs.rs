@@ -102,7 +102,7 @@ impl LogDecoder {
                 error!(
                     InvalidData,
                     "missing log formatter for log_id: `{:?}`, data: `{:?}`. \
-                     Consider adding external contracts with `set_contracts()`",
+                     Consider adding external contracts with `with_contracts()`",
                     log_id,
                     data
                 )

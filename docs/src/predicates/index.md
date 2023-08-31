@@ -49,7 +49,7 @@ Same as contracts and scripts, you can define configurable constants in `predica
 {{#include ../../../packages/fuels/tests/predicates/predicate_configurables/src/main.sw:predicate_configurables}}
 ```
 
-Each configurable constant will get a dedicated `set` method in the SDK. For example, the constant `U8` will get the `set_U8` method which accepts the same type defined in sway. Below is an example where we chain several `set` methods and update the predicate with the new constants.
+Each configurable constant will get a dedicated `with` method in the SDK. For example, the constant `U8` will get the `with_U8` method which accepts the same type defined in sway. Below is an example where we chain several `with` methods and update the predicate with the new constants.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/predicates.rs:predicate_configurables}}
