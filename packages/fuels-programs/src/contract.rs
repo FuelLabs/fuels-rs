@@ -137,6 +137,8 @@ impl StorageConfiguration {
 
     /// Slots added via [`add_slot_overrides_from_file`] will override any
     /// existing slots with matching keys.
+    ///
+    /// `path` - path to a JSON file containing the storage slots.
     pub fn add_slot_overrides_from_file(mut self, path: impl AsRef<Path>) -> Result<Self> {
         let slots = StorageSlots::load_from_file(path.as_ref())?;
         self.slot_overrides.add_overrides(slots.into_iter());
@@ -321,20 +323,29 @@ impl Contract {
 
         config.configurables.update_constants_in(&mut binary);
 
-        let storage_slots = {
-            let autoload_enabled = config.storage.autoload_enabled();
-            let user_overrides = config.storage.into_slots().collect::<Vec<_>>();
-            if autoload_enabled {
-                let mut slots = autoload_storage_slots(binary_filepath)?;
-                slots.add_overrides(user_overrides);
-                slots.into_iter().collect()
-            } else {
-                user_overrides
-            }
-        };
+        let storage_slots = Self::determine_storage_slots(config.storage, binary_filepath)?;
+
         Ok(Self::new(binary, config.salt, storage_slots))
     }
+
+    fn determine_storage_slots(
+        storage_config: StorageConfiguration,
+        binary_filepath: &Path,
+    ) -> Result<Vec<StorageSlot>> {
+        let autoload_enabled = storage_config.autoload_enabled();
+        let user_overrides = storage_config.into_slots().collect::<Vec<_>>();
+        let slots = if autoload_enabled {
+            let mut slots = autoload_storage_slots(binary_filepath)?;
+            slots.add_overrides(user_overrides);
+            slots.into_iter().collect()
+        } else {
+            user_overrides
+        };
+
+        Ok(slots)
+    }
 }
+
 fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
     let binary_filename = contract_binary.file_stem().unwrap().to_str().unwrap();
     let dir = contract_binary.parent().unwrap();
