@@ -163,7 +163,7 @@
         call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
     }
 </code></pre>
-<p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector</code> macro, and encoded calldata using the <code>fuels::core::calldata</code> macro.</p>
+<p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
 <p>E.g. to call the following function on the target contract:</p>
 <pre><code class="language-rust ignore">    #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
@@ -176,8 +176,8 @@
                 a: true,
                 b: [1, 2, 3],
             },
-            SizedAsciiString::&lt;4&gt;::try_from(&quot;fuel&quot;).unwrap()
-        );
+            SizedAsciiString::&lt;4&gt;::try_from(&quot;fuel&quot;)?
+        )?;
 
         caller_contract_instance
             .methods()
