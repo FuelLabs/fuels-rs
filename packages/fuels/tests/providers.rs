@@ -588,9 +588,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-/// This test will not work for as no endpoint supports the new `fuel-core` release yet
-/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
-#[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
     // This test depends on:
@@ -605,7 +602,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =
