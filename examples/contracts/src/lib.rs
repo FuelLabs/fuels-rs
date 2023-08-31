@@ -1,8 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::{
-        errors::{error, Error, Result},
-        Bits256,
+    use fuels::{
+        prelude::{LoadConfiguration, StorageConfiguration},
+        types::{
+            errors::{error, Error, Result},
+            Bits256,
+        },
     };
 
     #[tokio::test]
@@ -791,6 +794,35 @@ mod tests {
         assert_eq!(result_uint, 2);
         assert!(result_bool);
         assert_eq!(result_str, "fuel");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn storage_slots_override() -> Result<()> {
+        {
+            // ANCHOR: storage_slots_override
+            use fuels::{programs::contract::Contract, tx::StorageSlot};
+            let slot_override = StorageSlot::new([1; 32].into(), [2; 32].into());
+            let storage_config =
+                StorageConfiguration::default().add_slot_overrides([slot_override]);
+
+            let load_config =
+                LoadConfiguration::default().with_storage_configuration(storage_config);
+            let _: Result<Contract> = Contract::load_from("...", load_config);
+            // ANCHOR_END: storage_slots_override
+        }
+
+        {
+            // ANCHOR: storage_slots_disable_autoload
+            use fuels::programs::contract::Contract;
+            let storage_config = StorageConfiguration::default().with_autoload(false);
+
+            let load_config =
+                LoadConfiguration::default().with_storage_configuration(storage_config);
+            let _: Result<Contract> = Contract::load_from("...", load_config);
+            // ANCHOR_END: storage_slots_disable_autoload
+        }
 
         Ok(())
     }

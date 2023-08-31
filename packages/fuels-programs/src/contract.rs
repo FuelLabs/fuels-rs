@@ -116,7 +116,7 @@ impl StorageConfiguration {
 
     /// If enabled will try to automatically discover and load the storage configuration from the
     /// storage config json file.
-    pub fn enable_autoload(&mut self, enabled: bool) -> &mut Self {
+    pub fn with_autoload(mut self, enabled: bool) -> Self {
         self.autoload_storage = enabled;
         self
     }
