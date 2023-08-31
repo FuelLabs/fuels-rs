@@ -28,14 +28,14 @@ use std::fmt::Debug;
 /// - `call_handler`: The call handler that manages the type of call.
 ///
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubmitResponse<T: Account, D> {
     pub retry_config: RetryConfig,
     pub tx_id: Option<Bytes32>,
     pub call_handler: CallHandler<T, D>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum CallHandler<T: Account, D> {
     Contract(ContractCallHandler<T, D>),
     Script(ScriptCallHandler<T, D>),
@@ -125,7 +125,7 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
 ///
 /// This struct is similar to `SubmitResponse` but is designed to handle transactions
 /// with multiple contract calls.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubmitResponseMultiple<T: Account> {
     pub retry_config: RetryConfig,
     pub tx_id: Option<Bytes32>,

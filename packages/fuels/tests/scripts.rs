@@ -376,8 +376,10 @@ async fn test_script_submit_and_response() -> Result<()> {
         boolean: true,
     };
 
+    // ANCHOR: submit_response_script
     let handle = script_instance.main(my_struct).submit().await?;
     let response = handle.value().await?;
+    // ANCHOR_END: submit_response_script
 
     assert_eq!(response, 42);
     Ok(())

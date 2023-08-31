@@ -192,6 +192,18 @@ mod tests {
         assert_eq!(52, response.value);
         // ANCHOR_END: use_deployed_contract
 
+        // ANCHOR: submit_response_contract
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .submit()
+            .await?;
+
+        let value = response.value().await?;
+
+        assert_eq!(42, value);
+        // ANCHOR_END: submit_response_contract
+
         Ok(())
     }
 
@@ -586,6 +598,14 @@ mod tests {
         // ANCHOR: multi_contract_call_response
         let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_contract_call_response
+
+        assert_eq!(counter, 42);
+        assert_eq!(array, [42; 2]);
+
+        // ANCHOR: submit_response_multicontract
+        let response = multi_call_handler.submit().await?;
+        let (counter, array): (u64, [u64; 2]) = response.value().await?;
+        // ANCHOR_END: submit_response_multicontract
 
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);

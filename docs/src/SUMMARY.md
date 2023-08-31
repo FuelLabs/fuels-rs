@@ -39,6 +39,7 @@
   - [Estimating cost](./calling-contracts/cost-estimation.md)
   - [Low-level calls](./calling-contracts/low-level-calls.md)
 - [Running scripts](./running-scripts.md)
+- [Retry mechanism](./retry-mechanism.md)
 - [Predicates](./predicates/index.md)
   - [Signatures example](./predicates/send-spend-predicate.md)
 - [Types](./types/index.md)

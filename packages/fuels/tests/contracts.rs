@@ -1459,8 +1459,9 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
-    let response = contract_methods.get(1, 2).submit().await?; // try_submit -> retry -> retry -> retry -> tx_id OK
+    let response = contract_methods.get(1, 2).submit().await?;
     let value = response.value().await?;
+
     assert_eq!(value, 3);
 
     let contract_methods = contract_instance.methods();
@@ -1468,7 +1469,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let call_handler_2 = contract_methods.get_single(42);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-    //
+
     multi_call_handler
         .add_call(call_handler_1)
         .add_call(call_handler_2);
