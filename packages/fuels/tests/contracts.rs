@@ -1567,3 +1567,43 @@ async fn test_heap_type_multicall() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Predicate(
+            name = "MyPredicate",
+            project = "packages/fuels/tests/types/predicates/predicate_vector"
+        ),),
+    );
+
+    let provider = wallet.try_provider()?.clone();
+    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let predicate = Predicate::load_from(
+        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+    )?
+    .with_data(data)
+    .with_provider(provider);
+    let wallet: WalletUnlocked = wallet;
+    wallet
+        .transfer(
+            predicate.address(),
+            10_000,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // if the contract is successfully deployed then the predicate was unlocked. This further means
+    // the offsets were setup correctly since the predicate uses heap types in its arguments.
+    // Storage slots were loaded automatically by default
+    Contract::load_from(
+        "tests/contracts/storage/out/debug/storage.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
+    .await?;
+
+    Ok(())
+}
