@@ -7,6 +7,7 @@ struct TestStruct {
 #[allow(dead_code)]
 enum TestEnum {
     Value: u64,
+    OtherValue: u32,
 }
 
 fn main(input_tuple: (u64, TestStruct, TestEnum), number: u64) -> bool {
