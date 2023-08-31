@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    fs,
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
@@ -347,11 +353,19 @@ impl Contract {
 }
 
 fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
-    let binary_filename = contract_binary.file_stem().unwrap().to_str().unwrap();
-    let dir = contract_binary.parent().unwrap();
-    let storage_file = dir.join(format!("{binary_filename}-storage_slots.json"));
+    let storage_file = expected_storage_slots_filepath(contract_binary)
+        .ok_or_else(|| error!(InvalidData, "Could not determine storage slots file"))?;
+
     StorageSlots::load_from_file(&storage_file)
                 .map_err(|_| error!(InvalidData, "Could not autoload storage slots from file: {storage_file:?}. Either provide the file or disable autoloading in StorageConfiguration"))
+}
+
+fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
+    let dir = contract_binary.parent()?;
+
+    let binary_filename = contract_binary.file_stem()?.to_str()?;
+
+    Some(dir.join(format!("{binary_filename}-storage_slots.json")))
 }
 
 fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
