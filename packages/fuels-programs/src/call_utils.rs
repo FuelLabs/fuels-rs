@@ -365,8 +365,7 @@ pub(crate) fn get_single_call_instructions(
             // empty return data. 3 is not a "magic" number: we are looking left of the 3 words
             // (ptr, cap, len), that are placed at the end of the data, on the right.
             let offset = (output_param_type.compute_encoding_width() - 3) as u16;
-            let selected_discriminant =
-                variants.heap_type_variant_discriminant().unwrap() as u16;
+            let selected_discriminant = variants.heap_type_variant_discriminant().unwrap() as u16;
             instructions.extend([
                 // All the registers 0x15-0x18 are free
                 // The RET register contains the pointer address of the `CALL` return (a stack
