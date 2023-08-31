@@ -1,6 +1,6 @@
 # Overriding storage slots
 
-If you use storage in your contract the default storage values are going to be generated in a JSON file (e.g. `my_contract-storage_slots.json`) by the Sway compiler. These are loaded automatically for you when you load a contract binary. If you wish to override some of the defaults you need to provide the corresponding storage slots manually:
+If you use storage in your contract, the default storage values will be generated in a JSON file (e.g. `my_contract-storage_slots.json`) by the Sway compiler. These are loaded automatically for you when you load a contract binary. If you wish to override some of the defaults, you need to provide the corresponding storage slots manually:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:storage_slots_override}}
