@@ -10,7 +10,6 @@ on:
 
 jobs:
   test:
-    uses: FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@master
+    uses: FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@mdbook-docs-pre-command
     with:
-      docs-src-path: 'docs/src'
-
+      docs-src-path: "docs/src"
