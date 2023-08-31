@@ -13,3 +13,4 @@ jobs:
     uses: FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@mdbook-docs-pre-command
     with:
       docs-src-path: "docs/src"
+      pre-command: 'cargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"'
