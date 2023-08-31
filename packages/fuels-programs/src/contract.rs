@@ -1,8 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path};
 
 use fuel_tx::{
-    field::StorageSlots, AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt,
-    Salt, StorageSlot,
+    AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
@@ -93,7 +92,7 @@ pub trait SettableContract {
 #[derive(Debug, Clone)]
 pub struct StorageConfiguration {
     autoload_storage: bool,
-    slot_overrides: HashMap<Bytes32, StorageSlot>,
+    slot_overrides: StorageSlots,
 }
 
 impl Default for StorageConfiguration {
@@ -132,30 +131,60 @@ impl StorageConfiguration {
         mut self,
         storage_slots: impl IntoIterator<Item = StorageSlot>,
     ) -> Self {
-        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
-        self.slot_overrides.extend(pairs);
+        self.slot_overrides.add_overrides(storage_slots);
         self
     }
 
     /// Slots added via [`add_slot_overrides_from_file`] will override any
     /// existing slots with matching keys.
-    pub fn add_slot_overrides_from_file(self, storage_path: impl AsRef<Path>) -> Result<Self> {
+    pub fn add_slot_overrides_from_file(mut self, path: impl AsRef<Path>) -> Result<Self> {
+        let slots = StorageSlots::load_from_file(path.as_ref())?;
+        self.slot_overrides.add_overrides(slots.into_iter());
+        Ok(self)
+    }
+
+    pub fn into_slots(self) -> impl Iterator<Item = StorageSlot> {
+        self.slot_overrides.into_iter()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct StorageSlots {
+    storage_slots: HashMap<Bytes32, StorageSlot>,
+}
+
+impl StorageSlots {
+    fn from(storage_slots: impl IntoIterator<Item = StorageSlot>) -> Self {
+        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
+        Self {
+            storage_slots: pairs.collect(),
+        }
+    }
+
+    fn add_overrides(&mut self, storage_slots: impl IntoIterator<Item = StorageSlot>) -> &mut Self {
+        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
+        self.storage_slots.extend(pairs);
+        self
+    }
+
+    fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
         let storage_path = storage_path.as_ref();
         validate_path_and_extension(storage_path, "json")?;
 
-        let storage_json_string = fs::read_to_string(storage_path).map_err(|e| {
+        let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
             error!(
                 InvalidData,
                 "failed to read storage slots from: {storage_path:?}. Reason: {e}"
             )
         })?;
 
-        let slot_overrides: Vec<StorageSlot> = serde_json::from_str(&storage_json_string)?;
-        Ok(self.add_slot_overrides(slot_overrides))
+        let decoded_slots = serde_json::from_str::<Vec<StorageSlot>>(&storage_json_string)?;
+
+        Ok(StorageSlots::from(decoded_slots))
     }
 
-    pub fn extract_slots(self) -> Vec<StorageSlot> {
-        self.slot_overrides.into_values().collect()
+    fn into_iter(self) -> impl Iterator<Item = StorageSlot> {
+        self.storage_slots.into_values()
     }
 }
 
@@ -292,26 +321,25 @@ impl Contract {
 
         config.configurables.update_constants_in(&mut binary);
 
-        let storage_config = if config.storage.autoload_enabled() {
-            let slots = autoload_storage_slots(binary_filepath)?;
-            slots.add_slot_overrides(config.storage.extract_slots())
-        } else {
-            config.storage
+        let storage_slots = {
+            let autoload_enabled = config.storage.autoload_enabled();
+            let user_overrides = config.storage.into_slots().collect::<Vec<_>>();
+            if autoload_enabled {
+                let mut slots = autoload_storage_slots(binary_filepath)?;
+                slots.add_overrides(user_overrides);
+                slots.into_iter().collect()
+            } else {
+                user_overrides
+            }
         };
-
-        Ok(Self::new(
-            binary,
-            config.salt,
-            storage_config.extract_slots(),
-        ))
+        Ok(Self::new(binary, config.salt, storage_slots))
     }
 }
-fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageConfiguration> {
+fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
     let binary_filename = contract_binary.file_stem().unwrap().to_str().unwrap();
     let dir = contract_binary.parent().unwrap();
     let storage_file = dir.join(format!("{binary_filename}-storage_slots.json"));
-    StorageConfiguration::default()
-                .add_slot_overrides_from_file(&storage_file)
+    StorageSlots::load_from_file(&storage_file)
                 .map_err(|_| error!(InvalidData, "Could not autoload storage slots from file: {storage_file:?}. Either provide the file or disable autoloading in StorageConfiguration"))
 }
 
@@ -943,7 +971,7 @@ mod tests {
 
         // then
         assert_eq!(
-            HashSet::from_iter(original_config.extract_slots()),
+            HashSet::from_iter(original_config.slot_overrides.into_iter()),
             HashSet::from([make_slot(1, 100), make_slot(2, 200), make_slot(3, 200)])
         );
     }
