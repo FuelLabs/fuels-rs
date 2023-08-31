@@ -26,6 +26,8 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
+        let _local_provider = setup_test_provider(vec![], vec![], None, None);
+
         // ANCHOR: local_node_address
         let _provider = Provider::connect("127.0.0.1:4000").await.unwrap();
         // ANCHOR_END: local_node_address
