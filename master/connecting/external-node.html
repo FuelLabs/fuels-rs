@@ -146,7 +146,7 @@
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core
         // yet
-        let provider = Provider::connect(&quot;beta-3.fuel.network&quot;).await.unwrap();
+        let provider = Provider::connect(&quot;beta-4.fuel.network&quot;).await.unwrap();
 
         // Setup a private key
         let secret =
@@ -172,7 +172,9 @@
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
 </blockquote>
 <p>If you want to connect to another node just change the url or IP and port. For example, to connect to a local node that was created with <code>fuel-core</code> you can use:</p>
-<pre><code class="language-rust ignore">        let _provider = Provider::connect(&quot;127.0.0.1:4000&quot;).await.unwrap();
+<pre><code class="language-rust ignore">        let _provider = Provider::connect(format!(&quot;127.0.0.1:{port}&quot;))
+            .await
+            .unwrap();
 </code></pre>
 
                     </main>
