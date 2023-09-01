@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, path::Path};
+use std::{borrow::Cow, collections::HashMap, fs, path::Path};
 
 use color_eyre::{eyre::Context, Result};
 use once_cell::sync::Lazy;
@@ -14,16 +14,75 @@ pub fn replace_versions_in_file(
     let path = path.as_ref();
     let contents =
         fs::read_to_string(path).wrap_err_with(|| format!("failed to read {:?}", path))?;
-    let mut replacement_count = 0;
-    let replaced_contents = VERSIONS_REGEX.replace_all(&contents, |caps: &Captures| {
-        replacement_count += 1;
-        &versions[&caps[1]]
-    });
-    if replaced_contents != contents {
+    let (replaced_contents, replacement_count) = replace_versions_in_string(&contents, versions);
+    if replacement_count.is_some() {
         fs::write(path, replaced_contents.as_bytes())
             .wrap_err_with(|| format!("failed to write back to {:?}", path))?;
-        Ok(Some(replacement_count))
-    } else {
-        Ok(None)
+    }
+    Ok(replacement_count)
+}
+
+pub fn replace_versions_in_string<'a>(
+    s: &'a str,
+    versions: &HashMap<String, String>,
+) -> (Cow<'a, str>, Option<usize>) {
+    let mut replacement_count = 0;
+    let replaced_s = VERSIONS_REGEX.replace_all(s, |caps: &Captures| {
+        if let Some(version) = versions.get(&caps[1]) {
+            replacement_count += 1;
+            version.clone()
+        } else {
+            // leave unchanged
+            caps[0].to_string()
+        }
+    });
+    let replacement_count = (replaced_s != s).then_some(replacement_count);
+    (replaced_s, replacement_count)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_versions() -> HashMap<String, String> {
+        [("fuels", "0.47.0"), ("fuels-types", "0.35.3")]
+            .into_iter()
+            .map(|(name, version)| (name.to_string(), version.to_string()))
+            .collect()
+    }
+
+    #[test]
+    fn test_valid_replacements() {
+        let s = "docs.rs/fuels/{{versions.fuels}}/fuels\ndocs.rs/fuels-types/{{versions.fuels-types}}/fuels-types";
+        let versions = test_versions();
+        let (replaced, count) = replace_versions_in_string(s, &versions);
+        assert_eq!(
+            replaced,
+            format!(
+                "docs.rs/fuels/{}/fuels\ndocs.rs/fuels-types/{}/fuels-types",
+                versions["fuels"], versions["fuels-types"]
+            )
+        );
+        assert_eq!(count, Some(2));
+    }
+
+    #[test]
+    fn test_invalid_replacement() {
+        let s = "```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:deployed_contracts}}
+```";
+        let versions = test_versions();
+        let (replaced, count) = replace_versions_in_string(s, &versions);
+        assert_eq!(replaced, s);
+        assert!(count.is_none());
+    }
+
+    #[test]
+    fn test_invalid_package_name() {
+        let s = "docs.rs/fuels-wrong-name/{{versions.fuels-wrong-name}}/fuels-wrong-name";
+        let versions = test_versions();
+        let (replaced, count) = replace_versions_in_string(s, &versions);
+        assert_eq!(replaced, s);
+        assert_eq!(count, None);
     }
 }
