@@ -20,15 +20,6 @@ fuels-macros = { workspace = true }
 fuels-programs = { workspace = true, optional = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
-[dev-dependencies]
-chrono = { workspace = true }
-fuel-core = { workspace = true, default-features = false }
-fuel-core-types = { workspace = true }
-hex = { workspace = true, default-features = false }
-sha2 = { workspace = true }
-tempfile = { workspace = true }
-tokio = { workspace = true }
-
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts"]
 # The crates enabled via `dep:` below are not currently wasm compatible, as

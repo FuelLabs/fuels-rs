@@ -19,6 +19,7 @@ members = [
     "packages/fuels-accounts",
     "packages/fuels-code-gen",
     "packages/fuels-core",
+    "packages/fuels-e2e-tests",
     "packages/fuels-macros",
     "packages/fuels-programs",
     "packages/fuels-test-helpers",

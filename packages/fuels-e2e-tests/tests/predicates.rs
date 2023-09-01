@@ -1,14 +1,15 @@
-use fuel_tx::Output;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
     types::{
         coin::Coin,
+        coin_type::CoinType,
+        input::Input,
         message::Message,
+        output::Output,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     },
 };
-use fuels_core::types::{coin_type::CoinType, input::Input};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -143,7 +144,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 async fn spend_predicate_coins_messages_basic() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(4097, 4097);
@@ -189,11 +190,11 @@ async fn pay_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/types/predicates/u64/out/debug/u64-abi.json"
         )
     );
 
@@ -240,12 +241,12 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
     );
 
@@ -295,7 +296,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
@@ -357,7 +358,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(22, 20, vec![2, 4, 42]);
@@ -404,7 +405,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(2, 40, vec![2, 4, 42]);
@@ -484,12 +485,12 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
     );
 
@@ -509,7 +510,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxParameters::default())
@@ -561,12 +562,12 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels-e2e-tests/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
         )
     );
 
@@ -586,7 +587,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels-e2e-tests/tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxParameters::default())
@@ -612,7 +613,7 @@ async fn predicate_configurables() -> Result<()> {
     // ANCHOR: predicate_configurables
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json"
     ));
 
     let new_struct = StructWithGeneric {
@@ -670,7 +671,7 @@ async fn predicate_configurables() -> Result<()> {
 async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::encode_data(4097, 4097);

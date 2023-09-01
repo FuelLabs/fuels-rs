@@ -1,10 +1,15 @@
 use std::iter::repeat;
 
-use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
-use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
-use fuels_accounts::wallet::{Wallet, WalletUnlocked};
-use fuels_core::types::transaction_builders::TransactionBuilder;
-use fuels_test_helpers::setup_test_provider;
+use fuels::{
+    accounts::wallet::Wallet,
+    prelude::*,
+    test_helpers::setup_test_provider,
+    tx::{Bytes32, CoinSigned, Input, TxPointer, UtxoId},
+    types::{
+        output::Output,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    },
+};
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {

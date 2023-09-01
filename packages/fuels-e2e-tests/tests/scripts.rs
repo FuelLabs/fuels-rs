@@ -1,71 +1,15 @@
 use fuels::{prelude::*, types::Bits256};
 
 #[tokio::test]
-async fn test_transaction_script_workflow() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let call_handler = contract_instance.methods().initialize_counter(42);
-
-    let response = call_handler.call().await?;
-    assert!(response.tx_id.is_some());
-    assert_eq!(response.value, 42);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_multi_call_script_workflow() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let contract_methods = contract_instance.methods();
-    let call_handler_1 = contract_methods.initialize_counter(42);
-    let call_handler_2 = contract_methods.get_array([42; 2]);
-
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
-        .add_call(call_handler_1)
-        .add_call(call_handler_2);
-
-    let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
-    assert!(response.tx_id.is_some());
-    let (counter, array) = response.value;
-    assert_eq!(counter, 42);
-    assert_eq!(array, [42; 2]);
-    Ok(())
-}
-
-#[tokio::test]
 async fn main_function_arguments() -> Result<()> {
     // ANCHOR: script_with_arguments
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/scripts/arguments/out/debug/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
+    let bin_path = "../fuels-e2e-tests/tests/scripts/arguments/out/debug/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -88,7 +32,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -119,7 +63,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -175,7 +119,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -208,7 +152,7 @@ async fn test_script_signing() -> Result<()> {
     setup_program_test!(
         Abigen(Script(
             name = "BimBamScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -233,7 +177,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "transfer_script",
-            project = "packages/fuels/tests/scripts/transfer_script"
+            project = "packages/fuels-e2e-tests/tests/scripts/transfer_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -271,7 +215,7 @@ async fn test_script_struct() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",
@@ -296,7 +240,7 @@ async fn test_script_enum() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_enum"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_enum"
         )),
         LoadScript(
             name = "script_instance",
@@ -318,7 +262,7 @@ async fn test_script_array() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_array"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_array"
         )),
         LoadScript(
             name = "script_instance",
@@ -340,7 +284,7 @@ async fn test_script_b256() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_b256"
         )),
         LoadScript(
             name = "script_instance",
@@ -362,7 +306,7 @@ async fn test_script_submit_and_response() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",

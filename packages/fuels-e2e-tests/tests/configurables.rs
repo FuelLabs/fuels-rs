@@ -4,7 +4,7 @@ use fuels::{prelude::*, types::SizedAsciiString};
 async fn contract_uses_default_configurables() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/configurables/out/debug/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -47,7 +47,7 @@ async fn script_uses_default_configurables() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_configurables"
+            project = "packages/fuels-e2e-tests/tests/scripts/script_configurables"
         )),
         LoadScript(
             name = "script_instance",
@@ -80,7 +80,7 @@ async fn contract_configurables() -> Result<()> {
     // ANCHOR: contract_configurables
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
+        abi = "packages/fuels-e2e-tests/tests/contracts/configurables/out/debug/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
@@ -130,10 +130,11 @@ async fn contract_configurables() -> Result<()> {
 #[tokio::test]
 async fn script_configurables() -> Result<()> {
     // ANCHOR: script_configurables
-    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+    abigen!(Script(name="MyScript", abi="packages/fuels-e2e-tests/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/scripts/script_configurables/out/debug/script_configurables.bin";
+    let bin_path =
+        "../fuels-e2e-tests/tests/scripts/script_configurables/out/debug/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let new_str: SizedAsciiString<4> = "FUEL".try_into()?;

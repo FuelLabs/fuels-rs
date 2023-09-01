@@ -6,7 +6,7 @@ async fn main_function_generic_arguments() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_generics"
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_generics"
         )),
         LoadScript(
             name = "script_instance",
@@ -44,7 +44,7 @@ async fn main_function_option_result() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/options_results"
+            project = "packages/fuels-e2e-tests/tests/types/scripts/options_results"
         )),
         LoadScript(
             name = "script_instance",
@@ -69,7 +69,7 @@ async fn main_function_tuple_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_tuples"
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_tuples"
         )),
         LoadScript(
             name = "script_instance",
@@ -78,7 +78,8 @@ async fn main_function_tuple_types() -> Result<()> {
         )
     );
     let wallet = launch_provider_and_get_wallet().await;
-    let bin_path = "../fuels/tests/types/scripts/script_tuples/out/debug/script_tuples.bin";
+    let bin_path =
+        "../fuels-e2e-tests/tests/types/scripts/script_tuples/out/debug/script_tuples.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let bim = Bim { bim: 90 };
@@ -116,7 +117,7 @@ async fn main_function_vector_arguments() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_vectors"
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_vectors"
         )),
         LoadScript(
             name = "script_instance",
@@ -173,7 +174,7 @@ async fn test_script_raw_slice() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "BimBamScript",
-            project = "packages/fuels/tests/types/scripts/script_raw_slice",
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_raw_slice",
         )),
         LoadScript(
             name = "script_instance",
@@ -200,7 +201,7 @@ async fn main_function_bytes_arguments() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "BimBamScript",
-            project = "packages/fuels/tests/types/scripts/script_bytes",
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_bytes",
         )),
         LoadScript(
             name = "script_instance",
@@ -234,7 +235,7 @@ async fn script_handles_u128() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_u128",
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_u128",
         )),
         LoadScript(
             name = "script_instance",
@@ -271,7 +272,7 @@ async fn script_handles_u256() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_u256",
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_u256",
         )),
         LoadScript(
             name = "script_instance",
@@ -295,7 +296,7 @@ async fn script_handles_std_string() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/types/scripts/script_std_lib_string",
+            project = "packages/fuels-e2e-tests/tests/types/scripts/script_std_lib_string",
         )),
         LoadScript(
             name = "script_instance",
