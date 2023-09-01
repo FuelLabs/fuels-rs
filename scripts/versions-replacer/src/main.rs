@@ -31,6 +31,8 @@ fn main() -> Result<()> {
     let args: VersionsReplacer = argh::from_env();
     let versions = collect_versions_from_cargo_toml(&args.manifest_path)?;
 
+    let mut total_replacements: Vec<usize> = Vec::new();
+
     for entry in WalkDir::new(&args.path) {
         let entry = entry.wrap_err("failed to get directory entry")?;
 
@@ -47,9 +49,18 @@ fn main() -> Result<()> {
                 }
             }
 
-            replace_versions_in_file(entry.path(), &versions)
-                .wrap_err_with(|| format!("failed to replace versions in {:?}", entry.path()))?;
+            if let Some(replacement_count) = replace_versions_in_file(entry.path(), &versions)
+                .wrap_err_with(|| format!("failed to replace versions in {:?}", entry.path()))?
+            {
+                total_replacements.push(replacement_count);
+            }
         }
     }
+
+    println!(
+        "replaced {} variables across {} files",
+        total_replacements.iter().sum::<usize>(),
+        total_replacements.len()
+    );
     Ok(())
 }
