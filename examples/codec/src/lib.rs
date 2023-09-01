@@ -33,7 +33,7 @@ mod tests {
         struct MyStruct {
             field: u64,
         }
-        let _: Vec<u8> = calldata!(MyStruct { field: 101 }, MyStruct { field: 102 });
+        let _: Vec<u8> = calldata!(MyStruct { field: 101 }, MyStruct { field: 102 })?;
         //ANCHOR_END: encoding_example_w_macro
 
         Ok(())
