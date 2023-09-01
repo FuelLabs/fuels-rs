@@ -390,12 +390,12 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     let call_handler_1 = contract_caller_instance
         .methods()
         .logs_from_external_contract(contract_id.clone())
-        .set_contracts(&[&contract_instance]);
+        .with_contracts(&[&contract_instance]);
 
     let call_handler_2 = contract_caller_instance2
         .methods()
         .logs_from_external_contract(contract_id)
-        .set_contracts(&[&contract_instance]);
+        .with_contracts(&[&contract_instance]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -713,7 +713,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     let logs = contract_caller_instance
         .methods()
         .logs_from_external_contract(contract_id)
-        .set_contracts(&[&contract_instance])
+        .with_contracts(&[&contract_instance])
         .call()
         .await?
         .decode_logs();
@@ -770,7 +770,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     // ANCHOR: external_contract_ids
     let response = instance
         .main(contract_id)
-        .set_contract_ids(&[contract_id.into()])
+        .with_contract_ids(&[contract_id.into()])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -778,7 +778,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     // ANCHOR: external_contract
     let response = instance
         .main(contract_id)
-        .set_contracts(&[&contract_instance])
+        .with_contracts(&[&contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -966,7 +966,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
     let error = contract_caller_instance
         .methods()
         .require_from_contract(contract_id)
-        .set_contracts(&[&contract_instance])
+        .with_contracts(&[&contract_instance])
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1020,7 +1020,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     let call_handler_2 = contract_caller_instance
         .methods()
         .require_from_contract(contract_id)
-        .set_contracts(&[&lib_contract_instance]);
+        .with_contracts(&[&lib_contract_instance]);
 
     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
@@ -1060,7 +1060,7 @@ async fn test_script_require_from_contract() -> Result<()> {
 
     let error = instance
         .main(contract_id)
-        .set_contracts(&[&contract_instance])
+        .with_contracts(&[&contract_instance])
         .call()
         .await
         .expect_err("should return a revert error");
@@ -1284,7 +1284,7 @@ async fn test_log_results() -> Result<()> {
 
     let expected_err = format!(
         "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
-         Consider adding external contracts with `set_contracts()`",
+         Consider adding external contracts with `with_contracts()`",
         contract_id.hash, [0u8; 8]
     );
 

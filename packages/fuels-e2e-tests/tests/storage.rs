@@ -23,7 +23,7 @@ async fn test_storage_initialization() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+        LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;
@@ -55,7 +55,7 @@ async fn test_init_storage_automatically() -> Result<()> {
 
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        LoadConfiguration::default().set_storage_configuration(storage_configuration),
+        LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;

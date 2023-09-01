@@ -83,7 +83,7 @@ async fn test_contract_calling_contract() -> Result<()> {
         .methods()
         .increment_from_contracts(lib_contract_id, lib_contract_id2, 42)
         // Note that the two lib_contract_instances have different types
-        .set_contracts(&[&lib_contract_instance, &lib_contract_instance2])
+        .with_contracts(&[&lib_contract_instance, &lib_contract_instance2])
         .call()
         .await?;
 
@@ -93,7 +93,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&[&lib_contract_instance])
+        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
@@ -104,7 +104,7 @@ async fn test_contract_calling_contract() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contract_ids(&[lib_contract_id.clone()])
+        .with_contract_ids(&[lib_contract_id.clone()])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -282,15 +282,15 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 399;
     let expected_metered_bytes_size = 728;
-    let expected_total_fee = 372;
+    let expected_total_fee = 332;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
         .tx_params(
             TxParameters::default()
-                .set_gas_price(gas_price)
-                .set_gas_limit(gas_limit),
+                .with_gas_price(gas_price)
+                .with_gas_limit(gas_limit),
         )
         .estimate_transaction_cost(Some(tolerance))
         .await?;
@@ -398,7 +398,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxParameters::default().set_maturity(maturity))
+            .tx_params(TxParameters::default().with_maturity(maturity))
     };
 
     call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -555,7 +555,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     let response = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&[&lib_contract_instance])
+        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
@@ -564,7 +564,7 @@ async fn test_contract_setup_macro_deploy_with_salt() -> Result<()> {
     let response = contract_caller_instance2
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .set_contracts(&[&lib_contract_instance])
+        .with_contracts(&[&lib_contract_instance])
         .call()
         .await?;
 
@@ -619,8 +619,8 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet
     let tx_params = TxParameters::default()
-        .set_gas_price(10)
-        .set_gas_limit(1_000_000);
+        .with_gas_price(10)
+        .with_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)
@@ -980,8 +980,8 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
     let contract_methods = contract_caller_instance.methods();
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-    multi_call_handler.tx_params(Default::default());
+    let mut multi_call_handler =
+        MultiContractCallHandler::new(wallet.clone()).tx_params(Default::default());
 
     (0..3).for_each(|_| {
         let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
@@ -1159,8 +1159,8 @@ async fn test_payable_annotation() -> Result<()> {
         .payable()
         .call_params(
             CallParameters::default()
-                .set_amount(100)
-                .set_gas_forwarded(20_000),
+                .with_amount(100)
+                .with_gas_forwarded(20_000),
         )?
         .call()
         .await?;
@@ -1170,7 +1170,7 @@ async fn test_payable_annotation() -> Result<()> {
     // ANCHOR: non_payable_params
     let err = contract_methods
         .non_payable()
-        .call_params(CallParameters::default().set_amount(100))
+        .call_params(CallParameters::default().with_amount(100))
         .expect_err("Should return call params error.");
 
     assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
@@ -1178,7 +1178,7 @@ async fn test_payable_annotation() -> Result<()> {
 
     let response = contract_methods
         .non_payable()
-        .call_params(CallParameters::default().set_gas_forwarded(20_000))?
+        .call_params(CallParameters::default().with_gas_forwarded(20_000))?
         .call()
         .await?;
 
@@ -1245,7 +1245,7 @@ async fn low_level_call() -> Result<()> {
     );
 
     let function_selector = fn_selector!(initialize_counter(u64));
-    let call_data = calldata!(42u64);
+    let call_data = calldata!(42u64)?;
 
     caller_contract_instance
         .methods()
@@ -1274,8 +1274,8 @@ async fn low_level_call() -> Result<()> {
             a: true,
             b: [1, 2, 3],
         },
-        SizedAsciiString::<4>::try_from("fuel").unwrap()
-    );
+        SizedAsciiString::<4>::try_from("fuel")?
+    )?;
 
     caller_contract_instance
         .methods()
@@ -1478,6 +1478,92 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     assert_eq!(val_1, 7);
     assert_eq!(val_2, 42);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_heap_type_multicall() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Contract(
+                name = "VectorOutputContract",
+                project = "packages/fuels/tests/types/contracts/vector_output"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance_2",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+
+    {
+        // One heap type at the last position is allowed
+        let call_handler_1 = contract_instance.methods().get_single(7);
+        let call_handler_2 = contract_instance.methods().get_single(42);
+        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let handle = multi_call_handler.submit().await?;
+        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.response().await?.value;
+
+        assert_eq!(val_1, 7);
+        assert_eq!(val_2, 42);
+        assert_eq!(val_3, vec![0, 1, 2]);
+    }
+
+    {
+        let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_2 = contract_instance.methods().get_single(7);
+        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let error = multi_call_handler.submit().await.expect_err("Should error");
+        assert!(error.to_string().contains(
+            "`MultiContractCallHandler` can have only one call that returns a heap type"
+        ));
+    }
+
+    {
+        let call_handler_1 = contract_instance.methods().get_single(7);
+        let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_3 = contract_instance.methods().get_single(42);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2)
+            .add_call(call_handler_3);
+
+        let error = multi_call_handler.submit().await.expect_err("Should error");
+        assert!(error
+            .to_string()
+            .contains("The contract call with the heap type return must be at the last position"));
+    }
 
     Ok(())
 }

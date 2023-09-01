@@ -18,7 +18,7 @@ env:
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.20.4
   RUST_VERSION: 1.71.1
-  FORC_VERSION: 0.44.0
+  FORC_VERSION: 0.45.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -60,7 +60,7 @@ jobs:
         working-directory: packages/fuels-e2e-tests
 
       - name: Build Sway test projects
-        run: forc build --terse
+        run: forc build --terse --error-on-warnings
         working-directory: packages/fuels-e2e-tests
 
       - uses: actions/upload-artifact@v2
@@ -227,7 +227,7 @@ jobs:
         if: ${{ matrix.command == 'test_wasm' }}
         uses: actions/setup-node@v3
         with:
-          node-version:  18
+          node-version: 18
 
       - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
@@ -244,7 +244,7 @@ jobs:
       - name: Check for unresolved documentation links
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
-          ! cargo doc |& grep -A 6  "warning: unresolved link to"
+          ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
   publish:
     needs:

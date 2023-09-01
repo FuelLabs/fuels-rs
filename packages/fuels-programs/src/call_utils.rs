@@ -121,7 +121,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     // Find the spendable resources required for those calls
     for (asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount, None)
+            .get_asset_inputs_for_amount(*asset_id, *amount)
             .await?;
         asset_inputs.extend(resources);
     }
@@ -129,19 +129,15 @@ pub(crate) async fn build_tx_from_contract_calls(
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
     let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-        .set_script(script)
-        .set_script_data(script_data.clone());
+        .with_script(script)
+        .with_script_data(script_data.clone());
 
     let base_asset_amount = required_asset_amounts
         .iter()
         .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
         .unwrap_or_default();
 
-    let tx = account
-        .add_fee_resources(tb, base_asset_amount, None)
-        .await?;
-
-    Ok(tx)
+    account.add_fee_resources(tb, base_asset_amount).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
@@ -782,7 +778,7 @@ mod test {
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
-                Input::resource_signed(coin, 0)
+                Input::resource_signed(coin)
             })
             .collect();
         let call = ContractCall::new_with_random_id();
@@ -847,8 +843,8 @@ mod test {
         ]
         .map(|(asset_id, amount)| {
             CallParameters::default()
-                .set_amount(amount)
-                .set_asset_id(asset_id)
+                .with_amount(amount)
+                .with_asset_id(asset_id)
         })
         .map(|call_parameters| {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
