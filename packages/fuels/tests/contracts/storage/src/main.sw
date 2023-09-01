@@ -8,6 +8,8 @@ storage {
 }
 
 abi MyContract {
+    #[storage(write)]
+    fn set_storage(x: u64, y: b256);
     #[storage(read)]
     fn get_value_b256(key: b256) -> b256;
     #[storage(read)]
@@ -15,6 +17,12 @@ abi MyContract {
 }
 
 impl MyContract for Contract {
+    #[storage(write)]
+    fn set_storage(x: u64, y: b256) {
+        storage.x.write(x);
+        storage.y.write(y);
+    }
+
     #[storage(read)]
     fn get_value_b256(key: b256) -> b256 {
         read::<b256>(key, 0).unwrap()

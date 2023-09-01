@@ -3,6 +3,7 @@ predicate;
 #[allow(dead_code)]
 enum TestEnum {
     A: u64,
+    B: bool,
 }
 
 #[allow(dead_code)]
