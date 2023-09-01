@@ -9,10 +9,10 @@ use fuel_core_client::client::{
     FuelClient,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
-use fuel_types::{Address, Bytes32, MessageId, Nonce};
+use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE, MAX_GAS_PER_TX},
+    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -126,31 +126,6 @@ impl From<ProviderError> for Error {
     }
 }
 
-/// Extends the functionality of the [`FuelClient`].
-#[async_trait::async_trait]
-pub trait ClientExt {
-    // TODO: It should be part of the `fuel-core-client`. See https://github.com/FuelLabs/fuel-core/issues/1178
-    /// Submits transaction, await confirmation and return receipts.
-    async fn submit_and_await_commit_with_receipts(
-        &self,
-        tx: &fuel_tx::Transaction,
-    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)>;
-}
-
-#[async_trait::async_trait]
-impl ClientExt for FuelClient {
-    async fn submit_and_await_commit_with_receipts(
-        &self,
-        tx: &fuel_tx::Transaction,
-    ) -> io::Result<(TransactionStatus, Option<Vec<Receipt>>)> {
-        let tx_id = self.submit(tx).await?;
-        let status = self.await_transaction_commit(&tx_id).await?;
-        let receipts = self.receipts(&tx_id).await?;
-
-        Ok((status, receipts))
-    }
-}
-
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which provides a broader API.
@@ -169,13 +144,15 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
             min_gas_price,
             ..
-        } = self.estimate_transaction_cost(tx, Some(tolerance)).await?;
+        } = self
+            .estimate_transaction_cost(tx.clone(), Some(tolerance))
+            .await?;
 
         if gas_used > tx.gas_limit() {
             return Err(error!(
@@ -199,10 +176,15 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
-        let (status, receipts) = self.submit_with_feedback(tx.clone()).await?;
-        let receipts = receipts.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&status, &receipts)?;
+        let tx_id = self.submit_tx(tx.clone()).await?;
 
+        Ok(tx_id)
+    }
+
+    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+        let tx_status = self.client.transaction_status(tx_id).await?;
+        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
+        Self::if_failure_generate_error(&tx_status, &receipts)?;
         Ok(receipts)
     }
 
@@ -230,14 +212,11 @@ impl Provider {
         Ok(())
     }
 
-    async fn submit_with_feedback(
-        &self,
-        tx: impl Transaction,
-    ) -> ProviderResult<(TransactionStatus, Option<Vec<Receipt>>)> {
-        self.client
-            .submit_and_await_commit_with_receipts(&tx.into())
-            .await
-            .map_err(Into::into)
+    async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
+        let tx_id = self.client.submit(&tx.into()).await?;
+        self.client.await_transaction_commit(&tx_id).await?;
+
+        Ok(tx_id)
     }
 
     #[cfg(feature = "fuel-core-lib")]
@@ -262,11 +241,15 @@ impl Provider {
         self.consensus_parameters
     }
 
+    pub fn chain_id(&self) -> ChainId {
+        self.consensus_parameters.chain_id
+    }
+
     pub async fn node_info(&self) -> ProviderResult<NodeInfo> {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
+    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
         let receipts = self.dry_run(tx).await?;
         Self::has_script_succeeded(&receipts)?;
 
@@ -294,20 +277,14 @@ impl Provider {
             .unwrap_or(Ok(()))
     }
 
-    pub async fn dry_run<T: Transaction + Clone>(&self, tx: &T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run(&tx.clone().into()).await?;
+    pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
+        let receipts = self.client.dry_run(&tx.into()).await?;
 
         Ok(receipts)
     }
 
-    pub async fn dry_run_no_validation<T: Transaction + Clone>(
-        &self,
-        tx: &T,
-    ) -> Result<Vec<Receipt>> {
-        let receipts = self
-            .client
-            .dry_run_opt(&tx.clone().into(), Some(false))
-            .await?;
+    pub async fn dry_run_no_validation<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
+        let receipts = self.client.dry_run_opt(&tx.into(), Some(false)).await?;
 
         Ok(receipts)
     }
@@ -432,7 +409,7 @@ impl Provider {
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> ProviderResult<HashMap<String, u64>> {
+    ) -> ProviderResult<HashMap<AssetId, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -453,7 +430,7 @@ impl Provider {
                      contract: _,
                      amount,
                      asset_id,
-                 }| (asset_id.to_string(), amount),
+                 }| (asset_id, amount),
             )
             .collect();
         Ok(balances)
@@ -466,7 +443,6 @@ impl Provider {
         Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
-    // - Get transaction(s)
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
@@ -541,49 +517,50 @@ impl Provider {
         })
     }
 
-    pub async fn estimate_transaction_cost<T: Transaction + Clone>(
+    pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        tx: &T,
+        tx: T,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let NodeInfo { min_gas_price, .. } = self.node_info().await?;
-
-        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
-        let dry_run_tx = Self::generate_dry_run_tx(tx);
-        let consensus_parameters = self.consensus_parameters();
-        let gas_used = self
-            .get_gas_used_with_tolerance(&dry_run_tx, tolerance)
-            .await?;
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
+        let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
-        // Update the dry_run_tx with estimated gas_used and correct gas price to calculate the total_fee
-        dry_run_tx
+        // Remove limits from an existing Transaction for accurate gas estimation
+        let dry_run_tx = self.generate_dry_run_tx(tx.clone());
+        let gas_used = self
+            .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
+            .await?;
+
+        // Update the tx with estimated gas_used and correct gas price to calculate the total_fee
+        let dry_run_tx = dry_run_tx
             .with_gas_price(gas_price)
             .with_gas_limit(gas_used);
 
-        let transaction_fee = tx
-            .fee_checked_from_tx(&consensus_parameters)
+        let transaction_fee = dry_run_tx
+            .fee_checked_from_tx(&self.consensus_parameters)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
             min_gas_price,
             gas_price,
             gas_used,
-            metered_bytes_size: tx.metered_bytes_size() as u64,
+            metered_bytes_size: dry_run_tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.max_fee(),
         })
     }
 
     // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx<T: Transaction + Clone>(tx: &T) -> T {
-        // Simulate the contract call with MAX_GAS_PER_TX to get the complete gas_used
-        tx.clone().with_gas_limit(MAX_GAS_PER_TX).with_gas_price(0)
+    fn generate_dry_run_tx<T: Transaction>(&self, tx: T) -> T {
+        // Simulate the contract call with max gas to get the complete gas_used
+        let max_gas_per_tx = self.consensus_parameters.max_gas_per_tx;
+        tx.clone().with_gas_limit(max_gas_per_tx).with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance
-    async fn get_gas_used_with_tolerance<T: Transaction + Clone>(
+    async fn get_gas_used_with_tolerance<T: Transaction>(
         &self,
-        tx: &T,
+        tx: T,
         tolerance: f64,
     ) -> Result<u64> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);

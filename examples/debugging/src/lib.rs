@@ -60,11 +60,13 @@ mod tests {
     }
 
     #[test]
-    fn test_macros() {
+    fn test_macros() -> Result<()> {
         let function_selector = fn_selector!(initialize_counter(u64));
-        let call_data = calldata!(42u64);
+        let call_data = calldata!(42u64)?;
 
         assert_eq!(vec![0, 0, 0, 0, 171, 100, 229, 242], function_selector);
         assert_eq!(vec![0, 0, 0, 0, 0, 0, 0, 42], call_data);
+
+        Ok(())
     }
 }

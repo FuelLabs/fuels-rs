@@ -71,7 +71,12 @@ impl ReceiptParser {
 
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         for (index, receipt) in self.receipts.iter_mut().enumerate() {
-            if let Receipt::ReturnData { id, data, .. } = receipt {
+            if let Receipt::ReturnData {
+                id,
+                data: Some(data),
+                ..
+            } = receipt
+            {
                 if id == contract_id {
                     let data = std::mem::take(data);
                     self.receipts.remove(index);
@@ -134,10 +139,10 @@ impl ReceiptParser {
                     ..
                 },
             ) if *first_id == *contract_id
-                && !first_data.is_empty()
+                && first_data.is_some()
                 && *second_id == ContractId::zeroed() =>
             {
-                Some(vec_data)
+                vec_data.as_ref()
             }
             _ => None,
         }
@@ -176,7 +181,7 @@ mod tests {
             ptr: Default::default(),
             len: Default::default(),
             digest: Default::default(),
-            data: data.to_vec(),
+            data: Some(data.to_vec()),
             pc: Default::default(),
             is: Default::default(),
         }

@@ -2,7 +2,7 @@ use std::fmt;
 
 pub use fuel_tx::{Address, AssetId, ContractId, TxPointer, UtxoId};
 use fuel_types::bytes::padded_len;
-pub use fuel_types::{MessageId, Nonce};
+pub use fuel_types::{ChainId, MessageId, Nonce};
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{
@@ -23,15 +23,15 @@ pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
 pub type EnumSelector = (u8, Token, EnumVariants);
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
-pub struct StringToken {
+#[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+pub struct StaticStringToken {
     data: String,
     expected_len: Option<usize>,
 }
 
-impl StringToken {
+impl StaticStringToken {
     pub fn new(data: String, expected_len: Option<usize>) -> Self {
-        StringToken { data, expected_len }
+        StaticStringToken { data, expected_len }
     }
 
     fn validate(&self) -> Result<()> {
@@ -62,15 +62,15 @@ impl StringToken {
     }
 }
 
-impl TryFrom<StringToken> for String {
+impl TryFrom<StaticStringToken> for String {
     type Error = Error;
-    fn try_from(string_token: StringToken) -> Result<String> {
+    fn try_from(string_token: StaticStringToken) -> Result<String> {
         string_token.validate()?;
         Ok(string_token.data)
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.
@@ -85,14 +85,14 @@ pub enum Token {
     B256([u8; 32]),
     Array(Vec<Token>),
     Vector(Vec<Token>),
-    StringSlice(StringToken),
-    StringArray(StringToken),
+    StringSlice(StaticStringToken),
+    StringArray(StaticStringToken),
     Struct(Vec<Token>),
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
     RawSlice(Vec<u64>),
     Bytes(Vec<u8>),
-    StdString(String),
+    String(String),
 }
 
 impl fmt::Display for Token {

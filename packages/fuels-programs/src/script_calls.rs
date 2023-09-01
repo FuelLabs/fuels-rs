@@ -14,7 +14,7 @@ use fuels_core::{
         bech32::Bech32ContractId,
         errors::Result,
         input::Input,
-        transaction::{Transaction, TxParameters},
+        transaction::{ScriptTransaction, Transaction, TxParameters},
         transaction_builders::ScriptTransactionBuilder,
         unresolved_bytes::UnresolvedBytes,
     },
@@ -137,12 +137,12 @@ where
         self
     }
 
-    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.script_call.external_contracts = contract_ids.to_vec();
         self
     }
 
-    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
         self.script_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
@@ -186,8 +186,8 @@ where
         .collect();
 
         let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-            .set_script(self.script_call.script_binary.clone())
-            .set_script_data(self.compute_script_data().await?);
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?);
 
         Ok(tb)
     }
@@ -208,26 +208,30 @@ where
             .sum()
     }
 
+    /// Returns the transaction that executes the script call
+    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
+        let tb = self.prepare_builder().await?;
+        let base_amount = self.calculate_base_asset_sum();
+
+        self.account.add_fee_resources(tb, base_amount).await
+    }
+
     /// Call a script on the node. If `simulate == true`, then the call is done in a
     /// read-only manner, using a `dry-run`. The [`FuelCallResponse`] struct contains the `main`'s value
     /// in its `value` field as an actual typed value `D` (if your method returns `bool`,
     /// it will be a bool, works also for structs thanks to the `abigen!()`).
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tb = self.prepare_builder().await?;
-        let base_amount = self.calculate_base_asset_sum();
-        let tx = self
-            .account
-            .add_fee_resources(tb, base_amount, None)
-            .await?;
-        let consensus_parameters = self.provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        let tx = self.build_tx().await?;
+        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let receipts = if simulate {
-            self.provider.checked_dry_run(&tx).await?
+            self.provider.checked_dry_run(tx).await?
         } else {
-            self.provider.send_transaction(&tx).await?
+            let tx_id = self.provider.send_transaction(tx).await?;
+            self.provider.get_receipts(&tx_id).await?
         };
+
         self.get_response(receipts)
     }
 
@@ -236,6 +240,22 @@ where
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
+        let tx = self.build_tx().await?;
+        self.cached_tx_id = Some(self.provider.send_transaction(tx).await?);
+
+        Ok(self)
+    }
+
+    pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
@@ -255,11 +275,11 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0, None).await?;
+        let tx = self.account.add_fee_resources(tb, 0).await?;
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(&tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance)
             .await?;
 
         Ok(transaction_cost)

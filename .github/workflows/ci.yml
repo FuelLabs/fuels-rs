@@ -16,9 +16,9 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.19.1
-  RUST_VERSION: 1.70.0
-  FORC_VERSION: 0.42.1
+  FUEL_CORE_VERSION: 0.20.4
+  RUST_VERSION: 1.71.1
+  FORC_VERSION: 0.45.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -60,7 +60,7 @@ jobs:
         working-directory: packages/fuels
 
       - name: Build Sway test projects
-        run: forc build --terse
+        run: forc build --terse --error-on-warnings
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
@@ -227,7 +227,7 @@ jobs:
         if: ${{ matrix.command == 'test_wasm' }}
         uses: actions/setup-node@v3
         with:
-          node-version:  18
+          node-version: 18
 
       - name: Test WASM
         if: ${{ matrix.command == 'test_wasm' }}
@@ -244,7 +244,7 @@ jobs:
       - name: Check for unresolved documentation links
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
-          ! cargo doc |& grep -A 6  "warning: unresolved link to"
+          ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
   publish:
     needs:

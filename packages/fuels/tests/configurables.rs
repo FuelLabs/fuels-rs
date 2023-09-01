@@ -93,13 +93,13 @@ async fn contract_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/debug/configurables.bin",
-        LoadConfiguration::default().set_configurables(configurables),
+        LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;
@@ -144,9 +144,9 @@ async fn script_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyScriptConfigurables::new()
-        .set_STR_4(new_str.clone())
-        .set_STRUCT(new_struct.clone())
-        .set_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())
+        .with_STRUCT(new_struct.clone())
+        .with_ENUM(new_enum.clone());
 
     let response = instance
         .with_configurables(configurables)

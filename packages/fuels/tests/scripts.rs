@@ -134,8 +134,8 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     assert_eq!(result.value, "hello");
     // ANCHOR: script_with_tx_params
     let parameters = TxParameters::default()
-        .set_gas_price(1)
-        .set_gas_limit(10_000);
+        .with_gas_price(1)
+        .with_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)
@@ -247,10 +247,10 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 1000;
-    let asset_id = ContractId::from(*BASE_ASSET_ID);
-    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let asset_id = BASE_ASSET_ID;
+    let script_call = script_instance.main(amount, asset_id.into(), receiver.address());
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount, None)
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
         .await?;
     let _ = script_call
         .with_inputs(inputs)
@@ -353,5 +353,32 @@ async fn test_script_b256() -> Result<()> {
     let response = script_instance.main(my_b256).call().await?;
 
     assert!(response.value);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_submit_and_response() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_struct"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let my_struct = MyStruct {
+        number: 42,
+        boolean: true,
+    };
+
+    let handle = script_instance.main(my_struct).submit().await?;
+    let response = handle.response().await?;
+
+    assert_eq!(response.value, 42);
     Ok(())
 }

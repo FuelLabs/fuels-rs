@@ -11,7 +11,6 @@ use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
 pub enum Input {
     ResourceSigned {
         resource: CoinType,
-        witness_index: u8,
     },
     ResourcePredicate {
         resource: CoinType,
@@ -28,11 +27,8 @@ pub enum Input {
 }
 
 impl Input {
-    pub const fn resource_signed(resource: CoinType, witness_index: u8) -> Self {
-        Self::ResourceSigned {
-            resource,
-            witness_index,
-        }
+    pub const fn resource_signed(resource: CoinType) -> Self {
+        Self::ResourceSigned { resource }
     }
 
     pub const fn resource_predicate(
@@ -62,6 +58,20 @@ impl Input {
                 Some(resource.asset_id())
             }
             _ => None,
+        }
+    }
+
+    pub fn contains_data(&self) -> bool {
+        match self {
+            Self::ResourceSigned {
+                resource: CoinType::Message(msg),
+                ..
+            }
+            | Self::ResourcePredicate {
+                resource: CoinType::Message(msg),
+                ..
+            } => !msg.data.is_empty(),
+            _ => false,
         }
     }
 

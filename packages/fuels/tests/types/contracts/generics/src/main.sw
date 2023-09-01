@@ -1,6 +1,6 @@
 contract;
 
-use std::hash::sha256;
+use std::hash::*;
 
 struct SimpleGeneric<T> {
     single_generic_param: T,
@@ -28,6 +28,12 @@ enum EnumWGeneric<N> {
 struct MegaExample<T, U> {
     a: ([U; 2], T),
     b: Vec<([EnumWGeneric<StructWTupleGeneric<StructWArrayGeneric<PassTheGenericOn<T>>>>; 1], u32)>,
+}
+
+impl Hash for str[3] {
+    fn hash(self, ref mut state: Hasher) {
+        state.write_str(self);
+    }
 }
 
 abi MyContract {

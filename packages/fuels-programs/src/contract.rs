@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, panic, path::Path};
+use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path};
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
@@ -44,7 +44,7 @@ impl CallParameters {
         }
     }
 
-    pub fn set_amount(mut self, amount: u64) -> Self {
+    pub fn with_amount(mut self, amount: u64) -> Self {
         self.amount = amount;
         self
     }
@@ -53,7 +53,7 @@ impl CallParameters {
         self.amount
     }
 
-    pub fn set_asset_id(mut self, asset_id: AssetId) -> Self {
+    pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
         self.asset_id = asset_id;
         self
     }
@@ -62,7 +62,7 @@ impl CallParameters {
         self.asset_id
     }
 
-    pub fn set_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
+    pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
         self.gas_forwarded = Some(gas_forwarded);
         self
     }
@@ -83,7 +83,7 @@ impl Default for CallParameters {
 }
 
 // Trait implemented by contract instances so that
-// they can be passed to the `set_contracts` method
+// they can be passed to the `with_contracts` method
 pub trait SettableContract {
     fn id(&self) -> Bech32ContractId;
     fn log_decoder(&self) -> LogDecoder;
@@ -152,17 +152,17 @@ impl LoadConfiguration {
         }
     }
 
-    pub fn set_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
+    pub fn with_storage_configuration(mut self, storage: StorageConfiguration) -> Self {
         self.storage = storage;
         self
     }
 
-    pub fn set_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
+    pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         self.configurables = configurables.into();
         self
     }
 
-    pub fn set_salt(mut self, salt: impl Into<Salt>) -> Self {
+    pub fn with_salt(mut self, salt: impl Into<Salt>) -> Self {
         self.salt = salt.into();
         self
     }
@@ -243,14 +243,14 @@ impl Contract {
         );
 
         let tx = account
-            .add_fee_resources(tb, 0, Some(1))
+            .add_fee_resources(tb, 0)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
 
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction(&tx).await?;
+        provider.send_transaction(tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -377,12 +377,12 @@ where
     /// method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).set_contract_ids(&[another_contract_id]).call()
+    /// my_contract_instance.my_method(...).with_contract_ids(&[another_contract_id]).call()
     /// ```
     ///
     /// [`Input::Contract`]: fuel_tx::Input::Contract
     /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn set_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
+    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
         self
     }
@@ -393,9 +393,9 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// my_contract_instance.my_method(...).set_contracts(&[another_contract_instance]).call()
+    /// my_contract_instance.my_method(...).with_contracts(&[another_contract_instance]).call()
     /// ```
-    pub fn set_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
         self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
@@ -476,6 +476,23 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
+    pub async fn submit(mut self) -> Result<ContractCallHandler<T, D>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+        Ok(self)
+    }
+
+    pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
+    }
+
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     ///
@@ -489,13 +506,13 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
+            provider.checked_dry_run(tx).await?
         } else {
-            provider.send_transaction(&tx).await?
+            let tx_id = provider.send_transaction(tx).await?;
+            provider.get_receipts(&tx_id).await?
         };
 
         self.get_response(receipts)
@@ -510,7 +527,7 @@ where
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
-            .estimate_transaction_cost(&script, tolerance)
+            .estimate_transaction_cost(script, tolerance)
             .await?;
 
         Ok(transaction_cost)
@@ -631,7 +648,7 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
                     | Token::Vector(_)
                     | Token::StringArray(_)
                     | Token::StringSlice(_)
-                    | Token::StdString(_)
+                    | Token::String(_)
             )
         })
 }
@@ -674,16 +691,53 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Sets the transaction parameters for a given transaction.
     /// Note that this is a builder method
-    pub fn tx_params(&mut self, params: TxParameters) -> &mut Self {
+    pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
         self
     }
 
+    fn validate_contract_calls(&self) -> Result<()> {
+        if self.contract_calls.is_empty() {
+            return Err(error!(
+                InvalidData,
+                "No calls added. Have you used '.add_calls()'?"
+            ));
+        }
+
+        let number_of_heap_type_calls = self
+            .contract_calls
+            .iter()
+            .filter(|cc| cc.output_param.is_vm_heap_type())
+            .count();
+
+        match number_of_heap_type_calls {
+            0 => Ok(()),
+            1 => {
+                if self
+                    .contract_calls
+                    .last()
+                    .expect("is not empty")
+                    .output_param
+                    .is_vm_heap_type()
+                {
+                    Ok(())
+                } else {
+                    Err(error!(
+                        InvalidData,
+                        "The contract call with the heap type return must be at the last position"
+                    ))
+                }
+            }
+            _ => Err(error!(
+                InvalidData,
+                "`MultiContractCallHandler` can have only one call that returns a heap type"
+            )),
+        }
+    }
+
     /// Returns the script that executes the contract calls
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        if self.contract_calls.is_empty() {
-            panic!("No calls added. Have you used '.add_calls()'?");
-        }
+        self.validate_contract_calls()?;
 
         build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
     }
@@ -693,6 +747,24 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.call_or_simulate(false)
             .await
             .map_err(|err| map_revert_error(err, &self.log_decoder))
+    }
+
+    pub async fn submit(mut self) -> Result<MultiContractCallHandler<T>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+
+        Ok(self)
+    }
+
+    pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
+        let receipts = self
+            .account
+            .try_provider()?
+            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
+            .await?;
+        self.get_response(receipts)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -712,13 +784,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        let consensus_parameters = provider.consensus_parameters();
-        self.cached_tx_id = Some(tx.id(consensus_parameters.chain_id.into()));
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let receipts = if simulate {
-            provider.checked_dry_run(&tx).await?
+            provider.checked_dry_run(tx).await?
         } else {
-            provider.send_transaction(&tx).await?
+            let tx_id = provider.send_transaction(tx).await?;
+            provider.get_receipts(&tx_id).await?
         };
 
         self.get_response(receipts)
@@ -729,7 +802,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(&tx).await?;
+        provider.checked_dry_run(tx).await?;
 
         Ok(())
     }
@@ -744,7 +817,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let transaction_cost = self
             .account
             .try_provider()?
-            .estimate_transaction_cost(&script, tolerance)
+            .estimate_transaction_cost(script, tolerance)
             .await?;
 
         Ok(transaction_cost)
