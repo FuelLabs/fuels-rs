@@ -5,7 +5,10 @@ use fuels::{
     prelude::*,
     test_helpers::setup_test_provider,
     tx::{Bytes32, CoinSigned, Input, TxPointer, UtxoId},
-    types::{output::Output, transaction_builders::ScriptTransactionBuilder},
+    types::{
+        output::Output,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    },
 };
 
 #[tokio::test]

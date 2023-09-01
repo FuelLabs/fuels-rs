@@ -14,6 +14,7 @@ use fuels::{
     fuel_node::{Config as CoreConfig, FuelService, ServiceTrait},
     types::errors::error,
 };
+use rand::Rng;
 use tai64::Tai64;
 
 #[tokio::test]

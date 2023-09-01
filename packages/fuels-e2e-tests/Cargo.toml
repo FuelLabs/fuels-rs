@@ -14,6 +14,7 @@ description = "E2E tests for Fuel Rust SDK."
 chrono = { workspace = true }
 fuels = { workspace = true }
 hex = { workspace = true, default-features = false }
+rand = { workspace = true }
 sha2 = { workspace = true }
 tai64 = { workspace = true }
 tempfile = { workspace = true }

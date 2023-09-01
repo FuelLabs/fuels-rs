@@ -1489,11 +1489,11 @@ async fn test_heap_type_multicall() -> Result<()> {
         Abigen(
             Contract(
                 name = "TestContract",
-                project = "packages/fuels/tests/contracts/contract_test"
+                project = "packages/fuels-e2e-tests/tests/contracts/contract_test"
             ),
             Contract(
                 name = "VectorOutputContract",
-                project = "packages/fuels/tests/types/contracts/vector_output"
+                project = "packages/fuels-e2e-tests/tests/types/contracts/vector_output"
             )
         ),
         Deploy(
