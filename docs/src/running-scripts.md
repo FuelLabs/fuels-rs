@@ -12,7 +12,7 @@ Furthermore, if you need to separate submission from value retrieval for any rea
 {{#include ../../packages/fuels/tests/scripts.rs:submit_response_script}}
 ```
 
-This approach enables us to use a retry mechanism for submitting and acquiring values.
+This approach enables us to use a retry mechanism for submitting and acquiring values. [Retry mechanism](./retry-mechanism.md)
 
 ## Running scripts with transaction parameters
 

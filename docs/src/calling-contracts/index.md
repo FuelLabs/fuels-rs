@@ -21,6 +21,6 @@ Furthermore, if you need to separate submission from value retrieval for any rea
 {{#include ../../../examples/contracts/src/lib.rs:submit_response_contract}}
 ```
 
-This approach enables us to use a retry mechanism for submitting and acquiring values.
+This approach enables us to use a retry mechanism for submitting and acquiring values. [Retry mechanism](../retry-mechanism.md)
 
 Next, we'll see how we can further configure the many different parameters in a contract call
