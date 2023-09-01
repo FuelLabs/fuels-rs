@@ -83,6 +83,6 @@ mod tests {
         let versions = test_versions();
         let (replaced, count) = replace_versions_in_string(s, &versions);
         assert_eq!(replaced, s);
-        assert_eq!(count, None);
+        assert!(count.is_none());
     }
 }
