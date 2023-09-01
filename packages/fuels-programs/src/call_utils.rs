@@ -220,7 +220,7 @@ pub(crate) fn get_instructions(
         .iter()
         .zip(&offsets)
         .flat_map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
-        .chain(op::ret(RegId::ONE).to_bytes().into_iter())
+        .chain(op::ret(RegId::ONE).to_bytes())
         .collect()
 }
 
@@ -558,13 +558,13 @@ mod test {
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
         ];
 
-        let asset_ids = vec![
+        let asset_ids = [
             AssetId::from([4u8; 32]),
             AssetId::from([5u8; 32]),
             AssetId::from([6u8; 32]),
         ];
 
-        let selectors = vec![[7u8; 8], [8u8; 8], [9u8; 8]];
+        let selectors = [[7u8; 8], [8u8; 8], [9u8; 8]];
 
         // Call 2 has multiple inputs, compute_custom_input_offset will be true
 
