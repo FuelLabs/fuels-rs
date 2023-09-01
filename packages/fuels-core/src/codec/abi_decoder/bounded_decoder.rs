@@ -2,8 +2,8 @@ use std::{convert::TryInto, str};
 
 use fuel_types::bytes::padded_len_usize;
 
-use super::DecoderConfig;
 use crate::{
+    codec::DecoderConfig,
     constants::WORD_SIZE,
     traits::Tokenizable,
     types::{
