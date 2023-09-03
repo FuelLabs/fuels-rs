@@ -19,7 +19,7 @@ async fn test_storage_initialization() -> Result<()> {
     let value = Bytes32::from([2u8; 32]);
     let storage_slot = StorageSlot::new(key, value);
     let storage_vec = vec![storage_slot.clone()];
-    let storage_configuration = StorageConfiguration::from(storage_vec);
+    let storage_configuration = StorageConfiguration::default().add_slot_overrides(storage_vec);
 
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
@@ -49,13 +49,10 @@ async fn test_init_storage_automatically() -> Result<()> {
     ));
 
     let wallet = launch_provider_and_get_wallet().await;
-    let storage_configuration = StorageConfiguration::load_from(
-        "tests/contracts/storage/out/debug/storage-storage_slots.json",
-    )?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",
-        LoadConfiguration::default().with_storage_configuration(storage_configuration),
+        LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxParameters::default())
     .await?;
@@ -89,18 +86,22 @@ async fn test_init_storage_automatically() -> Result<()> {
 async fn storage_load_error_messages() {
     {
         let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
-        let expected_error = format!("Invalid data: file '{json_path}' does not exist");
+        let expected_error = format!("Invalid data: file \"{json_path}\" does not exist");
 
-        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
+        let error = StorageConfiguration::default()
+            .add_slot_overrides_from_file(json_path)
+            .expect_err("Should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }
     {
         let json_path = "tests/contracts/storage/out/debug/storage.bin";
         let expected_error =
-            format!("Invalid data: expected `{json_path}` to have '.json' extension");
+            format!("Invalid data: expected \"{json_path}\" to have '.json' extension");
 
-        let error = StorageConfiguration::load_from(json_path).expect_err("Should have failed");
+        let error = StorageConfiguration::default()
+            .add_slot_overrides_from_file(json_path)
+            .expect_err("Should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }

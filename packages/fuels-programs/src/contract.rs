@@ -1,4 +1,10 @@
-use std::{collections::HashMap, fmt::Debug, fs, marker::PhantomData, path::Path};
+use std::{
+    collections::HashMap,
+    fmt::Debug,
+    fs,
+    marker::PhantomData,
+    path::{Path, PathBuf},
+};
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
@@ -19,7 +25,6 @@ use fuels_core::{
     },
     Configurables,
 };
-use itertools::Itertools;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -90,44 +95,104 @@ pub trait SettableContract {
 }
 
 /// Configuration for contract storage
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct StorageConfiguration {
-    slots: Vec<StorageSlot>,
+    autoload_storage: bool,
+    slot_overrides: StorageSlots,
+}
+
+impl Default for StorageConfiguration {
+    fn default() -> Self {
+        Self {
+            autoload_storage: true,
+            slot_overrides: Default::default(),
+        }
+    }
 }
 
 impl StorageConfiguration {
-    pub fn from(storage_slots: impl IntoIterator<Item = StorageSlot>) -> Self {
+    pub fn new(autoload_enabled: bool, slots: impl IntoIterator<Item = StorageSlot>) -> Self {
+        let config = Self {
+            autoload_storage: autoload_enabled,
+            slot_overrides: Default::default(),
+        };
+
+        config.add_slot_overrides(slots)
+    }
+
+    /// If enabled will try to automatically discover and load the storage configuration from the
+    /// storage config json file.
+    pub fn with_autoload(mut self, enabled: bool) -> Self {
+        self.autoload_storage = enabled;
+        self
+    }
+
+    pub fn autoload_enabled(&self) -> bool {
+        self.autoload_storage
+    }
+
+    /// Slots added via [`add_slot_overrides`] will override any
+    /// existing slots with matching keys.
+    pub fn add_slot_overrides(
+        mut self,
+        storage_slots: impl IntoIterator<Item = StorageSlot>,
+    ) -> Self {
+        self.slot_overrides.add_overrides(storage_slots);
+        self
+    }
+
+    /// Slots added via [`add_slot_overrides_from_file`] will override any
+    /// existing slots with matching keys.
+    ///
+    /// `path` - path to a JSON file containing the storage slots.
+    pub fn add_slot_overrides_from_file(mut self, path: impl AsRef<Path>) -> Result<Self> {
+        let slots = StorageSlots::load_from_file(path.as_ref())?;
+        self.slot_overrides.add_overrides(slots.into_iter());
+        Ok(self)
+    }
+
+    pub fn into_slots(self) -> impl Iterator<Item = StorageSlot> {
+        self.slot_overrides.into_iter()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
+struct StorageSlots {
+    storage_slots: HashMap<Bytes32, StorageSlot>,
+}
+
+impl StorageSlots {
+    fn from(storage_slots: impl IntoIterator<Item = StorageSlot>) -> Self {
+        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
         Self {
-            slots: storage_slots.into_iter().unique().collect(),
+            storage_slots: pairs.collect(),
         }
     }
 
-    pub fn load_from(storage_path: &str) -> Result<Self> {
+    fn add_overrides(&mut self, storage_slots: impl IntoIterator<Item = StorageSlot>) -> &mut Self {
+        let pairs = storage_slots.into_iter().map(|slot| (*slot.key(), slot));
+        self.storage_slots.extend(pairs);
+        self
+    }
+
+    fn load_from_file(storage_path: impl AsRef<Path>) -> Result<Self> {
+        let storage_path = storage_path.as_ref();
         validate_path_and_extension(storage_path, "json")?;
 
-        let storage_json_string = fs::read_to_string(storage_path).map_err(|_| {
+        let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
             error!(
                 InvalidData,
-                "failed to read storage configuration from: '{storage_path}'"
+                "failed to read storage slots from: {storage_path:?}. Reason: {e}"
             )
         })?;
 
-        Ok(Self {
-            slots: serde_json::from_str(&storage_json_string)?,
-        })
+        let decoded_slots = serde_json::from_str::<Vec<StorageSlot>>(&storage_json_string)?;
+
+        Ok(StorageSlots::from(decoded_slots))
     }
 
-    pub fn extend(&mut self, storage_slots: impl IntoIterator<Item = StorageSlot>) {
-        self.merge(Self::from(storage_slots))
-    }
-
-    pub fn merge(&mut self, storage_config: StorageConfiguration) {
-        let slots = std::mem::take(&mut self.slots);
-        self.slots = slots
-            .into_iter()
-            .chain(storage_config.slots)
-            .unique()
-            .collect();
+    fn into_iter(self) -> impl Iterator<Item = StorageSlot> {
+        self.storage_slots.into_values()
     }
 }
 
@@ -255,37 +320,70 @@ impl Contract {
         Ok(self.contract_id.into())
     }
 
-    pub fn load_from(binary_filepath: &str, configuration: LoadConfiguration) -> Result<Self> {
+    pub fn load_from(binary_filepath: impl AsRef<Path>, config: LoadConfiguration) -> Result<Self> {
+        let binary_filepath = binary_filepath.as_ref();
         validate_path_and_extension(binary_filepath, "bin")?;
 
         let mut binary = fs::read(binary_filepath)
-            .map_err(|_| error!(InvalidData, "failed to read binary: '{binary_filepath}'"))?;
+            .map_err(|_| error!(InvalidData, "failed to read binary: {binary_filepath:?}"))?;
 
-        configuration.configurables.update_constants_in(&mut binary);
+        config.configurables.update_constants_in(&mut binary);
 
-        Ok(Self::new(
-            binary,
-            configuration.salt,
-            configuration.storage.slots,
-        ))
+        let storage_slots = Self::determine_storage_slots(config.storage, binary_filepath)?;
+
+        Ok(Self::new(binary, config.salt, storage_slots))
+    }
+
+    fn determine_storage_slots(
+        storage_config: StorageConfiguration,
+        binary_filepath: &Path,
+    ) -> Result<Vec<StorageSlot>> {
+        let autoload_enabled = storage_config.autoload_enabled();
+        let user_overrides = storage_config.into_slots().collect::<Vec<_>>();
+        let slots = if autoload_enabled {
+            let mut slots = autoload_storage_slots(binary_filepath)?;
+            slots.add_overrides(user_overrides);
+            slots.into_iter().collect()
+        } else {
+            user_overrides
+        };
+
+        Ok(slots)
     }
 }
 
-fn validate_path_and_extension(file_path: &str, extension: &str) -> Result<()> {
-    let path = Path::new(file_path);
+fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
+    let storage_file = expected_storage_slots_filepath(contract_binary)
+        .ok_or_else(|| error!(InvalidData, "Could not determine storage slots file"))?;
 
-    if !path.exists() {
-        return Err(error!(InvalidData, "file '{file_path}' does not exist"));
+    StorageSlots::load_from_file(&storage_file)
+                .map_err(|_| error!(InvalidData, "Could not autoload storage slots from file: {storage_file:?}. Either provide the file or disable autoloading in StorageConfiguration"))
+}
+
+fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
+    let dir = contract_binary.parent()?;
+
+    let binary_filename = contract_binary.file_stem()?.to_str()?;
+
+    Some(dir.join(format!("{binary_filename}-storage_slots.json")))
+}
+
+fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
+    if !file_path.exists() {
+        return Err(error!(InvalidData, "file {file_path:?} does not exist"));
     }
 
-    let path_extension = path
-        .extension()
-        .ok_or_else(|| error!(InvalidData, "could not extract extension from: {file_path}"))?;
+    let path_extension = file_path.extension().ok_or_else(|| {
+        error!(
+            InvalidData,
+            "could not extract extension from: {file_path:?}"
+        )
+    })?;
 
     if extension != path_extension {
         return Err(error!(
             InvalidData,
-            "expected `{file_path}` to have '.{extension}' extension"
+            "expected {file_path:?} to have '.{extension}' extension"
         ));
     }
 
@@ -873,5 +971,86 @@ where
             .take(1)
             .for_each(|call| call.append_external_contracts(contract_id.clone()));
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use tempfile::tempdir;
+
+    use super::*;
+
+    #[test]
+    fn merging_overrides_storage_slots() {
+        // given
+        let make_slot = |id, value| StorageSlot::new([id; 32].into(), [value; 32].into());
+
+        let slots = (1..3).map(|id| make_slot(id, 100));
+        let original_config = StorageConfiguration::new(false, slots);
+
+        let overlapping_slots = (2..4).map(|id| make_slot(id, 200));
+
+        // when
+        let original_config = original_config.add_slot_overrides(overlapping_slots);
+
+        // then
+        assert_eq!(
+            HashSet::from_iter(original_config.slot_overrides.into_iter()),
+            HashSet::from([make_slot(1, 100), make_slot(2, 200), make_slot(3, 200)])
+        );
+    }
+
+    #[test]
+    fn autoload_storage_slots() {
+        // given
+        let temp_dir = tempdir().unwrap();
+        let contract_bin = temp_dir.path().join("my_contract.bin");
+        std::fs::write(&contract_bin, "").unwrap();
+
+        let storage_file = temp_dir.path().join("my_contract-storage_slots.json");
+
+        let expected_storage_slots = vec![StorageSlot::new([1; 32].into(), [2; 32].into())];
+        save_slots(&expected_storage_slots, &storage_file);
+
+        let storage_config = StorageConfiguration::new(true, vec![]);
+        let load_config = LoadConfiguration::default().with_storage_configuration(storage_config);
+
+        // when
+        let loaded_contract = Contract::load_from(&contract_bin, load_config).unwrap();
+
+        // then
+        assert_eq!(loaded_contract.storage_slots, expected_storage_slots);
+    }
+
+    #[test]
+    fn autoload_fails_if_file_missing() {
+        // given
+        let temp_dir = tempdir().unwrap();
+        let contract_bin = temp_dir.path().join("my_contract.bin");
+        std::fs::write(&contract_bin, "").unwrap();
+
+        let storage_config = StorageConfiguration::new(true, vec![]);
+        let load_config = LoadConfiguration::default().with_storage_configuration(storage_config);
+
+        // when
+        let error = Contract::load_from(&contract_bin, load_config)
+            .expect_err("Should have failed because the storage slots file is missing");
+
+        // then
+        let storage_slots_path = temp_dir.path().join("my_contract-storage_slots.json");
+        let Error::InvalidData(msg) = error else {
+            panic!("Expected an error of type InvalidData");
+        };
+        assert_eq!(msg, format!("Could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in StorageConfiguration"));
+    }
+
+    fn save_slots(slots: &Vec<StorageSlot>, path: &Path) {
+        std::fs::write(
+            path,
+            serde_json::to_string::<Vec<StorageSlot>>(slots).unwrap(),
+        )
+        .unwrap()
     }
 }

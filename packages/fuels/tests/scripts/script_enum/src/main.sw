@@ -1,5 +1,6 @@
 script;
 
+#[allow(dead_code)]
 enum MyEnum {
     One: (),
     Two: (),

@@ -6,6 +6,7 @@ pub struct SomeStruct<T> {
 
 pub enum SomeEnum<T> {
     A: T,
+    B: bool,
 }
 
 fn main(
