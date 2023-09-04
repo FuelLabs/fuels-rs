@@ -9,9 +9,10 @@ use fuel_tx::{
     StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
     Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
+use fuel_types::{bytes::padded_len_usize, Bytes32, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
+use super::unresolved_bytes::UnresolvedBytes;
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -26,8 +27,6 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
-
-use super::unresolved_bytes::UnresolvedBytes;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
@@ -373,6 +372,7 @@ impl CreateTransactionBuilder {
         num_witnesses: u8,
         consensus_parameters: &ConsensusParameters,
     ) -> Result<Create> {
+        let num_of_storage_slots = self.storage_slots.len();
         let mut tx = FuelTransaction::create(
             self.gas_price,
             self.gas_limit,
@@ -382,7 +382,7 @@ impl CreateTransactionBuilder {
             self.storage_slots,
             resolve_fuel_inputs(
                 self.inputs,
-                base_offset,
+                base_offset + num_of_storage_slots * StorageSlot::LEN,
                 num_witnesses,
                 &self.unresolved_signatures,
             )?,

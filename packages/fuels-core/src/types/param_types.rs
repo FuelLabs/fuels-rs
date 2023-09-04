@@ -469,8 +469,6 @@ fn try_str_slice(the_type: &Type) -> Result<Option<ParamType>> {
 
 fn try_array(the_type: &Type) -> Result<Option<ParamType>> {
     if let Some(len) = extract_array_len(&the_type.type_field) {
-        if the_type.components.len() != 1 {}
-
         return match the_type.components.as_slice() {
             [single_type] => {
                 let array_type = single_type.try_into()?;

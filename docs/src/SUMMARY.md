@@ -22,6 +22,7 @@
   - [The `abigen!` macro](abigen/the-abigen-macro.md)
 - [Deploying contracts](./deploying/index.md)
   - [Configurable constants](./deploying/configurable-constants.md)
+  - [Storage slots](./deploying/storage-slots.md)
   - [Interacting with contracts](./deploying/interacting-with-contracts.md)
   - [The FuelVM Binary file](./deploying/the-fuelvm-binary-file.md)
 - [Calling contracts](./calling-contracts/index.md)

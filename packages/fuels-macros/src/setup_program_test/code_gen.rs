@@ -120,16 +120,10 @@ fn contract_deploying_code(
                 .get(&command.contract.value())
                 .expect("Project should be in lookup");
             let bin_path = project.bin_path();
-            let storage_path = project.storage_path();
 
             quote! {
                 let #contract_instance_name = {
-                    let storage_config = StorageConfiguration::load_from(#storage_path)
-                                            .expect("Failed to load storage slots from path");
-                    let load_config =
-                        LoadConfiguration::default()
-                            .with_storage_configuration(storage_config)
-                            .with_salt([#(#salt),*]);
+                    let load_config = LoadConfiguration::default().with_salt([#(#salt),*]);
 
                     let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
 
@@ -211,9 +205,5 @@ impl Project {
 
     fn bin_path(&self) -> String {
         self.compile_file_path(".bin", "the binary file")
-    }
-
-    fn storage_path(&self) -> String {
-        self.compile_file_path("-storage_slots.json", "the storage slots file")
     }
 }
