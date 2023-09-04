@@ -6,8 +6,7 @@ This document outlines the process for installing dependencies, setting up for d
 
 If you run into any difficulties getting started, you can always ask questions on our [Discourse](https://forum.fuel.network/).
 
-
-# Finding something to work on
+## Finding something to work on
 
 You may contribute to the project in many ways, some of which involve coding knowledge and some which do not. A few examples include:
 
@@ -19,7 +18,7 @@ Check out our [Help Wanted](https://github.com/FuelLabs/fuels-rs/labels/help%20w
 
 If you are planning something big, for example, changes related to multiple components or changes to current behaviors, make sure to [open an issue](https://github.com/FuelLabs/fuels-rs/issues/new) to discuss with us before starting on the implementation.
 
-# Contribution flow
+## Contribution flow
 
 This is a rough outline of what a contributor's workflow looks like:
 
@@ -40,7 +39,7 @@ This is a rough outline of what a contributor's workflow looks like:
 
 Thanks for your contributions!
 
-# Linking issues
+## Linking issues
 
 Pull requests should be linked to at least one issue in the same repo.
 
@@ -61,6 +60,3 @@ Multiple issues should use full syntax for each issue and be separated by a comm
 ```sh
 close #123, ref #456
 ```
-
-
-
