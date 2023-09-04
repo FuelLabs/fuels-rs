@@ -76,7 +76,7 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
         }
     }
 
-    pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
+    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
         self
     }
@@ -141,7 +141,7 @@ impl<T: Account> SubmitResponseMultiple<T> {
         }
     }
 
-    pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
+    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
         self
     }

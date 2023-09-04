@@ -46,7 +46,7 @@ pub enum Backoff {
         let response = contract_instance
             .methods()
             .initialize_counter(42)
-            .retry_config(retry_config)
+            .with_retry_config(retry_config)
             .submit()
             .await?;
 ```
@@ -57,5 +57,5 @@ In this step, we use the `response` obtained from the previous step to retrieve 
 
 ```rust, ignore
         let retry_config = RetryConfig::new(5, Backoff::default());
-        let value = response.retry_config(retry_config).value().await?;
+        let value = response.with_retry_config(retry_config).value().await?;
 ```

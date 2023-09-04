@@ -505,7 +505,7 @@ where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
 {
-    pub fn retry_config(mut self, retry_config: RetryConfig) -> Self {
+    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.retry_config = retry_config;
         self
     }
@@ -852,7 +852,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         }
     }
 
-    pub fn retry_config(mut self, retry_options: RetryConfig) -> Self {
+    pub fn with_retry_config(mut self, retry_options: RetryConfig) -> Self {
         self.retry_config = retry_options;
         self
     }
