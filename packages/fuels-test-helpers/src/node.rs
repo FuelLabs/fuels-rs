@@ -13,21 +13,18 @@ use fuel_core_client::client::FuelClient;
 use fuel_types::{BlockHeight, Word};
 use fuels_core::{
     constants::WORD_SIZE,
-    types::{coin::Coin, errors::Error, message::Message},
+    types::{coin::Coin, message::Message},
 };
-use portpicker::{is_free, pick_unused_port};
+use portpicker::pick_unused_port;
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_json::Value;
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
-use tokio::{process::Command, sync::oneshot};
+use tokio::process::Command;
 
 use fuels_core::types::errors::Result as FuelResult;
-
-use fuel_core_services::Service as ServiceTrait;
-use fuel_core_services::State;
-use fuel_core_services::StateWatcher;
 use tokio::task::JoinHandle;
+
 
 use crate::utils::{into_coin_configs, into_message_configs};
 // Set the cache for tests to 10MB, which is the default size in `fuel-core`.
@@ -387,82 +384,4 @@ pub async fn server_health_check(client: &FuelClient) -> FuelResult<()>{
 pub fn get_socket_address() -> SocketAddr {
     let free_port = pick_unused_port().expect("No ports free");
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
-}
-
-pub struct FuelService {
-    pub bound_address: SocketAddr,
-    pub join_handle: JoinHandle<()>
-    // runner: ServiceRunner<Task>,
-
-}
-
-impl FuelService {
-    pub async fn new_node(config: Config) -> FuelResult<Self> {
-        let requested_port = config.addr.port();
-
-        let bound_address = if requested_port == 0 {
-            get_socket_address()
-        } else if is_free(requested_port) {
-            config.addr
-        } else {
-            return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()));
-        };
-
-        let join_handle = new_fuel_node(
-            vec![],
-            vec![],
-            Config {
-                addr: bound_address,
-                ..config
-            },
-            None,
-        )
-        .await?;
-
-        Ok(FuelService { bound_address, join_handle })
-    }
-}
-
-#[async_trait::async_trait]
-impl ServiceTrait for FuelService {
-    fn start(&self) -> anyhow::Result<()> {
-        unimplemented!()
-        // self.runner.start()
-    }
-
-    async fn start_and_await(&self) -> anyhow::Result<State> {
-        unimplemented!()
-        // self.runner.start_and_await().await
-    }
-
-    async fn await_start_or_stop(&self) -> anyhow::Result<State> {
-        unimplemented!()
-
-        // self.runner.await_start_or_stop().await
-    }
-
-    fn stop(&self) -> bool {
-        unimplemented!()
-        // self.runner.stop()
-    }
-
-    async fn stop_and_await(&self) -> anyhow::Result<State> {
-        unimplemented!()
-        // self.runner.stop_and_await().await
-    }
-
-    async fn await_stop(&self) -> anyhow::Result<State> {
-        unimplemented!()
-        // self.runner.await_stop().await
-    }
-
-    fn state(&self) -> State {
-        unimplemented!()
-        // self.runner.state()
-    }
-
-    fn state_watcher(&self) -> StateWatcher {
-        unimplemented!()
-        // self.runner.state_watcher()
-    }
 }

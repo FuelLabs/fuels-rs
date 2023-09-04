@@ -41,6 +41,9 @@ pub use wallets_config::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod node;
 
+#[cfg(not(feature = "fuel-core-lib"))]
+pub mod fuel_service;
+
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
 mod utils;
