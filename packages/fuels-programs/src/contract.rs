@@ -393,7 +393,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
@@ -454,7 +454,7 @@ impl ContractCall {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
 pub struct ContractCallHandler<T: Account, D> {
@@ -466,38 +466,6 @@ pub struct ContractCallHandler<T: Account, D> {
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
     pub retry_config: RetryConfig,
-}
-
-// Implement Clone for ContractCallHandler once all types are provided.
-impl<T: Account, D> Clone for ContractCallHandler<T, D> {
-    fn clone(&self) -> Self {
-        ContractCallHandler {
-            contract_call: self.contract_call.clone(),
-            tx_parameters: self.tx_parameters,
-            cached_tx_id: self.cached_tx_id,
-            account: self.account.clone(),
-            datatype: self.datatype,
-            log_decoder: self.log_decoder.clone(),
-            retry_config: self.retry_config.clone(),
-        }
-    }
-}
-
-impl Clone for ContractCall {
-    fn clone(&self) -> Self {
-        ContractCall {
-            contract_id: self.contract_id.clone(),
-            encoded_args: self.encoded_args.clone(),
-            encoded_selector: self.encoded_selector,
-            call_parameters: self.call_parameters.clone(),
-            compute_custom_input_offset: self.compute_custom_input_offset,
-            variable_outputs: self.variable_outputs.clone(),
-            external_contracts: self.external_contracts.clone(),
-            output_param: self.output_param.clone(),
-            is_payable: self.is_payable,
-            custom_assets: self.custom_assets.clone(),
-        }
-    }
 }
 
 impl<T, D> ContractCallHandler<T, D>
@@ -812,7 +780,7 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         })
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
 pub struct MultiContractCallHandler<T: Account> {
@@ -823,19 +791,6 @@ pub struct MultiContractCallHandler<T: Account> {
     cached_tx_id: Option<Bytes32>,
     pub account: T,
     pub retry_config: RetryConfig,
-}
-
-impl<T: Account> Clone for MultiContractCallHandler<T> {
-    fn clone(&self) -> Self {
-        MultiContractCallHandler {
-            contract_calls: self.contract_calls.clone(),
-            log_decoder: self.log_decoder.clone(),
-            tx_parameters: self.tx_parameters,
-            cached_tx_id: self.cached_tx_id,
-            account: self.account.clone(),
-            retry_config: self.retry_config.clone(),
-        }
-    }
 }
 
 impl<T: Account> MultiContractCallHandler<T> {

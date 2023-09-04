@@ -32,7 +32,7 @@ use fuels_core::{
 use itertools::chain;
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
@@ -41,19 +41,6 @@ pub struct ScriptCall {
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub variable_outputs: Vec<Output>,
-}
-
-impl Clone for ScriptCall {
-    fn clone(&self) -> Self {
-        ScriptCall {
-            script_binary: self.script_binary.clone(),
-            encoded_args: self.encoded_args.clone(),
-            inputs: self.inputs.clone(),
-            outputs: self.outputs.clone(),
-            external_contracts: self.external_contracts.clone(),
-            variable_outputs: self.variable_outputs.clone(),
-        }
-    }
 }
 
 impl ScriptCall {
