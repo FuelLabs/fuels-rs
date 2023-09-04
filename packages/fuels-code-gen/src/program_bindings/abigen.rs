@@ -54,10 +54,10 @@ impl Abigen {
     }
     fn wasm_paths_hotfix(code: &TokenStream) -> TokenStream {
         [
-            (r#"::\s*std\s*::\s*string"#, "::alloc::string"),
-            (r#"::\s*std\s*::\s*format"#, "::alloc::format"),
-            (r#"::\s*std\s*::\s*vec"#, "::alloc::vec"),
-            (r#"::\s*std\s*::\s*boxed"#, "::alloc::boxed"),
+            (r"::\s*std\s*::\s*string", "::alloc::string"),
+            (r"::\s*std\s*::\s*format", "::alloc::format"),
+            (r"::\s*std\s*::\s*vec", "::alloc::vec"),
+            (r"::\s*std\s*::\s*boxed", "::alloc::boxed"),
         ]
         .map(|(reg_expr_str, substitute)| (Regex::new(reg_expr_str).unwrap(), substitute))
         .into_iter()

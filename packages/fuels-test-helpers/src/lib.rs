@@ -11,12 +11,10 @@ pub use fuel_core::service::DbType;
 use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::{config::Trigger, Config};
-use fuel_core_chain_config::ChainConfig;
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core_chain_config::StateConfig;
+use fuel_core_chain_config::{ChainConfig, StateConfig};
 #[cfg(feature = "fuel-core-lib")]
 use fuels_core::error;
-
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
@@ -69,7 +67,7 @@ pub fn setup_multiple_assets_coins(
                 .expect("failed to fill with random data");
             random_asset_id
         })
-        .chain([BASE_ASSET_ID].into_iter())
+        .chain([BASE_ASSET_ID])
         .collect::<Vec<AssetId>>();
 
     let coins = asset_ids

@@ -1,9 +1,11 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::Bits256;
     use fuels::{
         prelude::Result,
-        types::transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        types::{
+            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+            Bits256,
+        },
     };
 
     #[tokio::test]
