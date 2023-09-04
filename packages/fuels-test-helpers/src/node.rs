@@ -392,6 +392,7 @@ pub fn get_socket_address() -> SocketAddr {
 pub struct FuelService {
     pub bound_address: SocketAddr,
     pub join_handle: JoinHandle<()>
+    // runner: ServiceRunner<Task>,
 
 }
 

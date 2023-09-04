@@ -3,7 +3,7 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
-    async fn connect_to_fuel_node() {
+    async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
 
@@ -26,7 +26,7 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
-        let (_, addr) = setup_test_provider(vec![], vec![], None, None).await;
+        let (_, addr) = setup_test_provider(vec![], vec![], None, None).await?;
         let port = addr.port();
 
         // ANCHOR: local_node_address
@@ -34,6 +34,7 @@ mod tests {
             .await
             .unwrap();
         // ANCHOR_END: local_node_address
+        Ok(())
     }
 
     #[tokio::test]

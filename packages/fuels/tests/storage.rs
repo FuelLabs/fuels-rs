@@ -48,7 +48,7 @@ async fn test_init_storage_automatically() -> Result<()> {
         abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/storage/out/debug/storage.bin",

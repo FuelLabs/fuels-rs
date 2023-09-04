@@ -408,7 +408,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
 #[tokio::test]
 async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let wallet_config = base_asset_wallet_config(5);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
     let provider = wallets[0].try_provider()?;
 
     let mut receiver = WalletUnlocked::new_random(None);
