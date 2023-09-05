@@ -250,10 +250,7 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = self
-                .provider
-                .send_transaction_and_wait_to_commit(tx)
-                .await?;
+            let tx_id = self.provider.send_transaction_and_await(tx).await?;
             self.provider.get_receipts(&tx_id).await?
         };
 

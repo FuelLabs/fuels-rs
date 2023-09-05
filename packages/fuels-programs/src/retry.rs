@@ -160,8 +160,7 @@ where
 {
     let mut last_err = None;
     let max_attempts = retry_config.max_attempts;
-
-    for attempt in 1..max_attempts + 1 {
+    for attempt in 0..max_attempts {
         let result = action().await;
         match result.clone() {
             Ok(value) => {

@@ -144,7 +144,7 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction_and_wait_to_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn send_transaction_and_await<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tx_id = self.send_transaction(tx.clone()).await?;
         self.client.await_transaction_commit(&tx_id).await?;
 
@@ -218,20 +218,6 @@ impl Provider {
         Ok(receipts)
     }
 
-    #[allow(dead_code)]
-    async fn submit_and_wait_to_commit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
-        let tx_id = self.client.submit(&tx.into()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
-
-        Ok(tx_id)
-    }
-
-    #[allow(dead_code)]
-    async fn submit(&self, tx: impl Transaction) -> ProviderResult<TxId> {
-        let tx_id = self.client.submit(&tx.into()).await?;
-        Ok(tx_id)
-    }
-
     #[cfg(feature = "fuel-core-lib")]
     /// Launches a local `fuel-core` network based on provided config.
     pub async fn launch(config: Config) -> Result<FuelClient> {
@@ -291,7 +277,7 @@ impl Provider {
     }
 
     pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run(&tx.clone().into()).await?;
+        let receipts = self.client.dry_run(&tx.into()).await?;
 
         Ok(receipts)
     }

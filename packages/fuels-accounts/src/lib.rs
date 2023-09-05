@@ -207,7 +207,7 @@ pub trait Account: ViewOnlyAccount {
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
 
-        let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
+        let tx_id = provider.send_transaction_and_await(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id, receipts))
@@ -271,10 +271,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
-        let tx_id = self
-            .try_provider()?
-            .send_transaction_and_wait_to_commit(tx)
-            .await?;
+        let tx_id = self.try_provider()?.send_transaction_and_await(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         Ok((tx_id.to_string(), receipts))
@@ -303,7 +300,7 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let tx = self.add_fee_resources(tb, amount).await?;
-        let tx_id = provider.send_transaction_and_wait_to_commit(tx).await?;
+        let tx_id = provider.send_transaction_and_await(tx).await?;
         let receipts = provider.get_receipts(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
