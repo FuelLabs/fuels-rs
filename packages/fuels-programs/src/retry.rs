@@ -1,7 +1,7 @@
-use std::error::Error;
 use std::future::Future;
 use std::time::Duration;
 
+use fuels_core::types::errors::Error;
 use std::fmt::Debug;
 
 /// A set of strategies to control retry intervals between attempts.
@@ -42,7 +42,7 @@ impl Default for Backoff {
 impl Backoff {
     pub fn wait_duration(&self, attempt: usize) -> Duration {
         match self {
-            Backoff::Linear(base_duration) => *base_duration * (attempt) as u32,
+            Backoff::Linear(base_duration) => *base_duration * (attempt + 1) as u32,
             Backoff::Exponential(base_duration) => {
                 *base_duration * (2_usize.pow((attempt) as u32)) as u32
             }
@@ -155,32 +155,32 @@ pub async fn retry<Fut, T, K, ShouldRetry>(
 where
     T: Clone + Debug,
     Fut: Future<Output = Result<T, K>>,
-    K: Clone + Error + 'static,
+    K: Clone + 'static + From<Error>,
     ShouldRetry: Fn(&Result<T, K>) -> bool,
 {
     let mut last_err = None;
-    let max_attempts = retry_config.max_attempts;
-    for attempt in 0..max_attempts {
+
+    for attempt in 0..retry_config.max_attempts {
         let result = action().await;
         match result.clone() {
-            Ok(value) => {
-                if !should_retry(&result) {
-                    return Ok(value);
-                }
-            }
-            Err(error) => {
-                if should_retry(&result) {
-                    last_err = Some(error);
-                } else {
-                    return Err(error);
-                }
-            }
+            Ok(value) if !should_retry(&result) => return Ok(value),
+            Err(error) if should_retry(&result) => last_err = Some(error.clone()),
+            Err(error) => return Err(error),
+            _ => (),
         }
 
         tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
     }
 
-    Err(last_err.expect("Retry must have failed"))
+    last_err.map_or_else(
+        || {
+            Err(
+                Error::InvalidData("Please check if max_attempts is greater than 0.".to_string())
+                    .into(),
+            )
+        },
+        Err,
+    )
 }
 
 #[cfg(test)]
@@ -192,6 +192,25 @@ mod tests {
         use std::str::FromStr;
         use std::time::{Duration, Instant};
         use tokio::sync::Mutex;
+
+        #[tokio::test]
+        async fn gives_up_when_max_attempts_is_zero() -> anyhow::Result<()> {
+            let will_always_fail = || async { Ok(()) };
+
+            let should_retry_fn = |_res: &_| -> bool { true };
+
+            let retry_options = RetryConfig::new(0, Backoff::Linear(Duration::from_millis(10)));
+
+            let err = retry(will_always_fail, &retry_options, should_retry_fn)
+                .await
+                .expect_err("Should fail");
+
+            assert!(
+                matches!(err, Error::InvalidData(str) if str.starts_with("Please check if max_attempts is greater than 0."))
+            );
+
+            Ok(())
+        }
 
         #[tokio::test]
         async fn gives_up_after_max_attempts() -> anyhow::Result<()> {
@@ -390,7 +409,7 @@ mod tests {
                 .enumerate()
                 .all(|(attempt, (current_timestamp, the_next_timestamp))| {
                     the_next_timestamp.duration_since(*current_timestamp)
-                        >= (Duration::from_millis(100) * attempt as u32)
+                        >= (Duration::from_millis(100) * (attempt + 1) as u32)
                 });
 
             assert!(

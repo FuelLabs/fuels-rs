@@ -82,10 +82,6 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     }
 
     pub async fn value(self) -> Result<D> {
-        self.process_value().await
-    }
-
-    async fn process_value(self) -> Result<D> {
         let provider = self.call_handler.try_provider()?;
 
         let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
@@ -147,10 +143,6 @@ impl<T: Account> SubmitResponseMultiple<T> {
     }
 
     pub async fn value<D: Tokenizable + Debug>(self) -> errors::Result<D> {
-        self.process_value().await
-    }
-
-    async fn process_value<D: Tokenizable + Debug>(self) -> errors::Result<D> {
         let provider = self.call_handler.account.try_provider()?;
 
         let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
