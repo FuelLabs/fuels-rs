@@ -4,7 +4,7 @@ use fuel_abi_types::{
     abi::program::{TypeApplication, TypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
-use itertools::chain;
+use itertools::{chain, Itertools};
 
 use crate::{
     constants::WORD_SIZE,
@@ -69,8 +69,8 @@ impl ParamType {
         param_type: &ParamType,
         available_bytes: usize,
     ) -> Result<usize> {
-        let memory_size = param_type
-            .compute_encoding_width()
+        let width = param_type.compute_encoding_width()?;
+        let memory_size = width
             .checked_mul(WORD_SIZE)
             .ok_or_else(|| error!(InvalidData, "overflow while calculating memory_size"))?;
         let remainder = available_bytes
@@ -132,19 +132,23 @@ impl ParamType {
     }
 
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
-    pub fn heap_inner_element_size(&self) -> Option<usize> {
+    pub fn heap_inner_element_size(&self) -> Result<Option<usize>> {
         match &self {
             ParamType::Vector(inner_param_type) => {
-                Some(inner_param_type.compute_encoding_width() * WORD_SIZE)
+                let width = inner_param_type.compute_encoding_width()?;
+                width
+                    .checked_mul(WORD_SIZE)
+                    .map(Some)
+                    .ok_or_else(|| error!(InvalidData, "overflow while multiplying"))
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
-            _ => None,
+            ParamType::Bytes | ParamType::String => Ok(Some(std::mem::size_of::<u8>())),
+            _ => Ok(None),
         }
     }
 
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
-    pub fn compute_encoding_width(&self) -> usize {
+    pub fn compute_encoding_width(&self) -> Result<usize> {
         const fn count_words(bytes: usize) -> usize {
             let q = bytes / WORD_SIZE;
             let r = bytes % WORD_SIZE;
@@ -160,18 +164,29 @@ impl ParamType {
             | ParamType::U16
             | ParamType::U32
             | ParamType::U64
-            | ParamType::Bool => 1,
-            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => 2,
-            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => 3,
-            ParamType::U256 | ParamType::B256 => 4,
-            ParamType::Array(param, count) => param.compute_encoding_width() * count,
-            ParamType::StringArray(len) => count_words(*len),
+            | ParamType::Bool => Ok(1),
+            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Ok(2),
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Ok(3),
+            ParamType::U256 | ParamType::B256 => Ok(4),
+            ParamType::Array(param, count) => param
+                .compute_encoding_width()?
+                .checked_mul(*count)
+                .ok_or_else(|| {
+                    error!(
+                        InvalidData,
+                        "overflow while calculating encoding width for Array({param:?}, {count})"
+                    )
+                }),
+            ParamType::StringArray(len) => Ok(count_words(*len)),
             ParamType::Struct { fields, .. } => fields
                 .iter()
                 .map(|param_type| param_type.compute_encoding_width())
-                .sum(),
+                .process_results(|iter| iter.sum()),
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
-            ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
+            ParamType::Tuple(params) => params
+                .iter()
+                .map(|param_type| param_type.compute_encoding_width())
+                .process_results(|iter| iter.sum()),
         }
     }
 
@@ -522,7 +537,7 @@ mod tests {
         const NUM_ELEMENTS: usize = 11;
         let param = ParamType::Array(Box::new(ParamType::B256), NUM_ELEMENTS);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         let expected = NUM_ELEMENTS * WIDTH_OF_B256;
         assert_eq!(expected, width);
@@ -533,7 +548,7 @@ mod tests {
         const NUM_ASCII_CHARS: usize = 9;
         let param = ParamType::StringArray(NUM_ASCII_CHARS);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         // 2 WORDS or 16 B are enough to fit 9 ascii chars
         assert_eq!(2, width);
@@ -551,7 +566,7 @@ mod tests {
             generics: vec![],
         };
 
-        let width = a_struct.compute_encoding_width();
+        let width = a_struct.compute_encoding_width().unwrap();
 
         const INNER_STRUCT_WIDTH: usize = WIDTH_OF_U32 * 2;
         const EXPECTED_WIDTH: usize = WIDTH_OF_B256 + WIDTH_OF_BOOL + INNER_STRUCT_WIDTH;
@@ -571,7 +586,7 @@ mod tests {
             generics: vec![],
         };
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         const INNER_STRUCT_SIZE: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = INNER_STRUCT_SIZE + 1;
@@ -584,7 +599,7 @@ mod tests {
         let inner_tuple = ParamType::Tuple(vec![ParamType::B256]);
         let param = ParamType::Tuple(vec![ParamType::U32, inner_tuple]);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         const INNER_TUPLE_WIDTH: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = WIDTH_OF_U32 + INNER_TUPLE_WIDTH;

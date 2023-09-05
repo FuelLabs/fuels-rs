@@ -106,13 +106,13 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.try_provider()?.consensus_parameters();
 
-    let calls_instructions_len = compute_calls_instructions_len(calls);
+    let calls_instructions_len = compute_calls_instructions_len(calls)?;
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
 
-    let script = get_instructions(calls, call_param_offsets);
+    let script = get_instructions(calls, call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
@@ -142,7 +142,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
-fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
+fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
     let n_heap_type_calls = calls
         .iter()
         .filter(|c| c.output_param.is_vm_heap_type())
@@ -153,17 +153,17 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
         // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
         // the calling script doesn't depend on the underlying type, just on whether or not the
         // contract call output type is a heap type.
-        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
+        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64)?.len()
             * n_stack_type_calls;
 
     let total_instructions_len_heap_data = get_single_call_instructions(
         &CallOpcodeParamsOffset::default(),
         &ParamType::Vector(Box::from(ParamType::U64)),
-    )
+    )?
     .len()
         * n_heap_type_calls;
 
-    total_instructions_len_stack_data + total_instructions_len_heap_data
+    Ok(total_instructions_len_stack_data + total_instructions_len_heap_data)
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -215,13 +215,16 @@ fn sum_up_amounts_for_each_asset_id(
 pub(crate) fn get_instructions(
     calls: &[ContractCall],
     offsets: Vec<CallOpcodeParamsOffset>,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     calls
         .iter()
         .zip(&offsets)
-        .flat_map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
-        .chain(op::ret(RegId::ONE).to_bytes())
-        .collect()
+        .map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
+        .process_results(|iter| iter.flatten().collect::<Vec<_>>())
+        .map(|mut bytes| {
+            bytes.extend(op::ret(RegId::ONE).to_bytes());
+            bytes
+        })
 }
 
 /// Returns script data, consisting of the following items in the given order:
@@ -304,7 +307,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
     output_param_type: &ParamType,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
         .try_into()
@@ -333,7 +336,7 @@ pub(crate) fn get_single_call_instructions(
     ]
     .to_vec();
     // The instructions are different if you want to return data that was on the heap
-    if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
+    if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size()? {
         instructions.extend([
             // The RET register contains the pointer address of the `CALL` return (a stack
             // address).
@@ -355,7 +358,7 @@ pub(crate) fn get_single_call_instructions(
     }
 
     #[allow(clippy::iter_cloned_collect)]
-    instructions.into_iter().collect::<Vec<u8>>()
+    Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
