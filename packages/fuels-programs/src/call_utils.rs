@@ -226,11 +226,11 @@ pub(crate) fn get_instructions(
 }
 
 /// Returns script data, consisting of the following items in the given order:
-/// 1. Asset ID to be forwarded ([`AssetId::LEN`])
-/// 2. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 4. Contract ID ([`ContractId::LEN`]);
-/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 3. Contract ID ([`ContractId::LEN`]);
+/// 4. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 5. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
 /// 7. Encoded arguments (optional) (variable length)
 pub(crate) fn build_script_data_from_contract_calls(
