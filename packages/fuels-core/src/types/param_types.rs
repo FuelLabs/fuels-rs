@@ -69,7 +69,10 @@ impl ParamType {
         param_type: &ParamType,
         available_bytes: usize,
     ) -> Result<usize> {
-        let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
+        let memory_size = param_type
+            .compute_encoding_width()
+            .checked_mul(WORD_SIZE)
+            .ok_or_else(|| error!(InvalidData, "overflow while calculating memory_size"))?;
         let remainder = available_bytes
             .checked_rem(memory_size)
             .ok_or_else(|| error!(InvalidData, "memory_size of 0"))?;
