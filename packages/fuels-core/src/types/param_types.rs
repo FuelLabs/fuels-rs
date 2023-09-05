@@ -70,14 +70,19 @@ impl ParamType {
         available_bytes: usize,
     ) -> Result<usize> {
         let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
-        let remainder = available_bytes % memory_size;
+        let remainder = available_bytes
+            .checked_rem(memory_size)
+            .ok_or_else(|| error!(InvalidData, "memory_size of 0"))?;
         if remainder != 0 {
             return Err(error!(
                 InvalidData,
                 "{remainder} extra bytes detected while decoding heap type"
             ));
         }
-        Ok(available_bytes / memory_size)
+        let num_of_elements = available_bytes
+            .checked_div(memory_size)
+            .ok_or_else(|| error!(InvalidData, "memory_size of 0"))?;
+        Ok(num_of_elements)
     }
 
     pub fn contains_nested_heap_types(&self) -> bool {
