@@ -114,23 +114,15 @@ impl RetryConfig {
 ///
 /// ```rust
 /// use std::time::Duration;
-/// use tokio::time::sleep;
-/// use std::error::Error;
-/// use thiserror::Error;
+///use fuels_core::types::errors::Error;
 ///
 /// use fuels_programs::retry::{Backoff, retry, RetryConfig};
 ///
-/// #[derive(Debug, Error, Clone)]
-/// pub enum MyError {
-///     #[error("Network error: {0}")]
-///     NetworkError(String),
-/// }
-///
-/// async fn network_request() -> Result<(), MyError> {
+/// async fn network_request() -> Result<(), Error> {
 ///     // Simulate network request here
 ///     // ...
 ///     // For demonstration purposes, always return an error
-///   Err(MyError::NetworkError("Network error".into()))
+///   Err(Error::InvalidData("Error".to_string()))
 /// }
 ///
 /// fn main() {
@@ -139,7 +131,7 @@ impl RetryConfig {
 ///         interval: Backoff::Linear(Duration::from_secs(1)),
 ///     };
 ///
-///     let should_retry = |result: &Result<(), MyError>| {
+///     let should_retry = |result: &Result<(), Error>| {
 ///         // Retry if the error is retryable
 ///         result.is_err()
 ///     };
