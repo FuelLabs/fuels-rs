@@ -10,15 +10,12 @@ use fuel_tx::{
 };
 use fuel_types::ChainId;
 
-use crate::{
-    constants::{DEFAULT_GAS_LIMIT, DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    types::Result,
-};
+use crate::types::Result;
 
 #[derive(Debug, Copy, Clone)]
 pub struct TxParameters {
-    gas_price: u64,
-    gas_limit: u64,
+    gas_price: Option<u64>,
+    gas_limit: Option<u64>,
     maturity: u32,
 }
 
@@ -36,7 +33,7 @@ macro_rules! impl_setter_getter {
 }
 
 impl TxParameters {
-    pub fn new(gas_price: u64, gas_limit: u64, maturity: u32) -> Self {
+    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, maturity: u32) -> Self {
         Self {
             gas_price,
             gas_limit,
@@ -44,18 +41,17 @@ impl TxParameters {
         }
     }
 
-    impl_setter_getter!(with_gas_price, gas_price, u64);
-    impl_setter_getter!(with_gas_limit, gas_limit, u64);
+    impl_setter_getter!(with_gas_price, gas_price, Option<u64>);
+    impl_setter_getter!(with_gas_limit, gas_limit, Option<u64>);
     impl_setter_getter!(with_maturity, maturity, u32);
 }
 
 impl Default for TxParameters {
     fn default() -> Self {
         Self {
-            gas_price: DEFAULT_GAS_PRICE,
-            gas_limit: DEFAULT_GAS_LIMIT,
-            // By default, transaction is immediately valid
-            maturity: DEFAULT_MATURITY,
+            gas_price: None,
+            gas_limit: None,
+            maturity: Default::default(),
         }
     }
 }
@@ -92,8 +88,6 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
     fn gas_limit(&self) -> u64;
 
     fn with_gas_limit(self, gas_limit: u64) -> Self;
-
-    fn with_tx_params(self, tx_params: TxParameters) -> Self;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -188,13 +182,6 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
             TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
-        }
-    }
-
-    fn with_tx_params(self, tx_params: TxParameters) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_tx_params(tx_params)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_tx_params(tx_params)),
         }
     }
 
@@ -306,12 +293,6 @@ macro_rules! impl_tx_wrapper {
             fn with_gas_limit(mut self, gas_limit: u64) -> Self {
                 *self.tx.gas_limit_mut() = gas_limit;
                 self
-            }
-
-            fn with_tx_params(self, tx_params: TxParameters) -> Self {
-                self.with_gas_limit(tx_params.gas_limit)
-                    .with_gas_price(tx_params.gas_price)
-                    .with_maturity(tx_params.maturity)
             }
 
             fn metered_bytes_size(&self) -> usize {

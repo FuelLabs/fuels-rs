@@ -151,8 +151,8 @@ mod tests {
 
         // Optional: Configure deployment parameters
         let tx_parameters = TxParameters::default()
-            .with_gas_price(0)
-            .with_gas_limit(1_000_000)
+            .with_gas_price(Some(0))
+            .with_gas_limit(Some(1_000_000))
             .with_maturity(0);
 
         let contract_id_2 = Contract::load_from(
@@ -226,7 +226,7 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42)
-            .tx_params(TxParameters::default().with_gas_limit(1_000_000))
+            .tx_params(TxParameters::default().with_gas_limit(Some(1_000_000)))
             .call()
             .await?;
 
@@ -245,7 +245,7 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxParameters::default().with_gas_limit(1_000_000))
+            .tx_params(TxParameters::default().with_gas_limit(Some(1_000_000)))
             .call()
             .await?;
 
@@ -276,8 +276,8 @@ mod tests {
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let my_tx_parameters = TxParameters::default()
-            .with_gas_price(1)
-            .with_gas_limit(1_000_000)
+            .with_gas_price(Some(1))
+            .with_gas_limit(Some(1_000_000))
             .with_maturity(0);
 
         let response = contract_methods
@@ -538,7 +538,7 @@ mod tests {
         // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxParameters::default().with_gas_limit(1_000_000);
+        let tx_params = TxParameters::default().with_gas_limit(Some(1_000_000));
         let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
