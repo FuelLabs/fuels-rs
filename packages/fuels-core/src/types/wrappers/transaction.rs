@@ -12,7 +12,7 @@ use fuel_types::ChainId;
 
 use crate::types::Result;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
     gas_price: Option<u64>,
     gas_limit: Option<u64>,
@@ -46,15 +46,6 @@ impl TxParameters {
     impl_setter_getter!(with_maturity, maturity, u32);
 }
 
-impl Default for TxParameters {
-    fn default() -> Self {
-        Self {
-            gas_price: None,
-            gas_limit: None,
-            maturity: Default::default(),
-        }
-    }
-}
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
 #[derive(Debug, Clone)]
