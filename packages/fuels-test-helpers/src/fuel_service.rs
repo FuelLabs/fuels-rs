@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
+use std::thread::JoinHandle;
 use fuels_core::types::errors::{Error, Result as FuelResult};
 use portpicker::is_free;
-use tokio::task::JoinHandle;
 
 use fuel_core_services::Service as ServiceTrait;
 use fuel_core_services::State;
@@ -13,45 +13,20 @@ use crate::node::Config;
 use crate::node;
 
 pub type SubServices = Vec<Box<dyn ServiceTrait + Send + Sync + 'static>>;
+pub struct GraphqlService {
+    bound_address: SocketAddr,
+}
 
 #[derive(Clone)]
 pub struct SharedState {
-    // The transaction pool shared state.
-    // pub txpool: fuel_core_txpool::service::SharedState<P2PAdapter, Database>,
-    // The P2P network shared state.
-    // #[cfg(feature = "p2p")]
-    // pub network: Option<fuel_core_p2p::service::SharedState>,
-    // #[cfg(feature = "relayer")]
-    // The Relayer shared state.
-    // pub relayer: Option<fuel_core_relayer::SharedState<Database>>,
-    // The GraphQL shared state.
-    // pub graph_ql: crate::fuel_core_graphql_api::service::SharedState,
-    // The underlying database.
-    // pub database: Database,
-    // Subscribe to new block production.
-    // pub block_importer: BlockImporterAdapter,
-    // The config of the service.
     pub config: Config,
 }
 
 pub struct Task {
     /// The list of started sub services.
     services: SubServices,
-    // The address bound by the system for serving the API
+    /// The address bound by the system for serving the API
     pub shared: SharedState,
-}
-
-impl Task {
-    /// Private inner method for initializing the fuel service task
-    pub fn new(config: Config) -> anyhow::Result<Task> {
-        let services =
-        Ok(Task { services, shared: SharedState { config } })
-    }
-
-    #[cfg(test)]
-    pub fn sub_services(&mut self) -> &mut SubServices {
-        &mut self.services
-    }
 }
 
 #[async_trait::async_trait]
@@ -70,21 +45,21 @@ impl RunnableService for Task {
         _: &StateWatcher,
         _: Self::TaskParams,
     ) -> anyhow::Result<Self::Task> {
-        for service in &self.services {
-            service.start_and_await().await?;
-        }
         Ok(self)
     }
 }
 
 pub struct FuelService {
     pub bound_address: SocketAddr,
-    // pub runner: JoinHandle<()>
+    // pub runner: JoinHandle<()>,
     runner: ServiceRunner<Task>,
 }
 
 impl FuelService {
+
+
     pub async fn new_node(config: Config) -> FuelResult<Self> {
+
         let requested_port = config.addr.port();
 
         let bound_address = if requested_port == 0 {
@@ -109,6 +84,66 @@ impl FuelService {
         Ok(FuelService { bound_address, runner: ServiceRunner::new(join_handle) })
     }
 }
+
+pub type Shared<T> = std::sync::Arc<T>;
+use tokio::sync::watch;
+
+// #[tracing::instrument(skip_all, fields(service = S::NAME))]
+/// Initialize the background loop as a spawned task.
+fn initialize_loop<S>(
+    service: S,
+    params: S::TaskParams,
+    // metric: ServiceLifecycle,
+) -> Shared<watch::Sender<State>>
+    where
+        S: RunnableService + 'static,
+{
+    let (sender, _) = watch::channel(State::NotStarted);
+    let state = Shared::new(sender);
+    let stop_sender = state.clone();
+    // Spawned as a task to check if the service is already running and to capture any panics.
+    tokio::task::spawn(
+        async move {
+        //     tracing::debug!("running");
+        //     let run = std::panic::AssertUnwindSafe(run(
+        //         service,
+        //         stop_sender.clone(),
+        //         params,
+        //         metric,
+        //     ));
+        //     tracing::debug!("awaiting run");
+        //     let result = run.catch_unwind().await;
+        //
+        //     let stopped_state = if let Err(e) = result {
+        //         let panic_information = panic_to_string(e);
+        //         State::StoppedWithError(panic_information)
+        //     } else {
+        //         State::Stopped
+        //     };
+        //
+        //     tracing::debug!("shutting down {:?}", stopped_state);
+        //
+        //     let _ = stop_sender.send_if_modified(|state| {
+        //         if !state.stopped() {
+        //             *state = stopped_state.clone();
+        //             tracing::debug!("Wasn't stopped, so sent stop.");
+        //             true
+        //         } else {
+        //             tracing::debug!("Was already stopped.");
+        //             false
+        //         }
+        //     });
+        //
+        //     if let State::StoppedWithError(err) = stopped_state {
+        //         std::panic::resume_unwind(Box::new(err));
+        //     }
+        // }
+            .in_current_span(),
+    );
+    state
+}
+
+
 
 #[async_trait::async_trait]
 impl ServiceTrait for FuelService {
