@@ -15,16 +15,12 @@ You can configure these parameters by creating an instance of `TxParameters` and
 {{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}
 ```
 
+Notice that `gas_limit` and `gas_price` are optional. If these parameters are not provided, the SDK will retrieve them from the network consensus parameters.
+
 <!-- This section should explain how to use the defauly tx params -->
 <!-- tx_params_default:example:start -->
 You can also use `TxParameters::default()` to use the default values:
 <!-- tx_params_default:example:end -->
-
-```rust,ignore
-{{#include ../../../packages/fuels-core/src/utils/constants.rs:default_tx_parameters}}
-```
-
-This way:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:tx_parameters_default}}
