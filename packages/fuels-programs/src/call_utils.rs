@@ -247,18 +247,26 @@ pub(crate) fn build_script_data_from_contract_calls(
         let gas_forwarded = call.call_parameters.gas_forwarded();
 
         let call_param_offsets = CallOpcodeParamsOffset {
-            gas_forwarded_offset: gas_forwarded.map(|_| segment_offset),
-            amount_offset: segment_offset + WORD_SIZE,
-            asset_id_offset: segment_offset + 2 * WORD_SIZE,
-            call_data_offset: segment_offset + 2 * WORD_SIZE + AssetId::LEN,
+            amount_offset: segment_offset,
+            asset_id_offset: segment_offset + WORD_SIZE,
+            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN,
+            gas_forwarded_offset: gas_forwarded
+                .map(|_| segment_offset + WORD_SIZE + AssetId::LEN + ContractId::LEN + WORD_SIZE),
         };
         param_offsets.push(call_param_offsets);
 
-        script_data.extend(gas_forwarded.unwrap_or_default().to_be_bytes());
         script_data.extend(call.call_parameters.amount().to_be_bytes());
         script_data.extend(call.call_parameters.asset_id().iter());
         script_data.extend(call.contract_id.hash().as_ref());
         script_data.extend(call.encoded_selector);
+
+        let gas_forwarded_size = gas_forwarded
+            .map(|gf| {
+                script_data.extend(gf.to_be_bytes());
+
+                WORD_SIZE
+            })
+            .unwrap_or_default();
 
         // If the method call takes custom inputs or has more than
         // one argument, we need to calculate the `call_data_offset`,
@@ -267,9 +275,15 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_args_start_offset = if call.compute_custom_input_offset {
             // Custom inputs are stored after the previously added parameters,
             // including custom_input_offset
-            let custom_input_offset =
-                segment_offset + 2 * WORD_SIZE + AssetId::LEN + ContractId::LEN + 2 * WORD_SIZE;
+            let custom_input_offset = segment_offset
+                + WORD_SIZE // amount size
+                + AssetId::LEN
+                + ContractId::LEN
+                + WORD_SIZE // encoded_selector size
+                + gas_forwarded_size
+                + WORD_SIZE; // custom_input_offset size
             script_data.extend((custom_input_offset as Word).to_be_bytes());
+
             custom_input_offset
         } else {
             segment_offset
@@ -556,6 +570,7 @@ mod test {
     async fn test_script_data() {
         // Arrange
         const SELECTOR_LEN: usize = WORD_SIZE;
+        const GAS_FORWARDED_SIZE: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
@@ -624,16 +639,19 @@ mod test {
         }
 
         // Calls 1 and 3 have their input arguments after the selector
-        let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_1_arg_offset =
+            param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(call_1_arg, args[0].resolve(0));
 
-        let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_3_arg_offset =
+            param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(call_3_arg, args[2].resolve(0));
 
         // Call 2 has custom inputs and custom_input_offset
-        let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_2_arg_offset =
+            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let custom_input_offset =
             script_data[call_2_arg_offset..call_2_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(
@@ -641,8 +659,11 @@ mod test {
             (call_2_arg_offset + WORD_SIZE).to_be_bytes()
         );
 
-        let custom_input_offset =
-            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
+        let custom_input_offset = param_offsets[1].call_data_offset
+            + ContractId::LEN
+            + SELECTOR_LEN
+            + GAS_FORWARDED_SIZE
+            + WORD_SIZE;
         let custom_input =
             script_data[custom_input_offset..custom_input_offset + WORD_SIZE].to_vec();
         assert_eq!(custom_input, args[1].resolve(0));
