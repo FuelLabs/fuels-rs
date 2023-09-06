@@ -194,7 +194,7 @@ mod tests {
                 let msg = err_msgs[*number_of_attempts.lock().await];
                 *number_of_attempts.lock().await += 1;
 
-                Result::<(), _>::Err(Error::InvalidData(msg.to_string()))
+                Result::<()>::Err(Error::InvalidData(msg.to_string()))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
