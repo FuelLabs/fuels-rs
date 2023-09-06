@@ -207,8 +207,8 @@ mod tests {
 
         let value = response.value().await?;
 
-        assert_eq!(42, value);
         // ANCHOR_END: submit_response_contract
+        assert_eq!(42, value);
 
         Ok(())
     }
