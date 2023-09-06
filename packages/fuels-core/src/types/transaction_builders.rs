@@ -232,15 +232,8 @@ impl ScriptTransactionBuilder {
         num_witnesses: u8,
         consensus_parameters: &ConsensusParameters,
     ) -> Result<Script> {
-        let gas_limit = match self.gas_limit {
-            Some(limit) => limit,
-            None => consensus_parameters.max_gas_per_tx,
-        };
-
-        let gas_price = match self.gas_price {
-            Some(price) => price,
-            None => consensus_parameters.gas_per_byte,
-        };
+        let gas_limit = self.get_gas_limit_if_needed(consensus_parameters);
+        let gas_price = self.get_gas_price_if_needed(consensus_parameters);
 
         let mut tx = FuelTransaction::script(
             gas_price,
@@ -265,6 +258,20 @@ impl ScriptTransactionBuilder {
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
+    }
+
+    fn get_gas_limit_if_needed(&self, consensus_parameters: &ConsensusParameters) -> u64 {
+        match self.gas_limit {
+            Some(limit) => limit,
+            None => consensus_parameters.max_gas_per_tx,
+        }
+    }
+
+    fn get_gas_price_if_needed(&self, consensus_parameters: &ConsensusParameters) -> u64 {
+        match self.gas_price {
+            Some(price) => price,
+            None => consensus_parameters.gas_per_byte,
+        }
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {

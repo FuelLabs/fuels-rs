@@ -109,16 +109,11 @@ pub(crate) async fn build_tx_from_contract_calls(
     let calls_instructions_len = compute_calls_instructions_len(calls);
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
-    let (gas_limit, tx_parameters) = match tx_parameters.gas_limit() {
-        Some(limit) => (limit, tx_parameters),
-        None => {
-            let limit = consensus_parameters.max_gas_per_tx;
-            (limit, tx_parameters.with_gas_limit(Some(limit)))
-        }
-    };
-
-    let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, gas_limit);
+    let (script_data, call_param_offsets) = build_script_data_from_contract_calls(
+        calls,
+        data_offset,
+        tx_parameters.gas_limit().unwrap_or_default(),
+    );
 
     let script = get_instructions(calls, call_param_offsets);
 
