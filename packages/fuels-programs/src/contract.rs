@@ -589,16 +589,14 @@ where
 
         let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
 
-        self.cached_tx_id = Some(if self.retry_config.max_attempts != 0 {
+        self.cached_tx_id = Some(
             retry(
                 || async { provider.send_transaction(tx.clone()).await },
                 &self.retry_config,
                 should_retry_fn,
             )
-            .await?
-        } else {
-            provider.send_transaction(tx).await?
-        });
+            .await?,
+        );
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
@@ -889,16 +887,14 @@ impl<T: Account> MultiContractCallHandler<T> {
 
         let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
 
-        self.cached_tx_id = Some(if self.retry_config.max_attempts != 0 {
+        self.cached_tx_id = Some(
             retry(
                 || async { provider.send_transaction(tx.clone()).await },
                 &self.retry_config,
                 should_retry_fn,
             )
-            .await?
-        } else {
-            provider.send_transaction(tx).await?
-        });
+            .await?,
+        );
 
         Ok(SubmitResponseMultiple::new(self.cached_tx_id, self))
     }

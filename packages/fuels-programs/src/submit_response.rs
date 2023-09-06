@@ -84,7 +84,7 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     pub async fn value(self) -> Result<D> {
         let provider = self.call_handler.try_provider()?;
 
-        let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
+        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
             match res {
                 Err(err) if matches!(err, Error::IOError(_)) => true,
                 Ok(None) => true,
@@ -92,25 +92,18 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
             }
         };
 
-        let receipts = if self.retry_config.max_attempts != 0 {
-            retry(
-                || async {
-                    provider
-                        .client
-                        .receipts(&self.tx_id.expect("tx_id is missing"))
-                        .await
-                        .map_err(|e| e.into())
-                },
-                &self.retry_config,
-                should_retry_fn,
-            )
-            .await?
-        } else {
-            provider
-                .client
-                .receipts(&self.tx_id.expect("tx_id is missing"))
-                .await?
-        };
+        let receipts = retry(
+            || async {
+                provider
+                    .client
+                    .receipts(&self.tx_id.expect("tx_id is missing"))
+                    .await
+                    .map_err(|e| e.into())
+            },
+            &self.retry_config,
+            should_retry_fn,
+        )
+        .await?;
 
         let value = self.call_handler.get_response(receipts.unwrap())?.value;
         Ok(value)
@@ -142,7 +135,7 @@ impl<T: Account> SubmitResponseMultiple<T> {
         self
     }
 
-    pub async fn value<D: Tokenizable + Debug>(self) -> errors::Result<D> {
+    pub async fn value<D: Tokenizable + Debug>(self) -> Result<D> {
         let provider = self.call_handler.account.try_provider()?;
 
         let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
@@ -153,25 +146,18 @@ impl<T: Account> SubmitResponseMultiple<T> {
             }
         };
 
-        let receipts = if self.retry_config.max_attempts != 0 {
-            retry(
-                || async {
-                    provider
-                        .client
-                        .receipts(&self.tx_id.expect("tx_id is missing"))
-                        .await
-                        .map_err(|e| e.into())
-                },
-                &self.retry_config,
-                should_retry_fn,
-            )
-            .await?
-        } else {
-            provider
-                .client
-                .receipts(&self.tx_id.expect("tx_id is missing"))
-                .await?
-        };
+        let receipts = retry(
+            || async {
+                provider
+                    .client
+                    .receipts(&self.tx_id.expect("tx_id is missing"))
+                    .await
+                    .map_err(|e| e.into())
+            },
+            &self.retry_config,
+            should_retry_fn,
+        )
+        .await?;
 
         let value = self.call_handler.get_response(receipts.unwrap())?.value;
         Ok(value)
