@@ -130,7 +130,7 @@ impl Default for RetryConfig {
 ///     // Simulate network request here
 ///     // ...
 ///     // For demonstration purposes, always return an error
-///   Err(Error::InvalidData("Error".to_string()))
+///   Err(error!(InvalidData, "Error"))
 /// }
 ///
 /// fn main() {
