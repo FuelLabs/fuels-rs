@@ -67,8 +67,8 @@ impl CallParameters {
         self.asset_id
     }
 
-    pub fn with_gas_forwarded(mut self, gas_forwarded: u64) -> Self {
-        self.gas_forwarded = Some(gas_forwarded);
+    pub fn with_gas_forwarded(mut self, gas_forwarded: Option<u64>) -> Self {
+        self.gas_forwarded = gas_forwarded;
         self
     }
 
