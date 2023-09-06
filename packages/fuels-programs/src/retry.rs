@@ -179,8 +179,7 @@ mod tests {
     mod retry_until {
         use crate::retry::{retry, Backoff, RetryConfig};
         use fuel_tx::TxId;
-        use fuels_core::error;
-        use fuels_core::types::errors::{Error, Result};
+        use fuels_core::types::errors::{error, Error, Result};
         use std::num::NonZeroUsize;
         use std::str::FromStr;
         use std::time::{Duration, Instant};
