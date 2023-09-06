@@ -168,7 +168,7 @@ where
             return result;
         }
 
-        tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
+        tokio::time::sleep(retry_config.interval.wait_duration(attempt as u32)).await;
     }
 
     last_result.expect("Should not happen")
@@ -179,14 +179,15 @@ mod tests {
     mod retry_until {
         use crate::retry::{retry, Backoff, RetryConfig};
         use fuel_tx::TxId;
-        use fuels_core::types::errors::Error;
+        use fuels_core::error;
+        use fuels_core::types::errors::{Error, Result};
         use std::num::NonZeroUsize;
         use std::str::FromStr;
         use std::time::{Duration, Instant};
         use tokio::sync::Mutex;
 
         #[tokio::test]
-        async fn returns_last_error() -> anyhow::Result<()> {
+        async fn returns_last_error() -> Result<()> {
             let err_msgs = ["Err1", "Err2", "Err3"];
             let number_of_attempts = Mutex::new(0usize);
 
@@ -217,7 +218,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn returns_value_on_success() -> anyhow::Result<()> {
+        async fn returns_value_on_success() -> Result<()> {
             let values = Mutex::new(vec![
                 Ok(String::from("Success")),
                 Err(Error::InvalidData("Err1".to_string())),
@@ -242,7 +243,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn retry_on_none_values() -> anyhow::Result<()> {
+        async fn retry_on_none_values() -> Result<()> {
             let values = Mutex::new(vec![
                 Ok::<Option<String>, Error>(Some(String::from("Success"))),
                 Ok(None),
@@ -270,7 +271,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn return_on_last_attempt() -> anyhow::Result<()> {
+        async fn return_on_last_attempt() -> Result<()> {
             let values = Mutex::new(vec![Ok::<Option<String>, Error>(None), Ok(None), Ok(None)]);
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
 
@@ -296,7 +297,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn retry_on_io_error() -> anyhow::Result<()> {
+        async fn retry_on_io_error() -> Result<()> {
             let tx_id = TxId::from_str(
                 "0x98f01c73c2062b55bba70966917a0839995e86abfadfff24534262d1c8b7a64e",
             );
@@ -328,12 +329,12 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn retry_respects_delay_between_attempts_fixed() -> anyhow::Result<()> {
+        async fn retry_respects_delay_between_attempts_fixed() -> Result<()> {
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
+                Result::<()>::Err(Error::InvalidData("Error".to_string()))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
@@ -369,12 +370,12 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn retry_respects_delay_between_attempts_linear() -> anyhow::Result<()> {
+        async fn retry_respects_delay_between_attempts_linear() -> Result<()> {
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
+                Result::<()>::Err(Error::InvalidData("Error".to_string()))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
