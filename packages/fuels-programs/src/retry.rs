@@ -416,7 +416,7 @@ mod tests {
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<(), _>::Err(Error::InvalidData("Error".to_string()))
+                Result::<()>::Err(error!(InvalidData, "Error"))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
