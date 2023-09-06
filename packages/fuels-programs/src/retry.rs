@@ -220,8 +220,8 @@ mod tests {
         async fn returns_value_on_success() -> Result<()> {
             let values = Mutex::new(vec![
                 Ok(String::from("Success")),
-                Err(Error::InvalidData("Err1".to_string())),
-                Err(Error::InvalidData("Err2".to_string())),
+                Err(error!(InvalidData, "Err1")),
+                Err(error!(InvalidData, "Err2")),
             ]);
 
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
