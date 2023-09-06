@@ -23,4 +23,4 @@ Furthermore, if you need to separate submission from value retrieval for any rea
 
 This approach enables us to use a [Retry mechanism](../retry-mechanism.md) for submitting and acquiring values.
 
-Next, we'll see how we can further configure the many different parameters in a contract call
+Next, we'll see how we can further configure the many different parameters in a contract call.
