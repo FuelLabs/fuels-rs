@@ -40,12 +40,10 @@ impl Default for Backoff {
 }
 
 impl Backoff {
-    pub fn wait_duration(&self, attempt: usize) -> Duration {
+    pub fn wait_duration(&self, attempt: u32) -> Duration {
         match self {
-            Backoff::Linear(base_duration) => *base_duration * (attempt + 1) as u32,
-            Backoff::Exponential(base_duration) => {
-                *base_duration * (2_usize.pow((attempt) as u32)) as u32
-            }
+            Backoff::Linear(base_duration) => *base_duration * (attempt + 1),
+            Backoff::Exponential(base_duration) => *base_duration * 2u32.pow(attempt),
             Backoff::Fixed(interval) => *interval,
         }
     }
