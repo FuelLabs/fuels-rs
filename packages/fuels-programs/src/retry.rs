@@ -411,7 +411,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn retry_respects_delay_between_attempts_exponential() -> anyhow::Result<()> {
+        async fn retry_respects_delay_between_attempts_exponential() -> Result<()> {
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
