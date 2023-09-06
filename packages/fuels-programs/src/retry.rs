@@ -26,12 +26,14 @@ use std::time::Duration;
 /// let exponential_backoff = Backoff::Exponential(Duration::from_secs(1));
 /// let fixed_backoff = Backoff::Fixed(Duration::from_secs(5));
 /// ```
+//ANCHOR: backoff
 #[derive(Debug, Clone)]
 pub enum Backoff {
     Linear(Duration),
     Exponential(Duration),
     Fixed(Duration),
 }
+//ANCHOR_END: backoff
 
 impl Default for Backoff {
     fn default() -> Self {
@@ -72,11 +74,13 @@ impl Backoff {
 ///
 /// let retry_config = RetryConfig::new(max_attempts, interval_strategy);
 /// ```
+// ANCHOR: retry_config
 #[derive(Clone, Debug)]
 pub struct RetryConfig {
     pub max_attempts: NonZeroUsize,
     pub interval: Backoff,
 }
+// ANCHOR_END: retry_config
 
 impl RetryConfig {
     pub fn new(max_attempts: NonZeroUsize, interval: Backoff) -> Self {
@@ -130,7 +134,8 @@ impl Default for RetryConfig {
 ///     // Simulate network request here
 ///     // ...
 ///     // For demonstration purposes, always return an error
-///   Err(error!(InvalidData, "Error"))
+///   use fuels_core::error;
+/// Err(error!(InvalidData, "Error"))
 /// }
 ///
 /// fn main() {

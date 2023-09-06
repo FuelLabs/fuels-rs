@@ -10,11 +10,7 @@ To address these scenarios, we can configure the number of retry attempts and th
 The `RetryConfig` struct encapsulates the configuration parameters for controlling the retry behavior of asynchronous actions. It includes the maximum number of attempts and the interval strategy from the `Backoff` enum that determines how much time to wait between retry attempts.
 
 ```rust, ignore
-#[derive(Clone, Debug, Default)]
-pub struct RetryConfig {
-    pub max_attempts: usize,
-    pub interval: Backoff,
-}
+{{#include ../../packages/fuels-programs/src/retry.rs:retry_config}}
 ```
 
 ## Backoff
@@ -29,12 +25,7 @@ Each strategy allows you to customize the waiting time before a new attempt base
 - `Fixed(Duration)`: Uses a constant waiting time between attempts.
 
 ```rust, ignore
-#[derive(Debug, Clone)]
-pub enum Backoff {
-    Linear(Duration),
-    Exponential(Duration),
-    Fixed(Duration),
-}
+{{#include ../../packages/fuels-programs/src/retry.rs:backoff}}
 ```
 
 ## Transaction Workflow
@@ -42,13 +33,7 @@ pub enum Backoff {
 ### Submitting transaction
 
 ```rust, ignore
-        let retry_config = RetryConfig::new(3, Backoff::default());
-        let response = contract_instance
-            .methods()
-            .initialize_counter(42)
-            .with_retry_config(retry_config)
-            .submit()
-            .await?;
+{{#include ../../examples/contracts/src/lib.rs:submit_retry}}
 ```
 
 ### Requesting values
@@ -56,6 +41,5 @@ pub enum Backoff {
 In this step, we use the `response` obtained from the previous step to retrieve the desired values.
 
 ```rust, ignore
-        let retry_config = RetryConfig::new(5, Backoff::default());
-        let value = response.with_retry_config(retry_config).value().await?;
+{{#include ../../examples/contracts/src/lib.rs:response_retry}}
 ```

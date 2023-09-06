@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+    use fuels::programs::retry::{Backoff, RetryConfig};
     use fuels::{
         prelude::{LoadConfiguration, StorageConfiguration},
         types::{
@@ -7,6 +8,7 @@ mod tests {
             Bits256,
         },
     };
+    use std::num::NonZeroUsize;
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -208,6 +210,27 @@ mod tests {
         let value = response.value().await?;
 
         // ANCHOR_END: submit_response_contract
+        assert_eq!(42, value);
+
+        // ANCHOR: submit_retry
+        let max_attempts = NonZeroUsize::new(3).unwrap();
+        let retry_config = RetryConfig::new(max_attempts, Backoff::default());
+
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .with_retry_config(retry_config)
+            .submit()
+            .await?;
+        // ANCHOR_END: submit_retry
+
+        // ANCHOR: response_retry
+        let max_attempts = NonZeroUsize::new(3).unwrap();
+        let retry_config = RetryConfig::new(max_attempts, Backoff::default());
+
+        let value = response.with_retry_config(retry_config).value().await?;
+        // ANCHOR_END: response_retry
+
         assert_eq!(42, value);
 
         Ok(())
