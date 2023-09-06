@@ -322,12 +322,7 @@ mod tests {
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
-            assert_eq!(
-                ok,
-                TxId::from_str(
-                    "0x98f01c73c2062b55bba70966917a0839995e86abfadfff24534262d1c8b7a64e"
-                )
-            );
+            assert_eq!(ok, tx_id);
 
             Ok(())
         }
