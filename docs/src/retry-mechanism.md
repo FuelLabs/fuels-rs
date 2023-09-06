@@ -1,7 +1,7 @@
 # Retry Mechanism
 
-When we submit a transaction, it is dispatched to the txpool, where it awaits execution. If the submission is successful, we receive a transaction ID, which enables us to request transaction receipts or its value.However, it's crucial to acknowledge that during the transaction, `IO::Errors` may occur, potentially preventing the transaction from reaching the txpool.
-In the event of a successful transaction, when attempting to retrieve its receipts or values, we may encounter `IO::Errors` or receive a `None` value, indicating that the result is not yet available.
+When we submit a transaction, it is dispatched to the txpool, where it awaits execution. If the submission is successful, we receive a transaction ID, which enables us to request transaction receipts or return values of submitted methods. However, it's crucial to acknowledge that during the transaction, `IO::Errors` may occur, potentially preventing the transaction from reaching the txpool.
+In the event of a successful transaction, when attempting to retrieve its receipts or the return values of submitted methods, we may encounter `IO::Errors` or receive a `None` as the return value of these methods, indicating that the result is not yet available.
 
 To address these scenarios, we can configure the number of retry attempts and the retry strategy for transaction submissions, as detailed further in the following section of this document.
 
