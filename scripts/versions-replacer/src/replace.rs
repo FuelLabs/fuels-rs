@@ -44,21 +44,21 @@ mod tests {
     use super::*;
 
     fn test_versions() -> HashMap<String, String> {
-        [("fuels", "0.47.0"), ("fuels-types", "0.35.3")]
+        [("fuels", "0.47.0"), ("fuel-types", "0.35.3")]
             .map(|(name, version)| (name.to_string(), version.to_string()))
             .into()
     }
 
     #[test]
     fn test_valid_replacements() {
-        let s = "docs.rs/fuels/{{versions.fuels}}/fuels\ndocs.rs/fuels-types/{{versions.fuels-types}}/fuels-types";
+        let s = "docs.rs/fuels/{{versions.fuels}}/fuels\ndocs.rs/fuel-types/{{versions.fuel-types}}/fuel-types";
         let versions = test_versions();
         let (replaced, count) = replace_versions_in_string(s, &versions);
         assert_eq!(
             replaced,
             format!(
-                "docs.rs/fuels/{}/fuels\ndocs.rs/fuels-types/{}/fuels-types",
-                versions["fuels"], versions["fuels-types"]
+                "docs.rs/fuels/{}/fuels\ndocs.rs/fuel-types/{}/fuel-types",
+                versions["fuels"], versions["fuel-types"]
             )
         );
         assert_eq!(count, 2);

@@ -24,18 +24,9 @@ pub fn collect_versions_from_cargo_toml(
         .exec()
         .wrap_err("failed to execute 'cargo metadata'")?;
     let version_map = metadata
-        .workspace_members
+        .packages
         .iter()
-        .map(|package_id| {
-            let package = &metadata[package_id];
-            (package.name.clone(), package.version.to_string())
-        })
-        .chain(
-            serde_json::from_value::<WorkspaceMetadata>(metadata.workspace_metadata.clone())
-                .wrap_err("failed to parse '[workspace.metadata]'")?
-                .versions_replacer
-                .external_versions,
-        )
+        .map(|package| (package.name.clone(), package.version.to_string()))
         .collect::<HashMap<_, _>>();
     Ok(version_map)
 }
