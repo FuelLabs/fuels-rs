@@ -144,20 +144,18 @@ pub(crate) async fn build_tx_from_contract_calls(
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
-    let n_enum_heap_type_calls = calls
-        .iter()
-        .filter(|c| {
-            c.output_param.heap_inner_element_size().is_some()
-                && matches!(c.output_param, ParamType::Enum { .. })
-        })
+    let heap_calls = || {
+        calls
+            .iter()
+            .map(|call| &call.output_param)
+            .filter(|param| param.uses_heap_types())
+    };
+
+    let n_enum_heap_type_calls = heap_calls()
+        .filter(|param| matches!(param, ParamType::Enum { .. }))
         .count();
 
-    let n_heap_type_calls = calls
-        .iter()
-        .filter(|c| c.output_param.heap_inner_element_size().is_some())
-        .count()
-        - n_enum_heap_type_calls;
-
+    let n_heap_type_calls = heap_calls().count() - n_enum_heap_type_calls;
     let n_stack_type_calls = calls.len() - n_heap_type_calls - n_enum_heap_type_calls;
 
     let total_instructions_len_heap_enum_data = get_single_call_instructions(
