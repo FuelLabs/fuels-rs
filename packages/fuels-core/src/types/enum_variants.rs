@@ -41,15 +41,11 @@ impl EnumVariants {
     }
 
     pub fn heap_type_variant_discriminant(&self) -> Result<u8> {
-        for (discriminant, param) in self.param_types.iter().enumerate() {
-            if param.is_vm_heap_type() {
-                return Ok(discriminant as u8);
-            }
-        }
-        Err(error!(
-            InvalidData,
-            "There are no heap types inside {:?}", self
-        ))
+        self.param_types()
+            .iter()
+            .enumerate()
+            .find_map(|(d, p)| p.is_vm_heap_type().then_some(d as u8))
+            .ok_or_else(|| error!(InvalidData, "There are no heap types inside {:?}", self))
     }
 
     pub fn only_units_inside(&self) -> bool {
