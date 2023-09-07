@@ -368,29 +368,32 @@ pub(crate) fn get_single_call_instructions(
             let selected_discriminant = variants.heap_type_variant_discriminant().unwrap() as u16;
             instructions.extend([
                 // All the registers 0x15-0x18 are free
+                // Load the selected discriminant to a free register
+                op::muli(0x17, RegId::ONE, selected_discriminant),
+                // the first word of the CALL return is the enum discriminant. It is safe to load
+                // because the offset is 0.
+                op::lw(0x18, RegId::RET, 0),
+                // If the discriminant is not the one from the heap type, then jump ahead and
+                // return an empty receipt. Otherwise return heap data with the right length.
+                op::jnef(0x17, 0x18, RegId::ZERO, 3),
+                // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
                 // The RET register contains the pointer address of the `CALL` return (a stack
                 // address).
-                // The RETL register contains the length of the `CALL` return (=24 in the case of
-                // Vec/Bytes/String because their struct takes 3 WORDs). We don't actually need it
-                // unless the Vec/Bytes/String struct encoding changes in the compiler.
                 // Load the word located at the address contained in RET, it's a word that translates to
                 // a heap address. We use the offset because in the case of an enum containing a heap
                 // type, we need to get the pointer that is located at the heap address pointed to by
                 // the RET register.
                 op::lw(0x15, RegId::RET, offset),
+                // The RETL register contains the length of the `CALL` return (=24 in the case of
+                // Vec/Bytes/String because their struct takes 3 WORDs). We don't actually need it
+                // unless the Vec/Bytes/String struct encoding changes in the compiler.
                 // We know a Vec/Bytes/String struct has its third WORD contain the length of the
                 // underlying vector, so use a 2 offset to store the length.
                 op::lw(0x16, RegId::RET, offset + 2),
                 // The in-memory size of the type is (in-memory size of the inner type) * length
                 op::muli(0x16, 0x16, inner_type_byte_size as u16),
-                // Load the selected discriminant to a free register
-                op::muli(0x17, RegId::ONE, selected_discriminant),
-                // the first word of the CALL return is the enum discriminant
-                op::lw(0x18, RegId::RET, 0),
-                // If the discriminant is not the one from the heap type, then jump ahead and
-                // return an empty receipt. Otherwise return heap data with the right length.
-                op::jnef(0x17, 0x18, RegId::ZERO, 1),
                 op::retd(0x15, 0x16),
+                // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
                 op::retd(0x15, RegId::ZERO),
             ]);
         } else {

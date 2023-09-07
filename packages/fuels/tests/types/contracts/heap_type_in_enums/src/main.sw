@@ -15,6 +15,7 @@ abi MyContract {
     fn returns_bytes_option(return_some: bool) -> Option<Bytes>;
     fn returns_vec_option(return_some: bool) -> Option<Vec<u64>>;
     fn returns_string_option(return_some: bool) -> Option<String>;
+    fn would_raise_a_memory_overflow() -> Result<Bytes, b256>;
 }
 
 impl MyContract for Contract {
@@ -88,5 +89,9 @@ impl MyContract for Contract {
         } else {
             None
         }
+    }
+
+    fn would_raise_a_memory_overflow() -> Result<Bytes, b256> {
+        Result::Err(0x1111111111111111111111111111111111111111111111111111111111111111)
     }
 }

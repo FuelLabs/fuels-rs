@@ -2057,5 +2057,12 @@ async fn test_heap_type_in_enums() -> Result<()> {
     assert_eq!(resp.value, expected);
     let resp = contract_methods.returns_string_option(false).call().await?;
     assert!(resp.value.is_none());
+
+    // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
+    let _ = contract_methods
+        .would_raise_a_memory_overflow()
+        .call()
+        .await?;
+
     Ok(())
 }
