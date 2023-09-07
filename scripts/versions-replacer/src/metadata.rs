@@ -34,7 +34,7 @@ pub fn collect_versions_from_cargo_toml(
             serde_json::from_value::<WorkspaceMetadata>(metadata.workspace_metadata.clone())
                 .wrap_err("failed to parse '[workspace.metadata]'")?
                 .versions_replacer
-                .external_versions
+                .external_versions,
         )
         .collect::<HashMap<_, _>>();
     Ok(version_map)
