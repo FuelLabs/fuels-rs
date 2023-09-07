@@ -80,7 +80,7 @@ impl ReceiptParser {
             self.receipts.iter().tuple_windows().enumerate()
         {
             if let (Some(first_data), Some(second_data)) =
-                Self::extract_vec_data(current_receipt, next_receipt, contract_id)
+                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
             {
                 let mut first_data = first_data.clone();
                 let mut second_data = second_data.clone();
@@ -137,7 +137,7 @@ impl ReceiptParser {
             self.receipts.iter().tuple_windows().enumerate()
         {
             if let (_stack_data, Some(heap_data)) =
-                Self::extract_vec_data(current_receipt, next_receipt, contract_id)
+                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
             {
                 let data = heap_data.clone();
                 self.receipts.drain(index..=index + 1);
@@ -147,7 +147,7 @@ impl ReceiptParser {
         None
     }
 
-    fn extract_vec_data<'a>(
+    fn extract_heap_data_from_receipts<'a>(
         current_receipt: &'a Receipt,
         next_receipt: &'a Receipt,
         contract_id: &ContractId,
