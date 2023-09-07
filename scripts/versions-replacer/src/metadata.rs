@@ -35,7 +35,6 @@ pub fn collect_versions_from_cargo_toml(
                 .wrap_err("failed to parse '[workspace.metadata]'")?
                 .versions_replacer
                 .external_versions
-                .into_iter(),
         )
         .collect::<HashMap<_, _>>();
     Ok(version_map)

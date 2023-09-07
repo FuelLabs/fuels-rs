@@ -46,9 +46,8 @@ mod tests {
 
     fn test_versions() -> HashMap<String, String> {
         [("fuels", "0.47.0"), ("fuels-types", "0.35.3")]
-            .into_iter()
             .map(|(name, version)| (name.to_string(), version.to_string()))
-            .collect()
+            .into()
     }
 
     #[test]
