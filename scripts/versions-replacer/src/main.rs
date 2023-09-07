@@ -49,9 +49,9 @@ fn main() -> Result<()> {
                 }
             }
 
-            if let Some(replacement_count) = replace_versions_in_file(entry.path(), &versions)
-                .wrap_err_with(|| format!("failed to replace versions in {:?}", entry.path()))?
-            {
+            let replacement_count = replace_versions_in_file(entry.path(), &versions)
+                .wrap_err_with(|| format!("failed to replace versions in {:?}", entry.path()))?;
+            if replacement_count > 0 {
                 total_replacements.push(replacement_count);
             }
         }

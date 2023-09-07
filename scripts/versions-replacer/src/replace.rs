@@ -10,12 +10,12 @@ pub static VERSIONS_REGEX: Lazy<Regex> =
 pub fn replace_versions_in_file(
     path: impl AsRef<Path>,
     versions: &HashMap<String, String>,
-) -> Result<Option<usize>> {
+) -> Result<usize> {
     let path = path.as_ref();
     let contents =
         fs::read_to_string(path).wrap_err_with(|| format!("failed to read {:?}", path))?;
     let (replaced_contents, replacement_count) = replace_versions_in_string(&contents, versions);
-    if replacement_count.is_some() {
+    if replacement_count > 0 {
         fs::write(path, replaced_contents.as_bytes())
             .wrap_err_with(|| format!("failed to write back to {:?}", path))?;
     }
@@ -25,7 +25,7 @@ pub fn replace_versions_in_file(
 pub fn replace_versions_in_string<'a>(
     s: &'a str,
     versions: &HashMap<String, String>,
-) -> (Cow<'a, str>, Option<usize>) {
+) -> (Cow<'a, str>, usize) {
     let mut replacement_count = 0;
     let replaced_s = VERSIONS_REGEX.replace_all(s, |caps: &Captures| {
         if let Some(version) = versions.get(&caps[1]) {
@@ -36,7 +36,6 @@ pub fn replace_versions_in_string<'a>(
             caps[0].to_string()
         }
     });
-    let replacement_count = (replaced_s != s).then_some(replacement_count);
     (replaced_s, replacement_count)
 }
 
@@ -62,7 +61,7 @@ mod tests {
                 versions["fuels"], versions["fuels-types"]
             )
         );
-        assert_eq!(count, Some(2));
+        assert_eq!(count, 2);
     }
 
     #[test]
@@ -73,7 +72,7 @@ mod tests {
         let versions = test_versions();
         let (replaced, count) = replace_versions_in_string(s, &versions);
         assert_eq!(replaced, s);
-        assert!(count.is_none());
+        assert_eq!(count, 0);
     }
 
     #[test]
@@ -82,6 +81,6 @@ mod tests {
         let versions = test_versions();
         let (replaced, count) = replace_versions_in_string(s, &versions);
         assert_eq!(replaced, s);
-        assert!(count.is_none());
+        assert_eq!(count, 0);
     }
 }
