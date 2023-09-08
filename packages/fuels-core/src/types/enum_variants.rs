@@ -16,17 +16,7 @@ impl EnumVariants {
         if param_types.is_empty() {
             return Err(error!(InvalidData, "Enum variants can not be empty!"));
         }
-        // There can only be one variant in the Enum that uses heap types. The reason is that
-        // for bytecode injection to get the heap data, we need the encoding width of the heap
-        // type. To simplify, we therefore allow only one heap type inside the enum.
-        if param_types.iter().filter(|p| p.is_vm_heap_type()).count() > 1 {
-            Err(error!(
-                InvalidData,
-                "Enum variants can only contain one heap type"
-            ))
-        } else {
-            Ok(EnumVariants { param_types })
-        }
+        Ok(EnumVariants { param_types })
     }
 
     pub fn param_types(&self) -> &[ParamType] {
@@ -85,25 +75,6 @@ impl EnumVariants {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_enum_variants_can_have_only_one_heap_type() -> Result<()> {
-        let mut param_types = vec![
-            ParamType::U64,
-            ParamType::Bool,
-            ParamType::Vector(Box::from(ParamType::U64)),
-        ];
-        // it works if there is only one heap type
-        let _variants = EnumVariants::new(param_types.clone())?;
-        param_types.append(&mut vec![ParamType::Bytes]);
-
-        let error = EnumVariants::new(param_types).expect_err("Should have failed");
-        let expected_error =
-            "Invalid data: Enum variants can only contain one heap type".to_string();
-        assert_eq!(error.to_string(), expected_error);
-
-        Ok(())
-    }
 
     #[test]
     fn test_get_heap_type_variant_discriminant() -> Result<()> {

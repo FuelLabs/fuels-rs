@@ -272,6 +272,21 @@ impl ABIDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
+        // There can only be one variant using heap types in the Enum. The reason is that for
+        // bytecode injection to get the heap data, we need the encoding width of the heap type. To
+        // simplify, we therefore allow only one heap type inside the enum.
+        if variants
+            .param_types()
+            .iter()
+            .filter(|p| p.is_vm_heap_type())
+            .count()
+            > 1
+        {
+            return Err(error!(
+                InvalidData,
+                "Enum variants as return types can only contain one heap type"
+            ));
+        };
         let enum_width = variants.compute_encoding_width_of_enum();
 
         let discriminant = peek_u32(&bytes)? as u8;
@@ -813,6 +828,34 @@ mod tests {
 
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
+        Ok(())
+    }
+
+    #[test]
+    fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
+        let mut param_types = vec![
+            ParamType::U64,
+            ParamType::Bool,
+            ParamType::Vector(Box::from(ParamType::U64)),
+        ];
+        // empty data
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let variants = EnumVariants::new(param_types.clone())?;
+        // it works if there is only one heap type
+        let _ = ABIDecoder::decode_enum(&data, &variants)?;
+
+        param_types.append(&mut vec![ParamType::Bytes]);
+        let variants = EnumVariants::new(param_types)?;
+        // fails if there is more than one variant using heap type in the enum
+        let error = ABIDecoder::decode_enum(&data, &variants).expect_err("Should fail");
+        let expected_error =
+            "Invalid data: Enum variants as return types can only contain one heap type"
+                .to_string();
+        assert_eq!(error.to_string(), expected_error);
+
         Ok(())
     }
 }
