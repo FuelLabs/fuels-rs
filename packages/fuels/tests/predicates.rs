@@ -705,3 +705,48 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn predicate_transfer_non_base_asset() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::encode_data(32, 32);
+
+    let mut predicate: Predicate =
+        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+            .with_data(predicate_data);
+
+    let amount = 5;
+    let (coins, asset_ids) = setup_multiple_assets_coins(predicate.address(), 2, 1, amount);
+    let asset_id = asset_ids[0];
+
+    let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
+    predicate.set_provider(provider.clone());
+    let wallet = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let inputs = predicate
+        .get_asset_inputs_for_amount(asset_id, amount)
+        .await?;
+    let outputs = vec![Output::change(wallet.address().into(), 0, asset_id)];
+
+    let tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default().with_gas_price(1),
+    )
+    .with_consensus_parameters(provider.consensus_parameters());
+
+    let tx = predicate.add_fee_resources(tb, 0).await?;
+
+    let tx_id = provider.send_transaction(tx).await?;
+    provider.get_receipts(&tx_id).await?;
+
+    let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
+
+    assert_eq!(wallet_balance, amount);
+
+    Ok(())
+}
