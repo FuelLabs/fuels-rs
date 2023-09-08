@@ -1,15 +1,5 @@
-use crate::retry::{retry, RetryConfig};
-use crate::submit_response::{CallHandler, SubmitResponse};
-use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{
-        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
-        TxDependencyExtension,
-    },
-    contract::SettableContract,
-    logs::{map_revert_error, LogDecoder},
-    receipt_parser::ReceiptParser,
-};
+use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+
 use fuel_tx::{Bytes32, ContractId, Output, Receipt, TxId};
 use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
@@ -17,6 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
+    codec::{map_revert_error, LogDecoder},
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
@@ -30,7 +21,18 @@ use fuels_core::{
     },
 };
 use itertools::chain;
-use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
+
+use crate::{
+    call_response::FuelCallResponse,
+    call_utils::{
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        TxDependencyExtension,
+    },
+    contract::SettableContract,
+    receipt_parser::ReceiptParser,
+    retry::{retry, RetryConfig},
+    submit_response::{CallHandler, SubmitResponse},
+};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single script call
@@ -251,7 +253,10 @@ where
             self.provider.checked_dry_run(tx).await?
         } else {
             let tx_id = self.provider.send_transaction_and_await(tx).await?;
-            self.provider.get_receipts(&tx_id).await?
+            // TODO: see about unwrap
+            let tx_execution = self.provider.tx_status(&tx_id).await?;
+            tx_execution.check(Some(&self.log_decoder))?;
+            tx_execution.take_receipts()
         };
 
         self.get_response(receipts)
@@ -287,11 +292,14 @@ where
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+        // TODO: see about unwrap
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+        let provider = self.account.try_provider()?;
+
+        let tx_execution = provider.tx_status(&tx_id).await?;
+        tx_execution.check(Some(&self.log_decoder))?;
+        let receipts = tx_execution.take_receipts();
+
         self.get_response(receipts)
     }
 

@@ -1,10 +1,12 @@
 mod abi_decoder;
 mod abi_encoder;
 mod function_selector;
+mod logs;
 
 pub use abi_decoder::*;
 pub use abi_encoder::*;
 pub use function_selector::*;
+pub use logs::*;
 
 use crate::{
     traits::{Parameterize, Tokenizable},

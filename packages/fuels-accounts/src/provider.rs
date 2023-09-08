@@ -25,6 +25,7 @@ use fuels_core::{
         node_info::NodeInfo,
         transaction::Transaction,
         transaction_response::TransactionResponse,
+        tx_execution::TxStatus,
     },
 };
 use tai64::Tai64;
@@ -118,6 +119,8 @@ pub enum ProviderError {
     // Every IO error in the context of Provider comes from the gql client
     #[error("Client request error: {0}")]
     ClientRequestError(#[from] io::Error),
+    #[error("Receipts have not yet been propagated. Retry the request later.")]
+    ReceiptsNotPropagatedYet,
 }
 
 impl From<ProviderError> for Error {
@@ -187,35 +190,42 @@ impl Provider {
         Ok(tx_id)
     }
 
-    fn if_failure_generate_error(status: &TransactionStatus, receipts: &[Receipt]) -> Result<()> {
-        if let TransactionStatus::Failure {
-            reason,
-            program_state,
-            ..
-        } = status
-        {
-            let revert_id = program_state
-                .and_then(|state| match state {
-                    ProgramState::Revert(revert_id) => Some(revert_id),
-                    _ => None,
-                })
-                .expect("Transaction failed without a `revert_id`");
+    pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
+        let fetch_receipts = || async {
+            let receipts = self.client.receipts(tx_id).await?;
+            receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
+        };
 
-            return Err(Error::RevertTransactionError {
-                reason: reason.to_string(),
-                revert_id,
-                receipts: receipts.to_owned(),
-            });
-        }
-
-        Ok(())
-    }
-
-    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
         let tx_status = self.client.transaction_status(tx_id).await?;
-        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&tx_status, &receipts)?;
-        Ok(receipts)
+        let execution = match tx_status {
+            TransactionStatus::Success { .. } => {
+                let receipts = fetch_receipts().await?;
+                TxStatus::Success { receipts }
+            }
+            TransactionStatus::Failure {
+                reason,
+                program_state,
+                ..
+            } => {
+                let receipts = fetch_receipts().await?;
+                let revert_id = program_state
+                    .and_then(|state| match state {
+                        ProgramState::Revert(revert_id) => Some(revert_id),
+                        _ => None,
+                    })
+                    .expect("Transaction failed without a `revert_id`");
+
+                TxStatus::Revert {
+                    receipts,
+                    reason,
+                    id: revert_id,
+                }
+            }
+            TransactionStatus::Submitted { .. } => TxStatus::Submitted,
+            TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
+        };
+
+        Ok(execution)
     }
 
     #[cfg(feature = "fuel-core-lib")]

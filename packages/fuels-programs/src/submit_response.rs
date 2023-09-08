@@ -1,15 +1,22 @@
-use crate::call_response::FuelCallResponse;
-use crate::contract::{ContractCallHandler, MultiContractCallHandler};
-use crate::retry::{retry, RetryConfig};
-use crate::script_calls::ScriptCallHandler;
+use std::fmt::Debug;
+
 use fuel_tx::Receipt;
 use fuel_types::Bytes32;
-use fuels_accounts::provider::Provider;
-use fuels_accounts::Account;
-use fuels_core::traits::{Parameterize, Tokenizable};
-use fuels_core::types::errors;
-use fuels_core::types::errors::{Error, Result};
-use std::fmt::Debug;
+use fuels_accounts::{provider::Provider, Account};
+use fuels_core::{
+    traits::{Parameterize, Tokenizable},
+    types::{
+        errors,
+        errors::{Error, Result},
+    },
+};
+
+use crate::{
+    call_response::FuelCallResponse,
+    contract::{ContractCallHandler, MultiContractCallHandler},
+    retry::{retry, RetryConfig},
+    script_calls::ScriptCallHandler,
+};
 
 /// Represents the response of a submitted transaction with customizable retry behavior.
 ///

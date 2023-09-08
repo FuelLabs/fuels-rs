@@ -1,8 +1,9 @@
-use fuels_core::types::errors::Result;
-use std::fmt::Debug;
-use std::future::Future;
-use std::num::NonZeroUsize;
-use std::time::Duration;
+use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
+
+use fuels_core::{
+    error,
+    types::errors::{Error, Result},
+};
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -69,32 +70,35 @@ impl Backoff {
 /// use std::time::Duration;
 /// use fuels_programs::retry::{Backoff, RetryConfig};
 ///
-/// let max_attempts = NonZeroUsize::new(5).unwrap();
+/// let max_attempts = 5;
 /// let interval_strategy = Backoff::Exponential(Duration::from_secs(1));
 ///
-/// let retry_config = RetryConfig::new(max_attempts, interval_strategy);
+/// let retry_config = RetryConfig::new(max_attempts, interval_strategy).unwrap();
 /// ```
 // ANCHOR: retry_config
 #[derive(Clone, Debug)]
 pub struct RetryConfig {
-    pub max_attempts: NonZeroUsize,
-    pub interval: Backoff,
+    max_attempts: NonZeroU32,
+    interval: Backoff,
 }
 // ANCHOR_END: retry_config
 
 impl RetryConfig {
-    pub fn new(max_attempts: NonZeroUsize, interval: Backoff) -> Self {
-        RetryConfig {
+    pub fn new(max_attempts: u32, interval: Backoff) -> Result<Self> {
+        let max_attempts = NonZeroU32::new(max_attempts)
+            .ok_or_else(|| error!(InvalidData, "`max_attempts` must be greater than 0."))?;
+
+        Ok(RetryConfig {
             max_attempts,
             interval,
-        }
+        })
     }
 }
 
 impl Default for RetryConfig {
     fn default() -> Self {
         Self {
-            max_attempts: NonZeroUsize::new(1).expect("Should not fail!"),
+            max_attempts: NonZeroU32::new(1).expect("Should not fail!"),
             interval: Default::default(),
         }
     }
@@ -127,7 +131,6 @@ impl Default for RetryConfig {
 /// ```rust
 /// use std::time::Duration;
 /// use fuels_core::types::errors::Error;
-/// use std::num::NonZeroUsize;
 /// use fuels_programs::retry::{Backoff, retry, RetryConfig};
 ///
 /// async fn network_request() -> Result<(), Error> {
@@ -140,10 +143,7 @@ impl Default for RetryConfig {
 ///
 /// fn main() {
 ///
-///     let retry_config = RetryConfig {
-///         max_attempts: NonZeroUsize::new(3).unwrap(),
-///         interval: Backoff::Linear(Duration::from_secs(1)),
-///     };
+///     let retry_config = RetryConfig::new(3, Backoff::Linear(Duration::from_secs(1))).unwrap();
 ///
 ///     let should_retry = |result: &Result<(), Error>| {
 ///         // Retry if the error is retryable
@@ -173,7 +173,7 @@ where
             return result;
         }
 
-        tokio::time::sleep(retry_config.interval.wait_duration(attempt as u32)).await;
+        tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
     }
 
     last_result.expect("Should not happen")
@@ -182,13 +182,16 @@ where
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use crate::retry::{retry, Backoff, RetryConfig};
+        use std::{
+            str::FromStr,
+            time::{Duration, Instant},
+        };
+
         use fuel_tx::TxId;
         use fuels_core::types::errors::{error, Error, Result};
-        use std::num::NonZeroUsize;
-        use std::str::FromStr;
-        use std::time::{Duration, Instant};
         use tokio::sync::Mutex;
+
+        use crate::retry::{retry, Backoff, RetryConfig};
 
         #[tokio::test]
         async fn returns_last_error() -> Result<()> {
@@ -204,10 +207,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let max_attempts = NonZeroUsize::new(3).unwrap();
-
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(10)));
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
             let err = retry(will_always_fail, &retry_options, should_retry_fn)
                 .await
@@ -234,10 +234,8 @@ mod tests {
             let should_retry_fn = |res: &_| -> bool {
                 matches!(res, Err(err) if matches!(err, Error::InvalidData(_)))
             };
-            let max_attempts = NonZeroUsize::new(5).unwrap();
 
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(10)));
+            let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -262,10 +260,8 @@ mod tests {
                     _ => false,
                 }
             };
-            let max_attempts = NonZeroUsize::new(5).unwrap();
 
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(10)));
+            let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -286,10 +282,8 @@ mod tests {
                     _ => false,
                 }
             };
-            let max_attempts = NonZeroUsize::new(3).unwrap();
 
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(10)));
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -320,10 +314,7 @@ mod tests {
 
             let should_retry_fn = |res: &_| -> bool { matches!(res, Err(Error::IOError(_))) };
 
-            let max_attempts = NonZeroUsize::new(3).unwrap();
-
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(10)));
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
             let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
@@ -343,10 +334,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let max_attempts = NonZeroUsize::new(3).unwrap();
-
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Fixed(Duration::from_millis(100)));
+            let retry_options = RetryConfig::new(3, Backoff::Fixed(Duration::from_millis(100)))?;
 
             let _ = retry(
                 will_fail_and_record_timestamp,
@@ -384,10 +372,7 @@ mod tests {
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
-            let max_attempts = NonZeroUsize::new(3).unwrap();
-
-            let retry_options =
-                RetryConfig::new(max_attempts, Backoff::Linear(Duration::from_millis(100)));
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(100)))?;
 
             let _ = retry(
                 will_fail_and_record_timestamp,
@@ -425,12 +410,9 @@ mod tests {
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
-            let max_attempts = NonZeroUsize::new(3).unwrap();
 
-            let retry_options = RetryConfig::new(
-                max_attempts,
-                Backoff::Exponential(Duration::from_millis(100)),
-            );
+            let retry_options =
+                RetryConfig::new(3, Backoff::Exponential(Duration::from_millis(100)))?;
 
             let _ = retry(
                 will_fail_and_record_timestamp,

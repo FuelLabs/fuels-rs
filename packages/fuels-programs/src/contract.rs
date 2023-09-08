@@ -12,7 +12,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::ABIEncoder,
+    codec::{map_revert_error, ABIEncoder, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -27,13 +27,12 @@ use fuels_core::{
     Configurables,
 };
 
-use crate::retry::{retry, RetryConfig};
-use crate::submit_response::{CallHandler, SubmitResponse, SubmitResponseMultiple};
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
-    logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    retry::{retry, RetryConfig},
+    submit_response::{CallHandler, SubmitResponse, SubmitResponseMultiple},
 };
 
 #[derive(Debug, Clone)]
@@ -605,11 +604,14 @@ where
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+        // TODO: Maybe retry
+        let provider = self.account.try_provider()?;
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
+        let tx_execution = provider.tx_status(&tx_id).await?;
+        tx_execution.check(Some(&self.log_decoder))?;
+
+        let receipts = tx_execution.take_receipts();
         self.get_response(receipts)
     }
 
@@ -636,7 +638,10 @@ where
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            provider.get_receipts(&tx_id).await?
+            // TODO: see about this panic here
+            let tx_execution = provider.tx_status(&tx_id).await?;
+            tx_execution.check(Some(&self.log_decoder))?;
+            tx_execution.take_receipts()
         };
 
         self.get_response(receipts)
@@ -900,11 +905,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+        // TODO: See about unwrap
+        let provider = self.account.try_provider()?;
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
+        let tx_execution = provider.tx_status(&tx_id).await?;
+        tx_execution.check(Some(&self.log_decoder))?;
+        let receipts = tx_execution.take_receipts();
+
         self.get_response(receipts)
     }
 
@@ -936,7 +944,10 @@ impl<T: Account> MultiContractCallHandler<T> {
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            provider.get_receipts(&tx_id).await?
+            // TODO: see about unwrap
+            let tx_execution = provider.tx_status(&tx_id).await?;
+            tx_execution.check(Some(&self.log_decoder))?;
+            tx_execution.take_receipts()
         };
 
         self.get_response(receipts)
