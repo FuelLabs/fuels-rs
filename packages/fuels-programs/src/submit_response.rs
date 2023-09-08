@@ -3,18 +3,15 @@ use std::fmt::Debug;
 use fuel_tx::Receipt;
 use fuel_types::Bytes32;
 use fuels_accounts::{provider::Provider, Account};
+use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     traits::{Parameterize, Tokenizable},
-    types::{
-        errors,
-        errors::{Error, Result},
-    },
+    types::errors::{Error, Result},
 };
 
 use crate::{
     call_response::FuelCallResponse,
     contract::{ContractCallHandler, MultiContractCallHandler},
-    retry::{retry, RetryConfig},
     script_calls::ScriptCallHandler,
 };
 
@@ -145,7 +142,7 @@ impl<T: Account> SubmitResponseMultiple<T> {
     pub async fn value<D: Tokenizable + Debug>(self) -> Result<D> {
         let provider = self.call_handler.account.try_provider()?;
 
-        let should_retry_fn = |res: &errors::Result<Option<Vec<Receipt>>>| -> bool {
+        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
             match res {
                 Err(err) if matches!(err, Error::IOError(_)) => true,
                 Ok(None) => true,

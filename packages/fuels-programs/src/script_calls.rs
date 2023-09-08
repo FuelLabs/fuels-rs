@@ -2,10 +2,12 @@ use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{Bytes32, ContractId, Output, Receipt, TxId};
 use fuel_types::bytes::padded_len_usize;
+use fuels_accounts::provider::ProviderTrait;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
+use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     codec::{map_revert_error, LogDecoder},
     constants::BASE_ASSET_ID,
@@ -30,7 +32,6 @@ use crate::{
     },
     contract::SettableContract,
     receipt_parser::ReceiptParser,
-    retry::{retry, RetryConfig},
     submit_response::{CallHandler, SubmitResponse},
 };
 
@@ -254,9 +255,10 @@ where
         } else {
             let tx_id = self.provider.send_transaction_and_await(tx).await?;
             // TODO: see about unwrap
-            let tx_execution = self.provider.tx_status(&tx_id).await?;
-            tx_execution.check(Some(&self.log_decoder))?;
-            tx_execution.take_receipts()
+            // let tx_execution = self.provider.tx_status(&tx_id).await?;
+            // tx_execution.check(Some(&self.log_decoder))?;
+            // tx_execution.take_receipts()
+            self.provider.get_receipts_with_retry(&tx_id).await?
         };
 
         self.get_response(receipts)
@@ -296,9 +298,11 @@ where
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
         let provider = self.account.try_provider()?;
 
-        let tx_execution = provider.tx_status(&tx_id).await?;
-        tx_execution.check(Some(&self.log_decoder))?;
-        let receipts = tx_execution.take_receipts();
+        // let tx_execution = provider.tx_status(&tx_id).await?;
+        // tx_execution.check(Some(&self.log_decoder))?;
+        // let receipts = tx_execution.take_receipts();
+
+        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
 
         self.get_response(receipts)
     }

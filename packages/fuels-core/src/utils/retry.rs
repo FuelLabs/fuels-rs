@@ -1,9 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
-use fuels_core::{
-    error,
-    types::errors::{Error, Result},
-};
+use crate::types::errors::{error, Error, Result};
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -21,7 +18,7 @@ use fuels_core::{
 ///
 /// ```rust
 /// use std::time::Duration;
-/// use fuels_programs::retry::Backoff;
+/// use fuels_core::retry::Backoff;
 ///
 /// let linear_backoff = Backoff::Linear(Duration::from_secs(2));
 /// let exponential_backoff = Backoff::Exponential(Duration::from_secs(1));
@@ -68,7 +65,7 @@ impl Backoff {
 /// ```rust
 /// use std::num::NonZeroUsize;
 /// use std::time::Duration;
-/// use fuels_programs::retry::{Backoff, RetryConfig};
+/// use fuels_core::retry::{Backoff, RetryConfig};
 ///
 /// let max_attempts = 5;
 /// let interval_strategy = Backoff::Exponential(Duration::from_secs(1));
@@ -131,7 +128,7 @@ impl Default for RetryConfig {
 /// ```rust
 /// use std::time::Duration;
 /// use fuels_core::types::errors::Error;
-/// use fuels_programs::retry::{Backoff, retry, RetryConfig};
+/// use fuels_core::retry::{Backoff, retry, RetryConfig};
 ///
 /// async fn network_request() -> Result<(), Error> {
 ///     // Simulate network request here
@@ -143,7 +140,8 @@ impl Default for RetryConfig {
 ///
 /// fn main() {
 ///
-///     let retry_config = RetryConfig::new(3, Backoff::Linear(Duration::from_secs(1))).unwrap();
+///
+/// let retry_config = RetryConfig::new(3, Backoff::Linear(Duration::from_secs(1))).unwrap();
 ///
 ///     let should_retry = |result: &Result<(), Error>| {
 ///         // Retry if the error is retryable
@@ -187,11 +185,10 @@ mod tests {
             time::{Duration, Instant},
         };
 
-        use fuel_tx::TxId;
-        use fuels_core::types::errors::{error, Error, Result};
-        use tokio::sync::Mutex;
-
         use crate::retry::{retry, Backoff, RetryConfig};
+        use crate::types::errors::{error, Error, Result};
+        use fuel_tx::TxId;
+        use tokio::sync::Mutex;
 
         #[tokio::test]
         async fn returns_last_error() -> Result<()> {

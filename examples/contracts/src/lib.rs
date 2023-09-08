@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
+        core::retry::{Backoff, RetryConfig},
         prelude::{LoadConfiguration, StorageConfiguration},
-        programs::retry::{Backoff, RetryConfig},
         types::{
             errors::{error, Error, Result},
             Bits256,

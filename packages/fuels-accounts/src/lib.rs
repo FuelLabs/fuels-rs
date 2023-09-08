@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Display};
 
+use crate::provider::ProviderTrait;
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
@@ -209,9 +210,11 @@ pub trait Account: ViewOnlyAccount {
 
         // TODO: Should maybe retry until receipts available
         let tx_id = provider.send_transaction_and_await(tx).await?;
-        let tx_execution = provider.tx_status(&tx_id).await?;
-        tx_execution.check(None)?;
-        let receipts = tx_execution.take_receipts();
+
+        // let tx_execution = provider.tx_status(&tx_id).await?;
+        // tx_execution.check(None)?;
+        // let receipts = tx_execution.take_receipts();
+        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
 
         Ok((tx_id, receipts))
     }
@@ -276,9 +279,10 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_id = self.try_provider()?.send_transaction_and_await(tx).await?;
         // TODO: This maybe should also be retried
-        let tx_execution = provider.tx_status(&tx_id).await?;
-        tx_execution.check(None)?;
-        let receipts = tx_execution.take_receipts();
+        // let tx_execution = provider.tx_status(&tx_id).await?;
+        // tx_execution.check(None)?;
+        // let receipts = tx_execution.take_receipts();
+        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -308,9 +312,10 @@ pub trait Account: ViewOnlyAccount {
         let tx = self.add_fee_resources(tb, amount).await?;
         let tx_id = provider.send_transaction_and_await(tx).await?;
         // TODO: Maybe retry
-        let tx_execution = provider.tx_status(&tx_id).await?;
-        tx_execution.check(None)?;
-        let receipts = tx_execution.take_receipts();
+        // let tx_execution = provider.tx_status(&tx_id).await?;
+        // tx_execution.check(None)?;
+        // let receipts = tx_execution.take_receipts();
+        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

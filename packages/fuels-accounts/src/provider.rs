@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::{collections::HashMap, fmt::Debug, io};
 
 use chrono::{DateTime, Utc};
@@ -11,6 +12,7 @@ use fuel_core_client::client::{
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
+use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
@@ -129,6 +131,57 @@ impl From<ProviderError> for Error {
     }
 }
 
+#[async_trait]
+pub trait ProviderTrait {
+    async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
+        &self,
+        tx: T,
+    ) -> Result<TxId>;
+    async fn get_receipts_with_retry(&self, tx_id: &TxId) -> Result<Vec<Receipt>>;
+}
+
+#[async_trait]
+impl ProviderTrait for Provider {
+    async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
+        &self,
+        tx: T,
+    ) -> Result<TxId> {
+        let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
+        retry(
+            || self.send_transaction(tx.clone()),
+            &self.retry_config,
+            should_retry_fn,
+        )
+        .await
+    }
+
+    async fn get_receipts_with_retry(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+        let not_propagated = &ProviderError::ReceiptsNotPropagatedYet.to_string();
+
+        let should_retry_fn = |res: &Result<TxStatus>| match res {
+            Ok(_) => false,
+            Err(err) => match err {
+                Error::IOError(_) => true,
+                Error::ProviderError(str) if str.starts_with(not_propagated) => true,
+                _ => false,
+            },
+        };
+
+        let execution = retry(
+            || async {
+                let tx_execution = self.tx_status(tx_id).await?;
+                tx_execution.check(None)?;
+                Ok(tx_execution)
+            },
+            &self.retry_config,
+            should_retry_fn,
+        )
+        .await?;
+
+        Ok(execution.take_receipts())
+    }
+}
+
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which provides a broader API.
@@ -136,6 +189,7 @@ impl From<ProviderError> for Error {
 pub struct Provider {
     pub client: FuelClient,
     pub consensus_parameters: ConsensusParameters,
+    retry_config: RetryConfig,
 }
 
 impl Provider {
@@ -143,6 +197,7 @@ impl Provider {
         Self {
             client,
             consensus_parameters,
+            retry_config: Default::default(),
         }
     }
 
@@ -622,5 +677,9 @@ impl Provider {
             .await?
             .map(Into::into);
         Ok(proof)
+    }
+
+    pub fn retry_config(&mut self, retry_config: RetryConfig) {
+        self.retry_config = retry_config;
     }
 }
