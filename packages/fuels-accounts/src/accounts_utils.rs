@@ -21,7 +21,6 @@ pub fn calculate_base_amount_with_fee(
 ) -> Result<u64> {
     let transaction_fee = tb
         .fee_checked_from_tx(consensus_params)?
-        // TODO: use better error
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
     let mut new_base_amount = transaction_fee.max_fee() + previous_base_amount;

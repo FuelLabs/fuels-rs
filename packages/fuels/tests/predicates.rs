@@ -719,18 +719,31 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
             .with_data(predicate_data);
 
+    let mut wallet = WalletUnlocked::new_random(None);
+
     let amount = 5;
-    let (coins, asset_ids) = setup_multiple_assets_coins(predicate.address(), 2, 1, amount);
-    let asset_id = asset_ids[0];
+    let non_base_asset_id = AssetId::new([1; 32]);
+
+    // wallet has base and predicate non base asset
+    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, amount);
+    coins.extend(setup_single_asset_coins(
+        predicate.address(),
+        non_base_asset_id,
+        1,
+        amount,
+    ));
 
     let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
     predicate.set_provider(provider.clone());
-    let wallet = WalletUnlocked::new_random(Some(provider.clone()));
+    wallet.set_provider(provider.clone());
 
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount)
+        .get_asset_inputs_for_amount(non_base_asset_id, amount)
         .await?;
-    let outputs = vec![Output::change(wallet.address().into(), 0, asset_id)];
+    let outputs = vec![
+        Output::change(wallet.address().into(), 0, non_base_asset_id),
+        Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+    ];
 
     let tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
@@ -739,12 +752,12 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     )
     .with_consensus_parameters(provider.consensus_parameters());
 
-    let tx = predicate.add_fee_resources(tb, 0).await?;
+    let tx = wallet.add_fee_resources(tb, 0).await?;
 
     let tx_id = provider.send_transaction(tx).await?;
     provider.get_receipts(&tx_id).await?;
 
-    let wallet_balance = wallet.get_asset_balance(&asset_id).await?;
+    let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
 
     assert_eq!(wallet_balance, amount);
 
