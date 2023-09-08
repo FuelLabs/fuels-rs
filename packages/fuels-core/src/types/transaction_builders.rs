@@ -186,7 +186,6 @@ macro_rules! impl_tx_trait {
 
                 Ok(num_witnesses as u8)
             }
-
         }
     };
 }
