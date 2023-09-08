@@ -770,7 +770,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     // ANCHOR: external_contract_ids
     let response = instance
         .main(contract_id)
-        .with_contract_ids(&[contract_id.into()])
+        .set_contract_ids(&[contract_id.into()])
         .call()
         .await?;
     // ANCHOR_END: external_contract_ids
@@ -778,7 +778,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     // ANCHOR: external_contract
     let response = instance
         .main(contract_id)
-        .with_contracts(&[&contract_instance])
+        .set_contracts(&[&contract_instance])
         .call()
         .await?;
     // ANCHOR_END: external_contract
