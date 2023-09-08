@@ -149,7 +149,7 @@ impl Account for Predicate {
         tb = tb.with_consensus_parameters(consensus_parameters);
 
         let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
+            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount)?;
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
