@@ -2059,5 +2059,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
         .call()
         .await?;
 
+    // let _ = contract_methods.should_fail().call().await?;
+
     Ok(())
 }

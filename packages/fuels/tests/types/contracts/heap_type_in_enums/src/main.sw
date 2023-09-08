@@ -8,6 +8,10 @@ pub enum TestError {
     Else: u64,
 }
 
+pub struct Bimbam {
+    something: Bytes,
+}
+
 abi MyContract {
     fn returns_bytes_result(return_ok: bool) -> Result<Bytes, TestError>;
     fn returns_vec_result(return_ok: bool) -> Result<Vec<u64>, TestError>;
@@ -16,6 +20,7 @@ abi MyContract {
     fn returns_vec_option(return_some: bool) -> Option<Vec<u64>>;
     fn returns_string_option(return_some: bool) -> Option<String>;
     fn would_raise_a_memory_overflow() -> Result<Bytes, b256>;
+    fn should_fail() -> Result<Bimbam, u64>;
 }
 
 impl MyContract for Contract {
@@ -93,5 +98,9 @@ impl MyContract for Contract {
 
     fn would_raise_a_memory_overflow() -> Result<Bytes, b256> {
         Result::Err(0x1111111111111111111111111111111111111111111111111111111111111111)
+    }
+
+    fn should_fail() -> Result<Bimbam, u64> {
+        Result::Err(071)
     }
 }

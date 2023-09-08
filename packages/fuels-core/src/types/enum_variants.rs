@@ -16,6 +16,9 @@ impl EnumVariants {
         if param_types.is_empty() {
             return Err(error!(InvalidData, "Enum variants can not be empty!"));
         }
+        // There can only be one variant in the Enum that uses heap types. The reason is that
+        // for bytecode injection to get the heap data, we need the encoding width of the heap
+        // type. To simplify, we therefore allow only one heap type inside the enum.
         if param_types.iter().filter(|p| p.is_vm_heap_type()).count() > 1 {
             Err(error!(
                 InvalidData,

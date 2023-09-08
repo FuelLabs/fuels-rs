@@ -279,8 +279,8 @@ impl ABIDecoder {
         let skip_extra = if selected_variant.uses_heap_types(false) {
             // remove the 3 WORDS that represent (ptr, cap, len)
             // those 3 WORDS are leftovers from the concatenation of the bytes from the two
-            // `ReturnData` receipts. We need to remove them only if the selected variant is a
-            // heap type, otherwise we are erasing relevant bytes.
+            // `ReturnData` receipts. We need to skip them only if the selected variant is a
+            // heap type, otherwise we are skipping relevant bytes.
             3
         } else {
             0

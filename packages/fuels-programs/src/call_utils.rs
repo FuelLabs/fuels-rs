@@ -148,7 +148,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
         calls
             .iter()
             .map(|call| &call.output_param)
-            .filter(|param| param.uses_heap_types())
+            .filter(|param| param.uses_heap_types(false))
     };
 
     let n_enum_heap_type_calls = heap_calls()
