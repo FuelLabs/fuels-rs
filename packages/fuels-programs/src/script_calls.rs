@@ -258,7 +258,7 @@ where
             // let tx_execution = self.provider.tx_status(&tx_id).await?;
             // tx_execution.check(Some(&self.log_decoder))?;
             // tx_execution.take_receipts()
-            self.provider.get_receipts_with_retry(&tx_id).await?
+            self.provider.get_receipts_with_retry(&tx_id, None).await?
         };
 
         self.get_response(receipts)
@@ -298,11 +298,7 @@ where
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
         let provider = self.account.try_provider()?;
 
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(Some(&self.log_decoder))?;
-        // let receipts = tx_execution.take_receipts();
-
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         self.get_response(receipts)
     }

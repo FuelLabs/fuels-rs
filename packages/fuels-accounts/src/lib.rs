@@ -207,14 +207,10 @@ pub trait Account: ViewOnlyAccount {
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
-
-        // TODO: Should maybe retry until receipts available
+        // Todo: Should we retry this
         let tx_id = provider.send_transaction_and_await(tx).await?;
 
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(None)?;
-        // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         Ok((tx_id, receipts))
     }
@@ -278,11 +274,13 @@ pub trait Account: ViewOnlyAccount {
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
         let tx_id = self.try_provider()?.send_transaction_and_await(tx).await?;
+        // self.client.await_transaction_commit(&tx_id).await?;
+
         // TODO: This maybe should also be retried
         // let tx_execution = provider.tx_status(&tx_id).await?;
         // tx_execution.check(None)?;
         // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -315,7 +313,7 @@ pub trait Account: ViewOnlyAccount {
         // let tx_execution = provider.tx_status(&tx_id).await?;
         // tx_execution.check(None)?;
         // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

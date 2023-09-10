@@ -2,11 +2,12 @@ use std::fmt::Debug;
 
 use fuel_tx::Receipt;
 use fuel_types::Bytes32;
+use fuels_accounts::provider::ProviderTrait;
 use fuels_accounts::{provider::Provider, Account};
-use fuels_core::retry::{retry, RetryConfig};
+use fuels_core::retry::RetryConfig;
 use fuels_core::{
     traits::{Parameterize, Tokenizable},
-    types::errors::{Error, Result},
+    types::errors::Result,
 };
 
 use crate::{
@@ -88,28 +89,14 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     pub async fn value(self) -> Result<D> {
         let provider = self.call_handler.try_provider()?;
 
-        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
-            match res {
-                Err(err) if matches!(err, Error::IOError(_)) => true,
-                Ok(None) => true,
-                _ => false,
-            }
-        };
+        let receipts = provider
+            .get_receipts_with_retry(
+                &self.tx_id.expect("tx_id is missing"),
+                Some(self.retry_config),
+            )
+            .await?;
 
-        let receipts = retry(
-            || async {
-                provider
-                    .client
-                    .receipts(&self.tx_id.expect("tx_id is missing"))
-                    .await
-                    .map_err(|e| e.into())
-            },
-            &self.retry_config,
-            should_retry_fn,
-        )
-        .await?;
-
-        let value = self.call_handler.get_response(receipts.unwrap())?.value;
+        let value = self.call_handler.get_response(receipts)?.value;
         Ok(value)
     }
 }
@@ -142,28 +129,14 @@ impl<T: Account> SubmitResponseMultiple<T> {
     pub async fn value<D: Tokenizable + Debug>(self) -> Result<D> {
         let provider = self.call_handler.account.try_provider()?;
 
-        let should_retry_fn = |res: &Result<Option<Vec<Receipt>>>| -> bool {
-            match res {
-                Err(err) if matches!(err, Error::IOError(_)) => true,
-                Ok(None) => true,
-                _ => false,
-            }
-        };
+        let receipts = provider
+            .get_receipts_with_retry(
+                &self.tx_id.expect("tx_id is missing"),
+                Some(self.retry_config),
+            )
+            .await?;
 
-        let receipts = retry(
-            || async {
-                provider
-                    .client
-                    .receipts(&self.tx_id.expect("tx_id is missing"))
-                    .await
-                    .map_err(|e| e.into())
-            },
-            &self.retry_config,
-            should_retry_fn,
-        )
-        .await?;
-
-        let value = self.call_handler.get_response(receipts.unwrap())?.value;
+        let value = self.call_handler.get_response(receipts)?.value;
         Ok(value)
     }
 }

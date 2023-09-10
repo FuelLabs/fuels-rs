@@ -136,8 +136,13 @@ pub trait ProviderTrait {
     async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
         &self,
         tx: T,
+        retry_config: Option<RetryConfig>,
     ) -> Result<TxId>;
-    async fn get_receipts_with_retry(&self, tx_id: &TxId) -> Result<Vec<Receipt>>;
+    async fn get_receipts_with_retry(
+        &self,
+        tx_id: &TxId,
+        retry_config: Option<RetryConfig>,
+    ) -> Result<Vec<Receipt>>;
 }
 
 #[async_trait]
@@ -145,17 +150,25 @@ impl ProviderTrait for Provider {
     async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
         &self,
         tx: T,
+        retry_config: Option<RetryConfig>,
     ) -> Result<TxId> {
+        let retry_config = retry_config.as_ref().unwrap_or(&self.retry_config);
         let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
+
         retry(
             || self.send_transaction(tx.clone()),
-            &self.retry_config,
+            retry_config,
             should_retry_fn,
         )
         .await
     }
 
-    async fn get_receipts_with_retry(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
+    async fn get_receipts_with_retry(
+        &self,
+        tx_id: &TxId,
+        retry_config: Option<RetryConfig>,
+    ) -> Result<Vec<Receipt>> {
+        let retry_config = retry_config.as_ref().unwrap_or(&self.retry_config);
         let not_propagated = &ProviderError::ReceiptsNotPropagatedYet.to_string();
 
         let should_retry_fn = |res: &Result<TxStatus>| match res {
@@ -173,7 +186,7 @@ impl ProviderTrait for Provider {
                 tx_execution.check(None)?;
                 Ok(tx_execution)
             },
-            &self.retry_config,
+            retry_config,
             should_retry_fn,
         )
         .await?;

@@ -587,15 +587,11 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        // let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
-        // retry(
-        //     || async { provider.send_transaction(tx.clone()).await },
-        //     &self.retry_config,
-        //     should_retry_fn,
-        // )
-        // .await?,
-
-        self.cached_tx_id = Some(provider.send_transaction_with_retry(tx.clone()).await?);
+        self.cached_tx_id = Some(
+            provider
+                .send_transaction_with_retry(tx.clone(), None)
+                .await?,
+        );
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
@@ -604,14 +600,10 @@ where
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        // TODO: Maybe retry
         let provider = self.account.try_provider()?;
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
 
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(Some(&self.log_decoder))?;
-        // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         self.get_response(receipts)
     }
@@ -639,11 +631,7 @@ where
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            // TODO: see about this panic here
-            // let tx_execution = provider.tx_status(&tx_id).await?;
-            // tx_execution.check(Some(&self.log_decoder))?;
-            // tx_execution.take_receipts()
-            provider.get_receipts_with_retry(&tx_id).await?
+            provider.get_receipts_with_retry(&tx_id, None).await?
         };
 
         self.get_response(receipts)
@@ -915,7 +903,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         // tx_execution.check(Some(&self.log_decoder))?;
         // let receipts = tx_execution.take_receipts();
 
-        let receipts = provider.get_receipts_with_retry(&tx_id).await?;
+        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
 
         self.get_response(receipts)
     }
@@ -948,11 +936,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            // TODO: see about unwrap
-            // let tx_execution = provider.tx_status(&tx_id).await?;
-            // tx_execution.check(Some(&self.log_decoder))?;
-            // tx_execution.take_receipts()
-            provider.get_receipts_with_retry(&tx_id).await?
+            provider.get_receipts_with_retry(&tx_id, None).await?
         };
 
         self.get_response(receipts)
