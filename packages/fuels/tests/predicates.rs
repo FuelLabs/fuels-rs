@@ -754,8 +754,8 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let tx = wallet.add_fee_resources(tb, 0).await?;
 
-    let tx_id = provider.send_transaction(tx).await?;
-    provider.get_receipts(&tx_id).await?;
+    let tx_id = provider.send_transaction_and_await(tx).await?;
+    provider.get_receipts_with_retry(&tx_id, None).await?;
 
     let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
 
