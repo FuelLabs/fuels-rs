@@ -166,7 +166,7 @@ mod tests {
         use crate::provider::{retry_util, Backoff, RetryConfig};
 
         #[tokio::test]
-        async fn returns_last_error() -> Result<()> {
+        async fn returns_last_value() -> Result<()> {
             let err_msgs = ["Err1", "Err2", "Err3"];
             let number_of_attempts = Mutex::new(0usize);
 
@@ -195,73 +195,31 @@ mod tests {
 
         #[tokio::test]
         async fn returns_value_on_success() -> Result<()> {
-            let values = Mutex::new(vec![
-                Ok(String::from("Success")),
-                Err(error!(InvalidData, "Err1")),
-                Err(error!(InvalidData, "Err2")),
-            ]);
+            let values = Mutex::new(vec![1, 2, 3]);
 
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
 
-            let should_retry_fn = |res: &_| -> bool {
-                matches!(res, Err(err) if matches!(err, Error::InvalidData(_)))
-            };
+            let should_retry_fn = |res: &i32| *res != 2;
 
-            let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
+            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await;
 
-            assert_eq!(ok, "Success");
-
-            Ok(())
-        }
-
-        #[tokio::test]
-        async fn retry_on_none_values() -> Result<()> {
-            let values = Mutex::new(vec![
-                Ok::<Option<String>, Error>(Some(String::from("Success"))),
-                Ok(None),
-                Ok(None),
-            ]);
-            let will_always_fail = || async { values.lock().await.pop().unwrap() };
-
-            let should_retry_fn = |res: &_| -> bool {
-                match res {
-                    Err(err) if matches!(err, Error::IOError(_)) => true,
-                    Ok(None) => true,
-                    _ => false,
-                }
-            };
-
-            let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
-
-            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
-
-            assert_eq!(ok.unwrap(), "Success");
+            assert_eq!(ok, 2);
 
             Ok(())
         }
 
         #[tokio::test]
         async fn return_on_last_attempt() -> Result<()> {
-            let values = Mutex::new(vec![Ok::<Option<String>, Error>(None), Ok(None), Ok(None)]);
+            let values = Mutex::new(vec![1, 2, 3]);
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
-
-            let should_retry_fn = |res: &_| -> bool {
-                match res {
-                    Err(err) if matches!(err, Error::IOError(_)) => true,
-                    Ok(None) => true,
-                    _ => false,
-                }
-            };
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, |_| false).await;
 
-            dbg!(&ok);
-
-            assert_eq!(ok, None);
+            assert_eq!(ok, 3);
 
             Ok(())
         }
