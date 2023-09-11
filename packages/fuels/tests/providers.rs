@@ -610,7 +610,7 @@ async fn testnet_hello_world() -> Result<()> {
 
     // Setup the private key.
     let secret =
-        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
+        SecretKey::from_str("a0.48cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
             .unwrap();
 
     // Create the wallet.
