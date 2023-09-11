@@ -16,7 +16,7 @@ If the type came from [`abigen!`](../abigen/index.md) (or uses the [`::fuels::ma
 {{#include ../../../examples/codec/src/lib.rs:decoding_example_try_into}}
 ```
 
-Under the hood [`try_from_bytes`](https://docs.rs/fuels/latest/fuels/core/codec/fn.try_from_bytes.html) is being called which basically does what the preceding example did.
+Under the hood, [`try_from_bytes`](https://docs.rs/fuels/latest/fuels/core/codec/fn.try_from_bytes.html) is being called, which does what the preceding example did.
 
 ## Configuring the decoder
 
