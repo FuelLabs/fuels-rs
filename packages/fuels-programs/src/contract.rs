@@ -8,11 +8,8 @@ use std::{
 
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
-    TxId,
 };
-use fuels_accounts::provider::ProviderTrait;
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     codec::{map_revert_error, ABIEncoder, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -465,7 +462,6 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_config: RetryConfig,
 }
 
 impl<T, D> ContractCallHandler<T, D>
@@ -473,11 +469,6 @@ where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
 {
-    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = retry_config;
-        self
-    }
-
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
     /// pairs and set them into the transaction. Note that this is a builder
@@ -587,11 +578,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(
-            provider
-                .send_transaction_with_retry(tx.clone(), None)
-                .await?,
-        );
+        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
@@ -603,7 +590,10 @@ where
         let provider = self.account.try_provider()?;
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
 
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -631,7 +621,10 @@ where
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            provider.get_receipts_with_retry(&tx_id, None).await?
+            provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)
@@ -744,7 +737,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         account,
         datatype: PhantomData,
         log_decoder,
-        retry_config: Default::default(),
     })
 }
 
@@ -783,7 +775,6 @@ pub struct MultiContractCallHandler<T: Account> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
-    pub retry_config: RetryConfig,
 }
 
 impl<T: Account> MultiContractCallHandler<T> {
@@ -796,13 +787,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             log_decoder: LogDecoder {
                 log_formatters: Default::default(),
             },
-            retry_config: Default::default(),
         }
-    }
-
-    pub fn with_retry_config(mut self, retry_options: RetryConfig) -> Self {
-        self.retry_config = retry_options;
-        self
     }
 
     /// Adds a contract call to be bundled in the transaction
@@ -880,30 +865,19 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
-
-        self.cached_tx_id = Some(
-            retry(
-                || async { provider.send_transaction(tx.clone()).await },
-                &self.retry_config,
-                should_retry_fn,
-            )
-            .await?,
-        );
+        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
 
         Ok(SubmitResponseMultiple::new(self.cached_tx_id, self))
     }
 
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
-        // TODO: See about unwrap
         let provider = self.account.try_provider()?;
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
 
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(Some(&self.log_decoder))?;
-        // let receipts = tx_execution.take_receipts();
-
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -936,7 +910,10 @@ impl<T: Account> MultiContractCallHandler<T> {
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await(tx).await?;
-            provider.get_receipts_with_retry(&tx_id, None).await?
+            provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)

@@ -4,10 +4,10 @@ use fuel_abi_types::error_codes::{
 };
 use fuel_tx::Receipt;
 
-use crate::codec::LogDecoder;
-use crate::types::errors::Result;
-
-use super::errors::Error;
+use crate::{
+    codec::LogDecoder,
+    types::errors::{Error, Result},
+};
 
 #[derive(Debug, Clone)]
 pub enum TxStatus {
@@ -57,6 +57,11 @@ impl TxStatus {
             revert_id: *id,
             receipts: receipts.clone(),
         })
+    }
+
+    pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Vec<Receipt>> {
+        self.check(log_decoder)?;
+        Ok(self.take_receipts())
     }
 
     pub fn take_receipts(self) -> Vec<Receipt> {

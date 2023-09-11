@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Display};
 
-use crate::provider::ProviderTrait;
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
@@ -210,7 +209,10 @@ pub trait Account: ViewOnlyAccount {
         // Todo: Should we retry this
         let tx_id = provider.send_transaction_and_await(tx).await?;
 
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         Ok((tx_id, receipts))
     }
@@ -274,13 +276,11 @@ pub trait Account: ViewOnlyAccount {
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
         let tx_id = self.try_provider()?.send_transaction_and_await(tx).await?;
-        // self.client.await_transaction_commit(&tx_id).await?;
 
-        // TODO: This maybe should also be retried
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(None)?;
-        // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -309,11 +309,11 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, amount).await?;
         let tx_id = provider.send_transaction_and_await(tx).await?;
-        // TODO: Maybe retry
-        // let tx_execution = provider.tx_status(&tx_id).await?;
-        // tx_execution.check(None)?;
-        // let receipts = tx_execution.take_receipts();
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

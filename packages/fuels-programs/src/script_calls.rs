@@ -1,13 +1,11 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
-use fuel_tx::{Bytes32, ContractId, Output, Receipt, TxId};
+use fuel_tx::{Bytes32, ContractId, Output, Receipt};
 use fuel_types::bytes::padded_len_usize;
-use fuels_accounts::provider::ProviderTrait;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
-use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     codec::{map_revert_error, LogDecoder},
     constants::BASE_ASSET_ID,
@@ -15,7 +13,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
-        errors::{Error, Result},
+        errors::Result,
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxParameters},
         transaction_builders::ScriptTransactionBuilder,
@@ -86,7 +84,6 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-    pub retry_config: RetryConfig,
 }
 
 impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
@@ -99,7 +96,6 @@ impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
             provider: self.provider.clone(),
             datatype: self.datatype,
             log_decoder: self.log_decoder.clone(),
-            retry_config: self.retry_config.clone(),
         }
     }
 }
@@ -131,13 +127,7 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
-            retry_config: Default::default(),
         }
-    }
-
-    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = retry_config;
-        self
     }
 
     /// Sets the transaction parameters for a given transaction.
@@ -254,11 +244,10 @@ where
             self.provider.checked_dry_run(tx).await?
         } else {
             let tx_id = self.provider.send_transaction_and_await(tx).await?;
-            // TODO: see about unwrap
-            // let tx_execution = self.provider.tx_status(&tx_id).await?;
-            // tx_execution.check(Some(&self.log_decoder))?;
-            // tx_execution.take_receipts()
-            self.provider.get_receipts_with_retry(&tx_id, None).await?
+            self.provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)
@@ -275,17 +264,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let should_retry_fn =
-            |res: &Result<TxId>| -> bool { matches!(res, Err(Error::IOError(_))) };
-
-        self.cached_tx_id = Some(
-            retry(
-                || async { provider.send_transaction(tx.clone()).await },
-                &self.retry_config,
-                should_retry_fn,
-            )
-            .await?,
-        );
+        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
 
         Ok(SubmitResponse::new(
             self.cached_tx_id,
@@ -294,11 +273,13 @@ where
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        // TODO: see about unwrap
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
         let provider = self.account.try_provider()?;
 
-        let receipts = provider.get_receipts_with_retry(&tx_id, None).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }

@@ -1,5 +1,7 @@
-use async_trait::async_trait;
-use std::{collections::HashMap, fmt::Debug, io};
+use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
+
+mod retry_util;
+mod retryable_client;
 
 use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]
@@ -7,12 +9,10 @@ use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
-    FuelClient,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
-use fuels_core::retry::{retry, RetryConfig};
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
@@ -30,8 +30,11 @@ use fuels_core::{
         tx_execution::TxStatus,
     },
 };
+pub use retry_util::{Backoff, RetryConfig};
 use tai64::Tai64;
 use thiserror::Error;
+
+use crate::provider::retryable_client::RetryableClient;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -131,87 +134,47 @@ impl From<ProviderError> for Error {
     }
 }
 
-#[async_trait]
-pub trait ProviderTrait {
-    async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
-        &self,
-        tx: T,
-        retry_config: Option<RetryConfig>,
-    ) -> Result<TxId>;
-    async fn get_receipts_with_retry(
-        &self,
-        tx_id: &TxId,
-        retry_config: Option<RetryConfig>,
-    ) -> Result<Vec<Receipt>>;
-}
-
-#[async_trait]
-impl ProviderTrait for Provider {
-    async fn send_transaction_with_retry<T: Transaction + Send + Sync>(
-        &self,
-        tx: T,
-        retry_config: Option<RetryConfig>,
-    ) -> Result<TxId> {
-        let retry_config = retry_config.as_ref().unwrap_or(&self.retry_config);
-        let should_retry_fn = |res: &Result<TxId>| matches!(res, Err(Error::IOError(_)));
-
-        retry(
-            || self.send_transaction(tx.clone()),
-            retry_config,
-            should_retry_fn,
-        )
-        .await
-    }
-
-    async fn get_receipts_with_retry(
-        &self,
-        tx_id: &TxId,
-        retry_config: Option<RetryConfig>,
-    ) -> Result<Vec<Receipt>> {
-        let retry_config = retry_config.as_ref().unwrap_or(&self.retry_config);
-        let not_propagated = &ProviderError::ReceiptsNotPropagatedYet.to_string();
-
-        let should_retry_fn = |res: &Result<TxStatus>| match res {
-            Ok(_) => false,
-            Err(err) => match err {
-                Error::IOError(_) => true,
-                Error::ProviderError(str) if str.starts_with(not_propagated) => true,
-                _ => false,
-            },
-        };
-
-        let execution = retry(
-            || async {
-                let tx_execution = self.tx_status(tx_id).await?;
-                tx_execution.check(None)?;
-                Ok(tx_execution)
-            },
-            retry_config,
-            should_retry_fn,
-        )
-        .await?;
-
-        Ok(execution.take_receipts())
-    }
-}
-
 /// Encapsulates common client operations in the SDK.
 /// Note that you may also use `client`, which is an instance
 /// of `FuelClient`, directly, which provides a broader API.
 #[derive(Debug, Clone)]
 pub struct Provider {
-    pub client: FuelClient,
-    pub consensus_parameters: ConsensusParameters,
-    retry_config: RetryConfig,
+    client: RetryableClient,
+    consensus_parameters: ConsensusParameters,
 }
 
 impl Provider {
-    pub fn new(client: FuelClient, consensus_parameters: ConsensusParameters) -> Self {
-        Self {
+    pub fn new(url: impl AsRef<str>, consensus_parameters: ConsensusParameters) -> Result<Self> {
+        let client = RetryableClient::new(&url, Default::default())?;
+
+        Ok(Self {
             client,
             consensus_parameters,
-            retry_config: Default::default(),
-        }
+        })
+    }
+
+    pub async fn from(addr: impl Into<SocketAddr>) -> Result<Self> {
+        let addr = addr.into();
+        Self::connect(format!("http://{addr}")).await
+    }
+
+    pub async fn healthy(&self) -> Result<bool> {
+        Ok(self.client.health().await?)
+    }
+
+    /// Connects to an existing node at the given address.
+    pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
+        let client = RetryableClient::new(&url, Default::default())?;
+        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
+
+        Ok(Self {
+            client,
+            consensus_parameters,
+        })
+    }
+
+    pub fn url(&self) -> &str {
+        self.client.url()
     }
 
     /// Sends a transaction to the underlying Provider's client.
@@ -301,13 +264,6 @@ impl Provider {
     pub async fn launch(config: Config) -> Result<FuelClient> {
         let srv = FuelService::new_node(config).await.unwrap();
         Ok(FuelClient::from(srv.bound_address))
-    }
-
-    /// Connects to an existing node at the given address.
-    pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
-        let client = FuelClient::new(url).map_err(|err| error!(InfrastructureError, "{err}"))?;
-        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
-        Ok(Provider::new(client, consensus_parameters))
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
@@ -692,7 +648,8 @@ impl Provider {
         Ok(proof)
     }
 
-    pub fn retry_config(&mut self, retry_config: RetryConfig) {
-        self.retry_config = retry_config;
+    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
+        self.client.set_retry_config(retry_config);
+        self
     }
 }

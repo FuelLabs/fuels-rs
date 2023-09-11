@@ -2,9 +2,7 @@ use std::fmt::Debug;
 
 use fuel_tx::Receipt;
 use fuel_types::Bytes32;
-use fuels_accounts::provider::ProviderTrait;
 use fuels_accounts::{provider::Provider, Account};
-use fuels_core::retry::RetryConfig;
 use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::errors::Result,
@@ -35,7 +33,6 @@ use crate::{
 /// ```
 #[derive(Debug, Clone)]
 pub struct SubmitResponse<T: Account, D> {
-    pub retry_config: RetryConfig,
     pub tx_id: Option<Bytes32>,
     pub call_handler: CallHandler<T, D>,
 }
@@ -75,26 +72,19 @@ where
 impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     pub fn new(tx_id: Option<Bytes32>, call_handler: CallHandler<T, D>) -> Self {
         Self {
-            retry_config: Default::default(),
             tx_id,
             call_handler,
         }
     }
 
-    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = retry_config;
-        self
-    }
-
     pub async fn value(self) -> Result<D> {
         let provider = self.call_handler.try_provider()?;
+        let tx_id = &self.tx_id.expect("tx_id is missing");
 
         let receipts = provider
-            .get_receipts_with_retry(
-                &self.tx_id.expect("tx_id is missing"),
-                Some(self.retry_config),
-            )
-            .await?;
+            .tx_status(tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         let value = self.call_handler.get_response(receipts)?.value;
         Ok(value)
@@ -107,7 +97,6 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
 /// with multiple contract calls.
 #[derive(Debug, Clone)]
 pub struct SubmitResponseMultiple<T: Account> {
-    pub retry_config: RetryConfig,
     pub tx_id: Option<Bytes32>,
     pub call_handler: MultiContractCallHandler<T>,
 }
@@ -115,26 +104,19 @@ pub struct SubmitResponseMultiple<T: Account> {
 impl<T: Account> SubmitResponseMultiple<T> {
     pub fn new(tx_id: Option<Bytes32>, call_handler: MultiContractCallHandler<T>) -> Self {
         Self {
-            retry_config: Default::default(),
             tx_id,
             call_handler,
         }
     }
 
-    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
-        self.retry_config = retry_config;
-        self
-    }
-
     pub async fn value<D: Tokenizable + Debug>(self) -> Result<D> {
         let provider = self.call_handler.account.try_provider()?;
+        let tx_id = self.tx_id.expect("tx_id is missing");
 
         let receipts = provider
-            .get_receipts_with_retry(
-                &self.tx_id.expect("tx_id is missing"),
-                Some(self.retry_config),
-            )
-            .await?;
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         let value = self.call_handler.get_response(receipts)?.value;
         Ok(value)

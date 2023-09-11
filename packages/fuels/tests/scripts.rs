@@ -166,10 +166,8 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (fuel_client, _, consensus_parameters) =
-        setup_test_client(coins, vec![], None, Some(chain_config)).await;
-    let provider = Provider::new(fuel_client, consensus_parameters);
-    assert_eq!(consensus_parameters, consensus_parameters_config);
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
+    assert_eq!(provider.consensus_parameters(), consensus_parameters_config);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(

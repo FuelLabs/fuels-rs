@@ -5,16 +5,17 @@ use std::{
     iter::FilterMap,
 };
 
-use crate::{
-    codec::try_from_bytes,
-    traits::{Parameterize, Tokenizable},
-    types::errors::{error, Error, Result},
-};
 use fuel_abi_types::error_codes::{
     FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
+
+use crate::{
+    codec::try_from_bytes,
+    traits::{Parameterize, Tokenizable},
+    types::errors::{error, Error, Result},
+};
 
 #[derive(Clone)]
 pub struct LogFormatter {

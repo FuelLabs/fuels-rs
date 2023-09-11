@@ -37,7 +37,7 @@ pub mod programs {
 }
 
 pub mod core {
-    pub use fuels_core::{codec, constants, offsets, retry, traits, Configurables};
+    pub use fuels_core::{codec, constants, offsets, traits, Configurables};
 }
 
 #[cfg(feature = "std")]

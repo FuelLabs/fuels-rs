@@ -1,6 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
-use crate::types::errors::{error, Error, Result};
+use fuels_core::types::errors::{error, Error, Result as SdkResult};
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -18,7 +18,7 @@ use crate::types::errors::{error, Error, Result};
 ///
 /// ```rust
 /// use std::time::Duration;
-/// use fuels_core::retry::Backoff;
+/// use fuels_accounts::provider::Backoff;
 ///
 /// let linear_backoff = Backoff::Linear(Duration::from_secs(2));
 /// let exponential_backoff = Backoff::Exponential(Duration::from_secs(1));
@@ -65,7 +65,7 @@ impl Backoff {
 /// ```rust
 /// use std::num::NonZeroUsize;
 /// use std::time::Duration;
-/// use fuels_core::retry::{Backoff, RetryConfig};
+/// use fuels_accounts::provider::{Backoff, RetryConfig};
 ///
 /// let max_attempts = 5;
 /// let interval_strategy = Backoff::Exponential(Duration::from_secs(1));
@@ -81,7 +81,7 @@ pub struct RetryConfig {
 // ANCHOR_END: retry_config
 
 impl RetryConfig {
-    pub fn new(max_attempts: u32, interval: Backoff) -> Result<Self> {
+    pub fn new(max_attempts: u32, interval: Backoff) -> SdkResult<Self> {
         let max_attempts = NonZeroU32::new(max_attempts)
             .ok_or_else(|| error!(InvalidData, "`max_attempts` must be greater than 0."))?;
 
@@ -122,43 +122,14 @@ impl Default for RetryConfig {
 /// Returns `Err(Error)` if the maximum number of attempts is reached and the action
 /// still fails. If a retryable error occurs during the attempts, the error will
 /// be returned if the `should_retry` condition allows further retries.
-///
-/// # Examples
-///
-/// ```rust
-/// use std::time::Duration;
-/// use fuels_core::types::errors::Error;
-/// use fuels_core::retry::{Backoff, retry, RetryConfig};
-///
-/// async fn network_request() -> Result<(), Error> {
-///     // Simulate network request here
-///     // ...
-///     // For demonstration purposes, always return an error
-///   use fuels_core::error;
-/// Err(error!(InvalidData, "Error"))
-/// }
-///
-/// fn main() {
-///
-///
-/// let retry_config = RetryConfig::new(3, Backoff::Linear(Duration::from_secs(1))).unwrap();
-///
-///     let should_retry = |result: &Result<(), Error>| {
-///         // Retry if the error is retryable
-///         result.is_err()
-///     };
-///
-///     let result = retry(network_request, &retry_config, should_retry);
-/// }
-/// ```
-pub async fn retry<Fut, T, ShouldRetry>(
+pub(crate) async fn retry<Fut, T, ShouldRetry>(
     mut action: impl FnMut() -> Fut,
     retry_config: &RetryConfig,
     should_retry: ShouldRetry,
-) -> Result<T>
+) -> T
 where
-    Fut: Future<Output = Result<T>>,
-    ShouldRetry: Fn(&Result<T>) -> bool,
+    Fut: Future<Output = T>,
+    ShouldRetry: Fn(&T) -> bool,
 {
     let mut last_result = None;
 
@@ -185,10 +156,14 @@ mod tests {
             time::{Duration, Instant},
         };
 
-        use crate::retry::{retry, Backoff, RetryConfig};
-        use crate::types::errors::{error, Error, Result};
         use fuel_tx::TxId;
+        use fuels_core::{
+            error,
+            types::errors::{Error, Result},
+        };
         use tokio::sync::Mutex;
+
+        use crate::provider::{retry_util, Backoff, RetryConfig};
 
         #[tokio::test]
         async fn returns_last_error() -> Result<()> {
@@ -206,7 +181,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let err = retry(will_always_fail, &retry_options, should_retry_fn)
+            let err = retry_util::retry(will_always_fail, &retry_options, should_retry_fn)
                 .await
                 .expect_err("Should have failed");
 
@@ -234,7 +209,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok, "Success");
 
@@ -260,7 +235,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(5, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok.unwrap(), "Success");
 
@@ -282,7 +257,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             dbg!(&ok);
 
@@ -313,7 +288,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry(will_always_fail, &retry_options, should_retry_fn).await?;
+            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
 
             assert_eq!(ok, tx_id);
 
@@ -333,7 +308,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Fixed(Duration::from_millis(100)))?;
 
-            let _ = retry(
+            let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
                 should_retry_fn,
@@ -371,7 +346,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(100)))?;
 
-            let _ = retry(
+            let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
                 should_retry_fn,
@@ -411,7 +386,7 @@ mod tests {
             let retry_options =
                 RetryConfig::new(3, Backoff::Exponential(Duration::from_millis(100)))?;
 
-            let _ = retry(
+            let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
                 should_retry_fn,
