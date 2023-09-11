@@ -62,7 +62,7 @@ strum_macros = "0.25.2"
 syn = "2.0.28"
 tai64 = { version = "4.0.0", default-features = false }
 tempfile = { version = "3.7.1", default-features = false }
-thiserror = { version = "1.0.48", default-features = false }
+thiserror = { version = "1.0.47", default-features = false }
 tokio = { version = "1.31.0", default-features = false }
 trybuild = "1.0.82"
 which = { version = "4.4.0", default-features = false }
