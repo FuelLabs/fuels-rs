@@ -2,7 +2,12 @@ use fuel_tx::{ConsensusParameters, Output, Receipt};
 use fuel_types::MessageId;
 use fuels_core::{
     constants::BASE_ASSET_ID,
-    types::{bech32::Bech32Address, input::Input, transaction_builders::TransactionBuilder},
+    types::{
+        bech32::Bech32Address,
+        errors::{error, Error, Result},
+        input::Input,
+        transaction_builders::TransactionBuilder,
+    },
 };
 
 pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
@@ -13,10 +18,10 @@ pub fn calculate_base_amount_with_fee(
     tb: &impl TransactionBuilder,
     consensus_params: &ConsensusParameters,
     previous_base_amount: u64,
-) -> u64 {
+) -> Result<u64> {
     let transaction_fee = tb
-        .fee_checked_from_tx(consensus_params)
-        .expect("Error calculating TransactionFee");
+        .fee_checked_from_tx(consensus_params)?
+        .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
     let mut new_base_amount = transaction_fee.max_fee() + previous_base_amount;
 
@@ -31,7 +36,8 @@ pub fn calculate_base_amount_with_fee(
     if !is_consuming_utxos && new_base_amount == 0 {
         new_base_amount = MIN_AMOUNT;
     }
-    new_base_amount
+
+    Ok(new_base_amount)
 }
 
 // Replace the current base asset inputs of a tx builder with the provided ones.

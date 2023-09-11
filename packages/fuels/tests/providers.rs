@@ -342,7 +342,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 161;
+    let gas_used_by_script = 159;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -519,6 +519,7 @@ async fn test_gas_errors() -> Result<()> {
 
     let expected = "Provider error: Response errors; not enough coins to fit the target";
     assert!(response.to_string().starts_with(expected));
+
     Ok(())
 }
 
