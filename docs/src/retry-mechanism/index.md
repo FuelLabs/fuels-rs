@@ -10,7 +10,7 @@ To address these scenarios, we can configure the number of retry attempts and th
 The retry behavior can be altered by giving a custom `RetryConfig`. It allows for configuring the maximum number of attempts and the interval strategy used.
 
 ```rust, ignore
-{{#include ../../packages/fuels-core/src/utils/retry.rs:retry_config}}
+{{#include ../../../packages/fuels-core/src/utils/retry.rs:retry_config}}
 ```
 
 ## Interval strategy - Backoff
@@ -25,26 +25,6 @@ Each strategy allows you to customize the waiting time before a new attempt base
 - `Fixed(Duration)`: Uses a constant waiting time between attempts.
 
 ```rust, ignore
-{{#include ../../packages/fuels-core/src/utils/retry.rs:backoff}}
+{{#include ../../../packages/fuels-core/src/utils/retry.rs:backoff}}
 ```
 
-
-## Provider Configuration
-
-
-
-## Transaction Workflow
-
-### Submitting transaction
-
-```rust, ignore
-{{#include ../../examples/contracts/src/lib.rs:submit_retry}}
-```
-
-### Requesting values
-
-In this step, we use the `response` obtained from the previous step to retrieve the desired values.
-
-```rust, ignore
-{{#include ../../examples/contracts/src/lib.rs:response_retry}}
-```

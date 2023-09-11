@@ -22,7 +22,7 @@ Furthermore, if you need to separate submission from value retrieval for any rea
 {{#include ../../../examples/contracts/src/lib.rs:submit_response_multicontract}}
 ```
 
-This approach enables us to use a [Retry mechanism](../retry-mechanism.md) for submitting and acquiring values.
+This approach enables us to use a [Retry mechanism](../retry-configuration/retry-mechanism.md) for submitting and acquiring values.
 
 ## Output values
 
