@@ -206,7 +206,6 @@ pub trait Account: ViewOnlyAccount {
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
-        // Todo: Should we retry this
         let tx_id = provider.send_transaction_and_await(tx).await?;
 
         let receipts = provider
