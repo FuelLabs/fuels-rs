@@ -32,4 +32,3 @@ Each strategy allows you to customize the waiting time before a new attempt base
 ```rust, ignore
 {{#include ../../../packages/fuels-accounts/src/provider/retry_util.rs:backoff}}
 ```
-
