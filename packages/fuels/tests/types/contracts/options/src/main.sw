@@ -4,8 +4,10 @@ struct TestStruct {
     option: Option<Address>,
 }
 
+#[allow(dead_code)]
 enum TestEnum {
     EnumOption: Option<Address>,
+    OtherValue: bool,
 }
 
 const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;

@@ -1,7 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use fuels::types::errors::{error, Error, Result};
-    use fuels::types::Bits256;
+    use fuels::{
+        prelude::{LoadConfiguration, StorageConfiguration},
+        types::{
+            errors::{error, Error, Result},
+            Bits256,
+        },
+    };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
@@ -105,7 +110,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 333);
+        assert_eq!(transaction_cost.gas_used, 331);
 
         Ok(())
     }
@@ -138,7 +143,8 @@ mod tests {
         let key = Bytes32::from([1u8; 32]);
         let value = Bytes32::from([2u8; 32]);
         let storage_slot = StorageSlot::new(key, value);
-        let storage_configuration = StorageConfiguration::from(vec![storage_slot]);
+        let storage_configuration =
+            StorageConfiguration::default().add_slot_overrides([storage_slot]);
         let configuration = LoadConfiguration::default()
             .with_storage_configuration(storage_configuration)
             .with_salt(salt);
@@ -389,7 +395,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .call()
             .await;
 
@@ -401,7 +407,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .append_variable_outputs(1)
             .with_contract_ids(&[called_contract_id.into()])
             .call()
@@ -414,7 +420,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .increment_from_contract_then_mint(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address)
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -630,7 +636,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 546);
+        assert_eq!(transaction_cost.gas_used, 542);
 
         Ok(())
     }
@@ -788,6 +794,35 @@ mod tests {
         assert_eq!(result_uint, 2);
         assert!(result_bool);
         assert_eq!(result_str, "fuel");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn storage_slots_override() -> Result<()> {
+        {
+            // ANCHOR: storage_slots_override
+            use fuels::{programs::contract::Contract, tx::StorageSlot};
+            let slot_override = StorageSlot::new([1; 32].into(), [2; 32].into());
+            let storage_config =
+                StorageConfiguration::default().add_slot_overrides([slot_override]);
+
+            let load_config =
+                LoadConfiguration::default().with_storage_configuration(storage_config);
+            let _: Result<Contract> = Contract::load_from("...", load_config);
+            // ANCHOR_END: storage_slots_override
+        }
+
+        {
+            // ANCHOR: storage_slots_disable_autoload
+            use fuels::programs::contract::Contract;
+            let storage_config = StorageConfiguration::default().with_autoload(false);
+
+            let load_config =
+                LoadConfiguration::default().with_storage_configuration(storage_config);
+            let _: Result<Contract> = Contract::load_from("...", load_config);
+            // ANCHOR_END: storage_slots_disable_autoload
+        }
 
         Ok(())
     }

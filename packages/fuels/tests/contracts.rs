@@ -280,9 +280,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 399;
-    let expected_metered_bytes_size = 728;
-    let expected_total_fee = 332;
+    let expected_gas_used = 397;
+    let expected_metered_bytes_size = 712;
+    let expected_total_fee = 325;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -1119,7 +1119,7 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected_error = format!("Invalid data: file '{binary_path}' does not exist");
+        let expected_error = format!("Invalid data: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
@@ -1129,7 +1129,7 @@ async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let expected_error =
-            format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
+            format!("Invalid data: expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
@@ -1564,6 +1564,46 @@ async fn test_heap_type_multicall() -> Result<()> {
             .to_string()
             .contains("The contract call with the heap type return must be at the last position"));
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Predicate(
+            name = "MyPredicate",
+            project = "packages/fuels/tests/types/predicates/predicate_vector"
+        ),),
+    );
+
+    let provider = wallet.try_provider()?.clone();
+    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let predicate = Predicate::load_from(
+        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+    )?
+    .with_data(data)
+    .with_provider(provider);
+    let wallet: WalletUnlocked = wallet;
+    wallet
+        .transfer(
+            predicate.address(),
+            10_000,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // if the contract is successfully deployed then the predicate was unlocked. This further means
+    // the offsets were setup correctly since the predicate uses heap types in its arguments.
+    // Storage slots were loaded automatically by default
+    Contract::load_from(
+        "tests/contracts/storage/out/debug/storage.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
+    .await?;
 
     Ok(())
 }

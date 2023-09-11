@@ -10,6 +10,7 @@ enum TestEnum {
 
 pub enum TestError {
     NoAddress: str[5],
+    OtherError: (),
 }
 
 const ADDR = 0xd58573593432a30a800f97ad32f877425c223a9e427ab557aab5d5bb89156db0;
@@ -66,7 +67,7 @@ impl MyContract for Contract {
     fn input_error(test_result: Result<Address, TestError>) -> bool {
         if let Result::Err(test_error) = test_result {
             if let TestError::NoAddress(_err_msg) = test_error {
-                return true
+                return true;
             }
         }
         false

@@ -1,6 +1,6 @@
 contract;
 
-use std::{constants::ZERO_B256, hash::sha256};
+use std::{constants::ZERO_B256, hash::*};
 
 struct Person {
     name: str[4],
@@ -11,6 +11,12 @@ enum State {
     A: (),
     B: (),
     C: (),
+}
+
+impl Hash for str[4] {
+    fn hash(self, ref mut state: Hasher) {
+        state.write_str(self);
+    }
 }
 
 abi MyContract {

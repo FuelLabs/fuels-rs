@@ -31,9 +31,9 @@ strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true }
 
+[dev-dependencies]
+tempfile = "3.8"
+
 [features]
 default = ["std"]
-std = [
-    "fuels-core/std",
-    "fuels-accounts/std",
-]
+std = ["fuels-core/std", "fuels-accounts/std"]
