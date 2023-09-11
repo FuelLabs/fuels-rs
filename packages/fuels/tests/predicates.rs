@@ -377,7 +377,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let amount = 1000;
     let base_layer_address =
-        Address::from_str("0.48.0162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
+        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
             .expect("Invalid address.");
     let base_layer_address = Bech32Address::from(base_layer_address);
 
