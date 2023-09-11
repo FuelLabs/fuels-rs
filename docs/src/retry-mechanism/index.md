@@ -28,6 +28,11 @@ Each strategy allows you to customize the waiting time before a new attempt base
 {{#include ../../packages/fuels-core/src/utils/retry.rs:backoff}}
 ```
 
+
+## Provider Configuration
+
+
+
 ## Transaction Workflow
 
 ### Submitting transaction
