@@ -7,6 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
+    codec::DecoderConfig,
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
@@ -79,6 +80,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub tx_parameters: TxParameters,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
+    decoder_config: DecoderConfig,
     pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
@@ -112,6 +114,7 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
+            decoder_config: DecoderConfig::default(),
         }
     }
 
@@ -124,6 +127,12 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
         self
     }
 
@@ -287,7 +296,8 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts).parse(None, &D::param_type())?;
+        let token =
+            ReceiptParser::new(&receipts, self.decoder_config).parse(None, &D::param_type())?;
 
         Ok(FuelCallResponse::new(
             D::from_token(token)?,

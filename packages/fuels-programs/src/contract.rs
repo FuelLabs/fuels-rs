@@ -11,7 +11,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::ABIEncoder,
+    codec::{ABIEncoder, DecoderConfig},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -457,6 +457,7 @@ impl ContractCall {
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_parameters: TxParameters,
+    decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
@@ -539,6 +540,12 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
         self
     }
 
@@ -633,7 +640,7 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts).parse(
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
@@ -723,6 +730,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         account,
         datatype: PhantomData,
         log_decoder,
+        decoder_config: Default::default(),
     })
 }
 
@@ -760,6 +768,7 @@ pub struct MultiContractCallHandler<T: Account> {
     pub tx_parameters: TxParameters,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
+    decoder_config: DecoderConfig,
     pub account: T,
 }
 
@@ -770,10 +779,15 @@ impl<T: Account> MultiContractCallHandler<T> {
             tx_parameters: TxParameters::default(),
             cached_tx_id: None,
             account,
-            log_decoder: LogDecoder {
-                log_formatters: Default::default(),
-            },
+            log_decoder: LogDecoder::new(Default::default()),
+            decoder_config: DecoderConfig::default(),
         }
+    }
+
+    pub fn with_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
+        self
     }
 
     /// Adds a contract call to be bundled in the transaction
@@ -926,7 +940,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         &self,
         receipts: Vec<Receipt>,
     ) -> Result<FuelCallResponse<D>> {
-        let mut receipt_parser = ReceiptParser::new(&receipts);
+        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
         let final_tokens = self
             .contract_calls

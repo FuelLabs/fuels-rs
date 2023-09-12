@@ -1,4 +1,5 @@
 use fuels::{prelude::*, types::Bits256};
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
@@ -357,6 +358,53 @@ async fn test_script_b256() -> Result<()> {
 }
 
 #[tokio::test]
+async fn can_configure_decoder_on_script_call() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_needs_custom_decoder"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    {
+        // Will fail if max_tokens too low
+        script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 101,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .expect_err(
+                "Should fail because return type has more tokens than what is allowed by default",
+            );
+    }
+    {
+        // When the token limit is bumped should pass
+        let response = script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(response, [0u8; 1000]);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -380,5 +428,6 @@ async fn test_script_submit_and_response() -> Result<()> {
     let response = handle.response().await?;
 
     assert_eq!(response.value, 42);
+
     Ok(())
 }

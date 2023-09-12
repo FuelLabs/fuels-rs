@@ -51,11 +51,11 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
-                    log_decoder: ::fuels::programs::logs::LogDecoder {log_formatters: #log_formatters_lookup}
+                    log_decoder: ::fuels::programs::logs::LogDecoder::new(#log_formatters_lookup)
                 }
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+            pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
                ::core::result::Result::Ok(#name { account, binary: self.binary, log_decoder: self.log_decoder})
             }
 

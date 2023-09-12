@@ -12,7 +12,6 @@ use fuel_tx::{
 use fuel_types::{bytes::padded_len_usize, Bytes32, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
-use super::unresolved_bytes::UnresolvedBytes;
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -24,6 +23,7 @@ use crate::{
         input::Input,
         message::Message,
         transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+        unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
 };

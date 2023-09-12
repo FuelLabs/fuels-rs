@@ -50,7 +50,7 @@ pub(crate) fn contract_bindings(
                 account: T,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
-                let log_decoder = ::fuels::programs::logs::LogDecoder { log_formatters: #log_formatters };
+                let log_decoder = ::fuels::programs::logs::LogDecoder::new(#log_formatters);
                 Self { contract_id, account, log_decoder }
             }
 
@@ -62,7 +62,7 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
                 ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
             }
 

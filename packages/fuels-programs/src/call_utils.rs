@@ -22,7 +22,7 @@ use itertools::{chain, Itertools};
 use crate::contract::ContractCall;
 
 #[derive(Default)]
-/// Specifies offsets of [`Instruction::CALL`] parameters stored in the script
+/// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers
 pub(crate) struct CallOpcodeParamsOffset {
     pub call_data_offset: usize,
