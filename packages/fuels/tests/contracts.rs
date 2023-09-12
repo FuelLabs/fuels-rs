@@ -1459,8 +1459,8 @@ async fn test_contract_submit_and_response() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
-    let response = contract_methods.get(1, 2).submit().await?;
-    let value = response.value().await?;
+    let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    let value = submitted_tx.response().await?.value;
 
     assert_eq!(value, 3);
 
@@ -1475,7 +1475,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .add_call(call_handler_2);
 
     let handle = multi_call_handler.submit().await?;
-    let (val_1, val_2): (u64, u64) = handle.value().await?;
+    let (val_1, val_2): (u64, u64) = handle.response().await?.value;
 
     assert_eq!(val_1, 7);
     assert_eq!(val_2, 42);
@@ -1523,8 +1523,8 @@ async fn test_heap_type_multicall() -> Result<()> {
             .add_call(call_handler_3);
 
         let handle = multi_call_handler.submit().await?;
-        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.value().await?;
-        //
+        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.response().await?.value;
+
         assert_eq!(val_1, 7);
         assert_eq!(val_2, 42);
         assert_eq!(val_3, vec![0, 1, 2]);

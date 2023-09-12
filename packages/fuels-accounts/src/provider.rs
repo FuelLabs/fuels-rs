@@ -27,7 +27,7 @@ use fuels_core::{
         node_info::NodeInfo,
         transaction::Transaction,
         transaction_response::TransactionResponse,
-        tx_execution::TxStatus,
+        tx_status::TxStatus,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
@@ -178,7 +178,7 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction_and_await<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tx_id = self.send_transaction(tx.clone()).await?;
         self.client.await_transaction_commit(&tx_id).await?;
 

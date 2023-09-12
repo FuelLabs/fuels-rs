@@ -589,7 +589,6 @@ async fn test_get_gas_used() -> Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[tokio::test]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.

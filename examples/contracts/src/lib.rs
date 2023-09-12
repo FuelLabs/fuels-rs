@@ -205,7 +205,7 @@ mod tests {
             .submit()
             .await?;
 
-        let value = response.value().await?;
+        let value = response.response().await?.value;
 
         // ANCHOR_END: submit_response_contract
         assert_eq!(42, value);
@@ -609,8 +609,8 @@ mod tests {
         assert_eq!(array, [42; 2]);
 
         // ANCHOR: submit_response_multicontract
-        let response = multi_call_handler.submit().await?;
-        let (counter, array): (u64, [u64; 2]) = response.value().await?;
+        let submitted_tx = multi_call_handler.submit().await?;
+        let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;
         // ANCHOR_END: submit_response_multicontract
 
         assert_eq!(counter, 42);

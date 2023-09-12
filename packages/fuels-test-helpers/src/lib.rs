@@ -133,7 +133,6 @@ pub fn setup_single_message(
 }
 
 #[cfg(feature = "fuel-core-lib")]
-#[allow(clippy::let_unit_value)]
 pub async fn setup_test_provider(
     coins: Vec<Coin>,
     messages: Vec<Message>,
@@ -161,7 +160,7 @@ pub async fn setup_test_provider(
         let () = futures::future::pending().await;
     });
 
-    Provider::connect(format!("http://{address}"))
+    Provider::from(address)
         .await
         .expect("Could not connect to node")
 }
@@ -198,7 +197,7 @@ pub async fn setup_test_provider(
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await;
 
-    Provider::connect(format!("http://{bound_address}"))
+    Provider::from(bound_address)
         .await
         .expect("Could not connect to node!")
 }

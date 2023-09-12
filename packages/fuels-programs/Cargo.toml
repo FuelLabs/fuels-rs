@@ -26,8 +26,6 @@ regex = { workspace = true }
 serde = { workspace = true, default-features = false, features = ["derive"] }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
-strum = { workspace = true }
-strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true }
 

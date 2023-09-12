@@ -30,7 +30,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
     receipt_parser::ReceiptParser,
-    submit_response::{CallHandler, SubmitResponse, SubmitResponseMultiple},
+    submit_response::{SubmitResponse, SubmitResponseMultiple},
 };
 
 #[derive(Debug, Clone)]
@@ -315,7 +315,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction_and_await(tx).await?;
+        provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -451,7 +451,7 @@ impl ContractCall {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
 pub struct ContractCallHandler<T: Account, D> {
@@ -578,12 +578,10 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
+        let tx_id = provider.send_transaction(tx.clone()).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        Ok(SubmitResponse::new(
-            self.cached_tx_id,
-            CallHandler::Contract(self),
-        ))
+        Ok(SubmitResponse::new(tx_id, self))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
@@ -596,10 +594,6 @@ where
             .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
-    }
-
-    pub async fn get_value(self) -> Result<D> {
-        Ok(self.response().await?.value)
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -620,7 +614,7 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_await(tx).await?;
+            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
             provider
                 .tx_status(&tx_id)
                 .await?
@@ -765,7 +759,7 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
         })
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
 pub struct MultiContractCallHandler<T: Account> {
@@ -865,9 +859,10 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
+        let tx_id = provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        Ok(SubmitResponseMultiple::new(self.cached_tx_id, self))
+        Ok(SubmitResponseMultiple::new(tx_id, self))
     }
 
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
@@ -880,10 +875,6 @@ impl<T: Account> MultiContractCallHandler<T> {
             .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
-    }
-
-    pub async fn get_value<D: Tokenizable + Debug>(self) -> Result<D> {
-        Ok(self.response().await?.value)
     }
 
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
@@ -909,7 +900,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_await(tx).await?;
+            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
             provider
                 .tx_status(&tx_id)
                 .await?

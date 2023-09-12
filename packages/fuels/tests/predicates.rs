@@ -463,7 +463,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
-    provider.send_transaction_and_await(tx).await?;
+    provider.send_transaction_and_await_commit(tx).await?;
 
     assert_address_balance(
         predicate.address(),
@@ -754,7 +754,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let tx = wallet.add_fee_resources(tb, 0).await?;
 
-    let tx_id = provider.send_transaction_and_await(tx).await?;
+    let tx_id = provider.send_transaction_and_await_commit(tx).await?;
     provider.tx_status(&tx_id).await?.check(None)?;
 
     let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;

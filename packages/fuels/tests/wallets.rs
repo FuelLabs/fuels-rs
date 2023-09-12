@@ -441,7 +441,9 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         wallet.sign_transaction(&mut tb);
     }
 
-    provider.send_transaction_and_await(tb.build()?).await?;
+    provider
+        .send_transaction_and_await_commit(tb.build()?)
+        .await?;
 
     assert_eq!(
         receiver.get_asset_balance(&BASE_ASSET_ID).await?,

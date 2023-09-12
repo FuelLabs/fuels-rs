@@ -30,7 +30,7 @@ use crate::{
     },
     contract::SettableContract,
     receipt_parser::ReceiptParser,
-    submit_response::{CallHandler, SubmitResponse},
+    submit_response::SubmitResponse,
 };
 
 #[derive(Debug, Clone)]
@@ -84,20 +84,6 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
-}
-
-impl<T: Account, D> Clone for ScriptCallHandler<T, D> {
-    fn clone(&self) -> Self {
-        ScriptCallHandler {
-            script_call: self.script_call.clone(),
-            tx_parameters: self.tx_parameters,
-            cached_tx_id: self.cached_tx_id,
-            account: self.account.clone(),
-            provider: self.provider.clone(),
-            datatype: self.datatype,
-            log_decoder: self.log_decoder.clone(),
-        }
-    }
 }
 
 impl<T: Account, D> ScriptCallHandler<T, D>
@@ -243,7 +229,7 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = self.provider.send_transaction_and_await(tx).await?;
+            let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
             self.provider
                 .tx_status(&tx_id)
                 .await?
@@ -262,30 +248,22 @@ where
 
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
+        let tx_id = self.provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        self.cached_tx_id = Some(provider.send_transaction(tx.clone()).await?);
-
-        Ok(SubmitResponse::new(
-            self.cached_tx_id,
-            CallHandler::Script(self),
-        ))
+        Ok(SubmitResponse::new(tx_id, self))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-        let provider = self.account.try_provider()?;
 
-        let receipts = provider
+        let receipts = self
+            .provider
             .tx_status(&tx_id)
             .await?
             .take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
-    }
-
-    pub async fn get_value(self) -> Result<D> {
-        Ok(self.response().await?.value)
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the

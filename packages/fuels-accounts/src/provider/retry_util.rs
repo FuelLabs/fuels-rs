@@ -151,12 +151,8 @@ where
 #[cfg(test)]
 mod tests {
     mod retry_until {
-        use std::{
-            str::FromStr,
-            time::{Duration, Instant},
-        };
+        use std::time::{Duration, Instant};
 
-        use fuel_tx::TxId;
         use fuels_core::{
             error,
             types::errors::{Error, Result},
@@ -166,7 +162,8 @@ mod tests {
         use crate::provider::{retry_util, Backoff, RetryConfig};
 
         #[tokio::test]
-        async fn returns_last_value() -> Result<()> {
+        async fn returns_last_received_response() -> Result<()> {
+            // given
             let err_msgs = ["Err1", "Err2", "Err3"];
             let number_of_attempts = Mutex::new(0usize);
 
@@ -174,27 +171,26 @@ mod tests {
                 let msg = err_msgs[*number_of_attempts.lock().await];
                 *number_of_attempts.lock().await += 1;
 
-                Result::<()>::Err(Error::InvalidData(msg.to_string()))
+                msg
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let err = retry_util::retry(will_always_fail, &retry_options, should_retry_fn)
-                .await
-                .expect_err("Should have failed");
+            // when
+            let response =
+                retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await;
 
-            assert_eq!(
-                err.to_string(),
-                Error::InvalidData(err_msgs[2].to_string()).to_string()
-            );
+            // then
+            assert_eq!(response, "Err3");
 
             Ok(())
         }
 
         #[tokio::test]
-        async fn returns_value_on_success() -> Result<()> {
+        async fn stops_retrying_when_predicate_is_satistfied() -> Result<()> {
+            // given
             let values = Mutex::new(vec![1, 2, 3]);
 
             let will_always_fail = || async { values.lock().await.pop().unwrap() };
@@ -203,58 +199,19 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
 
-            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await;
+            // when
+            let response =
+                retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await;
 
-            assert_eq!(ok, 2);
-
-            Ok(())
-        }
-
-        #[tokio::test]
-        async fn return_on_last_attempt() -> Result<()> {
-            let values = Mutex::new(vec![1, 2, 3]);
-            let will_always_fail = || async { values.lock().await.pop().unwrap() };
-
-            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
-
-            let ok = retry_util::retry(will_always_fail, &retry_options, |_| false).await;
-
-            assert_eq!(ok, 3);
-
-            Ok(())
-        }
-
-        #[tokio::test]
-        async fn retry_on_io_error() -> Result<()> {
-            let tx_id = TxId::from_str(
-                "0x98f01c73c2062b55bba70966917a0839995e86abfadfff24534262d1c8b7a64e",
-            );
-            let values = Mutex::new(vec![
-                Ok(tx_id),
-                Err(Error::IOError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Failed".to_string(),
-                ))),
-                Err(Error::IOError(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Failed".to_string(),
-                ))),
-            ]);
-            let will_always_fail = || async { values.lock().await.pop().unwrap() };
-
-            let should_retry_fn = |res: &_| -> bool { matches!(res, Err(Error::IOError(_))) };
-
-            let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(10)))?;
-
-            let ok = retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await?;
-
-            assert_eq!(ok, tx_id);
+            // then
+            assert_eq!(response, 2);
 
             Ok(())
         }
 
         #[tokio::test]
         async fn retry_respects_delay_between_attempts_fixed() -> Result<()> {
+            // given
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
@@ -266,6 +223,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Fixed(Duration::from_millis(100)))?;
 
+            // when
             let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
@@ -273,6 +231,7 @@ mod tests {
             )
             .await;
 
+            // then
             let timestamps_vec = timestamps.lock().await.clone();
 
             let timestamps_spaced_out_at_least_100_mills = timestamps_vec
@@ -293,6 +252,7 @@ mod tests {
 
         #[tokio::test]
         async fn retry_respects_delay_between_attempts_linear() -> Result<()> {
+            // given
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
@@ -304,6 +264,7 @@ mod tests {
 
             let retry_options = RetryConfig::new(3, Backoff::Linear(Duration::from_millis(100)))?;
 
+            // when
             let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
@@ -311,6 +272,7 @@ mod tests {
             )
             .await;
 
+            // then
             let timestamps_vec = timestamps.lock().await.clone();
 
             let timestamps_spaced_out_at_least_100_mills = timestamps_vec
@@ -332,6 +294,7 @@ mod tests {
 
         #[tokio::test]
         async fn retry_respects_delay_between_attempts_exponential() -> Result<()> {
+            // given
             let timestamps: Mutex<Vec<Instant>> = Mutex::new(vec![]);
 
             let will_fail_and_record_timestamp = || async {
@@ -344,6 +307,7 @@ mod tests {
             let retry_options =
                 RetryConfig::new(3, Backoff::Exponential(Duration::from_millis(100)))?;
 
+            // when
             let _ = retry_util::retry(
                 will_fail_and_record_timestamp,
                 &retry_options,
@@ -351,6 +315,7 @@ mod tests {
             )
             .await;
 
+            // then
             let timestamps_vec = timestamps.lock().await.clone();
 
             let timestamps_spaced_out_at_least_100_mills = timestamps_vec
