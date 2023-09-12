@@ -25,10 +25,10 @@ use crate::contract::ContractCall;
 /// Specifies offsets of [`Instruction::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers
 pub(crate) struct CallOpcodeParamsOffset {
-    pub asset_id_offset: usize,
-    pub amount_offset: usize,
-    pub gas_forwarded_offset: usize,
     pub call_data_offset: usize,
+    pub amount_offset: usize,
+    pub asset_id_offset: usize,
+    pub gas_forwarded_offset: Option<usize>,
 }
 
 /// How many times to attempt to resolve missing tx dependencies.
@@ -110,7 +110,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset, tx_parameters.gas_limit());
+        build_script_data_from_contract_calls(calls, data_offset);
 
     let script = get_instructions(calls, call_param_offsets);
 
@@ -143,27 +143,28 @@ pub(crate) async fn build_tx_from_contract_calls(
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
 fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
-    let n_heap_type_calls = calls
+    calls
         .iter()
-        .filter(|c| c.output_param.is_vm_heap_type())
-        .count();
-    let n_stack_type_calls = calls.len() - n_heap_type_calls;
+        .map(|c| {
+            // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
+            // the calling script doesn't depend on the underlying type, just on whether or not
+            // gas was forwarded or contract call output type is a heap type.
 
-    let total_instructions_len_stack_data =
-        // Use placeholder for `call_param_offsets` and `output_param_type`, because the length of
-        // the calling script doesn't depend on the underlying type, just on whether or not the
-        // contract call output type is a heap type.
-        get_single_call_instructions(&CallOpcodeParamsOffset::default(), &ParamType::U64).len()
-            * n_stack_type_calls;
+            let mut call_opcode_params = CallOpcodeParamsOffset::default();
 
-    let total_instructions_len_heap_data = get_single_call_instructions(
-        &CallOpcodeParamsOffset::default(),
-        &ParamType::Vector(Box::from(ParamType::U64)),
-    )
-    .len()
-        * n_heap_type_calls;
+            if c.call_parameters.gas_forwarded().is_some() {
+                call_opcode_params.gas_forwarded_offset = Some(0);
+            }
 
-    total_instructions_len_stack_data + total_instructions_len_heap_data
+            let param_type = if c.output_param.is_vm_heap_type() {
+                ParamType::Vector(Box::from(ParamType::U64))
+            } else {
+                ParamType::U64
+            };
+
+            get_single_call_instructions(&call_opcode_params, &param_type).len()
+        })
+        .sum()
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -225,17 +226,16 @@ pub(crate) fn get_instructions(
 }
 
 /// Returns script data, consisting of the following items in the given order:
-/// 1. Asset ID to be forwarded ([`AssetId::LEN`])
-/// 2. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 4. Contract ID ([`ContractId::LEN`]);
-/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 3. Contract ID ([`ContractId::LEN`]);
+/// 4. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 5. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
 /// 7. Encoded arguments (optional) (variable length)
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
-    gas_limit: u64,
 ) -> (Vec<u8>, Vec<CallOpcodeParamsOffset>) {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -244,25 +244,29 @@ pub(crate) fn build_script_data_from_contract_calls(
     let mut segment_offset = data_offset;
 
     for call in calls {
+        let gas_forwarded = call.call_parameters.gas_forwarded();
+
         let call_param_offsets = CallOpcodeParamsOffset {
-            asset_id_offset: segment_offset,
-            amount_offset: segment_offset + AssetId::LEN,
-            gas_forwarded_offset: segment_offset + AssetId::LEN + WORD_SIZE,
-            call_data_offset: segment_offset + AssetId::LEN + 2 * WORD_SIZE,
+            amount_offset: segment_offset,
+            asset_id_offset: segment_offset + WORD_SIZE,
+            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN,
+            gas_forwarded_offset: gas_forwarded
+                .map(|_| segment_offset + WORD_SIZE + AssetId::LEN + ContractId::LEN + WORD_SIZE),
         };
         param_offsets.push(call_param_offsets);
 
-        script_data.extend(call.call_parameters.asset_id().iter());
-
         script_data.extend(call.call_parameters.amount().to_be_bytes());
-
-        // If gas_forwarded is not set, use the transaction gas limit
-        let gas_forwarded = call.call_parameters.gas_forwarded().unwrap_or(gas_limit);
-        script_data.extend(gas_forwarded.to_be_bytes());
-
+        script_data.extend(call.call_parameters.asset_id().iter());
         script_data.extend(call.contract_id.hash().as_ref());
-
         script_data.extend(call.encoded_selector);
+
+        let gas_forwarded_size = gas_forwarded
+            .map(|gf| {
+                script_data.extend(gf.to_be_bytes());
+
+                WORD_SIZE
+            })
+            .unwrap_or_default();
 
         // If the method call takes custom inputs or has more than
         // one argument, we need to calculate the `call_data_offset`,
@@ -271,9 +275,15 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_args_start_offset = if call.compute_custom_input_offset {
             // Custom inputs are stored after the previously added parameters,
             // including custom_input_offset
-            let custom_input_offset =
-                segment_offset + AssetId::LEN + 2 * WORD_SIZE + ContractId::LEN + 2 * WORD_SIZE;
+            let custom_input_offset = segment_offset
+                + WORD_SIZE // amount size
+                + AssetId::LEN
+                + ContractId::LEN
+                + WORD_SIZE // encoded_selector size
+                + gas_forwarded_size
+                + WORD_SIZE; // custom_input_offset size
             script_data.extend((custom_input_offset as Word).to_be_bytes());
+
             custom_input_offset
         } else {
             segment_offset
@@ -295,9 +305,9 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// pointing at the following registers:
 ///
 /// 0x10 Script data offset
-/// 0x11 Gas forwarded
-/// 0x12 Coin amount
-/// 0x13 Asset ID
+/// 0x11 Coin amount
+/// 0x12 Asset ID
+/// 0x13 Gas forwarded
 ///
 /// Note that these are soft rules as we're picking this addresses simply because they
 /// non-reserved register.
@@ -309,10 +319,6 @@ pub(crate) fn get_single_call_instructions(
         .call_data_offset
         .try_into()
         .expect("call_data_offset out of range");
-    let gas_forwarded_offset = offsets
-        .gas_forwarded_offset
-        .try_into()
-        .expect("gas_forwarded_offset out of range");
     let amount_offset = offsets
         .amount_offset
         .try_into()
@@ -324,14 +330,28 @@ pub(crate) fn get_single_call_instructions(
 
     let mut instructions = [
         op::movi(0x10, call_data_offset),
-        op::movi(0x11, gas_forwarded_offset),
+        op::movi(0x11, amount_offset),
         op::lw(0x11, 0x11, 0),
-        op::movi(0x12, amount_offset),
-        op::lw(0x12, 0x12, 0),
-        op::movi(0x13, asset_id_offset),
-        op::call(0x10, 0x12, 0x13, 0x11),
+        op::movi(0x12, asset_id_offset),
     ]
     .to_vec();
+
+    match offsets.gas_forwarded_offset {
+        Some(gas_forwarded_offset) => {
+            let gas_forwarded_offset = gas_forwarded_offset
+                .try_into()
+                .expect("gas_forwarded_offset out of range");
+
+            instructions.extend(&[
+                op::movi(0x13, gas_forwarded_offset),
+                op::lw(0x13, 0x13, 0),
+                op::call(0x10, 0x11, 0x12, 0x13),
+            ]);
+        }
+        // If `gas_forwarded` was not set use `REG_CGAS`
+        None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
+    };
+
     // The instructions are different if you want to return data that was on the heap
     if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
         instructions.extend([
@@ -550,6 +570,7 @@ mod test {
     async fn test_script_data() {
         // Arrange
         const SELECTOR_LEN: usize = WORD_SIZE;
+        const GAS_FORWARDED_SIZE: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
         let contract_ids = vec![
@@ -588,7 +609,7 @@ mod test {
             .collect();
 
         // Act
-        let (script_data, param_offsets) = build_script_data_from_contract_calls(&calls, 0, 0);
+        let (script_data, param_offsets) = build_script_data_from_contract_calls(&calls, 0);
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -602,9 +623,9 @@ mod test {
                 script_data[offsets.amount_offset..offsets.amount_offset + WORD_SIZE].to_vec();
             assert_eq!(amount, idx.to_be_bytes());
 
-            let gas = script_data
-                [offsets.gas_forwarded_offset..offsets.gas_forwarded_offset + WORD_SIZE]
-                .to_vec();
+            let gas_forwarded_offset = offsets.gas_forwarded_offset.expect("is set");
+
+            let gas = script_data[gas_forwarded_offset..gas_forwarded_offset + WORD_SIZE].to_vec();
             assert_eq!(gas, idx.to_be_bytes().to_vec());
 
             let contract_id =
@@ -618,16 +639,19 @@ mod test {
         }
 
         // Calls 1 and 3 have their input arguments after the selector
-        let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_1_arg_offset =
+            param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(call_1_arg, args[0].resolve(0));
 
-        let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_3_arg_offset =
+            param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(call_3_arg, args[2].resolve(0));
 
         // Call 2 has custom inputs and custom_input_offset
-        let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
+        let call_2_arg_offset =
+            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + GAS_FORWARDED_SIZE;
         let custom_input_offset =
             script_data[call_2_arg_offset..call_2_arg_offset + WORD_SIZE].to_vec();
         assert_eq!(
@@ -635,8 +659,11 @@ mod test {
             (call_2_arg_offset + WORD_SIZE).to_be_bytes()
         );
 
-        let custom_input_offset =
-            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
+        let custom_input_offset = param_offsets[1].call_data_offset
+            + ContractId::LEN
+            + SELECTOR_LEN
+            + GAS_FORWARDED_SIZE
+            + WORD_SIZE;
         let custom_input =
             script_data[custom_input_offset..custom_input_offset + WORD_SIZE].to_vec();
         assert_eq!(custom_input, args[1].resolve(0));

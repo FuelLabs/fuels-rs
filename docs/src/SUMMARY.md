@@ -67,7 +67,7 @@
 - [Debugging](./debugging/index.md)
   - [The Function selector](./debugging/function-selector.md)
 - [Glossary](./glossary.md)
-- [Contributing](./contributing/contributing.md)
+- [Contributing](./contributing/CONTRIBUTING.md)
   - [Integration tests structure](./contributing/tests-structure.md)
 - [Command Line Interfaces](./cli/index.md)
   - [`fuels-abi-cli`](./cli/fuels-abi-cli.md)
