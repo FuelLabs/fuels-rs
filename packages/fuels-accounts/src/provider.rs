@@ -228,7 +228,7 @@ impl Provider {
         };
 
         let tx_status = self.client.transaction_status(tx_id).await?;
-        let execution = match tx_status {
+        let status = match tx_status {
             TransactionStatus::Success { .. } => {
                 let receipts = fetch_receipts().await?;
                 TxStatus::Success { receipts }
@@ -256,7 +256,7 @@ impl Provider {
             TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
         };
 
-        Ok(execution)
+        Ok(status)
     }
 
     #[cfg(feature = "fuel-core-lib")]

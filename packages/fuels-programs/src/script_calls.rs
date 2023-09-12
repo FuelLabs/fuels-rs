@@ -33,7 +33,7 @@ use crate::{
     submit_response::SubmitResponse,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,

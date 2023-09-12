@@ -390,7 +390,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
     Ok(())
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,

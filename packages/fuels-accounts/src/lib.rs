@@ -274,10 +274,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
-        let tx_id = self
-            .try_provider()?
-            .send_transaction_and_await_commit(tx)
-            .await?;
+        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
             .tx_status(&tx_id)
