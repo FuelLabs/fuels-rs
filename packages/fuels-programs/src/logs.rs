@@ -11,14 +11,14 @@ use fuel_abi_types::error_codes::{
 };
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
-    codec::try_from_bytes,
+    codec::{try_from_bytes, DecoderConfig},
     traits::{Parameterize, Tokenizable},
     types::errors::{error, Error, Result},
 };
 
 #[derive(Clone)]
 pub struct LogFormatter {
-    formatter: fn(&[u8]) -> Result<String>,
+    formatter: fn(DecoderConfig, &[u8]) -> Result<String>,
     type_id: TypeId,
 }
 
@@ -30,16 +30,19 @@ impl LogFormatter {
         }
     }
 
-    fn format_log<T: Parameterize + Tokenizable + Debug>(bytes: &[u8]) -> Result<String> {
-        Ok(format!("{:?}", try_from_bytes::<T>(bytes)?))
+    fn format_log<T: Parameterize + Tokenizable + Debug>(
+        decoder_config: DecoderConfig,
+        bytes: &[u8],
+    ) -> Result<String> {
+        Ok(format!("{:?}", try_from_bytes::<T>(bytes, decoder_config)?))
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
         TypeId::of::<T>() == self.type_id
     }
 
-    pub fn format(&self, bytes: &[u8]) -> Result<String> {
-        (self.formatter)(bytes)
+    pub fn format(&self, decoder_config: DecoderConfig, bytes: &[u8]) -> Result<String> {
+        (self.formatter)(decoder_config, bytes)
     }
 }
 
@@ -59,7 +62,8 @@ pub struct LogId(ContractId, u64);
 #[derive(Debug, Clone, Default)]
 pub struct LogDecoder {
     /// A mapping of LogId and param-type
-    pub log_formatters: HashMap<LogId, LogFormatter>,
+    log_formatters: HashMap<LogId, LogFormatter>,
+    decoder_config: DecoderConfig,
 }
 
 #[derive(Debug)]
@@ -84,6 +88,18 @@ impl LogResult {
 }
 
 impl LogDecoder {
+    pub fn new(log_formatters: HashMap<LogId, LogFormatter>) -> Self {
+        Self {
+            log_formatters,
+            decoder_config: Default::default(),
+        }
+    }
+
+    pub fn set_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
+        self.decoder_config = decoder_config;
+        self
+    }
+
     /// Get all logs results from the given receipts as `Result<String>`
     pub fn decode_logs(&self, receipts: &[Receipt]) -> LogResult {
         let results = receipts
@@ -107,7 +123,7 @@ impl LogDecoder {
                     data
                 )
             })
-            .and_then(|log_formatter| log_formatter.format(data))
+            .and_then(|log_formatter| log_formatter.format(self.decoder_config, data))
     }
 
     fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
@@ -160,7 +176,7 @@ impl LogDecoder {
             .filter_map(|(log_id, data)| {
                 target_ids
                     .contains(&log_id)
-                    .then_some(try_from_bytes(&data))
+                    .then_some(try_from_bytes(&data, self.decoder_config))
             })
             .collect()
     }

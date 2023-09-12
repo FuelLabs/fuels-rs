@@ -34,6 +34,9 @@ strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { version = "0.9.5", default-features = false }
 
+[dev-dependencies]
+fuels-macros = { workspace = true }
+
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client"]

@@ -9,6 +9,7 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1440,6 +1441,67 @@ fn db_rocksdb() {
             Ok::<(), Box<dyn std::error::Error>>(())
         })
         .unwrap();
+}
+
+#[tokio::test]
+async fn can_configure_decoding_of_contract_return() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let methods = contract_instance.methods();
+    {
+        // Single call: Will not work if max_tokens not big enough
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default.",
+        );
+    }
+    {
+        // Single call: Works when limit is bumped
+        let result = methods
+            .i_return_a_1k_el_array()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, [0; 1000]);
+    }
+    {
+        // Multi call: Will not work if max_tokens not big enough
+        MultiContractCallHandler::new(wallet.clone())
+        .add_call(methods.i_return_a_1k_el_array())
+        .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
+        .call::<([u8; 1000],)>().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default",
+        );
+    }
+    {
+        // Multi call: Works when configured
+        MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_return_a_1k_el_array())
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call::<([u8; 1000],)>()
+            .await
+            .unwrap();
+    }
+
+    Ok(())
 }
 
 #[tokio::test]

@@ -5,6 +5,7 @@ use fuels::{
     tx::Receipt,
     types::{Bits256, SizedAsciiString},
 };
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
@@ -1292,6 +1293,151 @@ async fn test_log_results() -> Result<()> {
     let failed = log.filter_failed();
     assert_eq!(succeeded, vec!["123".to_string()]);
     assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+    let methods = contract_instance.methods();
+    {
+        // Single call: decoding with too low max_tokens fails
+        let response = methods
+            .i_log_a_1k_el_array()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
+            .call()
+            .await?;
+
+        response.decode_logs_with_type::<[u8; 1000]>().expect_err(
+            "Should have failed since there are more tokens than what is supported by default.",
+        );
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+    }
+    {
+        // Single call: increasing limits makes the test pass
+        let response = methods
+            .i_log_a_1k_el_array()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await?;
+
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_succeeded().is_empty());
+    }
+    {
+        // Multi call: decoding with too low max_tokens will fail
+        let response = MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_log_a_1k_el_array())
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
+            .call::<((),)>()
+            .await?;
+
+        response.decode_logs_with_type::<[u8; 1000]>().expect_err(
+            "Should have failed since there are more tokens than what is supported by default.",
+        );
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+    }
+    {
+        // Multi call: increasing limits makes the test pass
+        let response = MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_log_a_1k_el_array())
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call::<((),)>()
+            .await?;
+
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_succeeded().is_empty());
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    {
+        // Cannot decode the produced log with too low max_tokens
+        let response = script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 100,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .unwrap();
+
+        response
+            .decode_logs_with_type::<[u8; 1000]>()
+            .expect_err("Cannot decode the log with default decoder config");
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_failed().is_empty())
+    }
+    {
+        // When the token limit is bumped log decoding succeeds
+        let response = script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .unwrap();
+
+        let logs = response.decode_logs_with_type::<[u8; 1000]>().unwrap();
+        assert_eq!(logs, vec![[0u8; 1000]]);
+
+        let logs = response.decode_logs();
+        assert!(!logs.filter_succeeded().is_empty())
+    }
 
     Ok(())
 }
