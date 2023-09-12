@@ -7,7 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
-    codec::{map_revert_error, LogDecoder, DecoderConfig},
+    codec::{map_revert_error, DecoderConfig, LogDecoder},
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},

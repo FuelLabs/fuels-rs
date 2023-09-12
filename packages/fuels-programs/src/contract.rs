@@ -11,7 +11,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::{map_revert_error, ABIEncoder, LogDecoder, DecoderConfig},
+    codec::{map_revert_error, ABIEncoder, DecoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
