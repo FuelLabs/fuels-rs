@@ -25,7 +25,6 @@ use tokio::process::Command;
 use fuels_core::types::errors::Result as FuelResult;
 use tokio::task::JoinHandle;
 
-
 use crate::utils::{into_coin_configs, into_message_configs};
 // Set the cache for tests to 10MB, which is the default size in `fuel-core`.
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
@@ -363,7 +362,7 @@ pub async fn new_fuel_node(
     Ok(join_handle)
 }
 
-pub async fn server_health_check(client: &FuelClient) -> FuelResult<()>{
+pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
     let between_attempts = Duration::from_millis(300);

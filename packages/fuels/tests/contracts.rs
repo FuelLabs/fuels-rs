@@ -1443,11 +1443,8 @@ fn db_rocksdb() {
         .unwrap();
 }
 
-
 #[tokio::test]
 async fn test_join_handler() -> Result<()> {
-
-
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
@@ -1456,9 +1453,8 @@ async fn test_join_handler() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     let config = Config::local_node();
-    let service = FuelService::new_node(config)
-        .await?;
-        // .map_err(|err| error!(InfrastructureError, "{err}"))?;
+    let service = FuelService::new_node(config).await?;
+    // .map_err(|err| error!(InfrastructureError, "{err}"))?;
     let provider = Provider::connect(service.bound_address.to_string()).await?;
 
     wallet.set_provider(provider);
@@ -1466,15 +1462,14 @@ async fn test_join_handler() -> Result<()> {
     // Simulate an unreachable node
     // service.stop_and_await().await.unwrap();
 
-    service.join_handle.abort();
+    // service.join_handle.abort();
 
     let response = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-        .deploy(&wallet, TxParameters::default())
-        .await;
-
+    .deploy(&wallet, TxParameters::default())
+    .await;
 
     dbg!(&response);
 

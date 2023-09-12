@@ -13,11 +13,11 @@ use fuel_core::service::FuelService;
 pub use fuel_core::service::{config::Trigger, Config};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_chain_config::{ChainConfig, StateConfig};
-#[cfg(feature = "fuel-core-lib")]
-use fuels_core::error;
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
+#[cfg(feature = "fuel-core-lib")]
+use fuels_core::error;
 
 use fuels_core::{
     constants::BASE_ASSET_ID,

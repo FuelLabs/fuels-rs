@@ -733,7 +733,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         amount,
     ));
 
-    let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
+    let (provider, _) = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
     wallet.set_provider(provider.clone());
 
