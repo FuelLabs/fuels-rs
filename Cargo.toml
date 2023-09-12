@@ -6,10 +6,11 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-  "examples/abigen",
+  "examples/codec",
   "examples/contracts",
   "examples/cookbook",
   "examples/debugging",
+  "examples/macros",
   "examples/predicates",
   "examples/providers",
   "examples/rust_bindings",

@@ -1,5 +1,5 @@
 [package]
-name = "fuels-example-rust-bindings"
+name = "fuels-example-codec"
 version = { workspace = true }
 authors = { workspace = true }
 edition = { workspace = true }
@@ -7,12 +7,8 @@ homepage = { workspace = true }
 license = { workspace = true }
 publish = false
 repository = { workspace = true }
-description = "Fuel Rust SDK examples for Rust-native bindings"
+description = "Fuel Rust SDK codec examples."
 
 [dev-dependencies]
 fuels = { workspace = true }
-fuels-macros = { workspace = true }
-proc-macro2 = { workspace = true }
-rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-fuels-code-gen = { workspace = true }
