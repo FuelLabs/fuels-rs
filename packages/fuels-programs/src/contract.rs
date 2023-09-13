@@ -805,7 +805,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let number_of_heap_type_calls = self
             .contract_calls
             .iter()
-            .filter(|cc| cc.output_param.is_vm_heap_type())
+            .filter(|cc| cc.output_param.needs_extra_data_receipt(true))
             .count();
 
         match number_of_heap_type_calls {
@@ -816,7 +816,7 @@ impl<T: Account> MultiContractCallHandler<T> {
                     .last()
                     .expect("is not empty")
                     .output_param
-                    .is_vm_heap_type()
+                    .needs_extra_data_receipt(true)
                 {
                     Ok(())
                 } else {

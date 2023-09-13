@@ -10,7 +10,6 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        enum_variants::EnumVariants,
         errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
@@ -157,20 +156,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
                 call_opcode_params.gas_forwarded_offset = Some(0);
             }
 
-            let param_type = if c.output_param.uses_heap_types(false)
-                && matches!(c.output_param, ParamType::Enum { .. })
-            {
-                ParamType::Enum {
-                    variants: EnumVariants::new(vec![ParamType::Bytes]).unwrap(),
-                    generics: vec![],
-                }
-            } else if c.output_param.uses_heap_types(false) {
-                ParamType::Vector(Box::from(ParamType::U64))
-            } else {
-                ParamType::U64
-            };
-
-            get_single_call_instructions(&call_opcode_params, &param_type).len()
+            get_single_call_instructions(&call_opcode_params, &c.output_param).len()
         })
         .sum()
 }
@@ -360,60 +346,70 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    // The instructions are different if you want to return data that was on the heap
-    if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
-        if let ParamType::Enum { variants, .. } = output_param_type {
-            // This offset is here because if the variant type is an enum containing a heap type,
-            // the 3 words containing (ptr, cap, len) are at the end of the data of the enum, which
-            // depends on the encoding width. If the variant type does not contain a heap type, then
-            // the receipt generated will not be read anyway, so we can generate a receipt with
-            // empty return data. 3 is not a "magic" number: we are looking left of the 3 words
-            // (ptr, cap, len), that are placed at the end of the data, on the right.
-            let offset = (output_param_type.compute_encoding_width() - 3) as u16;
-            let selected_discriminant = variants.heap_type_variant_discriminant().unwrap() as u16;
-            instructions.extend([
-                // All the registers 0x15-0x18 are free
-                // Load the selected discriminant to a free register
-                op::muli(0x17, RegId::ONE, selected_discriminant),
-                // the first word of the CALL return is the enum discriminant. It is safe to load
-                // because the offset is 0.
-                op::lw(0x18, RegId::RET, 0),
-                // If the discriminant is not the one from the heap type, then jump ahead and
-                // return an empty receipt. Otherwise return heap data with the right length.
-                op::jnef(0x17, 0x18, RegId::ZERO, 3),
-                // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
-                // The RET register contains the pointer address of the `CALL` return (a stack
-                // address).
-                // Load the word located at the address contained in RET, it's a word that translates to
-                // a heap address. We use the offset because in the case of an enum containing a heap
-                // type, we need to get the pointer that is located at the heap address pointed to by
-                // the RET register.
-                op::lw(0x15, RegId::RET, offset),
-                // The RETL register contains the length of the `CALL` return (=24 in the case of
-                // Vec/Bytes/String because their struct takes 3 WORDs). We don't actually need it
-                // unless the Vec/Bytes/String struct encoding changes in the compiler.
-                // We know a Vec/Bytes/String struct has its third WORD contain the length of the
-                // underlying vector, so use a 2 offset to store the length.
-                op::lw(0x16, RegId::RET, offset + 2),
-                // The in-memory size of the type is (in-memory size of the inner type) * length
-                op::muli(0x16, 0x16, inner_type_byte_size as u16),
-                op::retd(0x15, 0x16),
-                // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
-                op::retd(0x15, RegId::ZERO),
-            ]);
-        } else {
-            // See above for explanations, no offset needed if the type is not an enum
-            instructions.extend([
-                op::lw(0x15, RegId::RET, 0),
-                op::lw(0x16, RegId::RET, 2),
-                op::muli(0x16, 0x16, inner_type_byte_size as u16),
-                op::retd(0x15, 0x16),
-            ]);
-        };
-    }
+    instructions.extend(extract_heap_data(output_param_type));
 
     #[allow(clippy::iter_cloned_collect)]
     instructions.into_iter().collect::<Vec<u8>>()
+}
+
+fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
+    match param_type {
+        ParamType::Enum { variants, .. } => {
+            eprintln!("Injecting for enums: start");
+            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+                eprintln!("Injecting for enums: wasnt a heap type");
+                return vec![];
+            };
+
+            let ptr_offset = (param_type.compute_encoding_width() - 3) as u16;
+
+            [
+                vec![
+                    // All the registers 0x15-0x18 are free
+                    // Load the selected discriminant to a free register
+                    op::movi(0x17, discriminant as u32),
+                    // the first word of the CALL return is the enum discriminant. It is safe to load
+                    // because the offset is 0.
+                    op::lw(0x18, RegId::RET, 0),
+                    // If the discriminant is not the one from the heap type, then jump ahead and
+                    // return an empty receipt. Otherwise return heap data with the right length.
+                    // TODO: segfault is this really 3 or 4? Look at spec
+                    op::jnef(0x17, 0x18, RegId::ZERO, 3),
+                ],
+                // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
+                extract_data_receipt(ptr_offset, false, heap_type),
+                // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
+                vec![op::retd(0x15, RegId::ZERO)],
+            ]
+            .concat()
+        }
+        _ => extract_data_receipt(0, true, param_type),
+    }
+}
+
+fn extract_data_receipt(
+    ptr_offset: u16,
+    top_level_type: bool,
+    param_type: &ParamType,
+) -> Vec<fuel_asm::Instruction> {
+    eprintln!("Injecting: extract_data_receipt({ptr_offset}, {top_level_type}, {param_type:?})");
+    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
+        return vec![];
+    };
+
+    let len_offset = match (top_level_type, param_type) {
+        // A nested RawSlice shows up as ptr,len
+        (false, ParamType::RawSlice) => 1,
+        // Every other heap type (currently) shows up as ptr,cap,len
+        _ => 2,
+    };
+
+    vec![
+        op::lw(0x15, RegId::RET, ptr_offset),
+        op::lw(0x16, RegId::RET, ptr_offset + len_offset),
+        op::muli(0x16, 0x16, inner_type_byte_size as u16),
+        op::retd(0x15, 0x16),
+    ]
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)

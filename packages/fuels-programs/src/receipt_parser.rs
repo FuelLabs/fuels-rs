@@ -41,6 +41,10 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
+        dbg!(&self.receipts);
+
+        output_param.validate_is_decodable()?;
+
         let data = self
             .extract_raw_data(output_param, &contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
@@ -60,14 +64,14 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
+        let extra_receipts_needed = output_param.needs_extra_data_receipt(true);
         match output_param.get_return_location() {
             ReturnLocation::ReturnData
-                if output_param.uses_heap_types(false)
-                    && matches!(output_param, ParamType::Enum { .. }) =>
+                if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
             {
                 self.extract_enum_heap_type_data(contract_id)
             }
-            ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
+            ReturnLocation::ReturnData if extra_receipts_needed => {
                 self.extract_return_data_heap(contract_id)
             }
             ReturnLocation::ReturnData => self.extract_return_data(contract_id),

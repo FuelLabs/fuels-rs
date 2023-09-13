@@ -33,12 +33,13 @@ impl EnumVariants {
         })
     }
 
-    pub fn heap_type_variant_discriminant(&self) -> Result<u8> {
+    pub fn heap_type_variant(&self) -> Option<(u8, &ParamType)> {
+        // TODO: segfault this needs to look at only the parent heap types. Or maybe to extract
+        // this from here because this limitation is not present when enums are used as args.
         self.param_types()
             .iter()
             .enumerate()
-            .find_map(|(d, p)| p.is_vm_heap_type().then_some(d as u8))
-            .ok_or_else(|| error!(InvalidData, "There are no heap types inside {:?}", self))
+            .find_map(|(d, p)| p.needs_extra_data_receipt(false).then_some((d as u8, p)))
     }
 
     pub fn only_units_inside(&self) -> bool {
@@ -84,7 +85,7 @@ mod tests {
             ParamType::Vector(Box::from(ParamType::U64)),
         ];
         let variants = EnumVariants::new(param_types)?;
-        assert_eq!(variants.heap_type_variant_discriminant()?, 2);
+        assert_eq!(variants.heap_type_variant().unwrap().0, 2);
 
         let param_types = vec![
             ParamType::Vector(Box::from(ParamType::U64)),
@@ -92,18 +93,11 @@ mod tests {
             ParamType::Bool,
         ];
         let variants = EnumVariants::new(param_types)?;
-        assert_eq!(variants.heap_type_variant_discriminant()?, 0);
+        assert_eq!(variants.heap_type_variant().unwrap().0, 0);
 
         let param_types = vec![ParamType::U64, ParamType::Bool];
         let variants = EnumVariants::new(param_types)?;
-        let error = variants
-            .heap_type_variant_discriminant()
-            .expect_err("Should have failed");
-        let expected_error = format!(
-            "Invalid data: There are no heap types inside {:?}",
-            variants
-        );
-        assert_eq!(error.to_string(), expected_error);
+        assert!(variants.heap_type_variant().is_none());
         Ok(())
     }
 }

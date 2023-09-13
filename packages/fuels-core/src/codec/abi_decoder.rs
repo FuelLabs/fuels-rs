@@ -53,16 +53,11 @@ impl ABIDecoder {
     /// The same as `decode` just for a single type. Used in most cases since
     /// contract functions can only return one type.
     pub fn decode_single(param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+        param_type.validate_is_decodable()?;
         Ok(Self::decode_param(param_type, bytes)?.token)
     }
 
     fn decode_param(param_type: &ParamType, bytes: &[u8]) -> Result<DecodeResult> {
-        if param_type.contains_nested_heap_types() {
-            return Err(error!(
-                InvalidData,
-                "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
-            ));
-        }
         match param_type {
             ParamType::Unit => Self::decode_unit(bytes),
             ParamType::U8 => Self::decode_u8(bytes),
@@ -137,6 +132,7 @@ impl ABIDecoder {
         let mut bytes_read = 0;
 
         for param_type in param_types {
+            param_type.validate_is_decodable()?;
             let res = Self::decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
             results.push(res.token);
@@ -272,36 +268,17 @@ impl ABIDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(bytes: &[u8], variants: &EnumVariants) -> Result<DecodeResult> {
-        // There can only be one variant using heap types in the Enum. The reason is that for
-        // bytecode injection to get the heap data, we need the encoding width of the heap type. To
-        // simplify, we therefore allow only one heap type inside the enum.
-        if variants
-            .param_types()
-            .iter()
-            .filter(|p| p.is_vm_heap_type())
-            .count()
-            > 1
-        {
-            return Err(error!(
-                InvalidData,
-                "Enum variants as return types can only contain one heap type"
-            ));
-        };
         let enum_width = variants.compute_encoding_width_of_enum();
 
-        let discriminant = peek_u32(&bytes)? as u8;
+        let discriminant = peek_u32(bytes)? as u8;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
-        let skip_extra = if selected_variant.uses_heap_types(false) {
-            // remove the 3 WORDS that represent (ptr, cap, len)
-            // those 3 WORDS are leftovers from the concatenation of the bytes from the two
-            // `ReturnData` receipts. We need to skip them only if the selected variant is a
-            // heap type, otherwise we are skipping relevant bytes.
-            3
-        } else {
-            0
-        };
-        let words_to_skip = enum_width - selected_variant.compute_encoding_width() + skip_extra;
-        let enum_content_bytes = skip(&bytes, words_to_skip * WORD_SIZE)?;
+        let skip_extra = variants
+            .heap_type_variant()
+            .is_some_and(|(heap_discriminant, _)| heap_discriminant == discriminant)
+            .then_some(3);
+        let words_to_skip =
+            enum_width - selected_variant.compute_encoding_width() + skip_extra.unwrap_or_default();
+        let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
         let result = Self::decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));
@@ -844,18 +821,53 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         ];
         let variants = EnumVariants::new(param_types.clone())?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
         // it works if there is only one heap type
-        let _ = ABIDecoder::decode_enum(&data, &variants)?;
+        let _ = ABIDecoder::decode_single(&enum_param_type, &data)?;
 
         param_types.append(&mut vec![ParamType::Bytes]);
         let variants = EnumVariants::new(param_types)?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
         // fails if there is more than one variant using heap type in the enum
-        let error = ABIDecoder::decode_enum(&data, &variants).expect_err("Should fail");
+        let error = ABIDecoder::decode_single(&enum_param_type, &data).expect_err("Should fail");
         let expected_error =
-            "Invalid data: Enum variants as return types can only contain one heap type"
+            "Invalid type: Enums currently support only one heap-type variant. Found: 2"
                 .to_string();
         assert_eq!(error.to_string(), expected_error);
 
         Ok(())
+    }
+
+    #[test]
+    fn enums_w_too_deeply_nested_heap_types_not_allowed() {
+        let param_types = vec![
+            ParamType::U8,
+            ParamType::Struct {
+                fields: vec![ParamType::RawSlice],
+                generics: vec![],
+            },
+        ];
+        let variants = EnumVariants::new(param_types).unwrap();
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+
+        let err = ABIDecoder::decode_single(&enum_param_type, &[]).expect_err("should have failed");
+
+        let Error::InvalidType(msg) = err else {
+            panic!("Unexpected err: {err}");
+        };
+
+        assert_eq!(
+            msg,
+            "Enums currently support only one level deep heap types."
+        );
     }
 }
