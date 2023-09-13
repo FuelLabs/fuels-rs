@@ -10,7 +10,8 @@ use fuel_abi_types::error_codes::{
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
 use fuel_tx::{ContractId, Receipt};
-use fuels_core::{
+
+use crate::{
     codec::{try_from_bytes, DecoderConfig},
     traits::{Parameterize, Tokenizable},
     types::errors::{error, Error, Result},
@@ -126,7 +127,7 @@ impl LogDecoder {
             .and_then(|log_formatter| log_formatter.format(self.decoder_config, data))
     }
 
-    fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
+    pub(crate) fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
         receipts
             .iter()
             .rev()
@@ -136,7 +137,7 @@ impl LogDecoder {
             .and_then(|(log_id, data)| self.format_log(&log_id, &data))
     }
 
-    fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
+    pub(crate) fn decode_last_two_logs(&self, receipts: &[Receipt]) -> Result<(String, String)> {
         let res = receipts
             .iter()
             .rev()

@@ -40,7 +40,7 @@ pub(crate) fn script_bindings(
         pub struct #name<T: ::fuels::accounts::Account>{
             account: T,
             binary: ::std::vec::Vec<u8>,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder
         }
 
         impl<T: ::fuels::accounts::Account> #name<T>
@@ -51,7 +51,7 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
-                    log_decoder: ::fuels::programs::logs::LogDecoder::new(#log_formatters_lookup)
+                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup)
                 }
             }
 
@@ -67,7 +67,7 @@ pub(crate) fn script_bindings(
                 self
             }
 
-            pub fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+            pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
             }
 

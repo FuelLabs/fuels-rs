@@ -11,7 +11,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::{ABIEncoder, DecoderConfig},
+    codec::{map_revert_error, ABIEncoder, DecoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -29,8 +29,8 @@ use fuels_core::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
-    logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    submit_response::{SubmitResponse, SubmitResponseMultiple},
 };
 
 #[derive(Debug, Clone)]
@@ -315,7 +315,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        provider.send_transaction(tx).await?;
+        provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(self.contract_id.into())
     }
@@ -581,20 +581,25 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn submit(mut self) -> Result<ContractCallHandler<T, D>> {
+    pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
-        Ok(self)
+        let tx_id = provider.send_transaction(tx.clone()).await?;
+        self.cached_tx_id = Some(tx_id);
+
+        Ok(SubmitResponse::new(tx_id, self))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+        let provider = self.account.try_provider()?;
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
+
         self.get_response(receipts)
     }
 
@@ -616,8 +621,11 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction(tx).await?;
-            provider.get_receipts(&tx_id).await?
+            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+            provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)
@@ -861,21 +869,25 @@ impl<T: Account> MultiContractCallHandler<T> {
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn submit(mut self) -> Result<MultiContractCallHandler<T>> {
+    pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(provider.send_transaction(tx).await?);
+        let tx_id = provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        Ok(self)
+        Ok(SubmitResponseMultiple::new(tx_id, self))
     }
 
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
-        let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+        let provider = self.account.try_provider()?;
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
+
         self.get_response(receipts)
     }
 
@@ -902,8 +914,11 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction(tx).await?;
-            provider.get_receipts(&tx_id).await?
+            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+            provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)

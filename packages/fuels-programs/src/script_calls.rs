@@ -7,7 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
-    codec::DecoderConfig,
+    codec::{map_revert_error, DecoderConfig, LogDecoder},
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
@@ -29,8 +29,8 @@ use crate::{
         TxDependencyExtension,
     },
     contract::SettableContract,
-    logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    submit_response::SubmitResponse,
 };
 
 #[derive(Debug)]
@@ -237,8 +237,11 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = self.provider.send_transaction(tx).await?;
-            self.provider.get_receipts(&tx_id).await?
+            let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
+            self.provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)
@@ -251,19 +254,23 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
+    pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(self.provider.send_transaction(tx).await?);
+        let tx_id = self.provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        Ok(self)
+        Ok(SubmitResponse::new(tx_id, self))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
         let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+            .provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
+
         self.get_response(receipts)
     }
 

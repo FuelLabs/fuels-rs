@@ -13,8 +13,8 @@ mod tests {
     async fn instantiate_client() -> Result<()> {
         // ANCHOR: instantiate_client
         use fuels::{
-            client::FuelClient,
             fuel_node::{Config, FuelService},
+            prelude::Provider,
         };
 
         // Run the fuel node.
@@ -23,8 +23,8 @@ mod tests {
             .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
         // Create a client that will talk to the node created above.
-        let client = FuelClient::from(server.bound_address);
-        assert!(client.health().await?);
+        let client = Provider::from(server.bound_address).await?;
+        assert!(client.healthy().await?);
         // ANCHOR_END: instantiate_client
         Ok(())
     }
@@ -198,6 +198,18 @@ mod tests {
 
         assert_eq!(52, response.value);
         // ANCHOR_END: use_deployed_contract
+
+        // ANCHOR: submit_response_contract
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .submit()
+            .await?;
+
+        let value = response.response().await?.value;
+
+        // ANCHOR_END: submit_response_contract
+        assert_eq!(42, value);
 
         Ok(())
     }
@@ -593,6 +605,14 @@ mod tests {
         // ANCHOR: multi_contract_call_response
         let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_contract_call_response
+
+        assert_eq!(counter, 42);
+        assert_eq!(array, [42; 2]);
+
+        // ANCHOR: submit_response_multicontract
+        let submitted_tx = multi_call_handler.submit().await?;
+        let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;
+        // ANCHOR_END: submit_response_multicontract
 
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
