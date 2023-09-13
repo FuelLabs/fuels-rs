@@ -355,9 +355,7 @@ pub(crate) fn get_single_call_instructions(
 fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
     match param_type {
         ParamType::Enum { variants, .. } => {
-            eprintln!("Injecting for enums: start");
             let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
-                eprintln!("Injecting for enums: wasnt a heap type");
                 return vec![];
             };
 
@@ -373,7 +371,7 @@ fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
                     op::lw(0x18, RegId::RET, 0),
                     // If the discriminant is not the one from the heap type, then jump ahead and
                     // return an empty receipt. Otherwise return heap data with the right length.
-                    // TODO: segfault is this really 3 or 4? Look at spec
+                    // Jump by (last argument + 1) instructions according to specs
                     op::jnef(0x17, 0x18, RegId::ZERO, 3),
                 ],
                 // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
@@ -392,7 +390,6 @@ fn extract_data_receipt(
     top_level_type: bool,
     param_type: &ParamType,
 ) -> Vec<fuel_asm::Instruction> {
-    eprintln!("Injecting: extract_data_receipt({ptr_offset}, {top_level_type}, {param_type:?})");
     let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
         return vec![];
     };
