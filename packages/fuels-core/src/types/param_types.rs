@@ -85,9 +85,12 @@ impl ParamType {
             ParamType::Array(inner, _) | ParamType::Vector(inner) => {
                 inner.needs_extra_data_receipt(false)
             }
-            ParamType::Struct { fields, generics } => chain!(fields, generics)
+            ParamType::Struct { fields, .. } => fields
+                .into_iter()
                 .any(|param_type| param_type.needs_extra_data_receipt(false)),
-            ParamType::Enum { variants, generics } => chain!(variants.param_types(), generics)
+            ParamType::Enum { variants, .. } => variants
+                .param_types()
+                .into_iter()
                 .any(|param_type| param_type.needs_extra_data_receipt(false)),
             ParamType::Tuple(inner_types) => inner_types
                 .iter()
@@ -98,8 +101,8 @@ impl ParamType {
 
     pub fn validate_is_decodable(&self) -> Result<()> {
         match self {
-            ParamType::Enum { variants, generics } => {
-                let all_param_types = chain!(variants.param_types(), generics);
+            ParamType::Enum { variants, .. } => {
+                let all_param_types = chain!(variants.param_types());
                 let grandchildren_need_receipts = all_param_types
                     .clone()
                     .any(|child| child.children_need_extra_receipts());
@@ -116,7 +119,8 @@ impl ParamType {
                 if num_of_children_needing_receipts > 1 {
                     Err(error!(
                         InvalidType,
-                        "Enums currently support only one heap-type variant. Found: {num_of_children_needing_receipts}"
+                        "Enums currently support only one heap-type variant. Found: \
+                        {num_of_children_needing_receipts}"
                     ))
                 } else {
                     Ok(())
@@ -1602,34 +1606,6 @@ mod tests {
 
         assert_eq!(param_type, ParamType::String);
     }
-
-    // TODO: segfault
-    // #[test]
-    // fn test_double_nested_heap_type_enum() -> Result<()> {
-    //     let enum_no_heap_types = ParamType::Enum {
-    //         variants: EnumVariants::new(vec![ParamType::U64, ParamType::Bool])?,
-    //         generics: vec![],
-    //     };
-    //     let r = ParamType::Enum {
-    //         variants: EnumVariants::new(vec![ParamType::Bytes, enum_no_heap_types])?,
-    //         generics: vec![],
-    //     };
-    //     assert!(!r.contains_nested_heap_types());
-    //
-    //     let enum_heap_types = ParamType::Enum {
-    //         variants: EnumVariants::new(vec![
-    //             ParamType::Vector(Box::from(ParamType::U64)),
-    //             ParamType::Bool,
-    //         ])?,
-    //         generics: vec![],
-    //     };
-    //     let r = ParamType::Enum {
-    //         variants: EnumVariants::new(vec![ParamType::Bytes, enum_heap_types])?,
-    //         generics: vec![],
-    //     };
-    //     assert!(r.contains_nested_heap_types());
-    //     Ok(())
-    // }
 
     fn given_type_with_path(path: &str) -> Type {
         Type {
