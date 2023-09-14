@@ -113,7 +113,7 @@ async fn setup_predicate_test(
         receiver_amount,
     ));
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let provider = setup_test_provider(coins, messages, None, None).await;
     receiver.set_provider(provider.clone());
 
     Ok((

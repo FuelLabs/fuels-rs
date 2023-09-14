@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
+        core::codec::DecoderConfig,
         prelude::{LoadConfiguration, StorageConfiguration},
         types::{
             errors::{error, Error, Result},
@@ -12,8 +13,8 @@ mod tests {
     async fn instantiate_client() -> Result<()> {
         // ANCHOR: instantiate_client
         use fuels::{
-            client::FuelClient,
             fuel_node::{Config, FuelService},
+            prelude::Provider,
         };
 
         // Run the fuel node.
@@ -22,8 +23,8 @@ mod tests {
             .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
         // Create a client that will talk to the node created above.
-        let client = FuelClient::from(server.bound_address);
-        assert!(client.health().await?);
+        let client = Provider::from(server.bound_address).await?;
+        assert!(client.healthy().await?);
         // ANCHOR_END: instantiate_client
         Ok(())
     }
@@ -197,6 +198,18 @@ mod tests {
 
         assert_eq!(52, response.value);
         // ANCHOR_END: use_deployed_contract
+
+        // ANCHOR: submit_response_contract
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .submit()
+            .await?;
+
+        let value = response.response().await?.value;
+
+        // ANCHOR_END: submit_response_contract
+        assert_eq!(42, value);
 
         Ok(())
     }
@@ -596,6 +609,14 @@ mod tests {
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
 
+        // ANCHOR: submit_response_multicontract
+        let submitted_tx = multi_call_handler.submit().await?;
+        let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;
+        // ANCHOR_END: submit_response_multicontract
+
+        assert_eq!(counter, 42);
+        assert_eq!(array, [42; 2]);
+
         Ok(())
     }
 
@@ -794,6 +815,38 @@ mod tests {
         assert_eq!(result_uint, 2);
         assert!(result_bool);
         assert_eq!(result_str, "fuel");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn configure_the_return_value_decoder() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "MyContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        // ANCHOR: contract_decoder_config
+        let _ = contract_instance
+            .methods()
+            .initialize_counter(42)
+            .with_decoder_config(DecoderConfig {
+                max_depth: 10,
+                max_tokens: 20_00,
+            })
+            .call()
+            .await?;
+        // ANCHOR_END: contract_decoder_config
 
         Ok(())
     }

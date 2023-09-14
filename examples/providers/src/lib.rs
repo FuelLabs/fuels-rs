@@ -1,5 +1,7 @@
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use fuels::prelude::Result;
 
     #[tokio::test]
@@ -26,8 +28,8 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
-        let (_, addr) = setup_test_provider(vec![], vec![], None, None).await;
-        let port = addr.port();
+        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let port = provider.url().split(':').last().unwrap();
 
         // ANCHOR: local_node_address
         let _provider = Provider::connect(format!("127.0.0.1:{port}"))
@@ -61,7 +63,12 @@ mod tests {
         );
         // ANCHOR_END: setup_single_asset
 
-        let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+        // ANCHOR: configure_retry
+        let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
+        let provider = setup_test_provider(coins.clone(), vec![], None, None)
+            .await
+            .with_retry_config(retry_config);
+        // ANCHOR_END: configure_retry
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins

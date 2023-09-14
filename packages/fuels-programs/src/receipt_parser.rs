@@ -1,6 +1,6 @@
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
-    codec::ABIDecoder,
+    codec::{ABIDecoder, DecoderConfig},
     types::{
         bech32::Bech32ContractId,
         errors::{error, Error, Result},
@@ -12,10 +12,11 @@ use itertools::Itertools;
 
 pub struct ReceiptParser {
     receipts: Vec<Receipt>,
+    decoder: ABIDecoder,
 }
 
 impl ReceiptParser {
-    pub fn new(receipts: &[Receipt]) -> Self {
+    pub fn new(receipts: &[Receipt], decoder_config: DecoderConfig) -> Self {
         let relevant_receipts: Vec<Receipt> = receipts
             .iter()
             .filter(|receipt| {
@@ -26,6 +27,7 @@ impl ReceiptParser {
 
         Self {
             receipts: relevant_receipts,
+            decoder: ABIDecoder::new(decoder_config),
         }
     }
 
@@ -41,15 +43,13 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
-        dbg!(&self.receipts);
-
         output_param.validate_is_decodable()?;
 
         let data = self
             .extract_raw_data(output_param, &contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        ABIDecoder::decode_single(output_param, &data)
+        self.decoder.decode(output_param, &data)
     }
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {
@@ -274,7 +274,7 @@ mod tests {
         let relevant_receipts = get_relevant_receipts();
         receipts.extend(relevant_receipts.clone());
 
-        let parser = ReceiptParser::new(&receipts);
+        let parser = ReceiptParser::new(&receipts, Default::default());
 
         assert_eq!(parser.receipts, relevant_receipts);
 
@@ -286,7 +286,7 @@ mod tests {
         let receipts = [];
         let output_param = ParamType::Unit;
 
-        let error = ReceiptParser::new(&receipts)
+        let error = ReceiptParser::new(&receipts, Default::default())
             .parse(Default::default(), &output_param)
             .expect_err("should error");
 
@@ -303,7 +303,7 @@ mod tests {
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_data_receipt(contract_id, RECEIPT_DATA));
-        let mut parser = ReceiptParser::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
             .parse(Some(&contract_id.into()), &<[u8; 3]>::param_type())
@@ -322,7 +322,7 @@ mod tests {
 
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
-        let mut parser = ReceiptParser::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
             .parse(Some(&contract_id.into()), &u64::param_type())
@@ -342,7 +342,7 @@ mod tests {
         let mut receipts = expected_receipts.clone();
         receipts.push(get_return_data_receipt(target_contract(), &[9, 9, 9]));
         receipts.push(get_return_data_receipt(Default::default(), RECEIPT_DATA));
-        let mut parser = ReceiptParser::new(&receipts);
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
             .parse(Some(&contract_id.into()), &<Vec<u8>>::param_type())
