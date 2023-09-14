@@ -2058,7 +2058,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
         .await?;
 
     let resp = contract_methods
-        .should_fail()
+        .returns_a_heap_type_too_deep()
         .call()
         .await
         .expect_err("Should fail because it has a deeply nested heap type");
