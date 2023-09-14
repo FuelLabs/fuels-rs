@@ -1370,13 +1370,13 @@ mod tests {
         can_be_decoded(ParamType::Vector(Box::new(ParamType::U64)));
         cannot_be_decoded(ParamType::Vector(Box::new(ParamType::Bytes)));
 
+        can_be_decoded(ParamType::Struct {
+            generics: param_types_no_bytes.clone(),
+            fields: param_types_no_bytes.clone(),
+        });
         cannot_be_decoded(ParamType::Struct {
             fields: param_types_containing_bytes.clone(),
             generics: param_types_no_bytes.clone(),
-        });
-        cannot_be_decoded(ParamType::Struct {
-            generics: param_types_containing_bytes.clone(),
-            fields: param_types_no_bytes.clone(),
         });
 
         can_be_decoded(ParamType::Tuple(param_types_no_bytes.clone()));
@@ -1421,7 +1421,7 @@ mod tests {
             variants: variants_one_bytes_type,
             generics: param_types_containing_bytes.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 3"
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
             .to_string();
         assert_eq!(
             ParamType::Enum {
@@ -1469,13 +1469,13 @@ mod tests {
             ParamType::U8,
         )))));
 
-        cannot_be_decoded(ParamType::Struct {
-            fields: param_types_containing_vector.clone(),
+        can_be_decoded(ParamType::Struct {
+            fields: param_types_no_vector.clone(),
             generics: param_types_no_vector.clone(),
         });
         cannot_be_decoded(ParamType::Struct {
-            generics: param_types_containing_vector.clone(),
-            fields: param_types_no_vector.clone(),
+            generics: param_types_no_vector.clone(),
+            fields: param_types_containing_vector.clone(),
         });
 
         can_be_decoded(ParamType::Tuple(param_types_no_vector.clone()));
@@ -1527,7 +1527,7 @@ mod tests {
             variants: variants_one_vector_type,
             generics: param_types_containing_vector.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 3"
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
             .to_string();
         assert_eq!(
             ParamType::Enum {
