@@ -2057,7 +2057,13 @@ async fn test_heap_type_in_enums() -> Result<()> {
         .call()
         .await?;
 
-    // let _ = contract_methods.should_fail().call().await?;
-
+    let resp = contract_methods
+        .should_fail()
+        .call()
+        .await
+        .expect_err("Should fail because it has a deeply nested heap type");
+    let expected =
+        "Invalid type: Enums currently support only one level deep heap types.".to_string();
+    assert_eq!(resp.to_string(), expected);
     Ok(())
 }

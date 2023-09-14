@@ -101,6 +101,12 @@ impl MyContract for Contract {
     }
 
     fn should_fail() -> Result<Bimbam, u64> {
-        Result::Err(071)
+    let mut b = Bytes::new();
+    b.push(2u8);
+    b.push(2u8);
+    b.push(2u8);
+        Result::Ok(Bimbam {
+        something: b
+        })
     }
 }
