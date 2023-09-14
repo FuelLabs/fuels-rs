@@ -90,11 +90,11 @@ impl ParamType {
                 inner.needs_extra_data_receipt(false)
             }
             ParamType::Struct { fields, .. } => fields
-                .into_iter()
+                .iter()
                 .any(|param_type| param_type.needs_extra_data_receipt(false)),
             ParamType::Enum { variants, .. } => variants
                 .param_types()
-                .into_iter()
+                .iter()
                 .any(|param_type| param_type.needs_extra_data_receipt(false)),
             ParamType::Tuple(inner_types) => inner_types
                 .iter()
@@ -1357,7 +1357,7 @@ mod tests {
         let cannot_be_decoded = |p: ParamType| {
             assert_eq!(
                 p.validate_is_decodable()
-                    .expect_err(&*format!("Should not be decodable: {:?}", p))
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
                     .to_string(),
                 nested_heap_type_error_message
             )
@@ -1451,7 +1451,7 @@ mod tests {
         let cannot_be_decoded = |p: ParamType| {
             assert_eq!(
                 p.validate_is_decodable()
-                    .expect_err(&*format!("Should not be decodable: {:?}", p))
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
                     .to_string(),
                 nested_heap_type_error_message
             )
