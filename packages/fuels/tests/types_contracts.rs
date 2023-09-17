@@ -1483,6 +1483,12 @@ async fn generics_test() -> Result<()> {
         assert_eq!(result, arg1);
     }
     {
+        contract_methods
+            .struct_w_unused_generic_param()
+            .call()
+            .await?;
+    }
+    {
         // complex case
         let pass_through = PassTheGenericOn {
             one: SimpleGeneric {

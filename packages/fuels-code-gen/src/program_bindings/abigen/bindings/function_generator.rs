@@ -70,7 +70,7 @@ impl FunctionGenerator {
             let field_name = &component.field_name;
             let field_type = &component.field_type;
 
-            get_equivalent_bech32_type(&field_type.type_name.to_string())
+            get_equivalent_bech32_type(field_type)
                 .map(|_| {
                     quote! {#field_type::from(#field_name.into())}
                 })
@@ -118,7 +118,7 @@ impl From<&FunctionGenerator> for TokenStream {
             let name = &component.field_name;
             let field_type = &component.field_type;
 
-            get_equivalent_bech32_type(&field_type.type_name.to_string())
+            get_equivalent_bech32_type(field_type)
                 .map(|new_type| {
                     quote! { #name: impl ::core::convert::Into<#new_type> }
                 })

@@ -52,18 +52,7 @@ pub(crate) fn param_type_calls(field_entries: &[Component]) -> Vec<TokenStream> 
 /// the given ResolvedType. Makes sure to properly handle calls when generics are
 /// involved.
 pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
-    let type_name = &field_type.type_name;
-    let parameters = field_type
-        .generic_params
-        .iter()
-        .map(|resolved_type| resolved_type.to_token_stream())
-        .collect::<Vec<_>>();
-
-    if parameters.is_empty() {
-        quote! { <#type_name as ::fuels::core::traits::Parameterize>::param_type() }
-    } else {
-        quote! { <#type_name::<#(#parameters),*> as ::fuels::core::traits::Parameterize>::param_type() }
-    }
+    quote! { <#field_type as ::fuels::core::traits::Parameterize>::param_type() }
 }
 
 #[cfg(test)]
@@ -157,12 +146,14 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
     .collect()
 }
 
-pub(crate) fn get_equivalent_bech32_type(ttype: &str) -> Option<TokenStream> {
-    match ttype {
-        ":: fuels :: types :: Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
-        ":: fuels :: types :: ContractId" => {
-            Some(quote! {::fuels::types::bech32::Bech32ContractId})
-        }
+pub(crate) fn get_equivalent_bech32_type(ttype: &ResolvedType) -> Option<TokenStream> {
+    let ResolvedType::Custom { path, .. } = ttype else {
+        return None;
+    };
+
+    match path.to_string().as_str() {
+        "::fuels::types::Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        "::fuels::types::ContractId" => Some(quote! {::fuels::types::bech32::Bech32ContractId}),
         _ => None,
     }
 }

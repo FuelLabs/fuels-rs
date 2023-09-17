@@ -9,6 +9,7 @@ use crate::{
     program_bindings::{
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
+        resolved_type::ResolvedType,
         utils::Component,
     },
 };
@@ -47,7 +48,7 @@ fn enum_decl(
              field_name,
              field_type,
          }| {
-            if field_type.is_unit() {
+            if let ResolvedType::Unit = field_type {
                 quote! {#field_name}
             } else {
                 quote! {#field_name(#field_type)}
