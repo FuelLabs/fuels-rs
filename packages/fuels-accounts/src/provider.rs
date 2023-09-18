@@ -1,4 +1,7 @@
-use std::{collections::HashMap, fmt::Debug, io};
+use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
+
+mod retry_util;
+mod retryable_client;
 
 use chrono::{DateTime, Utc};
 #[cfg(feature = "fuel-core-lib")]
@@ -6,7 +9,6 @@ use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
-    FuelClient,
 };
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
@@ -25,10 +27,14 @@ use fuels_core::{
         node_info::NodeInfo,
         transaction::Transaction,
         transaction_response::TransactionResponse,
+        tx_status::TxStatus,
     },
 };
+pub use retry_util::{Backoff, RetryConfig};
 use tai64::Tai64;
 use thiserror::Error;
+
+use crate::provider::retryable_client::RetryableClient;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -116,8 +122,10 @@ impl Default for ResourceFilter {
 #[derive(Debug, Error)]
 pub enum ProviderError {
     // Every IO error in the context of Provider comes from the gql client
-    #[error(transparent)]
+    #[error("Client request error: {0}")]
     ClientRequestError(#[from] io::Error),
+    #[error("Receipts have not yet been propagated. Retry the request later.")]
+    ReceiptsNotPropagatedYet,
 }
 
 impl From<ProviderError> for Error {
@@ -131,19 +139,52 @@ impl From<ProviderError> for Error {
 /// of `FuelClient`, directly, which provides a broader API.
 #[derive(Debug, Clone)]
 pub struct Provider {
-    pub client: FuelClient,
-    pub consensus_parameters: ConsensusParameters,
+    client: RetryableClient,
+    consensus_parameters: ConsensusParameters,
 }
 
 impl Provider {
-    pub fn new(client: FuelClient, consensus_parameters: ConsensusParameters) -> Self {
-        Self {
+    pub fn new(url: impl AsRef<str>, consensus_parameters: ConsensusParameters) -> Result<Self> {
+        let client = RetryableClient::new(&url, Default::default())?;
+
+        Ok(Self {
             client,
             consensus_parameters,
-        }
+        })
+    }
+
+    pub async fn from(addr: impl Into<SocketAddr>) -> Result<Self> {
+        let addr = addr.into();
+        Self::connect(format!("http://{addr}")).await
+    }
+
+    pub async fn healthy(&self) -> Result<bool> {
+        Ok(self.client.health().await?)
+    }
+
+    /// Connects to an existing node at the given address.
+    pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
+        let client = RetryableClient::new(&url, Default::default())?;
+        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
+
+        Ok(Self {
+            client,
+            consensus_parameters,
+        })
+    }
+
+    pub fn url(&self) -> &str {
+        self.client.url()
     }
 
     /// Sends a transaction to the underlying Provider's client.
+    pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+        let tx_id = self.send_transaction(tx.clone()).await?;
+        self.client.await_transaction_commit(&tx_id).await?;
+
+        Ok(tx_id)
+    }
+
     pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tolerance = 0.0;
         let TransactionCost {
@@ -176,47 +217,46 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
-        let tx_id = self.submit_tx(tx.clone()).await?;
-
-        Ok(tx_id)
-    }
-
-    pub async fn get_receipts(&self, tx_id: &TxId) -> Result<Vec<Receipt>> {
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let receipts = self.client.receipts(tx_id).await?.map_or(vec![], |v| v);
-        Self::if_failure_generate_error(&tx_status, &receipts)?;
-        Ok(receipts)
-    }
-
-    fn if_failure_generate_error(status: &TransactionStatus, receipts: &[Receipt]) -> Result<()> {
-        if let TransactionStatus::Failure {
-            reason,
-            program_state,
-            ..
-        } = status
-        {
-            let revert_id = program_state
-                .and_then(|state| match state {
-                    ProgramState::Revert(revert_id) => Some(revert_id),
-                    _ => None,
-                })
-                .expect("Transaction failed without a `revert_id`");
-
-            return Err(Error::RevertTransactionError {
-                reason: reason.to_string(),
-                revert_id,
-                receipts: receipts.to_owned(),
-            });
-        }
-
-        Ok(())
-    }
-
-    async fn submit_tx(&self, tx: impl Transaction) -> ProviderResult<TxId> {
         let tx_id = self.client.submit(&tx.into()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
-
         Ok(tx_id)
+    }
+
+    pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
+        let fetch_receipts = || async {
+            let receipts = self.client.receipts(tx_id).await?;
+            receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
+        };
+
+        let tx_status = self.client.transaction_status(tx_id).await?;
+        let status = match tx_status {
+            TransactionStatus::Success { .. } => {
+                let receipts = fetch_receipts().await?;
+                TxStatus::Success { receipts }
+            }
+            TransactionStatus::Failure {
+                reason,
+                program_state,
+                ..
+            } => {
+                let receipts = fetch_receipts().await?;
+                let revert_id = program_state
+                    .and_then(|state| match state {
+                        ProgramState::Revert(revert_id) => Some(revert_id),
+                        _ => None,
+                    })
+                    .expect("Transaction failed without a `revert_id`");
+
+                TxStatus::Revert {
+                    receipts,
+                    reason,
+                    id: revert_id,
+                }
+            }
+            TransactionStatus::Submitted { .. } => TxStatus::Submitted,
+            TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
+        };
+
+        Ok(status)
     }
 
     #[cfg(feature = "fuel-core-lib")]
@@ -224,13 +264,6 @@ impl Provider {
     pub async fn launch(config: Config) -> Result<FuelClient> {
         let srv = FuelService::new_node(config).await.unwrap();
         Ok(FuelClient::from(srv.bound_address))
-    }
-
-    /// Connects to an existing node at the given address.
-    pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
-        let client = FuelClient::new(url).map_err(|err| error!(InfrastructureError, "{err}"))?;
-        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
-        Ok(Provider::new(client, consensus_parameters))
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
@@ -613,5 +646,10 @@ impl Provider {
             .await?
             .map(Into::into);
         Ok(proof)
+    }
+
+    pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
+        self.client.set_retry_config(retry_config);
+        self
     }
 }

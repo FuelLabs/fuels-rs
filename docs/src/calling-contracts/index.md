@@ -15,4 +15,10 @@ Here's an example. Suppose your Sway contract has two ABI methods called `initia
 
 The example above uses all the default configurations and performs a simple contract call.
 
-Next, we'll see how we can further configure the many different parameters in a contract call
+Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:submit_response_contract}}
+```
+
+Next, we'll see how we can further configure the many different parameters in a contract call.
