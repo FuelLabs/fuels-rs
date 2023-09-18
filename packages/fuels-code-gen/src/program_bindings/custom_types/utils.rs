@@ -1,9 +1,8 @@
 use fuel_abi_types::{
     abi::full_program::FullTypeDeclaration,
-    utils::{extract_generic_name, ident, TypePath},
+    utils::{self, extract_generic_name, TypePath},
 };
-use proc_macro2::TokenStream;
-use quote::quote;
+use proc_macro2::Ident;
 
 use crate::{error::Result, program_bindings::utils::Component};
 
@@ -23,9 +22,7 @@ pub(crate) fn extract_components(
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub(crate) fn extract_generic_parameters(
-    type_decl: &FullTypeDeclaration,
-) -> Result<Vec<TokenStream>> {
+pub(crate) fn extract_generic_parameters(type_decl: &FullTypeDeclaration) -> Vec<Ident> {
     type_decl
         .type_parameters
         .iter()
@@ -33,8 +30,7 @@ pub(crate) fn extract_generic_parameters(
             let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
             });
-            let generic = ident(&name);
-            Ok(quote! {#generic})
+            utils::ident(&name)
         })
         .collect()
 }
@@ -44,7 +40,6 @@ mod tests {
     use fuel_abi_types::{abi::program::TypeDeclaration, utils::extract_custom_type_name};
 
     use super::*;
-    use crate::program_bindings::{resolved_type::ResolvedType, utils::param_type_calls};
 
     #[test]
     fn extracts_generic_types() -> Result<()> {
@@ -78,7 +73,7 @@ mod tests {
         let generics = extract_generic_parameters(&FullTypeDeclaration::from_counterpart(
             &declaration,
             &types,
-        ))?;
+        ));
 
         // then
         let stringified_generics = generics

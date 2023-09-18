@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use fuel_abi_types::abi::full_program::FullTypeApplication;
 use inflector::Inflector;
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, ToTokens};
+use quote::quote;
 
 use crate::{
     error::Result,

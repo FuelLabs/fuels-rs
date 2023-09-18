@@ -1,5 +1,5 @@
 pub(crate) use command::Command;
-use itertools::{chain, process_results, Itertools};
+use itertools::{chain, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
 use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant};
@@ -99,22 +99,41 @@ pub fn validate_and_extract_generic_types(generics: &Generics) -> syn::Result<Ve
         .collect()
 }
 
+struct Member {
+    name: Ident,
+    ty: TokenStream,
+    ignore: bool,
+}
+
 pub(crate) struct Members {
-    names: Vec<Ident>,
-    types: Vec<TokenStream>,
+    members: Vec<Member>,
     fuels_core_path: TokenStream,
 }
 
 impl Members {
     pub(crate) fn names(&self) -> impl Iterator<Item = &Ident> + '_ {
-        self.names.iter()
+        self.members
+            .iter()
+            .filter(|member| !member.ignore)
+            .map(|member| &member.name)
+    }
+
+    pub(crate) fn ignored_names(&self) -> impl Iterator<Item = &Ident> + '_ {
+        self.members
+            .iter()
+            .filter(|member| member.ignore)
+            .map(|member| &member.name)
     }
 
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
         let fuels_core_path = self.fuels_core_path.to_token_stream();
-        self.types.iter().map(move |ty| {
-            quote! { <#ty as #fuels_core_path::traits::Parameterize>::param_type() }
-        })
+        self.members
+            .iter()
+            .filter(|member| !member.ignore)
+            .map(move |member| {
+                let ty = &member.ty;
+                quote! { <#ty as #fuels_core_path::traits::Parameterize>::param_type() }
+            })
     }
 }
 
@@ -133,20 +152,23 @@ pub(crate) fn extract_struct_members(
         }
     }?;
 
-    let (names, types) = named_fields
+    let members = named_fields
         .into_iter()
         .map(|field| {
+            let ignore = field.attrs.iter().any(|attr| match &attr.meta {
+                syn::Meta::Path(path) => path.get_ident().is_some_and(|ident| ident == "Ignore"),
+                _ => false,
+            });
             let name = field
                 .ident
                 .expect("FieldsNamed to only contain named fields.");
             let ty = field.ty.into_token_stream();
-            (name, ty)
+            Member { name, ty, ignore }
         })
-        .unzip();
+        .collect();
 
     Ok(Members {
-        names,
-        types,
+        members,
         fuels_core_path,
     })
 }
@@ -155,38 +177,43 @@ pub(crate) fn extract_enum_members(
     data: DataEnum,
     fuels_core_path: TokenStream,
 ) -> syn::Result<Members> {
-    let components = data.variants.into_iter().map(|variant: Variant| {
-        let name = variant.ident;
+    let members = data
+        .variants
+        .into_iter()
+        .map(|variant: Variant| {
+            let name = variant.ident;
 
-        let ttype = match variant.fields {
-            Fields::Unnamed(fields_unnamed) => {
-                if fields_unnamed.unnamed.len() != 1 {
-                    return Err(Error::new(
-                        fields_unnamed.paren_token.span.join(),
-                        "Must have exactly one element",
-                    ));
+            let ty = match variant.fields {
+                Fields::Unnamed(fields_unnamed) => {
+                    if fields_unnamed.unnamed.len() != 1 {
+                        return Err(Error::new(
+                            fields_unnamed.paren_token.span.join(),
+                            "Must have exactly one element",
+                        ));
+                    }
+                    fields_unnamed.unnamed.into_iter().next()
                 }
-                fields_unnamed.unnamed.into_iter().next()
+                Fields::Unit => None,
+                Fields::Named(named_fields) => {
+                    return Err(Error::new_spanned(
+                        named_fields,
+                        "Struct-like enum variants are not supported.",
+                    ))
+                }
             }
-            Fields::Unit => None,
-            Fields::Named(named_fields) => {
-                return Err(Error::new_spanned(
-                    named_fields,
-                    "Struct-like enum variants are not supported.",
-                ))
-            }
-        }
-        .map(|field| field.ty.into_token_stream())
-        .unwrap_or_else(|| quote! {()});
+            .map(|field| field.ty.into_token_stream())
+            .unwrap_or_else(|| quote! {()});
 
-        Ok((name, ttype))
-    });
-
-    let (names, types) = process_results(components, |iter| iter.unzip())?;
+            Ok(Member {
+                name,
+                ty,
+                ignore: false,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(Members {
-        names,
-        types,
+        members,
         fuels_core_path,
     })
 }

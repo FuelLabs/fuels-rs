@@ -36,7 +36,9 @@ mod setup_program_test;
 pub fn abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);
 
-    Abigen::generate(targets.into(), false).unwrap().into()
+    let ts: TokenStream = Abigen::generate(targets.into(), false).unwrap().into();
+    std::fs::write("/home/segfault_magnet/the_code.rs", ts.to_string()).unwrap();
+    ts
 }
 
 #[proc_macro]
@@ -58,7 +60,7 @@ pub fn setup_program_test(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
+#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd, Ignore))]
 pub fn parameterize(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -67,7 +69,7 @@ pub fn parameterize(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
+#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, FuelsCorePath, NoStd, Ignore))]
 pub fn tokenizable(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 

@@ -166,9 +166,8 @@ impl LogDecoder {
         let target_ids: HashSet<LogId> = self
             .log_formatters
             .iter()
-            .filter_map(|(log_id, log_formatter)| {
-                log_formatter.can_handle_type::<T>().then(|| log_id.clone())
-            })
+            .filter(|&(_, log_formatter)| log_formatter.can_handle_type::<T>())
+            .map(|(log_id, _)| log_id.clone())
             .collect();
 
         receipts

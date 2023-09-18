@@ -1484,9 +1484,16 @@ async fn generics_test() -> Result<()> {
     }
     {
         contract_methods
-            .struct_w_unused_generic_param()
+            .struct_w_unused_generic_args(OneUnusedGenericParam::default())
             .call()
             .await?;
+
+        let response = contract_methods
+            .struct_w_used_and_unused_generic_args(UsedAndUnusedGenericParams::new(10u8))
+            .call()
+            .await?
+            .value;
+        assert_eq!(response.field, 11u8)
     }
     {
         // complex case

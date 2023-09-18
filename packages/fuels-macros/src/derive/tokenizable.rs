@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 use syn::{Data, DataEnum, DataStruct, DeriveInput, Error, Generics, Result};
@@ -50,8 +51,8 @@ fn tokenizable_for_struct(
     let struct_name_str = name.to_string();
     let members = extract_struct_members(contents, fuels_core_path.clone())?;
     let field_names = members.names().collect::<Vec<_>>();
+    let ignored_field_names = members.ignored_names().collect_vec();
 
-    validate_and_extract_generic_types(&generics)?;
     let std_lib = std_lib_path(no_std);
 
     Ok(quote! {
@@ -71,8 +72,9 @@ fn tokenizable_for_struct(
                         };
                         ::core::result::Result::Ok(Self {
                             #(
-                                #field_names: #fuels_core_path::traits::Tokenizable::from_token(next_token()?)?
-                             ),*
+                                #field_names: #fuels_core_path::traits::Tokenizable::from_token(next_token()?)?,
+                             )*
+                            #(#ignored_field_names: ::core::default::Default::default(),)*
 
                         })
                     },

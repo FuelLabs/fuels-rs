@@ -28,7 +28,8 @@ pub(crate) fn expand_custom_enum(
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }
-    let generics = extract_generic_parameters(type_decl)?;
+    let generics = extract_generic_parameters(type_decl);
+    // TODO: segfault impl Default when all elements are PhantomDatas
 
     let code = enum_decl(enum_ident, &components, &generics, no_std);
 
@@ -40,7 +41,7 @@ pub(crate) fn expand_custom_enum(
 fn enum_decl(
     enum_ident: &Ident,
     components: &[Component],
-    generics: &[TokenStream],
+    generics: &[Ident],
     no_std: bool,
 ) -> TokenStream {
     let enum_variants = components.iter().map(

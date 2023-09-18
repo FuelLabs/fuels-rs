@@ -5,8 +5,7 @@ use fuel_abi_types::{
     utils::{self, extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
 use proc_macro2::{Ident, TokenStream};
-use quote::quote;
-use quote::ToTokens;
+use quote::{quote, ToTokens};
 
 use crate::{
     error::{error, Result},
@@ -45,6 +44,22 @@ pub enum ResolvedType {
     Array(Box<ResolvedType>, usize),
     Tuple(Vec<ResolvedType>),
     Generic(GenericType),
+}
+
+impl ResolvedType {
+    pub fn generics(&self) -> Vec<GenericType> {
+        match self {
+            ResolvedType::Custom {
+                generics: elements, ..
+            }
+            | ResolvedType::Tuple(elements) => {
+                elements.iter().flat_map(|el| el.generics()).collect()
+            }
+            ResolvedType::Array(el, _) => el.generics(),
+            ResolvedType::Generic(inner) => vec![inner.clone()],
+            _ => vec![],
+        }
+    }
 }
 
 impl ToTokens for ResolvedType {
