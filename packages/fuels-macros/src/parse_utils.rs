@@ -180,6 +180,12 @@ pub(crate) fn extract_enum_members(
     let members = data
         .variants
         .into_iter()
+        .filter(|variant| {
+            !variant.attrs.iter().any(|attr| match &attr.meta {
+                syn::Meta::Path(path) => path.get_ident().is_some_and(|ident| ident == "Ignore"),
+                _ => false,
+            })
+        })
         .map(|variant: Variant| {
             let name = variant.ident;
 

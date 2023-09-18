@@ -44,27 +44,44 @@ pub(crate) fn find_attr<'a>(name: &str, attrs: &'a [Attribute]) -> Option<&'a At
     })
 }
 
-pub(crate) struct ExtractedVariant {
+pub(crate) struct VariantInfo {
     name: Ident,
-    discriminant: u8,
     is_unit: bool,
+}
+pub(crate) enum ExtractedVariant {
+    Normal { info: VariantInfo, discriminant: u8 },
+    Ignored { info: VariantInfo },
 }
 
 pub(crate) fn extract_variants<'a>(
     contents: impl IntoIterator<Item = &'a Variant>,
     fuels_core_path: TokenStream,
 ) -> Result<ExtractedVariants> {
+    let mut discriminant = 0;
     let variants = contents
         .into_iter()
-        .enumerate()
-        .map(|(discriminant, variant)| -> Result<_> {
+        .map(|variant| -> Result<_> {
+            let ignored = variant.attrs.iter().any(|attr| match &attr.meta {
+                syn::Meta::Path(path) => path.get_ident().is_some_and(|ident| ident == "Ignore"),
+                _ => false,
+            });
             let name = variant.ident.clone();
-            let ty = get_variant_type(variant)?;
-            Ok(ExtractedVariant {
-                name,
-                discriminant: discriminant as u8,
-                is_unit: ty.is_none(),
-            })
+
+            if ignored {
+                let is_unit = matches!(variant.fields, Fields::Unit);
+                Ok(ExtractedVariant::Ignored {
+                    info: VariantInfo { name, is_unit },
+                })
+            } else {
+                let is_unit = validate_and_extract_variant_type(variant)?.is_none();
+                let current_discriminant = discriminant;
+                discriminant += 1;
+
+                Ok(ExtractedVariant::Normal {
+                    info: VariantInfo { name, is_unit },
+                    discriminant: current_discriminant,
+                })
+            }
         })
         .collect::<Result<_>>()?;
 
@@ -82,15 +99,27 @@ pub(crate) struct ExtractedVariants {
 impl ExtractedVariants {
     pub(crate) fn variant_into_discriminant_and_token(&self) -> TokenStream {
         let match_branches = self.variants.iter().map(|variant| {
-            let discriminant = variant.discriminant;
-            let name = &variant.name;
             let fuels_core_path = &self.fuels_core_path;
-            if variant.is_unit {
-                quote! { Self::#name => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(())) }
-            } else {
-                quote! { Self::#name(inner) => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(inner))}
+
+            match variant {
+                ExtractedVariant::Normal { info: VariantInfo{ name, is_unit }, discriminant } => {
+                if *is_unit {
+                        quote! { Self::#name => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(())) }
+                } else {
+                        quote! { Self::#name(inner) => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(inner))}
+                }
+                },
+                ExtractedVariant::Ignored { info: VariantInfo{ name, is_unit } } => {
+                let name_stringified = name.to_string();
+                if *is_unit {
+                    quote! { Self::#name => ::core::panic!("Variant '{}' should never be constructed.", #name_stringified) }
+                } else {
+                    quote! { Self::#name(..) => ::core::panic!("Variant '{}' should never be constructed.", #name_stringified) }
+                }
+                }
             }
-        });
+        }
+        );
 
         quote! {
             match self {
@@ -99,19 +128,24 @@ impl ExtractedVariants {
         }
     }
     pub(crate) fn variant_from_discriminant_and_token(&self, no_std: bool) -> TokenStream {
-        let match_discriminant = self.variants.iter().map(|variant| {
-            let name = &variant.name;
-            let discriminant = variant.discriminant;
-            let fuels_core_path = &self.fuels_core_path;
+        let match_discriminant = self
+            .variants
+            .iter()
+            .filter_map(|variant| match variant {
+                ExtractedVariant::Normal { info, discriminant } => Some((info, discriminant)),
+                _ => None,
+            })
+            .map(|(VariantInfo { name, is_unit }, discriminant)| {
+                let fuels_core_path = &self.fuels_core_path;
 
-            let variant_value = if variant.is_unit {
-                quote! {}
-            } else {
-                quote! { (#fuels_core_path::traits::Tokenizable::from_token(variant_token)?) }
-            };
+                let variant_value = if *is_unit {
+                    quote! {}
+                } else {
+                    quote! { (#fuels_core_path::traits::Tokenizable::from_token(variant_token)?) }
+                };
 
-            quote! { #discriminant => ::core::result::Result::Ok(Self::#name #variant_value)}
-        });
+                quote! { #discriminant => ::core::result::Result::Ok(Self::#name #variant_value)}
+            });
 
         let std_lib = std_lib_path(no_std);
         quote! {
@@ -125,7 +159,7 @@ impl ExtractedVariants {
     }
 }
 
-fn get_variant_type(variant: &Variant) -> Result<Option<&Type>> {
+fn validate_and_extract_variant_type(variant: &Variant) -> Result<Option<&Type>> {
     match &variant.fields {
         Fields::Named(named_fields) => Err(Error::new_spanned(
             named_fields.clone(),

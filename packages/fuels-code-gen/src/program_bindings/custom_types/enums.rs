@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -9,7 +10,7 @@ use crate::{
     program_bindings::{
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
-        resolved_type::ResolvedType,
+        resolved_type::{GenericType, ResolvedType},
         utils::Component,
     },
 };
@@ -58,6 +59,33 @@ fn enum_decl(
     );
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
+    let used_generics: HashSet<Ident> = components
+        .iter()
+        .flat_map(|component| component.field_type.generics())
+        .filter_map(|generic_type| {
+            if let GenericType::Named(name) = generic_type {
+                Some(name)
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    let phantom_types = generics
+        .iter()
+        .filter(|generic| !used_generics.contains(generic))
+        .map(|generic| {
+            quote! {::core::marker::PhantomData<#generic>}
+        })
+        .collect_vec();
+
+    let extra_variants = (!phantom_types.is_empty()).then(|| {
+        quote! {
+            #[Ignore]
+            IgnoreMe(#(#phantom_types),*)
+        }
+    });
+
     quote! {
         #[allow(clippy::enum_variant_names)]
         #[derive(
@@ -71,7 +99,8 @@ fn enum_decl(
         )]
         #maybe_disable_std
         pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
-            #(#enum_variants),*
+            #(#enum_variants,)*
+            #extra_variants
         }
     }
 }
