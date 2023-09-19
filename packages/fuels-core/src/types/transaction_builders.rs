@@ -41,7 +41,7 @@ pub trait TransactionBuilder: Send {
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
-    fn with_gas_price(self, gas_price: Option<u64>) -> Self;
+    fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_gas_limit(self, gas_limit: Option<u64>) -> Self;
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
@@ -104,7 +104,7 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            fn with_gas_price(mut self, gas_price: Option<u64>) -> Self {
+            fn with_gas_price(mut self, gas_price: u64) -> Self {
                 self.gas_price = gas_price;
                 self
             }
@@ -190,9 +190,13 @@ macro_rules! impl_tx_trait {
     };
 }
 
+fn get_network_gas_limit(consensus_parameters: &ConsensusParameters) -> u64 {
+    consensus_parameters.max_gas_per_tx
+}
+
 #[derive(Debug, Clone, Default)]
 pub struct ScriptTransactionBuilder {
-    pub gas_price: Option<u64>,
+    pub gas_price: u64,
     pub gas_limit: Option<u64>,
     pub maturity: u32,
     pub script: Vec<u8>,
@@ -206,7 +210,7 @@ pub struct ScriptTransactionBuilder {
 
 #[derive(Debug, Clone, Default)]
 pub struct CreateTransactionBuilder {
-    pub gas_price: Option<u64>,
+    pub gas_price: u64,
     pub gas_limit: Option<u64>,
     pub maturity: u32,
     pub bytecode_length: u64,
@@ -230,11 +234,13 @@ impl ScriptTransactionBuilder {
         num_witnesses: u8,
         consensus_parameters: &ConsensusParameters,
     ) -> Result<Script> {
-        let gas_limit = self.get_gas_limit_if_needed(consensus_parameters);
-        let gas_price = self.get_gas_price_if_needed(consensus_parameters);
+        let gas_limit = match self.gas_limit {
+            Some(limit) => limit,
+            None => get_network_gas_limit(consensus_parameters),
+        };
 
         let mut tx = FuelTransaction::script(
-            gas_price,
+            self.gas_price,
             gas_limit,
             self.maturity.into(),
             self.script,
@@ -256,20 +262,6 @@ impl ScriptTransactionBuilder {
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
-    }
-
-    fn get_gas_limit_if_needed(&self, consensus_parameters: &ConsensusParameters) -> u64 {
-        match self.gas_limit {
-            Some(limit) => limit,
-            None => consensus_parameters.max_gas_per_tx,
-        }
-    }
-
-    fn get_gas_price_if_needed(&self, consensus_parameters: &ConsensusParameters) -> u64 {
-        match self.gas_price {
-            Some(price) => price,
-            None => consensus_parameters.gas_per_byte,
-        }
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
@@ -389,17 +381,12 @@ impl CreateTransactionBuilder {
     ) -> Result<Create> {
         let gas_limit = match self.gas_limit {
             Some(limit) => limit,
-            None => consensus_parameters.max_gas_per_tx,
-        };
-
-        let gas_price = match self.gas_price {
-            Some(price) => price,
-            None => consensus_parameters.gas_per_byte,
+            None => get_network_gas_limit(consensus_parameters),
         };
 
         let num_of_storage_slots = self.storage_slots.len();
         let mut tx = FuelTransaction::create(
-            gas_price,
+            self.gas_price,
             gas_limit,
             self.maturity.into(),
             self.bytecode_witness_index,

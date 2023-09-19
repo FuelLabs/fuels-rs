@@ -219,7 +219,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(Some(1), Some(1000000), 0);
+    let tx_params = TxParameters::new(1, Some(1000000), 0);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -273,8 +273,8 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_params = TxParameters::default()
-        .with_gas_price(Some(1))
-        .with_gas_limit(Some(1000000));
+        .with_gas_price(1)
+        .with_gas_limit(1000000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -517,7 +517,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::default().with_gas_price(Some(1));
+    let my_tx_params = TxParameters::default().with_gas_price(1);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()

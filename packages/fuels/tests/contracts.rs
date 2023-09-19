@@ -290,8 +290,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         .initialize_counter(42)
         .tx_params(
             TxParameters::default()
-                .with_gas_price(Some(gas_price))
-                .with_gas_limit(Some(gas_limit)),
+                .with_gas_price(gas_price)
+                .with_gas_limit(gas_limit),
         )
         .estimate_transaction_cost(Some(tolerance))
         .await?;
@@ -620,8 +620,8 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet
     let tx_params = TxParameters::default()
-        .with_gas_price(Some(10))
-        .with_gas_limit(Some(1_000_000));
+        .with_gas_price(10)
+        .with_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)

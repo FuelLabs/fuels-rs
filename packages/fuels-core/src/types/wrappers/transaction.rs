@@ -10,30 +10,17 @@ use fuel_tx::{
 };
 use fuel_types::ChainId;
 
-use crate::types::Result;
+use crate::{types::Result, constants::{DEFAULT_GAS_PRICE, DEFAULT_MATURITY}};
 
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct TxParameters {
-    gas_price: Option<u64>,
+    gas_price: u64,
     gas_limit: Option<u64>,
     maturity: u32,
 }
 
-macro_rules! impl_setter_getter {
-    ($name: ident, $field: ident, $ty: ty) => {
-        pub fn $name(mut self, $field: $ty) -> Self {
-            self.$field = $field;
-            self
-        }
-
-        pub fn $field(&self) -> $ty {
-            self.$field
-        }
-    };
-}
-
 impl TxParameters {
-    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, maturity: u32) -> Self {
+    pub fn new(gas_price: u64, gas_limit: Option<u64>, maturity: u32) -> Self {
         Self {
             gas_price,
             gas_limit,
@@ -41,9 +28,43 @@ impl TxParameters {
         }
     }
 
-    impl_setter_getter!(with_gas_price, gas_price, Option<u64>);
-    impl_setter_getter!(with_gas_limit, gas_limit, Option<u64>);
-    impl_setter_getter!(with_maturity, maturity, u32);
+    pub fn with_gas_price(mut self, gas_price: u64) -> Self {
+        self.gas_price = gas_price;
+        self
+    }
+
+    pub fn gas_price(&self) -> u64 {
+        self.gas_price
+    }
+
+    pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
+        self.gas_limit = Some(gas_limit);
+        self
+    }
+
+    pub fn gas_limit(&self) -> Option<u64> {
+        self.gas_limit
+    }
+
+    pub fn with_maturity(mut self, maturity: u32) -> Self {
+        self.maturity = maturity;
+        self
+    }
+
+    pub fn maturity(&self) -> u32 {
+        self.maturity
+    }
+}
+
+impl Default for TxParameters {
+    fn default() -> Self {
+        Self {
+            gas_price: DEFAULT_GAS_PRICE,
+            gas_limit: None,
+            // By default, transaction is immediately valid
+            maturity: DEFAULT_MATURITY,
+        }
+    }
 }
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
