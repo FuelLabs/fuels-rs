@@ -42,7 +42,7 @@ pub trait TransactionBuilder: Send {
     fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
-    fn with_gas_limit(self, gas_limit: Option<u64>) -> Self;
+    fn with_gas_limit(self, gas_limit: u64) -> Self;
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -109,14 +109,15 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            fn with_gas_limit(mut self, gas_limit: Option<u64>) -> Self {
-                self.gas_limit = gas_limit;
+            fn with_gas_limit(mut self, gas_limit: u64) -> Self {
+                self.gas_limit = Some(gas_limit);
                 self
             }
 
-            fn with_tx_params(self, tx_params: TxParameters) -> Self {
-                self.with_gas_limit(tx_params.gas_limit())
-                    .with_gas_price(tx_params.gas_price())
+            fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
+                self.gas_limit = tx_params.gas_limit();
+
+                self.with_gas_price(tx_params.gas_price())
                     .with_maturity(tx_params.maturity().into())
             }
 

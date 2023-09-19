@@ -10,7 +10,10 @@ use fuel_tx::{
 };
 use fuel_types::ChainId;
 
-use crate::{types::Result, constants::{DEFAULT_GAS_PRICE, DEFAULT_MATURITY}};
+use crate::{
+    constants::{DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
+    types::Result,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub struct TxParameters {
