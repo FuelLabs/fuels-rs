@@ -36,9 +36,7 @@ mod setup_program_test;
 pub fn abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);
 
-    let ts: TokenStream = Abigen::generate(targets.into(), false).unwrap().into();
-    std::fs::write("/home/segfault_magnet/the_code.rs", ts.to_string()).unwrap();
-    ts
+    Abigen::generate(targets.into(), false).unwrap().into()
 }
 
 #[proc_macro]

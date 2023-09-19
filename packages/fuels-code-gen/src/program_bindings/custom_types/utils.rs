@@ -4,20 +4,16 @@ use fuel_abi_types::{
 };
 use proc_macro2::Ident;
 
-use crate::{error::Result, program_bindings::utils::Component};
+use crate::{error::Result, program_bindings::utils::Components};
 
 /// Transforms components from inside the given `FullTypeDeclaration` into a vector
 /// of `Components`. Will fail if there are no components.
 pub(crate) fn extract_components(
     type_decl: &FullTypeDeclaration,
     snake_case: bool,
-    mod_name: &TypePath,
-) -> Result<Vec<Component>> {
-    type_decl
-        .components
-        .iter()
-        .map(|component| Component::new(component, snake_case, mod_name.clone()))
-        .collect()
+    parent_module: TypePath,
+) -> Result<Components> {
+    Components::new(&type_decl.components, snake_case, parent_module)
 }
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters

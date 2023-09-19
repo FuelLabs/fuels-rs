@@ -11,7 +11,7 @@ use crate::{
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         resolved_type::{GenericType, ResolvedType},
-        utils::Component,
+        utils::Components,
     },
 };
 
@@ -25,12 +25,11 @@ pub(crate) fn expand_custom_enum(
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, false, &enum_type_path.parent())?;
+    let components = extract_components(type_decl, false, enum_type_path.parent())?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }
     let generics = extract_generic_parameters(type_decl);
-    // TODO: segfault impl Default when all elements are PhantomDatas
 
     let code = enum_decl(enum_ident, &components, &generics, no_std);
 
@@ -41,50 +40,14 @@ pub(crate) fn expand_custom_enum(
 
 fn enum_decl(
     enum_ident: &Ident,
-    components: &[Component],
+    components: &Components,
     generics: &[Ident],
     no_std: bool,
 ) -> TokenStream {
-    let enum_variants = components.iter().map(
-        |Component {
-             field_name,
-             field_type,
-         }| {
-            if let ResolvedType::Unit = field_type {
-                quote! {#field_name}
-            } else {
-                quote! {#field_name(#field_type)}
-            }
-        },
-    );
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
-    let used_generics: HashSet<Ident> = components
-        .iter()
-        .flat_map(|component| component.field_type.generics())
-        .filter_map(|generic_type| {
-            if let GenericType::Named(name) = generic_type {
-                Some(name)
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let phantom_types = generics
-        .iter()
-        .filter(|generic| !used_generics.contains(generic))
-        .map(|generic| {
-            quote! {::core::marker::PhantomData<#generic>}
-        })
-        .collect_vec();
-
-    let extra_variants = (!phantom_types.is_empty()).then(|| {
-        quote! {
-            #[Ignore]
-            IgnoreMe(#(#phantom_types),*)
-        }
-    });
+    let enum_variants = components.as_enum_variants();
+    let unused_generics_variant = components.variant_for_unused_generics(generics);
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -100,7 +63,7 @@ fn enum_decl(
         #maybe_disable_std
         pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
             #(#enum_variants,)*
-            #extra_variants
+            #unused_generics_variant
         }
     }
 }

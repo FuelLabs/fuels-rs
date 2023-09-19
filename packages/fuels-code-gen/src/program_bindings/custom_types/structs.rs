@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 
 use fuel_abi_types::{abi::full_program::FullTypeDeclaration, utils::ident};
+use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -10,7 +11,7 @@ use crate::{
         custom_types::utils::{extract_components, extract_generic_parameters},
         generated_code::GeneratedCode,
         resolved_type::GenericType,
-        utils::Component,
+        utils::Components,
     },
 };
 
@@ -24,7 +25,7 @@ pub(crate) fn expand_custom_struct(
     let struct_type_path = type_decl.custom_type_path()?;
     let struct_ident = struct_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, true, &struct_type_path.parent())?;
+    let components = extract_components(type_decl, true, struct_type_path.parent())?;
     let generic_parameters = extract_generic_parameters(type_decl);
 
     let code = struct_decl(struct_ident, &components, &generic_parameters, no_std);
@@ -36,51 +37,21 @@ pub(crate) fn expand_custom_struct(
 
 fn struct_decl(
     struct_ident: &Ident,
-    components: &[Component],
-    generic_parameters: &Vec<Ident>,
+    components: &Components,
+    generics: &[Ident],
     no_std: bool,
 ) -> TokenStream {
-    let (field_names, field_types): (Vec<_>, Vec<_>) = components
-        .iter()
-        .map(
-            |Component {
-                 field_name,
-                 field_type,
-             }| { (field_name, field_type) },
-        )
-        .unzip();
-
-    let used_generics: HashSet<Ident> = components
-        .iter()
-        .flat_map(|component| component.field_type.generics())
-        .filter_map(|generic_type| {
-            if let GenericType::Named(name) = generic_type {
-                Some(name)
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    let (phantom_fields, phantom_types): (Vec<_>, Vec<_>) = generic_parameters
-        .iter()
-        .filter(|generic| !used_generics.contains(generic))
-        .enumerate()
-        .map(|(index, generic)| {
-            let field_name = ident(&format!("_unused_generic_{index}"));
-            (field_name, quote! {::core::marker::PhantomData<#generic>})
-        })
-        .unzip();
-
-    let derive_default = field_names
+    let derive_default = components
         .is_empty()
         .then(|| quote!(::core::default::Default,));
 
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     let generics_with_bounds = quote! {
-        <#(#generic_parameters: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*>
+        <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*>
     };
+    let (field_names, field_types) = components.as_parameters();
+    let (phantom_fields, phantom_types) = components.parameters_for_unused_generics(generics);
 
     quote! {
         #[derive(
@@ -95,16 +66,11 @@ fn struct_decl(
         )]
         #maybe_disable_std
         pub struct #struct_ident #generics_with_bounds {
-            #(
-               pub #field_names: #field_types,
-            )*
-            #(
-               #[Ignore]
-               pub #phantom_fields : #phantom_types,
-            )*
+            #( pub #field_names: #field_types, )*
+            #(#[Ignore] pub #phantom_fields: #phantom_types, )*
         }
 
-        impl #generics_with_bounds #struct_ident<#(#generic_parameters),*> {
+        impl #generics_with_bounds #struct_ident<#(#generics),*> {
             pub fn new(#(#field_names: #field_types,)*) -> Self {
                 Self {
                     #(#field_names,)*
