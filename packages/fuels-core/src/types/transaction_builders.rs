@@ -727,8 +727,6 @@ where
     *tx.gas_price_mut() = 0;
     *tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
 
-    // TODO: Fetch `GasCosts` from the `fuel-core`:
-    //  https://github.com/FuelLabs/fuel-core/issues/1221
     tx.estimate_predicates(consensus_parameters, &network_info.gas_costs)?;
     *tx.gas_price_mut() = gas_price;
     *tx.gas_limit_mut() = gas_limit;
