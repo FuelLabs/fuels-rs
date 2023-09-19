@@ -25,6 +25,8 @@ mod tests {
         abi::{full_program::FullTypeApplication, program::TypeDeclaration},
         utils::{extract_custom_type_name, TypePath},
     };
+    use pretty_assertions::assert_eq;
+    use quote::quote;
 
     use super::*;
     use crate::{error::Result, program_bindings::utils::Components};
@@ -105,7 +107,26 @@ mod tests {
                         },
                     ],
                 },
-                type_arguments: vec![],
+                type_arguments: vec![
+                    FullTypeApplication {
+                        name: "unimportant".to_string(),
+                        type_decl: FullTypeDeclaration {
+                            type_field: "u8".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
+                        },
+                        type_arguments: vec![],
+                    },
+                    FullTypeApplication {
+                        name: "unimportant".to_string(),
+                        type_decl: FullTypeDeclaration {
+                            type_field: "u16".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
+                        },
+                        type_arguments: vec![],
+                    },
+                ],
             },
         ];
 
@@ -119,13 +140,12 @@ mod tests {
             .into_iter()
             .map(|stream| stream.to_string())
             .collect::<Vec<_>>();
-        assert_eq!(
-            stringified_result,
-            vec![
-                "< u8 as :: fuels :: core :: traits :: Parameterize > :: param_type ()",
-                "< SomeStruct :: < T , K > as :: fuels :: core :: traits :: Parameterize > :: param_type ()"
-            ]
-        )
+
+        let expected = vec![
+            quote! { <::core::primitive::u8 as :: fuels::core::traits::Parameterize>::param_type() }.to_string(),
+            quote! { <self::SomeStruct<::core::primitive::u8, ::core::primitive::u16> as ::fuels::core::traits::Parameterize>::param_type() }.to_string(),
+        ];
+        assert_eq!(stringified_result, expected);
     }
 
     #[test]

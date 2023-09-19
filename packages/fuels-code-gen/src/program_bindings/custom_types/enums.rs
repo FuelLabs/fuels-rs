@@ -7,8 +7,9 @@ use quote::quote;
 use crate::{
     error::{error, Result},
     program_bindings::{
-        custom_types::utils::extract_generic_parameters, generated_code::GeneratedCode,
-        utils::Components,
+        custom_types::utils::extract_generic_parameters,
+        generated_code::GeneratedCode,
+        utils::{tokenize_generics, Components},
     },
 };
 
@@ -45,6 +46,7 @@ fn enum_decl(
 
     let enum_variants = components.as_enum_variants();
     let unused_generics_variant = components.variant_for_unused_generics(generics);
+    let (_, generics_w_bounds) = tokenize_generics(generics);
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -55,10 +57,10 @@ fn enum_decl(
             PartialEq,
             ::fuels::macros::Parameterize,
             ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom
+            ::fuels::macros::TryFrom,
         )]
         #maybe_disable_std
-        pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
+        pub enum #enum_ident #generics_w_bounds {
             #(#enum_variants,)*
             #unused_generics_variant
         }

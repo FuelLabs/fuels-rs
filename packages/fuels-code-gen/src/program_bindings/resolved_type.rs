@@ -302,7 +302,7 @@ impl TypeResolver {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, str::FromStr};
 
     use fuel_abi_types::abi::{
         full_program::FullTypeDeclaration,
@@ -330,6 +330,7 @@ mod tests {
             .map_err(|e| e.combine(error!("failed to resolve {:?}", type_application)))?;
         let actual = resolved_type.to_token_stream().to_string();
 
+        let expected = TokenStream::from_str(expected).unwrap().to_string();
         assert_eq!(actual, expected);
 
         Ok(())
@@ -348,32 +349,32 @@ mod tests {
 
     #[test]
     fn test_resolve_u8() -> Result<()> {
-        test_resolve_primitive_type("u8", "u8")
+        test_resolve_primitive_type("u8", "::core::primitive::u8")
     }
 
     #[test]
     fn test_resolve_u16() -> Result<()> {
-        test_resolve_primitive_type("u16", "u16")
+        test_resolve_primitive_type("u16", "::core::primitive::u16")
     }
 
     #[test]
     fn test_resolve_u32() -> Result<()> {
-        test_resolve_primitive_type("u32", "u32")
+        test_resolve_primitive_type("u32", "::core::primitive::u32")
     }
 
     #[test]
     fn test_resolve_u64() -> Result<()> {
-        test_resolve_primitive_type("u64", "u64")
+        test_resolve_primitive_type("u64", "::core::primitive::u64")
     }
 
     #[test]
     fn test_resolve_bool() -> Result<()> {
-        test_resolve_primitive_type("bool", "bool")
+        test_resolve_primitive_type("bool", "::core::primitive::bool")
     }
 
     #[test]
     fn test_resolve_b256() -> Result<()> {
-        test_resolve_primitive_type("b256", ":: fuels :: types :: Bits256")
+        test_resolve_primitive_type("b256", "::fuels::types::Bits256")
     }
 
     #[test]
@@ -384,7 +385,7 @@ mod tests {
     #[test]
     fn test_resolve_array() -> Result<()> {
         test_resolve_first_type(
-            "[u8 ; 3usize]",
+            "[::core::primitive::u8 ; 3usize]",
             &[
                 TypeDeclaration {
                     type_id: 0,
@@ -676,7 +677,7 @@ mod tests {
     #[test]
     fn test_resolve_tuple() -> Result<()> {
         test_resolve_first_type(
-            "(u8 , u16 , bool , T ,)",
+            "(::core::primitive::u8, ::core::primitive::u16, ::core::primitive::bool, T,)",
             &[
                 TypeDeclaration {
                     type_id: 0,
@@ -727,12 +728,13 @@ mod tests {
 
     #[test]
     fn custom_types_uses_correct_path_for_sdk_provided_types() {
+        let resolver = TypeResolver::default();
         for (type_path, expected_path) in sdk_provided_custom_types_lookup() {
             // given
             let type_application = given_fn_arg_of_custom_type(&type_path);
 
             // when
-            let resolved_type = TypeResolver::default().resolve(&type_application).unwrap();
+            let resolved_type = resolver.resolve(&type_application).unwrap();
 
             // then
             let expected_type_name = expected_path.into_token_stream();

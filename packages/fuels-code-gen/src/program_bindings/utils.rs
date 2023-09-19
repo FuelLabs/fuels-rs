@@ -132,6 +132,17 @@ impl Components {
     }
 }
 
+pub(crate) fn tokenize_generics(generics: &[Ident]) -> (TokenStream, TokenStream) {
+    if generics.is_empty() {
+        return (Default::default(), Default::default());
+    }
+
+    (
+        quote! {<#(#generics,)*>},
+        quote! {<#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*>},
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use fuel_abi_types::abi::full_program::FullTypeDeclaration;
@@ -196,7 +207,6 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ("std::option::Option", "::core::option::Option"),
         ("std::result::Result", "::core::result::Result"),
         ("std::string::String", "::std::string::String"),
-        ("std::u128::U128", "u128"),
         ("std::u256::U256", "::fuels::types::U256"),
         ("std::vec::Vec", "::std::vec::Vec"),
         (

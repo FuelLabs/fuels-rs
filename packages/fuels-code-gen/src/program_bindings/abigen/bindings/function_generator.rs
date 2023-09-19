@@ -126,6 +126,7 @@ impl FunctionGenerator {
 #[cfg(test)]
 mod tests {
     use fuel_abi_types::abi::full_program::{FullTypeApplication, FullTypeDeclaration};
+    use pretty_assertions::assert_eq;
 
     use super::*;
 
@@ -136,10 +137,12 @@ mod tests {
 
         let fn_selector_code = sut.fn_selector();
 
-        assert_eq!(
-            fn_selector_code.to_string(),
-            r#":: fuels :: core :: codec :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
-        );
+        let expected = quote! {
+            ::fuels::core::codec::resolve_fn_selector(
+                "test_function",
+                &[<self::CustomStruct<::core::primitive::u8> as::fuels::core::traits::Parameterize>::param_type()])
+        };
+        assert_eq!(fn_selector_code.to_string(), expected.to_string());
 
         Ok(())
     }
@@ -174,7 +177,7 @@ mod tests {
         // then
         let expected = quote! {
             #[doc = "This is a doc"]
-            pub fn test_function(&self, arg_0: self::CustomStruct<u8>) -> self::CustomStruct<u64> {
+            pub fn test_function(&self, arg_0: self::CustomStruct<::core::primitive::u8>) -> self::CustomStruct<::core::primitive::u64> {
                 this is ze body
             }
         };

@@ -7,8 +7,9 @@ use quote::quote;
 use crate::{
     error::Result,
     program_bindings::{
-        custom_types::utils::extract_generic_parameters, generated_code::GeneratedCode,
-        utils::Components,
+        custom_types::utils::extract_generic_parameters,
+        generated_code::GeneratedCode,
+        utils::{tokenize_generics, Components},
     },
 };
 
@@ -44,9 +45,7 @@ fn struct_decl(
 
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
-    let generics_with_bounds = quote! {
-        <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize, )*>
-    };
+    let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(generics);
     let (field_names, field_types) = components.as_parameters();
     let (phantom_fields, phantom_types) = components.parameters_for_unused_generics(generics);
 
@@ -59,15 +58,15 @@ fn struct_decl(
             #derive_default
             ::fuels::macros::Parameterize,
             ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom
+            ::fuels::macros::TryFrom,
         )]
         #maybe_disable_std
-        pub struct #struct_ident #generics_with_bounds {
+        pub struct #struct_ident #generics_w_bounds {
             #( pub #field_names: #field_types, )*
             #(#[Ignore] pub #phantom_fields: #phantom_types, )*
         }
 
-        impl #generics_with_bounds #struct_ident<#(#generics),*> {
+        impl #generics_w_bounds #struct_ident #generics_wo_bounds {
             pub fn new(#(#field_names: #field_types,)*) -> Self {
                 Self {
                     #(#field_names,)*

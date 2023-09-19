@@ -18,3 +18,5 @@ quote = { workspace = true }
 regex = { workspace = true }
 serde_json = { workspace = true }
 syn = { workspace = true }
+[dev-dependencies]
+pretty_assertions = "1.4"
