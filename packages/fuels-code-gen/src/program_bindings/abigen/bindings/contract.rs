@@ -162,7 +162,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     };
     generator.set_body(body);
 
-    Ok(generator.into())
+    Ok(generator.generate())
 }
 
 #[cfg(test)]

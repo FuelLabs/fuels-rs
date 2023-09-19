@@ -68,30 +68,6 @@ impl Components {
             .unzip()
     }
 
-    pub fn generics(&self) -> HashSet<Ident> {
-        self.components
-            .iter()
-            .flat_map(|(_, ty)| ty.generics())
-            .filter_map(|generic_type| {
-                if let GenericType::Named(name) = generic_type {
-                    Some(name)
-                } else {
-                    None
-                }
-            })
-            .collect()
-    }
-
-    fn unused_generics<'a>(
-        &'a self,
-        declared_generics: &'a [Ident],
-    ) -> impl Iterator<Item = &'a Ident> {
-        let used_generics = self.generics();
-        declared_generics
-            .iter()
-            .filter(move |generic| !used_generics.contains(generic))
-    }
-
     pub fn parameters_for_unused_generics(
         &self,
         declared_generics: &[Ident],
@@ -130,6 +106,30 @@ impl Components {
             })
             .collect()
     }
+
+    fn generics(&self) -> HashSet<Ident> {
+        self.components
+            .iter()
+            .flat_map(|(_, ty)| ty.generics())
+            .filter_map(|generic_type| {
+                if let GenericType::Named(name) = generic_type {
+                    Some(name)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn unused_generics<'a>(
+        &'a self,
+        declared_generics: &'a [Ident],
+    ) -> impl Iterator<Item = &'a Ident> {
+        let used_generics = self.generics();
+        declared_generics
+            .iter()
+            .filter(move |generic| !used_generics.contains(generic))
+    }
 }
 
 #[cfg(test)]
@@ -138,39 +138,40 @@ mod tests {
 
     use super::*;
 
-    // TODO: segfault
-    // #[test]
-    // fn respects_snake_case_flag() -> Result<()> {
-    //     let type_application = type_application_named("WasNotSnakeCased");
-    //
-    //     let sut = Component::new(&type_application, true, TypePath::default())?;
-    //
-    //     assert_eq!(sut.ident, "was_not_snake_cased");
-    //
-    //     Ok(())
-    // }
+    #[test]
+    fn respects_snake_case_flag() -> Result<()> {
+        // given
+        let type_application = type_application_named("WasNotSnakeCased");
 
-    // TODO: segfault
-    // #[test]
-    // fn avoids_collisions_with_reserved_keywords() -> Result<()> {
-    //     {
-    //         let type_application = type_application_named("if");
-    //
-    //         let sut = Component::new(&type_application, false, TypePath::default())?;
-    //
-    //         assert_eq!(sut.ident, "if_");
-    //     }
-    //
-    //     {
-    //         let type_application = type_application_named("let");
-    //
-    //         let sut = Component::new(&type_application, false, TypePath::default())?;
-    //
-    //         assert_eq!(sut.ident, "let_");
-    //     }
-    //
-    //     Ok(())
-    // }
+        // when
+        let sut = Components::new(&[type_application], true, TypePath::default())?;
+
+        // then
+        assert_eq!(sut.iter().next().unwrap().0, "was_not_snake_cased");
+
+        Ok(())
+    }
+
+    #[test]
+    fn avoids_collisions_with_reserved_keywords() -> Result<()> {
+        {
+            let type_application = type_application_named("if");
+
+            let sut = Components::new(&[type_application], false, TypePath::default())?;
+
+            assert_eq!(sut.iter().next().unwrap().0, "if_");
+        }
+
+        {
+            let type_application = type_application_named("let");
+
+            let sut = Components::new(&[type_application], false, TypePath::default())?;
+
+            assert_eq!(sut.iter().next().unwrap().0, "let_");
+        }
+
+        Ok(())
+    }
 
     fn type_application_named(name: &str) -> FullTypeApplication {
         FullTypeApplication {

@@ -4,7 +4,6 @@ use fuels::{
     prelude::*,
     types::{Bits256, EvmAddress, Identity, SizedAsciiString, B512, U256},
 };
-use fuels_code_gen::{Abigen, AbigenTarget};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]

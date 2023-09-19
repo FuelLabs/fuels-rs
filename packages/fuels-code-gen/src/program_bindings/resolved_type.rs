@@ -186,7 +186,8 @@ impl TypeResolver {
             return Ok(None);
         };
 
-        let path = TypePath::new("::fuels::types::SizedAsciiString").expect("is valid");
+        let path =
+            TypePath::new("::fuels::types::SizedAsciiString").expect("this is a valid TypePath");
         Ok(Some(ResolvedType::Custom {
             path,
             generics: vec![ResolvedType::Generic(GenericType::Constant(len))],
@@ -198,7 +199,8 @@ impl TypeResolver {
         type_application: &FullTypeApplication,
     ) -> Result<Option<ResolvedType>> {
         let maybe_resolved = (type_application.type_decl.type_field == "str").then(|| {
-            let path = TypePath::new("::fuels::types::AsciiString").expect("is valid");
+            let path =
+                TypePath::new("::fuels::types::AsciiString").expect("this is a valid TypePath");
             ResolvedType::Custom {
                 path,
                 generics: vec![],
@@ -261,12 +263,11 @@ impl TypeResolver {
         &self,
         type_application: &FullTypeApplication,
     ) -> Result<Option<ResolvedType>> {
-        // TODO: segfault change all 'is valid' expect messages to something more meaningful
         if type_application.type_decl.type_field != "raw untyped slice" {
             return Ok(None);
         }
 
-        let path = TypePath::new("::fuels::types::RawSlice").expect("is valid");
+        let path = TypePath::new("::fuels::types::RawSlice").expect("this is a valid TypePath");
         Ok(Some(ResolvedType::Custom {
             path,
             generics: vec![],

@@ -1,16 +1,13 @@
 use std::collections::HashSet;
 
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
-use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
     error::{error, Result},
     program_bindings::{
-        custom_types::utils::{extract_components, extract_generic_parameters},
-        generated_code::GeneratedCode,
-        resolved_type::{GenericType, ResolvedType},
+        custom_types::utils::extract_generic_parameters, generated_code::GeneratedCode,
         utils::Components,
     },
 };
@@ -25,7 +22,7 @@ pub(crate) fn expand_custom_enum(
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, false, enum_type_path.parent())?;
+    let components = Components::new(&type_decl.components, false, enum_type_path.parent())?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }

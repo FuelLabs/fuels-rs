@@ -1,16 +1,13 @@
 use std::collections::HashSet;
 
-use fuel_abi_types::{abi::full_program::FullTypeDeclaration, utils::ident};
-use itertools::Itertools;
+use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
 use crate::{
     error::Result,
     program_bindings::{
-        custom_types::utils::{extract_components, extract_generic_parameters},
-        generated_code::GeneratedCode,
-        resolved_type::GenericType,
+        custom_types::utils::extract_generic_parameters, generated_code::GeneratedCode,
         utils::Components,
     },
 };
@@ -25,7 +22,7 @@ pub(crate) fn expand_custom_struct(
     let struct_type_path = type_decl.custom_type_path()?;
     let struct_ident = struct_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, true, struct_type_path.parent())?;
+    let components = Components::new(&type_decl.components, true, struct_type_path.parent())?;
     let generic_parameters = extract_generic_parameters(type_decl);
 
     let code = struct_decl(struct_ident, &components, &generic_parameters, no_std);
