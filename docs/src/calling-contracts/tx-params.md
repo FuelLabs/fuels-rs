@@ -20,10 +20,6 @@ You can configure these parameters by creating an instance of `TxParameters` and
 You can also use `TxParameters::default()` to use the default values. If `gas_limit` or `gas_limit` are set to `None`, the SDK will use the networks default values:
 <!-- tx_params_default:example:end -->
 
-```rust,ignore
-{{#include ../../../packages/fuels-core/src/utils/constants.rs:default_tx_parameters}}
-```
-
 This way:
 
 ```rust,ignore
