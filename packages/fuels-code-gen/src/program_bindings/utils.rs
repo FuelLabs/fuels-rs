@@ -43,8 +43,8 @@ impl Components {
         Ok(Self { components })
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &(Ident, ResolvedType)> {
-        self.components.iter()
+    pub fn iter(&self) -> impl Iterator<Item = (&Ident, &ResolvedType)> {
+        self.components.iter().map(|(ident, ty)| (ident, ty))
     }
 
     pub fn is_empty(&self) -> bool {
@@ -59,13 +59,6 @@ impl Components {
                 quote! {#ident(#ty)}
             }
         })
-    }
-
-    pub fn as_parameters(&self) -> (Vec<&Ident>, Vec<&ResolvedType>) {
-        self.components
-            .iter()
-            .map(|(ident, ty)| (ident, ty))
-            .unzip()
     }
 
     pub fn parameters_for_unused_generics(

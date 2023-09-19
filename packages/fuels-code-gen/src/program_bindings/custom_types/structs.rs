@@ -46,7 +46,7 @@ fn struct_decl(
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(generics);
-    let (field_names, field_types) = components.as_parameters();
+    let (field_names, field_types): (Vec<_>, Vec<_>) = components.iter().unzip();
     let (phantom_fields, phantom_types) = components.parameters_for_unused_generics(generics);
 
     quote! {
