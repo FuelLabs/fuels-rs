@@ -3,6 +3,7 @@
 use fuel_core_client::client::types::{
     chain_info::ChainInfo as ClientChainInfo, ConsensusParameters,
 };
+use fuel_vm::prelude::GasCosts;
 
 use crate::types::block::Block;
 
@@ -13,6 +14,7 @@ pub struct ChainInfo {
     pub peer_count: i32,
     pub latest_block: Block,
     pub consensus_parameters: ConsensusParameters,
+    pub gas_costs: GasCosts,
 }
 
 impl From<ClientChainInfo> for ChainInfo {
@@ -23,6 +25,7 @@ impl From<ClientChainInfo> for ChainInfo {
             peer_count: client_chain_info.peer_count,
             latest_block: client_chain_info.latest_block.into(),
             consensus_parameters: client_chain_info.consensus_parameters,
+            gas_costs: client_chain_info.gas_costs.into(),
         }
     }
 }

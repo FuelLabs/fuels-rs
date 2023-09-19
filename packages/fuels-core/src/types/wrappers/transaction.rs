@@ -10,20 +10,17 @@ use fuel_tx::{
 };
 use fuel_types::ChainId;
 
-use crate::{
-    constants::{DEFAULT_GAS_PRICE, DEFAULT_MATURITY},
-    types::Result,
-};
+use crate::types::Result;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
-    gas_price: u64,
+    gas_price: Option<u64>,
     gas_limit: Option<u64>,
     maturity: u32,
 }
 
 impl TxParameters {
-    pub fn new(gas_price: u64, gas_limit: Option<u64>, maturity: u32) -> Self {
+    pub fn new(gas_price: Option<u64>, gas_limit: Option<u64>, maturity: u32) -> Self {
         Self {
             gas_price,
             gas_limit,
@@ -32,11 +29,11 @@ impl TxParameters {
     }
 
     pub fn with_gas_price(mut self, gas_price: u64) -> Self {
-        self.gas_price = gas_price;
+        self.gas_price = Some(gas_price);
         self
     }
 
-    pub fn gas_price(&self) -> u64 {
+    pub fn gas_price(&self) -> Option<u64> {
         self.gas_price
     }
 
@@ -56,17 +53,6 @@ impl TxParameters {
 
     pub fn maturity(&self) -> u32 {
         self.maturity
-    }
-}
-
-impl Default for TxParameters {
-    fn default() -> Self {
-        Self {
-            gas_price: DEFAULT_GAS_PRICE,
-            gas_limit: None,
-            // By default, transaction is immediately valid
-            maturity: DEFAULT_MATURITY,
-        }
     }
 }
 

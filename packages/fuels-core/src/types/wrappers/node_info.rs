@@ -2,7 +2,7 @@
 
 use fuel_core_client::client::types::node_info::NodeInfo as ClientNodeInfo;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct NodeInfo {
     pub utxo_validation: bool,
     pub vm_backtrace: bool,

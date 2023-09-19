@@ -337,9 +337,13 @@ async fn test_default_tx_params_match_network() -> Result<()> {
     let outputs =
         wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
 
-    let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default())
-            .with_consensus_parameters(consensus_params);
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
