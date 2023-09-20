@@ -61,7 +61,9 @@ Your Rust code would look like this:
 ```
 
 ### Unused generic type parameters
+
 Sway supports unused generic type parameters when declaring structs/enums:
+
 ```Rust
 struct SomeStruct<T, K> {
   field: u64
@@ -73,9 +75,8 @@ enum SomeEnum<T, K> {
 
 ```
 
-If you tried the same in Rust you'd get complaints that `T` and `K` must be used or removed. When generating Rust bindings for such types we make use of the [`PhantomData`](https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters) type.
+If you tried the same in Rust you'd get complaints that `T` and `K` must be used or removed. When generating Rust bindings for such types we make use of the [`PhantomData`](https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters) type. The generated bindings for the above example would look something like this:
 
-The generated bindings for the above example would look something like this:
 ```Rust
 struct SomeStruct<T, K> {
    pub field: u64,
@@ -90,13 +91,13 @@ enum SomeEnum<T, K> {
 ```
 
 To lessen the impact to DEX you may use `SomeStruct::new` to initialize the above structure without bothering with the `PhantomData`s:
+
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:unused_generics_struct}}
 ```
 
-If your struct doesn't have any fields we'll also derive `Default`.
+If your struct doesn't have any fields we'll also derive `Default`. As for enums all `PhantomData`s are placed inside a new variant called `IgnoreMe` which you'll need to ignore in your matches:
 
-As for enums all `PhantomData`s are placed inside a new variant called `IgnoreMe` which you'll need to ignore in your matches:
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:unused_generics_enum}}
 ```
