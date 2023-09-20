@@ -1399,21 +1399,6 @@ async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error:
     Ok(())
 }
 
-// #[test]
-// fn feature() {
-//     let code = Abigen::generate(
-//         vec![AbigenTarget {
-//             name: "MyContract".to_string(),
-//             abi: "tests/types/contracts/generics/out/debug/generics-abi.json".into(),
-//             program_type: fuels_code_gen::ProgramType::Contract,
-//         }],
-//         false,
-//     )
-//     .unwrap();
-//
-//     std::fs::write("/home/segfault_magnet/the_code.rs", code.to_string()).unwrap();
-// }
-
 #[tokio::test]
 async fn generics_test() -> Result<()> {
     setup_program_test!(
