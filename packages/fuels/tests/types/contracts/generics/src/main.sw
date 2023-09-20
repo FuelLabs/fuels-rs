@@ -4,12 +4,14 @@ use std::hash::*;
 
 struct StructOneUnusedGenericParam<T> {}
 
+#[allow(dead_code)]
 enum EnumOneUnusedGenericParam<T> {
     One: (),
 }
 
 struct StructTwoUnusedGenericParams<T, K> {}
 
+#[allow(dead_code)]
 enum EnumTwoUnusedGenericParams<T, K> {
     One: (),
 }
@@ -18,6 +20,7 @@ struct StructUsedAndUnusedGenericParams<T, K, Z> {
     field: K,
 }
 
+#[allow(dead_code)]
 enum EnumUsedAndUnusedGenericParams<T, K, Z> {
     One: str[3],
     Two: K,
