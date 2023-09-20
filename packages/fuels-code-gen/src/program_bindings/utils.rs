@@ -65,7 +65,7 @@ impl Components {
         &self,
         declared_generics: &[Ident],
     ) -> (Vec<Ident>, Vec<TokenStream>) {
-        self.unused_generics(declared_generics)
+        self.unused_named_generics(declared_generics)
             .enumerate()
             .map(|(index, generic)| {
                 let ident = utils::ident(&format!("_unused_generic_{index}"));
@@ -77,7 +77,7 @@ impl Components {
 
     pub fn variant_for_unused_generics(&self, declared_generics: &[Ident]) -> Option<TokenStream> {
         let phantom_types = self
-            .unused_generics(declared_generics)
+            .unused_named_generics(declared_generics)
             .map(|generic| {
                 quote! {::core::marker::PhantomData<#generic>}
             })
@@ -100,7 +100,7 @@ impl Components {
             .collect()
     }
 
-    fn generics(&self) -> HashSet<Ident> {
+    fn named_generics(&self) -> HashSet<Ident> {
         self.components
             .iter()
             .flat_map(|(_, ty)| ty.generics())
@@ -114,11 +114,11 @@ impl Components {
             .collect()
     }
 
-    fn unused_generics<'a>(
+    fn unused_named_generics<'a>(
         &'a self,
         declared_generics: &'a [Ident],
     ) -> impl Iterator<Item = &'a Ident> {
-        let used_generics = self.generics();
+        let used_generics = self.named_generics();
         declared_generics
             .iter()
             .filter(move |generic| !used_generics.contains(generic))
@@ -230,7 +230,7 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
 }
 
 pub(crate) fn get_equivalent_bech32_type(ttype: &ResolvedType) -> Option<TokenStream> {
-    let ResolvedType::Custom { path, .. } = ttype else {
+    let ResolvedType::StructOrEnum { path, .. } = ttype else {
         return None;
     };
 

@@ -8,7 +8,7 @@ use crate::{
         utils,
         utils::{find_attr, get_path_from_attr_or, std_lib_path},
     },
-    parse_utils::{extract_struct_members, validate_and_extract_generic_types},
+    parse_utils::{validate_and_extract_generic_types, Members},
 };
 
 pub fn generate_tokenizable_impl(input: DeriveInput) -> Result<TokenStream> {
@@ -50,7 +50,7 @@ fn tokenizable_for_struct(
     validate_and_extract_generic_types(&generics)?;
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let struct_name_str = name.to_string();
-    let members = extract_struct_members(contents, fuels_core_path.clone())?;
+    let members = Members::from_struct(contents, fuels_core_path.clone())?;
     let field_names = members.names().collect::<Vec<_>>();
     let ignored_field_names = members.ignored_names().collect_vec();
 
@@ -97,7 +97,7 @@ fn tokenizable_for_enum(
     validate_and_extract_generic_types(&generics)?;
     let (impl_gen, type_gen, where_clause) = generics.split_for_impl();
     let name_stringified = name.to_string();
-    let variants = utils::extract_variants(&contents.variants, fuels_core_path.clone())?;
+    let variants = utils::extract_variants(contents.variants, fuels_core_path.clone())?;
     let discriminant_and_token = variants.variant_into_discriminant_and_token();
     let constructed_variant = variants.variant_from_discriminant_and_token(no_std);
 

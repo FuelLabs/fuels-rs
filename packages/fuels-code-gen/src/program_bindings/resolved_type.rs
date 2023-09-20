@@ -13,7 +13,7 @@ use crate::{
     utils::TypePath,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum GenericType {
     Named(Ident),
     Constant(usize),
@@ -37,7 +37,7 @@ impl ToTokens for GenericType {
 pub enum ResolvedType {
     Unit,
     Primitive(TypePath),
-    Custom {
+    StructOrEnum {
         path: TypePath,
         generics: Vec<ResolvedType>,
     },
@@ -49,7 +49,7 @@ pub enum ResolvedType {
 impl ResolvedType {
     pub fn generics(&self) -> Vec<GenericType> {
         match self {
-            ResolvedType::Custom {
+            ResolvedType::StructOrEnum {
                 generics: elements, ..
             }
             | ResolvedType::Tuple(elements) => {
@@ -67,7 +67,7 @@ impl ToTokens for ResolvedType {
         let tokenized = match self {
             ResolvedType::Unit => quote! {()},
             ResolvedType::Primitive(path) => path.into_token_stream(),
-            ResolvedType::Custom { path, generics } => {
+            ResolvedType::StructOrEnum { path, generics } => {
                 if generics.is_empty() {
                     path.to_token_stream()
                 } else {
@@ -188,7 +188,7 @@ impl TypeResolver {
 
         let path =
             TypePath::new("::fuels::types::SizedAsciiString").expect("this is a valid TypePath");
-        Ok(Some(ResolvedType::Custom {
+        Ok(Some(ResolvedType::StructOrEnum {
             path,
             generics: vec![ResolvedType::Generic(GenericType::Constant(len))],
         }))
@@ -201,7 +201,7 @@ impl TypeResolver {
         let maybe_resolved = (type_application.type_decl.type_field == "str").then(|| {
             let path =
                 TypePath::new("::fuels::types::AsciiString").expect("this is a valid TypePath");
-            ResolvedType::Custom {
+            ResolvedType::StructOrEnum {
                 path,
                 generics: vec![],
             }
@@ -253,7 +253,7 @@ impl TypeResolver {
         }
 
         let path = TypePath::new("::fuels::types::Bits256").expect("to be valid");
-        Ok(Some(ResolvedType::Custom {
+        Ok(Some(ResolvedType::StructOrEnum {
             path,
             generics: vec![],
         }))
@@ -268,7 +268,7 @@ impl TypeResolver {
         }
 
         let path = TypePath::new("::fuels::types::RawSlice").expect("this is a valid TypePath");
-        Ok(Some(ResolvedType::Custom {
+        Ok(Some(ResolvedType::StructOrEnum {
             path,
             generics: vec![],
         }))
@@ -293,7 +293,7 @@ impl TypeResolver {
 
         let generics = self.resolve_multiple(&type_application.type_arguments)?;
 
-        Ok(Some(ResolvedType::Custom {
+        Ok(Some(ResolvedType::StructOrEnum {
             path: used_path,
             generics,
         }))
@@ -304,12 +304,46 @@ impl TypeResolver {
 mod tests {
     use std::{collections::HashMap, str::FromStr};
 
-    use fuel_abi_types::abi::{
-        full_program::FullTypeDeclaration,
-        program::{TypeApplication, TypeDeclaration},
+    use fuel_abi_types::{
+        abi::{
+            full_program::FullTypeDeclaration,
+            program::{TypeApplication, TypeDeclaration},
+        },
+        utils::ident,
     };
 
     use super::*;
+
+    #[test]
+    fn correctly_extracts_used_generics() {
+        let resolved_type = ResolvedType::StructOrEnum {
+            path: Default::default(),
+            generics: vec![
+                ResolvedType::Tuple(vec![ResolvedType::Array(
+                    Box::new(ResolvedType::StructOrEnum {
+                        path: Default::default(),
+                        generics: vec![
+                            ResolvedType::Generic(GenericType::Named(ident("A"))),
+                            ResolvedType::Generic(GenericType::Constant(10)),
+                        ],
+                    }),
+                    2,
+                )]),
+                ResolvedType::Generic(GenericType::Named(ident("B"))),
+            ],
+        };
+
+        let generics = resolved_type.generics();
+
+        assert_eq!(
+            generics,
+            vec![
+                GenericType::Named(ident("A")),
+                GenericType::Constant(10),
+                GenericType::Named(ident("B"))
+            ]
+        )
+    }
 
     fn test_resolve_first_type(
         expected: &str,

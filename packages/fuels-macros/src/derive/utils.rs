@@ -1,7 +1,9 @@
 use fuels_code_gen::utils::TypePath;
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{Attribute, Error, Expr, ExprLit, Fields, Lit, Meta, Result, Type, Variant};
+use syn::{Attribute, Error, Expr, ExprLit, Fields, Lit, Meta, Result, Variant};
+
+use crate::parse_utils::has_ignore_attr;
 
 pub(crate) fn get_path_from_attr_or(
     attr_name: &str,
@@ -48,37 +50,39 @@ pub(crate) struct VariantInfo {
     name: Ident,
     is_unit: bool,
 }
+
 pub(crate) enum ExtractedVariant {
     Normal { info: VariantInfo, discriminant: u8 },
     Ignored { info: VariantInfo },
 }
 
-pub(crate) fn extract_variants<'a>(
-    contents: impl IntoIterator<Item = &'a Variant>,
+pub(crate) fn extract_variants(
+    contents: impl IntoIterator<Item = Variant>,
     fuels_core_path: TokenStream,
 ) -> Result<ExtractedVariants> {
     let mut discriminant = 0;
     let variants = contents
         .into_iter()
         .map(|variant| -> Result<_> {
-            let ignored = variant.attrs.iter().any(|attr| match &attr.meta {
-                syn::Meta::Path(path) => path.get_ident().is_some_and(|ident| ident == "Ignore"),
-                _ => false,
-            });
-            let name = variant.ident.clone();
-
-            if ignored {
-                let is_unit = matches!(variant.fields, Fields::Unit);
+            let is_unit = matches!(variant.fields, Fields::Unit);
+            if has_ignore_attr(&variant.attrs) {
                 Ok(ExtractedVariant::Ignored {
-                    info: VariantInfo { name, is_unit },
+                    info: VariantInfo {
+                        name: variant.ident,
+                        is_unit,
+                    },
                 })
             } else {
-                let is_unit = validate_and_extract_variant_type(variant)?.is_none();
+                validate_variant_type(&variant)?;
+
                 let current_discriminant = discriminant;
                 discriminant += 1;
 
                 Ok(ExtractedVariant::Normal {
-                    info: VariantInfo { name, is_unit },
+                    info: VariantInfo {
+                        name: variant.ident,
+                        is_unit,
+                    },
                     discriminant: current_discriminant,
                 })
             }
@@ -98,27 +102,28 @@ pub(crate) struct ExtractedVariants {
 
 impl ExtractedVariants {
     pub(crate) fn variant_into_discriminant_and_token(&self) -> TokenStream {
-        let match_branches = self.variants.iter().map(|variant| {
-            let fuels_core_path = &self.fuels_core_path;
-
+        let match_branches = self.variants.iter().map(|variant|
             match variant {
                 ExtractedVariant::Normal { info: VariantInfo{ name, is_unit }, discriminant } => {
-                if *is_unit {
-                        quote! { Self::#name => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(())) }
-                } else {
-                        quote! { Self::#name(inner) => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(inner))}
-                }
+                    let fuels_core_path = &self.fuels_core_path;
+                    if *is_unit {
+                            quote! { Self::#name => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(())) }
+                    } else {
+                            quote! { Self::#name(inner) => (#discriminant, #fuels_core_path::traits::Tokenizable::into_token(inner))}
+                    }
                 },
                 ExtractedVariant::Ignored { info: VariantInfo{ name, is_unit } } => {
-                let name_stringified = name.to_string();
-                if *is_unit {
-                    quote! { Self::#name => ::core::panic!("Variant '{}' should never be constructed.", #name_stringified) }
-                } else {
-                    quote! { Self::#name(..) => ::core::panic!("Variant '{}' should never be constructed.", #name_stringified) }
-                }
+                    let panic_expression = {
+                        let name_stringified = name.to_string();
+                        quote! {::core::panic!("Variant '{}' should never be constructed.", #name_stringified)} 
+                    };
+                    if *is_unit {
+                        quote! { Self::#name => #panic_expression }
+                    } else {
+                        quote! { Self::#name(..) => #panic_expression }
+                    }
                 }
             }
-        }
         );
 
         quote! {
@@ -159,26 +164,28 @@ impl ExtractedVariants {
     }
 }
 
-fn validate_and_extract_variant_type(variant: &Variant) -> Result<Option<&Type>> {
+fn validate_variant_type(variant: &Variant) -> Result<()> {
     match &variant.fields {
-        Fields::Named(named_fields) => Err(Error::new_spanned(
-            named_fields.clone(),
-            "Struct like enum variants are not supported".to_string(),
-        )),
+        Fields::Named(named_fields) => {
+            return Err(Error::new_spanned(
+                named_fields.clone(),
+                "Struct like enum variants are not supported".to_string(),
+            ))
+        }
         Fields::Unnamed(unnamed_fields) => {
             let fields = &unnamed_fields.unnamed;
 
-            if fields.len() == 1 {
-                Ok(fields.iter().next().map(|field| &field.ty))
-            } else {
-                Err(Error::new_spanned(
+            if fields.len() != 1 {
+                return Err(Error::new_spanned(
                     unnamed_fields.clone(),
                     "Tuple-like enum variants must contain exactly one element.".to_string(),
-                ))
+                ));
             }
         }
-        Fields::Unit => Ok(None),
+        _ => {}
     }
+
+    Ok(())
 }
 
 pub(crate) fn std_lib_path(no_std: bool) -> TokenStream {
