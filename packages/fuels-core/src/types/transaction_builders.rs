@@ -86,9 +86,10 @@ macro_rules! impl_tx_trait {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
                 let uses_predicates = self.is_using_predicates();
-                let base_offset = match uses_predicates {
-                    true => self.base_offset(),
-                    false => 0,
+                let base_offset = if uses_predicates {
+                    self.base_offset()
+                } else {
+                    0
                 };
 
                 let network_info = self.network_info.clone();
@@ -239,20 +240,6 @@ pub struct CreateTransactionBuilder {
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
-fn resolve_gas_limit(gas_limit: Option<u64>, network_default: u64) -> u64 {
-    match gas_limit {
-        Some(limit) => limit,
-        _ => network_default,
-    }
-}
-
-fn resolve_gas_price(gas_price: Option<u64>, network_default: u64) -> u64 {
-    match gas_price {
-        Some(price) => price,
-        _ => network_default,
-    }
-}
-
 impl ScriptTransactionBuilder {
     pub fn new(network_info: NetworkInfo) -> ScriptTransactionBuilder {
         ScriptTransactionBuilder {
@@ -270,8 +257,8 @@ impl ScriptTransactionBuilder {
     }
 
     fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
-        let gas_price = resolve_gas_price(self.gas_price, self.network_info.min_gas_price);
-        let gas_limit = resolve_gas_limit(self.gas_limit, self.network_info.max_gas_per_tx);
+        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
+        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
 
         let mut tx = FuelTransaction::script(
             gas_price,
@@ -430,8 +417,8 @@ impl CreateTransactionBuilder {
     fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Create> {
         let num_of_storage_slots = self.storage_slots.len();
 
-        let gas_price = resolve_gas_price(self.gas_price, self.network_info.min_gas_price);
-        let gas_limit = resolve_gas_limit(self.gas_limit, self.network_info.max_gas_per_tx);
+        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
+        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
 
         let mut tx = FuelTransaction::create(
             gas_price,
