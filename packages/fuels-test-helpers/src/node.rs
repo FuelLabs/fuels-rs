@@ -213,7 +213,7 @@ pub fn get_node_config_json(
     serde_json::to_value(&chain_config).expect("Failed to build `ChainConfig` JSON")
 }
 
-fn write_temp_config_file(config: Value) -> NamedTempFile {
+pub fn write_temp_config_file(config: Value) -> NamedTempFile {
     let config_file = NamedTempFile::new();
 
     let _ = writeln!(
