@@ -201,7 +201,7 @@ pub async fn setup_test_client(
         return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()));
     };
 
-    new_fuel_node(
+    let (config, args, path) = new_fuel_node_arguments(
         coins,
         messages,
         Config {
@@ -209,8 +209,9 @@ pub async fn setup_test_client(
             ..config
         },
         chain_config,
-    )
-    .await?;
+    )?;
+
+    let _ = run_node(config, args, &path).await?;
 
     let client = FuelClient::from(bound_address);
     server_health_check(&client).await?;

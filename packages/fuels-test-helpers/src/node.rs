@@ -22,6 +22,8 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
+use fuel_core_services::Service;
+
 use fuels_core::types::errors::Result as FuelResult;
 use tokio::task::JoinHandle;
 
@@ -64,6 +66,22 @@ pub struct Config {
 
 impl Config {
     pub fn local_node() -> Self {
+        Self {
+            addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
+            max_database_cache_size: DEFAULT_CACHE_SIZE,
+            database_path: Default::default(),
+            database_type: DbType::InMemory,
+            utxo_validation: true,
+            manual_blocks_enabled: false,
+            block_production: Trigger::Instant,
+            vm_backtrace: false,
+            silent: true,
+        }
+    }
+}
+
+impl Default for Config {
+    fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             max_database_cache_size: DEFAULT_CACHE_SIZE,
@@ -225,17 +243,177 @@ pub fn write_temp_config_file(config: Value) -> NamedTempFile {
     config_file.unwrap()
 }
 
-pub async fn new_fuel_node(
+// pub async fn new_fuel_node(
+//     coins: Vec<Coin>,
+//     messages: Vec<Message>,
+//     config: Config,
+//     chain_config: Option<ChainConfig>,
+// ) -> FuelResult<JoinHandle<()>> {
+//     // Create a new one-shot channel for sending single values across asynchronous tasks.
+//     let (tx, rx) = oneshot::channel();
+//     //
+//     // tokio::spawn(async move {
+//
+//     let config_json = get_node_config_json(coins, messages, chain_config);
+//
+//     let temp_config_file = write_temp_config_file(config_json);
+//
+//     let port = config.addr.port().to_string();
+//     let mut args = vec![
+//         "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+//         "--ip".to_string(),
+//         "127.0.0.1".to_string(),
+//         "--port".to_string(),
+//         port,
+//         "--chain".to_string(),
+//         temp_config_file.path().to_str().unwrap().to_string(),
+//     ];
+//
+//     args.extend(vec![
+//         "--db-type".to_string(),
+//         match config.database_type {
+//             DbType::InMemory => "in-memory",
+//             DbType::RocksDb => "rocks-db",
+//         }
+//         .to_string(),
+//     ]);
+//
+//     if let DbType::RocksDb = config.database_type {
+//         let path = if config.database_path.as_os_str().is_empty() {
+//             PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
+//         } else {
+//             config.database_path
+//         };
+//         args.extend(vec![
+//             "--db-path".to_string(),
+//             path.to_string_lossy().to_string(),
+//         ]);
+//     }
+//
+//     if config.max_database_cache_size != DEFAULT_CACHE_SIZE {
+//         args.push("--max-database-cache-size".to_string());
+//         args.push(config.max_database_cache_size.to_string());
+//     }
+//
+//     if config.utxo_validation {
+//         args.push("--utxo-validation".to_string());
+//     }
+//
+//     if config.manual_blocks_enabled {
+//         args.push("--manual_blocks_enabled".to_string());
+//     }
+//
+//     match config.block_production {
+//         Trigger::Instant => {
+//             args.push("--poa-instant=true".to_string());
+//         }
+//         Trigger::Never => {
+//             args.push("--poa-instant=false".to_string());
+//         }
+//         Trigger::Interval { block_time } => {
+//             args.push(format!(
+//                 "--poa-interval-period={}ms",
+//                 block_time.as_millis()
+//             ));
+//         }
+//         Trigger::Hybrid {
+//             min_block_time,
+//             max_tx_idle_time,
+//             max_block_time,
+//         } => {
+//             args.push(format!(
+//                 "--poa-hybrid-min-time={}ms",
+//                 min_block_time.as_millis()
+//             ));
+//             args.push(format!(
+//                 "--poa-hybrid-idle-time={}ms",
+//                 max_tx_idle_time.as_millis()
+//             ));
+//             args.push(format!(
+//                 "--poa-hybrid-max-time={}ms",
+//                 max_block_time.as_millis()
+//             ));
+//         }
+//     };
+//
+//     if config.vm_backtrace {
+//         args.push("--vm-backtrace".to_string());
+//     }
+//
+//     // Warn if there is more than one binary in PATH.
+//     let binary_name = "fuel-core";
+//     let paths = which::which_all(binary_name)
+//         .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
+//         .collect::<Vec<_>>();
+//     let path = paths
+//         .first()
+//         .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
+//     if paths.len() > 1 {
+//         eprintln!(
+//             "found more than one '{}' binary in PATH, using '{}'",
+//             binary_name,
+//             path.display()
+//         );
+//     }
+//
+//     let mut command = Command::new(path);
+//     command.stdin(Stdio::null());
+//     if config.silent {
+//         command.stdout(Stdio::null()).stderr(Stdio::null());
+//     }
+//     let running_node = command.args(args).kill_on_drop(true).env_clear().output();
+//
+//     let client = FuelClient::from(config.addr);
+//     server_health_check(&client).await?;
+//     // Sending single to RX to inform that the fuel core node is ready.
+//     tx.send(()).unwrap();
+//
+//     let join_handle = tokio::spawn(async move {
+//         let result = running_node
+//             .await
+//             .expect("error: Couldn't find fuel-core in PATH.");
+//         let stdout = String::from_utf8_lossy(&result.stdout);
+//         let stderr = String::from_utf8_lossy(&result.stderr);
+//         eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+//     });
+//
+//     Ok(join_handle)
+// }
+
+pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
+    let mut attempts = 5;
+    let mut healthy = client.health().await.unwrap_or(false);
+    let between_attempts = Duration::from_millis(300);
+
+    while attempts > 0 && !healthy {
+        healthy = client.health().await.unwrap_or(false);
+        tokio::time::sleep(between_attempts).await;
+        attempts -= 1;
+    }
+
+    if !healthy {
+        panic!("error: Could not connect to fuel core server.")
+    }
+
+    Ok(())
+}
+
+pub fn get_socket_address() -> SocketAddr {
+    let free_port = pick_unused_port().expect("No ports free");
+    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+}
+
+pub type Shared<T> = std::sync::Arc<T>;
+use fuel_core_services::State;
+use fuel_core_services::StateWatcher;
+use tokio::sync::watch;
+
+pub fn new_fuel_node_arguments(
     coins: Vec<Coin>,
     messages: Vec<Message>,
     config: Config,
     chain_config: Option<ChainConfig>,
-) -> FuelResult<JoinHandle<()>> {
-    // Create a new one-shot channel for sending single values across asynchronous tasks.
-    // let (tx, rx) = oneshot::channel();
-    //
-    // tokio::spawn(async move {
-
+) -> FuelResult<(Config, Vec<String>, PathBuf)> {
     let config_json = get_node_config_json(coins, messages, chain_config);
 
     let temp_config_file = write_temp_config_file(config_json);
@@ -264,7 +442,7 @@ pub async fn new_fuel_node(
         let path = if config.database_path.as_os_str().is_empty() {
             PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
         } else {
-            config.database_path
+            config.database_path.clone()
         };
         args.extend(vec![
             "--db-path".to_string(),
@@ -338,49 +516,58 @@ pub async fn new_fuel_node(
         );
     }
 
+    Ok((config, args, path.clone()))
+}
+
+pub async fn run_node(
+    config: Config,
+    args: Vec<String>,
+    path: &PathBuf,
+) -> FuelResult<(Shared<watch::Sender<State>>, JoinHandle<()>)> {
+    let (sender, _) = watch::channel(State::NotStarted);
+    let state = Shared::new(sender);
+    let stop_sender = state.clone();
+
     let mut command = Command::new(path);
+
     command.stdin(Stdio::null());
     if config.silent {
         command.stdout(Stdio::null()).stderr(Stdio::null());
     }
+
     let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
     let client = FuelClient::from(config.addr);
     server_health_check(&client).await?;
-    // Sending single to RX to inform that the fuel core node is ready.
-    // tx.send(()).unwrap();
 
-    let join_handle = tokio::spawn(async move {
+    let join_handle = tokio::task::spawn(async move {
+        let mut state: StateWatcher = stop_sender.subscribe().into();
+
+        if state.borrow_and_update().not_started() {
+            state.changed().await.expect("The service is destroyed");
+        }
+
+        if !state.borrow().starting() {
+            return;
+        }
+
         let result = running_node
             .await
             .expect("error: Couldn't find fuel-core in PATH.");
         let stdout = String::from_utf8_lossy(&result.stdout);
         let stderr = String::from_utf8_lossy(&result.stderr);
         eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+
+        //Todo ovo ovdje se ne izvrsava
+        stop_sender.send_if_modified(|s| {
+            if s.starting() {
+                *s = State::Started;
+                true
+            } else {
+                false
+            }
+        });
     });
 
-    Ok(join_handle)
-}
-
-pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
-    let mut attempts = 5;
-    let mut healthy = client.health().await.unwrap_or(false);
-    let between_attempts = Duration::from_millis(300);
-
-    while attempts > 0 && !healthy {
-        healthy = client.health().await.unwrap_or(false);
-        tokio::time::sleep(between_attempts).await;
-        attempts -= 1;
-    }
-
-    if !healthy {
-        panic!("error: Could not connect to fuel core server.")
-    }
-
-    Ok(())
-}
-
-pub fn get_socket_address() -> SocketAddr {
-    let free_port = pick_unused_port().expect("No ports free");
-    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+    Ok((state, join_handle))
 }
