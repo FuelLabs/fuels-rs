@@ -22,8 +22,6 @@ use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::NamedTempFile;
 use tokio::process::Command;
 
-use fuel_core_services::Service;
-
 use fuels_core::types::errors::Result as FuelResult;
 use tokio::task::JoinHandle;
 
@@ -62,7 +60,10 @@ pub struct Config {
     pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
+    pub chain_conf: ChainConfig,
 }
+
+impl Config {}
 
 impl Config {
     pub fn local_node() -> Self {
@@ -76,6 +77,7 @@ impl Config {
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
+            chain_conf: ChainConfig::local_testnet(),
         }
     }
 }
@@ -92,6 +94,7 @@ impl Default for Config {
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
+            chain_conf: ChainConfig::local_testnet(),
         }
     }
 }
@@ -408,15 +411,12 @@ use fuel_core_services::State;
 use fuel_core_services::StateWatcher;
 use tokio::sync::watch;
 
-pub fn new_fuel_node_arguments(
-    coins: Vec<Coin>,
-    messages: Vec<Message>,
-    config: Config,
-    chain_config: Option<ChainConfig>,
-) -> FuelResult<(Config, Vec<String>, PathBuf)> {
-    let config_json = get_node_config_json(coins, messages, chain_config);
+pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>, PathBuf)> {
+    // TOdo make Config::to_args_vec()
+    let chain_config_json =
+        serde_json::to_value(&config.chain_conf).expect("Failed to build `ChainConfig` JSON");
 
-    let temp_config_file = write_temp_config_file(config_json);
+    let temp_config_file = write_temp_config_file(chain_config_json);
 
     let port = config.addr.port().to_string();
     let mut args = vec![
@@ -557,16 +557,6 @@ pub async fn run_node(
         let stdout = String::from_utf8_lossy(&result.stdout);
         let stderr = String::from_utf8_lossy(&result.stderr);
         eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
-
-        //Todo ovo ovdje se ne izvrsava
-        stop_sender.send_if_modified(|s| {
-            if s.starting() {
-                *s = State::Started;
-                true
-            } else {
-                false
-            }
-        });
     });
 
     Ok((state, join_handle))

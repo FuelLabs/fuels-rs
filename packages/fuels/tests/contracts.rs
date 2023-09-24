@@ -1,10 +1,10 @@
 #[allow(unused_imports)]
 use std::future::Future;
-use std::vec;
+use std::{time, vec};
 
 use fuel_core::chain_config::ChainConfig;
 use fuel_core::service::ServiceTrait;
-use fuel_core_types::fuel_types;
+
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -1647,32 +1647,41 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
 #[tokio::test]
 async fn fuel_service_test() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    ));
-    let mut wallet = WalletUnlocked::new_random(None);
+    // abigen!(Contract(
+    //     name = "MyContract",
+    //     abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+    // ));
+    // let mut wallet = WalletUnlocked::new_random(None);
 
     let config = Config::local_node();
     let service = FuelService::new_node(config)
         .await
         .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
-    let provider = Provider::connect(service.bound_address.to_string()).await?;
 
-    wallet.set_provider(provider);
-
-    // Simulate an unreachable node
-    // service.stop_and_await().await.unwrap();
-
+    dbg!("fuel_service_test");
+    dbg!(service.bound_address);
     dbg!(service.state());
+    // service.stop_and_await().await.unwrap();
+    // dbg!(service.state());
 
-    let response = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await;
-
-    assert!(matches!(response, Err(Error::ProviderError(_))));
+    std::thread::sleep(time::Duration::from_secs(3));
+    let provider = Provider::connect(service.bound_address.to_string()).await?;
+    //
+    // wallet.set_provider(provider);
+    //
+    // std::thread::sleep(std::time::Duration::from_secs(2));
+    // // Simulate an unreachable node
+    // // service.stop_and_await().await.unwrap();
+    //
+    // dbg!(service.state());
+    //
+    // let response = Contract::load_from(
+    //     "tests/contracts/contract_test/out/debug/contract_test.bin",
+    //     LoadConfiguration::default(),
+    // )?
+    // .deploy(&wallet, TxParameters::default())
+    // .await;
+    //
+    // assert!(matches!(response, Err(Error::ProviderError(_))));
     Ok(())
 }

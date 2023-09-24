@@ -11,12 +11,10 @@ pub use fuel_core::service::DbType;
 use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::{config::Trigger, Config};
-#[cfg(feature = "fuel-core-lib")]
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, ConsensusParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
-#[cfg(feature = "fuel-core-lib")]
 use fuels_core::error;
 
 use fuels_core::{
@@ -34,7 +32,6 @@ pub use node::*;
 #[cfg(not(feature = "fuel-core-lib"))]
 use portpicker::is_free;
 use rand::Fill;
-#[cfg(feature = "fuel-core-lib")]
 pub use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
@@ -43,6 +40,8 @@ pub mod node;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod fuel_service;
+#[cfg(not(feature = "fuel-core-lib"))]
+pub use fuel_service::*;
 
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
@@ -190,35 +189,34 @@ pub async fn setup_test_client(
     node_config: Option<Config>,
     chain_config: Option<ChainConfig>,
 ) -> Result<(FuelClient, SocketAddr, ConsensusParameters)> {
-    let config = node_config.unwrap_or_else(Config::local_node);
-    let requested_port = config.addr.port();
+    let coin_configs = into_coin_configs(coins);
+    let message_configs = into_message_configs(messages);
+    let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
 
-    let bound_address = if requested_port == 0 {
-        get_socket_address()
-    } else if is_free(requested_port) {
-        config.addr
-    } else {
-        return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()));
-    };
+    chain_conf.initial_state = Some(StateConfig {
+        coins: Some(coin_configs),
+        contracts: None,
+        messages: Some(message_configs),
+        ..StateConfig::default()
+    });
 
-    let (config, args, path) = new_fuel_node_arguments(
-        coins,
-        messages,
-        Config {
-            addr: bound_address,
-            ..config
-        },
-        chain_config,
-    )?;
+    let mut config = node_config.unwrap_or_else(Config::local_node);
+    config.chain_conf = chain_conf;
 
-    let _ = run_node(config, args, &path).await?;
+    dbg!("asd");
 
-    let client = FuelClient::from(bound_address);
+    // Todo make this working
+    let srv = FuelService::new_node(config)
+        .await
+        .map_err(|err| error!(InfrastructureError, "{err}"))?;
+
+    let address = srv.bound_address;
+    let client = FuelClient::from(address);
     server_health_check(&client).await?;
 
     let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
 
-    Ok((client, bound_address, consensus_parameters))
+    Ok((client, address, consensus_parameters))
 }
 
 #[cfg(test)]
