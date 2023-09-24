@@ -35,9 +35,8 @@ pub struct ServerParams {
 }
 
 pub struct FuelNode {
-    // pub running_node:
-    //     Pin<Box<dyn Future<Output = std::io::Result<std::process::Output>> + Send + 'static>>,
-    pub running_node: Pin<Box<Command>>,
+    pub running_node:
+        Pin<Box<dyn Future<Output = std::io::Result<std::process::Output>> + Send + 'static>>,
     pub shared: SharedState,
 }
 
@@ -63,11 +62,10 @@ impl FuelNode {
         if config.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        // let running_node = command.args(args).kill_on_drop(true).env_clear().output();
-        let running_node = command.args(args).kill_on_drop(true).env_clear();
+
+        let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
         Ok(Self {
-            // running_node: Box::pin(running_node),
             running_node: Box::pin(running_node),
             shared: SharedState { config },
         })
@@ -85,13 +83,13 @@ impl RunnableTask for FuelNode {
         let join_handle = tokio::task::spawn(async move {
 
             let result = self.running_node
-                .output()
                 .await
                 .as_mut()
                 .expect("error: Couldn't find fuel-core in PATH.");
             let stdout = String::from_utf8_lossy(&result.stdout);
             let stderr = String::from_utf8_lossy(&result.stderr);
             eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+
         });
 
 
@@ -131,11 +129,9 @@ impl RunnableService for FuelNode {
         if config_.silent {
             command.stdout(Stdio::null()).stderr(Stdio::null());
         }
-        // let running_node = command.args(args).kill_on_drop(true).env_clear().output();
-        let running_node = command.args(args).kill_on_drop(true).env_clear();
+        let running_node = command.args(args).kill_on_drop(true).env_clear().output();
 
         Ok(Self {
-            // running_node: Box::pin(running_node),
             running_node: Box::pin(running_node),
             shared: SharedState { config: config_ },
         })
