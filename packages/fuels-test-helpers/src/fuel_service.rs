@@ -16,6 +16,7 @@ use fuel_core_client::client::FuelClient;
 use futures::FutureExt;
 use std::process::Stdio;
 use std::time::Duration;
+use tempfile::NamedTempFile;
 use tokio::process::Command;
 use tokio::task::JoinHandle;
 
@@ -47,10 +48,6 @@ impl RunnableTask for Task {
     }
 
     async fn shutdown(self) -> anyhow::Result<()> {
-        self.running_node.abort();
-        // Nothing to shut down because we don't have any temporary state that should be dumped,
-        // and we don't spawn any sub-tasks that we need to finish or await.
-        // The `axum::Server` was already gracefully shutdown at this point.
         Ok(())
     }
 }
@@ -61,7 +58,7 @@ pub struct FuelNode {
 
 #[async_trait::async_trait]
 impl RunnableService for FuelNode {
-    const NAME: &'static str = "FuelNode";
+    const NAME: &'static str = "FuelService";
     type SharedData = SharedState;
     type Task = Task;
     type TaskParams = ServerParams;
@@ -77,9 +74,9 @@ impl RunnableService for FuelNode {
         _state: &StateWatcher,
         params: Self::TaskParams,
     ) -> anyhow::Result<Self::Task> {
-        let ServerParams { mut config } = params;
+        let ServerParams { config } = params;
 
-        let (config, args, temp_file) = new_fuel_node_arguments(config)?;
+        let (_, args, temp_file) = new_fuel_node_arguments(config)?;
 
         let binary_name = "fuel-core";
         let paths = which::which_all(binary_name)

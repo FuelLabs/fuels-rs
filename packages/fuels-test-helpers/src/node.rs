@@ -64,7 +64,9 @@ pub struct Config {
     pub chain_conf: ChainConfig,
 }
 
-impl Config {}
+impl Config {
+
+}
 
 impl Config {
     pub fn local_node() -> Self {
@@ -413,15 +415,11 @@ use fuel_core_services::StateWatcher;
 use tokio::sync::watch;
 
 pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>, NamedTempFile)> {
-    // TOdo make Config::to_args_vec()
-    use std::fs::File;
-    use std::io::{self, BufRead};
 
     let chain_config_json =
         serde_json::to_value(&config.chain_conf).expect("Failed to build `ChainConfig` JSON");
 
     let temp_config_file = write_temp_config_file(chain_config_json);
-
 
     let port = config.addr.port().to_string();
     let mut args = vec![
