@@ -13,9 +13,9 @@ use fuel_core_services::StateWatcher;
 pub use fuel_core_services::{RunnableTask, Service};
 
 use fuel_core_client::client::FuelClient;
+use futures::FutureExt;
 use std::process::Stdio;
 use std::time::Duration;
-use futures::FutureExt;
 use tokio::process::Command;
 use tokio::task::JoinHandle;
 
@@ -74,7 +74,9 @@ impl RunnableService for FuelNode {
     type TaskParams = ServerParams;
 
     fn shared_data(&self) -> Self::SharedData {
-        SharedState { config: self.config.clone() }
+        SharedState {
+            config: self.config.clone(),
+        }
     }
 
     async fn into_task(
@@ -84,7 +86,16 @@ impl RunnableService for FuelNode {
     ) -> anyhow::Result<Self::Task> {
         let ServerParams { mut config } = params;
 
-        let (config, args) = new_fuel_node_arguments(config)?;
+        let (config, args, temp_file) = new_fuel_node_arguments(config)?;
+
+        let file_path = args.get(6).unwrap();
+
+        if std::fs::metadata(file_path).is_ok() {
+
+            println!("File '{}' exists.", file_path);
+        } else {
+            println!("File '{}' does not exist.", file_path);
+        }
 
         // Warn if there is more than one binary in PATH.
         let binary_name = "fuel-core";
@@ -102,24 +113,17 @@ impl RunnableService for FuelNode {
             );
         }
 
-        dbg!(&path);
-
         let mut command = Command::new(path);
-        // command.stdin(Stdio::null());
-        // if config.silent {
-        //     command.stdout(Stdio::null()).stderr(Stdio::null());
-        // }
+        let running_node = command
+            .args(args)
+            .kill_on_drop(true)
+            .output();
 
-        let running_node = command.args(args).kill_on_drop(true).env_clear().output();
-
-        let address = self.config.addr;
-        dbg!(&address);
-
+        let address = config.addr.clone();
         let client = FuelClient::from(address);
-        // server_health_check(&client).await;
+        server_health_check(&client).await?;
 
         let join_handle = tokio::task::spawn(async move {
-            dbg!("muda od labuda");
             let result = running_node
                 .await
                 .expect("error: Couldn't find fuel-core in PATH.");
@@ -127,6 +131,8 @@ impl RunnableService for FuelNode {
             let stderr = String::from_utf8_lossy(&result.stderr);
             eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
         });
+
+
 
         Ok(Task {
             running_node: Box::pin(join_handle),
@@ -157,7 +163,12 @@ impl FuelService {
             ..config
         };
 
-        let runner = ServiceRunner::new_with_params(FuelNode {  config: config.clone() }, ServerParams { config });
+        let runner = ServiceRunner::new_with_params(
+            FuelNode {
+                config: config.clone(),
+            },
+            ServerParams { config },
+        );
         let shared = runner.shared.clone();
         dbg!(bound_address);
 

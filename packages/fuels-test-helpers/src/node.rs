@@ -10,6 +10,7 @@ use std::{
 pub use fuel_core_chain_config::ChainConfig;
 use fuel_core_chain_config::StateConfig;
 use fuel_core_client::client::FuelClient;
+use fuel_core_client::client::schema::schema::__fields::Query::chain;
 use fuel_types::{BlockHeight, Word};
 use fuels_core::{
     constants::WORD_SIZE,
@@ -411,12 +412,16 @@ use fuel_core_services::State;
 use fuel_core_services::StateWatcher;
 use tokio::sync::watch;
 
-pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>)> {
+pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>, NamedTempFile)> {
     // TOdo make Config::to_args_vec()
+    use std::fs::File;
+    use std::io::{self, BufRead};
+
     let chain_config_json =
         serde_json::to_value(&config.chain_conf).expect("Failed to build `ChainConfig` JSON");
 
     let temp_config_file = write_temp_config_file(chain_config_json);
+
 
     let port = config.addr.port().to_string();
     let mut args = vec![
@@ -500,7 +505,7 @@ pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String
         args.push("--vm-backtrace".to_string());
     }
 
-    Ok((config, args))
+    Ok((config, args, temp_config_file))
 }
 
 pub async fn run_node(

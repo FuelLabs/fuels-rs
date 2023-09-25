@@ -1,6 +1,7 @@
 #[allow(unused_imports)]
 use std::future::Future;
 use std::{time, vec};
+use tokio::process::Command;
 
 use fuel_core::chain_config::ChainConfig;
 use fuel_core::service::ServiceTrait;
@@ -1657,18 +1658,37 @@ async fn fuel_service_test() -> Result<()> {
     let service = FuelService::new_node(config)
         .await
         .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
-
+    //
     // service.start_and_await().await.map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;;
 
-    dbg!("fuel_service_test");
+    // dbg!("fuel_service_test");
     dbg!(service.bound_address);
-    dbg!(service.state());
+    // dbg!(service.state());
     // service.stop_and_await().await.unwrap();
     // dbg!(service.state());
 
-    std::thread::sleep(time::Duration::from_secs(5));
     let provider = Provider::connect(service.bound_address.to_string()).await?;
     //
+    dbg!(service.state());
+
+    // let mut command = Command::new("fuel-core");
+    // let running_node = command.args(vec!["run", "--db-type", "in-memory"]).kill_on_drop(true).output();
+    //
+    // let join_handle = tokio::task::spawn(async move {
+    //     let result = running_node
+    //         .await
+    //         .expect("error: Couldn't find fuel-core in PATH.");
+    //     let stdout = String::from_utf8_lossy(&result.stdout);
+    //     let stderr = String::from_utf8_lossy(&result.stderr);
+    //     eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+    // });
+
+    // std::thread::sleep(time::Duration::from_secs(7));
+
+    service.stop_and_await().await
+        .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
+    dbg!(service.state());
+
     // wallet.set_provider(provider);
     //
     // std::thread::sleep(std::time::Duration::from_secs(2));
