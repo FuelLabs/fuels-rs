@@ -206,9 +206,12 @@ pub trait Account: ViewOnlyAccount {
         let tx = self
             .add_fee_resources(tx_builder, previous_base_amount)
             .await?;
+        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
-        let receipts = provider.get_receipts(&tx_id).await?;
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         Ok((tx_id, receipts))
     }
@@ -271,8 +274,12 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = self.add_fee_resources(tb, base_amount).await?;
 
-        let tx_id = provider.send_transaction(tx).await?;
-        let receipts = provider.get_receipts(&tx_id).await?;
+        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -300,8 +307,12 @@ pub trait Account: ViewOnlyAccount {
         );
 
         let tx = self.add_fee_resources(tb, amount).await?;
-        let tx_id = provider.send_transaction(tx).await?;
-        let receipts = provider.get_receipts(&tx_id).await?;
+        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(None)?;
 
         let message_id = extract_message_id(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
@@ -413,7 +424,7 @@ mod tests {
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
 
-        // Verify the signature
+        // Verify signature
         signature.verify(&recovered_address, &message)?;
         // ANCHOR_END: sign_tx
 

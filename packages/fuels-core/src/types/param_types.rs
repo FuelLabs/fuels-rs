@@ -24,8 +24,6 @@ pub enum ParamType {
     U256,
     Bool,
     B256,
-    // The Unit ParamType is used for unit variants in Enums. The corresponding type field is `()`,
-    // similar to Rust.
     Unit,
     Array(Box<ParamType>, usize),
     Vector(Box<ParamType>),
@@ -69,13 +67,15 @@ impl ParamType {
         param_type: &ParamType,
         available_bytes: usize,
     ) -> Result<usize> {
-        let width = param_type.compute_encoding_width()?;
-        let memory_size = width
-            .checked_mul(WORD_SIZE)
-            .ok_or_else(|| error!(InvalidData, "overflow while calculating memory_size"))?;
-        let remainder = available_bytes
-            .checked_rem(memory_size)
-            .ok_or_else(|| error!(InvalidData, "memory_size of 0"))?;
+        let encoding_width = param_type.compute_encoding_width()?;
+        let memory_size = encoding_width.checked_mul(WORD_SIZE).ok_or_else(|| error!(InvalidData, "attempt to multiply encoding_width ({encoding_width:?}) by WORD_SIZE ({WORD_SIZE:?}) with overflow"))?;
+        if memory_size == 0 {
+            return Err(error!(
+                InvalidType,
+                "Cannot calculate the number of elements because the type is zero-sized."
+            ));
+        }
+        let remainder = available_bytes % memory_size;
         if remainder != 0 {
             return Err(error!(
                 InvalidData,
@@ -525,6 +525,7 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
     use crate::types::param_types::ParamType;
 

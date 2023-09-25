@@ -31,10 +31,8 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
-    let connected_provider = Provider::connect(address.to_string()).await?;
-
-    wallet.set_provider(connected_provider);
+    let provider = setup_test_provider(coins, vec![], None, None).await;
+    wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -52,7 +50,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         .await?;
     assert_eq!(42, response.value);
 
-    wallet.set_provider(launched_provider);
+    wallet.set_provider(provider);
     let contract_instance_launched = MyContract::new(contract_id, wallet);
 
     let response = contract_instance_launched
@@ -120,7 +118,7 @@ async fn test_input_message() -> Result<()> {
         vec![1, 2],
     )];
 
-    let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
+    let provider = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -164,7 +162,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         vec![],
     );
 
-    let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await;
+    let provider = setup_test_provider(vec![], vec![messages], None, None).await;
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -285,9 +283,7 @@ async fn given_a_provider() -> Provider {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
     };
-    setup_test_provider(vec![], vec![], Some(config), None)
-        .await
-        .0
+    setup_test_provider(vec![], vec![], Some(config), None).await
 }
 
 #[tokio::test]
@@ -471,7 +467,7 @@ async fn test_gas_errors() -> Result<()> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -517,7 +513,9 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: Response errors; not enough coins to fit the target";
+    let expected =
+        "Provider error: Client request error: Response errors; not enough coins to fit the target";
+
     assert!(response.to_string().starts_with(expected));
 
     Ok(())
@@ -655,7 +653,7 @@ async fn testnet_hello_world() -> Result<()> {
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
     let tx_parameters = TxParameters::default()
         .with_gas_price(1)
@@ -706,7 +704,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let message_nonce = message.nonce;
 
-    let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
+    let provider = setup_test_provider(coins, vec![message], None, None).await;
 
     wallet.set_provider(provider.clone());
 

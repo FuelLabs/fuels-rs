@@ -117,7 +117,7 @@ mod tests {
 
         // ANCHOR: custom_chain_provider
         let node_config = Config::local_node();
-        let (_provider, _bound_address) =
+        let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
         // ANCHOR_END: custom_chain_provider
         Ok(())
@@ -138,7 +138,7 @@ mod tests {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let (provider, _) = setup_test_provider(coins, vec![], None, None).await;
+        let provider = setup_test_provider(coins, vec![], None, None).await;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
@@ -171,7 +171,7 @@ mod tests {
         wallet_1.sign_transaction(&mut tb);
         let tx = tb.build()?;
 
-        provider.send_transaction(tx).await?;
+        provider.send_transaction_and_await_commit(tx).await?;
 
         let balances = wallet_2.get_balances().await?;
 

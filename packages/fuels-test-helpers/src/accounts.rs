@@ -1,16 +1,13 @@
-use std::{mem::size_of, net::SocketAddr};
+use std::mem::size_of;
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
-use fuels_accounts::{
-    fuel_crypto::SecretKey, provider::Provider, wallet::WalletUnlocked, ViewOnlyAccount,
-};
-use fuels_core::types::{coin::Coin, message::Message};
+use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::node::Config;
-use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
+use crate::{setup_custom_assets_coins, setup_test_provider, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
 /// The provider and the wallets are instantiated with the default configs.
@@ -80,35 +77,13 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let (provider, _) = setup_test_provider(all_coins, vec![], provider_config, chain_config).await;
+    let provider = setup_test_provider(all_coins, vec![], provider_config, chain_config).await;
 
     for wallet in &mut wallets {
         wallet.set_provider(provider.clone());
     }
 
     wallets
-}
-
-/// Setup a test provider with the given coins. We return the SocketAddr so the launched node
-/// client can be connected to more easily (even though it is often ignored).
-/// # Examples
-/// ```
-/// use fuels_test_helpers::setup_test_provider;
-///
-/// async fn test_provider() -> Result<(), Box<dyn std::error::Error>> {
-///   let (_provider, _address) = setup_test_provider(vec![], vec![], None, None).await;
-///   Ok(())
-/// }
-/// ```
-pub async fn setup_test_provider(
-    coins: Vec<Coin>,
-    messages: Vec<Message>,
-    node_config: Option<Config>,
-    chain_config: Option<ChainConfig>,
-) -> (Provider, SocketAddr) {
-    let (client, addr, consensus_parameters) =
-        setup_test_client(coins, messages, node_config, chain_config).await;
-    (Provider::new(client, consensus_parameters), addr)
 }
 
 #[cfg(test)]
@@ -239,13 +214,7 @@ mod tests {
 
         for wallet in wallets.into_iter() {
             assert_eq!(
-                wallet
-                    .try_provider()?
-                    .client
-                    .chain_info()
-                    .await?
-                    .consensus_parameters
-                    .max_gas_per_tx,
+                wallet.try_provider()?.consensus_parameters().max_gas_per_tx,
                 10_000_000_000
             );
             assert_eq!(wallet.get_coins(AssetId::default()).await?.len(), 3);
