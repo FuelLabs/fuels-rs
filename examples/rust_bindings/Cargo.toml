@@ -15,3 +15,4 @@ fuels-macros = { workspace = true }
 proc-macro2 = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+fuels-code-gen = { workspace = true }

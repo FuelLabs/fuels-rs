@@ -16,6 +16,12 @@ Next, you provide the prepared calls to your `MultiContractCallHandler` and opti
 
 > **Note:** any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to `MultiContractCallHandler`.
 
+Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:submit_response_multicontract}}
+```
+
 ## Output values
 
 To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of `call()` or `simulate()` to a variable:

@@ -44,7 +44,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let (provider, _) = setup_test_provider(all_coins, vec![], None, None).await;
+        let provider = setup_test_provider(all_coins, vec![], None, None).await;
 
         [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
             .iter_mut()

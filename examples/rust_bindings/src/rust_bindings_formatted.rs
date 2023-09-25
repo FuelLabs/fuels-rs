@@ -1,15 +1,34 @@
 pub mod abigen_bindings {
     pub mod my_contract_mod {
+        use ::fuels::{
+            accounts::{Account, ViewOnlyAccount},
+            core::{
+                codec,
+                traits::{Parameterize, Tokenizable},
+                Configurables,
+            },
+            programs::{
+                contract::{self, ContractCallHandler},
+                logs::{self, LogDecoder},
+            },
+            types::{bech32::Bech32ContractId, errors::Result, AssetId},
+        };
+
         pub struct MyContract<T: Account> {
             contract_id: Bech32ContractId,
             account: T,
             log_decoder: LogDecoder,
         }
         impl<T: Account> MyContract<T> {
-            pub fn new(contract_id: Bech32ContractId, account: T) -> Self {
-                let log_decoder = LogDecoder {
-                    type_lookup: logs::log_type_lookup(&[], contract_id.clone().into()),
-                };
+            pub fn new(
+                contract_id: impl ::core::convert::Into<Bech32ContractId>,
+                account: T,
+            ) -> Self {
+                let contract_id: Bech32ContractId = contract_id.into();
+                let log_decoder = LogDecoder::new(logs::log_formatters_lookup(
+                    vec![],
+                    contract_id.clone().into(),
+                ));
                 Self {
                     contract_id,
                     account,
@@ -22,18 +41,18 @@ pub mod abigen_bindings {
             pub fn account(&self) -> T {
                 self.account.clone()
             }
-            pub fn with_account<U: Account>(&self, mut account: U) -> Result<MyContract<U>> {
-                Ok(MyContract {
+            pub fn with_account<U: Account>(&self, account: U) -> Result<MyContract<U>> {
+                ::core::result::Result::Ok(MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
                 })
             }
-            pub async fn get_balances(&self) -> Result<HashMap<String, u64>> {
+            pub async fn get_balances(&self) -> Result<::std::collections::HashMap<AssetId, u64>> {
                 ViewOnlyAccount::try_provider(&self.account)?
                     .get_contract_balances(&self.contract_id)
                     .await
-                    .map_err(Into::into)
+                    .map_err(::std::convert::Into::into)
             }
             pub fn methods(&self) -> MyContractMethods<T> {
                 MyContractMethods {
@@ -51,13 +70,10 @@ pub mod abigen_bindings {
         impl<T: Account> MyContractMethods<T> {
             #[doc = "Calls the contract's `initialize_counter` function"]
             pub fn initialize_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                Contract::method_hash(
+                contract::method_hash(
                     self.contract_id.clone(),
-                    self.account,
-                    function_selector::resolve_fn_selector(
-                        "initialize_counter",
-                        &[<u64 as Parameterize>::param_type()],
-                    ),
+                    self.account.clone(),
+                    codec::resolve_fn_selector("initialize_counter", &[u64::param_type()]),
                     &[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
@@ -66,21 +82,18 @@ pub mod abigen_bindings {
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
-                Contract::method_hash(
+                contract::method_hash(
                     self.contract_id.clone(),
-                    self.account,
-                    function_selector::resolve_fn_selector(
-                        "increment_counter",
-                        &[<u64 as Parameterize>::param_type()],
-                    ),
-                    &[Tokenizable::into_token(value)],
+                    self.account.clone(),
+                    codec::resolve_fn_selector("increment_counter", &[u64::param_type()]),
+                    &[value.into_token()],
                     self.log_decoder.clone(),
                     false,
                 )
                 .expect("method not found (this should never happen)")
             }
         }
-        impl<T: Account> SettableContract for MyContract<T> {
+        impl<T: Account> contract::SettableContract for MyContract<T> {
             fn id(&self) -> Bech32ContractId {
                 self.contract_id.clone()
             }
@@ -90,11 +103,11 @@ pub mod abigen_bindings {
         }
         #[derive(Clone, Debug, Default)]
         pub struct MyContractConfigurables {
-            offsets_with_data: Vec<(u64, Vec<u8>)>,
+            offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>,
         }
         impl MyContractConfigurables {
             pub fn new() -> Self {
-                Default::default()
+                ::std::default::Default::default()
             }
         }
         impl From<MyContractConfigurables> for Configurables {
@@ -104,7 +117,7 @@ pub mod abigen_bindings {
         }
     }
 }
-
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
+
