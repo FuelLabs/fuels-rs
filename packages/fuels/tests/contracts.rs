@@ -1658,13 +1658,15 @@ async fn fuel_service_test() -> Result<()> {
         .await
         .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
 
+    // service.start_and_await().await.map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;;
+
     dbg!("fuel_service_test");
     dbg!(service.bound_address);
     dbg!(service.state());
     // service.stop_and_await().await.unwrap();
     // dbg!(service.state());
 
-    std::thread::sleep(time::Duration::from_secs(3));
+    std::thread::sleep(time::Duration::from_secs(5));
     let provider = Provider::connect(service.bound_address.to_string()).await?;
     //
     // wallet.set_provider(provider);
