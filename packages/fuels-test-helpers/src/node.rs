@@ -411,7 +411,7 @@ use fuel_core_services::State;
 use fuel_core_services::StateWatcher;
 use tokio::sync::watch;
 
-pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>, PathBuf)> {
+pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String>)> {
     // TOdo make Config::to_args_vec()
     let chain_config_json =
         serde_json::to_value(&config.chain_conf).expect("Failed to build `ChainConfig` JSON");
@@ -500,23 +500,7 @@ pub fn new_fuel_node_arguments(config: Config) -> FuelResult<(Config, Vec<String
         args.push("--vm-backtrace".to_string());
     }
 
-    // Warn if there is more than one binary in PATH.
-    let binary_name = "fuel-core";
-    let paths = which::which_all(binary_name)
-        .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
-        .collect::<Vec<_>>();
-    let path = paths
-        .first()
-        .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
-    if paths.len() > 1 {
-        eprintln!(
-            "found more than one '{}' binary in PATH, using '{}'",
-            binary_name,
-            path.display()
-        );
-    }
-
-    Ok((config, args, path.clone()))
+    Ok((config, args))
 }
 
 pub async fn run_node(
