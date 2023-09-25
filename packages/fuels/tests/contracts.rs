@@ -1685,7 +1685,7 @@ async fn fuel_service_test() -> Result<()> {
 
     // std::thread::sleep(time::Duration::from_secs(7));
 
-    service.stop_and_await().await
+    let a = service.stop_and_await().await
         .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
     dbg!(service.state());
 

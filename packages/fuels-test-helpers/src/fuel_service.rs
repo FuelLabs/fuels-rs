@@ -36,25 +36,18 @@ pub struct ServerParams {
     config: Config,
 }
 
-// #[derive(Default)]
-// pub struct ServerParams {
-//     config: Config,
-// }
-
 pub struct Task {
     pub running_node: Pin<Box<JoinHandle<()>>>,
 }
 #[async_trait::async_trait]
 impl RunnableTask for Task {
-    async fn run(&mut self, _: &mut StateWatcher) -> anyhow::Result<bool> {
-        self.running_node.as_mut().await?;
-        // self.running_node.as_mut().await;
-        // The `axum::Server` has its internal loop. If `await` is finished, we get an internal
-        // error or stop signal.
-        Ok(false /* should_continue */)
+    async fn run(&mut self, state: &mut StateWatcher) -> anyhow::Result<bool> {
+        state.while_started().await?;
+        Ok(false)
     }
 
     async fn shutdown(self) -> anyhow::Result<()> {
+        self.running_node.abort();
         // Nothing to shut down because we don't have any temporary state that should be dumped,
         // and we don't spawn any sub-tasks that we need to finish or await.
         // The `axum::Server` was already gracefully shutdown at this point.
@@ -88,16 +81,6 @@ impl RunnableService for FuelNode {
 
         let (config, args, temp_file) = new_fuel_node_arguments(config)?;
 
-        let file_path = args.get(6).unwrap();
-
-        if std::fs::metadata(file_path).is_ok() {
-
-            println!("File '{}' exists.", file_path);
-        } else {
-            println!("File '{}' does not exist.", file_path);
-        }
-
-        // Warn if there is more than one binary in PATH.
         let binary_name = "fuel-core";
         let paths = which::which_all(binary_name)
             .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
@@ -131,8 +114,6 @@ impl RunnableService for FuelNode {
             let stderr = String::from_utf8_lossy(&result.stderr);
             eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
         });
-
-
 
         Ok(Task {
             running_node: Box::pin(join_handle),
@@ -208,7 +189,7 @@ impl Service for FuelService {
     }
 
     fn stop(&self) -> bool {
-        unimplemented!()
+        self.runner.stop()
     }
 
     async fn stop_and_await(&self) -> anyhow::Result<State> {
