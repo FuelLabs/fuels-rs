@@ -1,4 +1,4 @@
-use std::{convert::TryInto, str};
+use std::{convert::TryInto, fmt, str};
 
 use fuel_types::bytes::padded_len_usize;
 
@@ -19,6 +19,7 @@ use crate::{
 pub(crate) struct BoundedDecoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
+    config: DecoderConfig,
 }
 
 const U128_BYTES_SIZE: usize = 2 * WORD_SIZE;
@@ -32,11 +33,12 @@ impl BoundedDecoder {
         Self {
             depth_tracker,
             token_tracker,
+            config,
         }
     }
 
     pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        Self::is_type_decodable(param_type)?;
+        self.is_type_decodable(param_type)?;
         Ok(self.decode_param(param_type, bytes)?.token)
     }
 
@@ -46,18 +48,19 @@ impl BoundedDecoder {
         bytes: &[u8],
     ) -> Result<Vec<Token>> {
         for param_type in param_types {
-            Self::is_type_decodable(param_type)?;
+            self.is_type_decodable(param_type)?;
         }
         let (tokens, _) = self.decode_params(param_types, bytes)?;
 
         Ok(tokens)
     }
 
-    fn is_type_decodable(param_type: &ParamType) -> Result<()> {
+    fn is_type_decodable(&self, param_type: &ParamType) -> Result<()> {
         if param_type.contains_nested_heap_types() {
             Err(error!(
                 InvalidType,
-                "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
+                "Type {:?} contains nested heap types (`Vec` or `Bytes`), this is not supported.",
+                DebugWithDepth::new(param_type, self.config.max_depth)
             ))
         } else {
             Ok(())
@@ -456,5 +459,92 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
         ))
     } else {
         Ok(&slice[num_bytes..])
+    }
+}
+
+/// Allows `Debug` formatting of arbitrary-depth nested `ParamTypes` by
+/// omitting the details of inner types if max depth is exceeded.
+pub(crate) struct DebugWithDepth<'a> {
+    param_type: &'a ParamType,
+    depth_left: usize,
+}
+
+impl<'a> DebugWithDepth<'a> {
+    pub(crate) fn new(param_type: &'a ParamType, depth_left: usize) -> Self {
+        Self {
+            param_type,
+            depth_left,
+        }
+    }
+
+    fn descend(&'a self, param_type: &'a ParamType) -> Self {
+        Self {
+            param_type,
+            depth_left: self.depth_left - 1,
+        }
+    }
+}
+
+impl<'a> fmt::Debug for DebugWithDepth<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.depth_left == 0 {
+            return write!(f, "...");
+        }
+
+        match &self.param_type {
+            ParamType::Array(inner, size) => f
+                .debug_tuple("Array")
+                .field(&self.descend(inner))
+                .field(&size)
+                .finish(),
+            ParamType::Struct { fields, generics } => f
+                .debug_struct("Struct")
+                .field(
+                    "fields",
+                    &fields
+                        .iter()
+                        .map(|field| self.descend(field))
+                        .collect::<Vec<_>>(),
+                )
+                .field(
+                    "generics",
+                    &generics
+                        .iter()
+                        .map(|generic| self.descend(generic))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Enum { variants, generics } => f
+                .debug_struct("Enum")
+                .field(
+                    "variants",
+                    &variants
+                        .param_types
+                        .iter()
+                        .map(|variant| self.descend(variant))
+                        .collect::<Vec<_>>(),
+                )
+                .field(
+                    "generics",
+                    &generics
+                        .iter()
+                        .map(|generic| self.descend(generic))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Tuple(inner) => f
+                .debug_tuple("Tuple")
+                .field(
+                    &inner
+                        .iter()
+                        .map(|param_type| self.descend(param_type))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Vector(inner) => {
+                f.debug_tuple("Vector").field(&self.descend(inner)).finish()
+            }
+            _ => write!(f, "{:?}", self.param_type),
+        }
     }
 }
