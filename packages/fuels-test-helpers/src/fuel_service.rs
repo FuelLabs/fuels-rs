@@ -141,6 +141,7 @@ impl RunnableTask for Task {
     }
 
     async fn shutdown(self) -> anyhow::Result<()> {
+        self.running_node.abort();
         Ok(())
     }
 }

@@ -9,6 +9,7 @@ pub use fuel_core::service::DbType;
 use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::{config::Trigger, Config};
+
 use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
@@ -163,6 +164,11 @@ pub async fn setup_test_provider(
         .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
     let address = srv.bound_address;
+
+    tokio::spawn(async move {
+        let _own_the_handle = srv;
+        let () = futures::future::pending().await;
+    });
 
     Ok(Provider::from(address)
         .await

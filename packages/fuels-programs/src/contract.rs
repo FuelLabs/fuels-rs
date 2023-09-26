@@ -315,6 +315,7 @@ impl Contract {
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
+
         provider.send_transaction_and_await_commit(tx).await?;
 
         Ok(self.contract_id.into())

@@ -377,6 +377,7 @@ impl Provider {
             .flatten()
             .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
             .collect::<ProviderResult<Vec<CoinType>>>()?;
+
         Ok(res)
     }
 
