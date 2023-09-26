@@ -128,6 +128,7 @@ impl LogDecoder {
     }
 
     pub(crate) fn decode_last_log(&self, receipts: &[Receipt]) -> Result<String> {
+        eprintln!("The receipts were: {receipts:?}");
         receipts
             .iter()
             .rev()

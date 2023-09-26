@@ -20,7 +20,7 @@ fn main(_my_tuple: (Bim, Bam, Boum), _zim: Bam) -> ((Boum, Bim, Bam), u64) {
         (
             Boum { boum: true },
             Bim { bim: 193817 },
-            Bam { bam: "hello" },
+            Bam { bam: "hello".try_as_str_array().unwrap() },
         ),
         42242,
     )

@@ -8,6 +8,6 @@ impl LibContract for Contract {
     }
 
     fn require() -> () {
-        require(false, "require from contract");
+        require(false, __to_str_array("require from contract"));
     }
 }
