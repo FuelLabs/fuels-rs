@@ -38,12 +38,9 @@ impl MyContract for Contract {
     }
 
     fn returns_struct_in_tuple(input: (u64, Person)) -> (u64, Person) {
-        let expected = (
-            42,
-            Person {
-                name: "Jane".try_as_str_array().unwrap(),
-            },
-        );
+        let expected = (42, Person {
+            name: __to_str_array("Jane"),
+        });
         assert(input.0 == expected.0);
         assert(sha256(from_str_array(input.1.name)) == sha256(from_str_array(expected.1.name)));
 

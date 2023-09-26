@@ -71,11 +71,10 @@ impl VectorsOutputContract for Contract {
     }
 
     fn str_in_vec() -> Vec<str[4]> {
-
         let mut vec: Vec<str[4]> = Vec::new();
-        vec.push("hell".try_as_str_array().unwrap());
-        vec.push("ello".try_as_str_array().unwrap());
-        vec.push("lloh".try_as_str_array().unwrap());
+        vec.push(__to_str_array("hell"));
+        vec.push(__to_str_array("ello"));
+        vec.push(__to_str_array("lloh"));
         vec
     }
 
