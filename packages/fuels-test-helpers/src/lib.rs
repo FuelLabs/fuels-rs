@@ -169,11 +169,6 @@ pub async fn setup_test_client(
         .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
     let address = srv.bound_address;
-    // Todo : remove this
-    // tokio::spawn(async move {
-    //     let _own_the_handle = srv;
-    //     let () = futures::future::pending().await;
-    // });
 
     let client = FuelClient::from(address);
     let consensus_parameters = client.chain_info().await?.consensus_parameters.into();

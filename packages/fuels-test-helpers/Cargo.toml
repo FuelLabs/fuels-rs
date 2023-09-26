@@ -10,9 +10,14 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
+anyhow = "1.0.62"
+
+async-trait = { version = "0.1.68", default-features = false }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true }
+fuel-core-services = "0.19.1"
+fuel-core-txpool = "0.19.1"
 fuel-core-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
@@ -20,6 +25,7 @@ fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
 futures = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std", "serde"] }
+oneshot = "0.1.5"
 portpicker = { workspace = true }
 rand = { workspace = true, default-features = false }
 serde = { workspace = true, features = ["derive"] }
@@ -28,13 +34,6 @@ serde_with = { workspace = true }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
-oneshot = "0.1.5"
-fuel-core-services = "0.19.1"
-fuel-core-txpool = "0.19.1"
-
-async-trait = { version = "0.1.68", default-features = false }
-anyhow = "1.0.62"
-
 
 [features]
 default = ["fuels-accounts", "std"]

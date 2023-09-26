@@ -10,8 +10,7 @@ use serde_json::{to_value, Value};
 use std::{io::Write, net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
 
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
-pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
-use crate::node_types::{Config, DbType, Trigger};
+use crate::node_types::{Config, DbType, Trigger, DEFAULT_CACHE_SIZE};
 use portpicker::{is_free, pick_unused_port};
 
 #[derive(Debug)]
@@ -21,9 +20,8 @@ struct ExtendedConfig {
 }
 
 impl ExtendedConfig {
-    pub(crate) fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
+    pub fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
         let chain_config_json = to_value(&self.config.chain_conf)?;
-        // .expect("Failed to build `ChainConfig` JSON");
 
         self.write_temp_config_file(chain_config_json)?;
 
@@ -116,7 +114,7 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    pub(crate) fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
+    pub fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
         writeln!(self.config_file, "{}", &config.to_string())?;
         Ok(())
     }
@@ -243,6 +241,7 @@ impl FuelService {
                 },
             },
         );
+
         let shared = runner.shared.clone();
 
         Ok(FuelService {
