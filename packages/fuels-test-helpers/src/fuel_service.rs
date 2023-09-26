@@ -9,9 +9,9 @@ use fuel_core_client::client::FuelClient;
 use serde_json::{to_value, Value};
 use std::{io::Write, net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
 
-use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 use crate::node_types::{Config, DbType, Trigger, DEFAULT_CACHE_SIZE};
 use portpicker::{is_free, pick_unused_port};
+use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 #[derive(Debug)]
 struct ExtendedConfig {

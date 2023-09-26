@@ -254,8 +254,7 @@ mod tests {
             amount_per_coin,
         );
         // ANCHOR_END: multiple_assets_coins
-        let provider =
-            setup_test_provider(coins.clone(), vec![], None, None).await?;
+        let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
         Ok(())

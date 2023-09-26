@@ -1399,8 +1399,7 @@ fn db_rocksdb() {
                 ..Config::local_node()
             };
 
-            let provider =
-                setup_test_provider(vec![], vec![], Some(node_config), None).await?;
+            let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
             // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
             let mut wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(

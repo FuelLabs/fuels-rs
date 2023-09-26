@@ -13,12 +13,16 @@ use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
-use fuels_core::{constants::BASE_ASSET_ID, error, types::{
-    bech32::Bech32Address,
-    coin::{Coin, CoinStatus},
-    errors::{Error, Result},
-    message::{Message, MessageStatus},
-}};
+use fuels_core::{
+    constants::BASE_ASSET_ID,
+    error,
+    types::{
+        bech32::Bech32Address,
+        coin::{Coin, CoinStatus},
+        errors::{Error, Result},
+        message::{Message, MessageStatus},
+    },
+};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node_types::*;
