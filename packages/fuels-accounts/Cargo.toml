@@ -11,7 +11,6 @@ description = "Fuel Rust SDK accounts."
 
 [dependencies]
 async-trait = { workspace = true, default-features = false }
-bytes = { workspace = true, features = ["serde"] }
 chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }
 eth-keystore =  { workspace = true }
@@ -23,10 +22,7 @@ fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }
-itertools = { workspace = true }
 rand = { workspace = true, default-features = false }
-serde = { workspace = true, default-features = true, features = ["derive"] }
-sha2 = { workspace = true, default-features = false }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"] }
