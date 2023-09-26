@@ -1,7 +1,7 @@
 use std::{mem::size_of, net::SocketAddr};
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::Config;
+use crate::node_types::Config;
 use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;

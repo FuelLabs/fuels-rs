@@ -1,32 +1,136 @@
 use fuels_core::types::errors::{Error, Result as FuelResult};
 use portpicker::is_free;
 use std::net::SocketAddr;
+use tempfile::NamedTempFile;
 
-use std::net::Ipv4Addr;
 use std::pin::Pin;
+use std::time::Duration;
 
-use core::future::Future;
 use fuel_core_services::RunnableService;
 use fuel_core_services::ServiceRunner;
 use fuel_core_services::State;
 use fuel_core_services::StateWatcher;
-pub use fuel_core_services::{RunnableTask, Service};
+pub use fuel_core_services::{RunnableTask, Service as ServiceTrait};
 
 use fuel_core_client::client::FuelClient;
-use futures::FutureExt;
-use std::process::Stdio;
-use std::time::Duration;
-use tempfile::NamedTempFile;
+use serde_json::Value;
+use std::path::PathBuf;
 use tokio::process::Command;
 use tokio::task::JoinHandle;
-
+use std::io::Write;
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
-
-use fuels_core::types::{coin::Coin, message::Message};
-
-use crate::node::{
-    get_socket_address, new_fuel_node_arguments, server_health_check, ChainConfig, Config,
+use portpicker::pick_unused_port;
+use crate::node_types::{
+    Config, Trigger, DbType
 };
+
+#[derive(Debug)]
+struct ExtendedConfig {
+    pub config: Config,
+    pub config_file: NamedTempFile,
+}
+
+impl ExtendedConfig {
+    pub(crate) fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
+        let chain_config_json = serde_json::to_value(&self.config.chain_conf)
+            .expect("Failed to build `ChainConfig` JSON");
+
+        self.write_temp_config_file(chain_config_json)?;
+
+        let port = self.config.addr.port().to_string();
+        let mut args = vec![
+            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+            "--ip".to_string(),
+            "127.0.0.1".to_string(),
+            "--port".to_string(),
+            port,
+            "--chain".to_string(),
+            self.config_file.path().to_str().expect("Failed to find config file").to_string(),
+        ];
+
+        args.extend(vec![
+            "--db-type".to_string(),
+            match self.config.database_type {
+                DbType::InMemory => "in-memory",
+                DbType::RocksDb => "rocks-db",
+            }
+            .to_string(),
+        ]);
+
+        if let DbType::RocksDb = self.config.database_type {
+            let path = if self.config.database_path.as_os_str().is_empty() {
+                PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
+            } else {
+                self.config.database_path.clone()
+            };
+            args.extend(vec![
+                "--db-path".to_string(),
+                path.to_string_lossy().to_string(),
+            ]);
+        }
+
+        if self.config.max_database_cache_size != DEFAULT_CACHE_SIZE {
+            args.push("--max-database-cache-size".to_string());
+            args.push(self.config.max_database_cache_size.to_string());
+        }
+
+        if self.config.utxo_validation {
+            args.push("--utxo-validation".to_string());
+        }
+
+        if self.config.manual_blocks_enabled {
+            args.push("--manual_blocks_enabled".to_string());
+        }
+
+        match self.config.block_production {
+            Trigger::Instant => {
+                args.push("--poa-instant=true".to_string());
+            }
+            Trigger::Never => {
+                args.push("--poa-instant=false".to_string());
+            }
+            Trigger::Interval { block_time } => {
+                args.push(format!(
+                    "--poa-interval-period={}ms",
+                    block_time.as_millis()
+                ));
+            }
+            Trigger::Hybrid {
+                min_block_time,
+                max_tx_idle_time,
+                max_block_time,
+            } => {
+                args.push(format!(
+                    "--poa-hybrid-min-time={}ms",
+                    min_block_time.as_millis()
+                ));
+                args.push(format!(
+                    "--poa-hybrid-idle-time={}ms",
+                    max_tx_idle_time.as_millis()
+                ));
+                args.push(format!(
+                    "--poa-hybrid-max-time={}ms",
+                    max_block_time.as_millis()
+                ));
+            }
+        };
+
+        if self.config.vm_backtrace {
+            args.push("--vm-backtrace".to_string());
+        }
+
+        Ok(args)
+    }
+
+    pub(crate) fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()>{
+        writeln!(
+            self.config_file,
+            "{}",
+            &config.to_string()
+        )?;
+        Ok(())
+    }
+}
 
 #[derive(Clone, Default, Debug)]
 pub struct SharedState {
@@ -34,12 +138,13 @@ pub struct SharedState {
 }
 
 pub struct ServerParams {
-    config: Config,
+    extended_config: ExtendedConfig,
 }
 
 pub struct Task {
     pub running_node: Pin<Box<JoinHandle<()>>>,
 }
+
 #[async_trait::async_trait]
 impl RunnableTask for Task {
     async fn run(&mut self, state: &mut StateWatcher) -> anyhow::Result<bool> {
@@ -74,9 +179,8 @@ impl RunnableService for FuelNode {
         _state: &StateWatcher,
         params: Self::TaskParams,
     ) -> anyhow::Result<Self::Task> {
-        let ServerParams { config } = params;
-
-        let (_, args, temp_file) = new_fuel_node_arguments(config)?;
+        let ServerParams { mut extended_config } = params;
+        let args = extended_config.config_to_args_vec()?;
 
         let binary_name = "fuel-core";
         let paths = which::which_all(binary_name)
@@ -94,12 +198,9 @@ impl RunnableService for FuelNode {
         }
 
         let mut command = Command::new(path);
-        let running_node = command
-            .args(args)
-            .kill_on_drop(true)
-            .output();
+        let running_node = command.args(args).kill_on_drop(true).output();
 
-        let address = config.addr.clone();
+        let address = extended_config.config.addr.clone();
         let client = FuelClient::from(address);
         server_health_check(&client).await?;
 
@@ -128,12 +229,10 @@ impl FuelService {
     pub fn new(config: Config) -> FuelResult<Self> {
         let requested_port = config.addr.port();
 
-        let bound_address = if requested_port == 0 {
-            get_socket_address()
-        } else if is_free(requested_port) {
-            config.addr
-        } else {
-            return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()).into());
+        let bound_address = match requested_port {
+            0 => get_socket_address(),
+            _ if is_free(requested_port) => config.addr,
+            _ => return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()).into()),
         };
 
         let config = Config {
@@ -145,10 +244,14 @@ impl FuelService {
             FuelNode {
                 config: config.clone(),
             },
-            ServerParams { config },
+            ServerParams {
+                extended_config: ExtendedConfig {
+                    config,
+                    config_file: NamedTempFile::new()?,
+                },
+            },
         );
         let shared = runner.shared.clone();
-        dbg!(bound_address);
 
         Ok(FuelService {
             bound_address,
@@ -169,10 +272,8 @@ impl FuelService {
     }
 }
 
-pub type Shared<T> = std::sync::Arc<T>;
-
 #[async_trait::async_trait]
-impl Service for FuelService {
+impl ServiceTrait for FuelService {
     fn start(&self) -> anyhow::Result<()> {
         self.runner.start()
     }
@@ -204,4 +305,27 @@ impl Service for FuelService {
     fn state_watcher(&self) -> StateWatcher {
         self.runner.state_watcher()
     }
+}
+
+pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
+    let mut attempts = 5;
+    let mut healthy = client.health().await.unwrap_or(false);
+    let between_attempts = Duration::from_millis(300);
+
+    while attempts > 0 && !healthy {
+        healthy = client.health().await.unwrap_or(false);
+        tokio::time::sleep(between_attempts).await;
+        attempts -= 1;
+    }
+
+    if !healthy {
+        panic!("error: Could not connect to fuel core server.")
+    }
+
+    Ok(())
+}
+
+pub fn get_socket_address() -> SocketAddr {
+    let free_port = pick_unused_port().expect("No ports free");
+    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }

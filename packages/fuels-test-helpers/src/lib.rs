@@ -28,15 +28,14 @@ use fuels_core::{
 };
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub use node::*;
-#[cfg(not(feature = "fuel-core-lib"))]
-use portpicker::is_free;
+pub use node_types::*;
+
 use rand::Fill;
 pub use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub mod node;
+pub mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub mod fuel_service;
@@ -144,7 +143,6 @@ pub fn setup_single_message(
 
 // Setup a test client with the given coins. We return the SocketAddr so the launched node
 // client can be connected to more easily (even though it is often ignored).
-#[cfg(feature = "fuel-core-lib")]
 #[allow(clippy::let_unit_value)]
 pub async fn setup_test_client(
     coins: Vec<Coin>,
@@ -171,49 +169,13 @@ pub async fn setup_test_client(
         .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
     let address = srv.bound_address;
-    tokio::spawn(async move {
-        let _own_the_handle = srv;
-        let () = futures::future::pending().await;
-    });
+    // Todo : remove this
+    // tokio::spawn(async move {
+    //     let _own_the_handle = srv;
+    //     let () = futures::future::pending().await;
+    // });
 
     let client = FuelClient::from(address);
-    let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
-
-    Ok((client, address, consensus_parameters))
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub async fn setup_test_client(
-    coins: Vec<Coin>,
-    messages: Vec<Message>,
-    node_config: Option<Config>,
-    chain_config: Option<ChainConfig>,
-) -> Result<(FuelClient, SocketAddr, ConsensusParameters)> {
-    let coin_configs = into_coin_configs(coins);
-    let message_configs = into_message_configs(messages);
-    let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
-
-    chain_conf.initial_state = Some(StateConfig {
-        coins: Some(coin_configs),
-        contracts: None,
-        messages: Some(message_configs),
-        ..StateConfig::default()
-    });
-
-    let mut config = node_config.unwrap_or_else(Config::local_node);
-    config.chain_conf = chain_conf;
-
-    dbg!("asd");
-
-    // Todo make this working
-    let srv = FuelService::new_node(config)
-        .await
-        .map_err(|err| error!(InfrastructureError, "{err}"))?;
-
-    let address = srv.bound_address;
-    let client = FuelClient::from(address);
-    server_health_check(&client).await?;
-
     let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
 
     Ok((client, address, consensus_parameters))

@@ -57,13 +57,15 @@ pub mod test_helpers {
 #[cfg(feature = "std")]
 pub mod fuel_node {
     #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::chain_config::ChainConfig;
-    #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::service::{config::Trigger, Config, DbType, FuelService};
+    pub use fuel_core::{
+        chain_config::ChainConfig,
+        service::{config::Trigger, Config, DbType, FuelService, ServiceTrait},
+    };
     #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::fuel_service::{FuelNode, FuelService, Service};
-    #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::node::{ChainConfig, Config, DbType, Trigger};
+    pub use fuels_test_helpers::{
+        fuel_service::FuelService,
+        node_types::{ChainConfig, Config, DbType, Trigger},
+    };
 }
 
 /// Easy imports of frequently used

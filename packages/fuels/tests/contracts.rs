@@ -1,10 +1,8 @@
 #[allow(unused_imports)]
 use std::future::Future;
-use std::{time, vec};
-use tokio::process::Command;
+use std::vec;
 
 use fuel_core::chain_config::ChainConfig;
-use fuel_core::service::ServiceTrait;
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
@@ -1447,40 +1445,6 @@ fn db_rocksdb() {
 }
 
 #[tokio::test]
-async fn test_join_handler() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    ));
-
-    let mut wallet = WalletUnlocked::new_random(None);
-
-    let config = Config::local_node();
-    let service = FuelService::new_node(config).await?;
-    // .map_err(|err| error!(InfrastructureError, "{err}"))?;
-    let provider = Provider::connect(service.bound_address.to_string()).await?;
-
-    wallet.set_provider(provider);
-
-    // Simulate an unreachable node
-    // service.stop_and_await().await.unwrap();
-
-    // service.join_handle.abort();
-
-    let response = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await;
-
-    dbg!(&response);
-
-    assert!(matches!(response, Err(Error::ProviderError(_))));
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1667,7 +1631,7 @@ async fn fuel_service_test() -> Result<()> {
     // service.stop_and_await().await.unwrap();
     // dbg!(service.state());
 
-    let provider = Provider::connect(service.bound_address.to_string()).await?;
+    let _provider = Provider::connect(service.bound_address.to_string()).await?;
     //
     dbg!(service.state());
 
@@ -1685,7 +1649,9 @@ async fn fuel_service_test() -> Result<()> {
 
     // std::thread::sleep(time::Duration::from_secs(7));
 
-    let a = service.stop_and_await().await
+    let _a = service
+        .stop_and_await()
+        .await
         .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
     dbg!(service.state());
 
