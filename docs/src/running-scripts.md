@@ -6,6 +6,12 @@ You can run a script using its JSON-ABI and the path to its binary file. You can
 {{#include ../../packages/fuels/tests/scripts.rs:script_with_arguments}}
 ````
 
+Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
+
+```rust,ignore
+{{#include ../../packages/fuels/tests/scripts.rs:submit_response_script}}
+```
+
 ## Running scripts with transaction parameters
 
 The method for passing transaction parameters is the same as [with contracts](./calling-contracts/tx-params.md). As a reminder, the workflow would look like this:

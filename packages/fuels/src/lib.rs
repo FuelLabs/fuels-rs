@@ -86,6 +86,7 @@ pub mod prelude {
             wallet::{generate_mnemonic_phrase, WalletUnlocked},
             Account, Signer, ViewOnlyAccount,
         },
+        core::codec::{LogDecoder, LogId, LogResult},
         fuel_node::*,
         programs::{
             call_utils::TxDependencyExtension,
@@ -93,7 +94,6 @@ pub mod prelude {
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,
             },
-            logs::{LogDecoder, LogId, LogResult},
         },
         test_helpers::*,
     };

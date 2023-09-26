@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{
-        core::codec::try_from_bytes,
-        prelude::{AssetId, ContractId, Result},
-    };
+    use fuels::prelude::Result;
 
     #[tokio::test]
     #[allow(unused_variables)]
@@ -73,23 +70,6 @@ mod tests {
             ));
             // ANCHOR_END: abigen_with_string
         }
-        Ok(())
-    }
-
-    #[test]
-    fn manual_decode_of_native_types() -> Result<()> {
-        // ANCHOR: manual_decode_native
-        let contract_id_bytes = [0xFF; 32];
-        let contract_id = ContractId::new(contract_id_bytes);
-
-        let asset_id_bytes = [0xFF; 32];
-        let asset_id = AssetId::new(asset_id_bytes);
-
-        let bytes: Vec<u8> = [contract_id_bytes, asset_id_bytes].concat();
-        let expected: (ContractId, AssetId) = try_from_bytes(&bytes)?;
-
-        assert_eq!(expected, (contract_id, asset_id));
-        // ANCHOR_END: manual_decode_native
         Ok(())
     }
 }

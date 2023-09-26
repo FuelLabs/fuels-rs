@@ -1,4 +1,5 @@
 use fuels::{prelude::*, types::Bits256};
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
@@ -166,10 +167,8 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
 
-    let (fuel_client, _, consensus_parameters) =
-        setup_test_client(coins, vec![], None, Some(chain_config)).await?;
-    let provider = Provider::new(fuel_client, consensus_parameters);
-    assert_eq!(consensus_parameters, consensus_parameters_config);
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
+    assert_eq!(provider.consensus_parameters(), consensus_parameters_config);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(
@@ -357,6 +356,53 @@ async fn test_script_b256() -> Result<()> {
 }
 
 #[tokio::test]
+async fn can_configure_decoder_on_script_call() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_needs_custom_decoder"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    {
+        // Will fail if max_tokens too low
+        script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 101,
+                ..Default::default()
+            })
+            .call()
+            .await
+            .expect_err(
+                "Should fail because return type has more tokens than what is allowed by default",
+            );
+    }
+    {
+        // When the token limit is bumped should pass
+        let response = script_instance
+            .main()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(response, [0u8; 1000]);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -376,9 +422,11 @@ async fn test_script_submit_and_response() -> Result<()> {
         boolean: true,
     };
 
-    let handle = script_instance.main(my_struct).submit().await?;
-    let response = handle.response().await?;
+    // ANCHOR: submit_response_script
+    let submitted_tx = script_instance.main(my_struct).submit().await?;
+    let value = submitted_tx.response().await?.value;
+    // ANCHOR_END: submit_response_script
 
-    assert_eq!(response.value, 42);
+    assert_eq!(value, 42);
     Ok(())
 }
