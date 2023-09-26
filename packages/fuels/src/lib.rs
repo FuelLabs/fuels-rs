@@ -63,7 +63,7 @@ pub mod fuel_node {
     };
     #[cfg(not(feature = "fuel-core-lib"))]
     pub use fuels_test_helpers::{
-        fuel_service::FuelService,
+        fuel_service::{FuelService, ServiceTrait},
         node_types::{ChainConfig, Config, DbType, Trigger},
     };
 }

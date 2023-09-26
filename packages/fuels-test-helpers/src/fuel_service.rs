@@ -1,28 +1,18 @@
-use fuels_core::types::errors::{Error, Result as FuelResult};
-use portpicker::is_free;
-use std::net::SocketAddr;
+use fuels_core::types::errors::{error, Error, Result as FuelResult};
 use tempfile::NamedTempFile;
 
-use std::pin::Pin;
-use std::time::Duration;
+use fuel_core_services::{RunnableService, RunnableTask, ServiceRunner, State, StateWatcher};
 
-use fuel_core_services::RunnableService;
-use fuel_core_services::ServiceRunner;
-use fuel_core_services::State;
-use fuel_core_services::StateWatcher;
-pub use fuel_core_services::{RunnableTask, Service as ServiceTrait};
+pub use fuel_core_services::Service as ServiceTrait;
 
 use fuel_core_client::client::FuelClient;
-use serde_json::Value;
-use std::path::PathBuf;
-use tokio::process::Command;
-use tokio::task::JoinHandle;
-use std::io::Write;
+use serde_json::{to_value, Value};
+use std::{io::Write, net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
+
+use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
-use portpicker::pick_unused_port;
-use crate::node_types::{
-    Config, Trigger, DbType
-};
+use crate::node_types::{Config, DbType, Trigger};
+use portpicker::{is_free, pick_unused_port};
 
 #[derive(Debug)]
 struct ExtendedConfig {
@@ -32,8 +22,8 @@ struct ExtendedConfig {
 
 impl ExtendedConfig {
     pub(crate) fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
-        let chain_config_json = serde_json::to_value(&self.config.chain_conf)
-            .expect("Failed to build `ChainConfig` JSON");
+        let chain_config_json = to_value(&self.config.chain_conf)?;
+        // .expect("Failed to build `ChainConfig` JSON");
 
         self.write_temp_config_file(chain_config_json)?;
 
@@ -45,7 +35,11 @@ impl ExtendedConfig {
             "--port".to_string(),
             port,
             "--chain".to_string(),
-            self.config_file.path().to_str().expect("Failed to find config file").to_string(),
+            self.config_file
+                .path()
+                .to_str()
+                .expect("Failed to find config file")
+                .to_string(),
         ];
 
         args.extend(vec![
@@ -122,12 +116,8 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    pub(crate) fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()>{
-        writeln!(
-            self.config_file,
-            "{}",
-            &config.to_string()
-        )?;
+    pub(crate) fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
+        writeln!(self.config_file, "{}", &config.to_string())?;
         Ok(())
     }
 }
@@ -179,7 +169,9 @@ impl RunnableService for FuelNode {
         _state: &StateWatcher,
         params: Self::TaskParams,
     ) -> anyhow::Result<Self::Task> {
-        let ServerParams { mut extended_config } = params;
+        let ServerParams {
+            mut extended_config,
+        } = params;
         let args = extended_config.config_to_args_vec()?;
 
         let binary_name = "fuel-core";
@@ -204,7 +196,7 @@ impl RunnableService for FuelNode {
         let client = FuelClient::from(address);
         server_health_check(&client).await?;
 
-        let join_handle = tokio::task::spawn(async move {
+        let join_handle = spawn(async move {
             let result = running_node
                 .await
                 .expect("error: Couldn't find fuel-core in PATH.");
@@ -267,7 +259,7 @@ impl FuelService {
             .runner
             .start_and_await()
             .await
-            .map_err(|err| fuels_core::error!(InfrastructureError, "{err}"))?;
+            .map_err(|err| error!(InfrastructureError, "{err}"))?;
         Ok(service)
     }
 }
@@ -307,14 +299,14 @@ impl ServiceTrait for FuelService {
     }
 }
 
-pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
+async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
     let between_attempts = Duration::from_millis(300);
 
     while attempts > 0 && !healthy {
         healthy = client.health().await.unwrap_or(false);
-        tokio::time::sleep(between_attempts).await;
+        sleep(between_attempts).await;
         attempts -= 1;
     }
 
@@ -325,7 +317,7 @@ pub async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
     Ok(())
 }
 
-pub fn get_socket_address() -> SocketAddr {
+fn get_socket_address() -> SocketAddr {
     let free_port = pick_unused_port().expect("No ports free");
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }

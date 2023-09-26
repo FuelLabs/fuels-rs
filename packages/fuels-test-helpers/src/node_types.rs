@@ -1,27 +1,18 @@
 use std::{
     fmt,
-    io::Write,
     net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
     time::Duration,
 };
 
 pub use fuel_core_chain_config::ChainConfig;
-use fuel_core_chain_config::StateConfig;
-use fuel_core_client::client::FuelClient;
 
 use fuel_types::{BlockHeight, Word};
-use fuels_core::{
-    constants::WORD_SIZE,
-    types::{coin::Coin, message::Message},
-};
-use portpicker::pick_unused_port;
-use serde::{de::Error as SerdeError, Deserializer, Serializer};
-use serde_json::Value;
-use serde_with::{DeserializeAs, SerializeAs};
-use tempfile::NamedTempFile;
+use fuels_core::constants::WORD_SIZE;
 
-use fuels_core::types::errors::Result as FuelResult;
+use serde::{de::Error as SerdeError, Deserializer, Serializer};
+
+use serde_with::{DeserializeAs, SerializeAs};
 
 pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
