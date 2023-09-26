@@ -190,7 +190,7 @@ impl RunnableService for FuelNode {
         let mut command = Command::new(path);
         let running_node = command.args(args).kill_on_drop(true).output();
 
-        let address = extended_config.config.addr.clone();
+        let address = extended_config.config.addr;
         let client = FuelClient::from(address);
         server_health_check(&client).await?;
 
@@ -222,11 +222,11 @@ impl FuelService {
         let bound_address = match requested_port {
             0 => get_socket_address(),
             _ if is_free(requested_port) => config.addr,
-            _ => return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into()).into()),
+            _ => return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into())),
         };
 
         let config = Config {
-            addr: bound_address.clone(),
+            addr: bound_address,
             ..config
         };
 
