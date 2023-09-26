@@ -266,7 +266,7 @@ async fn can_set_custom_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn can_retrieve_latest_block_time() -> Result<()> {
-    let provider = given_a_provider().await;
+    let provider = given_a_provider().await?;
     let since_epoch = 1676039910;
 
     let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
@@ -280,12 +280,12 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     Ok(())
 }
 
-async fn given_a_provider() -> Provider {
+async fn given_a_provider() -> Result<Provider> {
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
     };
-    setup_test_provider(vec![], vec![], Some(config), None).await?
+    setup_test_provider(vec![], vec![], Some(config), None).await
 }
 
 #[tokio::test]

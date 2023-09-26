@@ -50,7 +50,7 @@ async fn test_wallet_balance_api_single_asset() -> Result<()> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await?;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
 
     for coin in coins {

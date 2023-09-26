@@ -1,15 +1,13 @@
 use std::mem::size_of;
 
-#[cfg(not(feature = "fuel-core-lib"))]
-use crate::node_types::Config;
-use crate::{setup_custom_assets_coins, setup_test_client, wallets_config::*};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config;
 use fuel_core_chain_config::ChainConfig;
 use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
+use fuels_core::types::errors::Result;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::Config;
+use crate::node_types::Config;
 use crate::{setup_custom_assets_coins, setup_test_provider, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
@@ -86,7 +84,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         wallet.set_provider(provider.clone());
     }
 
-    wallets
+    Ok(wallets)
 }
 
 #[cfg(test)]

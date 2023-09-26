@@ -10,20 +10,15 @@ use fuel_core::service::FuelService;
 #[cfg(feature = "fuel-core-lib")]
 pub use fuel_core::service::{config::Trigger, Config};
 use fuel_core_chain_config::{ChainConfig, StateConfig};
-#[cfg(not(feature = "fuel-core-lib"))]
-use fuel_core_client::client::FuelClient;
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address,
-        coin::{Coin, CoinStatus},
-        errors::{Error, Result},
-        message::{Message, MessageStatus},
-    },
-};
+use fuels_core::{constants::BASE_ASSET_ID, error, types::{
+    bech32::Bech32Address,
+    coin::{Coin, CoinStatus},
+    errors::{Error, Result},
+    message::{Message, MessageStatus},
+}};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub use node_types::*;
@@ -165,9 +160,9 @@ pub async fn setup_test_provider(
 
     let address = srv.bound_address;
 
-    Provider::from(address)
+    Ok(Provider::from(address)
         .await
-        .expect("Could not connect to node")
+        .expect("Could not connect to node"))
 }
 
 #[cfg(test)]
@@ -339,6 +334,7 @@ mod tests {
         let retrieved_parameters = provider.consensus_parameters();
 
         assert_eq!(retrieved_parameters, configured_parameters);
+        Ok(())
     }
 
     #[tokio::test]
@@ -360,5 +356,6 @@ mod tests {
         assert_eq!(chain_info.name, "Solo_Munib");
         assert_eq!(chain_info.consensus_parameters.max_inputs, 123);
         assert_eq!(chain_info.consensus_parameters.gas_per_byte, 456);
+        Ok(())
     }
 }
