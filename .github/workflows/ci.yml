@@ -173,6 +173,8 @@ jobs:
             install_fuel_core: true
           - cargo_command: test
             args: --doc --workspace
+          - cargo_command: machete
+            args: --skip-target-dir
           - command: test_wasm
             args:
           - command: check_doc_anchors_valid
@@ -214,6 +216,10 @@ jobs:
       - name: Install nextest
         if: ${{ matrix.cargo_command == 'nextest' }}
         uses: taiki-e/install-action@nextest
+
+      - name: Install cargo-machete
+        if: ${{ matrix.cargo_command == 'machete' }}
+        uses: taiki-e/install-action@cargo-machete
 
       - name: Cargo (workspace-level)
         if: ${{ matrix.cargo_command && !matrix.package }}
