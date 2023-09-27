@@ -289,7 +289,7 @@ To build these tests, run the following command:</p>
 <p>In the code example, we connected a new provider to the Testnet node and created a new wallet from a private key.</p>
 <blockquote>
 <p><strong>Note:</strong> New wallets on the Testnet will not have any assets! They can be obtained by providing the wallet address to the faucet at</p>
-<p><a href="https://faucet-beta-3.fuel.network">faucet-beta-3.fuel.network</a></p>
+<p><a href="https://faucet-beta-4.fuel.network">faucet-beta-4.fuel.network</a></p>
 <p>Once the assets have been transferred to the wallet, you can reuse it in other tests by providing the private key!</p>
 <p>In addition to the faucet, there is a block explorer for the Tesnet at</p>
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
@@ -923,6 +923,12 @@ coins and coin amount</p>
         )?;
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
+        let network_info = NetworkInfo {
+            consensus_parameters: Default::default(),
+            max_gas_per_tx: 0,
+            min_gas_price: 0,
+            gas_costs: Default::default(),
+        };
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
@@ -945,6 +951,7 @@ coins and coin amount</p>
                 vec![input_coin],
                 vec![output_coin],
                 Default::default(),
+                network_info,
             )
         };
 
@@ -964,7 +971,7 @@ coins and coin amount</p>
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;d7027be16db0aada625ac8cd438f9b6187bd74465495ba39511c1ad72b7bb10af4ef582c94cc33433f7a1eb4f2ad21c471473947f5f645e90924ba273e2cee7f&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;51198e39c541cd3197785fd8add8cdbec3dc5aba7f8fbb23eb09455dd1003a8b78d94f247df8e1577805ea7eebd6d58336393942fd98484609e9e7d6d7a55f28&quot;)?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;
@@ -1701,12 +1708,8 @@ half-word   byte   op                raw           notes
 </code></pre>
 <!-- This section should explain how to use the defauly tx params -->
 <!-- tx_params_default:example:start -->
-<p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
+<p>You can also use <code>TxParameters::default()</code> to use the default values. If <code>gas_price</code> or <code>gas_limit</code> is set to <code>None</code>, the SDK will use the network's default value:</p>
 <!-- tx_params_default:example:end -->
-<pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_GAS_LIMIT: u64 = 10_000_000;
-pub const DEFAULT_MATURITY: u32 = 0;
-</code></pre>
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
@@ -3476,8 +3479,13 @@ impl LiquidityPool for Contract {
         }
 </code></pre>
 <p>All that is left is to build the transaction via <code>ScriptTransactionBuilder</code>, have <code>wallet_1</code> sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:</p>
-<pre><code class="language-rust ignore">        let mut tb =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+<pre><code class="language-rust ignore">        let network_info = provider.network_info().await?;
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            TxParameters::default(),
+            network_info,
+        );
         wallet_1.sign_transaction(&amp;mut tb);
         let tx = tb.build()?;
 

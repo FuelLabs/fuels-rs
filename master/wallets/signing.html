@@ -178,6 +178,12 @@
         )?;
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
+        let network_info = NetworkInfo {
+            consensus_parameters: Default::default(),
+            max_gas_per_tx: 0,
+            min_gas_price: 0,
+            gas_costs: Default::default(),
+        };
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
@@ -200,6 +206,7 @@
                 vec![input_coin],
                 vec![output_coin],
                 Default::default(),
+                network_info,
             )
         };
 
@@ -219,7 +226,7 @@
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str(&quot;d7027be16db0aada625ac8cd438f9b6187bd74465495ba39511c1ad72b7bb10af4ef582c94cc33433f7a1eb4f2ad21c471473947f5f645e90924ba273e2cee7f&quot;)?);
+        assert_eq!(signature, Signature::from_str(&quot;51198e39c541cd3197785fd8add8cdbec3dc5aba7f8fbb23eb09455dd1003a8b78d94f247df8e1577805ea7eebd6d58336393942fd98484609e9e7d6d7a55f28&quot;)?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&amp;message)?;

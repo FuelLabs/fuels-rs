@@ -177,8 +177,13 @@
         }
 </code></pre>
 <p>All that is left is to build the transaction via <code>ScriptTransactionBuilder</code>, have <code>wallet_1</code> sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:</p>
-<pre><code class="language-rust ignore">        let mut tb =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+<pre><code class="language-rust ignore">        let network_info = provider.network_info().await?;
+        let mut tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            TxParameters::default(),
+            network_info,
+        );
         wallet_1.sign_transaction(&amp;mut tb);
         let tx = tb.build()?;
 

@@ -163,12 +163,8 @@
 </code></pre>
 <!-- This section should explain how to use the defauly tx params -->
 <!-- tx_params_default:example:start -->
-<p>You can also use <code>TxParameters::default()</code> to use the default values:</p>
+<p>You can also use <code>TxParameters::default()</code> to use the default values. If <code>gas_price</code> or <code>gas_limit</code> is set to <code>None</code>, the SDK will use the network's default value:</p>
 <!-- tx_params_default:example:end -->
-<pre><code class="language-rust ignore">pub const DEFAULT_GAS_PRICE: u64 = 0;
-pub const DEFAULT_GAS_LIMIT: u64 = 10_000_000;
-pub const DEFAULT_MATURITY: u32 = 0;
-</code></pre>
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .initialize_counter(42)
