@@ -17,7 +17,7 @@ You can configure these parameters by creating an instance of `TxParameters` and
 
 <!-- This section should explain how to use the defauly tx params -->
 <!-- tx_params_default:example:start -->
-You can also use `TxParameters::default()` to use the default values. If `gas_limit` or `gas_limit` are set to `None`, the SDK will use the networks default values:
+You can also use `TxParameters::default()` to use the default values. If `gas_price` or `gas_limit` is set to `None`, the SDK will use the network's default value:
 <!-- tx_params_default:example:end -->
 
 This way:
