@@ -9,7 +9,7 @@ use fuel_tx::{
     Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, MemLayout, Salt};
+use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
 use crate::{
@@ -27,6 +27,31 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
+
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
+
+#[derive(Debug, Clone)]
+pub struct NetworkInfo {
+    pub consensus_parameters: ConsensusParameters,
+    pub max_gas_per_tx: u64,
+    pub min_gas_price: u64,
+    pub gas_costs: GasCosts,
+}
+
+impl NetworkInfo {
+    pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
+        Self {
+            max_gas_per_tx: chain_info.consensus_parameters.max_gas_per_tx,
+            consensus_parameters: chain_info.consensus_parameters.into(),
+            min_gas_price: node_info.min_gas_price,
+            gas_costs: chain_info.gas_costs,
+        }
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.consensus_parameters.chain_id
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
@@ -47,7 +72,6 @@ pub trait TransactionBuilder: Send {
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
     fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
-    fn with_consensus_parameters(self, consensus_parameters: ConsensusParameters) -> Self;
     fn inputs(&self) -> &Vec<Input>;
     fn inputs_mut(&mut self) -> &mut Vec<Input>;
     fn outputs(&self) -> &Vec<Output>;
@@ -62,27 +86,21 @@ macro_rules! impl_tx_trait {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
                 let uses_predicates = self.is_using_predicates();
-                let (base_offset, consensus_parameters) = if uses_predicates {
-                    let consensus_params = self
-                        .consensus_parameters
-                        .ok_or(error!(
-                                TransactionBuildError,
-                                "predicate inputs require consensus parameters. Use `.set_consensus_parameters()`."))?;
-                    (self.base_offset(&consensus_params), consensus_params)
+                let base_offset = if uses_predicates {
+                    self.base_offset()
                 } else {
-                    // If no ConsensusParameters have been set, we can use the default instead of
-                    // erroring out since the tx doesn't use predicates
-                    (0, self.consensus_parameters.unwrap_or_default())
+                    0
                 };
 
-                let num_witnesses = self.num_witnesses()?;
-                let mut tx =
-                    self.resolve_fuel_tx(base_offset, num_witnesses, &consensus_parameters)?;
+                let network_info = self.network_info.clone();
 
-                tx.precompute(&consensus_parameters.chain_id)?;
+                let num_witnesses = self.num_witnesses()?;
+                let mut tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
+
+                tx.precompute(&network_info.chain_id())?;
 
                 if uses_predicates {
-                    estimate_predicates(&mut tx, &consensus_parameters)?;
+                    estimate_predicates(&mut tx, &network_info)?;
                 };
 
                 Ok($tx_ty { tx })
@@ -91,10 +109,15 @@ macro_rules! impl_tx_trait {
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
                 let index_offset = self.unresolved_signatures.secret_keys.len() as u8;
                 self.unresolved_signatures.secret_keys.push(secret_key);
-                self.unresolved_signatures.addr_idx_offset_map.insert(owner, index_offset);
+                self.unresolved_signatures
+                    .addr_idx_offset_map
+                    .insert(owner, index_offset);
             }
 
-            fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Result<Option<TransactionFee>>{
+            fn fee_checked_from_tx(
+                &self,
+                params: &ConsensusParameters,
+            ) -> Result<Option<TransactionFee>> {
                 let tx = self.clone().build()?.tx;
                 Ok(TransactionFee::checked_from_tx(params, &tx))
             }
@@ -105,19 +128,20 @@ macro_rules! impl_tx_trait {
             }
 
             fn with_gas_price(mut self, gas_price: u64) -> Self {
-                self.gas_price = gas_price;
+                self.gas_price = Some(gas_price);
                 self
             }
 
             fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-                self.gas_limit = gas_limit;
+                self.gas_limit = Some(gas_limit);
                 self
             }
 
-            fn with_tx_params(self, tx_params: TxParameters) -> Self {
-                self.with_gas_limit(tx_params.gas_limit())
-                    .with_gas_price(tx_params.gas_price())
-                    .with_maturity(tx_params.maturity().into())
+            fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
+                self.gas_limit = tx_params.gas_limit();
+                self.gas_price = tx_params.gas_price();
+
+                self.with_maturity(tx_params.maturity().into())
             }
 
             fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -132,14 +156,6 @@ macro_rules! impl_tx_trait {
 
             fn with_witnesses(mut self, witnesses: Vec<Witness>) -> Self {
                 self.witnesses = witnesses;
-                self
-            }
-
-            fn with_consensus_parameters(
-                mut self,
-                consensus_parameters: ConsensusParameters,
-            ) -> Self {
-                self.consensus_parameters = Some(consensus_parameters);
                 self
             }
 
@@ -176,12 +192,13 @@ macro_rules! impl_tx_trait {
             }
 
             fn num_witnesses(&self) -> Result<u8> {
-                let num_witnesses = self
-                    .witnesses()
-                    .len();
+                let num_witnesses = self.witnesses().len();
 
                 if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
-                    return Err(error!(InvalidData, "tx can not have more than 256 witnesses"));
+                    return Err(error!(
+                        InvalidData,
+                        "tx can not have more than 256 witnesses"
+                    ));
                 }
 
                 Ok(num_witnesses as u8)
@@ -190,24 +207,24 @@ macro_rules! impl_tx_trait {
     };
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct ScriptTransactionBuilder {
-    pub gas_price: u64,
-    pub gas_limit: u64,
+    pub gas_price: Option<u64>,
+    pub gas_limit: Option<u64>,
     pub maturity: u32,
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub witnesses: Vec<Witness>,
-    pub(crate) consensus_parameters: Option<ConsensusParameters>,
+    pub(crate) network_info: NetworkInfo,
     unresolved_signatures: UnresolvedSignatures,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct CreateTransactionBuilder {
-    pub gas_price: u64,
-    pub gas_limit: u64,
+    pub gas_price: Option<u64>,
+    pub gas_limit: Option<u64>,
     pub maturity: u32,
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
@@ -216,7 +233,7 @@ pub struct CreateTransactionBuilder {
     pub outputs: Vec<Output>,
     pub witnesses: Vec<Witness>,
     pub salt: Salt,
-    pub(crate) consensus_parameters: Option<ConsensusParameters>,
+    pub(crate) network_info: NetworkInfo,
     unresolved_signatures: UnresolvedSignatures,
 }
 
@@ -224,15 +241,28 @@ impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
-    fn resolve_fuel_tx(
-        self,
-        base_offset: usize,
-        num_witnesses: u8,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<Script> {
+    pub fn new(network_info: NetworkInfo) -> ScriptTransactionBuilder {
+        ScriptTransactionBuilder {
+            gas_price: None,
+            gas_limit: None,
+            maturity: 0,
+            script: vec![],
+            script_data: vec![],
+            inputs: vec![],
+            outputs: vec![],
+            witnesses: vec![],
+            network_info,
+            unresolved_signatures: Default::default(),
+        }
+    }
+
+    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
+        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
+        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
+
         let mut tx = FuelTransaction::script(
-            self.gas_price,
-            self.gas_limit,
+            gas_price,
+            gas_limit,
             self.maturity.into(),
             self.script,
             self.script_data,
@@ -247,7 +277,7 @@ impl ScriptTransactionBuilder {
         );
 
         let missing_witnesses = generate_missing_witnesses(
-            tx.id(&consensus_parameters.chain_id),
+            tx.id(&self.network_info.chain_id()),
             &self.unresolved_signatures,
         );
         tx.witnesses_mut().extend(missing_witnesses);
@@ -255,8 +285,8 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_script(consensus_parameters)
+    fn base_offset(&self) -> usize {
+        offsets::base_offset_script(&self.network_info.consensus_parameters)
             + padded_len_usize(self.script_data.len())
             + padded_len_usize(self.script.len())
     }
@@ -275,8 +305,9 @@ impl ScriptTransactionBuilder {
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
+        network_info: NetworkInfo,
     ) -> Self {
-        ScriptTransactionBuilder::default()
+        ScriptTransactionBuilder::new(network_info)
             .with_inputs(inputs)
             .with_outputs(outputs)
             .with_tx_params(params)
@@ -290,6 +321,7 @@ impl ScriptTransactionBuilder {
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         params: TxParameters,
+        network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [
             to.to_vec(),
@@ -317,7 +349,7 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        ScriptTransactionBuilder::default()
+        ScriptTransactionBuilder::new(network_info)
             .with_tx_params(params)
             .with_script(script)
             .with_script_data(script_data)
@@ -331,6 +363,7 @@ impl ScriptTransactionBuilder {
         amount: u64,
         inputs: Vec<Input>,
         params: TxParameters,
+        network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
@@ -354,7 +387,7 @@ impl ScriptTransactionBuilder {
 
         let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
 
-        ScriptTransactionBuilder::default()
+        ScriptTransactionBuilder::new(network_info)
             .with_tx_params(params)
             .with_script(script)
             .with_script_data(script_data)
@@ -364,16 +397,32 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    fn resolve_fuel_tx(
-        self,
-        base_offset: usize,
-        num_witnesses: u8,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<Create> {
+    fn new(network_info: NetworkInfo) -> CreateTransactionBuilder {
+        CreateTransactionBuilder {
+            gas_price: None,
+            gas_limit: None,
+            maturity: 0,
+            bytecode_length: 0,
+            bytecode_witness_index: 0,
+            storage_slots: vec![],
+            salt: Default::default(),
+            inputs: vec![],
+            outputs: vec![],
+            witnesses: vec![],
+            network_info,
+            unresolved_signatures: Default::default(),
+        }
+    }
+
+    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Create> {
         let num_of_storage_slots = self.storage_slots.len();
+
+        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
+        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
+
         let mut tx = FuelTransaction::create(
-            self.gas_price,
-            self.gas_limit,
+            gas_price,
+            gas_limit,
             self.maturity.into(),
             self.bytecode_witness_index,
             self.salt,
@@ -389,7 +438,7 @@ impl CreateTransactionBuilder {
         );
 
         let missing_witnesses = generate_missing_witnesses(
-            tx.id(&consensus_parameters.chain_id),
+            tx.id(&self.network_info.chain_id()),
             &self.unresolved_signatures,
         );
 
@@ -398,8 +447,8 @@ impl CreateTransactionBuilder {
         Ok(tx)
     }
 
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_create(consensus_parameters)
+    fn base_offset(&self) -> usize {
+        offsets::base_offset_create(&self.network_info.consensus_parameters)
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {
@@ -432,12 +481,13 @@ impl CreateTransactionBuilder {
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
         params: TxParameters,
+        network_info: NetworkInfo,
     ) -> Self {
         let bytecode_witness_index = 0;
         let outputs = vec![Output::contract_created(contract_id, state_root)];
         let witnesses = vec![binary.into()];
 
-        CreateTransactionBuilder::default()
+        CreateTransactionBuilder::new(network_info)
             .with_tx_params(params)
             .with_bytecode_witness_index(bytecode_witness_index)
             .with_salt(salt)
@@ -653,18 +703,18 @@ fn generate_missing_witnesses(
         .collect()
 }
 
-fn estimate_predicates<T>(tx: &mut T, consensus_parameters: &ConsensusParameters) -> Result<()>
+fn estimate_predicates<T>(tx: &mut T, network_info: &NetworkInfo) -> Result<()>
 where
     T: GasLimit + GasPrice + EstimatePredicates,
 {
+    let consensus_parameters = &network_info.consensus_parameters;
+
     let gas_price = *tx.gas_price();
     let gas_limit = *tx.gas_limit();
     *tx.gas_price_mut() = 0;
     *tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
 
-    // TODO: Fetch `GasCosts` from the `fuel-core`:
-    //  https://github.com/FuelLabs/fuel-core/issues/1221
-    tx.estimate_predicates(consensus_parameters, &GasCosts::default())?;
+    tx.estimate_predicates(consensus_parameters, &network_info.gas_costs)?;
     *tx.gas_price_mut() = gas_price;
     *tx.gas_limit_mut() = gas_limit;
 
@@ -681,8 +731,14 @@ mod tests {
         let unsorted_storage_slots = [2, 1].map(given_a_storage_slot).to_vec();
         let sorted_storage_slots = [1, 2].map(given_a_storage_slot).to_vec();
 
+        let network_info = NetworkInfo {
+            max_gas_per_tx: 0,
+            min_gas_price: 0,
+            gas_costs: Default::default(),
+            consensus_parameters: Default::default(),
+        };
         let builder =
-            CreateTransactionBuilder::default().with_storage_slots(unsorted_storage_slots);
+            CreateTransactionBuilder::new(network_info).with_storage_slots(unsorted_storage_slots);
 
         assert_eq!(builder.storage_slots, sorted_storage_slots);
     }

@@ -146,8 +146,6 @@ impl Account for Predicate {
         previous_base_amount: u64,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-        tb = tb.with_consensus_parameters(consensus_parameters);
-
         let new_base_amount =
             calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount)?;
 

@@ -6,7 +6,7 @@ use fuel_core_client::client::types::{
     primitives::Bytes32,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Header {
     pub id: Bytes32,
     pub da_height: u64,
@@ -40,7 +40,7 @@ impl From<ClientHeader> for Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Block {
     pub id: Bytes32,
     pub header: Header,
