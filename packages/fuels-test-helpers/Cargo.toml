@@ -16,7 +16,7 @@ fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true }
 fuel-core-services = "0.19.1"
-fuel-core-txpool = "0.19.1"
+#fuel-core-txpool = "0.19.1"
 fuel-core-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
