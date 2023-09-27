@@ -18,3 +18,6 @@ quote = { workspace = true }
 regex = { workspace = true }
 serde_json = { workspace = true }
 syn = { workspace = true }
+
+[package.metadata.cargo-machete]
+ignored = ["Inflector"]
