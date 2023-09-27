@@ -14,7 +14,10 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
-use fuels_core::types::Bits256;
+use fuels_core::types::{
+    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    Bits256,
+};
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -319,6 +322,33 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     deploy_w_maturity(1u32)?
         .await
         .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_default_tx_params_match_network() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = wallet.try_provider()?;
+    let consensus_params = provider.consensus_parameters();
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
+
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
+    wallet.sign_transaction(&mut tb);
+    let tx = tb.build()?;
+
+    assert_eq!(tx.gas_limit(), consensus_params.max_gas_per_tx);
+
     Ok(())
 }
 
