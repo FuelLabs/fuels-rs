@@ -25,16 +25,24 @@ pub enum TxStatus {
 
 impl TxStatus {
     pub fn check(&self, log_decoder: Option<&LogDecoder>) -> Result<()> {
-        let Self::Revert {
-            receipts,
-            reason,
-            id,
-        } = &self
-        else {
-            return Ok(());
-        };
+        match self {
+            Self::SqueezedOut => Err(Error::SqueezedOutTransactionError),
+            Self::Revert {
+                receipts,
+                reason,
+                id,
+            } => Self::map_revert_error(receipts, reason, *id, log_decoder),
+            _ => Ok(()),
+        }
+    }
 
-        let reason = match (*id, log_decoder) {
+    fn map_revert_error(
+        receipts: &[Receipt],
+        reason: &str,
+        id: u64,
+        log_decoder: Option<&LogDecoder>,
+    ) -> Result<()> {
+        let reason = match (id, log_decoder) {
             (FAILED_REQUIRE_SIGNAL, Some(log_decoder)) => log_decoder
                 .decode_last_log(receipts)
                 .unwrap_or_else(|err| format!("failed to decode log from require revert: {err}")),
@@ -43,19 +51,21 @@ impl TxStatus {
                     Ok((lhs, rhs)) => format!(
                         "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
                     ),
-                    Err(err) => format!("failed to decode log from assert_eq revert: {err}"),
+                    Err(err) => {
+                        format!("failed to decode log from assert_eq revert: {err}")
+                    }
                 }
             }
             (FAILED_ASSERT_SIGNAL, _) => "assertion failed.".into(),
             (FAILED_SEND_MESSAGE_SIGNAL, _) => "failed to send message.".into(),
             (FAILED_TRANSFER_TO_ADDRESS_SIGNAL, _) => "failed transfer to address.".into(),
-            _ => reason.clone(),
+            _ => reason.to_string(),
         };
 
         Err(Error::RevertTransactionError {
             reason,
-            revert_id: *id,
-            receipts: receipts.clone(),
+            revert_id: id,
+            receipts: receipts.to_vec(),
         })
     }
 
