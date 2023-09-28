@@ -137,7 +137,13 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .pop()
         .unwrap();
 
-    let tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxParameters::default());
+    let network_info = wallet.try_provider()?.network_info().await?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(
+        vec![],
+        vec![],
+        TxParameters::default(),
+        network_info,
+    );
     let tx = wallet.add_fee_resources(tb, 0).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -173,7 +179,13 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
-    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+    let network_info = wallet.try_provider()?.network_info().await?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
     let tx = wallet.add_fee_resources(tb, base_amount).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -245,7 +257,7 @@ async fn send_transfer_transactions() -> Result<()> {
     let gas_limit = 500_000;
     let maturity = 0u32;
 
-    let tx_params = TxParameters::new(gas_price, gas_limit, maturity);
+    let tx_params = TxParameters::new(Some(gas_price), Some(gas_limit), maturity);
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
@@ -434,8 +446,13 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         amount_to_receive,
     );
 
-    let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxParameters::default());
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
 
     for wallet in wallets.iter() {
         wallet.sign_transaction(&mut tb);

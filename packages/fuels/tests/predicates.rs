@@ -219,7 +219,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(1, 1000000, 0);
+    let tx_params = TxParameters::new(Some(1), Some(1000000), 0);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -457,9 +457,13 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
-    let params = provider.consensus_parameters();
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .with_consensus_parameters(params);
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        Default::default(),
+        network_info,
+    );
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
@@ -691,13 +695,13 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await;
     predicate.set_provider(provider.clone());
 
-    let params = provider.consensus_parameters();
+    let network_info = provider.network_info().await?;
     let tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
         Default::default(),
-    )
-    .with_consensus_parameters(params);
+        network_info,
+    );
     let tx = predicate.add_fee_resources(tb, 1000).await?;
 
     assert_eq!(tx.inputs().len(), 2);
@@ -745,12 +749,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
     ];
 
+    let network_info = provider.network_info().await?;
     let tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxParameters::default().with_gas_price(1),
-    )
-    .with_consensus_parameters(provider.consensus_parameters());
+        network_info,
+    );
 
     let tx = wallet.add_fee_resources(tb, 0).await?;
 

@@ -186,15 +186,18 @@ pub trait Account: ViewOnlyAccount {
         tx_parameters: TxParameters,
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
+        let network_info = provider.network_info().await?;
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let consensus_parameters = provider.consensus_parameters();
-
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-            .with_consensus_parameters(consensus_parameters);
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            tx_parameters,
+            network_info,
+        );
 
         // if we are not transferring the base asset, previous base amount is 0
         let previous_base_amount = if asset_id == AssetId::default() {
@@ -233,6 +236,7 @@ pub trait Account: ViewOnlyAccount {
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
+        let network_info = provider.network_info().await?;
 
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
@@ -253,8 +257,6 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let params = provider.consensus_parameters();
-
         let tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
@@ -262,8 +264,8 @@ pub trait Account: ViewOnlyAccount {
             inputs,
             outputs,
             tx_parameters,
-        )
-        .with_consensus_parameters(params);
+            network_info,
+        );
 
         // if we are not transferring the base asset, previous base amount is 0
         let base_amount = if asset_id == AssetId::default() {
@@ -294,6 +296,7 @@ pub trait Account: ViewOnlyAccount {
         tx_parameters: TxParameters,
     ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
+        let network_info = provider.network_info().await?;
 
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
@@ -304,6 +307,7 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_parameters,
+            network_info,
         );
 
         let tx = self.add_fee_resources(tb, amount).await?;
@@ -327,7 +331,7 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{Address, Output};
-    use fuels_core::types::transaction::Transaction;
+    use fuels_core::types::{transaction::Transaction, transaction_builders::NetworkInfo};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -376,6 +380,12 @@ mod tests {
         )?;
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
+        let network_info = NetworkInfo {
+            consensus_parameters: Default::default(),
+            max_gas_per_tx: 0,
+            min_gas_price: 0,
+            gas_costs: Default::default(),
+        };
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
@@ -398,6 +408,7 @@ mod tests {
                 vec![input_coin],
                 vec![output_coin],
                 Default::default(),
+                network_info,
             )
         };
 
@@ -417,7 +428,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("d7027be16db0aada625ac8cd438f9b6187bd74465495ba39511c1ad72b7bb10af4ef582c94cc33433f7a1eb4f2ad21c471473947f5f645e90924ba273e2cee7f")?);
+        assert_eq!(signature, Signature::from_str("51198e39c541cd3197785fd8add8cdbec3dc5aba7f8fbb23eb09455dd1003a8b78d94f247df8e1577805ea7eebd6d58336393942fd98484609e9e7d6d7a55f28")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
