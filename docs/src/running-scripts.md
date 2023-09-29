@@ -32,13 +32,13 @@ Script calls provide the same logging functions, `decode_logs()` and `decode_log
 
 Scripts use the same interfaces for setting external contracts as [contract methods](./calling-contracts/other-contracts.md).
 
-Below is an example that uses `set_contracts(&[&contract_instance, ...])`.
+Below is an example that uses `with_contracts(&[&contract_instance, ...])`.
 
 ```rust,ignore
 {{#include ../../packages/fuels/tests/logs.rs:external_contract}}
 ```
 
-And this is an example that uses `set_contract_ids(&[&contract_id, ...])`.
+And this is an example that uses `with_contract_ids(&[&contract_id, ...])`.
 
 ```rust,ignore
 {{#include ../../packages/fuels/tests/logs.rs:external_contract_ids}}
