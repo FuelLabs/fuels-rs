@@ -26,6 +26,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::Transaction,
+        transaction_builders::NetworkInfo,
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -272,6 +273,13 @@ impl Provider {
 
     pub fn consensus_parameters(&self) -> ConsensusParameters {
         self.consensus_parameters
+    }
+
+    pub async fn network_info(&self) -> ProviderResult<NetworkInfo> {
+        let node_info = self.node_info().await?;
+        let chain_info = self.chain_info().await?;
+
+        Ok(NetworkInfo::new(node_info, chain_info))
     }
 
     pub fn chain_id(&self) -> ChainId {

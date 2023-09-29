@@ -194,9 +194,15 @@ where
         )
         .collect();
 
-        let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-            .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?);
+        let network_info = self.account.try_provider()?.network_info().await?;
+        let tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            self.tx_parameters,
+            network_info,
+        )
+        .with_script(self.script_call.script_binary.clone())
+        .with_script_data(self.compute_script_data().await?);
 
         Ok(tb)
     }
