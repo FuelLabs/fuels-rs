@@ -274,12 +274,10 @@ impl Account for WalletUnlocked {
         previous_base_amount: u64,
     ) -> Result<Tb::TxType> {
         let consensus_parameters = self.try_provider()?.consensus_parameters();
-        tb = tb.with_consensus_parameters(consensus_parameters);
-
         self.sign_transaction(&mut tb);
 
         let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount);
+            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount)?;
 
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)

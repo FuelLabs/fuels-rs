@@ -21,7 +21,7 @@ where:
 So, an `abigen!` which generates bindings for two contracts and one script looks like this:
 
 ```rust,ignore
-{{#include ../../../examples/abigen/src/lib.rs:multiple_abigen_program_types}}
+{{#include ../../../examples/macros/src/lib.rs:multiple_abigen_program_types}}
 ```
 
 ## How does the generated code look?

@@ -6,6 +6,12 @@ You can run a script using its JSON-ABI and the path to its binary file. You can
 {{#include ../../packages/fuels/tests/scripts.rs:script_with_arguments}}
 ````
 
+Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
+
+```rust,ignore
+{{#include ../../packages/fuels/tests/scripts.rs:submit_response_script}}
+```
+
 ## Running scripts with transaction parameters
 
 The method for passing transaction parameters is the same as [with contracts](./calling-contracts/tx-params.md). As a reminder, the workflow would look like this:
@@ -26,13 +32,13 @@ Script calls provide the same logging functions, `decode_logs()` and `decode_log
 
 Scripts use the same interfaces for setting external contracts as [contract methods](./calling-contracts/other-contracts.md).
 
-Below is an example that uses `set_contracts(&[&contract_instance, ...])`.
+Below is an example that uses `with_contracts(&[&contract_instance, ...])`.
 
 ```rust,ignore
 {{#include ../../packages/fuels/tests/logs.rs:external_contract}}
 ```
 
-And this is an example that uses `set_contract_ids(&[&contract_id, ...])`.
+And this is an example that uses `with_contract_ids(&[&contract_id, ...])`.
 
 ```rust,ignore
 {{#include ../../packages/fuels/tests/logs.rs:external_contract_ids}}

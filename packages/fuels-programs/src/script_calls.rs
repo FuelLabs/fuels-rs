@@ -7,6 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
+    codec::{map_revert_error, DecoderConfig, LogDecoder},
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
@@ -28,8 +29,8 @@ use crate::{
         TxDependencyExtension,
     },
     contract::SettableContract,
-    logs::{map_revert_error, LogDecoder},
     receipt_parser::ReceiptParser,
+    submit_response::SubmitResponse,
 };
 
 #[derive(Debug)]
@@ -79,6 +80,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub tx_parameters: TxParameters,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
+    decoder_config: DecoderConfig,
     pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
@@ -112,6 +114,7 @@ where
             provider,
             datatype: PhantomData,
             log_decoder,
+            decoder_config: DecoderConfig::default(),
         }
     }
 
@@ -124,6 +127,12 @@ where
     /// ```
     pub fn tx_params(mut self, params: TxParameters) -> Self {
         self.tx_parameters = params;
+        self
+    }
+
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
         self
     }
 
@@ -185,9 +194,15 @@ where
         )
         .collect();
 
-        let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-            .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?);
+        let network_info = self.account.try_provider()?.network_info().await?;
+        let tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            self.tx_parameters,
+            network_info,
+        )
+        .with_script(self.script_call.script_binary.clone())
+        .with_script_data(self.compute_script_data().await?);
 
         Ok(tb)
     }
@@ -223,16 +238,18 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
-        let chain_id = self.provider.chain_id();
-        self.cached_tx_id = Some(tx.id(chain_id));
 
-        let receipts = match simulate {
-            true => self.provider.checked_dry_run(tx).await?,
-            false => {
-                let tx_id = self.provider.send_transaction(tx.clone()).await?;
-                self.account.cache(&tx, chain_id);
-                self.provider.get_receipts(&tx_id).await?
-            }
+        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
+
+        let receipts = if simulate {
+            self.provider.checked_dry_run(tx).await?
+        } else {
+            let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
+            self.account.cache(&tx, chain_id);
+            self.provider
+                .tx_status(&tx_id)
+                .await?
+                .take_receipts_checked(Some(&self.log_decoder))?
         };
 
         self.get_response(receipts)
@@ -245,19 +262,23 @@ where
             .map_err(|err| map_revert_error(err, &self.log_decoder))
     }
 
-    pub async fn submit(mut self) -> Result<ScriptCallHandler<T, D>> {
+    pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
-        self.cached_tx_id = Some(self.provider.send_transaction(tx).await?);
+        let tx_id = self.provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
 
-        Ok(self)
+        Ok(SubmitResponse::new(tx_id, self))
     }
 
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
+        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
+
         let receipts = self
-            .account
-            .try_provider()?
-            .get_receipts(&self.cached_tx_id.expect("Cached tx_id is missing"))
-            .await?;
+            .provider
+            .tx_status(&tx_id)
+            .await?
+            .take_receipts_checked(Some(&self.log_decoder))?;
+
         self.get_response(receipts)
     }
 
@@ -290,7 +311,8 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts).parse(None, &D::param_type())?;
+        let token =
+            ReceiptParser::new(&receipts, self.decoder_config).parse(None, &D::param_type())?;
 
         Ok(FuelCallResponse::new(
             D::from_token(token)?,

@@ -18,22 +18,14 @@ fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
 fuels-accounts = { workspace = true }
 fuels-core = { workspace = true }
-hex = { workspace = true, default-features = false, features = ["std"] }
 itertools = { workspace = true }
-proc-macro2 = { workspace = true }
 rand = { workspace = true }
-regex = { workspace = true }
-serde = { workspace = true, default-features = false, features = ["derive"] }
 serde_json = { workspace = true }
-sha2 = { workspace = true }
-strum = { workspace = true }
-strum_macros = { workspace = true }
-thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.8"
 
 [features]
 default = ["std"]
-std = [
-    "fuels-core/std",
-    "fuels-accounts/std",
-]
+std = ["fuels-core/std", "fuels-accounts/std"]

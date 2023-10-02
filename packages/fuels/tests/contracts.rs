@@ -9,6 +9,7 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -280,9 +281,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 399;
-    let expected_metered_bytes_size = 728;
-    let expected_total_fee = 332;
+    let expected_gas_used = 397;
+    let expected_metered_bytes_size = 712;
+    let expected_total_fee = 325;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -815,7 +816,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
 
     let random_asset_id = &asset_ids[1];
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider.clone());
 
     setup_program_test!(
@@ -1024,7 +1025,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         ..ChainConfig::default()
     };
 
-    let (provider, _address) = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
     wallet.set_provider(provider.clone());
     assert_eq!(consensus_parameters_config, provider.consensus_parameters());
 
@@ -1119,7 +1120,7 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected_error = format!("Invalid data: file '{binary_path}' does not exist");
+        let expected_error = format!("Invalid data: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
@@ -1129,7 +1130,7 @@ async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let expected_error =
-            format!("Invalid data: expected `{binary_path}` to have '.bin' extension");
+            format!("Invalid data: expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
             .expect_err("Should have failed");
@@ -1245,7 +1246,7 @@ async fn low_level_call() -> Result<()> {
     );
 
     let function_selector = fn_selector!(initialize_counter(u64));
-    let call_data = calldata!(42u64);
+    let call_data = calldata!(42u64)?;
 
     caller_contract_instance
         .methods()
@@ -1274,8 +1275,8 @@ async fn low_level_call() -> Result<()> {
             a: true,
             b: [1, 2, 3],
         },
-        SizedAsciiString::<4>::try_from("fuel").unwrap()
-    );
+        SizedAsciiString::<4>::try_from("fuel")?
+    )?;
 
     caller_contract_instance
         .methods()
@@ -1377,7 +1378,7 @@ fn db_rocksdb() {
                 DEFAULT_COIN_AMOUNT,
             );
 
-            let (provider, _) =
+            let provider =
                 setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config))
                     .await;
 
@@ -1398,7 +1399,7 @@ fn db_rocksdb() {
                 ..Config::local_node()
             };
 
-            let (provider, _) = setup_test_provider(vec![], vec![], Some(node_config), None).await;
+            let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await;
             // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
             let mut wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
@@ -1443,6 +1444,67 @@ fn db_rocksdb() {
 }
 
 #[tokio::test]
+async fn can_configure_decoding_of_contract_return() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let methods = contract_instance.methods();
+    {
+        // Single call: Will not work if max_tokens not big enough
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default.",
+        );
+    }
+    {
+        // Single call: Works when limit is bumped
+        let result = methods
+            .i_return_a_1k_el_array()
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, [0; 1000]);
+    }
+    {
+        // Multi call: Will not work if max_tokens not big enough
+        MultiContractCallHandler::new(wallet.clone())
+        .add_call(methods.i_return_a_1k_el_array())
+        .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
+        .call::<([u8; 1000],)>().await.expect_err(
+            "Should have failed because there are more tokens than what is supported by default",
+        );
+    }
+    {
+        // Multi call: Works when configured
+        MultiContractCallHandler::new(wallet.clone())
+            .add_call(methods.i_return_a_1k_el_array())
+            .with_decoder_config(DecoderConfig {
+                max_tokens: 1001,
+                ..Default::default()
+            })
+            .call::<([u8; 1000],)>()
+            .await
+            .unwrap();
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1458,10 +1520,11 @@ async fn test_contract_submit_and_response() -> Result<()> {
     );
 
     let contract_methods = contract_instance.methods();
-    let handle = contract_methods.get(5, 6).submit().await?;
-    let response = handle.response().await?;
 
-    assert_eq!(response.value, 11);
+    let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    let value = submitted_tx.response().await?.value;
+
+    assert_eq!(value, 3);
 
     let contract_methods = contract_instance.methods();
     let call_handler_1 = contract_methods.get_single(7);
@@ -1564,6 +1627,46 @@ async fn test_heap_type_multicall() -> Result<()> {
             .to_string()
             .contains("The contract call with the heap type return must be at the last position"));
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Predicate(
+            name = "MyPredicate",
+            project = "packages/fuels/tests/types/predicates/predicate_vector"
+        ),),
+    );
+
+    let provider = wallet.try_provider()?.clone();
+    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let predicate = Predicate::load_from(
+        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+    )?
+    .with_data(data)
+    .with_provider(provider);
+    let wallet: WalletUnlocked = wallet;
+    wallet
+        .transfer(
+            predicate.address(),
+            10_000,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?;
+
+    // if the contract is successfully deployed then the predicate was unlocked. This further means
+    // the offsets were setup correctly since the predicate uses heap types in its arguments.
+    // Storage slots were loaded automatically by default
+    Contract::load_from(
+        "tests/contracts/storage/out/debug/storage.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&predicate, TxParameters::default())
+    .await?;
 
     Ok(())
 }

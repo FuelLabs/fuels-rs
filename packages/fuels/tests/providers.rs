@@ -2,7 +2,10 @@ use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
-use fuel_core_types::tai64::Tai64;
+use fuel_core_types::{
+    fuel_crypto::rand::{self, Rng},
+    tai64::Tai64,
+};
 use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
@@ -11,9 +14,11 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, errors::error, message::Message},
 };
-use fuels_accounts::AccountError;
-use fuels_core::types::Bits256;
-use tokio::time::sleep;
+
+use fuels_core::types::{
+    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    Bits256,
+};
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -30,10 +35,8 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let (launched_provider, address) = setup_test_provider(coins, vec![], None, None).await;
-    let connected_provider = Provider::connect(address.to_string()).await?;
-
-    wallet.set_provider(connected_provider);
+    let provider = setup_test_provider(coins, vec![], None, None).await;
+    wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -51,7 +54,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         .await?;
     assert_eq!(42, response.value);
 
-    wallet.set_provider(launched_provider);
+    wallet.set_provider(provider);
     let contract_instance_launched = MyContract::new(contract_id, wallet);
 
     let response = contract_instance_launched
@@ -119,7 +122,7 @@ async fn test_input_message() -> Result<()> {
         vec![1, 2],
     )];
 
-    let (provider, _) = setup_test_provider(coins, messages.clone(), None, None).await;
+    let provider = setup_test_provider(coins, messages.clone(), None, None).await;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -163,7 +166,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         vec![],
     );
 
-    let (provider, _) = setup_test_provider(vec![], vec![messages], None, None).await;
+    let provider = setup_test_provider(vec![], vec![messages], None, None).await;
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -284,9 +287,7 @@ async fn given_a_provider() -> Provider {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
     };
-    setup_test_provider(vec![], vec![], Some(config), None)
-        .await
-        .0
+    setup_test_provider(vec![], vec![], Some(config), None).await
 }
 
 #[tokio::test]
@@ -326,6 +327,33 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_default_tx_params_match_network() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    let provider = wallet.try_provider()?;
+    let consensus_params = provider.consensus_parameters();
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
+
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
+    wallet.sign_transaction(&mut tb);
+    let tx = tb.build()?;
+
+    assert_eq!(tx.gas_limit(), consensus_params.max_gas_per_tx);
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -341,7 +369,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 161;
+    let gas_used_by_script = 159;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -470,7 +498,7 @@ async fn test_gas_errors() -> Result<()> {
         amount_per_coin,
     );
 
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -516,8 +544,10 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected: Error = AccountError::no_resources().into();
-    assert_eq!(response.to_string(), expected.to_string());
+    let expected =
+        "Provider error: Client request error: Response errors; not enough coins to fit the target";
+
+    assert!(response.to_string().starts_with(expected));
 
     Ok(())
 }
@@ -591,8 +621,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-/// This test will not work for as no endpoint supports the new `fuel-core` release yet
-/// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
@@ -608,7 +636,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =
@@ -618,13 +646,17 @@ async fn testnet_hello_world() -> Result<()> {
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
 
+    let mut rng = rand::thread_rng();
+    let salt: [u8; 32] = rng.gen();
+    let configuration = LoadConfiguration::default().with_salt(salt);
+
     let tx_params = TxParameters::default()
         .with_gas_price(1)
         .with_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
-        LoadConfiguration::default(),
+        configuration,
     )?
     .deploy(&wallet, tx_params)
     .await?;
@@ -653,7 +685,7 @@ async fn testnet_hello_world() -> Result<()> {
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
-    let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
     wallet.set_provider(provider);
     let tx_parameters = TxParameters::default()
         .with_gas_price(1)
@@ -704,7 +736,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let message_nonce = message.nonce;
 
-    let (provider, _) = setup_test_provider(coins, vec![message], None, None).await;
+    let provider = setup_test_provider(coins, vec![message], None, None).await;
 
     wallet.set_provider(provider.clone());
 
@@ -752,7 +784,10 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
     let unix = Tai64(timestamp).to_unix();
-    DateTime::from_local(NaiveDateTime::from_timestamp_opt(unix, 0).unwrap(), Utc)
+    NaiveDateTime::from_timestamp_opt(unix, 0)
+        .unwrap()
+        .and_local_timezone(Utc)
+        .unwrap()
 }
 
 /// This test is here in addition to `can_set_custom_block_time` because even though this test

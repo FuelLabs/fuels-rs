@@ -160,10 +160,7 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
             }
             len if len < WORD_SIZE => {
                 // pad if length < word size
-                bytes = (0..WORD_SIZE - len)
-                    .map(|_| 0u8)
-                    .chain(bytes.into_iter())
-                    .collect();
+                bytes = (0..WORD_SIZE - len).map(|_| 0u8).chain(bytes).collect();
             }
             _ => {}
         }

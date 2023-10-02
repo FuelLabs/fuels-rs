@@ -93,7 +93,7 @@ async fn setup_predicate_test(
         manual_blocks_enabled: true,
         ..Config::local_node()
     };
-    let (provider, _address) = setup_test_provider(coins, messages, Some(config), None).await;
+    let provider = setup_test_provider(coins, messages, Some(config), None).await;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -117,7 +117,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let (coins, messages, asset_id) =
         get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let provider = setup_test_provider(coins, messages, None, None).await;
 
     wallet.set_provider(provider.clone());
 
@@ -219,7 +219,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(1, 1000000, 0);
+    let tx_params = TxParameters::new(Some(1), Some(1000000), 0);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -443,7 +443,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     coins.extend(wallet_coins);
     messages.extend(wallet_messages);
 
-    let (provider, _address) = setup_test_provider(coins, messages, None, None).await;
+    let provider = setup_test_provider(coins, messages, None, None).await;
     wallet.set_provider(provider.clone());
     predicate.set_provider(provider.clone());
 
@@ -457,13 +457,17 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
-    let params = provider.consensus_parameters();
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default())
-        .with_consensus_parameters(params);
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        Default::default(),
+        network_info,
+    );
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
-    provider.send_transaction(tx).await?;
+    provider.send_transaction_and_await_commit(tx).await?;
 
     assert_address_balance(
         predicate.address(),
@@ -688,20 +692,79 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         predicate.data().clone(),
     );
 
-    let (provider, _) = setup_test_provider(coins, vec![message.clone()], None, None).await;
+    let provider = setup_test_provider(coins, vec![message.clone()], None, None).await;
     predicate.set_provider(provider.clone());
 
-    let params = provider.consensus_parameters();
+    let network_info = provider.network_info().await?;
     let tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
         Default::default(),
-    )
-    .with_consensus_parameters(params);
+        network_info,
+    );
     let tx = predicate.add_fee_resources(tb, 1000).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_transfer_non_base_asset() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::encode_data(32, 32);
+
+    let mut predicate: Predicate =
+        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+            .with_data(predicate_data);
+
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let amount = 5;
+    let non_base_asset_id = AssetId::new([1; 32]);
+
+    // wallet has base and predicate non base asset
+    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, amount);
+    coins.extend(setup_single_asset_coins(
+        predicate.address(),
+        non_base_asset_id,
+        1,
+        amount,
+    ));
+
+    let provider = setup_test_provider(coins, vec![], None, None).await;
+    predicate.set_provider(provider.clone());
+    wallet.set_provider(provider.clone());
+
+    let inputs = predicate
+        .get_asset_inputs_for_amount(non_base_asset_id, amount)
+        .await?;
+    let outputs = vec![
+        Output::change(wallet.address().into(), 0, non_base_asset_id),
+        Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+    ];
+
+    let network_info = provider.network_info().await?;
+    let tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default().with_gas_price(1),
+        network_info,
+    );
+
+    let tx = wallet.add_fee_resources(tb, 0).await?;
+
+    let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+    provider.tx_status(&tx_id).await?.check(None)?;
+
+    let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
+
+    assert_eq!(wallet_balance, amount);
 
     Ok(())
 }

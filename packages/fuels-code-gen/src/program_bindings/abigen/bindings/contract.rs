@@ -40,7 +40,7 @@ pub(crate) fn contract_bindings(
         pub struct #name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder
         }
 
         impl<T: ::fuels::accounts::Account> #name<T>
@@ -50,7 +50,7 @@ pub(crate) fn contract_bindings(
                 account: T,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
-                let log_decoder = ::fuels::programs::logs::LogDecoder { log_formatters: #log_formatters };
+                let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters);
                 Self { contract_id, account, log_decoder }
             }
 
@@ -62,7 +62,7 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(&self, mut account: U) -> ::fuels::types::errors::Result<#name<U>> {
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
                 ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
             }
 
@@ -86,7 +86,7 @@ pub(crate) fn contract_bindings(
         pub struct #methods_name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
-            log_decoder: ::fuels::programs::logs::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder
         }
 
         impl<T: ::fuels::accounts::Account> #methods_name<T> {
@@ -100,7 +100,7 @@ pub(crate) fn contract_bindings(
                 self.contract_id.clone()
             }
 
-            fn log_decoder(&self) -> ::fuels::programs::logs::LogDecoder {
+            fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
             }
         }

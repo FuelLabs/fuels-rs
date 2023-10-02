@@ -1,11 +1,10 @@
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
     use fuels::prelude::Result;
 
     #[tokio::test]
-    /// This test will not work for as no endpoint supports the new `fuel-core` release yet
-    /// TODO: https://github.com/FuelLabs/fuels-rs/issues/978
-    #[ignore]
     async fn connect_to_fuel_node() {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -15,7 +14,7 @@ mod tests {
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core
         // yet
-        let provider = Provider::connect("beta-3.fuel.network").await.unwrap();
+        let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
@@ -29,8 +28,13 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
+        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let port = provider.url().split(':').last().unwrap();
+
         // ANCHOR: local_node_address
-        let _provider = Provider::connect("127.0.0.1:4000").await.unwrap();
+        let _provider = Provider::connect(format!("127.0.0.1:{port}"))
+            .await
+            .unwrap();
         // ANCHOR_END: local_node_address
     }
 
@@ -59,7 +63,12 @@ mod tests {
         );
         // ANCHOR_END: setup_single_asset
 
-        let (provider, _) = setup_test_provider(coins.clone(), vec![], None, None).await;
+        // ANCHOR: configure_retry
+        let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
+        let provider = setup_test_provider(coins.clone(), vec![], None, None)
+            .await
+            .with_retry_config(retry_config);
+        // ANCHOR_END: configure_retry
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
