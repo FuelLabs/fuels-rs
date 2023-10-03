@@ -33,7 +33,11 @@ impl ResourceCache {
     }
 
     pub fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
-        self.resource_ids_used.borrow_mut().clone().into_iter().collect()
+        self.resource_ids_used
+            .borrow_mut()
+            .clone()
+            .into_iter()
+            .collect()
     }
 
     pub fn get_expected_resources(&self) -> Vec<CoinType> {

@@ -8,29 +8,23 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuel_types::ChainId;
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::{Bech32Address, FUEL_BECH32_HRP},
-        coin_type::{CoinType, CoinTypeId},
-        errors::{Error, Result},
-        input::Input,
-        transaction_builders::TransactionBuilder,
-        AssetId,
-    },
+use fuels_core::types::{
+    bech32::{Bech32Address, FUEL_BECH32_HRP},
+    coin_type::{CoinType, CoinTypeId},
+    errors::{Error, Result},
+    input::Input,
+    transaction::CachedTx,
+    transaction_builders::TransactionBuilder,
+    AssetId,
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 
 use crate::{
-    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::{Provider, ProviderError},
     resource_cache::ResourceCache,
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
-
-use fuels_core::types::transaction::Transaction;
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -268,30 +262,13 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder>(
-        &self,
-        mut tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType> {
-        let consensus_parameters = self.try_provider()?.consensus_parameters();
+    fn finalize_tx<Tb: TransactionBuilder>(&self, mut tb: Tb) -> Result<Tb::TxType> {
         self.sign_transaction(&mut tb);
-
-        let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount)?;
-
-        let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
-            .await?;
-
-        adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address(), new_base_amount);
-
         tb.build()
     }
 
-    fn cache(&self, tx: &impl Transaction, chain_id: ChainId) {
-        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
-        self.cache.lock().unwrap().save(cached_tx)
+    fn cache(&self, tx: CachedTx) {
+        self.cache.lock().unwrap().save(tx)
     }
 
     fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {

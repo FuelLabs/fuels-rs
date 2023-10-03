@@ -1,12 +1,13 @@
 use std::{collections::HashMap, fmt::Display};
 
+use accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_id};
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
 use fuel_crypto::Signature;
-use fuel_tx::{ConsensusParameters, Output, Receipt, TxId, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId, MessageId, ChainId};
+use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
+use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -16,14 +17,12 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::{TxParameters, Transaction},
+        transaction::{CachedTx, Transaction, TxParameters},
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
 };
-use provider::ResourceFilter;
-
-use crate::{accounts_utils::extract_message_id, provider::Provider};
+use provider::{Provider, ResourceFilter};
 
 mod accounts_utils;
 pub mod predicate;
@@ -149,13 +148,12 @@ pub trait Account: ViewOnlyAccount {
     fn get_calculated_change_output(
         &self,
         tx_builder: &impl TransactionBuilder,
-        consensus_parameters: &ConsensusParameters,
         asset_id: AssetId,
         amount: u64,
-    ) -> Output {
+    ) -> Result<Output> {
         let max_fee = tx_builder
-            .fee_checked_from_tx(consensus_parameters)
-            .unwrap()
+            .fee_checked_from_tx()?
+            .expect("Failed to calculate tx fee.")
             .max_fee();
         let total_input_amount = tx_builder
             .inputs()
@@ -169,7 +167,11 @@ pub trait Account: ViewOnlyAccount {
         }
         expected_amount -= amount;
 
-        Output::coin(self.address().into(), expected_amount, asset_id)
+        Ok(Output::coin(
+            self.address().into(),
+            expected_amount,
+            asset_id,
+        ))
     }
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
@@ -182,7 +184,7 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
     ) -> Result<Vec<Input>>;
 
-    fn cache(&self, tx: &impl Transaction, chain_id: ChainId);
+    fn cache(&self, tx: CachedTx);
 
     fn get_used_resource_ids(&self) -> Vec<CoinTypeId>;
 
@@ -242,11 +244,24 @@ pub trait Account: ViewOnlyAccount {
             })
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder>(
-        &self,
-        tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType>;
+    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// Requires contract inputs to be at the start of the transactions inputs vec
+    /// so that their indexes are retained
+    async fn adjust_for_fee<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
+        let missing_base_amount = calculate_missing_base_amount(tb)?;
+
+        if missing_base_amount > 0 {
+            let new_base_inputs = self
+                .get_asset_inputs_for_amount(BASE_ASSET_ID, missing_base_amount)
+                .await?;
+
+            adjust_inputs_outputs(tb, new_base_inputs, self.address());
+        };
+
+        Ok(())
+    }
+
+    fn finalize_tx<Tb: TransactionBuilder>(&self, tb: Tb) -> Result<Tb::TxType>;
 
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
@@ -260,36 +275,28 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
+        let chain_id = network_info.chain_id();
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
         //let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            tx_parameters,
-            network_info,
-        );
+        let tx_builder =
+            ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters, network_info);
 
         let mut outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
         let expected_change_output =
-            self.get_calculated_change_output(&tx_builder, &consensus_parameters, asset_id, amount);
+            self.get_calculated_change_output(&tx_builder, asset_id, amount)?;
         outputs.push(expected_change_output);
-        let tx_builder = tx_builder.with_outputs(outputs);
+        let mut tx_builder = tx_builder.with_outputs(outputs);
 
-        // if we are not transferring the base asset, previous base amount is 0
-        let previous_base_amount = match asset_id {
-            BASE_ASSET_ID => amount,
-            _ => 0,
-        };
+        self.adjust_for_fee(&mut tx_builder).await?;
 
-        let tx = self
-            .add_fee_resources(tx_builder, previous_base_amount)
-            .await?;
+        let tx = self.finalize_tx(tx_builder)?;
+        let cached = tx.compute_cached_tx(self.address(), chain_id);
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        self.cache(&tx, chain_id);
-      
+        self.cache(cached);
+
         let receipts = provider
             .tx_status(&tx_id)
             .await?
@@ -316,6 +323,7 @@ pub trait Account: ViewOnlyAccount {
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
+        let chain_id = network_info.chain_id();
 
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
@@ -336,7 +344,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
+        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -346,17 +354,12 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        // if we are not transferring the base asset, previous base amount is 0
-        let base_amount = if asset_id == AssetId::default() {
-            balance
-        } else {
-            0
-        };
+        self.adjust_for_fee(&mut tb).await?;
+        let tx = self.finalize_tx(tb)?;
 
-        let tx = self.add_fee_resources(tb, base_amount).await?;
-
+        let cached = tx.compute_cached_tx(self.address(), chain_id);
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        self.cache(&tx, params.chain_id);
+        self.cache(cached);
 
         let receipts = provider
             .tx_status(&tx_id)
@@ -382,7 +385,7 @@ pub trait Account: ViewOnlyAccount {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
-        let tb = ScriptTransactionBuilder::prepare_message_to_output(
+        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
             to.into(),
             amount,
             inputs,
@@ -390,7 +393,8 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        let tx = self.add_fee_resources(tb, amount).await?;
+        self.adjust_for_fee(&mut tb).await?;
+        let tx = self.finalize_tx(tb)?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider

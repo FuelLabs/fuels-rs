@@ -64,7 +64,7 @@ pub trait TransactionBuilder: Send {
 
     fn build(self) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    fn fee_checked_from_tx(&self, params: &ConsensusParameters) -> Result<Option<TransactionFee>>;
+    fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_gas_limit(self, gas_limit: u64) -> Self;
@@ -114,12 +114,12 @@ macro_rules! impl_tx_trait {
                     .insert(owner, index_offset);
             }
 
-            fn fee_checked_from_tx(
-                &self,
-                params: &ConsensusParameters,
-            ) -> Result<Option<TransactionFee>> {
+            fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
                 let tx = self.clone().build()?.tx;
-                Ok(TransactionFee::checked_from_tx(params, &tx))
+                Ok(TransactionFee::checked_from_tx(
+                    &self.network_info.consensus_parameters,
+                    &tx,
+                ))
             }
 
             fn with_maturity(mut self, maturity: u32) -> Self {

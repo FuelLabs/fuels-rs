@@ -299,8 +299,9 @@ impl Contract {
         tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
         let network_info = account.try_provider()?.network_info().await?;
+        let chain_id = network_info.chain_id();
 
-        let tb = CreateTransactionBuilder::prepare_contract_deployment(
+        let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
             self.contract_id,
             self.state_root,
@@ -310,16 +311,21 @@ impl Contract {
             network_info,
         );
 
-        let tx = account
-            .add_fee_resources(tb, 0)
+        account
+            .adjust_for_fee(&mut tb)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
+        let tx = account.finalize_tx(tb)?;
+
+        dbg!(tx.inputs());
 
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
-        account.cache(&tx, chain_id);
+
+        let cached = tx.compute_cached_tx(account.address(), chain_id);
         provider.send_transaction_and_await_commit(tx).await?;
+        account.cache(cached);
 
         Ok(self.contract_id.into())
     }
@@ -626,8 +632,10 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
+            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(&tx, chain_id);
+            self.account.cache(cached);
+
             provider
                 .tx_status(&tx_id)
                 .await?
@@ -914,13 +922,17 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let chain_id = provider.chain_id();
+
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
+            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(&tx, chain_id);
+            self.account.cache(cached);
+
             provider
                 .tx_status(&tx_id)
                 .await?

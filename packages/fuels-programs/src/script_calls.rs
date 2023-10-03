@@ -8,7 +8,6 @@ use fuels_accounts::{
 };
 use fuels_core::{
     codec::{map_revert_error, DecoderConfig, LogDecoder},
-    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
@@ -207,28 +206,12 @@ where
         Ok(tb)
     }
 
-    fn calculate_base_asset_sum(&self) -> u64 {
-        self.script_call
-            .inputs
-            .iter()
-            .map(|input| match input {
-                Input::ResourceSigned { resource, .. }
-                | Input::ResourcePredicate { resource, .. }
-                    if resource.asset_id() == BASE_ASSET_ID =>
-                {
-                    resource.amount()
-                }
-                _ => 0,
-            })
-            .sum()
-    }
-
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        let tb = self.prepare_builder().await?;
-        let base_amount = self.calculate_base_asset_sum();
+        let mut tb = self.prepare_builder().await?;
+        self.account.adjust_for_fee(&mut tb).await?;
 
-        self.account.add_fee_resources(tb, base_amount).await
+        self.account.finalize_tx(tb)
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -244,8 +227,11 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
+            let chain_id = self.provider.chain_id();
+            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(&tx, chain_id);
+            self.account.cache(cached);
+
             self.provider
                 .tx_status(&tx_id)
                 .await?
@@ -298,8 +284,9 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0).await?;
+        let mut tb = self.prepare_builder().await?;
+        self.account.adjust_for_fee(&mut tb).await?;
+        let tx = self.account.finalize_tx(tb)?;
 
         let transaction_cost = self
             .provider

@@ -5,21 +5,18 @@ use std::{
 };
 
 use fuel_tx::ConsensusParameters;
-use fuel_types::{AssetId, ChainId};
+use fuel_types::AssetId;
 use fuels_core::{
-    constants::BASE_ASSET_ID,
     types::{
-        bech32::Bech32Address, errors::Result, input::Input, transaction::Transaction,
+        bech32::Bech32Address, errors::Result, input::Input, transaction::CachedTx,
         transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
     },
     Configurables,
 };
 
 use crate::{
-    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
-    resource_cache::ResourceCache,
-    Account, AccountError, AccountResult, CoinType, CoinTypeId, ViewOnlyAccount,
+    provider::Provider, resource_cache::ResourceCache, Account, AccountError, AccountResult,
+    CoinType, CoinTypeId, ViewOnlyAccount,
 };
 
 #[derive(Debug, Clone)]
@@ -140,9 +137,12 @@ impl Account for Predicate {
             .collect::<Vec<Input>>())
     }
 
-    fn cache(&self, tx: &impl Transaction, chain_id: ChainId) {
-        let cached_tx = tx.compute_cached_tx(self.address(), chain_id);
-        self.cache.lock().unwrap().save(cached_tx)
+    fn finalize_tx<Tb: TransactionBuilder>(&self, tb: Tb) -> Result<Tb::TxType> {
+        tb.build()
+    }
+
+    fn cache(&self, tx: CachedTx) {
+        self.cache.lock().unwrap().save(tx)
     }
 
     fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
@@ -151,31 +151,5 @@ impl Account for Predicate {
 
     fn get_expected_resources(&self) -> Vec<CoinType> {
         self.cache.lock().unwrap().get_expected_resources()
-    }
-
-    /// Add base asset inputs to the transaction to cover the estimated fee.
-    /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected resources may exceed
-    /// the required amount to avoid dust. Therefore we require it as an argument.
-    ///
-    /// Requires contract inputs to be at the start of the transactions inputs vec
-    /// so that their indexes are retained
-    async fn add_fee_resources<Tb: TransactionBuilder>(
-        &self,
-        mut tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType> {
-        let consensus_parameters = self.try_provider()?.consensus_parameters();
-        let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &consensus_parameters, previous_base_amount)?;
-
-        let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
-            .await?;
-
-        adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address(), new_base_amount);
-
-        tb.build()
     }
 }

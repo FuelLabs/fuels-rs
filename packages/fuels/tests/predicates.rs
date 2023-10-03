@@ -696,13 +696,14 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let network_info = provider.network_info().await?;
-    let tb = ScriptTransactionBuilder::prepare_transfer(
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
         Default::default(),
         network_info,
     );
-    let tx = predicate.add_fee_resources(tb, 1000).await?;
+    predicate.adjust_for_fee(&mut tb).await?;
+    let tx = tb.build()?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
@@ -750,14 +751,15 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     ];
 
     let network_info = provider.network_info().await?;
-    let tb = ScriptTransactionBuilder::prepare_transfer(
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxParameters::default().with_gas_price(1),
         network_info,
     );
 
-    let tx = wallet.add_fee_resources(tb, 0).await?;
+    predicate.adjust_for_fee(&mut tb).await?;
+    let tx = tb.build()?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
     provider.tx_status(&tx_id).await?.check(None)?;

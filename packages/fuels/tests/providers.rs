@@ -19,6 +19,7 @@ use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     Bits256,
 };
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -891,14 +892,39 @@ async fn test_caching() -> Result<()> {
     let response = methods.return_timestamp().call().await?;
      */
 
-    let tx_id1 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
-    let tx_id2 = wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
-    let tx_id3 =wallet_1.transfer(wallet_2.address(), 100, BASE_ASSET_ID, TxParameters::default()).await?.0;
+    let tx_id1 = wallet_1
+        .transfer(
+            wallet_2.address(),
+            100,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?
+        .0;
+    let tx_id2 = wallet_1
+        .transfer(
+            wallet_2.address(),
+            100,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?
+        .0;
+    let tx_id3 = wallet_1
+        .transfer(
+            wallet_2.address(),
+            100,
+            BASE_ASSET_ID,
+            TxParameters::default(),
+        )
+        .await?
+        .0;
 
     sleep(std::time::Duration::from_secs(30)).await;
 
+    /*
     let rec1 = provider.get_receipts(&tx_id1).await;
-    let stat = provider.client.transaction_status(&tx_id1).await;
+    let stat = provider.tx_status(&tx_id1).await?;
     dbg!(stat);
     dbg!(rec1);
 
@@ -912,7 +938,7 @@ async fn test_caching() -> Result<()> {
     dbg!(stat);
     dbg!(rec3);
 
-    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);
+    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);*/
 
     Ok(())
 }
