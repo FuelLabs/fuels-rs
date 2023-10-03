@@ -137,4 +137,8 @@ impl ContractLogs for Contract {
 
         log(123);
     }
+
+    fn produce_string_slice_log() {
+        log("string_slice");
+    }
 }

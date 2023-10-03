@@ -1245,7 +1245,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed());
         let address = wallet.address();
 
         let error = contract_methods
@@ -1438,6 +1438,40 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         let logs = response.decode_logs();
         assert!(!logs.filter_succeeded().is_empty())
     }
+
+    Ok(())
+}
+
+// String slices can not be decoded from logs as they are encoded as ptr, len
+// TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
+#[tokio::test]
+async fn test_string_slice_log() -> Result<()> {
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
+    ));
+
+    let wallet = launch_provider_and_get_wallet().await;
+
+    let contract_id = Contract::load_from(
+        "tests/logs/contract_logs/out/debug/contract_logs.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxParameters::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
+
+    let contract_methods = contract_instance.methods();
+    let response = contract_methods.produce_string_slice_log().call().await?;
+
+    let log = response.decode_logs();
+
+    let expected_err =
+        "Invalid data: String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
+
+    let failed = log.filter_failed();
+    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
 
     Ok(())
 }
