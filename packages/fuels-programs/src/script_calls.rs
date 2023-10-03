@@ -209,7 +209,7 @@ where
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         let mut tb = self.prepare_builder().await?;
-        self.account.adjust_for_fee(&mut tb).await?;
+        self.account.adjust_for_fee(&mut tb, 0).await?;
 
         self.account.finalize_tx(tb)
     }
@@ -285,7 +285,7 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let mut tb = self.prepare_builder().await?;
-        self.account.adjust_for_fee(&mut tb).await?;
+        self.account.adjust_for_fee(&mut tb, 0).await?;
         let tx = self.account.finalize_tx(tb)?;
 
         let transaction_cost = self

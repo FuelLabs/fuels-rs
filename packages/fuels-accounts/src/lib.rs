@@ -248,8 +248,12 @@ pub trait Account: ViewOnlyAccount {
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    async fn adjust_for_fee<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
-        let missing_base_amount = calculate_missing_base_amount(self, tb)?;
+    async fn adjust_for_fee<Tb: TransactionBuilder>(
+        &self,
+        tb: &mut Tb,
+        used_base_amount: u64,
+    ) -> Result<()> {
+        let missing_base_amount = calculate_missing_base_amount(self, tb, used_base_amount)?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
@@ -291,7 +295,7 @@ pub trait Account: ViewOnlyAccount {
         //outputs.push(expected_change_output);
         let mut tx_builder = tx_builder.with_outputs(outputs);
 
-        self.adjust_for_fee(&mut tx_builder).await?;
+        self.adjust_for_fee(&mut tx_builder, amount).await?;
 
         let tx = self.finalize_tx(tx_builder)?;
         let cached = tx.compute_cached_tx(self.address(), chain_id);
@@ -318,7 +322,7 @@ pub trait Account: ViewOnlyAccount {
     async fn force_transfer_to_contract(
         &self,
         to: &Bech32ContractId,
-        balance: u64,
+        amount: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
@@ -337,7 +341,7 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
+        inputs.extend(self.get_asset_inputs_for_amount(asset_id, amount).await?);
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -347,7 +351,7 @@ pub trait Account: ViewOnlyAccount {
         // Build transaction and sign it
         let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
-            balance,
+            amount,
             asset_id,
             inputs,
             outputs,
@@ -355,7 +359,7 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        self.adjust_for_fee(&mut tb).await?;
+        self.adjust_for_fee(&mut tb, amount).await?;
         let tx = self.finalize_tx(tb)?;
 
         let cached = tx.compute_cached_tx(self.address(), chain_id);
@@ -394,7 +398,7 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        self.adjust_for_fee(&mut tb).await?;
+        self.adjust_for_fee(&mut tb, amount).await?;
         let tx = self.finalize_tx(tb)?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 

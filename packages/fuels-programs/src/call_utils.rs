@@ -134,7 +134,12 @@ pub(crate) async fn build_tx_from_contract_calls(
             .with_script(script)
             .with_script_data(script_data.clone());
 
-    account.adjust_for_fee(&mut tb).await?;
+    let used_base_amount = required_asset_amounts
+        .iter()
+        .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
+        .unwrap_or_default();
+
+    account.adjust_for_fee(&mut tb, used_base_amount).await?;
     account.finalize_tx(tb)
 }
 

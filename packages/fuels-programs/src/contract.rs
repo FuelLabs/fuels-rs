@@ -312,7 +312,7 @@ impl Contract {
         );
 
         account
-            .adjust_for_fee(&mut tb)
+            .adjust_for_fee(&mut tb, 0)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
         let tx = account.finalize_tx(tb)?;

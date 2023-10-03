@@ -130,7 +130,7 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 }
 
 #[tokio::test]
-async fn add_fee_resources_empty_transaction() -> Result<()> {
+async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await
@@ -144,7 +144,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         TxParameters::default(),
         network_info,
     );
-    wallet.adjust_for_fee(&mut tb).await?;
+    wallet.adjust_for_fee(&mut tb, 0).await?;
     let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -166,7 +166,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
 }
 
 #[tokio::test]
-async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
+async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await
@@ -187,7 +187,7 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         TxParameters::default(),
         network_info,
     );
-    wallet.adjust_for_fee(&mut tb).await?;
+    wallet.adjust_for_fee(&mut tb, base_amount).await?;
     let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);

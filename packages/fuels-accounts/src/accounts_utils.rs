@@ -20,6 +20,7 @@ pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
 pub fn calculate_missing_base_amount(
     account: &impl Account,
     tb: &impl TransactionBuilder,
+    used_base_amount: u64,
 ) -> Result<u64> {
     let consensus_parameters = tb.consensus_parameters();
     let tx = account.finalize_tx(tb.clone())?;
@@ -27,42 +28,36 @@ pub fn calculate_missing_base_amount(
         .fee_checked_from_tx(&consensus_parameters)
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
-    let input_base_amount: u64 = tb
-        .inputs()
+    let available_amount: u64 = available_base_amount(tb);
+
+    let total_used = transaction_fee.max_fee() + used_base_amount;
+    let missing_amount = if total_used > available_amount {
+        available_amount.abs_diff(total_used)
+    } else if !is_consuming_utxos(tb) {
+        // A tx needs to have at least 1 spendable input
+        // Enforce a minimum required amount on the base asset if no other inputs are present
+        1
+    } else {
+        0
+    };
+
+    Ok(missing_amount)
+}
+
+fn available_base_amount(tb: &impl TransactionBuilder) -> u64 {
+    tb.inputs()
         .iter()
         .filter_map(|input| match (input.amount(), input.asset_id()) {
             (Some(amount), Some(asset_id)) if asset_id == BASE_ASSET_ID => Some(amount),
             _ => None,
         })
-        .sum();
+        .sum()
+}
 
-    let output_base_amount: u64 = tb
-        .outputs()
+fn is_consuming_utxos(tb: &impl TransactionBuilder) -> bool {
+    tb.inputs()
         .iter()
-        .filter_map(|output| match (output.amount(), output.asset_id()) {
-            (Some(amount), Some(asset_id)) if *asset_id == BASE_ASSET_ID => Some(amount),
-            _ => None,
-        })
-        .sum();
-
-    let needed_base_amount = transaction_fee.max_fee() + output_base_amount;
-    let missing_amount = if needed_base_amount > input_base_amount {
-        input_base_amount.abs_diff(needed_base_amount)
-    } else {
-        // A tx needs to have at least 1 spendable input
-        // We enforce a minimum amount on the base asset if no other inputs are present
-        let is_consuming_utxos = tb
-            .inputs()
-            .iter()
-            .any(|input| !matches!(input, Input::Contract { .. }));
-        if !is_consuming_utxos {
-            1
-        } else {
-            0
-        }
-    };
-
-    Ok(missing_amount)
+        .any(|input| !matches!(input, Input::Contract { .. }))
 }
 
 pub fn adjust_inputs_outputs(

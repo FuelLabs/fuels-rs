@@ -671,7 +671,7 @@ async fn predicate_configurables() -> Result<()> {
 }
 
 #[tokio::test]
-async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
+async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
@@ -699,13 +699,13 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
-        Default::default(),
+        TxParameters::default().with_gas_price(1),
         network_info,
     );
-    predicate.adjust_for_fee(&mut tb).await?;
+    predicate.adjust_for_fee(&mut tb, 1000).await?;
     let tx = tb.build()?;
 
-    assert_eq!(tx.inputs().len(), 1);
+    assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
 
     Ok(())
@@ -758,7 +758,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         network_info,
     );
 
-    predicate.adjust_for_fee(&mut tb).await?;
+    predicate.adjust_for_fee(&mut tb, amount).await?;
     let tx = tb.build()?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
