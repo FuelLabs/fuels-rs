@@ -143,6 +143,7 @@ pub trait Account: ViewOnlyAccount {
         ]
     }
 
+    /*
     // Create a change output with a fixed amount so that it can be used for
     // caching and spending expected outputs optimistically
     fn get_calculated_change_output(
@@ -172,7 +173,7 @@ pub trait Account: ViewOnlyAccount {
             expected_amount,
             asset_id,
         ))
-    }
+    } */
 
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
@@ -248,7 +249,7 @@ pub trait Account: ViewOnlyAccount {
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
     async fn adjust_for_fee<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
-        let missing_base_amount = calculate_missing_base_amount(tb)?;
+        let missing_base_amount = calculate_missing_base_amount(self, tb)?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
@@ -284,10 +285,10 @@ pub trait Account: ViewOnlyAccount {
         let tx_builder =
             ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters, network_info);
 
-        let mut outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-        let expected_change_output =
-            self.get_calculated_change_output(&tx_builder, asset_id, amount)?;
-        outputs.push(expected_change_output);
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        //let expected_change_output =
+        //    self.get_calculated_change_output(&tx_builder, asset_id, amount)?;
+        //outputs.push(expected_change_output);
         let mut tx_builder = tx_builder.with_outputs(outputs);
 
         self.adjust_for_fee(&mut tx_builder).await?;

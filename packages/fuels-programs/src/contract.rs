@@ -317,8 +317,6 @@ impl Contract {
             .map_err(|err| error!(ProviderError, "{err}"))?;
         let tx = account.finalize_tx(tb)?;
 
-        dbg!(tx.inputs());
-
         let provider = account
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;

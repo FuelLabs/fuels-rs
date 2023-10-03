@@ -7,7 +7,7 @@ use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
     field::{GasLimit, GasPrice, Witnesses},
     Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    Transaction as FuelTransaction, TxPointer, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
@@ -59,12 +59,11 @@ struct UnresolvedSignatures {
     secret_keys: Vec<SecretKey>,
 }
 
-pub trait TransactionBuilder: Send {
+pub trait TransactionBuilder: Send + Clone {
     type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_gas_limit(self, gas_limit: u64) -> Self;
@@ -78,6 +77,7 @@ pub trait TransactionBuilder: Send {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
+    fn consensus_parameters(&self) -> ConsensusParameters;
 }
 
 macro_rules! impl_tx_trait {
@@ -112,14 +112,6 @@ macro_rules! impl_tx_trait {
                 self.unresolved_signatures
                     .addr_idx_offset_map
                     .insert(owner, index_offset);
-            }
-
-            fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
-                let tx = self.clone().build()?.tx;
-                Ok(TransactionFee::checked_from_tx(
-                    &self.network_info.consensus_parameters,
-                    &tx,
-                ))
             }
 
             fn with_maturity(mut self, maturity: u32) -> Self {
@@ -181,6 +173,10 @@ macro_rules! impl_tx_trait {
 
             fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
                 &mut self.witnesses
+            }
+
+            fn consensus_parameters(&self) -> ConsensusParameters {
+                self.network_info.consensus_parameters
             }
         }
 

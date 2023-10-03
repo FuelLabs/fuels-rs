@@ -705,7 +705,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
     predicate.adjust_for_fee(&mut tb).await?;
     let tx = tb.build()?;
 
-    assert_eq!(tx.inputs().len(), 2);
+    assert_eq!(tx.inputs().len(), 1);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
 
     Ok(())

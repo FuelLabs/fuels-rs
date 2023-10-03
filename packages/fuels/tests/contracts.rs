@@ -1156,6 +1156,8 @@ async fn test_payable_annotation() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
+    dbg!(wallet.address());
+
     let response = contract_methods
         .payable()
         .call_params(
