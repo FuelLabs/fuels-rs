@@ -128,9 +128,11 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters)
-        .with_script(script)
-        .with_script_data(script_data.clone());
+    let network_info = account.try_provider()?.network_info().await?;
+    let tb =
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters, network_info)
+            .with_script(script)
+            .with_script_data(script_data.clone());
 
     let base_asset_amount = required_asset_amounts
         .iter()

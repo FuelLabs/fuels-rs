@@ -298,6 +298,8 @@ impl Contract {
         account: &impl Account,
         tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
+        let network_info = account.try_provider()?.network_info().await?;
+
         let tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
             self.contract_id,
@@ -305,6 +307,7 @@ impl Contract {
             self.salt,
             self.storage_slots,
             tx_parameters,
+            network_info,
         );
 
         let tx = account
