@@ -167,6 +167,8 @@ async fn main_function_vector_arguments() -> Result<()> {
     Ok(())
 }
 
+// TODO: Decide what to do with this test once
+// https://github.com/FuelLabs/sway/issues/5145 is resolved
 #[tokio::test]
 async fn test_script_raw_slice() -> Result<()> {
     setup_program_test!(
