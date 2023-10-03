@@ -34,8 +34,6 @@ impl EnumVariants {
     }
 
     pub fn heap_type_variant(&self) -> Option<(u8, &ParamType)> {
-        // TODO: segfault this needs to look at only the parent heap types. Or maybe to extract
-        // this from here because this limitation is not present when enums are used as args.
         self.param_types()
             .iter()
             .enumerate()
