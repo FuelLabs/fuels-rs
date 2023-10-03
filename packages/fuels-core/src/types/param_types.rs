@@ -106,9 +106,9 @@ impl ParamType {
     pub fn validate_is_decodable(&self) -> Result<()> {
         match self {
             ParamType::Enum { variants, .. } => {
-                let all_param_types = chain!(variants.param_types());
+                let all_param_types = variants.param_types();
                 let grandchildren_need_receipts = all_param_types
-                    .clone()
+                    .iter()
                     .any(|child| child.children_need_extra_receipts());
                 if grandchildren_need_receipts {
                     return Err(error!(
@@ -118,6 +118,7 @@ impl ParamType {
                 }
 
                 let num_of_children_needing_receipts = all_param_types
+                    .iter()
                     .filter(|param_type| param_type.needs_extra_data_receipt(false))
                     .count();
                 if num_of_children_needing_receipts > 1 {
