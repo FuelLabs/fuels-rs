@@ -15,7 +15,9 @@ pub enum TxStatus {
         receipts: Vec<Receipt>,
     },
     Submitted,
-    SqueezedOut,
+    SqueezedOut {
+        reason: String,
+    },
     Revert {
         receipts: Vec<Receipt>,
         reason: String,
@@ -26,7 +28,7 @@ pub enum TxStatus {
 impl TxStatus {
     pub fn check(&self, log_decoder: Option<&LogDecoder>) -> Result<()> {
         match self {
-            Self::SqueezedOut => Err(Error::SqueezedOutTransactionError),
+            Self::SqueezedOut { reason } => Err(Error::SqueezedOutTransactionError(reason.clone())),
             Self::Revert {
                 receipts,
                 reason,
