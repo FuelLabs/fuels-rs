@@ -254,7 +254,7 @@ impl Provider {
                 }
             }
             TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
+            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
         };
 
         Ok(status)
