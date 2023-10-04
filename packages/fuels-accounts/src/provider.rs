@@ -26,6 +26,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::Transaction,
+        transaction_builders::NetworkInfo,
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -253,7 +254,7 @@ impl Provider {
                 }
             }
             TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
+            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
         };
 
         Ok(status)
@@ -274,6 +275,13 @@ impl Provider {
         self.consensus_parameters
     }
 
+    pub async fn network_info(&self) -> ProviderResult<NetworkInfo> {
+        let node_info = self.node_info().await?;
+        let chain_info = self.chain_info().await?;
+
+        Ok(NetworkInfo::new(node_info, chain_info))
+    }
+
     pub fn chain_id(&self) -> ChainId {
         self.consensus_parameters.chain_id
     }
@@ -282,32 +290,27 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
+    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<TxStatus> {
         let receipts = self.dry_run(tx).await?;
-        Self::has_script_succeeded(&receipts)?;
-
-        Ok(receipts)
+        Ok(Self::tx_status_from_receipts(receipts))
     }
 
-    fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
-        receipts
-            .iter()
-            .find_map(|receipt| match receipt {
-                Receipt::ScriptResult { result, .. }
-                    if *result != ScriptExecutionResult::Success =>
-                {
-                    Some(format!("{result:?}"))
-                }
-                _ => None,
-            })
-            .map(|error_message| {
-                Err(Error::RevertTransactionError {
-                    reason: error_message,
-                    revert_id: 0,
-                    receipts: receipts.to_owned(),
-                })
-            })
-            .unwrap_or(Ok(()))
+    fn tx_status_from_receipts(receipts: Vec<Receipt>) -> TxStatus {
+        let revert_reason = receipts.iter().find_map(|receipt| match receipt {
+            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                Some(format!("{result:?}"))
+            }
+            _ => None,
+        });
+
+        match revert_reason {
+            Some(reason) => TxStatus::Revert {
+                receipts,
+                reason,
+                id: 0,
+            },
+            None => TxStatus::Success { receipts },
+        }
     }
 
     pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {

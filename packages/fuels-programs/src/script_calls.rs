@@ -7,7 +7,7 @@ use fuels_accounts::{
     Account,
 };
 use fuels_core::{
-    codec::{map_revert_error, DecoderConfig, LogDecoder},
+    codec::{DecoderConfig, LogDecoder},
     constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
@@ -194,9 +194,15 @@ where
         )
         .collect();
 
-        let tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, self.tx_parameters)
-            .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?);
+        let network_info = self.account.try_provider()?.network_info().await?;
+        let tb = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            self.tx_parameters,
+            network_info,
+        )
+        .with_script(self.script_call.script_binary.clone())
+        .with_script_data(self.compute_script_data().await?);
 
         Ok(tb)
     }
@@ -234,24 +240,20 @@ where
         let tx = self.build_tx().await?;
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
-        let receipts = if simulate {
+        let tx_status = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
             let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
-            self.provider
-                .tx_status(&tx_id)
-                .await?
-                .take_receipts_checked(Some(&self.log_decoder))?
+            self.provider.tx_status(&tx_id).await?
         };
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
 
     /// Call a script on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(false).await
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
@@ -280,9 +282,7 @@ where
     ///
     /// [`call`]: Self::call
     pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(true).await
     }
 
     /// Get a scripts's estimated cost
