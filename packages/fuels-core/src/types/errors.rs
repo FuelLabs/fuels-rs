@@ -35,6 +35,8 @@ pub enum Error {
         revert_id: u64,
         receipts: Vec<Receipt>,
     },
+    #[error("Transaction was squeezed out. Reason: `{0}`")]
+    SqueezedOutTransactionError(String),
     #[error("Transaction build error: {0}")]
     TransactionBuildError(String),
 }
