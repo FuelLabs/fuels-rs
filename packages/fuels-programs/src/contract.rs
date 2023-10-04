@@ -11,7 +11,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::{map_revert_error, ABIEncoder, DecoderConfig, LogDecoder},
+    codec::{ABIEncoder, DecoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -579,9 +579,7 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(false).await
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
@@ -610,9 +608,7 @@ where
     /// blockchain is *not* modified but simulated.
     ///
     pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(true).await
     }
 
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
@@ -621,15 +617,13 @@ where
 
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
-        let receipts = if simulate {
+        let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider
-                .tx_status(&tx_id)
-                .await?
-                .take_receipts_checked(Some(&self.log_decoder))?
+            provider.tx_status(&tx_id).await?
         };
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -867,9 +861,7 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(false).await
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
@@ -900,9 +892,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     ///
     /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true)
-            .await
-            .map_err(|err| map_revert_error(err, &self.log_decoder))
+        self.call_or_simulate(true).await
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
@@ -914,15 +904,13 @@ impl<T: Account> MultiContractCallHandler<T> {
 
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
-        let receipts = if simulate {
+        let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider
-                .tx_status(&tx_id)
-                .await?
-                .take_receipts_checked(Some(&self.log_decoder))?
+            provider.tx_status(&tx_id).await?
         };
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -932,7 +920,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(tx).await?;
+        provider.checked_dry_run(tx).await?.check(None)?;
 
         Ok(())
     }
