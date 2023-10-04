@@ -64,7 +64,7 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
-        let extra_receipts_needed = output_param.needs_extra_data_receipt(true);
+        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
         match output_param.get_return_location() {
             ReturnLocation::ReturnData
                 if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>

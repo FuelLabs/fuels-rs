@@ -37,7 +37,7 @@ impl EnumVariants {
         self.param_types()
             .iter()
             .enumerate()
-            .find_map(|(d, p)| p.needs_extra_data_receipt(false).then_some((d as u8, p)))
+            .find_map(|(d, p)| p.is_extra_receipt_needed(false).then_some((d as u8, p)))
     }
 
     pub fn only_units_inside(&self) -> bool {

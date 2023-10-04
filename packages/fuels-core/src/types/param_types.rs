@@ -87,18 +87,18 @@ impl ParamType {
     pub fn children_need_extra_receipts(&self) -> bool {
         match self {
             ParamType::Array(inner, _) | ParamType::Vector(inner) => {
-                inner.needs_extra_data_receipt(false)
+                inner.is_extra_receipt_needed(false)
             }
             ParamType::Struct { fields, .. } => fields
                 .iter()
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             ParamType::Enum { variants, .. } => variants
                 .param_types()
                 .iter()
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             ParamType::Tuple(inner_types) => inner_types
                 .iter()
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             _ => false,
         }
     }
@@ -119,7 +119,7 @@ impl ParamType {
 
                 let num_of_children_needing_receipts = all_param_types
                     .iter()
-                    .filter(|param_type| param_type.needs_extra_data_receipt(false))
+                    .filter(|param_type| param_type.is_extra_receipt_needed(false))
                     .count();
                 if num_of_children_needing_receipts > 1 {
                     Err(error!(
@@ -139,17 +139,18 @@ impl ParamType {
         }
     }
 
-    pub fn needs_extra_data_receipt(&self, top_level_type: bool) -> bool {
+    pub fn is_extra_receipt_needed(&self, top_level_type: bool) -> bool {
         match self {
             ParamType::Vector(_) | ParamType::Bytes | ParamType::String => true,
-            ParamType::Array(inner, _) => inner.needs_extra_data_receipt(false),
-            ParamType::Struct { fields, generics } => chain!(fields, generics)
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+            ParamType::Array(inner, _) => inner.is_extra_receipt_needed(false),
+            ParamType::Struct { fields, generics } => {
+                chain!(fields, generics).any(|param_type| param_type.is_extra_receipt_needed(false))
+            }
             ParamType::Enum { variants, generics } => chain!(variants.param_types(), generics)
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             ParamType::Tuple(elements) => elements
                 .iter()
-                .any(|param_type| param_type.needs_extra_data_receipt(false)),
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             ParamType::RawSlice => !top_level_type,
             _ => false,
         }
