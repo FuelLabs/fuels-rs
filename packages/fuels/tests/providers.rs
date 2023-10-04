@@ -65,7 +65,9 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     Ok(())
 }
 
+// Ignored until https://github.com/FuelLabs/fuel-core/issues/1384 is resolved
 #[tokio::test]
+#[ignore]
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
