@@ -332,7 +332,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_default_tx_params_match_network() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;
     let consensus_params = provider.consensus_parameters();
 
