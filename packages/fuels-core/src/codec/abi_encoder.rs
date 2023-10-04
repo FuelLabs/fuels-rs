@@ -1200,4 +1200,17 @@ mod tests {
 
         Ok(())
     }
+
+    #[test]
+    fn encoding_large_unsigned_integers() -> Result<()> {
+        let token = Token::U128(u128::MAX);
+        let expected_encoding = [255; 16];
+        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        assert_eq!(result, expected_encoding);
+        let token = Token::U256(U256::MAX);
+        let expected_encoding = [255; 32];
+        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        assert_eq!(result, expected_encoding);
+        Ok(())
+    }
 }
