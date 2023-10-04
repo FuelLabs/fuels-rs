@@ -16,15 +16,12 @@ fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true }
 fuel-core-services = "0.19.1"
-fuel-core-txpool = "0.19.1"
-fuel-core-types = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
 futures = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std", "serde"] }
-oneshot = "0.1.5"
 portpicker = { workspace = true }
 rand = { workspace = true, default-features = false }
 serde = { workspace = true, features = ["derive"] }
