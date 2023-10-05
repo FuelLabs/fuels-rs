@@ -10,9 +10,33 @@ use fuel_tx::{
 };
 
 use fuel_types::ChainId;
-use fuel_vm::checked_transaction::EstimatePredicates;
+use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
-use crate::types::{transaction_builders::NetworkInfo, Result};
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
+use crate::types::Result;
+
+#[derive(Debug, Clone)]
+pub struct NetworkInfo {
+    pub consensus_parameters: ConsensusParameters,
+    pub max_gas_per_tx: u64,
+    pub min_gas_price: u64,
+    pub gas_costs: GasCosts,
+}
+
+impl NetworkInfo {
+    pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
+        Self {
+            max_gas_per_tx: chain_info.consensus_parameters.max_gas_per_tx,
+            consensus_parameters: chain_info.consensus_parameters.into(),
+            min_gas_price: node_info.min_gas_price,
+            gas_costs: chain_info.gas_costs,
+        }
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.consensus_parameters.chain_id
+    }
+}
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {

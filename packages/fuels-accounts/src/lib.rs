@@ -331,7 +331,7 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{Address, Output};
-    use fuels_core::types::{transaction::Transaction, transaction_builders::NetworkInfo};
+    use fuels_core::types::transaction::{NetworkInfo, Transaction};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -339,6 +339,12 @@ mod tests {
 
     #[tokio::test]
     async fn sign_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let mut args = vec![];
+        let v = [(true, "one"), (false, "two")]
+            .into_iter()
+            .filter(|(flag, _)| *flag)
+            .map(|(_, arg)| arg.to_string());
+        args.extend(v);
         // ANCHOR: sign_message
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
