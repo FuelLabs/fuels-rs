@@ -165,7 +165,7 @@
 <pre><code class="language-rust ignore">        let b256_string = b256.to_string();
         let b256_hex_string = format!(&quot;{b256:#x}&quot;);
 </code></pre>
-<p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
+<p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
 <blockquote>
 <p><strong>Note:</strong> In Fuel, there's a special type called <code>b256</code>, which is similar to <code>Bytes32</code>; also used to represent hashes, and it holds a 256-bit value. In Rust, through the SDK, this is represented as <code>Bits256(value)</code> where <code>value</code> is a <code>[u8; 32]</code>. If your contract method takes a <code>b256</code> as input, all you need to do is pass a <code>Bits256([u8; 32])</code> when calling it from the SDK.</p>
 </blockquote>

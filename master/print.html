@@ -216,10 +216,10 @@ If <code>cargo generate</code> is not already installed, you can instal it with:
 <!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuels = &quot;0.48&quot;
+<pre><code class="language-toml">fuels = &quot;{{versions.fuels}}&quot;
 </code></pre>
 <blockquote>
-<p><strong>Note</strong> We're using version <code>0.48</code> of the SDK, which is the latest version at the time of this writing.</p>
+<p><strong>Note</strong> We're using version <code>{{versions.fuels}}</code> of the SDK, which is the latest version at the time of this writing.</p>
 </blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><code class="language-rust ignore">use fuels::prelude::*;
@@ -350,7 +350,7 @@ To build these tests, run the following command:</p>
 <p>Note: If the specified database does not exist, a new database will be created at that path. To utilize the code snippets above, either the <code>fuel-core</code> binary must be present, or both the <code>fuel-core-lib</code> and <code>rocksdb</code> features need to be enabled.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="querying-the-blockchain"><a class="header" href="#querying-the-blockchain">Querying the blockchain</a></h1>
-<p>Once you set up a provider, you can interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the <a href="https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html">official provider API documentation</a>.</p>
+<p>Once you set up a provider, you can interact with the Fuel blockchain. Here are a few examples of what you can do with a provider; for a more in-depth overview of the API, check the <a href="https://docs.rs/fuels/%7B%7Bversions.fuels%7D%7D/fuels/accounts/provider/struct.Provider.html">official provider API documentation</a>.</p>
 <ul>
 <li><a href="connecting/querying.html#set-up">Set up</a></li>
 <li><a href="connecting/querying.html#get-all-coins-from-an-address">Get all coins from an address</a></li>
@@ -1732,7 +1732,7 @@ half-word   byte   op                raw           notes
 <li>Gas forwarded</li>
 </ol>
 <!-- call_params:example:end -->
-<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/latest/fuels/programs/contract/struct.CallParameters.html"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
+<p>You can use these to forward coins to a contract. You can configure these parameters by creating an instance of <a href="https://docs.rs/fuels/%7B%7Bversions.fuels%7D%7D/fuels/programs/contract/struct.CallParameters.html"><code>CallParameters</code></a> and passing it to a chain method called <code>call_params</code>.</p>
 <!-- use_call_params:example:end -->
 <p>For instance, suppose the following contract that uses Sway's <code>msg_amount()</code> to return the amount sent in that transaction.</p>
 <pre><code class="language-rust ignore">    #[payable]
@@ -2540,12 +2540,12 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <pre><code class="language-rust ignore">        let b256_string = b256.to_string();
         let b256_hex_string = format!(&quot;{b256:#x}&quot;);
 </code></pre>
-<p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
+<p>For a full list of implemented methods and traits, see the <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.Bytes32.html">fuel-types documentation</a>.</p>
 <blockquote>
 <p><strong>Note:</strong> In Fuel, there's a special type called <code>b256</code>, which is similar to <code>Bytes32</code>; also used to represent hashes, and it holds a 256-bit value. In Rust, through the SDK, this is represented as <code>Bits256(value)</code> where <code>value</code> is a <code>[u8; 32]</code>. If your contract method takes a <code>b256</code> as input, all you need to do is pass a <code>Bits256([u8; 32])</code> when calling it from the SDK.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="address"><a class="header" href="#address">Address</a></h1>
-<p>Like <code>Bytes32</code>, <code>Address</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.Address.html">fuel-types documentation</a>).</p>
+<p>Like <code>Bytes32</code>, <code>Address</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.Address.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>Address</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
@@ -2569,7 +2569,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         assert_eq!([0u8; 32], *address);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contractid"><a class="header" href="#contractid">ContractId</a></h1>
-<p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
+<p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating a <code>ContractId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
@@ -2594,7 +2594,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         assert_eq!([0u8; 32], *contract_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assetid"><a class="header" href="#assetid">AssetId</a></h1>
-<p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/latest/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
+<p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>AssetId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
@@ -2983,7 +2983,7 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
 </code></pre>
 <p>The same method is available for script calls.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="api-reference"><a class="header" href="#api-reference">API Reference</a></h1>
-<p>For a more in-depth look at the APIs provided by the Fuel Rust SDK, head over to the <a href="https://docs.rs/fuels/latest/fuels/">official documentation</a>. In the actual Rust docs, you can see the most up-to-date information about the API, which is synced with the code as it changes.</p>
+<p>For a more in-depth look at the APIs provided by the Fuel Rust SDK, head over to the <a href="https://docs.rs/fuels/%7B%7Bversions.fuels%7D%7D/fuels/">official documentation</a>. In the actual Rust docs, you can see the most up-to-date information about the API, which is synced with the code as it changes.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="fuels-rs-testing"><a class="header" href="#fuels-rs-testing"><code>fuels-rs</code> Testing</a></h1>
 <blockquote>
 <p><strong>note</strong> This section is still a work in progress.</p>
