@@ -524,7 +524,10 @@ mod tests {
 
     #[test]
     pub fn division_by_zero() {
-        let result = ABIDecoder::default().decode(&Vector(Box::new(Array(Box::new(U16), 0))), &[]);
+        let param_type = Vec::<[u16; 0]>::param_type();
+
+        let result = ABIDecoder::default().decode(&param_type, &[]);
+
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 

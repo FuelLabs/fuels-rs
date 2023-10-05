@@ -84,7 +84,7 @@ impl ParamType {
         }
         let num_of_elements = available_bytes
             .checked_div(memory_size)
-            .ok_or_else(|| error!(InvalidData, "memory_size of 0"))?;
+            .ok_or_else(|| error!(InvalidData, "Type {param_type} has a memory_size of 0"))?;
         Ok(num_of_elements)
     }
 
