@@ -5,12 +5,12 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::{GasLimit, GasPrice, Witnesses},
-    Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    field::Witnesses, Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
-use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+use fuel_vm::gas::GasCosts;
 
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -22,7 +22,9 @@ use crate::{
         errors::{error, Error, Result},
         input::Input,
         message::Message,
-        transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+        transaction::{
+            estimate_predicates, CreateTransaction, ScriptTransaction, Transaction, TxParameters,
+        },
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
@@ -701,24 +703,6 @@ fn generate_missing_witnesses(
             Witness::from(signature.as_ref())
         })
         .collect()
-}
-
-fn estimate_predicates<T>(tx: &mut T, network_info: &NetworkInfo) -> Result<()>
-where
-    T: GasLimit + GasPrice + EstimatePredicates,
-{
-    let consensus_parameters = &network_info.consensus_parameters;
-
-    let gas_price = *tx.gas_price();
-    let gas_limit = *tx.gas_limit();
-    *tx.gas_price_mut() = 0;
-    *tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
-
-    tx.estimate_predicates(consensus_parameters, &network_info.gas_costs)?;
-    *tx.gas_price_mut() = gas_price;
-    *tx.gas_limit_mut() = gas_limit;
-
-    Ok(())
 }
 
 #[cfg(test)]
