@@ -84,6 +84,7 @@ mod tests {
     use std::vec;
 
     use super::*;
+    use crate::traits::Parameterize;
     use crate::types::U256;
     use crate::{
         constants::WORD_SIZE,
@@ -525,9 +526,7 @@ mod tests {
     #[test]
     pub fn division_by_zero() {
         let param_type = Vec::<[u16; 0]>::param_type();
-
         let result = ABIDecoder::default().decode(&param_type, &[]);
-
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 
@@ -535,51 +534,46 @@ mod tests {
     pub fn multiply_overflow_enum() {
         let result = ABIDecoder::default().decode(
             &Enum {
-                variants: EnumVariants {
-                    param_types: vec![
-                        Array(Box::new(Array(Box::new(RawSlice), 8)), 576469587185895432),
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                        B256,
-                    ],
-                },
+                variants: EnumVariants::new(vec![
+                    Array(Box::new(Array(Box::new(RawSlice), 8)), usize::MAX),
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                ])
+                .unwrap(),
                 generics: vec![U16],
             },
-            &[0, 8, 8, 8, 9, 8, 0, 8, 8, 8, 8, 8, 15, 8, 8, 8],
+            &[],
         );
         assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]
     pub fn multiply_overflow_vector() {
-        let result = ABIDecoder::default().decode(
-            &Vector(Box::new(Array(Box::new(Unit), 2308103648053880071))),
-            &[8, 8, 10, 7, 229, 8, 8, 8],
-        );
+        let param_type = Vec::<[(); usize::MAX]>::param_type();
+        let result = ABIDecoder::default().decode(&param_type, &[]);
         assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]
     pub fn multiply_overflow_arith() {
-        let mut typ: ParamType = U16;
+        let mut param_type: ParamType = U16;
         for _ in 0..50 {
-            typ = Array(Box::new(typ), 8);
+            param_type = Array(Box::new(param_type), 8);
         }
         let result = ABIDecoder::default().decode(
             &Enum {
-                variants: EnumVariants {
-                    param_types: vec![typ],
-                },
+                variants: EnumVariants::new(vec![param_type]).unwrap(),
                 generics: vec![U16],
             },
-            &[0, 8, 8, 51, 51, 51, 51, 51, 51, 51, 3, 8, 15, 8, 8, 8],
+            &[],
         );
         assert!(matches!(result, Err(Error::InvalidData(_))));
     }
@@ -587,32 +581,26 @@ mod tests {
     #[test]
     pub fn capacity_overflow() {
         let result = ABIDecoder::default().decode(
-            &Array(
-                Box::new(Array(Box::new(Tuple(vec![])), 7638104972323651592)),
-                242,
-            ),
-            &[13, 0, 1, 0, 0, 106, 242, 8],
+            &Array(Box::new(Array(Box::new(Tuple(vec![])), usize::MAX)), 1),
+            &[],
         );
-        dbg!(&result);
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 
     #[test]
     pub fn stack_overflow() {
-        let mut typ: ParamType = U16;
+        let mut param_type: ParamType = U16;
         for _ in 0..13500 {
-            typ = Vector(Box::new(typ));
+            param_type = Vector(Box::new(param_type));
         }
-        let result = ABIDecoder::default().decode(&typ, &[8, 9, 9, 9, 9, 9, 9, 9]);
+        let result = ABIDecoder::default().decode(&param_type, &[]);
         assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 
     #[test]
     pub fn capacity_maloc() {
-        let result = ABIDecoder::default().decode(
-            &Array(Box::new(U8), 72340198607880449),
-            &[8, 8, 7, 252, 201, 8, 8, 8],
-        );
+        let param_type = Array(Box::new(U8), usize::MAX);
+        let result = ABIDecoder::default().decode(&param_type, &[]);
         assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 

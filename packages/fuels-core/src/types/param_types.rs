@@ -68,7 +68,9 @@ impl ParamType {
         available_bytes: usize,
     ) -> Result<usize> {
         let encoding_width = param_type.compute_encoding_width()?;
-        let memory_size = encoding_width.checked_mul(WORD_SIZE).ok_or_else(|| error!(InvalidData, "attempt to multiply encoding_width ({encoding_width:?}) by WORD_SIZE ({WORD_SIZE:?}) with overflow"))?;
+        let memory_size = encoding_width
+            .checked_mul(WORD_SIZE)
+            .ok_or_else(|| error!(InvalidData, "Overflow error while encoding {param_type:?}"))?;
         if memory_size == 0 {
             return Err(error!(
                 InvalidType,
@@ -84,7 +86,7 @@ impl ParamType {
         }
         let num_of_elements = available_bytes
             .checked_div(memory_size)
-            .ok_or_else(|| error!(InvalidData, "Type {param_type} has a memory_size of 0"))?;
+            .ok_or_else(|| error!(InvalidData, "Type {param_type:?} has a memory_size of 0"))?;
         Ok(num_of_elements)
     }
 

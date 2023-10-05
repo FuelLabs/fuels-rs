@@ -317,7 +317,12 @@ impl BoundedDecoder {
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
         let words_to_skip = enum_width - selected_variant.compute_encoding_width()?;
-        let bytes_to_skip = words_to_skip .checked_mul(WORD_SIZE).ok_or_else(|| error!(InvalidData, "attempt to multiply words_to_skip ({words_to_skip:?}) by WORD_SIZE ({WORD_SIZE:?}) with overflow"))?;
+        let bytes_to_skip = words_to_skip.checked_mul(WORD_SIZE).ok_or_else(|| {
+            error!(
+                InvalidData,
+                "Overflow error while decoding enum {variants:?}"
+            )
+        })?;
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
@@ -519,7 +524,7 @@ impl<'a> fmt::Debug for DebugWithDepth<'a> {
                 .field(
                     "variants",
                     &variants
-                        .param_types
+                        .param_types()
                         .iter()
                         .map(|variant| self.descend(variant))
                         .collect::<Vec<_>>(),
