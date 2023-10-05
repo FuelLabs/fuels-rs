@@ -10,33 +10,9 @@ use fuel_tx::{
 };
 
 use fuel_types::ChainId;
-use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
 
-use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::types::Result;
-
-#[derive(Debug, Clone)]
-pub struct NetworkInfo {
-    pub consensus_parameters: ConsensusParameters,
-    pub max_gas_per_tx: u64,
-    pub min_gas_price: u64,
-    pub gas_costs: GasCosts,
-}
-
-impl NetworkInfo {
-    pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
-        Self {
-            max_gas_per_tx: chain_info.consensus_parameters.max_gas_per_tx,
-            consensus_parameters: chain_info.consensus_parameters.into(),
-            min_gas_price: node_info.min_gas_price,
-            gas_costs: chain_info.gas_costs,
-        }
-    }
-
-    pub fn chain_id(&self) -> ChainId {
-        self.consensus_parameters.chain_id
-    }
-}
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
@@ -125,7 +101,13 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
     fn witnesses(&self) -> &Vec<Witness>;
 
     /// Append witness and return the corresponding witness index
-    fn append_witness(&mut self, witness: Witness, network_info: &NetworkInfo) -> Result<usize>;
+    fn append_witness(
+        &mut self,
+        witness: Witness,
+        chain_id: &ChainId,
+        consensus_parameters: &ConsensusParameters,
+        gas_costs: &GasCosts,
+    ) -> Result<usize>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -240,10 +222,20 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn append_witness(&mut self, witness: Witness, network_info: &NetworkInfo) -> Result<usize> {
+    fn append_witness(
+        &mut self,
+        witness: Witness,
+        chain_id: &ChainId,
+        consensus_parameters: &ConsensusParameters,
+        gas_costs: &GasCosts,
+    ) -> Result<usize> {
         match self {
-            TransactionType::Script(tx) => tx.append_witness(witness, network_info),
-            TransactionType::Create(tx) => tx.append_witness(witness, network_info),
+            TransactionType::Script(tx) => {
+                tx.append_witness(witness, chain_id, consensus_parameters, gas_costs)
+            }
+            TransactionType::Create(tx) => {
+                tx.append_witness(witness, chain_id, consensus_parameters, gas_costs)
+            }
         }
     }
 }
@@ -341,13 +333,15 @@ macro_rules! impl_tx_wrapper {
             fn append_witness(
                 &mut self,
                 witness: Witness,
-                network_info: &NetworkInfo,
+                chain_id: &ChainId,
+                consensus_parameters: &ConsensusParameters,
+                gas_costs: &GasCosts,
             ) -> Result<usize> {
                 let idx = self.tx.witnesses().len();
                 self.tx.witnesses_mut().push(witness);
 
-                self.tx.precompute(&network_info.chain_id())?;
-                estimate_predicates(&mut self.tx, network_info)?;
+                self.tx.precompute(chain_id)?;
+                estimate_predicates(&mut self.tx, consensus_parameters, gas_costs)?;
 
                 Ok(idx)
             }
@@ -386,18 +380,20 @@ impl ScriptTransaction {
     }
 }
 
-pub(crate) fn estimate_predicates<T>(tx: &mut T, network_info: &NetworkInfo) -> Result<()>
+pub(crate) fn estimate_predicates<T>(
+    tx: &mut T,
+    consensus_parameters: &ConsensusParameters,
+    gas_costs: &GasCosts,
+) -> Result<()>
 where
     T: GasLimit + GasPrice + EstimatePredicates,
 {
-    let consensus_parameters = &network_info.consensus_parameters;
-
     let gas_price = *tx.gas_price();
     let gas_limit = *tx.gas_limit();
     *tx.gas_price_mut() = 0;
     *tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
 
-    tx.estimate_predicates(consensus_parameters, &network_info.gas_costs)?;
+    tx.estimate_predicates(consensus_parameters, gas_costs)?;
     *tx.gas_price_mut() = gas_price;
     *tx.gas_limit_mut() = gas_limit;
 

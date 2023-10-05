@@ -9,7 +9,8 @@ use fuel_tx::{
     StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
     Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, MemLayout, Salt};
+use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
+use fuel_vm::gas::GasCosts;
 
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
@@ -22,13 +23,37 @@ use crate::{
         input::Input,
         message::Message,
         transaction::{
-            estimate_predicates, CreateTransaction, NetworkInfo, ScriptTransaction, Transaction,
-            TxParameters,
+            estimate_predicates, CreateTransaction, ScriptTransaction, Transaction, TxParameters,
         },
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
 };
+
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
+
+#[derive(Debug, Clone)]
+pub struct NetworkInfo {
+    pub consensus_parameters: ConsensusParameters,
+    pub max_gas_per_tx: u64,
+    pub min_gas_price: u64,
+    pub gas_costs: GasCosts,
+}
+
+impl NetworkInfo {
+    pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
+        Self {
+            max_gas_per_tx: chain_info.consensus_parameters.max_gas_per_tx,
+            consensus_parameters: chain_info.consensus_parameters.into(),
+            min_gas_price: node_info.min_gas_price,
+            gas_costs: chain_info.gas_costs,
+        }
+    }
+
+    pub fn chain_id(&self) -> ChainId {
+        self.consensus_parameters.chain_id
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedSignatures {
@@ -77,7 +102,11 @@ macro_rules! impl_tx_trait {
                 tx.precompute(&network_info.chain_id())?;
 
                 if uses_predicates {
-                    estimate_predicates(&mut tx, &network_info)?;
+                    estimate_predicates(
+                        &mut tx,
+                        &network_info.consensus_parameters,
+                        &network_info.gas_costs,
+                    )?;
                 };
 
                 Ok($tx_ty { tx })

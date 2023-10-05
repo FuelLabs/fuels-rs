@@ -496,7 +496,12 @@ async fn test_tx() -> Result<()> {
     dbg!(tx.id(network_info.chain_id()));
     dbg!(&tx);
 
-    tx.append_witness(Witness::from([1u8; 32].to_vec()), &network_info)?;
+    tx.append_witness(
+        Witness::from([1u8; 32].to_vec()),
+        &network_info.chain_id(),
+        &network_info.consensus_parameters,
+        &network_info.gas_costs,
+    )?;
     dbg!(tx.id(network_info.chain_id()));
     dbg!(&tx);
 

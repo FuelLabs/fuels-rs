@@ -331,7 +331,7 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{Address, Output};
-    use fuels_core::types::transaction::{NetworkInfo, Transaction};
+    use fuels_core::types::{transaction::Transaction, transaction_builders::NetworkInfo};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
