@@ -158,13 +158,7 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
                 call_opcode_params.gas_forwarded_offset = Some(0);
             }
 
-            let param_type = if c.output_param.is_vm_heap_type() {
-                ParamType::Vector(Box::from(ParamType::U64))
-            } else {
-                ParamType::U64
-            };
-
-            get_single_call_instructions(&call_opcode_params, &param_type).len()
+            get_single_call_instructions(&call_opcode_params, &c.output_param).len()
         })
         .sum()
 }
@@ -354,30 +348,67 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    // The instructions are different if you want to return data that was on the heap
-    if let Some(inner_type_byte_size) = output_param_type.heap_inner_element_size() {
-        instructions.extend([
-            // The RET register contains the pointer address of the `CALL` return (a stack
-            // address).
-            // The RETL register contains the length of the `CALL` return (=24 because the
-            // Vec/Bytes/String struct takes 3 WORDs).
-            // We don't actually need it unless the Vec/Bytes/String struct encoding changes in the
-            // compiler.
-            // Load the word located at the address contained in RET, it's a word that
-            // translates to a heap address. 0x15 is a free register.
-            op::lw(0x15, RegId::RET, 0),
-            // We know a Vec/Bytes/String struct has its third WORD contain the length of the
-            // underlying vector, so use a 2 offset to store the length in 0x16, which is a free
-            // register.
-            op::lw(0x16, RegId::RET, 2),
-            // The in-memory size of the type is (in-memory size of the inner type) * length
-            op::muli(0x16, 0x16, inner_type_byte_size as u16),
-            op::retd(0x15, 0x16),
-        ]);
-    }
+    instructions.extend(extract_heap_data(output_param_type));
 
     #[allow(clippy::iter_cloned_collect)]
     instructions.into_iter().collect::<Vec<u8>>()
+}
+
+fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
+    match param_type {
+        ParamType::Enum { variants, .. } => {
+            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+                return vec![];
+            };
+
+            let ptr_offset = (param_type.compute_encoding_width() - 3) as u16;
+
+            [
+                vec![
+                    // All the registers 0x15-0x18 are free
+                    // Load the selected discriminant to a free register
+                    op::movi(0x17, discriminant as u32),
+                    // the first word of the CALL return is the enum discriminant. It is safe to load
+                    // because the offset is 0.
+                    op::lw(0x18, RegId::RET, 0),
+                    // If the discriminant is not the one from the heap type, then jump ahead and
+                    // return an empty receipt. Otherwise return heap data with the right length.
+                    // Jump by (last argument + 1) instructions according to specs
+                    op::jnef(0x17, 0x18, RegId::ZERO, 3),
+                ],
+                // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
+                extract_data_receipt(ptr_offset, false, heap_type),
+                // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
+                vec![op::retd(0x15, RegId::ZERO)],
+            ]
+            .concat()
+        }
+        _ => extract_data_receipt(0, true, param_type),
+    }
+}
+
+fn extract_data_receipt(
+    ptr_offset: u16,
+    top_level_type: bool,
+    param_type: &ParamType,
+) -> Vec<fuel_asm::Instruction> {
+    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
+        return vec![];
+    };
+
+    let len_offset = match (top_level_type, param_type) {
+        // A nested RawSlice shows up as ptr,len
+        (false, ParamType::RawSlice) => 1,
+        // Every other heap type (currently) shows up as ptr,cap,len
+        _ => 2,
+    };
+
+    vec![
+        op::lw(0x15, RegId::RET, ptr_offset),
+        op::lw(0x16, RegId::RET, ptr_offset + len_offset),
+        op::muli(0x16, 0x16, inner_type_byte_size as u16),
+        op::retd(0x15, 0x16),
+    ]
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
