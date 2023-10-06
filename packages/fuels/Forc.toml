@@ -58,6 +58,7 @@ members = [
   'tests/types/contracts/enum_inside_struct',
   'tests/types/contracts/evm_address',
   'tests/types/contracts/generics',
+  'tests/types/contracts/heap_type_in_enums',
   'tests/types/contracts/identity',
   'tests/types/contracts/native_types',
   'tests/types/contracts/nested_structs',
