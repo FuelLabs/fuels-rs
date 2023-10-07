@@ -3,7 +3,7 @@ use tempfile::NamedTempFile;
 
 use fuel_core_services::{RunnableService, RunnableTask, ServiceRunner, State, StateWatcher};
 
-pub use fuel_core_services::Service as ServiceTrait;
+use fuel_core_services::Service as ServiceTrait;
 
 use fuel_core_client::client::FuelClient;
 use serde_json::{to_value, Value};
@@ -21,9 +21,7 @@ struct ExtendedConfig {
 
 impl ExtendedConfig {
     pub fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
-        let chain_config_json = to_value(&self.config.chain_conf)?;
-
-        self.write_temp_config_file(chain_config_json)?;
+        self.generate_chain_config_file()?;
 
         let port = self.config.addr.port().to_string();
         let mut args = vec![
@@ -114,7 +112,14 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    pub fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
+    fn generate_chain_config_file(&mut self) -> Result<(), Error> {
+        let chain_config_json = to_value(&self.config.chain_conf)?;
+
+        self.write_temp_config_file(chain_config_json)?;
+        Ok(())
+    }
+
+    fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
         writeln!(self.config_file, "{}", &config.to_string())?;
         Ok(())
     }

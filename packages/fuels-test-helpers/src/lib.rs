@@ -1,47 +1,40 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
+use fuel_core_chain_config::StateConfig;
+
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
-#[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::DbType;
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::FuelService;
-#[cfg(feature = "fuel-core-lib")]
-pub use fuel_core::service::{config::Trigger, Config};
 
-use fuel_core_chain_config::{ChainConfig, StateConfig};
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
 use fuels_core::{
     constants::BASE_ASSET_ID,
-    error,
     types::{
         bech32::Bech32Address,
         coin::{Coin, CoinStatus},
-        errors::{Error, Result},
+        errors::Result,
         message::{Message, MessageStatus},
     },
 };
 
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use node_types::*;
-
 use rand::Fill;
-pub use utils::{into_coin_configs, into_message_configs};
+use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
-#[cfg(not(feature = "fuel-core-lib"))]
+pub use node_types::*;
 pub mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]
-pub mod fuel_service;
-#[cfg(not(feature = "fuel-core-lib"))]
-pub use fuel_service::*;
+pub(crate) mod fuel_bin_service;
 
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
+
+pub mod service;
+pub use service::*;
+
 mod utils;
 mod wallets_config;
 
@@ -159,11 +152,13 @@ pub async fn setup_test_provider(
     let mut config = node_config.unwrap_or_else(Config::local_node);
     config.chain_conf = chain_conf;
 
-    let srv = FuelService::new_node(config)
-        .await
-        .map_err(|err| error!(InfrastructureError, "{err}"))?;
+    // let srv = FuelService::new_node(config)
+    //     .await
+    //     .map_err(|err| error!(InfrastructureError, "{err}"))?;
 
-    let address = srv.bound_address;
+    let srv = service::FuelService::start(config).await?;
+
+    let address = srv.bound_address();
 
     tokio::spawn(async move {
         let _own_the_handle = srv;

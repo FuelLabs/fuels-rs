@@ -54,20 +54,6 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
-#[cfg(feature = "std")]
-pub mod fuel_node {
-    #[cfg(feature = "fuel-core-lib")]
-    pub use fuel_core::{
-        chain_config::ChainConfig,
-        service::{config::Trigger, Config, DbType, FuelService, ServiceTrait},
-    };
-    #[cfg(not(feature = "fuel-core-lib"))]
-    pub use fuels_test_helpers::{
-        fuel_service::{FuelService, ServiceTrait},
-        node_types::{ChainConfig, Config, DbType, Trigger},
-    };
-}
-
 /// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
@@ -87,7 +73,6 @@ pub mod prelude {
             Account, Signer, ViewOnlyAccount,
         },
         core::codec::{LogDecoder, LogId, LogResult},
-        fuel_node::*,
         programs::{
             call_utils::TxDependencyExtension,
             contract::{

@@ -30,10 +30,32 @@ pub enum Trigger {
     },
 }
 
+#[cfg(feature = "fuel-core-lib")]
+impl From<Trigger> for fuel_core_poa::Trigger {
+    fn from(value: Trigger) -> Self {
+        match value {
+            Trigger::Instant => fuel_core_poa::Trigger::Instant,
+            Trigger::Never => fuel_core_poa::Trigger::Never,
+            Trigger::Interval { block_time } => fuel_core_poa::Trigger::Interval { block_time },
+            _ => value.into(),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DbType {
     InMemory,
     RocksDb,
+}
+
+#[cfg(feature = "fuel-core-lib")]
+impl From<DbType> for fuel_core::service::DbType {
+    fn from(value: DbType) -> Self {
+        match value {
+            DbType::InMemory => fuel_core::service::DbType::InMemory,
+            DbType::RocksDb => fuel_core::service::DbType::RocksDb,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -84,7 +106,22 @@ impl Default for Config {
     }
 }
 
-pub type InternalDaBlockHeight = u64;
+#[cfg(feature = "fuel-core-lib")]
+impl From<Config> for fuel_core::service::Config {
+    fn from(value: Config) -> Self {
+        Self {
+            addr: value.addr,
+            max_database_cache_size: value.max_database_cache_size,
+            database_path: value.database_path,
+            database_type: value.database_type.into(),
+            utxo_validation: value.utxo_validation,
+            manual_blocks_enabled: value.manual_blocks_enabled,
+            block_production: value.block_production.into(),
+            chain_conf: value.chain_conf,
+            ..fuel_core::service::Config::local_node()
+        }
+    }
+}
 
 pub(crate) struct HexType;
 
@@ -110,7 +147,7 @@ where
     }
 }
 
-pub mod serde_hex {
+pub(crate) mod serde_hex {
     use std::{convert::TryFrom, fmt};
 
     use hex::{FromHex, ToHex};

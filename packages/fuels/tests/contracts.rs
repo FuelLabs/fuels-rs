@@ -2,7 +2,6 @@
 use std::future::Future;
 use std::vec;
 
-use fuel_core::chain_config::ChainConfig;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -1008,7 +1007,9 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{tx::ConsensusParameters, types::coin::Coin};
+    use fuels::{
+        test_helpers::node_types::ChainConfig, tx::ConsensusParameters, types::coin::Coin,
+    };
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 
@@ -1330,7 +1331,10 @@ fn db_rocksdb() {
     use fuels::{
         accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
         client::{PageDirection, PaginationRequest},
-        prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+        prelude::{
+            node_types::{ChainConfig, Config},
+            setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT,
+        },
     };
 
     let temp_dir = tempfile::tempdir()
@@ -1667,6 +1671,23 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     )?
     .deploy(&predicate, TxParameters::default())
     .await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn bla_bla() -> Result<()> {
+    use service::FuelService;
+
+    let config = Config::local_node();
+
+    let service = FuelService::start(config).await?;
+
+    let provider = Provider::connect(service.bound_address().to_string()).await?;
+
+    dbg!(service.state());
+    service.stop().await.unwrap();
+    dbg!(service.state());
 
     Ok(())
 }

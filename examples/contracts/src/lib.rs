@@ -2,28 +2,20 @@
 mod tests {
     use fuels::{
         core::codec::DecoderConfig,
-        prelude::{LoadConfiguration, StorageConfiguration},
-        types::{
-            errors::{error, Error, Result},
-            Bits256,
-        },
+        prelude::{Config, LoadConfiguration, StorageConfiguration},
+        types::{errors::Result, Bits256},
     };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
         // ANCHOR: instantiate_client
-        use fuels::{
-            fuel_node::{Config, FuelService},
-            prelude::Provider,
-        };
+        use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node())
-            .await
-            .map_err(|err| error!(InfrastructureError, "{err}"))?;
+        let server = FuelService::start(Config::local_node()).await?;
 
         // Create a client that will talk to the node created above.
-        let client = Provider::from(server.bound_address).await?;
+        let client = Provider::from(server.bound_address()).await?;
         assert!(client.healthy().await?);
         // ANCHOR_END: instantiate_client
         Ok(())

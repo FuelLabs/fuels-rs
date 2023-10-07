@@ -1,7 +1,9 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
+
+use service::FuelService;
+
 use fuel_core_types::{
     fuel_crypto::rand::{self, Rng},
     tai64::Tai64,
@@ -10,9 +12,9 @@ use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    test_helpers::Config,
+    test_helpers::node_types::Config,
     tx::Receipt,
-    types::{block::Block, coin_type::CoinType, errors::error, message::Message},
+    types::{block::Block, coin_type::CoinType, message::Message},
 };
 use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
@@ -76,16 +78,14 @@ async fn test_network_error() -> Result<()> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let config = CoreConfig::local_node();
-    let service = FuelService::new_node(config)
-        .await
-        .map_err(|err| error!(InfrastructureError, "{err}"))?;
-    let provider = Provider::connect(service.bound_address.to_string()).await?;
+    let config = Config::local_node();
+    let service = FuelService::start(config).await?;
+    let provider = Provider::connect(service.bound_address().to_string()).await?;
 
     wallet.set_provider(provider);
 
     // Simulate an unreachable node
-    service.stop_and_await().await.unwrap();
+    service.stop().await.unwrap();
 
     let response = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
