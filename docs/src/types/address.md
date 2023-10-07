@@ -1,6 +1,6 @@
 # Address
 
-Like `Bytes32`, `Address` is a wrapper on `[u8; 32]` with similar methods and implements the same traits (see [fuel-types documentation](https://docs.rs/fuel-types/latest/fuel_types/struct.Address.html)).
+Like `Bytes32`, `Address` is a wrapper on `[u8; 32]` with similar methods and implements the same traits (see [fuel-types documentation](https://docs.rs/fuel-types/{{versions.fuel-types}}/fuel_types/struct.Address.html)).
 
 These are the main ways of creating an `Address`:
 

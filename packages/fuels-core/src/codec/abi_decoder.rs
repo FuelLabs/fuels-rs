@@ -84,6 +84,7 @@ mod tests {
     use std::vec;
 
     use super::*;
+    use crate::types::U256;
     use crate::{
         constants::WORD_SIZE,
         types::{enum_variants::EnumVariants, errors::Error, StaticStringToken},
@@ -106,11 +107,19 @@ mod tests {
             ParamType::U8,
             ParamType::U16,
             ParamType::U64,
+            ParamType::U128,
+            ParamType::U256,
         ];
         let data = [
-            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff,
+            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, // u32
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, // u8
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, // u16
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // u64
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, // u128
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, // u256
         ];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
@@ -120,6 +129,8 @@ mod tests {
             Token::U8(u8::MAX),
             Token::U16(u16::MAX),
             Token::U64(u64::MAX),
+            Token::U128(u128::MAX),
+            Token::U256(U256::MAX),
         ];
         assert_eq!(decoded, expected);
         Ok(())
@@ -508,6 +519,73 @@ mod tests {
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
+    }
+
+    #[test]
+    fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
+        let mut param_types = vec![
+            ParamType::U64,
+            ParamType::Bool,
+            ParamType::Vector(Box::from(ParamType::U64)),
+        ];
+        // empty data
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let variants = EnumVariants::new(param_types.clone())?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+        // it works if there is only one heap type
+        let _ = ABIDecoder::default().decode(&enum_param_type, &data)?;
+
+        param_types.append(&mut vec![ParamType::Bytes]);
+        let variants = EnumVariants::new(param_types)?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+        // fails if there is more than one variant using heap type in the enum
+        let error = ABIDecoder::default()
+            .decode(&enum_param_type, &data)
+            .expect_err("Should fail");
+        let expected_error =
+            "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+                .to_string();
+        assert_eq!(error.to_string(), expected_error);
+
+        Ok(())
+    }
+
+    #[test]
+    fn enums_w_too_deeply_nested_heap_types_not_allowed() {
+        let param_types = vec![
+            ParamType::U8,
+            ParamType::Struct {
+                fields: vec![ParamType::RawSlice],
+                generics: vec![],
+            },
+        ];
+        let variants = EnumVariants::new(param_types).unwrap();
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+
+        let err = ABIDecoder::default()
+            .decode(&enum_param_type, &[])
+            .expect_err("should have failed");
+
+        let Error::InvalidType(msg) = err else {
+            panic!("Unexpected err: {err}");
+        };
+
+        assert_eq!(
+            msg,
+            "Enums currently support only one level deep heap types."
+        );
     }
 
     #[test]

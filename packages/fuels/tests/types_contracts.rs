@@ -1995,3 +1995,75 @@ async fn test_contract_std_lib_string() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_heap_type_in_enums() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "HeapTypeInEnum",
+            project = "packages/fuels/tests/types/contracts/heap_type_in_enums"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "HeapTypeInEnum",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    let resp = contract_methods.returns_bytes_result(true).call().await?;
+    let expected = Ok(Bytes(vec![1, 1, 1, 1]));
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_bytes_result(false).call().await?;
+    let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
+    assert_eq!(resp.value, expected);
+
+    let resp = contract_methods.returns_vec_result(true).call().await?;
+    let expected = Ok(vec![2, 2, 2, 2, 2]);
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_vec_result(false).call().await?;
+    let expected = Err(TestError::Else(7777));
+    assert_eq!(resp.value, expected);
+
+    let resp = contract_methods.returns_string_result(true).call().await?;
+    let expected = Ok("Hello World".to_string());
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_result(false).call().await?;
+    let expected = Err(TestError::Else(3333));
+    assert_eq!(resp.value, expected);
+
+    let resp = contract_methods.returns_bytes_option(true).call().await?;
+    let expected = Some(Bytes(vec![1, 1, 1, 1]));
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_bytes_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    let resp = contract_methods.returns_vec_option(true).call().await?;
+    let expected = Some(vec![2, 2, 2, 2, 2]);
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_vec_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    let resp = contract_methods.returns_string_option(true).call().await?;
+    let expected = Some("Hello World".to_string());
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
+    let _ = contract_methods
+        .would_raise_a_memory_overflow()
+        .call()
+        .await?;
+
+    let resp = contract_methods
+        .returns_a_heap_type_too_deep()
+        .call()
+        .await
+        .expect_err("Should fail because it has a deeply nested heap type");
+    let expected =
+        "Invalid type: Enums currently support only one level deep heap types.".to_string();
+    assert_eq!(resp.to_string(), expected);
+    Ok(())
+}
