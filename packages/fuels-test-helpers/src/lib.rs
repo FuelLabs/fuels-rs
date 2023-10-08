@@ -152,10 +152,6 @@ pub async fn setup_test_provider(
     let mut config = node_config.unwrap_or_else(Config::local_node);
     config.chain_conf = chain_conf;
 
-    // let srv = FuelService::new_node(config)
-    //     .await
-    //     .map_err(|err| error!(InfrastructureError, "{err}"))?;
-
     let srv = service::FuelService::start(config).await?;
 
     let address = srv.bound_address();

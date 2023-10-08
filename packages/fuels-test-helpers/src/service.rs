@@ -15,6 +15,7 @@ pub struct FuelService {
 }
 
 impl FuelService {
+    #[allow(clippy::useless_conversion)]
     pub async fn start(config: Config) -> Result<Self> {
         let service = FService::new_node(config.into())
             .await
