@@ -10,8 +10,8 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK."
 
-#[package.metadata.cargo-machete]
-#ignored = ["fuel-core"]
+[package.metadata.cargo-machete]
+ignored = ["fuel-core"]
 
 [dependencies]
 fuel-core = { workspace = true, default-features = false, optional = true }
