@@ -361,7 +361,8 @@ fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
                 return vec![];
             };
 
-            let ptr_offset = (param_type.compute_encoding_width() - 3) as u16;
+            let ptr_offset =
+                (param_type.compute_encoding_width() - heap_type.compute_encoding_width()) as u16;
 
             [
                 vec![
@@ -397,9 +398,10 @@ fn extract_data_receipt(
     };
 
     let len_offset = match (top_level_type, param_type) {
-        // A nested RawSlice shows up as ptr,len
+        // Nested `RawSlice` or `str` show up as ptr, len
         (false, ParamType::RawSlice) => 1,
-        // Every other heap type (currently) shows up as ptr,cap,len
+        (false, ParamType::StringSlice) => 1,
+        // Every other heap type (currently) shows up as ptr, cap, len
         _ => 2,
     };
 
