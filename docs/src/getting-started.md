@@ -2,7 +2,7 @@
 
 ## Installation Guide
 
-Please visit the Fuel's [installation guide](https://docs.fuel.network/guides/installation) to install The Fuel toolchain binaries and pre requisites.
+Please visit the Fuel [installation guide](https://docs.fuel.network/guides/installation) to install the Fuel toolchain binaries and prerequisites.
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
 
