@@ -15,7 +15,7 @@ enum State {
 
 impl Hash for str[4] {
     fn hash(self, ref mut state: Hasher) {
-        state.write_str(self);
+        state.write_str(from_str_array(self));
     }
 }
 
@@ -38,9 +38,11 @@ impl MyContract for Contract {
     }
 
     fn returns_struct_in_tuple(input: (u64, Person)) -> (u64, Person) {
-        let expected = (42, Person { name: "Jane" });
+        let expected = (42, Person {
+            name: __to_str_array("Jane"),
+        });
         assert(input.0 == expected.0);
-        assert(sha256(input.1.name) == sha256(expected.1.name));
+        assert(sha256(from_str_array(input.1.name)) == sha256(from_str_array(expected.1.name)));
 
         expected
     }

@@ -52,7 +52,7 @@ const COUNTER_KEY = 0x0000000000000000000000000000000000000000000000000000000000
 
 storage {
     value: u64 = 0,
-    value_str: str[4] = "none",
+    value_str: str[4] = __to_str_array("none"),
     value_bool: bool = false,
 }
 
