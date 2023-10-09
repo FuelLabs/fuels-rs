@@ -32,7 +32,7 @@ fn main(match_enum: MatchEnum) {
     if let MatchEnum::RequirePrimitive = match_enum {
         require(false, 42);
     } else if let MatchEnum::RequireString = match_enum {
-        require(false, "fuel");
+        require(false, __to_str_array("fuel"));
     } else if let MatchEnum::RequireCustomGeneric = match_enum {
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
@@ -49,7 +49,7 @@ fn main(match_enum: MatchEnum) {
         require(false, test_deeply_nested_generic);
     } else if let MatchEnum::RequireWithAdditionalLogs = match_enum {
         log(42);
-        log("fuel");
+        log(__to_str_array("fuel"));
         require(false, 64);
     }
 }

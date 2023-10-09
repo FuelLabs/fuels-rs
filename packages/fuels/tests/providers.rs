@@ -65,9 +65,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     Ok(())
 }
 
-// Ignored until https://github.com/FuelLabs/fuel-core/issues/1384 is resolved
 #[tokio::test]
-#[ignore]
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -370,7 +368,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 159;
+    let gas_used_by_script = 169;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -408,7 +406,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     );
     let contract_id = contract_instance.contract_id();
     let contract_methods = contract_instance.methods();
-    let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
+    let asset_id = contract_id.asset_id(&Bits256::zeroed());
 
     let mut balance_response = contract_methods
         .get_balance(contract_id, asset_id)
