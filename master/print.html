@@ -1480,7 +1480,7 @@ configurable {
     U8: u8 = 8u8,
     BOOL: bool = true,
     ARRAY: [u32; 3] = [253u32, 254u32, 255u32],
-    STR_4: str[4] = &quot;fuel&quot;,
+    STR_4: str[4] = __to_str_array(&quot;fuel&quot;),
     STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
         field_1: 8u8,
         field_2: 16,
@@ -1877,7 +1877,7 @@ let is_error = response.is_err();
 <pre><code class="language-rust ignore">    fn produce_logs_variables() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
-        let e: str[4] = &quot;Fuel&quot;;
+        let e: str[4] = __to_str_array(&quot;Fuel&quot;);
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
         log(f);
@@ -1911,6 +1911,9 @@ let is_error = response.is_err();
     let logs = response.decode_logs();
 </code></pre>
 <p>Due to possible performance hits, it is not recommended to use <code>decode_logs()</code> outside of a debugging scenario.</p>
+<blockquote>
+<p><strong>Note:</strong> String slices can not be logged directly. Use the <code>__to_str_array()</code> function to convert it to a <code>str[N]</code> first.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="output-variables"><a class="header" href="#output-variables">Output variables</a></h1>
 <!-- This section should explain variable outputs  -->
 <!-- variable_outputs:example:start -->
@@ -1923,7 +1926,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs by chaining <code>append_variable_outputs(amount)</code> to your call. Like this:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
-        let asset_id = contract_id.asset_id(&amp;Bits256::zeroed()).into();
+        let asset_id = contract_id.asset_id(&amp;Bits256::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -2187,14 +2190,14 @@ let is_error = response.is_err();
 <h2 id="calling-contracts-from-scripts"><a class="header" href="#calling-contracts-from-scripts">Calling contracts from scripts</a></h2>
 <p>Scripts use the same interfaces for setting external contracts as <a href="./calling-contracts/other-contracts.html">contract methods</a>.</p>
 <p>Below is an example that uses <code>with_contracts(&amp;[&amp;contract_instance, ...])</code>.</p>
-<pre><code class="language-rust ignore">    let response = instance
+<pre><code class="language-rust ignore">    let response = script_instance
         .main(contract_id)
         .with_contracts(&amp;[&amp;contract_instance])
         .call()
         .await?;
 </code></pre>
 <p>And this is an example that uses <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
-<pre><code class="language-rust ignore">    let response = instance
+<pre><code class="language-rust ignore">    let response = script_instance
         .main(contract_id)
         .with_contract_ids(&amp;[contract_id.into()])
         .call()
@@ -2220,7 +2223,7 @@ configurable {
     U8: u8 = 8u8,
     BOOL: bool = true,
     ARRAY: [u32; 3] = [253u32, 254u32, 255u32],
-    STR_4: str[4] = &quot;fuel&quot;,
+    STR_4: str[4] = __to_str_array(&quot;fuel&quot;),
     STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
         field_1: 8u8,
         field_2: 16,
@@ -3345,7 +3348,7 @@ abi LiquidityPool {
     fn withdraw(recipient: Address);
 }
 
-const BASE_TOKEN: b256 = 0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c;
+const BASE_TOKEN: AssetId = AssetId::from(0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c);
 
 impl LiquidityPool for Contract {
     #[payable]
