@@ -43,6 +43,8 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
+        output_param.validate_is_decodable()?;
+
         let data = self
             .extract_raw_data(output_param, &contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
@@ -62,13 +64,37 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
+        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
         match output_param.get_return_location() {
-            ReturnLocation::ReturnData if output_param.is_vm_heap_type() => {
+            ReturnLocation::ReturnData
+                if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
+            {
+                self.extract_enum_heap_type_data(contract_id)
+            }
+            ReturnLocation::ReturnData if extra_receipts_needed => {
                 self.extract_return_data_heap(contract_id)
             }
             ReturnLocation::ReturnData => self.extract_return_data(contract_id),
             ReturnLocation::Return => self.extract_return(contract_id),
         }
+    }
+
+    fn extract_enum_heap_type_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
+        for (index, (current_receipt, next_receipt)) in
+            self.receipts.iter().tuple_windows().enumerate()
+        {
+            if let (Some(first_data), Some(second_data)) =
+                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
+            {
+                let mut first_data = first_data.clone();
+                let mut second_data = second_data.clone();
+                self.receipts.drain(index..=index + 1);
+                first_data.append(&mut second_data);
+
+                return Some(first_data);
+            }
+        }
+        None
     }
 
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
@@ -114,8 +140,10 @@ impl ReceiptParser {
         for (index, (current_receipt, next_receipt)) in
             self.receipts.iter().tuple_windows().enumerate()
         {
-            if let Some(data) = Self::extract_vec_data(current_receipt, next_receipt, contract_id) {
-                let data = data.clone();
+            if let (_stack_data, Some(heap_data)) =
+                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
+            {
+                let data = heap_data.clone();
                 self.receipts.drain(index..=index + 1);
                 return Some(data);
             }
@@ -123,11 +151,11 @@ impl ReceiptParser {
         None
     }
 
-    fn extract_vec_data<'a>(
-        current_receipt: &Receipt,
+    fn extract_heap_data_from_receipts<'a>(
+        current_receipt: &'a Receipt,
         next_receipt: &'a Receipt,
         contract_id: &ContractId,
-    ) -> Option<&'a Vec<u8>> {
+    ) -> (Option<&'a Vec<u8>>, Option<&'a Vec<u8>>) {
         match (current_receipt, next_receipt) {
             (
                 Receipt::ReturnData {
@@ -142,11 +170,13 @@ impl ReceiptParser {
                 },
             ) if *first_id == *contract_id
                 && first_data.is_some()
+                // The second ReturnData receipt was added by a script instruction, its contract id
+                // is null
                 && *second_id == ContractId::zeroed() =>
             {
-                vec_data.as_ref()
+                (first_data.as_ref(), vec_data.as_ref())
             }
-            _ => None,
+            _ => (None, None),
         }
     }
 }

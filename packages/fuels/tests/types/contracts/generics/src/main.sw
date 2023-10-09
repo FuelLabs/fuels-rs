@@ -32,7 +32,7 @@ struct MegaExample<T, U> {
 
 impl Hash for str[3] {
     fn hash(self, ref mut state: Hasher) {
-        state.write_str(self);
+        state.write_str(from_str_array(self));
     }
 }
 
@@ -61,11 +61,11 @@ impl MyContract for Contract {
     fn struct_delegating_generic(arg1: PassTheGenericOn<str[3]>) -> PassTheGenericOn<str[3]> {
         let expected = PassTheGenericOn {
             one: SimpleGeneric {
-                single_generic_param: "abc",
+                single_generic_param: __to_str_array("abc"),
             },
         };
 
-        assert(sha256(expected.one.single_generic_param) == sha256(arg1.one.single_generic_param));
+        assert(sha256(from_str_array(expected.one.single_generic_param)) == sha256(from_str_array(arg1.one.single_generic_param)));
 
         expected
     }

@@ -36,7 +36,7 @@ impl BoundedDecoder {
     }
 
     pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        Self::is_type_decodable(param_type)?;
+        param_type.validate_is_decodable()?;
         Ok(self.decode_param(param_type, bytes)?.token)
     }
 
@@ -46,22 +46,11 @@ impl BoundedDecoder {
         bytes: &[u8],
     ) -> Result<Vec<Token>> {
         for param_type in param_types {
-            Self::is_type_decodable(param_type)?;
+            param_type.validate_is_decodable()?;
         }
         let (tokens, _) = self.decode_params(param_types, bytes)?;
 
         Ok(tokens)
-    }
-
-    fn is_type_decodable(param_type: &ParamType) -> Result<()> {
-        if param_type.contains_nested_heap_types() {
-            Err(error!(
-                InvalidType,
-                "Type {param_type:?} contains nested heap types (`Vec` or `Bytes`), this is not supported."
-            ))
-        } else {
-            Ok(())
-        }
     }
 
     fn run_w_depth_tracking(
@@ -312,8 +301,12 @@ impl BoundedDecoder {
 
         let discriminant = peek_u32(bytes)? as u8;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
-
-        let words_to_skip = enum_width - selected_variant.compute_encoding_width();
+        let skip_extra = variants
+            .heap_type_variant()
+            .is_some_and(|(heap_discriminant, _)| heap_discriminant == discriminant)
+            .then_some(3);
+        let words_to_skip =
+            enum_width - selected_variant.compute_encoding_width() + skip_extra.unwrap_or_default();
         let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 

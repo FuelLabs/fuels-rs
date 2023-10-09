@@ -727,31 +727,29 @@ async fn test_contract_with_contract_logs() -> Result<()> {
 #[tokio::test]
 #[allow(unused_variables)]
 async fn test_script_logs_with_contract_logs() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
-
-    abigen!(
-        Contract(
-        name="MyContract",
-        abi="packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json",
-    ),Script(
-        name="log_script",
-        abi="packages/fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs-abi.json"
-    )
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "packages/fuels/tests/logs/contract_logs",
+            ),
+            Script(
+                name = "LogScript",
+                project = "packages/fuels/tests/logs/script_with_contract_logs"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        ),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
     );
-
-    let contract_id: ContractId = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await?
-    .into();
-
-    let contract_instance = MyContract::new(contract_id, wallet.clone());
-
-    let bin_path =
-        "../fuels/tests/logs/script_with_contract_logs/out/debug/script_with_contract_logs.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
 
     let expected_num_contract_logs = 4;
 
@@ -768,8 +766,10 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
+    let contract_id: ContractId = contract_instance.id().into();
+
     // ANCHOR: external_contract_ids
-    let response = instance
+    let response = script_instance
         .main(contract_id)
         .with_contract_ids(&[contract_id.into()])
         .call()
@@ -777,7 +777,7 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     // ANCHOR_END: external_contract_ids
 
     // ANCHOR: external_contract
-    let response = instance
+    let response = script_instance
         .main(contract_id)
         .with_contracts(&[&contract_instance])
         .call()
@@ -807,12 +807,12 @@ async fn test_script_decode_logs_with_type() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
-            name = "log_script",
+            name = "LogScript",
             project = "packages/fuels/tests/logs/script_logs"
         )),
         LoadScript(
             name = "script_instance",
-            script = "log_script",
+            script = "LogScript",
             wallet = "wallet"
         )
     );
@@ -884,12 +884,12 @@ async fn test_script_require_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
-            name = "log_script",
+            name = "LogScript",
             project = "packages/fuels/tests/scripts/script_require"
         )),
         LoadScript(
             name = "script_instance",
-            script = "log_script",
+            script = "LogScript",
             wallet = "wallet"
         )
     );
@@ -1041,26 +1041,32 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_require_from_contract() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "MyContract",
+                project = "packages/fuels/tests/contracts/lib_contract",
+            ),
+            Script(
+                name = "LogScript",
+                project = "packages/fuels/tests/scripts/require_from_contract"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        ),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
 
-    abigen!(Contract(name = "MyContract", abi = "packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract-abi.json"),
-            Script(name = "log_script", abi = "packages/fuels/tests/scripts/require_from_contract/out/debug/require_from_contract-abi.json"));
-
-    let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
-
-    let bin_path =
-        "../fuels/tests/scripts/require_from_contract/out/debug/require_from_contract.bin";
-    let instance = log_script::new(wallet.clone(), bin_path);
-
-    let error = instance
-        .main(contract_id)
+    let error = script_instance
+        .main(contract_instance.id())
         .with_contracts(&[&contract_instance])
         .call()
         .await
@@ -1152,12 +1158,12 @@ async fn test_script_asserts_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
-            name = "log_script",
+            name = "LogScript",
             project = "packages/fuels/tests/scripts/script_asserts"
         )),
         LoadScript(
             name = "script_instance",
-            script = "log_script",
+            script = "LogScript",
             wallet = "wallet"
         )
     );
@@ -1245,7 +1251,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
     {
         let contract_id = contract_instance.contract_id();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed());
         let address = wallet.address();
 
         let error = contract_methods
@@ -1262,31 +1268,32 @@ async fn contract_token_ops_error_messages() -> Result<()> {
 
 #[tokio::test]
 async fn test_log_results() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/logs/contract_logs/out/debug/contract_logs-abi.json"
-    ));
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/logs/contract_logs"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
 
-    let wallet = launch_provider_and_get_wallet().await;
-
-    let contract_id = Contract::load_from(
-        "tests/logs/contract_logs/out/debug/contract_logs.bin",
-        LoadConfiguration::default(),
-    )?
-    .deploy(&wallet, TxParameters::default())
-    .await?;
-
-    let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
-
-    let contract_methods = contract_instance.methods();
-    let response = contract_methods.produce_bad_logs().call().await?;
+    let response = contract_instance
+        .methods()
+        .produce_bad_logs()
+        .call()
+        .await?;
 
     let log = response.decode_logs();
 
     let expected_err = format!(
         "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
          Consider adding external contracts with `with_contracts()`",
-        contract_id.hash, [0u8; 8]
+        contract_instance.id().hash,
+        [0u8; 8]
     );
 
     let succeeded = log.filter_succeeded();
@@ -1311,6 +1318,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
             wallet = "wallet"
         )
     );
+
     let methods = contract_instance.methods();
     {
         // Single call: decoding with too low max_tokens fails
@@ -1391,12 +1399,12 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
-            name = "MyScript",
+            name = "LogScript",
             project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
         )),
         LoadScript(
             name = "script_instance",
-            script = "MyScript",
+            script = "LogScript",
             wallet = "wallet"
         )
     );
@@ -1438,6 +1446,40 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         let logs = response.decode_logs();
         assert!(!logs.filter_succeeded().is_empty())
     }
+
+    Ok(())
+}
+
+// String slices can not be decoded from logs as they are encoded as ptr, len
+// TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
+#[tokio::test]
+async fn test_string_slice_log() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/logs/contract_logs"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let response = contract_instance
+        .methods()
+        .produce_string_slice_log()
+        .call()
+        .await?;
+
+    let log = response.decode_logs();
+
+    let expected_err =
+        "Invalid data: String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
+
+    let failed = log.filter_failed();
+    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
 
     Ok(())
 }

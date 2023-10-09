@@ -54,7 +54,7 @@ impl MyContract for Contract {
     }
 
     fn get_error() -> Result<Address, TestError> {
-        Result::Err(TestError::NoAddress("error"))
+        Result::Err(TestError::NoAddress(__to_str_array("error")))
     }
 
     fn input_ok(ok_address: Result<Address, TestError>) -> bool {

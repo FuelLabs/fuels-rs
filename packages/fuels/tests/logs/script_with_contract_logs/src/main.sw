@@ -10,7 +10,7 @@ fn main(contract_id: ContractId) {
 
     let f: bool = true;
     let u: u64 = 42;
-    let e: str[4] = "Fuel";
+    let e: str[4] = __to_str_array("Fuel");
     let l: [u8; 3] = [1u8, 2u8, 3u8];
     log(f);
     log(u);

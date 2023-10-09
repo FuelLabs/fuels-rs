@@ -21,3 +21,5 @@ You can use the `decode_logs()` function to retrieve a `LogResult` struct contai
 ```
 
 Due to possible performance hits, it is not recommended to use `decode_logs()` outside of a debugging scenario.
+
+> **Note:** String slices can not be logged directly. Use the `__to_str_array()` function to convert it to a `str[N]` first.
