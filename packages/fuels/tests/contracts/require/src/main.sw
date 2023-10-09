@@ -33,7 +33,7 @@ impl TestContract for Contract {
     }
 
     fn require_string() {
-        require(false, "fuel");
+        require(false, __to_str_array("fuel"));
     }
 
     fn require_custom_generic() {
@@ -54,7 +54,7 @@ impl TestContract for Contract {
 
     fn require_with_additional_logs() {
         log(42);
-        log("fuel");
+        log(__to_str_array("fuel"));
         require(false, 64);
     }
 }

@@ -111,7 +111,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 331);
+        assert_eq!(transaction_cost.gas_used, 397);
 
         Ok(())
     }
@@ -364,7 +364,7 @@ mod tests {
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
-        let asset_id = contract_id.asset_id(&Bits256::zeroed()).into();
+        let asset_id = contract_id.asset_id(&Bits256::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
@@ -657,7 +657,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 542);
+        assert_eq!(transaction_cost.gas_used, 618);
 
         Ok(())
     }

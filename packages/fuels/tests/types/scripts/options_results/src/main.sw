@@ -10,6 +10,6 @@ fn main(bim: Option<u32>, _bam: Option<u64>) -> Result<Option<bool>, TestError> 
     } else if let Option::Some(_) = bim {
         Result::Ok(Option::None)
     } else {
-        Result::Err(TestError::ZimZam("error"))
+        Result::Err(TestError::ZimZam(__to_str_array("error")))
     }
 }

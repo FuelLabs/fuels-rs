@@ -25,12 +25,12 @@ impl TestContract for Contract {
     }
 
     fn get_small_string() -> str[8] {
-        let my_string: str[8] = "gggggggg";
+        let my_string: str[8] = __to_str_array("gggggggg");
         my_string
     }
 
     fn get_large_string() -> str[9] {
-        let my_string: str[9] = "ggggggggg";
+        let my_string: str[9] = __to_str_array("ggggggggg");
         my_string
     }
 
