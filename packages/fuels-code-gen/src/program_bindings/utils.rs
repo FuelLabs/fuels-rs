@@ -61,7 +61,7 @@ impl Components {
         })
     }
 
-    pub fn parameters_for_unused_generics(
+    pub fn generate_parameters_for_unused_generics(
         &self,
         declared_generics: &[Ident],
     ) -> (Vec<Ident>, Vec<TokenStream>) {
@@ -75,7 +75,10 @@ impl Components {
             .unzip()
     }
 
-    pub fn variant_for_unused_generics(&self, declared_generics: &[Ident]) -> Option<TokenStream> {
+    pub fn generate_variant_for_unused_generics(
+        &self,
+        declared_generics: &[Ident],
+    ) -> Option<TokenStream> {
         let phantom_types = self
             .unused_named_generics(declared_generics)
             .map(|generic| {

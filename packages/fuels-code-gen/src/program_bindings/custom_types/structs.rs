@@ -47,7 +47,8 @@ fn struct_decl(
 
     let (generics_wo_bounds, generics_w_bounds) = tokenize_generics(generics);
     let (field_names, field_types): (Vec<_>, Vec<_>) = components.iter().unzip();
-    let (phantom_fields, phantom_types) = components.parameters_for_unused_generics(generics);
+    let (phantom_fields, phantom_types) =
+        components.generate_parameters_for_unused_generics(generics);
 
     quote! {
         #[derive(

@@ -45,7 +45,7 @@ fn enum_decl(
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
 
     let enum_variants = components.as_enum_variants();
-    let unused_generics_variant = components.variant_for_unused_generics(generics);
+    let unused_generics_variant = components.generate_variant_for_unused_generics(generics);
     let (_, generics_w_bounds) = tokenize_generics(generics);
 
     quote! {
