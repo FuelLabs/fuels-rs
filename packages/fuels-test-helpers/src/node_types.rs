@@ -40,7 +40,7 @@ impl From<Trigger> for fuel_core_poa::Trigger {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub enum DbType {
     InMemory,
     RocksDb(Option<PathBuf>),
