@@ -8,7 +8,7 @@ use fuel_core_services::Service as ServiceTrait;
 use fuel_core_client::client::FuelClient;
 use std::{net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
 
-use crate::node_types::{Config, DbType, Trigger, DEFAULT_CACHE_SIZE};
+use crate::node_types::{Config, DbType, Trigger};
 use portpicker::{is_free, pick_unused_port};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
@@ -51,9 +51,9 @@ impl ExtendedConfig {
             }
         }
 
-        if self.config.max_database_cache_size != DEFAULT_CACHE_SIZE {
+        if let Some(cache_size) = self.config.max_database_cache_size {
             args.push("--max-database-cache-size".to_string());
-            args.push(self.config.max_database_cache_size.to_string());
+            args.push(cache_size.to_string());
         }
 
         if self.config.utxo_validation {

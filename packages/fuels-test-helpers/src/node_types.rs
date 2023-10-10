@@ -14,8 +14,6 @@ use serde::{de::Error as SerdeError, Deserializer, Serializer};
 
 use serde_with::{DeserializeAs, SerializeAs};
 
-pub const DEFAULT_CACHE_SIZE: usize = 10 * 1024 * 1024;
-
 #[derive(Clone, Debug)]
 pub enum Trigger {
     Instant,
@@ -61,7 +59,7 @@ impl From<DbType> for fuel_core::service::DbType {
 #[derive(Clone, Debug)]
 pub struct Config {
     pub addr: SocketAddr,
-    pub max_database_cache_size: usize,
+    pub max_database_cache_size: Option<usize>,
     pub database_type: DbType,
     pub utxo_validation: bool,
     pub manual_blocks_enabled: bool,
@@ -75,7 +73,7 @@ impl Config {
     pub fn local_node() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: DEFAULT_CACHE_SIZE,
+            max_database_cache_size: Some(10 * 1024 * 1024),
             database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
@@ -91,7 +89,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: DEFAULT_CACHE_SIZE,
+            max_database_cache_size: Some(10 * 1024 * 1024),
             database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
@@ -108,7 +106,7 @@ impl From<Config> for fuel_core::service::Config {
     fn from(value: Config) -> Self {
         Self {
             addr: value.addr,
-            max_database_cache_size: value.max_database_cache_size,
+            max_database_cache_size: value.max_database_cache_size.unwrap_or(10 * 1024 * 1024),
             database_path: match &value.database_type {
                 DbType::InMemory => Default::default(),
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
