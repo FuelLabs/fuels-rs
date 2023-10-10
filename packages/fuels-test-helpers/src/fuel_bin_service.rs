@@ -21,7 +21,7 @@ struct ExtendedConfig {
 
 impl ExtendedConfig {
     pub fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
-        self.generate_chain_config_file()?;
+        self.write_temp_chain_config_file()?;
 
         let port = self.config.addr.port().to_string();
         let mut args = vec![
@@ -112,16 +112,11 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    fn generate_chain_config_file(&mut self) -> Result<(), Error> {
-        let chain_config_json = to_value(&self.config.chain_conf)?;
-
-        self.write_temp_config_file(chain_config_json)?;
-        Ok(())
-    }
-
-    fn write_temp_config_file(&mut self, config: Value) -> FuelResult<()> {
-        writeln!(self.config_file, "{}", &config.to_string())?;
-        Ok(())
+    pub fn write_temp_chain_config_file(&mut self) -> FuelResult<()> {
+        Ok(serde_json::to_writer(
+            &mut self.config_file,
+            &self.config.chain_conf,
+        )?)
     }
 }
 
