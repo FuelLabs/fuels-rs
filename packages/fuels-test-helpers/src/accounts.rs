@@ -25,7 +25,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
             .await?;
 
-    Ok(wallets.pop().unwrap())
+    Ok(wallets.pop().expect("should have one wallet"))
 }
 
 /// Launches a custom node and provider, along with a configurable number of wallets.

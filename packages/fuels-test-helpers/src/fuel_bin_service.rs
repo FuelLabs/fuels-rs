@@ -6,8 +6,7 @@ use fuel_core_services::{RunnableService, RunnableTask, ServiceRunner, State, St
 use fuel_core_services::Service as ServiceTrait;
 
 use fuel_core_client::client::FuelClient;
-use serde_json::{to_value, Value};
-use std::{io::Write, net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
 
 use crate::node_types::{Config, DbType, Trigger, DEFAULT_CACHE_SIZE};
 use portpicker::{is_free, pick_unused_port};
@@ -38,25 +37,18 @@ impl ExtendedConfig {
                 .to_string(),
         ];
 
-        args.extend(vec![
-            "--db-type".to_string(),
-            match self.config.database_type {
-                DbType::InMemory => "in-memory",
-                DbType::RocksDb => "rocks-db",
+        args.push("--db-type".to_string());
+        match &self.config.database_type {
+            DbType::InMemory => args.push("in-memory".to_string()),
+            DbType::RocksDb(path_to_db) => {
+                args.push("rocks-db".to_string());
+                let path = path_to_db.as_ref().map(Clone::clone).unwrap_or_else(|| {
+                    PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                        .join(".fuel/db")
+                });
+                args.push("--db-path".to_string());
+                args.push(path.to_string_lossy().to_string());
             }
-            .to_string(),
-        ]);
-
-        if let DbType::RocksDb = self.config.database_type {
-            let path = if self.config.database_path.as_os_str().is_empty() {
-                PathBuf::from(std::env::var("HOME").expect("HOME env var missing")).join(".fuel/db")
-            } else {
-                self.config.database_path.clone()
-            };
-            args.extend(vec![
-                "--db-path".to_string(),
-                path.to_string_lossy().to_string(),
-            ]);
         }
 
         if self.config.max_database_cache_size != DEFAULT_CACHE_SIZE {

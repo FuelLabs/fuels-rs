@@ -1359,10 +1359,8 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-
             let mut node_config = Config {
-                database_path: temp_database_path.clone(),
-                database_type: DbType::RocksDb,
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
                 ..Config::local_node()
             };
 
@@ -1398,8 +1396,7 @@ fn db_rocksdb() {
         .expect("Tokio runtime failed")
         .block_on(async {
             let node_config = Config {
-                database_path: temp_database_path.clone(),
-                database_type: DbType::RocksDb,
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
                 ..Config::local_node()
             };
 

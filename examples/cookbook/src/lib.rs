@@ -195,11 +195,9 @@ mod tests {
         use std::path::PathBuf;
 
         use fuels::prelude::*;
-
         // ANCHOR: create_or_use_rocksdb
         let provider_config = Config {
-            database_path: PathBuf::from("/tmp/.spider/db"),
-            database_type: DbType::RocksDb,
+            database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
             ..Config::local_node()
         };
         // ANCHOR_END: create_or_use_rocksdb

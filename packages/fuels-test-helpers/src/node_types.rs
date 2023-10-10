@@ -45,7 +45,7 @@ impl From<Trigger> for fuel_core_poa::Trigger {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum DbType {
     InMemory,
-    RocksDb,
+    RocksDb(Option<PathBuf>),
 }
 
 #[cfg(feature = "fuel-core-lib")]
@@ -53,7 +53,7 @@ impl From<DbType> for fuel_core::service::DbType {
     fn from(value: DbType) -> Self {
         match value {
             DbType::InMemory => fuel_core::service::DbType::InMemory,
-            DbType::RocksDb => fuel_core::service::DbType::RocksDb,
+            DbType::RocksDb(..) => fuel_core::service::DbType::RocksDb,
         }
     }
 }
@@ -62,7 +62,6 @@ impl From<DbType> for fuel_core::service::DbType {
 pub struct Config {
     pub addr: SocketAddr,
     pub max_database_cache_size: usize,
-    pub database_path: PathBuf,
     pub database_type: DbType,
     pub utxo_validation: bool,
     pub manual_blocks_enabled: bool,
@@ -77,7 +76,6 @@ impl Config {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             max_database_cache_size: DEFAULT_CACHE_SIZE,
-            database_path: Default::default(),
             database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
@@ -94,7 +92,6 @@ impl Default for Config {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
             max_database_cache_size: DEFAULT_CACHE_SIZE,
-            database_path: Default::default(),
             database_type: DbType::InMemory,
             utxo_validation: false,
             manual_blocks_enabled: false,
@@ -112,7 +109,10 @@ impl From<Config> for fuel_core::service::Config {
         Self {
             addr: value.addr,
             max_database_cache_size: value.max_database_cache_size,
-            database_path: value.database_path,
+            database_path: match &value.database_type {
+                DbType::InMemory => Default::default(),
+                DbType::RocksDb(path) => path.clone().unwrap_or_default(),
+            },
             database_type: value.database_type.into(),
             utxo_validation: value.utxo_validation,
             manual_blocks_enabled: value.manual_blocks_enabled,
