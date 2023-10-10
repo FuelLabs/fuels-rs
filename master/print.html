@@ -2726,6 +2726,45 @@ impl MyContract for Contract {
 
         assert_eq!(result, arg1);
 </code></pre>
+<h3 id="unused-generic-type-parameters"><a class="header" href="#unused-generic-type-parameters">Unused generic type parameters</a></h3>
+<p>Sway supports unused generic type parameters when declaring structs/enums:</p>
+<pre><code class="language-Rust">struct SomeStruct&lt;T, K&gt; {
+  field: u64
+}
+
+enum SomeEnum&lt;T, K&gt; {
+  One: u64
+}
+
+</code></pre>
+<p>If you tried the same in Rust you'd get complaints that <code>T</code> and <code>K</code> must be used or removed. When generating Rust bindings for such types we make use of the <a href="https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters"><code>PhantomData</code></a> type. The generated bindings for the above example would look something like this:</p>
+<pre><code class="language-Rust">struct SomeStruct&lt;T, K&gt; {
+   pub field: u64,
+   pub _unused_generic_0: PhantomData&lt;T&gt;
+   pub _unused_generic_1: PhantomData&lt;K&gt;
+}
+
+enum SomeEnum&lt;T, K&gt; {
+  One(u64),
+  IgnoreMe(PhantomData&lt;T&gt;, PhantomData&lt;K&gt;)
+}
+</code></pre>
+<p>To lessen the impact to developer experience you may use <code>SomeStruct::new</code> to initialize the above structure without bothering with the <code>PhantomData</code>s:</p>
+<pre><code class="language-rust ignore">        assert_eq!(
+            &lt;MyStruct&lt;u16, u32&gt;&gt;::new(15),
+            MyStruct {
+                field: 15,
+                _unused_generic_0: std::marker::PhantomData,
+                _unused_generic_1: std::marker::PhantomData
+            }
+        );
+</code></pre>
+<p>If your struct doesn't have any fields we'll also derive <code>Default</code>. As for enums all <code>PhantomData</code>s are placed inside a new variant called <code>IgnoreMe</code> which you'll need to ignore in your matches:</p>
+<pre><code class="language-rust ignore">        match my_enum {
+            MyEnum::One(_value) =&gt; {}
+            MyEnum::IgnoreMe(..) =&gt; panic!(&quot;Will never receive this variant&quot;),
+        }
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="string"><a class="header" href="#string">String</a></h1>
 <p>The Rust SDK represents Fuel's <code>String</code>s as <code>SizedAsciiString&lt;LEN&gt;</code>, where the generic parameter <code>LEN</code> is the length of a given string. This abstraction is necessary because all strings in Fuel and Sway are statically-sized, i.e., you must know the size of the string beforehand.</p>
 <p>Here's how you can create a simple string using <code>SizedAsciiString</code>:</p>
