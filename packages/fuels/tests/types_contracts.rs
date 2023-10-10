@@ -1483,6 +1483,31 @@ async fn generics_test() -> Result<()> {
         assert_eq!(result, arg1);
     }
     {
+        contract_methods
+            .unused_generic_args(
+                StructOneUnusedGenericParam::default(),
+                EnumOneUnusedGenericParam::One,
+            )
+            .call()
+            .await?;
+
+        let (the_struct, the_enum) = contract_methods
+            .used_and_unused_generic_args(
+                StructUsedAndUnusedGenericParams::new(10u8),
+                EnumUsedAndUnusedGenericParams::Two(11u8),
+            )
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(the_struct.field, 12u8);
+        if let EnumUsedAndUnusedGenericParams::Two(val) = the_enum {
+            assert_eq!(val, 13)
+        } else {
+            panic!("Expected the variant EnumUsedAndUnusedGenericParams::Two");
+        }
+    }
+    {
         // complex case
         let pass_through = PassTheGenericOn {
             one: SimpleGeneric {

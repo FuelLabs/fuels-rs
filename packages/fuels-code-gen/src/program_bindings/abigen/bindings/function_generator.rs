@@ -1,4 +1,4 @@
-use fuel_abi_types::abi::full_program::{FullABIFunction, FullTypeApplication};
+use fuel_abi_types::abi::full_program::FullABIFunction;
 use proc_macro2::TokenStream;
 use quote::{quote, ToTokens};
 
@@ -6,7 +6,7 @@ use crate::{
     error::Result,
     program_bindings::{
         resolved_type::TypeResolver,
-        utils::{get_equivalent_bech32_type, param_type_calls, Component},
+        utils::{get_equivalent_bech32_type, Components},
     },
     utils::{safe_ident, TypePath},
 };
@@ -14,7 +14,7 @@ use crate::{
 #[derive(Debug)]
 pub(crate) struct FunctionGenerator {
     name: String,
-    args: Vec<Component>,
+    args: Components,
     output_type: TokenStream,
     body: TokenStream,
     doc: Option<String>,
@@ -23,7 +23,11 @@ pub(crate) struct FunctionGenerator {
 
 impl FunctionGenerator {
     pub fn new(fun: &FullABIFunction) -> Result<Self> {
-        let args = function_arguments(fun.inputs())?;
+        // All abi-method-calling Rust functions are currently generated at the top-level-mod of
+        // the Program in question (e.g. abigen_bindings::my_contract_mod`). If we ever nest
+        // these functions in a deeper mod we would need to propagate the mod to here instead of
+        // just hard-coding the default path.
+        let args = Components::new(fun.inputs(), true, TypePath::default())?;
 
         // We are not checking that the ABI contains non-SDK supported types so that the user can
         // still interact with an ABI even if some methods will fail at runtime.
@@ -59,22 +63,19 @@ impl FunctionGenerator {
     }
 
     pub fn fn_selector(&self) -> TokenStream {
-        let param_type_calls = param_type_calls(&self.args);
+        let param_type_calls = self.args.param_type_calls();
 
         let name = &self.name;
         quote! {::fuels::core::codec::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
-        let arg_names = self.args.iter().map(|component| {
-            let field_name = &component.field_name;
-            let field_type = &component.field_type;
-
-            get_equivalent_bech32_type(&field_type.type_name.to_string())
+        let arg_names = self.args.iter().map(|(name, ty)| {
+            get_equivalent_bech32_type(ty)
                 .map(|_| {
-                    quote! {#field_type::from(#field_name.into())}
+                    quote! {<#ty>::from(#name.into())}
                 })
-                .unwrap_or(quote! {#field_name})
+                .unwrap_or(quote! {#name})
         });
         quote! {[#(::fuels::core::traits::Tokenizable::into_token(#arg_names)),*]}
     }
@@ -87,26 +88,10 @@ impl FunctionGenerator {
     pub fn output_type(&self) -> &TokenStream {
         &self.output_type
     }
-}
 
-fn function_arguments(inputs: &[FullTypeApplication]) -> Result<Vec<Component>> {
-    inputs
-        .iter()
-        .map(|input| {
-            // All abi-method-calling Rust functions are currently generated at the top-level-mod of
-            // the Program in question (e.g. abigen_bindings::my_contract_mod`). If we ever nest
-            // these functions in a deeper mod we would need to propagate the mod to here instead of
-            // just hard-coding the default path.
-            let mod_of_component = TypePath::default();
-            Component::new(input, true, mod_of_component)
-        })
-        .collect::<Result<_>>()
-}
-
-impl From<&FunctionGenerator> for TokenStream {
-    fn from(fun: &FunctionGenerator) -> Self {
-        let name = safe_ident(&fun.name);
-        let doc = fun
+    pub fn generate(&self) -> TokenStream {
+        let name = safe_ident(&self.name);
+        let doc = self
             .doc
             .as_ref()
             .map(|text| {
@@ -114,21 +99,18 @@ impl From<&FunctionGenerator> for TokenStream {
             })
             .unwrap_or_default();
 
-        let arg_declarations = fun.args.iter().map(|component| {
-            let name = &component.field_name;
-            let field_type = &component.field_type;
-
-            get_equivalent_bech32_type(&field_type.type_name.to_string())
+        let arg_declarations = self.args.iter().map(|(name, ty)| {
+            get_equivalent_bech32_type(ty)
                 .map(|new_type| {
                     quote! { #name: impl ::core::convert::Into<#new_type> }
                 })
-                .unwrap_or(quote! { #name: #field_type })
+                .unwrap_or(quote! { #name: #ty })
         });
 
-        let output_type = fun.output_type();
-        let body = &fun.body;
+        let output_type = self.output_type();
+        let body = &self.body;
 
-        let self_param = fun.is_method.then_some(quote! {&self,});
+        let self_param = self.is_method.then_some(quote! {&self,});
 
         let params = quote! { #self_param #(#arg_declarations),* };
 
@@ -141,185 +123,12 @@ impl From<&FunctionGenerator> for TokenStream {
     }
 }
 
-impl From<FunctionGenerator> for TokenStream {
-    fn from(fun: FunctionGenerator) -> Self {
-        (&fun).into()
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
-    use fuel_abi_types::abi::{
-        full_program::FullTypeDeclaration,
-        program::{ABIFunction, TypeApplication, TypeDeclaration},
-    };
+    use fuel_abi_types::abi::full_program::{FullTypeApplication, FullTypeDeclaration};
+    use pretty_assertions::assert_eq;
 
     use super::*;
-
-    #[test]
-    fn test_expand_fn_arguments() -> Result<()> {
-        let the_argument = TypeApplication {
-            name: "some_argument".to_string(),
-            type_id: 0,
-            ..Default::default()
-        };
-
-        // All arguments are here
-        let the_function = ABIFunction {
-            inputs: vec![the_argument],
-            name: "some_fun".to_string(),
-            ..ABIFunction::default()
-        };
-
-        let types = [(
-            0,
-            TypeDeclaration {
-                type_id: 0,
-                type_field: String::from("u32"),
-                ..Default::default()
-            },
-        )]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result =
-            function_arguments(FullABIFunction::from_counterpart(&the_function, &types)?.inputs())?;
-        let component = &result[0];
-
-        assert_eq!(&component.field_name.to_string(), "some_argument");
-        assert_eq!(&component.field_type.to_string(), "u32");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_fn_arguments_primitive() -> Result<()> {
-        let the_function = ABIFunction {
-            inputs: vec![TypeApplication {
-                name: "bim_bam".to_string(),
-                type_id: 1,
-                ..Default::default()
-            }],
-            name: "pip_pop".to_string(),
-            ..Default::default()
-        };
-
-        let types = [
-            (
-                0,
-                TypeDeclaration {
-                    type_id: 0,
-                    type_field: String::from("()"),
-                    ..Default::default()
-                },
-            ),
-            (
-                1,
-                TypeDeclaration {
-                    type_id: 1,
-                    type_field: String::from("u64"),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result =
-            function_arguments(FullABIFunction::from_counterpart(&the_function, &types)?.inputs())?;
-        let component = &result[0];
-
-        assert_eq!(&component.field_name.to_string(), "bim_bam");
-        assert_eq!(&component.field_type.to_string(), "u64");
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_expand_fn_arguments_composite() -> Result<()> {
-        let mut function = ABIFunction {
-            inputs: vec![TypeApplication {
-                name: "bim_bam".to_string(),
-                type_id: 0,
-                ..Default::default()
-            }],
-            name: "PipPopFunction".to_string(),
-            ..Default::default()
-        };
-
-        let types = [
-            (
-                0,
-                TypeDeclaration {
-                    type_id: 0,
-                    type_field: "struct CarMaker".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "name".to_string(),
-                        type_id: 1,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
-                },
-            ),
-            (
-                1,
-                TypeDeclaration {
-                    type_id: 1,
-                    type_field: "str[5]".to_string(),
-                    ..Default::default()
-                },
-            ),
-            (
-                2,
-                TypeDeclaration {
-                    type_id: 2,
-                    type_field: "enum Cocktail".to_string(),
-                    components: Some(vec![TypeApplication {
-                        name: "variant".to_string(),
-                        type_id: 3,
-                        ..Default::default()
-                    }]),
-                    ..Default::default()
-                },
-            ),
-            (
-                3,
-                TypeDeclaration {
-                    type_id: 3,
-                    type_field: "u32".to_string(),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .into_iter()
-        .collect::<HashMap<_, _>>();
-        let result =
-            function_arguments(FullABIFunction::from_counterpart(&function, &types)?.inputs())?;
-
-        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "self :: CarMaker");
-
-        function.inputs[0].type_id = 2;
-        let result =
-            function_arguments(FullABIFunction::from_counterpart(&function, &types)?.inputs())?;
-
-        assert_eq!(&result[0].field_name.to_string(), "bim_bam");
-        assert_eq!(&result[0].field_type.to_string(), "self :: Cocktail");
-
-        Ok(())
-    }
-
-    #[test]
-    fn correct_output_type() -> Result<()> {
-        let function = given_a_fun();
-        let sut = FunctionGenerator::new(&function)?;
-
-        let output_type = sut.output_type();
-
-        assert_eq!(output_type.to_string(), "self :: CustomStruct < u64 >");
-
-        Ok(())
-    }
 
     #[test]
     fn correct_fn_selector_resolving_code() -> Result<()> {
@@ -328,10 +137,12 @@ mod tests {
 
         let fn_selector_code = sut.fn_selector();
 
-        assert_eq!(
-            fn_selector_code.to_string(),
-            r#":: fuels :: core :: codec :: resolve_fn_selector ("test_function" , & [< self :: CustomStruct :: < u8 > as :: fuels :: core :: traits :: Parameterize > :: param_type ()])"#
-        );
+        let expected = quote! {
+            ::fuels::core::codec::resolve_fn_selector(
+                "test_function",
+                &[<self::CustomStruct<::core::primitive::u8> as::fuels::core::traits::Parameterize>::param_type()])
+        };
+        assert_eq!(fn_selector_code.to_string(), expected.to_string());
 
         Ok(())
     }
@@ -361,12 +172,12 @@ mod tests {
             .set_body(quote! {this is ze body});
 
         // when
-        let tokenized: TokenStream = sut.into();
+        let tokenized: TokenStream = sut.generate();
 
         // then
         let expected = quote! {
             #[doc = "This is a doc"]
-            pub fn test_function(&self, arg_0: self::CustomStruct<u8>) -> self::CustomStruct<u64> {
+            pub fn test_function(&self, arg_0: self::CustomStruct<::core::primitive::u8>) -> self::CustomStruct<::core::primitive::u64> {
                 this is ze body
             }
         };

@@ -162,16 +162,21 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     };
     generator.set_body(body);
 
-    Ok(generator.into())
+    Ok(generator.generate())
 }
 
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
 
-    use fuel_abi_types::abi::program::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration};
+    use fuel_abi_types::abi::{
+        full_program::FullABIFunction,
+        program::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration},
+    };
+    use pretty_assertions::assert_eq;
+    use quote::quote;
 
-    use super::*;
+    use crate::{error::Result, program_bindings::abigen::bindings::contract::expand_fn};
 
     #[test]
     fn test_expand_fn_simple_abi() -> Result<()> {
@@ -395,13 +400,13 @@ mod tests {
 
         let expected = quote! {
             #[doc = "Calls the contract's `HelloWorld` function"]
-            pub fn HelloWorld(&self, bimbam: bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
+            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
                     ::fuels::core::codec::resolve_fn_selector(
                         "HelloWorld",
-                        &[<bool as ::fuels::core::traits::Parameterize>::param_type()]
+                        &[<::core::primitive::bool as ::fuels::core::traits::Parameterize>::param_type()]
                     ),
                     &[::fuels::core::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),

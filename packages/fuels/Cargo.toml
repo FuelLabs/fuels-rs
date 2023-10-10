@@ -21,6 +21,7 @@ fuels-programs = { workspace = true, optional = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
 [dev-dependencies]
+fuels-code-gen = { workspace = true }
 chrono = { workspace = true }
 fuel-core = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true }
