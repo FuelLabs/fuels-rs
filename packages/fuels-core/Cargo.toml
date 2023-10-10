@@ -28,6 +28,7 @@ serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { version = "0.9.5", default-features = false }
+zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 fuels-macros = { workspace = true }
