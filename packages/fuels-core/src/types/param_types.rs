@@ -1,10 +1,10 @@
-use itertools::chain;
 use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
     abi::program::{TypeApplication, TypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
+use itertools::chain;
 
 use crate::{
     constants::WORD_SIZE,
