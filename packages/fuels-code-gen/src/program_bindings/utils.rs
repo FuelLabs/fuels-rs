@@ -66,57 +66,6 @@ pub(crate) fn single_param_type_call(field_type: &ResolvedType) -> TokenStream {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use fuel_abi_types::abi::full_program::FullTypeDeclaration;
-
-    use super::*;
-
-    #[test]
-    fn respects_snake_case_flag() -> Result<()> {
-        let type_application = type_application_named("WasNotSnakeCased");
-
-        let sut = Component::new(&type_application, true, TypePath::default())?;
-
-        assert_eq!(sut.field_name, "was_not_snake_cased");
-
-        Ok(())
-    }
-
-    #[test]
-    fn avoids_collisions_with_reserved_keywords() -> Result<()> {
-        {
-            let type_application = type_application_named("if");
-
-            let sut = Component::new(&type_application, false, TypePath::default())?;
-
-            assert_eq!(sut.field_name, "if_");
-        }
-
-        {
-            let type_application = type_application_named("let");
-
-            let sut = Component::new(&type_application, false, TypePath::default())?;
-
-            assert_eq!(sut.field_name, "let_");
-        }
-
-        Ok(())
-    }
-
-    fn type_application_named(name: &str) -> FullTypeApplication {
-        FullTypeApplication {
-            name: name.to_string(),
-            type_decl: FullTypeDeclaration {
-                type_field: "u64".to_string(),
-                components: vec![],
-                type_parameters: vec![],
-            },
-            type_arguments: vec![],
-        }
-    }
-}
-
 pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
     [
         ("std::address::Address", "::fuels::types::Address"),
@@ -165,5 +114,56 @@ pub(crate) fn get_equivalent_bech32_type(ttype: &str) -> Option<TokenStream> {
             Some(quote! {::fuels::types::bech32::Bech32ContractId})
         }
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fuel_abi_types::abi::full_program::FullTypeDeclaration;
+
+    use super::*;
+
+    #[test]
+    fn respects_snake_case_flag() -> Result<()> {
+        let type_application = type_application_named("WasNotSnakeCased");
+
+        let sut = Component::new(&type_application, true, TypePath::default())?;
+
+        assert_eq!(sut.field_name, "was_not_snake_cased");
+
+        Ok(())
+    }
+
+    #[test]
+    fn avoids_collisions_with_reserved_keywords() -> Result<()> {
+        {
+            let type_application = type_application_named("if");
+
+            let sut = Component::new(&type_application, false, TypePath::default())?;
+
+            assert_eq!(sut.field_name, "if_");
+        }
+
+        {
+            let type_application = type_application_named("let");
+
+            let sut = Component::new(&type_application, false, TypePath::default())?;
+
+            assert_eq!(sut.field_name, "let_");
+        }
+
+        Ok(())
+    }
+
+    fn type_application_named(name: &str) -> FullTypeApplication {
+        FullTypeApplication {
+            name: name.to_string(),
+            type_decl: FullTypeDeclaration {
+                type_field: "u64".to_string(),
+                components: vec![],
+                type_parameters: vec![],
+            },
+            type_arguments: vec![],
+        }
     }
 }
