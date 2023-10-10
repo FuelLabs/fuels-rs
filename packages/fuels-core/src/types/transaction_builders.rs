@@ -12,6 +12,7 @@ use fuel_tx::{
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -27,8 +28,6 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
-
-use super::{chain_info::ChainInfo, node_info::NodeInfo};
 
 #[derive(Debug, Clone)]
 pub struct NetworkInfo {

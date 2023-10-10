@@ -10,7 +10,10 @@ use fuel_tx::{ContractId, Receipt};
 use crate::{
     codec::{try_from_bytes, DecoderConfig},
     traits::{Parameterize, Tokenizable},
-    types::errors::{error, Error, Result},
+    types::{
+        errors::{error, Error, Result},
+        param_types::ParamType,
+    },
 };
 
 #[derive(Clone)]
@@ -31,7 +34,20 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
+        Self::can_decode_log_with_type::<T>()?;
         Ok(format!("{:?}", try_from_bytes::<T>(bytes, decoder_config)?))
+    }
+
+    fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
+        match T::param_type() {
+            // String slices can not be decoded from logs as they are encoded as ptr, len
+            // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
+            ParamType::StringSlice => Err(error!(
+                InvalidData,
+                "String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
+            )),
+            _ => Ok(()),
+        }
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
@@ -162,9 +178,8 @@ impl LogDecoder {
         let target_ids: HashSet<LogId> = self
             .log_formatters
             .iter()
-            .filter_map(|(log_id, log_formatter)| {
-                log_formatter.can_handle_type::<T>().then(|| log_id.clone())
-            })
+            .filter(|(_, log_formatter)| log_formatter.can_handle_type::<T>())
+            .map(|(log_id, _)| log_id.clone())
             .collect();
 
         receipts
