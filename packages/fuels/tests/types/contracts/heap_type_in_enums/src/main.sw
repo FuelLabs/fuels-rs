@@ -16,9 +16,11 @@ abi MyContract {
     fn returns_bytes_result(return_ok: bool) -> Result<Bytes, TestError>;
     fn returns_vec_result(return_ok: bool) -> Result<Vec<u64>, TestError>;
     fn returns_string_result(return_ok: bool) -> Result<String, TestError>;
+    fn returns_str_result(return_ok: bool) -> Result<str, TestError>;
     fn returns_bytes_option(return_some: bool) -> Option<Bytes>;
     fn returns_vec_option(return_some: bool) -> Option<Vec<u64>>;
     fn returns_string_option(return_some: bool) -> Option<String>;
+    fn returns_str_option(return_some: bool) -> Option<str>;
     fn would_raise_a_memory_overflow() -> Result<Bytes, b256>;
     fn returns_a_heap_type_too_deep() -> Result<Bimbam, u64>;
 }
@@ -60,6 +62,14 @@ impl MyContract for Contract {
         }
     }
 
+    fn returns_str_result(return_ok: bool) -> Result<str, TestError> {
+        return if return_ok {
+            Result::Ok("Hello World")
+        } else {
+            Result::Err(TestError::Else(3333))
+        }
+    }
+
     fn returns_bytes_option(return_some: bool) -> Option<Bytes> {
         return if return_some {
             let mut b = Bytes::new();
@@ -91,6 +101,14 @@ impl MyContract for Contract {
         return if return_some {
             let s = String::from_ascii_str("Hello World");
             Option::Some(s)
+        } else {
+            None
+        }
+    }
+
+    fn returns_str_option(return_some: bool) -> Option<str> {
+        return if return_some {
+            Option::Some("Hello World")
         } else {
             None
         }

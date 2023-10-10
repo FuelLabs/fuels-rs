@@ -1992,6 +1992,31 @@ async fn test_contract_raw_slice() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_contract_returning_string_slice() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await;
+    setup_program_test!(
+        Abigen(Contract(
+            name = "StringSliceContract",
+            project = "packages/fuels/tests/types/contracts/string_slice"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "StringSliceContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    {
+        let response = contract_methods.return_str().call().await?;
+        assert_eq!(response.value, "contract-return");
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_contract_std_lib_string() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await;
     setup_program_test!(
@@ -2058,6 +2083,13 @@ async fn test_heap_type_in_enums() -> Result<()> {
     let expected = Err(TestError::Else(3333));
     assert_eq!(resp.value, expected);
 
+    let resp = contract_methods.returns_str_result(true).call().await?;
+    let expected = Ok("Hello World".try_into()?);
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_result(false).call().await?;
+    let expected = Err(TestError::Else(3333));
+    assert_eq!(resp.value, expected);
+
     let resp = contract_methods.returns_bytes_option(true).call().await?;
     let expected = Some(Bytes(vec![1, 1, 1, 1]));
     assert_eq!(resp.value, expected);
@@ -2072,6 +2104,12 @@ async fn test_heap_type_in_enums() -> Result<()> {
 
     let resp = contract_methods.returns_string_option(true).call().await?;
     let expected = Some("Hello World".to_string());
+    assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_string_option(false).call().await?;
+    assert!(resp.value.is_none());
+
+    let resp = contract_methods.returns_str_option(true).call().await?;
+    let expected = Some("Hello World".try_into()?);
     assert_eq!(resp.value, expected);
     let resp = contract_methods.returns_string_option(false).call().await?;
     assert!(resp.value.is_none());
