@@ -69,6 +69,7 @@ thiserror = { version = "1.0.47", default-features = false }
 tokio = { version = "1.31.0", default-features = false }
 trybuild = "1.0.82"
 which = { version = "4.4.0", default-features = false }
+zeroize = "1.6.0"
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.20.4", default-features = false }

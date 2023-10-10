@@ -16,6 +16,7 @@ use fuels_core::{
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
@@ -71,8 +72,11 @@ pub struct Wallet {
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
 /// alongside in-memory. Knowing the private key allows a `WalletUlocked` to sign operations, send
 /// transactions, and more.
-#[derive(Clone, Debug)]
+///
+/// `private_key` will be zeroed out on calling `lock()` or `drop`ping a `WalletUnlocked`.
+#[derive(Clone, Debug, Zeroize, ZeroizeOnDrop)]
 pub struct WalletUnlocked {
+    #[zeroize(skip)]
     wallet: Wallet,
     pub(crate) private_key: SecretKey,
 }
@@ -118,9 +122,10 @@ impl ViewOnlyAccount for Wallet {
 }
 
 impl WalletUnlocked {
-    /// Lock the wallet by `drop`ping the private key from memory.
-    pub fn lock(self) -> Wallet {
-        self.wallet
+    /// Lock the wallet by securely `zeroize`-ing and `drop`ping the private key from memory.
+    pub fn lock(mut self) -> Wallet {
+        self.private_key.zeroize();
+        self.wallet.clone()
     }
 
     // NOTE: Rather than providing a `DerefMut` implementation, we wrap the `set_provider` method
