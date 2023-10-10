@@ -56,14 +56,6 @@ impl ExtendedConfig {
             args.push(cache_size.to_string());
         }
 
-        if self.config.utxo_validation {
-            args.push("--utxo-validation".to_string());
-        }
-
-        if self.config.manual_blocks_enabled {
-            args.push("--manual_blocks_enabled".to_string());
-        }
-
         match self.config.block_production {
             Trigger::Instant => {
                 args.push("--poa-instant=true".to_string());
@@ -97,9 +89,16 @@ impl ExtendedConfig {
             }
         };
 
-        if self.config.vm_backtrace {
-            args.push("--vm-backtrace".to_string());
-        }
+        args.extend(
+            [
+                (self.config.vm_backtrace, "--vm-backtrace"),
+                (self.config.utxo_validation, "--utxo-validation"),
+                (self.config.manual_blocks_enabled, "--manual_blocks_enabled"),
+            ]
+            .into_iter()
+            .filter(|(flag, _)| *flag)
+            .map(|(_, arg)| arg.to_string()),
+        );
 
         Ok(args)
     }
