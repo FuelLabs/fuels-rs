@@ -35,7 +35,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.73.0"
+rust-version = "1.72.1"
 version = "0.48.0"
 
 [workspace.dependencies]
