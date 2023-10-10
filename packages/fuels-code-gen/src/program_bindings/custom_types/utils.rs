@@ -1,31 +1,12 @@
 use fuel_abi_types::{
     abi::full_program::FullTypeDeclaration,
-    utils::{extract_generic_name, ident, TypePath},
+    utils::{self, extract_generic_name},
 };
-use proc_macro2::TokenStream;
-use quote::quote;
-
-use crate::{error::Result, program_bindings::utils::Component};
-
-/// Transforms components from inside the given `FullTypeDeclaration` into a vector
-/// of `Components`. Will fail if there are no components.
-pub(crate) fn extract_components(
-    type_decl: &FullTypeDeclaration,
-    snake_case: bool,
-    mod_name: &TypePath,
-) -> Result<Vec<Component>> {
-    type_decl
-        .components
-        .iter()
-        .map(|component| Component::new(component, snake_case, mod_name.clone()))
-        .collect()
-}
+use proc_macro2::Ident;
 
 /// Returns a vector of TokenStreams, one for each of the generic parameters
 /// used by the given type.
-pub(crate) fn extract_generic_parameters(
-    type_decl: &FullTypeDeclaration,
-) -> Result<Vec<TokenStream>> {
+pub(crate) fn extract_generic_parameters(type_decl: &FullTypeDeclaration) -> Vec<Ident> {
     type_decl
         .type_parameters
         .iter()
@@ -33,18 +14,22 @@ pub(crate) fn extract_generic_parameters(
             let name = extract_generic_name(&decl.type_field).unwrap_or_else(|| {
                 panic!("Type parameters should only contain ids of generic types!")
             });
-            let generic = ident(&name);
-            Ok(quote! {#generic})
+            utils::ident(&name)
         })
         .collect()
 }
 
 #[cfg(test)]
 mod tests {
-    use fuel_abi_types::{abi::program::TypeDeclaration, utils::extract_custom_type_name};
+    use fuel_abi_types::{
+        abi::{full_program::FullTypeApplication, program::TypeDeclaration},
+        utils::{extract_custom_type_name, TypePath},
+    };
+    use pretty_assertions::assert_eq;
+    use quote::quote;
 
     use super::*;
-    use crate::program_bindings::{resolved_type::ResolvedType, utils::param_type_calls};
+    use crate::{error::Result, program_bindings::utils::Components};
 
     #[test]
     fn extracts_generic_types() -> Result<()> {
@@ -78,7 +63,7 @@ mod tests {
         let generics = extract_generic_parameters(&FullTypeDeclaration::from_counterpart(
             &declaration,
             &types,
-        ))?;
+        ));
 
         // then
         let stringified_generics = generics
@@ -94,48 +79,75 @@ mod tests {
     #[test]
     fn param_type_calls_correctly_generated() {
         // arrange
-        let components = vec![
-            Component {
-                field_name: ident("a"),
-                field_type: ResolvedType {
-                    type_name: quote! {u8},
-                    generic_params: vec![],
+        let type_applications = vec![
+            FullTypeApplication {
+                name: "unimportant".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "u8".to_string(),
+                    components: vec![],
+                    type_parameters: vec![],
                 },
+                type_arguments: vec![],
             },
-            Component {
-                field_name: ident("b"),
-                field_type: ResolvedType {
-                    type_name: quote! {SomeStruct},
-                    generic_params: vec![
-                        ResolvedType {
-                            type_name: quote! {T},
-                            generic_params: vec![],
+            FullTypeApplication {
+                name: "unimportant".to_string(),
+                type_decl: FullTypeDeclaration {
+                    type_field: "struct SomeStruct".to_string(),
+                    components: vec![],
+                    type_parameters: vec![
+                        FullTypeDeclaration {
+                            type_field: "generic T".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
                         },
-                        ResolvedType {
-                            type_name: quote! {K},
-                            generic_params: vec![],
+                        FullTypeDeclaration {
+                            type_field: "generic K".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
                         },
                     ],
                 },
+                type_arguments: vec![
+                    FullTypeApplication {
+                        name: "unimportant".to_string(),
+                        type_decl: FullTypeDeclaration {
+                            type_field: "u8".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
+                        },
+                        type_arguments: vec![],
+                    },
+                    FullTypeApplication {
+                        name: "unimportant".to_string(),
+                        type_decl: FullTypeDeclaration {
+                            type_field: "u16".to_string(),
+                            components: vec![],
+                            type_parameters: vec![],
+                        },
+                        type_arguments: vec![],
+                    },
+                ],
             },
         ];
 
         // act
-        let result = param_type_calls(&components);
+        let param_type_calls = Components::new(&type_applications, true, TypePath::default())
+            .unwrap()
+            .param_type_calls();
 
         // assert
-        let stringified_result = result
+        let stringified_result = param_type_calls
             .into_iter()
             .map(|stream| stream.to_string())
             .collect::<Vec<_>>();
-        assert_eq!(
-            stringified_result,
-            vec![
-                "< u8 as :: fuels :: core :: traits :: Parameterize > :: param_type ()",
-                "< SomeStruct :: < T , K > as :: fuels :: core :: traits :: Parameterize > :: param_type ()"
-            ]
-        )
+
+        let expected = vec![
+            quote! { <::core::primitive::u8 as :: fuels::core::traits::Parameterize>::param_type() }.to_string(),
+            quote! { <self::SomeStruct<::core::primitive::u8, ::core::primitive::u16> as ::fuels::core::traits::Parameterize>::param_type() }.to_string(),
+        ];
+        assert_eq!(stringified_result, expected);
     }
+
     #[test]
     fn can_extract_struct_name() {
         let declaration = TypeDeclaration {

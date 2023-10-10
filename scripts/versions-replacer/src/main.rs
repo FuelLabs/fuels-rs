@@ -6,11 +6,10 @@ use color_eyre::{
     Result,
 };
 use regex::Regex;
-use walkdir::WalkDir;
-
 use versions_replacer::{
     metadata::collect_versions_from_cargo_toml, replace::replace_versions_in_file,
 };
+use walkdir::WalkDir;
 
 #[derive(FromArgs)]
 /// Replace variables like '{{{{versions.fuels}}}}' with correct versions from Cargo.toml.

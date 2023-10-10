@@ -84,10 +84,9 @@ mod tests {
     use std::vec;
 
     use super::*;
-    use crate::types::U256;
     use crate::{
         constants::WORD_SIZE,
-        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken},
+        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken, U256},
     };
 
     #[test]
