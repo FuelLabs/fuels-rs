@@ -58,7 +58,7 @@ pub fn setup_program_test(input: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
+#[proc_macro_derive(Parameterize, attributes(FuelsTypesPath, FuelsCorePath, NoStd, Ignore))]
 pub fn parameterize(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 
@@ -67,7 +67,7 @@ pub fn parameterize(stream: TokenStream) -> TokenStream {
         .into()
 }
 
-#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, FuelsCorePath, NoStd))]
+#[proc_macro_derive(Tokenizable, attributes(FuelsTypesPath, FuelsCorePath, NoStd, Ignore))]
 pub fn tokenizable(stream: TokenStream) -> TokenStream {
     let input = parse_macro_input!(stream as DeriveInput);
 

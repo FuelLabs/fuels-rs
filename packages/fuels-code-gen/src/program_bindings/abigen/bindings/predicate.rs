@@ -65,5 +65,5 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
         .make_fn_associated()
         .set_body(body);
 
-    Ok(generator.into())
+    Ok(generator.generate())
 }
