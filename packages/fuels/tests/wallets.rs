@@ -1,6 +1,6 @@
 use std::iter::repeat;
 
-use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId, Witness};
+use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
 use fuels_accounts::wallet::{Wallet, WalletUnlocked};
 use fuels_core::types::transaction_builders::TransactionBuilder;

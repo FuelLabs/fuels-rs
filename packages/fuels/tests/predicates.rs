@@ -814,19 +814,8 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
 
-    tx.append_witness(
-        witness.into(),
-        &network_info.chain_id(),
-        &network_info.consensus_parameters,
-        &network_info.gas_costs,
-    )?;
-
-    tx.append_witness(
-        witness2.into(),
-        &network_info.chain_id(),
-        &network_info.consensus_parameters,
-        &network_info.gas_costs,
-    )?;
+    tx.append_witness(witness.into());
+    tx.append_witness(witness2.into());
 
     provider.send_transaction_and_await_commit(tx).await?;
 
