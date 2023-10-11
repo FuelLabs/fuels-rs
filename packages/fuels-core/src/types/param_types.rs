@@ -1,10 +1,10 @@
-use itertools::chain;
 use std::{collections::HashMap, iter::zip};
 
 use fuel_abi_types::{
     abi::program::{TypeApplication, TypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
+use itertools::chain;
 
 use crate::{
     constants::WORD_SIZE,
@@ -151,7 +151,7 @@ impl ParamType {
             ParamType::Tuple(elements) => elements
                 .iter()
                 .any(|param_type| param_type.is_extra_receipt_needed(false)),
-            ParamType::RawSlice => !top_level_type,
+            ParamType::RawSlice | ParamType::StringSlice => !top_level_type,
             _ => false,
         }
     }
@@ -165,6 +165,7 @@ impl ParamType {
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
             ParamType::RawSlice if !top_level_type => Some(ParamType::U64.compute_encoding_width()),
+            ParamType::StringSlice if !top_level_type => Some(std::mem::size_of::<u8>()),
             _ => None,
         }
     }

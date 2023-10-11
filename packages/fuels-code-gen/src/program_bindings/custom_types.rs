@@ -123,6 +123,7 @@ mod tests {
     use std::collections::HashMap;
 
     use fuel_abi_types::abi::program::{ProgramABI, TypeApplication, TypeDeclaration};
+    use pretty_assertions::assert_eq;
     use quote::quote;
 
     use super::*;
@@ -179,11 +180,11 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub enum MatchaTea<> {
-                LongIsland(u64),
-                MoscowMule(bool)
+            pub enum MatchaTea {
+                LongIsland(::core::primitive::u64),
+                MoscowMule(::core::primitive::bool),
             }
         };
 
@@ -263,11 +264,11 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub enum Amsterdam<> {
+            pub enum Amsterdam {
                 Infrastructure(self::Building),
-                Service(u32)
+                Service(::core::primitive::u32),
             }
         };
 
@@ -325,10 +326,10 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub enum SomeEnum < > {
-                SomeArr([u64; 7usize])
+            pub enum SomeEnum {
+                SomeArr([::core::primitive::u64; 7usize]),
             }
         };
 
@@ -399,10 +400,10 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub enum EnumLevel3<> {
-                El2(self::EnumLevel2)
+            pub enum EnumLevel3 {
+                El2(self::EnumLevel2),
             }
         };
 
@@ -474,12 +475,25 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub struct Cocktail < > {
-                pub long_island: bool,
-                pub cosmopolitan: u64,
-                pub mojito: u32
+            pub struct Cocktail {
+                pub long_island: ::core::primitive::bool,
+                pub cosmopolitan: ::core::primitive::u64,
+                pub mojito: ::core::primitive::u32,
+            }
+            impl Cocktail {
+                pub fn new(
+                    long_island: ::core::primitive::bool,
+                    cosmopolitan: ::core::primitive::u64,
+                    mojito: ::core::primitive::u32,
+                ) -> Self {
+                    Self {
+                        long_island,
+                        cosmopolitan,
+                        mojito,
+                    }
+                }
             }
         };
 
@@ -507,11 +521,17 @@ mod tests {
                 Debug,
                 Eq,
                 PartialEq,
+                ::core::default::Default,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub struct SomeEmptyStruct < > {}
+            pub struct SomeEmptyStruct {}
+            impl SomeEmptyStruct {
+                pub fn new() -> Self {
+                    Self {}
+                }
+            }
         };
 
         assert_eq!(actual.code().to_string(), expected.to_string());
@@ -572,11 +592,19 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub struct Cocktail < > {
+            pub struct Cocktail {
                 pub long_island: self::Shaker,
-                pub mojito: u32
+                pub mojito: ::core::primitive::u32,
+            }
+            impl Cocktail {
+                pub fn new(long_island: self::Shaker, mojito: ::core::primitive::u32,) -> Self {
+                    Self {
+                        long_island,
+                        mojito,
+                    }
+                }
             }
         };
 
@@ -675,11 +703,16 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub struct MyStruct1 < > {
-                pub x: u64,
-                pub y: ::fuels::types::Bits256
+            pub struct MyStruct1 {
+                pub x: ::core::primitive::u64,
+                pub y: ::fuels::types::Bits256,
+            }
+            impl MyStruct1 {
+                pub fn new(x: ::core::primitive::u64, y: ::fuels::types::Bits256,) -> Self {
+                    Self { x, y, }
+                }
             }
         };
 
@@ -698,11 +731,16 @@ mod tests {
                 PartialEq,
                 ::fuels::macros::Parameterize,
                 ::fuels::macros::Tokenizable,
-                ::fuels::macros::TryFrom
+                ::fuels::macros::TryFrom,
             )]
-            pub struct MyStruct2 < > {
-                pub x: bool,
-                pub y: self::MyStruct1
+            pub struct MyStruct2 {
+                pub x: ::core::primitive::bool,
+                pub y: self::MyStruct1,
+            }
+            impl MyStruct2 {
+                pub fn new(x: ::core::primitive::bool, y: self::MyStruct1,) -> Self {
+                    Self { x, y, }
+                }
             }
         };
 
