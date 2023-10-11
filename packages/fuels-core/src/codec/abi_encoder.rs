@@ -154,16 +154,17 @@ impl ABIEncoder {
             .collect::<Vec<_>>();
 
         let num_bytes = data.len() * WORD_SIZE;
-
         let len = Self::encode_u64(num_bytes as u64);
+
         Ok(vec![Data::Dynamic(encoded_data), len])
     }
 
     fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {
-        let encoded_data = Data::Inline(arg_string.get_encodable_str()?.as_bytes().to_vec());
+        let encodable_str = arg_string.get_encodable_str()?;
 
-        let num_bytes = arg_string.get_encodable_str()?.len();
-        let len = Self::encode_u64(num_bytes as u64);
+        let encoded_data = Data::Inline(encodable_str.as_bytes().to_vec());
+        let len = Self::encode_u64(encodable_str.len() as u64);
+
         Ok(vec![Data::Dynamic(vec![encoded_data]), len])
     }
 

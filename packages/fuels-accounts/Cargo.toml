@@ -26,6 +26,7 @@ rand = { workspace = true, default-features = false }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"] }
+zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 hex = { workspace = true, default-features = false, features = ["std"] }
