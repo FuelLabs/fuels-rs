@@ -67,6 +67,7 @@ members = [
   'tests/types/contracts/results',
   'tests/types/contracts/std_lib_string',
   'tests/types/contracts/str_in_array',
+  'tests/types/contracts/string_slice',
   'tests/types/contracts/tuples',
   'tests/types/contracts/two_structs',
   'tests/types/contracts/type_inside_enum',
