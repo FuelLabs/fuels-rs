@@ -84,10 +84,9 @@ mod tests {
     use std::vec;
 
     use super::*;
-    use crate::types::U256;
     use crate::{
         constants::WORD_SIZE,
-        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken},
+        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken, U256},
     };
 
     #[test]
@@ -519,6 +518,73 @@ mod tests {
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
+    }
+
+    #[test]
+    fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
+        let mut param_types = vec![
+            ParamType::U64,
+            ParamType::Bool,
+            ParamType::Vector(Box::from(ParamType::U64)),
+        ];
+        // empty data
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let variants = EnumVariants::new(param_types.clone())?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+        // it works if there is only one heap type
+        let _ = ABIDecoder::default().decode(&enum_param_type, &data)?;
+
+        param_types.append(&mut vec![ParamType::Bytes]);
+        let variants = EnumVariants::new(param_types)?;
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+        // fails if there is more than one variant using heap type in the enum
+        let error = ABIDecoder::default()
+            .decode(&enum_param_type, &data)
+            .expect_err("Should fail");
+        let expected_error =
+            "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+                .to_string();
+        assert_eq!(error.to_string(), expected_error);
+
+        Ok(())
+    }
+
+    #[test]
+    fn enums_w_too_deeply_nested_heap_types_not_allowed() {
+        let param_types = vec![
+            ParamType::U8,
+            ParamType::Struct {
+                fields: vec![ParamType::RawSlice],
+                generics: vec![],
+            },
+        ];
+        let variants = EnumVariants::new(param_types).unwrap();
+        let enum_param_type = ParamType::Enum {
+            variants,
+            generics: vec![],
+        };
+
+        let err = ABIDecoder::default()
+            .decode(&enum_param_type, &[])
+            .expect_err("should have failed");
+
+        let Error::InvalidType(msg) = err else {
+            panic!("Unexpected err: {err}");
+        };
+
+        assert_eq!(
+            msg,
+            "Enums currently support only one level deep heap types."
+        );
     }
 
     #[test]

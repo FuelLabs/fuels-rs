@@ -113,5 +113,5 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
         .set_doc("Run the script's `main` function with the provided arguments".to_string())
         .set_body(body);
 
-    Ok(generator.into())
+    Ok(generator.generate())
 }
