@@ -40,7 +40,7 @@ mod wallets_config;
 
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
-/// output of this function can be used with `setup_test_client` to get a client with some
+/// output of this function can be used with `setup_test_provider` to get a client with some
 /// pre-existing coins, with `num_asset` different asset ids. Note that one of the assets is the
 /// base asset to pay for gas.
 pub fn setup_multiple_assets_coins(
@@ -82,7 +82,7 @@ pub fn setup_custom_assets_coins(owner: &Bech32Address, assets: &[AssetConfig]) 
 }
 
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
-/// The output of this function can be used with `setup_test_client` to get a client with some
+/// The output of this function can be used with `setup_test_provider` to get a client with some
 /// pre-existing coins, but with only one asset ID.
 pub fn setup_single_asset_coins(
     owner: &Bech32Address,
@@ -152,7 +152,7 @@ pub async fn setup_test_provider(
     let mut config = node_config.unwrap_or_else(Config::local_node);
     config.chain_conf = chain_conf;
 
-    let srv = service::FuelService::start(config).await?;
+    let srv = FuelService::start(config).await?;
 
     let address = srv.bound_address();
 

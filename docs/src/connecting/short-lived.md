@@ -17,7 +17,7 @@ You can also use the test helper `setup_test_provider()` for this:
 You can also use `launch_provider_and_get_wallet()`, which abstracts away the `setup_test_provider()` and the wallet creation, all in one single method:
 
 ```rust,ignore
-let wallet = launch_provider_and_get_wallet().await;
+let wallet = launch_provider_and_get_wallet().await?;
 ```
 
 ## Features
