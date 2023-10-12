@@ -201,8 +201,7 @@ impl Provider {
 
         self.validate_transaction(tx.clone()).await?;
 
-        let tx_id = self.client.submit(&tx.into()).await?;
-        Ok(tx_id)
+        Ok(self.client.submit(&tx.into()).await?)
     }
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
