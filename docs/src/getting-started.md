@@ -6,7 +6,7 @@
 <!-- rs_dependencies:example:start -->
 The dependencies for using the Fuel Rust SDK are:
 
-- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/book/introduction/installation.html);
+- [The latest `stable` Rust toolchain](https://docs.fuel.network/guides/installation/);
 - [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/book/introduction/installation.html#installing-from-cargo).
 <!-- rs_dependencies:example:end -->
 
