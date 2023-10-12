@@ -1671,17 +1671,3 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
     Ok(())
 }
-
-#[tokio::test]
-async fn bla_bla() -> Result<()> {
-    use service::FuelService;
-
-    let config = Config::local_node();
-
-    let service = FuelService::start(config).await?;
-    let _ = Provider::connect(service.bound_address().to_string()).await?;
-
-    service.stop().await.unwrap();
-
-    Ok(())
-}
