@@ -14,10 +14,10 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v1.24.3/dasel_linux_amd64
+  DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.20.4
-  RUST_VERSION: 1.72.0
+  FUEL_CORE_VERSION: 0.20.6
+  RUST_VERSION: 1.72.1
   FORC_VERSION: 0.46.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
@@ -119,7 +119,7 @@ jobs:
       - run: |
           curl -sSLf "$DASEL_VERSION" -L -o dasel && chmod +x dasel
           mv ./dasel /usr/local/bin/dasel
-          MIN_VERSION=$(cat Cargo.toml | dasel -r toml 'workspace.package.rust-version')
+          MIN_VERSION=$(cat Cargo.toml | dasel -r toml 'workspace.package.rust-version' -w plain)
           RUST_VERSION="${{ env.RUST_VERSION }}"
           echo "Comparing minimum supported toolchain ($MIN_VERSION) with ci toolchain (RUST_VERSION)"
           test "$MIN_VERSION" == "$RUST_VERSION"
