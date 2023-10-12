@@ -17,7 +17,10 @@ pub fn check_fuel_core_version_compatibility(network_version: &Version) -> Versi
     check_version_compatibility(network_version, &supported_version)
 }
 
-fn check_version_compatibility(actual_version: &Version, expected_version: &Version) -> VersionCompatibility {
+fn check_version_compatibility(
+    actual_version: &Version,
+    expected_version: &Version,
+) -> VersionCompatibility {
     let is_major_supported = expected_version.major == actual_version.major;
     let is_minor_supported = expected_version.minor == actual_version.minor;
     let is_patch_supported = expected_version.patch == actual_version.patch;
