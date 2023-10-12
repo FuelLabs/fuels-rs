@@ -1679,12 +1679,9 @@ async fn bla_bla() -> Result<()> {
     let config = Config::local_node();
 
     let service = FuelService::start(config).await?;
-
     let _ = Provider::connect(service.bound_address().to_string()).await?;
 
-    dbg!(service.state());
     service.stop().await.unwrap();
-    dbg!(service.state());
 
     Ok(())
 }

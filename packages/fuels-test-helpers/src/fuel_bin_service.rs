@@ -1,11 +1,8 @@
-use fuels_core::types::errors::{error, Error, Result as FuelResult};
+use fuels_core::types::errors::{Error, Result as FuelResult};
 use tempfile::NamedTempFile;
 
-use fuel_core_services::{RunnableService, RunnableTask, ServiceRunner, State, StateWatcher};
-
-use fuel_core_services::Service as ServiceTrait;
-
 use fuel_core_client::client::FuelClient;
+use fuel_core_services::State;
 use std::{net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
 
 use crate::node_types::{Config, DbType, Trigger};
@@ -120,95 +117,13 @@ pub struct ServerParams {
     extended_config: ExtendedConfig,
 }
 
-pub struct Task {
-    pub running_node: Pin<Box<JoinHandle<()>>>,
-}
-
-#[async_trait::async_trait]
-impl RunnableTask for Task {
-    async fn run(&mut self, state: &mut StateWatcher) -> anyhow::Result<bool> {
-        state.while_started().await?;
-        Ok(false)
-    }
-
-    async fn shutdown(self) -> anyhow::Result<()> {
-        self.running_node.abort();
-        Ok(())
-    }
-}
-
-pub struct FuelNode {
-    pub config: Config,
-}
-
-#[async_trait::async_trait]
-impl RunnableService for FuelNode {
-    const NAME: &'static str = "FuelService";
-    type SharedData = SharedState;
-    type Task = Task;
-    type TaskParams = ServerParams;
-
-    fn shared_data(&self) -> Self::SharedData {
-        SharedState {
-            config: self.config.clone(),
-        }
-    }
-
-    async fn into_task(
-        self,
-        _state: &StateWatcher,
-        params: Self::TaskParams,
-    ) -> anyhow::Result<Self::Task> {
-        let ServerParams {
-            mut extended_config,
-        } = params;
-        let args = extended_config.config_to_args_vec()?;
-
-        let binary_name = "fuel-core";
-        let paths = which::which_all(binary_name)
-            .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
-            .collect::<Vec<_>>();
-        let path = paths
-            .first()
-            .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
-        if paths.len() > 1 {
-            eprintln!(
-                "found more than one '{}' binary in PATH, using '{}'",
-                binary_name,
-                path.display()
-            );
-        }
-
-        let mut command = Command::new(path);
-        let running_node = command.args(args).kill_on_drop(true).output();
-
-        let address = extended_config.config.addr;
-        let client = FuelClient::from(address);
-        server_health_check(&client).await?;
-
-        let join_handle = spawn(async move {
-            let result = running_node
-                .await
-                .expect("error: Couldn't find fuel-core in PATH.");
-            let stdout = String::from_utf8_lossy(&result.stdout);
-            let stderr = String::from_utf8_lossy(&result.stderr);
-            eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
-        });
-
-        Ok(Task {
-            running_node: Box::pin(join_handle),
-        })
-    }
-}
-
 pub struct FuelService {
     pub bound_address: SocketAddr,
-    pub shared: SharedState,
-    runner: ServiceRunner<FuelNode>,
+    runner: Pin<Box<JoinHandle<()>>>,
 }
 
 impl FuelService {
-    pub fn new(config: Config) -> FuelResult<Self> {
+    pub async fn new_node(config: Config) -> FuelResult<Self> {
         let requested_port = config.addr.port();
 
         let bound_address = match requested_port {
@@ -222,71 +137,24 @@ impl FuelService {
             ..config
         };
 
-        let runner = ServiceRunner::new_with_params(
-            FuelNode {
-                config: config.clone(),
+        let params = ServerParams {
+            extended_config: ExtendedConfig {
+                config,
+                config_file: NamedTempFile::new()?,
             },
-            ServerParams {
-                extended_config: ExtendedConfig {
-                    config,
-                    config_file: NamedTempFile::new()?,
-                },
-            },
-        );
+        };
 
-        let shared = runner.shared.clone();
+        let runner = run_node(params).await?;
 
         Ok(FuelService {
             bound_address,
-            shared,
-            runner,
+            runner: Box::pin(runner),
         })
     }
 
-    pub async fn new_node(config: Config) -> FuelResult<Self> {
-        let service = Self::new(config)?;
-
-        service
-            .runner
-            .start_and_await()
-            .await
-            .map_err(|err| error!(InfrastructureError, "{err}"))?;
-        Ok(service)
-    }
-}
-
-#[async_trait::async_trait]
-impl ServiceTrait for FuelService {
-    fn start(&self) -> anyhow::Result<()> {
-        self.runner.start()
-    }
-
-    async fn start_and_await(&self) -> anyhow::Result<State> {
-        self.runner.start_and_await().await
-    }
-
-    async fn await_start_or_stop(&self) -> anyhow::Result<State> {
-        self.runner.await_start_or_stop().await
-    }
-
-    fn stop(&self) -> bool {
-        self.runner.stop()
-    }
-
-    async fn stop_and_await(&self) -> anyhow::Result<State> {
-        self.runner.stop_and_await().await
-    }
-
-    async fn await_stop(&self) -> anyhow::Result<State> {
-        self.runner.await_stop().await
-    }
-
-    fn state(&self) -> State {
-        self.runner.state()
-    }
-
-    fn state_watcher(&self) -> StateWatcher {
-        self.runner.state_watcher()
+    pub async fn stop(&self) -> FuelResult<State> {
+        self.runner.abort();
+        Ok(State::Stopped)
     }
 }
 
@@ -311,4 +179,44 @@ async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
 fn get_socket_address() -> SocketAddr {
     let free_port = pick_unused_port().expect("No ports free");
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+}
+
+async fn run_node(params: ServerParams) -> FuelResult<JoinHandle<()>> {
+    let ServerParams {
+        mut extended_config,
+    } = params;
+    let args = extended_config.config_to_args_vec()?;
+
+    let binary_name = "fuel-core";
+    let paths = which::which_all(binary_name)
+        .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
+        .collect::<Vec<_>>();
+    let path = paths
+        .first()
+        .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
+    if paths.len() > 1 {
+        eprintln!(
+            "found more than one '{}' binary in PATH, using '{}'",
+            binary_name,
+            path.display()
+        );
+    }
+
+    let mut command = Command::new(path);
+    let running_node = command.args(args).kill_on_drop(true).output();
+
+    let address = extended_config.config.addr;
+    let client = FuelClient::from(address);
+    server_health_check(&client).await?;
+
+    let join_handle = spawn(async move {
+        let result = running_node
+            .await
+            .expect("error: Couldn't find fuel-core in PATH.");
+        let stdout = String::from_utf8_lossy(&result.stdout);
+        let stderr = String::from_utf8_lossy(&result.stderr);
+        eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");
+    });
+
+    Ok(join_handle)
 }
