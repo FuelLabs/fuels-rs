@@ -139,6 +139,58 @@ pub(crate) fn tokenize_generics(generics: &[Ident]) -> (TokenStream, TokenStream
     )
 }
 
+pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
+    [
+        ("std::address::Address", "::fuels::types::Address"),
+        ("std::contract_id::AssetId", "::fuels::types::AssetId"),
+        ("std::b512::B512", "::fuels::types::B512"),
+        ("std::bytes::Bytes", "::fuels::types::Bytes"),
+        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
+        ("std::identity::Identity", "::fuels::types::Identity"),
+        ("std::option::Option", "::core::option::Option"),
+        ("std::result::Result", "::core::result::Result"),
+        ("std::string::String", "::std::string::String"),
+        ("std::u256::U256", "::fuels::types::U256"),
+        ("std::vec::Vec", "::std::vec::Vec"),
+        (
+            "std::vm::evm::evm_address::EvmAddress",
+            "::fuels::types::EvmAddress",
+        ),
+    ]
+    .into_iter()
+    .map(|(original_type_path, provided_type_path)| {
+        let msg = "known at compile time to be correctly formed";
+        (
+            TypePath::new(original_type_path).expect(msg),
+            TypePath::new(provided_type_path).expect(msg),
+        )
+    })
+    .flat_map(|(original_type_path, provided_type_path)| {
+        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+        let backward_compat_mapping = original_type_path
+            .ident()
+            .expect("The original type path must have at least one part")
+            .into();
+        [
+            (backward_compat_mapping, provided_type_path.clone()),
+            (original_type_path, provided_type_path),
+        ]
+    })
+    .collect()
+}
+
+pub(crate) fn get_equivalent_bech32_type(ttype: &ResolvedType) -> Option<TokenStream> {
+    let ResolvedType::StructOrEnum { path, .. } = ttype else {
+        return None;
+    };
+
+    match path.to_string().as_str() {
+        "::fuels::types::Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
+        "::fuels::types::ContractId" => Some(quote! {::fuels::types::bech32::Bech32ContractId}),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use fuel_abi_types::abi::full_program::FullTypeDeclaration;
@@ -190,57 +242,5 @@ mod tests {
             },
             type_arguments: vec![],
         }
-    }
-}
-
-pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
-    [
-        ("std::address::Address", "::fuels::types::Address"),
-        ("std::contract_id::AssetId", "::fuels::types::AssetId"),
-        ("std::b512::B512", "::fuels::types::B512"),
-        ("std::bytes::Bytes", "::fuels::types::Bytes"),
-        ("std::contract_id::ContractId", "::fuels::types::ContractId"),
-        ("std::identity::Identity", "::fuels::types::Identity"),
-        ("std::option::Option", "::core::option::Option"),
-        ("std::result::Result", "::core::result::Result"),
-        ("std::string::String", "::std::string::String"),
-        ("std::u256::U256", "::fuels::types::U256"),
-        ("std::vec::Vec", "::std::vec::Vec"),
-        (
-            "std::vm::evm::evm_address::EvmAddress",
-            "::fuels::types::EvmAddress",
-        ),
-    ]
-    .into_iter()
-    .map(|(original_type_path, provided_type_path)| {
-        let msg = "known at compile time to be correctly formed";
-        (
-            TypePath::new(original_type_path).expect(msg),
-            TypePath::new(provided_type_path).expect(msg),
-        )
-    })
-    .flat_map(|(original_type_path, provided_type_path)| {
-        // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-        let backward_compat_mapping = original_type_path
-            .ident()
-            .expect("The original type path must have at least one part")
-            .into();
-        [
-            (backward_compat_mapping, provided_type_path.clone()),
-            (original_type_path, provided_type_path),
-        ]
-    })
-    .collect()
-}
-
-pub(crate) fn get_equivalent_bech32_type(ttype: &ResolvedType) -> Option<TokenStream> {
-    let ResolvedType::StructOrEnum { path, .. } = ttype else {
-        return None;
-    };
-
-    match path.to_string().as_str() {
-        "::fuels::types::Address" => Some(quote! {::fuels::types::bech32::Bech32Address}),
-        "::fuels::types::ContractId" => Some(quote! {::fuels::types::bech32::Bech32ContractId}),
-        _ => None,
     }
 }
