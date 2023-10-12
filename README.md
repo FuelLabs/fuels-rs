@@ -33,8 +33,8 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 
 ### What dependencies do I need?
 
-- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/book/introduction/installation.html);
-- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/book/introduction/installation.html#installing-from-cargo).
+- [The latest `stable` Rust toolchain](https://docs.fuel.network/guides/installation/#installing-rust);
+- [`forc` and `fuel-core` binaries](https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup).
 
 ### How can I run the SDK tests?
 

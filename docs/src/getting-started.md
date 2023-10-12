@@ -6,8 +6,8 @@
 <!-- rs_dependencies:example:start -->
 The dependencies for using the Fuel Rust SDK are:
 
-- [The latest `stable` Rust toolchain](https://fuellabs.github.io/sway/master/book/introduction/installation.html);
-- [`forc` and `fuel-core` binaries](https://fuellabs.github.io/sway/master/book/introduction/installation.html#installing-from-cargo).
+-- [The latest `stable` Rust toolchain](https://docs.fuel.network/guides/installation/#installing-rust);
+-- [`forc` and `fuel-core` binaries](https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup).
 <!-- rs_dependencies:example:end -->
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
