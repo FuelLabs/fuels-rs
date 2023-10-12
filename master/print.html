@@ -155,10 +155,8 @@
 <!-- This section should list the dependencies for the Fuel Rust SDK -->
 <!-- rs_dependencies:example:start -->
 <p>The dependencies for using the Fuel Rust SDK are:</p>
-<ul>
-<li><a href="https://fuellabs.github.io/sway/master/book/introduction/installation.html">The latest <code>stable</code> Rust toolchain</a>;</li>
-<li><a href="https://fuellabs.github.io/sway/master/book/introduction/installation.html#installing-from-cargo"><code>forc</code> and <code>fuel-core</code> binaries</a>.</li>
-</ul>
+<p>-- <a href="https://docs.fuel.network/guides/installation/#installing-rust">The latest <code>stable</code> Rust toolchain</a>;
+-- <a href="https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup"><code>forc</code> and <code>fuel-core</code> binaries</a>.</p>
 <!-- rs_dependencies:example:end -->
 <p><code>forc</code> is Sway equivalent of Rust's <code>cargo</code>. <code>fuel-core</code> is a Fuel full node implementation.</p>
 <!-- This section should list the main ways developers can use the Fuel Rust SDK -->
@@ -997,7 +995,7 @@ In order to call your contracts, scripts or predicates, you first need to genera
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-json-abi-file"><a class="header" href="#the-json-abi-file">The JSON ABI file</a></h1>
 <!-- This section should talk about the importance of the ABI -->
 <!-- abi:example:start -->
-<p>Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the <a href="https://fuellabs.github.io/sway/master/book/introduction/sway_quickstart.html#abi">ABI methods</a> in your smart contracts.</p>
+<p>Whether you want to deploy or connect to a pre-existing smart contract, the JSON ABI file is extremely important: it's what tells the SDK about the <a href="https://docs.fuel.network/guides/quickstart/building-a-smart-contract/#abi">ABI methods</a> in your smart contracts.</p>
 <!-- abi:example:end -->
 <p>For the same example Sway code as above:</p>
 <pre><code class="language-Rust">contract;
@@ -1372,7 +1370,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <p>Once you've written a contract in Sway and compiled it with <code>forc build</code>, you'll have in your hands two important artifacts: the compiled binary file and the JSON ABI file.</p>
 <!-- build:example:end -->
 <blockquote>
-<p>Note: Read <a href="https://fuellabs.github.io/sway/master/book/introduction/sway_quickstart.html">here</a> for more on how to work with Sway.</p>
+<p>Note: Read <a href="https://docs.fuel.network/guides/quickstart/">here</a> for more on how to work with Sway.</p>
 </blockquote>
 <p>Below is how you can deploy your contracts using the SDK. For more details about each component in this process, read <a href="deploying/../abigen/the-abigen-macro.html">The abigen macro</a>, <a href="deploying/./the-fuelvm-binary-file.html">The FuelVM binary file</a>, and <a href="deploying/../abigen/the-json-abi-file.html">The JSON ABI file</a>.</p>
 <!-- This section should explain how to load and deploy a contract  -->
