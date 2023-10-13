@@ -12,9 +12,9 @@ version.workspace = true
 
 [dependencies]
 argh = "0.1.12"
-cargo_metadata = "0.17.0"
+cargo_metadata = "0.18.0"
 color-eyre = "0.6.2"
 once_cell = "1.18.0"
 regex = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-walkdir = "2.3.3"
+walkdir = "2.4.0"
