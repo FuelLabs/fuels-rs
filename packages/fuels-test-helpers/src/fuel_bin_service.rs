@@ -11,8 +11,8 @@ use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 #[derive(Debug)]
 struct ExtendedConfig {
-    pub config: Config,
-    pub config_file: NamedTempFile,
+    config: Config,
+    config_file: NamedTempFile,
 }
 
 impl ExtendedConfig {
