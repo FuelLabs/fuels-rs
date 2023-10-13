@@ -24,7 +24,6 @@ use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
 pub use node_types::*;
-pub mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub(crate) mod fuel_bin_service;
