@@ -112,7 +112,7 @@ impl ExtendedConfig {
 
 pub struct FuelService {
     pub bound_address: SocketAddr,
-    runner: Pin<Box<JoinHandle<()>>>,
+    handle: JoinHandle<()>,
 }
 
 impl FuelService {
