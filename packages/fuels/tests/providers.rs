@@ -2,8 +2,6 @@ use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 
-use service::FuelService;
-
 use fuel_core_types::{
     fuel_crypto::rand::{self, Rng},
     tai64::Tai64,
@@ -12,7 +10,6 @@ use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    test_helpers::node_types::Config,
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, message::Message},
 };

@@ -24,6 +24,7 @@ use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 
 pub use node_types::*;
+mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]
 pub(crate) mod fuel_bin_service;
@@ -32,6 +33,7 @@ pub(crate) mod fuel_bin_service;
 mod accounts;
 
 pub use service::*;
+mod service;
 
 mod utils;
 mod wallets_config;
@@ -160,7 +162,6 @@ pub async fn setup_test_provider(
     });
 
     Provider::from(address).await
-        .await
 }
 
 #[cfg(test)]

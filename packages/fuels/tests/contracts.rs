@@ -1007,9 +1007,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{
-        test_helpers::node_types::ChainConfig, tx::ConsensusParameters, types::coin::Coin,
-    };
+    use fuels::{tx::ConsensusParameters, types::coin::Coin};
 
     let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
 
@@ -1331,10 +1329,7 @@ fn db_rocksdb() {
     use fuels::{
         accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
         client::{PageDirection, PaginationRequest},
-        prelude::{
-            node_types::{ChainConfig, Config},
-            setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT,
-        },
+        prelude::{setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
     let temp_dir = tempfile::tempdir()

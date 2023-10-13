@@ -3,9 +3,10 @@ use tempfile::NamedTempFile;
 
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
-use std::{net::SocketAddr, path::PathBuf, pin::Pin, time::Duration};
+use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use crate::node_types::{Config, DbType, Trigger};
+use fuels_core::error;
 use portpicker::{is_free, pick_unused_port};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
@@ -108,8 +109,6 @@ impl ExtendedConfig {
     }
 }
 
-
-
 pub struct FuelService {
     pub bound_address: SocketAddr,
     handle: JoinHandle<()>,
@@ -144,7 +143,7 @@ impl FuelService {
     }
 
     pub fn stop(&self) -> FuelResult<State> {
-        self.runner.abort();
+        self.handle.abort();
         Ok(State::Stopped)
     }
 }
@@ -161,7 +160,10 @@ async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
     }
 
     if !healthy {
-        panic!("error: Could not connect to fuel core server.")
+        return Err(error!(
+            InfrastructureError,
+            "Could not connect to fuel core server."
+        ));
     }
 
     Ok(())
@@ -176,12 +178,20 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let args = extended_config.config_to_args_vec()?;
 
     let binary_name = "fuel-core";
+
     let paths = which::which_all(binary_name)
-        .unwrap_or_else(|_| panic!("failed to list '{binary_name}' binaries"))
+        .or_else(|_| {
+            Err(error!(
+                InfrastructureError,
+                "failed to list '{}' binaries", binary_name
+            ))
+        })?
         .collect::<Vec<_>>();
+
     let path = paths
         .first()
-        .unwrap_or_else(|| panic!("no '{binary_name}' in PATH"));
+        .ok_or_else(|| error!(InfrastructureError, "no '{}' in PATH", binary_name))?;
+
     if paths.len() > 1 {
         eprintln!(
             "found more than one '{}' binary in PATH, using '{}'",
