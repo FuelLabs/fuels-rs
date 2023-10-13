@@ -180,11 +180,11 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let binary_name = "fuel-core";
 
     let paths = which::which_all(binary_name)
-        .or_else(|_| {
-            Err(error!(
+        .map_err(|_| {
+            error!(
                 InfrastructureError,
                 "failed to list '{}' binaries", binary_name
-            ))
+            )
         })?
         .collect::<Vec<_>>();
 
