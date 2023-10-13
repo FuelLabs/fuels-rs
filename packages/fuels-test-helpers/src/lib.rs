@@ -160,7 +160,7 @@ pub async fn setup_test_provider(
         let () = futures::future::pending().await;
     });
 
-    Ok(Provider::from(address)
+    Provider::from(address).await
         .await
         .expect("Could not connect to node"))
 }
