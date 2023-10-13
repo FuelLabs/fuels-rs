@@ -108,10 +108,6 @@ impl ExtendedConfig {
     }
 }
 
-#[derive(Clone, Default, Debug)]
-pub struct SharedState {
-    pub config: Config,
-}
 
 
 pub struct FuelService {
