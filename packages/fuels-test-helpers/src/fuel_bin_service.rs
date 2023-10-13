@@ -130,18 +130,16 @@ impl FuelService {
             ..config
         };
 
-        let params = ServerParams {
-            extended_config: ExtendedConfig {
-                config,
-                config_file: NamedTempFile::new()?,
-            },
+        let extended_config = ExtendedConfig {
+            config,
+            config_file: NamedTempFile::new()?,
         };
 
-        let runner = run_node(params).await?;
+        let handle = run_node(extended_config).await?;
 
         Ok(FuelService {
             bound_address,
-            runner: Box::pin(runner),
+            handle,
         })
     }
 
