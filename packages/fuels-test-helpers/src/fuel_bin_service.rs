@@ -113,9 +113,6 @@ pub struct SharedState {
     pub config: Config,
 }
 
-pub struct ServerParams {
-    extended_config: ExtendedConfig,
-}
 
 pub struct FuelService {
     pub bound_address: SocketAddr,
