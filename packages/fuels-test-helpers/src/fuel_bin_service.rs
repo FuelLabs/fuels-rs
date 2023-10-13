@@ -39,7 +39,7 @@ impl ExtendedConfig {
             DbType::InMemory => args.push("in-memory".to_string()),
             DbType::RocksDb(path_to_db) => {
                 args.push("rocks-db".to_string());
-                let path = path_to_db.as_ref().map(Clone::clone).unwrap_or_else(|| {
+                let path = path_to_db.as_ref().cloned().unwrap_or_else(|| {
                     PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
                         .join(".fuel/db")
                 });
