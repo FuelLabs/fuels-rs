@@ -31,7 +31,6 @@ pub(crate) mod fuel_bin_service;
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
 
-pub mod service;
 pub use service::*;
 
 mod utils;
