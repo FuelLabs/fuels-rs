@@ -178,10 +178,7 @@ fn get_socket_address() -> SocketAddr {
     SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
 }
 
-async fn run_node(params: ServerParams) -> FuelResult<JoinHandle<()>> {
-    let ServerParams {
-        mut extended_config,
-    } = params;
+async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
     let args = extended_config.config_to_args_vec()?;
 
     let binary_name = "fuel-core";
