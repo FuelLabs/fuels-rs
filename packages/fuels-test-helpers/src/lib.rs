@@ -161,7 +161,6 @@ pub async fn setup_test_provider(
 
     Provider::from(address).await
         .await
-        .expect("Could not connect to node"))
 }
 
 #[cfg(test)]
