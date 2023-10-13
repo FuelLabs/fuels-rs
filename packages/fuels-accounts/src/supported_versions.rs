@@ -1,18 +1,18 @@
 use semver::Version;
 
-pub fn get_supported_fuel_core_version() -> Version {
+fn get_supported_fuel_core_version() -> Version {
     "0.20.6".parse().unwrap()
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct VersionCompatibility {
-    pub supported_version: Version,
-    pub is_major_supported: bool,
-    pub is_minor_supported: bool,
-    pub is_patch_supported: bool,
+pub(crate) struct VersionCompatibility {
+    pub(crate) supported_version: Version,
+    pub(crate) is_major_supported: bool,
+    pub(crate) is_minor_supported: bool,
+    pub(crate) is_patch_supported: bool,
 }
 
-pub fn check_fuel_core_version_compatibility(network_version: &Version) -> VersionCompatibility {
+pub(crate) fn check_fuel_core_version_compatibility(network_version: &Version) -> VersionCompatibility {
     let supported_version = get_supported_fuel_core_version();
     check_version_compatibility(network_version, &supported_version)
 }
