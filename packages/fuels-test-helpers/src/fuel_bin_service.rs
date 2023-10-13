@@ -143,7 +143,7 @@ impl FuelService {
         })
     }
 
-    pub async fn stop(&self) -> FuelResult<State> {
+    pub fn stop(&self) -> FuelResult<State> {
         self.runner.abort();
         Ok(State::Stopped)
     }
