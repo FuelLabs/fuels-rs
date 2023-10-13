@@ -3,8 +3,10 @@ extern crate alloc;
 #[cfg(test)]
 mod tests {
     use fuels::{
+        accounts::predicate::Predicate,
         core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
+        types::bech32::Bech32Address,
     };
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -30,12 +32,12 @@ mod tests {
                       "type": "enum SomeEnum",
                       "components": [
                         {
-                          "name": "v1",
+                          "name": "V1",
                           "type": 0,
                           "typeArguments": null
                         },
                         {
-                          "name": "v2",
+                          "name": "V2",
                           "type": 3,
                           "typeArguments": null
                         }
@@ -106,7 +108,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     fn decoding_and_encoding() {
-        let original = SomeEnum::v2(SomeStruct { a: 123, b: false });
+        let original = SomeEnum::V2(SomeStruct { a: 123, b: false });
 
         let bytes = ABIEncoder::encode(&[original.clone().into_token()])
             .unwrap()
@@ -115,5 +117,12 @@ mod tests {
         let reconstructed = bytes.try_into().unwrap();
 
         assert_eq!(original, reconstructed);
+    }
+
+    #[wasm_bindgen_test]
+    fn calculate_predicate_address() {
+        let address = Predicate::calculate_address(&[0, 1, 2], 0);
+
+        assert_eq!(address, Bech32Address::default());
     }
 }
