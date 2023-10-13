@@ -12,50 +12,28 @@ use fuel_core_services::Service;
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::fuel_bin_service::FuelService as BinFuelService;
 
-#[cfg(feature = "fuel-core-lib")]
 pub struct FuelService {
+    #[cfg(feature = "fuel-core-lib")]
     service: CoreFuelService,
-    bound_address: SocketAddr,
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-pub struct FuelService {
+    #[cfg(not(feature = "fuel-core-lib"))]
     service: BinFuelService,
     bound_address: SocketAddr,
 }
 
-#[cfg(feature = "fuel-core-lib")]
 impl FuelService {
     pub async fn start(config: Config) -> Result<Self> {
+        #[cfg(feature = "fuel-core-lib")]
         let service = CoreFuelService::new_node(config.into())
             .await
             .map_err(|err| error!(InfrastructureError, "{}", err))?;
-        let bound_address = service.bound_address;
-        Ok(FuelService {
-            service,
-            bound_address,
-        })
-    }
 
-    pub async fn stop(&self) -> Result<State> {
-        self.service
-            .stop_and_await()
-            .await
-            .map_err(|err| error!(InfrastructureError, "{}", err))
-    }
-
-    pub fn bound_address(&self) -> SocketAddr {
-        self.bound_address
-    }
-}
-
-#[cfg(not(feature = "fuel-core-lib"))]
-impl FuelService {
-    pub async fn start(config: Config) -> Result<Self> {
+        #[cfg(not(feature = "fuel-core-lib"))]
         let service = BinFuelService::new_node(config)
             .await
             .map_err(|err| error!(InfrastructureError, "{}", err))?;
+
         let bound_address = service.bound_address;
+
         Ok(FuelService {
             service,
             bound_address,
@@ -63,10 +41,13 @@ impl FuelService {
     }
 
     pub async fn stop(&self) -> Result<State> {
-        self.service
-            .stop()
-            .await
-            .map_err(|err| error!(InfrastructureError, "{}", err))
+        #[cfg(feature = "fuel-core-lib")]
+        let result = self.service.stop_and_await().await;
+
+        #[cfg(not(feature = "fuel-core-lib"))]
+        let result = self.service.stop();
+
+        result.map_err(|err| error!(InfrastructureError, "{}", err))
     }
 
     pub fn bound_address(&self) -> SocketAddr {
