@@ -10,6 +10,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK."
 
+[package.metadata.cargo-machete]
+ignored = ["fuel-core"]
+
 [dependencies]
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, optional = true }
@@ -25,6 +28,7 @@ fuels-code-gen = { workspace = true }
 chrono = { workspace = true }
 fuel-core = { workspace = true, default-features = false }
 fuel-core-types = { workspace = true }
+fuels-test-helpers = { workspace = true }
 hex = { workspace = true, default-features = false }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
