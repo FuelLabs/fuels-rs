@@ -153,7 +153,7 @@ pub struct RetryConfig {
 </code></pre>
 <pre><code class="language-rust  ignore">        let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
         let provider = setup_test_provider(coins.clone(), vec![], None, None)
-            .await
+            .await?
             .with_retry_config(retry_config);
 </code></pre>
 <h2 id="interval-strategy---backoff"><a class="header" href="#interval-strategy---backoff">Interval strategy - Backoff</a></h2>

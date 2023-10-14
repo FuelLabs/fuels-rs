@@ -141,8 +141,7 @@
 <p>RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
 <p>To create or use a local database, follow these instructions:</p>
 <pre><code class="language-rust ignore">        let provider_config = Config {
-            database_path: PathBuf::from(&quot;/tmp/.spider/db&quot;),
-            database_type: DbType::RocksDb,
+            database_type: DbType::RocksDb(Some(PathBuf::from(&quot;/tmp/.spider/db&quot;))),
             ..Config::local_node()
         };
 </code></pre>

@@ -140,7 +140,7 @@
                         <h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
 <p>First, we have to import <code>ConsensusParameters</code> and <code>ChainConfig</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
+<pre><code class="language-rust ignore">        use fuels::{prelude::*, tx::ConsensusParameters};
 </code></pre>
 <p>Next, we can define some values for the consensus parameters:</p>
 <pre><code class="language-rust ignore">        let consensus_parameters_config = ConsensusParameters::DEFAULT
@@ -165,7 +165,7 @@
 provider attached to that node:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
         let _provider =
-            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
 </code></pre>
 
                     </main>

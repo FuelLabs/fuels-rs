@@ -142,7 +142,7 @@
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
@@ -153,7 +153,7 @@
         use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Setup the private key.
         let secret = SecretKey::from_str(

@@ -139,18 +139,13 @@
                     <main>
                         <h1 id="running-a-short-lived-fuel-node-with-the-sdk"><a class="header" href="#running-a-short-lived-fuel-node-with-the-sdk">Running a short-lived Fuel node with the SDK</a></h1>
 <p>You can use the SDK to spin up a local, ideally short-lived Fuel node. Then, you can instantiate a Fuel client, pointing to this node.</p>
-<pre><code class="language-rust ignore">        use fuels::{
-            fuel_node::{Config, FuelService},
-            prelude::Provider,
-        };
+<pre><code class="language-rust ignore">        use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node())
-            .await
-            .map_err(|err| error!(InfrastructureError, &quot;{err}&quot;))?;
+        let server = FuelService::start(Config::local_node()).await?;
 
         // Create a client that will talk to the node created above.
-        let client = Provider::from(server.bound_address).await?;
+        let client = Provider::from(server.bound_address()).await?;
         assert!(client.healthy().await?);
 </code></pre>
 <p>This approach is ideal for contract testing.</p>
@@ -158,13 +153,13 @@
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
 </code></pre>
 <p>You can also use <code>launch_provider_and_get_wallet()</code>, which abstracts away the <code>setup_test_provider()</code> and the wallet creation, all in one single method:</p>
-<pre><code class="language-rust ignore">let wallet = launch_provider_and_get_wallet().await;
+<pre><code class="language-rust ignore">let wallet = launch_provider_and_get_wallet().await?;
 </code></pre>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <h3 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h3>

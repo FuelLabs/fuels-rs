@@ -180,7 +180,7 @@ impl TestContract for Contract {
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let new_str: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
     let new_struct = StructWithGeneric {

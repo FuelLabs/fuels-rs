@@ -166,7 +166,7 @@ fn main(a: u32, b: u64) -&gt; bool {
             }],
         );
 
-        let wallets = &amp;launch_custom_provider_and_get_wallets(wallets_config, None, None).await;
+        let wallets = &amp;launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
 
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];

@@ -153,7 +153,7 @@
 <p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
 <!-- deploy:example:end -->
 <pre><code class="language-rust ignore">        // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance

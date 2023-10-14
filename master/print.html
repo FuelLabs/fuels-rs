@@ -299,18 +299,13 @@ To build these tests, run the following command:</p>
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-a-short-lived-fuel-node-with-the-sdk"><a class="header" href="#running-a-short-lived-fuel-node-with-the-sdk">Running a short-lived Fuel node with the SDK</a></h1>
 <p>You can use the SDK to spin up a local, ideally short-lived Fuel node. Then, you can instantiate a Fuel client, pointing to this node.</p>
-<pre><code class="language-rust ignore">        use fuels::{
-            fuel_node::{Config, FuelService},
-            prelude::Provider,
-        };
+<pre><code class="language-rust ignore">        use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node())
-            .await
-            .map_err(|err| error!(InfrastructureError, &quot;{err}&quot;))?;
+        let server = FuelService::start(Config::local_node()).await?;
 
         // Create a client that will talk to the node created above.
-        let client = Provider::from(server.bound_address).await?;
+        let client = Provider::from(server.bound_address()).await?;
         assert!(client.healthy().await?);
 </code></pre>
 <p>This approach is ideal for contract testing.</p>
@@ -318,13 +313,13 @@ To build these tests, run the following command:</p>
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
 </code></pre>
 <p>You can also use <code>launch_provider_and_get_wallet()</code>, which abstracts away the <code>setup_test_provider()</code> and the wallet creation, all in one single method:</p>
-<pre><code class="language-rust ignore">let wallet = launch_provider_and_get_wallet().await;
+<pre><code class="language-rust ignore">let wallet = launch_provider_and_get_wallet().await?;
 </code></pre>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <h3 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h3>
@@ -339,8 +334,7 @@ To build these tests, run the following command:</p>
 <p>RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
 <p>To create or use a local database, follow these instructions:</p>
 <pre><code class="language-rust ignore">        let provider_config = Config {
-            database_path: PathBuf::from(&quot;/tmp/.spider/db&quot;),
-            database_type: DbType::RocksDb,
+            database_type: DbType::RocksDb(Some(PathBuf::from(&quot;/tmp/.spider/db&quot;))),
             ..Config::local_node()
         };
 </code></pre>
@@ -379,7 +373,7 @@ To build these tests, run the following command:</p>
 
         let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
         let provider = setup_test_provider(coins.clone(), vec![], None, None)
-            .await
+            .await?
             .with_retry_config(retry_config);
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
@@ -426,7 +420,7 @@ pub struct RetryConfig {
 </code></pre>
 <pre><code class="language-rust  ignore">        let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
         let provider = setup_test_provider(coins.clone(), vec![], None, None)
-            .await
+            .await?
             .with_retry_config(retry_config);
 </code></pre>
 <h2 id="interval-strategy---backoff"><a class="header" href="#interval-strategy---backoff">Interval strategy - Backoff</a></h2>
@@ -474,7 +468,7 @@ pub enum Backoff {
             None,
             None,
         )
-        .await;
+        .await?;
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
@@ -527,7 +521,7 @@ pub enum Backoff {
             Some(config),
             None,
         )
-        .await;
+        .await?;
         let wallet = wallets.first().unwrap();
 
         let amount = 1000;
@@ -577,7 +571,7 @@ pub enum Backoff {
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
@@ -588,7 +582,7 @@ pub enum Backoff {
         use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Setup the private key.
         let secret = SecretKey::from_str(
@@ -614,7 +608,7 @@ enables defining owners (wallet addresses) of genesis coins before a provider is
             &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create first account from mnemonic phrase.
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
@@ -687,7 +681,7 @@ vulnerabilities in downstream libraries and applications.</p>
         let mut rng = rand::thread_rng();
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         let password = &quot;my_master_password&quot;;
 
@@ -709,7 +703,7 @@ vulnerabilities in downstream libraries and applications.</p>
             &quot;oblige salon price punch saddle immune slogan rare snap desert retire surprise&quot;;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create first account from mnemonic phrase.
         let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
@@ -750,7 +744,7 @@ vulnerabilities in downstream libraries and applications.</p>
         // This helper will launch a local node and provide 10 test wallets linked to it.
         // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
         let wallets =
-            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
 </code></pre>
 <!-- This section should explain how to customize test wallets -->
 <!-- custom_test_wallets:example:start -->
@@ -766,7 +760,7 @@ vulnerabilities in downstream libraries and applications.</p>
             Some(amount_per_coin),
         );
         // Launches a local node and provides test wallets as specified by the config
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 </code></pre>
 <!-- This section should explain that test wallets are deterministic -->
 <!-- deterministic:example:start -->
@@ -789,7 +783,7 @@ will have deterministic addresses.</p>
             coins_per_asset,
             amount_per_coin,
         );
-        let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
+        let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
         wallet.set_provider(provider);
 </code></pre>
 <ul>
@@ -829,13 +823,13 @@ will have deterministic addresses.</p>
         let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), &amp;assets);
-        let provider = setup_test_provider(coins, vec![], None, None).await;
+        let provider = setup_test_provider(coins, vec![], None, None).await?;
         wallet.set_provider(provider);
 </code></pre>
 <p>This can also be achieved directly with the <code>WalletsConfig</code>.</p>
 <pre><code class="language-rust ignore">        let num_wallets = 1;
         let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> In this case, you need to manually add the base asset and the corresponding number of
@@ -1378,7 +1372,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <p>First, the <code>Contract::load_from</code> function is used to load a contract binary with a <code>LoadConfiguration</code>. If you are only interested in a single instance of your contract, use the default configuration: <code>LoadConfiguration::default()</code>. After the contract binary is loaded, you can use the <code>deploy()</code> method to deploy the contract to the blockchain.</p>
 <!-- deploy:example:end -->
 <pre><code class="language-rust ignore">        // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
@@ -1502,7 +1496,7 @@ impl TestContract for Contract {
         abi = &quot;packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json&quot;
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let new_str: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
     let new_struct = StructWithGeneric {
@@ -1552,7 +1546,7 @@ impl TestContract for Contract {
                 abi =
                     &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
             ));
-            let wallet_original = launch_provider_and_get_wallet().await;
+            let wallet_original = launch_provider_and_get_wallet().await?;
 
             let wallet = wallet_original.clone();
             // Your bech32m encoded contract ID.
@@ -2139,7 +2133,7 @@ let is_error = response.is_err();
         name = &quot;MyScript&quot;,
         abi = &quot;packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json&quot;
     ));
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = &quot;../fuels/tests/scripts/arguments/out/debug/arguments.bin&quot;;
     let script_instance = MyScript::new(wallet, bin_path);
 
@@ -2176,7 +2170,7 @@ let is_error = response.is_err();
         abi = &quot;packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json&quot;
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = &quot;../fuels/tests/logs/script_logs/out/debug/script_logs.bin&quot;;
     let instance = log_script::new(wallet.clone(), bin_path);
 
@@ -2236,7 +2230,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json&quot;));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = &quot;../fuels/tests/scripts/script_configurables/out/debug/script_configurables.bin&quot;;
     let instance = MyScript::new(wallet, bin_path);
 
@@ -2287,7 +2281,7 @@ fn main(a: u32, b: u64) -&gt; bool {
             }],
         );
 
-        let wallets = &amp;launch_custom_provider_and_get_wallets(wallets_config, None, None).await;
+        let wallets = &amp;launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
 
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];
@@ -2456,7 +2450,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             })
             .collect::&lt;Vec&lt;_&gt;&gt;();
 
-        let provider = setup_test_provider(all_coins, vec![], None, None).await;
+        let provider = setup_test_provider(all_coins, vec![], None, None).await?;
 
         [&amp;mut wallet, &amp;mut wallet2, &amp;mut wallet3, &amp;mut receiver]
             .iter_mut()
@@ -3259,7 +3253,7 @@ should point to root of the <code>forc</code> project.</p>
 <p>In addition, you can manually create the <code>wallet</code> variable and then use it inside the macro. This is useful if you want to create custom wallets or providers but still want to use the macro to reduce boilerplate code. Below is an example of this approach.</p>
 <pre><code class="language-rust ignore">    let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
     let wallet = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -3285,7 +3279,8 @@ should point to root of the <code>forc</code> project.</p>
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &amp;wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -3306,7 +3301,8 @@ should point to root of the <code>forc</code> project.</p>
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &amp;wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -3334,7 +3330,7 @@ should point to root of the <code>forc</code> project.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-chain"><a class="header" href="#custom-chain">Custom chain</a></h1>
 <p>This example demonstrates how to start a short-lived Fuel node with custom consensus parameters for the underlying chain.</p>
 <p>First, we have to import <code>ConsensusParameters</code> and <code>ChainConfig</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::{fuel_node::ChainConfig, prelude::*, tx::ConsensusParameters};
+<pre><code class="language-rust ignore">        use fuels::{prelude::*, tx::ConsensusParameters};
 </code></pre>
 <p>Next, we can define some values for the consensus parameters:</p>
 <pre><code class="language-rust ignore">        let consensus_parameters_config = ConsensusParameters::DEFAULT
@@ -3359,7 +3355,7 @@ should point to root of the <code>forc</code> project.</p>
 provider attached to that node:</p>
 <pre><code class="language-rust ignore">        let node_config = Config::local_node();
         let _provider =
-            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await;
+            setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="deposit-and-withdraw"><a class="header" href="#deposit-and-withdraw">Deposit and withdraw</a></h1>
 <p>Consider the following contract:</p>
@@ -3435,7 +3431,7 @@ impl LiquidityPool for Contract {
             .into();
 
         let wallet_config = WalletsConfig::new_multiple_assets(1, asset_configs);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
         let wallet = &amp;wallets[0];
 </code></pre>
 <p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
@@ -3491,7 +3487,7 @@ impl LiquidityPool for Contract {
         let (coins, _) =
             setup_multiple_assets_coins(wallet_1.address(), NUM_ASSETS, NUM_COINS, AMOUNT);
 
-        let provider = setup_test_provider(coins, vec![], None, None).await;
+        let provider = setup_test_provider(coins, vec![], None, None).await?;
 
         wallet_1.set_provider(provider.clone());
         wallet_2.set_provider(provider.clone());
