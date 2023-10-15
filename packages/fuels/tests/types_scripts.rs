@@ -77,7 +77,7 @@ async fn main_function_tuple_types() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "../fuels/tests/types/scripts/script_tuples/out/debug/script_tuples.bin";
     let instance = MyScript::new(wallet, bin_path);
 

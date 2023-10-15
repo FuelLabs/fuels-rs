@@ -5,7 +5,7 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
-    async fn connect_to_fuel_node() {
+    async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
 
@@ -28,7 +28,7 @@ mod tests {
         dbg!(wallet.address().to_string());
         // ANCHOR_END: connect_to_testnet
 
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
         let port = provider.url().split(':').last().unwrap();
 
         // ANCHOR: local_node_address
@@ -36,6 +36,7 @@ mod tests {
             .await
             .unwrap();
         // ANCHOR_END: local_node_address
+        Ok(())
     }
 
     #[tokio::test]
@@ -66,7 +67,7 @@ mod tests {
         // ANCHOR: configure_retry
         let retry_config = RetryConfig::new(3, Backoff::Fixed(Duration::from_secs(2)))?;
         let provider = setup_test_provider(coins.clone(), vec![], None, None)
-            .await
+            .await?
             .with_retry_config(retry_config);
         // ANCHOR_END: configure_retry
         // ANCHOR_END: setup_test_blockchain
