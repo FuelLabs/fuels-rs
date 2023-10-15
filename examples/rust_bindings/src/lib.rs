@@ -6,7 +6,7 @@ mod tests {
     #[allow(unused_variables)]
     async fn transform_json_to_bindings() -> Result<()> {
         use fuels::test_helpers::launch_provider_and_get_wallet;
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
         {
             // ANCHOR: use_abigen
             use fuels::prelude::*;

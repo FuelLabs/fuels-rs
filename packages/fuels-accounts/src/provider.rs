@@ -4,8 +4,6 @@ mod retry_util;
 mod retryable_client;
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
@@ -36,7 +34,6 @@ use tai64::Tai64;
 use thiserror::Error;
 
 use crate::provider::retryable_client::RetryableClient;
-
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
 #[derive(Debug)]
@@ -260,13 +257,6 @@ impl Provider {
         Ok(status)
     }
 
-    #[cfg(feature = "fuel-core-lib")]
-    /// Launches a local `fuel-core` network based on provided config.
-    pub async fn launch(config: Config) -> Result<FuelClient> {
-        let srv = FuelService::new_node(config).await.unwrap();
-        Ok(FuelClient::from(srv.bound_address))
-    }
-
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
         Ok(self.client.chain_info().await?.into())
     }
@@ -380,6 +370,7 @@ impl Provider {
             .flatten()
             .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
             .collect::<ProviderResult<Vec<CoinType>>>()?;
+
         Ok(res)
     }
 
