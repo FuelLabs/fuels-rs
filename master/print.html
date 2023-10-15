@@ -151,22 +151,14 @@
 <!-- fuels_rs:example:end -->
 <p>This book is an overview of the different things one can achieve using the Rust SDK, and how to implement them. Keep in mind that both the SDK and the documentation are works-in-progress!</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started"><a class="header" href="#getting-started">Getting Started</a></h1>
-<h2 id="dependencies"><a class="header" href="#dependencies">Dependencies</a></h2>
-<!-- This section should list the dependencies for the Fuel Rust SDK -->
-<!-- rs_dependencies:example:start -->
-<p>The dependencies for using the Fuel Rust SDK are:</p>
-<p>-- <a href="https://docs.fuel.network/guides/installation/#installing-rust">The latest <code>stable</code> Rust toolchain</a>;
--- <a href="https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup"><code>forc</code> and <code>fuel-core</code> binaries</a>.</p>
-<!-- rs_dependencies:example:end -->
+<h2 id="installation-guide"><a class="header" href="#installation-guide">Installation Guide</a></h2>
+<p>Please visit the Fuel <a href="https://docs.fuel.network/guides/installation">installation guide</a> to install the Fuel toolchain binaries and prerequisites.</p>
 <p><code>forc</code> is Sway equivalent of Rust's <code>cargo</code>. <code>fuel-core</code> is a Fuel full node implementation.</p>
-<!-- This section should list the main ways developers can use the Fuel Rust SDK -->
-<!-- rs_uses:example:start -->
 <p>There are two main ways you can use the Fuel Rust SDK:</p>
 <ol>
 <li>Creating a new Sway project with <code>forc</code> and running the tests</li>
 <li>Creating a standalone project and importing the <code>fuels-rs</code> crate</li>
 </ol>
-<!-- rs_uses:example:end -->
 <h2 id="creating-a-new-project-with-forc"><a class="header" href="#creating-a-new-project-with-forc">Creating a new project with Forc</a></h2>
 <p>You can create a new Sway project with</p>
 <pre><code class="language-shell">forc new &lt;Project name&gt;
@@ -245,7 +237,7 @@ To build these tests, run the following command:</p>
 <pre><code class="language-shell">cargo test -- --nocapture
 </code></pre>
 <h2 id="more-in-depth-fuel-and-sway-knowledge"><a class="header" href="#more-in-depth-fuel-and-sway-knowledge">More in-depth Fuel and Sway knowledge</a></h2>
-<p>Read <a href="https://fuellabs.github.io/sway/master/book/introduction/index.html">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
+<p>Read <a href="https://docs.fuel.network/docs/sway/">The Sway Book</a> for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="connecting-to-a-fuel-node"><a class="header" href="#connecting-to-a-fuel-node">Connecting to a Fuel node</a></h1>
 <!-- This section should explain at a high level the main ways to connect to a node with the Rust SDK and when they are appropriate to use-->
 <!-- rs_node:example:start -->
