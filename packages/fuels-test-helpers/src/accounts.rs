@@ -1,12 +1,9 @@
 use std::mem::size_of;
 
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::Config;
-use fuel_core_chain_config::ChainConfig;
+use crate::node_types::{ChainConfig, Config};
 use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
+use fuels_core::types::errors::Result;
 
-#[cfg(not(feature = "fuel-core-lib"))]
-use crate::node::Config;
 use crate::{setup_custom_assets_coins, setup_test_provider, wallets_config::*};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
@@ -18,17 +15,17 @@ use crate::{setup_custom_assets_coins, setup_test_provider, wallets_config::*};
 /// use fuels_accounts::Signer;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
-///   let wallet = launch_provider_and_get_wallet().await;
+///   let wallet = launch_provider_and_get_wallet().await?;
 ///   dbg!(wallet.address());
 ///   Ok(())
 /// }
 /// ```
-pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
+pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
     let mut wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::new(Some(1), None, None), None, None)
-            .await;
+            .await?;
 
-    wallets.pop().unwrap()
+    Ok(wallets.pop().expect("should have one wallet"))
 }
 
 /// Launches a custom node and provider, along with a configurable number of wallets.
@@ -45,7 +42,7 @@ pub async fn launch_provider_and_get_wallet() -> WalletUnlocked {
 ///   let amount = 1;
 ///   let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 ///
-///   let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+///   let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 ///   let first_wallet = wallets.pop().unwrap();
 ///   dbg!(first_wallet.address());
 ///   Ok(())
@@ -55,7 +52,7 @@ pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
     provider_config: Option<Config>,
     chain_config: Option<ChainConfig>,
-) -> Vec<WalletUnlocked> {
+) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
     const PADDING_BYTES: usize = SIZE_SECRET_KEY - size_of::<u64>();
     let mut secret_key: [u8; SIZE_SECRET_KEY] = [0; SIZE_SECRET_KEY];
@@ -77,13 +74,13 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let provider = setup_test_provider(all_coins, vec![], provider_config, chain_config).await;
+    let provider = setup_test_provider(all_coins, vec![], provider_config, chain_config).await?;
 
     for wallet in &mut wallets {
         wallet.set_provider(provider.clone());
     }
 
-    wallets
+    Ok(wallets)
 }
 
 #[cfg(test)]
@@ -104,7 +101,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
@@ -151,7 +148,7 @@ mod tests {
         let assets = vec![asset_base, asset_1, asset_2];
 
         let config = WalletsConfig::new_multiple_assets(num_wallets, assets.clone());
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for asset in assets {
@@ -182,7 +179,7 @@ mod tests {
         let amount = 100;
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
 
         assert_eq!(
             wallets.get(31).unwrap().address().to_string(),
@@ -208,7 +205,7 @@ mod tests {
             None,
             Some(chain_config),
         )
-        .await;
+        .await?;
 
         assert_eq!(wallets.len(), 4);
 

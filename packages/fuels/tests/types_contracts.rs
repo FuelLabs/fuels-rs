@@ -71,7 +71,7 @@ async fn call_with_structs() -> Result<()> {
     };
     // ANCHOR_END: struct_generation
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
         "tests/types/contracts/complex_types_contract/out/debug/complex_types_contract.bin",
@@ -832,7 +832,9 @@ async fn strings_must_have_correct_length() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet()
+        .await
+        .expect("Should have wallet");
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
     let _ = contract_instance
         .methods()
@@ -883,7 +885,7 @@ async fn strings_must_have_all_ascii_chars() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await.unwrap();
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
     let _ = contract_instance
         .methods()
@@ -969,7 +971,7 @@ async fn strings_must_have_correct_length_custom_types() {
         "#,
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await.unwrap();
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
     let _ = contract_instance
         .methods()
@@ -1063,7 +1065,9 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
         foo: inner_struct,
     };
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet()
+        .await
+        .expect("Should have wallet");
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
     let _ = contract_instance.methods().takes_nested_struct(input);
 }
@@ -1948,7 +1952,7 @@ async fn test_bytes_as_input() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_raw_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "RawSliceContract",
@@ -1993,7 +1997,7 @@ async fn test_contract_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_returning_string_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "StringSliceContract",
@@ -2018,7 +2022,7 @@ async fn test_contract_returning_string_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_std_lib_string() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "StdLibString",
@@ -2048,7 +2052,7 @@ async fn test_contract_std_lib_string() -> Result<()> {
 
 #[tokio::test]
 async fn test_heap_type_in_enums() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
         Abigen(Contract(
             name = "HeapTypeInEnum",
