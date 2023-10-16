@@ -292,7 +292,7 @@ impl Provider {
             is_major_supported,
             is_minor_supported,
             is_patch_supported,
-        } = check_fuel_core_version_compatibility(&node_version);
+        } = check_fuel_core_version_compatibility(node_version.clone());
 
         if !is_major_supported || !is_minor_supported {
             return Err(ProviderError::UnsupportedFuelClientVersion {
