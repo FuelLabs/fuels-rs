@@ -617,7 +617,7 @@ async fn test_script_decode_logs() -> Result<()> {
         abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
     ));
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 

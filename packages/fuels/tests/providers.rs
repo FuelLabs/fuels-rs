@@ -1,7 +1,7 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use fuel_core::service::{Config as CoreConfig, FuelService, ServiceTrait};
+
 use fuel_core_types::{
     fuel_crypto::rand::{self, Rng},
     tai64::Tai64,
@@ -10,9 +10,8 @@ use fuels::{
     accounts::{fuel_crypto::SecretKey, Account},
     client::{PageDirection, PaginationRequest},
     prelude::*,
-    test_helpers::Config,
     tx::Receipt,
-    types::{block::Block, coin_type::CoinType, errors::error, message::Message},
+    types::{block::Block, coin_type::CoinType, message::Message},
 };
 use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
@@ -34,7 +33,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
-    let provider = setup_test_provider(coins, vec![], None, None).await;
+    let provider = setup_test_provider(coins, vec![], None, None).await?;
     wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
@@ -74,16 +73,14 @@ async fn test_network_error() -> Result<()> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let config = CoreConfig::local_node();
-    let service = FuelService::new_node(config)
-        .await
-        .map_err(|err| error!(InfrastructureError, "{err}"))?;
-    let provider = Provider::connect(service.bound_address.to_string()).await?;
+    let config = Config::local_node();
+    let service = FuelService::start(config).await?;
+    let provider = Provider::connect(service.bound_address().to_string()).await?;
 
     wallet.set_provider(provider);
 
     // Simulate an unreachable node
-    service.stop_and_await().await.unwrap();
+    service.stop().await.unwrap();
 
     let response = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -121,7 +118,7 @@ async fn test_input_message() -> Result<()> {
         vec![1, 2],
     )];
 
-    let provider = setup_test_provider(coins, messages.clone(), None, None).await;
+    let provider = setup_test_provider(coins, messages.clone(), None, None).await?;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -165,7 +162,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
         vec![],
     );
 
-    let provider = setup_test_provider(vec![], vec![messages], None, None).await;
+    let provider = setup_test_provider(vec![], vec![messages], None, None).await?;
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -205,7 +202,8 @@ async fn can_increase_block_height() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -231,7 +229,8 @@ async fn can_set_custom_block_time() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -267,7 +266,7 @@ async fn can_set_custom_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn can_retrieve_latest_block_time() -> Result<()> {
-    let provider = given_a_provider().await;
+    let provider = given_a_provider().await?;
     let since_epoch = 1676039910;
 
     let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
@@ -281,7 +280,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     Ok(())
 }
 
-async fn given_a_provider() -> Provider {
+async fn given_a_provider() -> Result<Provider> {
     let config = Config {
         manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         ..Config::local_node()
@@ -298,7 +297,8 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         ..Config::local_node()
     };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None).await;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -327,7 +327,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
 #[tokio::test]
 async fn test_default_tx_params_match_network() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;
     let consensus_params = provider.consensus_parameters();
 
@@ -497,7 +497,7 @@ async fn test_gas_errors() -> Result<()> {
         amount_per_coin,
     );
 
-    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
 
     setup_program_test!(
@@ -684,7 +684,7 @@ async fn testnet_hello_world() -> Result<()> {
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
-    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
     let tx_parameters = TxParameters::default()
         .with_gas_price(1)
@@ -735,7 +735,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let message_nonce = message.nonce;
 
-    let provider = setup_test_provider(coins, vec![message], None, None).await;
+    let provider = setup_test_provider(coins, vec![message], None, None).await?;
 
     wallet.set_provider(provider.clone());
 
@@ -807,7 +807,7 @@ async fn test_sway_timestamp() -> Result<()> {
         Some(provider_config),
         None,
     )
-    .await;
+    .await?;
     let wallet = wallets.pop().unwrap();
     let provider = wallet.try_provider()?;
 

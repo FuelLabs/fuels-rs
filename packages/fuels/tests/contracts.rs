@@ -2,7 +2,6 @@
 use std::future::Future;
 use std::vec;
 
-use fuel_core::chain_config::ChainConfig;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector},
@@ -601,7 +600,7 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR: contract_setup_macro_manual_wallet
     let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
 
-    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+    let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
     let wallet = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -653,7 +652,7 @@ async fn test_connect_wallet() -> Result<()> {
 async fn setup_output_variable_estimation_test(
 ) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
-    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
@@ -816,7 +815,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let (coins, asset_ids) = setup_multiple_assets_coins(wallet.address(), 2, 4, 8);
 
     let random_asset_id = &asset_ids[1];
-    let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
+    let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider.clone());
 
     setup_program_test!(
@@ -1025,7 +1024,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         ..ChainConfig::default()
     };
 
-    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await;
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
     assert_eq!(consensus_parameters_config, provider.consensus_parameters());
 
@@ -1075,7 +1074,7 @@ async fn test_add_custom_assets() -> Result<()> {
 
     let num_wallets = 2;
     let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+    let mut wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
@@ -1330,7 +1329,7 @@ fn db_rocksdb() {
     use fuels::{
         accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
         client::{PageDirection, PaginationRequest},
-        prelude::{setup_test_provider, Config, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+        prelude::{setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
     let temp_dir = tempfile::tempdir()
@@ -1355,10 +1354,8 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-
             let mut node_config = Config {
-                database_path: temp_database_path.clone(),
-                database_type: DbType::RocksDb,
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
                 ..Config::local_node()
             };
 
@@ -1380,7 +1377,7 @@ fn db_rocksdb() {
 
             let provider =
                 setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config))
-                    .await;
+                    .await?;
 
             provider.produce_blocks(2, None).await?;
 
@@ -1394,12 +1391,11 @@ fn db_rocksdb() {
         .expect("Tokio runtime failed")
         .block_on(async {
             let node_config = Config {
-                database_path: temp_database_path.clone(),
-                database_type: DbType::RocksDb,
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
                 ..Config::local_node()
             };
 
-            let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await;
+            let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
             // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
             let mut wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(

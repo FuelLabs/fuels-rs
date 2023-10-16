@@ -1,24 +1,15 @@
 # Getting Started
 
-## Dependencies
+## Installation Guide
 
-<!-- This section should list the dependencies for the Fuel Rust SDK -->
-<!-- rs_dependencies:example:start -->
-The dependencies for using the Fuel Rust SDK are:
-
--- [The latest `stable` Rust toolchain](https://docs.fuel.network/guides/installation/#installing-rust);
--- [`forc` and `fuel-core` binaries](https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup).
-<!-- rs_dependencies:example:end -->
+Please visit the Fuel [installation guide](https://docs.fuel.network/guides/installation) to install the Fuel toolchain binaries and prerequisites.
 
 `forc` is Sway equivalent of Rust's `cargo`. `fuel-core` is a Fuel full node implementation.
 
-<!-- This section should list the main ways developers can use the Fuel Rust SDK -->
-<!-- rs_uses:example:start -->
 There are two main ways you can use the Fuel Rust SDK:
 
 1. Creating a new Sway project with `forc` and running the tests
 2. Creating a standalone project and importing the `fuels-rs` crate
-<!-- rs_uses:example:end -->
 
 ## Creating a new project with Forc
 
@@ -135,4 +126,4 @@ cargo test -- --nocapture
 
 ## More in-depth Fuel and Sway knowledge
 
-Read [The Sway Book](https://fuellabs.github.io/sway/master/book/introduction/index.html) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.
+Read [The Sway Book](https://docs.fuel.network/docs/sway/) for more in-depth knowledge about Sway, the official smart contract language for the Fuel Virtual Machine.

@@ -97,7 +97,7 @@ async fn setup_predicate_test(
         manual_blocks_enabled: true,
         ..Config::local_node()
     };
-    let provider = setup_test_provider(coins, messages, Some(config), None).await;
+    let provider = setup_test_provider(coins, messages, Some(config), None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -121,7 +121,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     let (coins, messages, asset_id) =
         get_test_coins_and_messages(wallet.address(), num_coins, num_messages, amount, 0);
 
-    let provider = setup_test_provider(coins, messages, None, None).await;
+    let provider = setup_test_provider(coins, messages, None, None).await?;
 
     wallet.set_provider(provider.clone());
 
@@ -447,7 +447,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     coins.extend(wallet_coins);
     messages.extend(wallet_messages);
 
-    let provider = setup_test_provider(coins, messages, None, None).await;
+    let provider = setup_test_provider(coins, messages, None, None).await?;
     wallet.set_provider(provider.clone());
     predicate.set_provider(provider.clone());
 
@@ -696,7 +696,7 @@ async fn predicate_add_fee_persists_message_w_data() -> Result<()> {
         predicate.data().clone(),
     );
 
-    let provider = setup_test_provider(coins, vec![message.clone()], None, None).await;
+    let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
     predicate.set_provider(provider.clone());
 
     let network_info = provider.network_info().await?;
@@ -741,7 +741,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         amount,
     ));
 
-    let provider = setup_test_provider(coins, vec![], None, None).await;
+    let provider = setup_test_provider(coins, vec![], None, None).await?;
     predicate.set_provider(provider.clone());
     wallet.set_provider(provider.clone());
 

@@ -273,10 +273,8 @@ impl Account for WalletUnlocked {
         let new_base_inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
             .await?;
-
         adjust_inputs(&mut tb, new_base_inputs);
         adjust_outputs(&mut tb, self.address(), new_base_amount);
-
         tb.build()
     }
 }
