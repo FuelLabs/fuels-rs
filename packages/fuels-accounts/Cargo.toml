@@ -22,9 +22,11 @@ fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }
 rand = { workspace = true, default-features = false }
+semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
