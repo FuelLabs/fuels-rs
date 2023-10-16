@@ -306,17 +306,14 @@ impl BoundedDecoder {
 
         let skip_extra = variants
             .heap_type_variant()
-            .is_some_and(|(heap_discriminant, _)| heap_discriminant == discriminant)
-            .then_some(3);
-        let words_to_skip = enum_width - selected_variant.compute_encoding_width()?
-            + skip_extra.unwrap_or_default();
-        let bytes_to_skip = words_to_skip.checked_mul(WORD_SIZE).ok_or_else(|| {
-            error!(
-                InvalidData,
-                "Overflow error while decoding enum {variants:?}"
-            )
-        })?;
-        let enum_content_bytes = skip(bytes, bytes_to_skip)?;
+            .and_then(|(heap_discriminant, heap_type)| {
+                (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_width())
+            })
+            .transpose()?
+            .unwrap_or_default();
+
+        let words_to_skip = enum_width - selected_variant.compute_encoding_width()? + skip_extra;
+        let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));

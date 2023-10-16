@@ -85,7 +85,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
@@ -198,7 +198,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.foo.a);
 
-    let wallet = launch_provider_and_get_wallet().await;
+    let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 

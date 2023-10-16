@@ -7,9 +7,9 @@ use quote::quote;
 use crate::{
     error::{error, Result},
     program_bindings::{
-        custom_types::utils::{extract_components, extract_generic_parameters},
+        custom_types::utils::extract_generic_parameters,
         generated_code::GeneratedCode,
-        utils::Component,
+        utils::{tokenize_generics, Components},
     },
 };
 
@@ -23,11 +23,11 @@ pub(crate) fn expand_custom_enum(
     let enum_type_path = type_decl.custom_type_path()?;
     let enum_ident = enum_type_path.ident().unwrap();
 
-    let components = extract_components(type_decl, false, &enum_type_path.parent())?;
+    let components = Components::new(&type_decl.components, false, enum_type_path.parent())?;
     if components.is_empty() {
         return Err(error!("Enum must have at least one component!"));
     }
-    let generics = extract_generic_parameters(type_decl)?;
+    let generics = extract_generic_parameters(type_decl);
 
     let code = enum_decl(enum_ident, &components, &generics, no_std);
 
@@ -38,23 +38,15 @@ pub(crate) fn expand_custom_enum(
 
 fn enum_decl(
     enum_ident: &Ident,
-    components: &[Component],
-    generics: &[TokenStream],
+    components: &Components,
+    generics: &[Ident],
     no_std: bool,
 ) -> TokenStream {
-    let enum_variants = components.iter().map(
-        |Component {
-             field_name,
-             field_type,
-         }| {
-            if field_type.is_unit() {
-                quote! {#field_name}
-            } else {
-                quote! {#field_name(#field_type)}
-            }
-        },
-    );
     let maybe_disable_std = no_std.then(|| quote! {#[NoStd]});
+
+    let enum_variants = components.as_enum_variants();
+    let unused_generics_variant = components.generate_variant_for_unused_generics(generics);
+    let (_, generics_w_bounds) = tokenize_generics(generics);
 
     quote! {
         #[allow(clippy::enum_variant_names)]
@@ -65,11 +57,12 @@ fn enum_decl(
             PartialEq,
             ::fuels::macros::Parameterize,
             ::fuels::macros::Tokenizable,
-            ::fuels::macros::TryFrom
+            ::fuels::macros::TryFrom,
         )]
         #maybe_disable_std
-        pub enum #enum_ident <#(#generics: ::fuels::core::traits::Tokenizable + ::fuels::core::traits::Parameterize),*> {
-            #(#enum_variants),*
+        pub enum #enum_ident #generics_w_bounds {
+            #(#enum_variants,)*
+            #unused_generics_variant
         }
     }
 }

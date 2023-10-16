@@ -3,16 +3,18 @@ mod tests {
     use fuels::prelude::*;
 
     #[tokio::test]
-    async fn create_random_wallet() {
+    async fn create_random_wallet() -> Result<()> {
         // ANCHOR: create_random_wallet
         use fuels::prelude::*;
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create the wallet.
         let _wallet = WalletUnlocked::new_random(Some(provider));
         // ANCHOR_END: create_random_wallet
+
+        Ok(())
     }
 
     #[tokio::test]
@@ -24,7 +26,7 @@ mod tests {
         use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Setup the private key.
         let secret = SecretKey::from_str(
@@ -46,7 +48,7 @@ mod tests {
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create first account from mnemonic phrase.
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase_with_path(
@@ -74,7 +76,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         let password = "my_master_password";
 
@@ -100,7 +102,7 @@ mod tests {
             "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
 
         // Use the test helper to setup a test provider.
-        let provider = setup_test_provider(vec![], vec![], None, None).await;
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
 
         // Create first account from mnemonic phrase.
         let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
@@ -128,7 +130,7 @@ mod tests {
             None,
             None,
         )
-        .await;
+        .await?;
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
@@ -168,7 +170,7 @@ mod tests {
 
         let wallet_config = WalletsConfig::new_multiple_assets(1, vec![random_asset, base_asset]);
         let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
-            .await
+            .await?
             .pop()
             .unwrap();
 
@@ -216,7 +218,7 @@ mod tests {
         // This helper will launch a local node and provide 10 test wallets linked to it.
         // The initial balance defaults to 1 coin per wallet with an amount of 1_000_000_000
         let wallets =
-            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
         // ANCHOR_END: multiple_wallets_helper
         // ANCHOR: setup_5_wallets
         let num_wallets = 5;
@@ -229,7 +231,7 @@ mod tests {
             Some(amount_per_coin),
         );
         // Launches a local node and provides test wallets as specified by the config
-        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         // ANCHOR_END: setup_5_wallets
         Ok(())
     }
@@ -252,7 +254,7 @@ mod tests {
             amount_per_coin,
         );
         // ANCHOR_END: multiple_assets_coins
-        let provider = setup_test_provider(coins.clone(), vec![], None, None).await;
+        let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
         wallet.set_provider(provider);
         // ANCHOR_END: multiple_assets_wallet
         Ok(())
@@ -260,7 +262,7 @@ mod tests {
 
     #[tokio::test]
     #[allow(unused_variables)]
-    async fn setup_wallet_custom_assets() -> std::result::Result<(), rand::Error> {
+    async fn setup_wallet_custom_assets() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: custom_assets_wallet
         use fuels::prelude::*;
         use rand::Fill;
@@ -293,13 +295,13 @@ mod tests {
         let assets = vec![asset_base, asset_1, asset_2];
 
         let coins = setup_custom_assets_coins(wallet.address(), &assets);
-        let provider = setup_test_provider(coins, vec![], None, None).await;
+        let provider = setup_test_provider(coins, vec![], None, None).await?;
         wallet.set_provider(provider);
         // ANCHOR_END: custom_assets_wallet
         // ANCHOR: custom_assets_wallet_short
         let num_wallets = 1;
         let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
-        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await;
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
         // ANCHOR_END: custom_assets_wallet_short
         Ok(())
     }
@@ -317,7 +319,7 @@ mod tests {
             types::AssetId,
         };
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
         // ANCHOR: get_asset_balance
         let asset_id: AssetId = BASE_ASSET_ID;
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
@@ -351,7 +353,7 @@ mod tests {
             Some(config),
             None,
         )
-        .await;
+        .await?;
         let wallet = wallets.first().unwrap();
 
         let amount = 1000;

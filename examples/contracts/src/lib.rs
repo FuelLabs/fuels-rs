@@ -2,28 +2,20 @@
 mod tests {
     use fuels::{
         core::codec::DecoderConfig,
-        prelude::{LoadConfiguration, StorageConfiguration},
-        types::{
-            errors::{error, Error, Result},
-            Bits256,
-        },
+        prelude::{Config, LoadConfiguration, StorageConfiguration},
+        types::{errors::Result, Bits256},
     };
 
     #[tokio::test]
     async fn instantiate_client() -> Result<()> {
         // ANCHOR: instantiate_client
-        use fuels::{
-            fuel_node::{Config, FuelService},
-            prelude::Provider,
-        };
+        use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::new_node(Config::local_node())
-            .await
-            .map_err(|err| error!(InfrastructureError, "{err}"))?;
+        let server = FuelService::start(Config::local_node()).await?;
 
         // Create a client that will talk to the node created above.
-        let client = Provider::from(server.bound_address).await?;
+        let client = Provider::from(server.bound_address()).await?;
         assert!(client.healthy().await?);
         // ANCHOR_END: instantiate_client
         Ok(())
@@ -35,7 +27,7 @@ mod tests {
 
         // ANCHOR: deploy_contract
         // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
@@ -91,7 +83,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -124,7 +116,7 @@ mod tests {
         };
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id_1 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -224,7 +216,7 @@ mod tests {
         ));
 
         let wallets =
-            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await;
+            launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
 
         let contract_id_1 = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -275,7 +267,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -345,7 +337,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/token_ops/out/debug/token_ops\
@@ -385,7 +377,7 @@ mod tests {
             abi="packages/fuels/tests/contracts/lib_contract_caller/out/debug/lib_contract_caller-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let called_contract_id: ContractId = Contract::load_from(
             "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
@@ -456,7 +448,7 @@ mod tests {
                 abi =
                     "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
-            let wallet = launch_provider_and_get_wallet().await;
+            let wallet = launch_provider_and_get_wallet().await?;
 
             let contract_id = Contract::load_from(
                 "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -501,7 +493,7 @@ mod tests {
                 abi =
                     "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
             ));
-            let wallet_original = launch_provider_and_get_wallet().await;
+            let wallet_original = launch_provider_and_get_wallet().await?;
 
             let wallet = wallet_original.clone();
             // Your bech32m encoded contract ID.
@@ -536,7 +528,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -574,7 +566,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -630,7 +622,7 @@ mod tests {
             abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
         ));
 
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
 
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -672,7 +664,7 @@ mod tests {
         ));
 
         let config = WalletsConfig::new(Some(2), Some(1), Some(DEFAULT_COIN_AMOUNT));
-        let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await;
+        let mut wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
         let wallet_1 = wallets.pop().unwrap();
         let wallet_2 = wallets.pop().unwrap();
 

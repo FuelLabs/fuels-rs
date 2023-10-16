@@ -158,7 +158,7 @@ impl ParamType {
             ParamType::Tuple(elements) => elements
                 .iter()
                 .any(|param_type| param_type.is_extra_receipt_needed(false)),
-            ParamType::RawSlice => !top_level_type,
+            ParamType::RawSlice | ParamType::StringSlice => !top_level_type,
             _ => false,
         }
     }
@@ -178,6 +178,7 @@ impl ParamType {
             ParamType::RawSlice if !top_level_type => {
                 ParamType::U64.compute_encoding_width().map(Some)
             }
+            ParamType::StringSlice if !top_level_type => Ok(Some(std::mem::size_of::<u8>())),
             _ => Ok(None),
         }
     }
