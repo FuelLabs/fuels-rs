@@ -102,8 +102,13 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
 
     fn is_using_predicates(&self) -> bool;
 
+    /// Precompute transaction metadata. The metadata is required for
+    /// `check_without_signatures` validation.
     fn precompute(&mut self, chain_id: &ChainId) -> Result<()>;
 
+    /// If a transactions contains predicates, we have to estimate them
+    /// before sending the transaction to the node. The estimation will check
+    /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
     fn estimate_predicates(
         &mut self,
         consensus_parameters: &ConsensusParameters,

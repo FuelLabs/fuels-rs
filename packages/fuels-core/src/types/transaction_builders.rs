@@ -115,8 +115,6 @@ macro_rules! impl_tx_trait {
             ) -> Result<Option<TransactionFee>> {
                 let mut tx = self.clone().build()?;
 
-                tx.precompute(&network_info.chain_id())?;
-
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(
                         &network_info.consensus_parameters,
