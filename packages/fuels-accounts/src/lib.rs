@@ -28,6 +28,7 @@ use crate::{accounts_utils::extract_message_id, provider::Provider};
 mod accounts_utils;
 pub mod predicate;
 pub mod provider;
+mod supported_versions;
 pub mod wallet;
 
 /// Trait for signing transactions and messages
