@@ -106,13 +106,13 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.try_provider()?.consensus_parameters();
 
-    let calls_instructions_len = compute_calls_instructions_len(calls);
+    let calls_instructions_len = compute_calls_instructions_len(calls)?;
     let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset);
 
-    let script = get_instructions(calls, call_param_offsets);
+    let script = get_instructions(calls, call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
@@ -144,7 +144,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
 /// a heap type, and those that don't.
-fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
+fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
     calls
         .iter()
         .map(|c| {
@@ -158,9 +158,10 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> usize {
                 call_opcode_params.gas_forwarded_offset = Some(0);
             }
 
-            get_single_call_instructions(&call_opcode_params, &c.output_param).len()
+            get_single_call_instructions(&call_opcode_params, &c.output_param)
+                .map(|instructions| instructions.len())
         })
-        .sum()
+        .process_results(|c| c.sum())
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
@@ -212,13 +213,16 @@ fn sum_up_amounts_for_each_asset_id(
 pub(crate) fn get_instructions(
     calls: &[ContractCall],
     offsets: Vec<CallOpcodeParamsOffset>,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     calls
         .iter()
         .zip(&offsets)
-        .flat_map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
-        .chain(op::ret(RegId::ONE).to_bytes())
-        .collect()
+        .map(|(call, offset)| get_single_call_instructions(offset, &call.output_param))
+        .process_results(|iter| iter.flatten().collect::<Vec<_>>())
+        .map(|mut bytes| {
+            bytes.extend(op::ret(RegId::ONE).to_bytes());
+            bytes
+        })
 }
 
 /// Returns script data, consisting of the following items in the given order:
@@ -310,7 +314,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
     output_param_type: &ParamType,
-) -> Vec<u8> {
+) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
         .try_into()
@@ -348,23 +352,23 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    instructions.extend(extract_heap_data(output_param_type));
+    instructions.extend(extract_heap_data(output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
-    instructions.into_iter().collect::<Vec<u8>>()
+    Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
-fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
+fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
         ParamType::Enum { variants, .. } => {
             let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
-                return vec![];
+                return Ok(vec![]);
             };
 
             let ptr_offset =
-                (param_type.compute_encoding_width() - heap_type.compute_encoding_width()) as u16;
+                (param_type.compute_encoding_width()? - heap_type.compute_encoding_width()?) as u16;
 
-            [
+            Ok([
                 vec![
                     // All the registers 0x15-0x18 are free
                     // Load the selected discriminant to a free register
@@ -378,11 +382,11 @@ fn extract_heap_data(param_type: &ParamType) -> Vec<fuel_asm::Instruction> {
                     op::jnef(0x17, 0x18, RegId::ZERO, 3),
                 ],
                 // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
-                extract_data_receipt(ptr_offset, false, heap_type),
+                extract_data_receipt(ptr_offset, false, heap_type)?,
                 // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
                 vec![op::retd(0x15, RegId::ZERO)],
             ]
-            .concat()
+            .concat())
         }
         _ => extract_data_receipt(0, true, param_type),
     }
@@ -392,9 +396,9 @@ fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,
     param_type: &ParamType,
-) -> Vec<fuel_asm::Instruction> {
-    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
-        return vec![];
+) -> Result<Vec<fuel_asm::Instruction>> {
+    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type)? else {
+        return Ok(vec![]);
     };
 
     let len_offset = match (top_level_type, param_type) {
@@ -405,12 +409,12 @@ fn extract_data_receipt(
         _ => 2,
     };
 
-    vec![
+    Ok(vec![
         op::lw(0x15, RegId::RET, ptr_offset),
         op::lw(0x16, RegId::RET, ptr_offset + len_offset),
         op::muli(0x16, 0x16, inner_type_byte_size as u16),
         op::retd(0x15, 0x16),
-    ]
+    ])
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)

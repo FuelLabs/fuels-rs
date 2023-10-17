@@ -115,7 +115,7 @@ impl ABIEncoder {
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
             let variant_param_type = variants.param_type_of_variant(*discriminant)?;
-            let padding_amount = variants.compute_padding_amount(variant_param_type);
+            let padding_amount = variants.compute_padding_amount(variant_param_type)?;
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
 
