@@ -1563,21 +1563,26 @@ mod tests {
 
     #[test]
     fn validate_is_decodable_complex_types_containing_string() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
         let base_string = ParamType::String;
         let param_types_no_nested_string = vec![ParamType::U64, ParamType::U32];
         let param_types_nested_string = vec![ParamType::Unit, ParamType::Bool, base_string.clone()];
-        let nested_heap_type_error_message = "Invalid type: Nested heap types are currently not \
-        supported except in Enums."
-            .to_string();
-        let cannot_be_decoded = |p: ParamType| {
-            assert_eq!(
-                p.validate_is_decodable()
-                    .expect_err(&format!("Should not be decodable: {:?}", p))
-                    .to_string(),
-                nested_heap_type_error_message
+        let nested_heap_type_error_message = |p: ParamType| {
+            format!(
+                "Invalid type: type {:?} is not decodable: nested heap types \
+        are currently not supported except in Enums.",
+                DebugWithDepth::new(&p, max_depth)
             )
         };
-        let can_be_decoded = |p: ParamType| p.validate_is_decodable().is_ok();
+        let cannot_be_decoded = |p: ParamType| {
+            assert_eq!(
+                p.validate_is_decodable(max_depth)
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .to_string(),
+                nested_heap_type_error_message(p)
+            )
+        };
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
 
         can_be_decoded(base_string.clone());
         cannot_be_decoded(ParamType::Vector(Box::from(base_string.clone())));
@@ -1608,7 +1613,8 @@ mod tests {
 
     #[test]
     fn validate_is_decodable_enum_containing_string() -> Result<()> {
-        let can_be_decoded = |p: ParamType| p.validate_is_decodable().is_ok();
+        let max_depth = DecoderConfig::default().max_depth;
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
         let param_types_containing_string = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
         let param_types_no_string = vec![ParamType::U64, ParamType::U32];
         let variants_no_string_type = EnumVariants::new(param_types_no_string.clone())?;
@@ -1629,7 +1635,7 @@ mod tests {
                 variants: variants_two_string_type.clone(),
                 generics: param_types_no_string.clone(),
             }
-            .validate_is_decodable()
+            .validate_is_decodable(1)
             .expect_err("Should not be decodable")
             .to_string(),
             expected
@@ -1649,7 +1655,7 @@ mod tests {
                 variants: variants_two_string_type.clone(),
                 generics: param_types_containing_string.clone(),
             }
-            .validate_is_decodable()
+            .validate_is_decodable(1)
             .expect_err("Should not be decodable")
             .to_string(),
             expected
