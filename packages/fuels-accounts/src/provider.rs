@@ -33,7 +33,11 @@ pub use retry_util::{Backoff, RetryConfig};
 use tai64::Tai64;
 use thiserror::Error;
 
-use crate::provider::retryable_client::RetryableClient;
+use crate::{
+    provider::retryable_client::RetryableClient,
+    supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
+};
+
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
 #[derive(Debug)]
@@ -124,6 +128,13 @@ pub enum ProviderError {
     ClientRequestError(#[from] io::Error),
     #[error("Receipts have not yet been propagated. Retry the request later.")]
     ReceiptsNotPropagatedYet,
+    #[error("Invalid Fuel client version: {0}")]
+    InvalidFuelClientVersion(#[from] semver::Error),
+    #[error("Unsupported Fuel client version. Current version: {current}, supported version: {supported}")]
+    UnsupportedFuelClientVersion {
+        current: semver::Version,
+        supported: semver::Version,
+    },
 }
 
 impl From<ProviderError> for Error {
@@ -269,7 +280,34 @@ impl Provider {
         let node_info = self.node_info().await?;
         let chain_info = self.chain_info().await?;
 
+        Self::ensure_client_version_is_supported(&node_info)?;
+
         Ok(NetworkInfo::new(node_info, chain_info))
+    }
+
+    fn ensure_client_version_is_supported(node_info: &NodeInfo) -> ProviderResult<()> {
+        let node_version = node_info.node_version.parse::<semver::Version>()?;
+        let VersionCompatibility {
+            supported_version,
+            is_major_supported,
+            is_minor_supported,
+            is_patch_supported,
+        } = check_fuel_core_version_compatibility(node_version.clone());
+
+        if !is_major_supported || !is_minor_supported {
+            return Err(ProviderError::UnsupportedFuelClientVersion {
+                current: node_version,
+                supported: supported_version,
+            });
+        } else if !is_patch_supported {
+            tracing::warn!(
+                fuel_client_version = %node_version,
+                supported_version = %supported_version,
+                "The patch versions of the client and SDK differ.",
+            );
+        };
+
+        Ok(())
     }
 
     pub fn chain_id(&self) -> ChainId {

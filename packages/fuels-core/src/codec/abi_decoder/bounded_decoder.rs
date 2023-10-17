@@ -19,6 +19,7 @@ use crate::{
 pub(crate) struct BoundedDecoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
+    config: DecoderConfig,
 }
 
 const U128_BYTES_SIZE: usize = 2 * WORD_SIZE;
@@ -32,11 +33,12 @@ impl BoundedDecoder {
         Self {
             depth_tracker,
             token_tracker,
+            config,
         }
     }
 
     pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        param_type.validate_is_decodable()?;
+        param_type.validate_is_decodable(self.config.max_depth)?;
         Ok(self.decode_param(param_type, bytes)?.token)
     }
 
@@ -46,7 +48,7 @@ impl BoundedDecoder {
         bytes: &[u8],
     ) -> Result<Vec<Token>> {
         for param_type in param_types {
-            param_type.validate_is_decodable()?;
+            param_type.validate_is_decodable(self.config.max_depth)?;
         }
         let (tokens, _) = self.decode_params(param_types, bytes)?;
 
@@ -297,19 +299,27 @@ impl BoundedDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
-        let enum_width = variants.compute_encoding_width_of_enum();
+        let enum_width = variants.compute_encoding_width_of_enum()?;
 
         let discriminant = peek_u32(bytes)? as u8;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
+
         let skip_extra = variants
             .heap_type_variant()
             .and_then(|(heap_discriminant, heap_type)| {
                 (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_width())
             })
+            .transpose()?
             .unwrap_or_default();
 
-        let words_to_skip = enum_width - selected_variant.compute_encoding_width() + skip_extra;
-        let enum_content_bytes = skip(bytes, words_to_skip * WORD_SIZE)?;
+        let words_to_skip = enum_width - selected_variant.compute_encoding_width()? + skip_extra;
+        let bytes_to_skip = words_to_skip.checked_mul(WORD_SIZE).ok_or_else(|| {
+            error!(
+                InvalidData,
+                "Overflow error while decoding enum {variants:?}"
+            )
+        })?;
+        let enum_content_bytes = skip(bytes, bytes_to_skip)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));
