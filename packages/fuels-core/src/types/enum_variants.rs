@@ -47,27 +47,32 @@ impl EnumVariants {
     }
 
     /// Calculates how many WORDs are needed to encode an enum.
-    pub fn compute_encoding_width_of_enum(&self) -> usize {
+    pub fn compute_encoding_width_of_enum(&self) -> Result<usize> {
         if self.only_units_inside() {
-            return ENUM_DISCRIMINANT_WORD_WIDTH;
+            return Ok(ENUM_DISCRIMINANT_WORD_WIDTH);
         }
         self.param_types()
             .iter()
             .map(|p| p.compute_encoding_width())
+            .collect::<Result<Vec<_>>>()?
+            .iter()
             .max()
             .map(|width| width + ENUM_DISCRIMINANT_WORD_WIDTH)
-            .expect(
-                "Will never panic because EnumVariants must have at least one variant inside it!",
-            )
+            .ok_or_else(|| {
+                error!(
+                    InvalidData,
+                    "EnumVariants was empty, must have at least one variant"
+                )
+            })
     }
 
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
-    pub fn compute_padding_amount(&self, variant_param_type: &ParamType) -> usize {
+    pub fn compute_padding_amount(&self, variant_param_type: &ParamType) -> Result<usize> {
         let biggest_variant_width =
-            self.compute_encoding_width_of_enum() - ENUM_DISCRIMINANT_WORD_WIDTH;
-        let variant_width = variant_param_type.compute_encoding_width();
-        (biggest_variant_width - variant_width) * WORD_SIZE
+            self.compute_encoding_width_of_enum()? - ENUM_DISCRIMINANT_WORD_WIDTH;
+        let variant_width = variant_param_type.compute_encoding_width()?;
+        Ok((biggest_variant_width - variant_width) * WORD_SIZE)
     }
 }
 
