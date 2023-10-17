@@ -2,7 +2,6 @@ use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
 
 use fuels_core::types::coin_type::{CoinType, CoinTypeId};
-use fuels_core::types::transaction::CachedTx;
 
 #[derive(Clone, Debug, Default)]
 pub struct ResourceCache {

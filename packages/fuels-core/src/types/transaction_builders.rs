@@ -28,7 +28,8 @@ use crate::{
     },
 };
 
-use super::{chain_info::ChainInfo, node_info::NodeInfo};
+use super::{chain_info::ChainInfo, coin_type::CoinTypeId, node_info::NodeInfo};
+use itertools::Itertools;
 
 #[derive(Debug, Clone)]
 pub struct NetworkInfo {
@@ -85,6 +86,8 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
+                let used_coins = compute_used_coins(&self);
+
                 let uses_predicates = self.is_using_predicates();
                 let base_offset = if uses_predicates {
                     self.base_offset()
@@ -103,7 +106,7 @@ macro_rules! impl_tx_trait {
                     estimate_predicates(&mut tx, &network_info)?;
                 };
 
-                Ok($tx_ty { tx })
+                Ok($tx_ty { tx, used_coins })
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
@@ -184,7 +187,7 @@ macro_rules! impl_tx_trait {
             fn is_using_predicates(&self) -> bool {
                 self.inputs()
                     .iter()
-                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
+                    .any(|input| matches!(input, Input::CoinPredicate { .. }))
             }
 
             fn num_witnesses(&self) -> Result<u8> {
@@ -504,13 +507,13 @@ fn resolve_fuel_inputs(
     inputs
         .into_iter()
         .map(|input| match input {
-            Input::ResourceSigned { resource } => resolve_signed_resource(
+            Input::CoinSigned { resource } => resolve_signed_resource(
                 resource,
                 &mut data_offset,
                 num_witnesses,
                 unresolved_signatures,
             ),
-            Input::ResourcePredicate {
+            Input::CoinPredicate {
                 resource,
                 code,
                 data,
@@ -715,6 +718,18 @@ where
     *tx.gas_limit_mut() = gas_limit;
 
     Ok(())
+}
+
+fn compute_used_coins(tb: &impl TransactionBuilder) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
+    tb.inputs()
+        .iter()
+        .filter_map(|input| match input {
+            Input::CoinSigned { resource, .. } | Input::CoinPredicate { resource, .. } => {
+                Some((resource.owner().to_owned(), resource.id()))
+            }
+            _ => None,
+        })
+        .into_group_map()
 }
 
 #[cfg(test)]

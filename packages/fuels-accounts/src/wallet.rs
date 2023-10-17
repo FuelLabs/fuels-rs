@@ -1,8 +1,4 @@
-use std::{
-    fmt, ops,
-    path::Path,
-    sync::{Arc, Mutex},
-};
+use std::{fmt, ops, path::Path};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
@@ -10,10 +6,8 @@ use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuels_core::types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
-    coin_type::{CoinType, CoinTypeId},
     errors::{Error, Result},
     input::Input,
-    transaction::CachedTx,
     transaction_builders::TransactionBuilder,
     AssetId,
 };
@@ -22,7 +16,6 @@ use thiserror::Error;
 
 use crate::{
     provider::{Provider, ProviderError},
-    resource_cache::ResourceCache,
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
 
@@ -69,7 +62,6 @@ pub struct Wallet {
     /// from the first 32 bytes of SHA-256 hash of the wallet's public key.
     pub(crate) address: Bech32Address,
     provider: Option<Provider>,
-    cache: Arc<Mutex<ResourceCache>>,
 }
 
 /// A `WalletUnlocked` is equivalent to a [`Wallet`] whose private key is known and stored
@@ -84,11 +76,7 @@ pub struct WalletUnlocked {
 impl Wallet {
     /// Construct a Wallet from its given public address.
     pub fn from_address(address: Bech32Address, provider: Option<Provider>) -> Self {
-        Self {
-            address,
-            provider,
-            cache: Default::default(),
-        }
+        Self { address, provider }
     }
 
     pub fn provider(&self) -> Option<&Provider> {
@@ -265,18 +253,6 @@ impl Account for WalletUnlocked {
     fn finalize_tx<Tb: TransactionBuilder>(&self, mut tb: Tb) -> Result<Tb::TxType> {
         self.sign_transaction(&mut tb);
         tb.build()
-    }
-
-    fn cache(&self, tx: CachedTx) {
-        self.cache.lock().unwrap().save(tx)
-    }
-
-    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
-        self.cache.lock().unwrap().get_used_resource_ids()
-    }
-
-    fn get_expected_resources(&self) -> Vec<CoinType> {
-        self.cache.lock().unwrap().get_expected_resources()
     }
 }
 

@@ -299,7 +299,7 @@ impl Contract {
         tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
         let network_info = account.try_provider()?.network_info().await?;
-        let chain_id = network_info.chain_id();
+        let _chain_id = network_info.chain_id();
 
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
@@ -321,9 +321,7 @@ impl Contract {
             .try_provider()
             .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
 
-        let cached = tx.compute_cached_tx(account.address(), chain_id);
         provider.send_transaction_and_await_commit(tx).await?;
-        account.cache(cached);
 
         Ok(self.contract_id.into())
     }
@@ -630,9 +628,7 @@ where
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(cached);
 
             provider
                 .tx_status(&tx_id)
@@ -927,9 +923,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let receipts = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(cached);
 
             provider
                 .tx_status(&tx_id)

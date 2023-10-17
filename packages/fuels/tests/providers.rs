@@ -853,6 +853,29 @@ async fn test_sway_timestamp() -> Result<()> {
     Ok(())
 }
 
+async fn create_transfer(
+    wallet: &WalletUnlocked,
+    amount: u64,
+    to: &Bech32Address,
+) -> Result<ScriptTransaction> {
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
+
+    let network_info = wallet.try_provider()?.network_info().await?;
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, amount).await?;
+    tb.build()
+}
+
 #[tokio::test]
 async fn test_caching() -> Result<()> {
     let block_time = 7u32; // seconds
@@ -862,9 +885,9 @@ async fn test_caching() -> Result<()> {
         },
         ..Config::local_node()
     };
-    let amount = 10000;
+    let amount = 1000;
     let mut wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(1), Some(amount)),
+        WalletsConfig::new(Some(2), Some(3), Some(amount)),
         Some(provider_config),
         None,
     )
@@ -873,72 +896,34 @@ async fn test_caching() -> Result<()> {
     let wallet_2 = wallets.pop().unwrap();
 
     let provider = wallet_1.try_provider()?;
-    let params = provider.consensus_parameters();
 
-    /*
-    setup_program_test!(
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/block_timestamp"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet_1"
-        ),
-    );
+    dbg!("1");
 
-    let methods = contract_instance.methods();
-    let response = methods.return_timestamp().call().await?;
-     */
+    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let tx_1_id = provider.send_transaction(tx_1).await?;
 
-    let tx_id1 = wallet_1
-        .transfer(
-            wallet_2.address(),
-            100,
-            BASE_ASSET_ID,
-            TxParameters::default(),
-        )
-        .await?
-        .0;
-    let tx_id2 = wallet_1
-        .transfer(
-            wallet_2.address(),
-            100,
-            BASE_ASSET_ID,
-            TxParameters::default(),
-        )
-        .await?
-        .0;
-    let tx_id3 = wallet_1
-        .transfer(
-            wallet_2.address(),
-            100,
-            BASE_ASSET_ID,
-            TxParameters::default(),
-        )
-        .await?
-        .0;
+    dbg!("2");
+
+    let tx_2 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let tx_2_id = provider.send_transaction(tx_2).await?;
+
+    dbg!("3");
+
+    let tx_3 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    let tx_3_id = provider.send_transaction(tx_3).await?;
 
     sleep(std::time::Duration::from_secs(30)).await;
 
-    /*
-    let rec1 = provider.get_receipts(&tx_id1).await;
-    let stat = provider.tx_status(&tx_id1).await?;
-    dbg!(stat);
-    dbg!(rec1);
+    let status_1 = provider.tx_status(&tx_1_id).await?;
+    dbg!(status_1);
 
-    let rec2 = provider.get_receipts(&tx_id2).await;
-    let stat = provider.client.transaction_status(&tx_id2).await;
-    dbg!(stat);
-    dbg!(rec2);
+    let status_2 = provider.tx_status(&tx_2_id).await?;
+    dbg!(status_2);
 
-    let rec3 = provider.get_receipts(&tx_id3).await;
-    let stat = provider.client.transaction_status(&tx_id3).await;
-    dbg!(stat);
-    dbg!(rec3);
+    let status_3 = provider.tx_status(&tx_3_id).await?;
+    dbg!(status_3);
 
-    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);*/
+    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);
 
     Ok(())
 }

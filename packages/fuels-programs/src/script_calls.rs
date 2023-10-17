@@ -227,10 +227,7 @@ where
         let receipts = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
-            let chain_id = self.provider.chain_id();
-            let cached = tx.compute_cached_tx(self.account.address(), chain_id);
             let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
-            self.account.cache(cached);
 
             self.provider
                 .tx_status(&tx_id)

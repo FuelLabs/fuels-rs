@@ -13,11 +13,11 @@ use fuels_core::{
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         coin::Coin,
-        coin_type::{CoinType, CoinTypeId},
+        coin_type::CoinType,
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::{CachedTx, Transaction, TxParameters},
+        transaction::TxParameters,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
@@ -27,7 +27,6 @@ use provider::{Provider, ResourceFilter};
 mod accounts_utils;
 pub mod predicate;
 pub mod provider;
-mod resource_cache;
 pub mod wallet;
 
 /// Trait for signing transactions and messages
@@ -185,12 +184,6 @@ pub trait Account: ViewOnlyAccount {
         amount: u64,
     ) -> Result<Vec<Input>>;
 
-    fn cache(&self, tx: CachedTx);
-
-    fn get_used_resource_ids(&self) -> Vec<CoinTypeId>;
-
-    fn get_expected_resources(&self) -> Vec<CoinType>;
-
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
     /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
     /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
@@ -198,51 +191,19 @@ pub trait Account: ViewOnlyAccount {
         &self,
         asset_id: AssetId,
         amount: u64,
-    ) -> AccountResult<Vec<CoinType>> {
-        let used_resource_ids = self.get_used_resource_ids();
-
-        let excluded_utxos = used_resource_ids
-            .iter()
-            .filter_map(|resource_id| match resource_id {
-                CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
-                _ => None,
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
-        dbg!("==========================");
-        dbg!(&excluded_utxos);
-
-        let excluded_message_nonces = used_resource_ids
-            .iter()
-            .filter_map(|resource_id| match resource_id {
-                CoinTypeId::Nonce(nonce) => Some(nonce),
-                _ => None,
-            })
-            .cloned()
-            .collect::<Vec<_>>();
-
+    ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id,
             amount,
-            excluded_utxos,
-            excluded_message_nonces,
+            excluded_utxos: vec![],
+            excluded_message_nonces: vec![],
         };
 
         self.try_provider()?
             .get_spendable_resources(filter)
             .await
             .map_err(Into::into)
-            .or_else(|_: Error| {
-                let resources = self.get_expected_resources();
-                dbg!("*****************************");
-                dbg!(&resources);
-                if resources.iter().map(|c| c.amount()).sum::<u64>() < amount {
-                    return Err(AccountError::no_resources());
-                }
-                Ok(resources)
-            })
     }
 
     /// Add base asset inputs to the transaction to cover the estimated fee.
@@ -280,7 +241,6 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
-        let chain_id = network_info.chain_id();
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
@@ -298,9 +258,7 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tx_builder, amount).await?;
 
         let tx = self.finalize_tx(tx_builder)?;
-        let cached = tx.compute_cached_tx(self.address(), chain_id);
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        self.cache(cached);
 
         let receipts = provider
             .tx_status(&tx_id)
@@ -328,7 +286,6 @@ pub trait Account: ViewOnlyAccount {
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
-        let chain_id = network_info.chain_id();
 
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
@@ -362,9 +319,7 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tb, amount).await?;
         let tx = self.finalize_tx(tb)?;
 
-        let cached = tx.compute_cached_tx(self.address(), chain_id);
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        self.cache(cached);
 
         let receipts = provider
             .tx_status(&tx_id)
@@ -477,7 +432,7 @@ mod tests {
         };
         // Set up a transaction
         let mut tb = {
-            let input_coin = Input::ResourceSigned {
+            let input_coin = Input::CoinSigned {
                 resource: CoinType::Coin(Coin {
                     amount: 10000000,
                     owner: wallet.address().clone(),

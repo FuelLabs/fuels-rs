@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
+use std::{borrow::BorrowMut, collections::HashMap, fmt::Debug, io, net::SocketAddr, sync::Arc};
 
 mod retry_util;
 mod retryable_client;
@@ -20,7 +20,7 @@ use fuels_core::{
         block::Block,
         chain_info::ChainInfo,
         coin::Coin,
-        coin_type::CoinType,
+        coin_type::{CoinType, CoinTypeId},
         errors::{error, Error, Result},
         message::Message,
         message_proof::MessageProof,
@@ -34,6 +34,7 @@ use fuels_core::{
 pub use retry_util::{Backoff, RetryConfig};
 use tai64::Tai64;
 use thiserror::Error;
+use tokio::sync::Mutex;
 
 use crate::provider::retryable_client::RetryableClient;
 
@@ -142,6 +143,7 @@ impl From<ProviderError> for Error {
 pub struct Provider {
     client: RetryableClient,
     consensus_parameters: ConsensusParameters,
+    cache: Arc<Mutex<HashMap<Bech32Address, Vec<CoinTypeId>>>>,
 }
 
 impl Provider {
@@ -151,6 +153,7 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            cache: Default::default(),
         })
     }
 
@@ -171,6 +174,7 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            cache: Default::default(),
         })
     }
 
@@ -218,7 +222,10 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
+        let used_utxos = tx.used_coins();
         let tx_id = self.client.submit(&tx.into()).await?;
+        self.cache.lock().await.extend(used_utxos);
+
         Ok(tx_id)
     }
 
@@ -369,8 +376,38 @@ impl Provider {
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     pub async fn get_spendable_resources(
         &self,
-        filter: ResourceFilter,
+        mut filter: ResourceFilter,
     ) -> ProviderResult<Vec<CoinType>> {
+        let cache = self.cache.lock().await;
+        dbg!(cache.clone());
+        let used_coins = cache.get(&filter.from);
+
+        if let Some(used_coins) = used_coins {
+            let excluded_utxos = used_coins
+                .iter()
+                .filter_map(|coin_id| match coin_id {
+                    CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
+                    _ => None,
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+
+            let excluded_message_nonces = used_coins
+                .iter()
+                .filter_map(|coin_id| match coin_id {
+                    CoinTypeId::Nonce(nonce) => Some(nonce),
+                    _ => None,
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+
+            dbg!(excluded_utxos.clone());
+            filter.excluded_utxos.extend(excluded_utxos);
+            filter
+                .excluded_message_nonces
+                .extend(excluded_message_nonces);
+        }
+
         let queries = filter.resource_queries();
 
         let res = self

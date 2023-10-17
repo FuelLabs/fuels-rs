@@ -1,23 +1,16 @@
-use std::{
-    fmt::Debug,
-    fs,
-    sync::{Arc, Mutex},
-};
+use std::{fmt::Debug, fs};
 
 use fuel_tx::ConsensusParameters;
 use fuel_types::AssetId;
 use fuels_core::{
     types::{
-        bech32::Bech32Address, errors::Result, input::Input, transaction::CachedTx,
+        bech32::Bech32Address, errors::Result, input::Input,
         transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
     },
     Configurables,
 };
 
-use crate::{
-    provider::Provider, resource_cache::ResourceCache, Account, AccountError, AccountResult,
-    CoinType, CoinTypeId, ViewOnlyAccount,
-};
+use crate::{provider::Provider, Account, AccountError, AccountResult, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -25,7 +18,6 @@ pub struct Predicate {
     code: Vec<u8>,
     data: UnresolvedBytes,
     provider: Option<Provider>,
-    cache: Arc<Mutex<ResourceCache>>,
 }
 
 impl Predicate {
@@ -76,7 +68,6 @@ impl Predicate {
             code,
             data: Default::default(),
             provider: None,
-            cache: Default::default(),
         }
     }
 
@@ -139,17 +130,5 @@ impl Account for Predicate {
 
     fn finalize_tx<Tb: TransactionBuilder>(&self, tb: Tb) -> Result<Tb::TxType> {
         tb.build()
-    }
-
-    fn cache(&self, tx: CachedTx) {
-        self.cache.lock().unwrap().save(tx)
-    }
-
-    fn get_used_resource_ids(&self) -> Vec<CoinTypeId> {
-        self.cache.lock().unwrap().get_used_resource_ids()
-    }
-
-    fn get_expected_resources(&self) -> Vec<CoinType> {
-        self.cache.lock().unwrap().get_expected_resources()
     }
 }

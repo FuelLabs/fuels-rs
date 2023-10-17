@@ -1,6 +1,7 @@
-use std::{collections::HashSet, fmt::Debug};
+use std::collections::HashMap;
+use std::fmt::Debug;
 
-use crate::types::{bech32::Bech32Address, coin::Coin, coin_type::CoinType};
+use crate::types::{coin::Coin, coin_type::CoinType};
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
@@ -15,6 +16,7 @@ use fuel_tx::{
 };
 use fuel_types::ChainId;
 
+use crate::types::bech32::Bech32Address;
 use crate::types::Result;
 
 #[derive(Default, Debug, Copy, Clone)]
@@ -71,15 +73,7 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
-#[derive(Clone, Debug)]
-pub struct CachedTx {
-    pub resource_ids_used: HashSet<CoinTypeId>,
-    pub expected_resources: HashSet<CoinType>,
-}
-
 pub trait Transaction: Into<FuelTransaction> + Clone {
-    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx;
-
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
@@ -115,6 +109,8 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
 
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> usize;
+
+    fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -127,13 +123,6 @@ impl From<TransactionType> for FuelTransaction {
 }
 
 impl Transaction for TransactionType {
-    fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx {
-        match self {
-            TransactionType::Script(tx) => tx.compute_cached_tx(address, chain_id),
-            TransactionType::Create(tx) => tx.compute_cached_tx(address, chain_id),
-        }
-    }
-
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
@@ -242,6 +231,13 @@ impl Transaction for TransactionType {
             TransactionType::Create(tx) => tx.append_witness(witness),
         }
     }
+
+    fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
+        match self {
+            TransactionType::Script(tx) => self.used_coins(),
+            TransactionType::Create(tx) => self.used_coins(),
+        }
+    }
 }
 
 fn extract_input_id(input: &Input, from_owner: Address) -> Option<CoinTypeId> {
@@ -287,6 +283,7 @@ macro_rules! impl_tx_wrapper {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
             pub(crate) tx: $wrapped,
+            pub(crate) used_coins: HashMap<Bech32Address, Vec<CoinTypeId>>,
         }
 
         impl From<$wrapper> for $wrapped {
@@ -303,35 +300,14 @@ macro_rules! impl_tx_wrapper {
 
         impl From<$wrapped> for $wrapper {
             fn from(tx: $wrapped) -> Self {
-                $wrapper { tx }
+                $wrapper {
+                    tx,
+                    used_coins: Default::default(),
+                }
             }
         }
 
         impl Transaction for $wrapper {
-            fn compute_cached_tx(&self, address: &Bech32Address, chain_id: ChainId) -> CachedTx {
-                let plain_address: Address = address.into();
-                let resource_ids_used = self
-                    .inputs()
-                    .iter()
-                    .filter_map(|input| extract_input_id(input, plain_address))
-                    .collect();
-
-                let tx_id = self.id(chain_id);
-                let expected_resources = self
-                    .outputs()
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(idx, output)| {
-                        extract_expected_coin(output, plain_address, tx_id, idx as u8)
-                    })
-                    .collect();
-
-                CachedTx {
-                    resource_ids_used,
-                    expected_resources,
-                }
-            }
-
             fn fee_checked_from_tx(
                 &self,
                 consensus_parameters: &ConsensusParameters,
@@ -401,6 +377,10 @@ macro_rules! impl_tx_wrapper {
                 self.tx.witnesses_mut().push(witness);
 
                 idx
+            }
+
+            fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
+                self.used_coins.clone()
             }
         }
     };
