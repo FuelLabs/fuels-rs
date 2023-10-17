@@ -64,7 +64,7 @@ pub trait TransactionBuilder: Send {
 
     fn build(self) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    fn fee_checked_from_tx(&self, networ_info: &NetworkInfo) -> Result<Option<TransactionFee>>;
+    fn fee_checked_from_tx(&self, network_info: &NetworkInfo) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_gas_limit(self, gas_limit: u64) -> Self;

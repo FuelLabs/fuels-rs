@@ -839,3 +839,58 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_witnesses/out/debug/predicate_witnesses-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::encode_data(0, 1);
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/predicates/predicate_witnesses/out/debug/predicate_witnesses.bin",
+    )?
+    .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 0;
+    let amount = 16;
+    let (provider, _predicate_balance, receiver, _receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    let amount_to_send = 12;
+    let inputs = predicate
+        .get_asset_inputs_for_amount(asset_id, amount_to_send)
+        .await?;
+    let outputs =
+        predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
+
+    let network_info = provider.network_info().await?;
+    let mut tx = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info.clone(),
+    )
+    .build()?;
+
+    let tx_id = tx.id(network_info.chain_id());
+
+    let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
+    let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
+
+    tx.append_witness(witness.into());
+    tx.append_witness(witness2.into());
+    let tx_id_after_witnesses = tx.id(network_info.chain_id());
+
+    let tx_id_from_provider = provider.send_transaction_and_await_commit(tx).await?;
+
+    assert_eq!(tx_id, tx_id_after_witnesses);
+    assert_eq!(tx_id, tx_id_from_provider);
+
+    Ok(())
+}
