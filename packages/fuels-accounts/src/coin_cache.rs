@@ -23,8 +23,7 @@ impl CoinsCache {
     }
 
     pub fn append(&mut self, key: &CoinCacheKey, item: CoinCacheItem) {
-        let items = self.items
-            .entry(key.clone()).or_default();
+        let items = self.items.entry(key.clone()).or_default();
         items.insert(item);
     }
 
