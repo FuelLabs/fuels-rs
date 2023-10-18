@@ -25,6 +25,7 @@ use fuels_core::{
 use provider::{Provider, ResourceFilter};
 
 mod accounts_utils;
+mod coin_cache;
 pub mod predicate;
 pub mod provider;
 pub mod wallet;
