@@ -3,7 +3,7 @@
 Once you've instantiated your wallet in an unlocked state using one of the previously discussed methods, you can sign a message with `wallet.sign_message`. Below is a full example of how to sign and recover a message.
 
 ```rust,ignore
-{{#include ../../../packages/fuels-accounts/src/lib.rs:sign_message}}
+{{#include ../../../packages/fuels-accounts/src/account.rs:sign_message}}
 ```
 
 ## Signing a transaction
@@ -15,5 +15,5 @@ To sign a _transaction builder_ use the `wallet.sign_transaction`. Below is a fu
 > Note: When you sign a transaction builder the secret key is stored inside it and will not be resolved until you call `build()`!
 
 ```rust,ignore
-{{#include ../../../packages/fuels-accounts/src/lib.rs:sign_tx}}
+{{#include ../../../packages/fuels-accounts/src/account.rs:sign_tx}}
 ```
