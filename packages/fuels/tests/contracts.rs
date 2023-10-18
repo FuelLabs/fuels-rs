@@ -1197,7 +1197,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     ));
 
     let wallet = WalletUnlocked::new_random(None);
-    let predicate = Predicate::from_code(vec![]);
+    let predicate = Predicate::from_code(vec![], 0);
 
     let contract_methods_wallet =
         MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();

@@ -43,6 +43,7 @@ std = [
   "dep:fuel-core-client",
   "dep:fuels-programs",
   "dep:fuels-test-helpers",
+  "fuels-accounts/std",
   "fuels-programs?/std",
   "fuels-core/std",
   "fuels-test-helpers?/std",
