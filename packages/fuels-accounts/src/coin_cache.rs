@@ -22,7 +22,7 @@ impl CoinsCache {
         }
     }
 
-    pub fn insert(&mut self, key: &CoinCacheKey, item: CoinCacheItem) {
+    pub fn append(&mut self, key: &CoinCacheKey, item: CoinCacheItem) {
         let items = self.items
             .entry(key.clone()).or_default();
         items.insert(item);
@@ -32,7 +32,7 @@ impl CoinsCache {
         // remove expired entries
         self.items
             .get_mut(key)
-            .map(|items| items.retain(|item| item.is_valid(self.ttl)));
+            .map(|entry| entry.retain(|item| item.is_valid(self.ttl)));
 
         self.items
             .get(key)
@@ -71,7 +71,7 @@ impl CoinCacheItem {
     }
 
     pub fn is_valid(&self, ttl: Duration) -> bool {
-        self.created_at + ttl < SystemTime::now()
+        self.created_at + ttl > SystemTime::now()
     }
 }
 
@@ -101,8 +101,8 @@ mod tests {
         let key = Default::default();
         let (item1, item2) = get_items();
 
-        cache.insert(&key, item1.clone());
-        cache.insert(&key, item2.clone());
+        cache.append(&key, item1.clone());
+        cache.append(&key, item2.clone());
 
         let active_coins = cache.get_active(&key);
 
@@ -116,14 +116,15 @@ mod tests {
         let mut cache = CoinsCache::new(Duration::from_secs(1));
 
         let key = Default::default();
-        let (item1, item2) = get_items();
+        let (item1, _) = get_items();
 
-        cache.insert(&key, item1.clone());
+        cache.append(&key, item1.clone());
 
         // Sleep for more than the cache's TTL
         std::thread::sleep(Duration::from_secs(2));
 
-        cache.insert(&key, item2.clone());
+        let (_, item2) = get_items();
+        cache.append(&key, item2.clone());
 
         let active_coins = cache.get_active(&key);
 
