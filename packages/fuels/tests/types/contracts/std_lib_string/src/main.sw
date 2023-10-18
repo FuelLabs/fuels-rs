@@ -9,16 +9,12 @@ abi MyContract {
     fn accepts_dynamic_string(s: String);
 }
 
-fn validate_string(string: String) {
-    assert_eq(string, String::from_ascii_str("Hello World"));
-}
-
 impl MyContract for Contract {
     fn return_dynamic_string() -> String {
         String::from_ascii_str("Hello World")
     }
 
     fn accepts_dynamic_string(string: String) {
-        validate_string(string);
+        assert_eq(string, String::from_ascii_str("Hello World"));
     }
 }
