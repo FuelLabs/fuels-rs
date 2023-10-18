@@ -6,12 +6,9 @@ use std::{
 };
 
 pub use fuel_core_chain_config::ChainConfig;
-
 use fuel_types::{BlockHeight, Word};
 use fuels_core::constants::WORD_SIZE;
-
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
-
 use serde_with::{DeserializeAs, SerializeAs};
 
 #[derive(Clone, Debug)]

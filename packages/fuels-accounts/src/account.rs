@@ -22,7 +22,10 @@ use fuels_core::{
     },
 };
 
-use crate::{accounts_utils::extract_message_id, provider::Provider, provider::ResourceFilter};
+use crate::{
+    accounts_utils::extract_message_id,
+    provider::{Provider, ResourceFilter},
+};
 
 /// Trait for signing transactions and messages
 ///

@@ -5,7 +5,6 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{input::Input, transaction_builders::TransactionBuilder, AssetId},
 };
-
 use fuels_core::{
     types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,

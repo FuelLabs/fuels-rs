@@ -1,10 +1,13 @@
 use std::mem::size_of;
 
-use crate::node_types::{ChainConfig, Config};
 use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
 use fuels_core::types::errors::Result;
 
-use crate::{setup_custom_assets_coins, setup_test_provider, wallets_config::*};
+use crate::{
+    node_types::{ChainConfig, Config},
+    setup_custom_assets_coins, setup_test_provider,
+    wallets_config::*,
+};
 
 /// Launches a local Fuel node, instantiates a provider, and returns a wallet.
 /// The provider and the wallets are instantiated with the default configs.

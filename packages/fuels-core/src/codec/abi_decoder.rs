@@ -83,13 +83,14 @@ impl ABIDecoder {
 mod tests {
     use std::vec;
 
+    use ParamType::*;
+
     use super::*;
     use crate::{
         constants::WORD_SIZE,
         traits::Parameterize,
         types::{enum_variants::EnumVariants, errors::Error, StaticStringToken, U256},
     };
-    use ParamType::*;
 
     #[test]
     fn decode_int() -> Result<()> {
