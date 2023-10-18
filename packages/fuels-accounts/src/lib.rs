@@ -11,4 +11,3 @@ pub mod wallet;
 pub use account::*;
 
 pub mod predicate;
-mod supported_versions;
