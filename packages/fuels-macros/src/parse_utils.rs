@@ -1,8 +1,10 @@
 pub(crate) use command::Command;
-use itertools::{chain, process_results, Itertools};
+use itertools::{chain, Itertools};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, ToTokens};
-use syn::{DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant};
+use syn::{
+    Attribute, DataEnum, DataStruct, Error, Fields, GenericParam, Generics, TypeParam, Variant,
+};
 pub(crate) use unique_lit_strs::UniqueLitStrs;
 pub(crate) use unique_name_values::UniqueNameValues;
 
@@ -99,94 +101,127 @@ pub fn validate_and_extract_generic_types(generics: &Generics) -> syn::Result<Ve
         .collect()
 }
 
+enum Member {
+    Normal { name: Ident, ty: TokenStream },
+    Ignored { name: Ident },
+}
+
 pub(crate) struct Members {
-    names: Vec<Ident>,
-    types: Vec<TokenStream>,
+    members: Vec<Member>,
     fuels_core_path: TokenStream,
 }
 
 impl Members {
+    pub(crate) fn from_struct(
+        fields: DataStruct,
+        fuels_core_path: TokenStream,
+    ) -> syn::Result<Self> {
+        let named_fields = match fields.fields {
+            Fields::Named(named_fields) => Ok(named_fields.named),
+            Fields::Unnamed(fields) => Err(Error::new_spanned(
+                fields.unnamed,
+                "Tuple-like structs not supported",
+            )),
+            _ => {
+                panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
+            }
+        }?;
+
+        let members = named_fields
+            .into_iter()
+            .map(|field| {
+                let name = field
+                    .ident
+                    .expect("FieldsNamed to only contain named fields.");
+                if has_ignore_attr(&field.attrs) {
+                    Member::Ignored { name }
+                } else {
+                    let ty = field.ty.into_token_stream();
+                    Member::Normal { name, ty }
+                }
+            })
+            .collect();
+
+        Ok(Members {
+            members,
+            fuels_core_path,
+        })
+    }
+
+    pub(crate) fn from_enum(data: DataEnum, fuels_core_path: TokenStream) -> syn::Result<Self> {
+        let members = data
+            .variants
+            .into_iter()
+            .map(|variant: Variant| {
+                let name = variant.ident;
+                if has_ignore_attr(&variant.attrs) {
+                    Ok(Member::Ignored { name })
+                } else {
+                    let ty = match variant.fields {
+                        Fields::Unnamed(fields_unnamed) => {
+                            if fields_unnamed.unnamed.len() != 1 {
+                                return Err(Error::new(
+                                    fields_unnamed.paren_token.span.join(),
+                                    "Must have exactly one element",
+                                ));
+                            }
+                            fields_unnamed.unnamed.into_iter().next()
+                        }
+                        Fields::Unit => None,
+                        Fields::Named(named_fields) => {
+                            return Err(Error::new_spanned(
+                                named_fields,
+                                "Struct-like enum variants are not supported.",
+                            ))
+                        }
+                    }
+                    .map(|field| field.ty.into_token_stream())
+                    .unwrap_or_else(|| quote! {()});
+                    Ok(Member::Normal { name, ty })
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(Members {
+            members,
+            fuels_core_path,
+        })
+    }
+
     pub(crate) fn names(&self) -> impl Iterator<Item = &Ident> + '_ {
-        self.names.iter()
+        self.members.iter().filter_map(|member| {
+            if let Member::Normal { name, .. } = member {
+                Some(name)
+            } else {
+                None
+            }
+        })
+    }
+
+    pub(crate) fn ignored_names(&self) -> impl Iterator<Item = &Ident> + '_ {
+        self.members.iter().filter_map(|member| {
+            if let Member::Ignored { name } = member {
+                Some(name)
+            } else {
+                None
+            }
+        })
     }
 
     pub(crate) fn param_type_calls(&self) -> impl Iterator<Item = TokenStream> + '_ {
         let fuels_core_path = self.fuels_core_path.to_token_stream();
-        self.types.iter().map(move |ty| {
-            quote! { <#ty as #fuels_core_path::traits::Parameterize>::param_type() }
+        self.members.iter().filter_map(move |member| match member {
+            Member::Normal { ty, .. } => {
+                Some(quote! { <#ty as #fuels_core_path::traits::Parameterize>::param_type() })
+            }
+            _ => None,
         })
     }
 }
 
-pub(crate) fn extract_struct_members(
-    fields: DataStruct,
-    fuels_core_path: TokenStream,
-) -> syn::Result<Members> {
-    let named_fields = match fields.fields {
-        Fields::Named(named_fields) => Ok(named_fields.named),
-        Fields::Unnamed(fields) => Err(Error::new_spanned(
-            fields.unnamed,
-            "Tuple-like structs not supported",
-        )),
-        _ => {
-            panic!("This cannot happen in valid Rust code. Fields::Unit only appears in enums")
-        }
-    }?;
-
-    let (names, types) = named_fields
-        .into_iter()
-        .map(|field| {
-            let name = field
-                .ident
-                .expect("FieldsNamed to only contain named fields.");
-            let ty = field.ty.into_token_stream();
-            (name, ty)
-        })
-        .unzip();
-
-    Ok(Members {
-        names,
-        types,
-        fuels_core_path,
-    })
-}
-
-pub(crate) fn extract_enum_members(
-    data: DataEnum,
-    fuels_core_path: TokenStream,
-) -> syn::Result<Members> {
-    let components = data.variants.into_iter().map(|variant: Variant| {
-        let name = variant.ident;
-
-        let ttype = match variant.fields {
-            Fields::Unnamed(fields_unnamed) => {
-                if fields_unnamed.unnamed.len() != 1 {
-                    return Err(Error::new(
-                        fields_unnamed.paren_token.span.join(),
-                        "Must have exactly one element",
-                    ));
-                }
-                fields_unnamed.unnamed.into_iter().next()
-            }
-            Fields::Unit => None,
-            Fields::Named(named_fields) => {
-                return Err(Error::new_spanned(
-                    named_fields,
-                    "Struct-like enum variants are not supported.",
-                ))
-            }
-        }
-        .map(|field| field.ty.into_token_stream())
-        .unwrap_or_else(|| quote! {()});
-
-        Ok((name, ttype))
-    });
-
-    let (names, types) = process_results(components, |iter| iter.unzip())?;
-
-    Ok(Members {
-        names,
-        types,
-        fuels_core_path,
+pub(crate) fn has_ignore_attr(attrs: &[Attribute]) -> bool {
+    attrs.iter().any(|attr| match &attr.meta {
+        syn::Meta::Path(path) => path.get_ident().is_some_and(|ident| ident == "Ignore"),
+        _ => false,
     })
 }

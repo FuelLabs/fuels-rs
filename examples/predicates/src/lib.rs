@@ -44,7 +44,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let provider = setup_test_provider(all_coins, vec![], None, None).await;
+        let provider = setup_test_provider(all_coins, vec![], None, None).await?;
 
         [&mut wallet, &mut wallet2, &mut wallet3, &mut receiver]
             .iter_mut()
@@ -138,7 +138,7 @@ mod tests {
             }],
         );
 
-        let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await;
+        let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
 
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];

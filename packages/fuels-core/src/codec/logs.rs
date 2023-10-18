@@ -5,16 +5,15 @@ use std::{
     iter::FilterMap,
 };
 
-use fuel_abi_types::error_codes::{
-    FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
-    FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
-};
 use fuel_tx::{ContractId, Receipt};
 
 use crate::{
     codec::{try_from_bytes, DecoderConfig},
     traits::{Parameterize, Tokenizable},
-    types::errors::{error, Error, Result},
+    types::{
+        errors::{error, Error, Result},
+        param_types::ParamType,
+    },
 };
 
 #[derive(Clone)]
@@ -35,7 +34,20 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
+        Self::can_decode_log_with_type::<T>()?;
         Ok(format!("{:?}", try_from_bytes::<T>(bytes, decoder_config)?))
+    }
+
+    fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
+        match T::param_type() {
+            // String slices can not be decoded from logs as they are encoded as ptr, len
+            // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
+            ParamType::StringSlice => Err(error!(
+                InvalidData,
+                "String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
+            )),
+            _ => Ok(()),
+        }
     }
 
     pub fn can_handle_type<T: Tokenizable + Parameterize + 'static>(&self) -> bool {
@@ -166,9 +178,8 @@ impl LogDecoder {
         let target_ids: HashSet<LogId> = self
             .log_formatters
             .iter()
-            .filter_map(|(log_id, log_formatter)| {
-                log_formatter.can_handle_type::<T>().then(|| log_id.clone())
-            })
+            .filter(|(_, log_formatter)| log_formatter.can_handle_type::<T>())
+            .map(|(log_id, _)| log_id.clone())
             .collect();
 
         receipts
@@ -206,38 +217,6 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
             _ => None,
         })
     }
-}
-
-/// Map the provided `RevertTransactionError` based on the `revert_id`.
-/// If applicable, decode the logged types from the receipt.
-pub fn map_revert_error(mut err: Error, log_decoder: &LogDecoder) -> Error {
-    if let Error::RevertTransactionError {
-        revert_id,
-        ref receipts,
-        ref mut reason,
-    } = err
-    {
-        match revert_id {
-            FAILED_REQUIRE_SIGNAL => {
-                *reason = log_decoder.decode_last_log(receipts).unwrap_or_else(|err| {
-                    format!("failed to decode log from require revert: {err}")
-                })
-            }
-            FAILED_ASSERT_EQ_SIGNAL => {
-                *reason = match log_decoder.decode_last_two_logs(receipts) {
-                    Ok((lhs, rhs)) => format!(
-                        "assertion failed: `(left == right)`\n left: `{lhs:?}`\n right: `{rhs:?}`"
-                    ),
-                    Err(err) => format!("failed to decode log from assert_eq revert: {err}"),
-                };
-            }
-            FAILED_ASSERT_SIGNAL => *reason = "assertion failed.".into(),
-            FAILED_SEND_MESSAGE_SIGNAL => *reason = "failed to send message.".into(),
-            FAILED_TRANSFER_TO_ADDRESS_SIGNAL => *reason = "failed transfer to address.".into(),
-            _ => {}
-        }
-    }
-    err
 }
 
 pub fn log_formatters_lookup(

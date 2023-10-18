@@ -1,10 +1,10 @@
-use std::{collections::HashMap, iter::zip};
+use std::{collections::HashMap, fmt, iter::zip};
 
 use fuel_abi_types::{
     abi::program::{TypeApplication, TypeDeclaration},
     utils::{extract_array_len, extract_generic_name, extract_str_len, has_tuple_format},
 };
-use itertools::chain;
+use itertools::{chain, Itertools};
 
 use crate::{
     constants::WORD_SIZE,
@@ -67,7 +67,10 @@ impl ParamType {
         param_type: &ParamType,
         available_bytes: usize,
     ) -> Result<usize> {
-        let memory_size = param_type.compute_encoding_width() * WORD_SIZE;
+        let encoding_width = param_type.compute_encoding_width()?;
+        let memory_size = encoding_width
+            .checked_mul(WORD_SIZE)
+            .ok_or_else(|| error!(InvalidData, "Overflow error while encoding {param_type:?}"))?;
         if memory_size == 0 {
             return Err(error!(
                 InvalidType,
@@ -81,66 +84,107 @@ impl ParamType {
                 "{remainder} extra bytes detected while decoding heap type"
             ));
         }
-        Ok(available_bytes / memory_size)
+        let num_of_elements = available_bytes
+            .checked_div(memory_size)
+            .ok_or_else(|| error!(InvalidData, "Type {param_type:?} has a memory_size of 0"))?;
+        Ok(num_of_elements)
     }
 
-    pub fn contains_nested_heap_types(&self) -> bool {
-        match &self {
-            ParamType::Vector(param_type) => param_type.uses_heap_types(),
-            ParamType::Bytes => false,
-            // Here, we return false because even though the `Token::String` type has an underlying
-            // `Bytes` type nested, it is an exception that will be generalized as part of
-            // https://github.com/FuelLabs/fuels-rs/discussions/944
-            ParamType::String => false,
-            _ => self.uses_heap_types(),
-        }
-    }
-
-    fn uses_heap_types(&self) -> bool {
-        match &self {
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::String => true,
-            ParamType::Array(param_type, ..) => param_type.uses_heap_types(),
-            ParamType::Tuple(param_types, ..) => Self::any_nested_heap_types(param_types),
-            ParamType::Enum {
-                generics, variants, ..
-            } => {
-                let variants_types = variants.param_types();
-                Self::any_nested_heap_types(chain!(generics, variants_types))
+    pub fn children_need_extra_receipts(&self) -> bool {
+        match self {
+            ParamType::Array(inner, _) | ParamType::Vector(inner) => {
+                inner.is_extra_receipt_needed(false)
             }
-            ParamType::Struct {
-                fields, generics, ..
-            } => Self::any_nested_heap_types(chain!(fields, generics)),
+            ParamType::Struct { fields, .. } => fields
+                .iter()
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
+            ParamType::Enum { variants, .. } => variants
+                .param_types()
+                .iter()
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
+            ParamType::Tuple(inner_types) => inner_types
+                .iter()
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
             _ => false,
         }
     }
 
-    fn any_nested_heap_types<'a>(param_types: impl IntoIterator<Item = &'a ParamType>) -> bool {
-        param_types
-            .into_iter()
-            .any(|param_type| param_type.uses_heap_types())
+    pub fn validate_is_decodable(&self, max_depth: usize) -> Result<()> {
+        match self {
+            ParamType::Enum { variants, .. } => {
+                let all_param_types = variants.param_types();
+                let grandchildren_need_receipts = all_param_types
+                    .iter()
+                    .any(|child| child.children_need_extra_receipts());
+                if grandchildren_need_receipts {
+                    return Err(error!(
+                        InvalidType,
+                        "Enums currently support only one level deep heap types."
+                    ));
+                }
+
+                let num_of_children_needing_receipts = all_param_types
+                    .iter()
+                    .filter(|param_type| param_type.is_extra_receipt_needed(false))
+                    .count();
+                if num_of_children_needing_receipts > 1 {
+                    Err(error!(
+                        InvalidType,
+                        "Enums currently support only one heap-type variant. Found: \
+                        {num_of_children_needing_receipts}"
+                    ))
+                } else {
+                    Ok(())
+                }
+            }
+            _ if self.children_need_extra_receipts() => Err(error!(
+                InvalidType,
+                "type {:?} is not decodable: nested heap types are currently not supported except in Enums.",
+                DebugWithDepth::new(self, max_depth)
+            )),
+            _ => Ok(()),
+        }
     }
 
-    pub fn is_vm_heap_type(&self) -> bool {
-        matches!(
-            self,
-            ParamType::Vector(..) | ParamType::Bytes | ParamType::String
-        )
+    pub fn is_extra_receipt_needed(&self, top_level_type: bool) -> bool {
+        match self {
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => true,
+            ParamType::Array(inner, _) => inner.is_extra_receipt_needed(false),
+            ParamType::Struct { fields, generics } => {
+                chain!(fields, generics).any(|param_type| param_type.is_extra_receipt_needed(false))
+            }
+            ParamType::Enum { variants, generics } => chain!(variants.param_types(), generics)
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
+            ParamType::Tuple(elements) => elements
+                .iter()
+                .any(|param_type| param_type.is_extra_receipt_needed(false)),
+            ParamType::RawSlice | ParamType::StringSlice => !top_level_type,
+            _ => false,
+        }
     }
 
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
-    pub fn heap_inner_element_size(&self) -> Option<usize> {
+    pub fn heap_inner_element_size(&self, top_level_type: bool) -> Result<Option<usize>> {
         match &self {
             ParamType::Vector(inner_param_type) => {
-                Some(inner_param_type.compute_encoding_width() * WORD_SIZE)
+                let width = inner_param_type.compute_encoding_width()?;
+                width
+                    .checked_mul(WORD_SIZE)
+                    .map(Some)
+                    .ok_or_else(|| error!(InvalidData, "overflow while multiplying"))
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
-            _ => None,
+            ParamType::Bytes | ParamType::String => Ok(Some(std::mem::size_of::<u8>())),
+            ParamType::RawSlice if !top_level_type => {
+                ParamType::U64.compute_encoding_width().map(Some)
+            }
+            ParamType::StringSlice if !top_level_type => Ok(Some(std::mem::size_of::<u8>())),
+            _ => Ok(None),
         }
     }
 
     /// Calculates the number of `WORD`s the VM expects this parameter to be encoded in.
-    pub fn compute_encoding_width(&self) -> usize {
+    pub fn compute_encoding_width(&self) -> Result<usize> {
         const fn count_words(bytes: usize) -> usize {
             let q = bytes / WORD_SIZE;
             let r = bytes % WORD_SIZE;
@@ -156,18 +200,29 @@ impl ParamType {
             | ParamType::U16
             | ParamType::U32
             | ParamType::U64
-            | ParamType::Bool => 1,
-            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => 2,
-            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => 3,
-            ParamType::U256 | ParamType::B256 => 4,
-            ParamType::Array(param, count) => param.compute_encoding_width() * count,
-            ParamType::StringArray(len) => count_words(*len),
+            | ParamType::Bool => Ok(1),
+            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Ok(2),
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Ok(3),
+            ParamType::U256 | ParamType::B256 => Ok(4),
+            ParamType::Array(param, count) => param
+                .compute_encoding_width()?
+                .checked_mul(*count)
+                .ok_or_else(|| {
+                    error!(
+                        InvalidData,
+                        "overflow while calculating encoding width for Array({param:?}, {count})"
+                    )
+                }),
+            ParamType::StringArray(len) => Ok(count_words(*len)),
             ParamType::Struct { fields, .. } => fields
                 .iter()
                 .map(|param_type| param_type.compute_encoding_width())
-                .sum(),
+                .process_results(|iter| iter.sum()),
             ParamType::Enum { variants, .. } => variants.compute_encoding_width_of_enum(),
-            ParamType::Tuple(params) => params.iter().map(|p| p.compute_encoding_width()).sum(),
+            ParamType::Tuple(params) => params
+                .iter()
+                .map(|param_type| param_type.compute_encoding_width())
+                .process_results(|iter| iter.sum()),
         }
     }
 
@@ -504,11 +559,98 @@ fn try_primitive(the_type: &Type) -> Result<Option<ParamType>> {
     Ok(result)
 }
 
+/// Allows `Debug` formatting of arbitrary-depth nested `ParamTypes` by
+/// omitting the details of inner types if max depth is exceeded.
+pub(crate) struct DebugWithDepth<'a> {
+    param_type: &'a ParamType,
+    depth_left: usize,
+}
+
+impl<'a> DebugWithDepth<'a> {
+    pub(crate) fn new(param_type: &'a ParamType, depth_left: usize) -> Self {
+        Self {
+            param_type,
+            depth_left,
+        }
+    }
+
+    fn descend(&'a self, param_type: &'a ParamType) -> Self {
+        Self {
+            param_type,
+            depth_left: self.depth_left - 1,
+        }
+    }
+}
+
+impl<'a> fmt::Debug for DebugWithDepth<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.depth_left == 0 {
+            return write!(f, "...");
+        }
+
+        match &self.param_type {
+            ParamType::Array(inner, size) => f
+                .debug_tuple("Array")
+                .field(&self.descend(inner))
+                .field(&size)
+                .finish(),
+            ParamType::Struct { fields, generics } => f
+                .debug_struct("Struct")
+                .field(
+                    "fields",
+                    &fields
+                        .iter()
+                        .map(|field| self.descend(field))
+                        .collect::<Vec<_>>(),
+                )
+                .field(
+                    "generics",
+                    &generics
+                        .iter()
+                        .map(|generic| self.descend(generic))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Enum { variants, generics } => f
+                .debug_struct("Enum")
+                .field(
+                    "variants",
+                    &variants
+                        .param_types()
+                        .iter()
+                        .map(|variant| self.descend(variant))
+                        .collect::<Vec<_>>(),
+                )
+                .field(
+                    "generics",
+                    &generics
+                        .iter()
+                        .map(|generic| self.descend(generic))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Tuple(inner) => f
+                .debug_tuple("Tuple")
+                .field(
+                    &inner
+                        .iter()
+                        .map(|param_type| self.descend(param_type))
+                        .collect::<Vec<_>>(),
+                )
+                .finish(),
+            ParamType::Vector(inner) => {
+                f.debug_tuple("Vector").field(&self.descend(inner)).finish()
+            }
+            _ => write!(f, "{:?}", self.param_type),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
     use super::*;
-    use crate::types::param_types::ParamType;
+    use crate::{codec::DecoderConfig, types::param_types::ParamType};
 
     const WIDTH_OF_B256: usize = 4;
     const WIDTH_OF_U32: usize = 1;
@@ -519,7 +661,7 @@ mod tests {
         const NUM_ELEMENTS: usize = 11;
         let param = ParamType::Array(Box::new(ParamType::B256), NUM_ELEMENTS);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         let expected = NUM_ELEMENTS * WIDTH_OF_B256;
         assert_eq!(expected, width);
@@ -530,7 +672,7 @@ mod tests {
         const NUM_ASCII_CHARS: usize = 9;
         let param = ParamType::StringArray(NUM_ASCII_CHARS);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         // 2 WORDS or 16 B are enough to fit 9 ascii chars
         assert_eq!(2, width);
@@ -548,7 +690,7 @@ mod tests {
             generics: vec![],
         };
 
-        let width = a_struct.compute_encoding_width();
+        let width = a_struct.compute_encoding_width().unwrap();
 
         const INNER_STRUCT_WIDTH: usize = WIDTH_OF_U32 * 2;
         const EXPECTED_WIDTH: usize = WIDTH_OF_B256 + WIDTH_OF_BOOL + INNER_STRUCT_WIDTH;
@@ -568,7 +710,7 @@ mod tests {
             generics: vec![],
         };
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         const INNER_STRUCT_SIZE: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = INNER_STRUCT_SIZE + 1;
@@ -581,7 +723,7 @@ mod tests {
         let inner_tuple = ParamType::Tuple(vec![ParamType::B256]);
         let param = ParamType::Tuple(vec![ParamType::U32, inner_tuple]);
 
-        let width = param.compute_encoding_width();
+        let width = param.compute_encoding_width().unwrap();
 
         const INNER_TUPLE_WIDTH: usize = WIDTH_OF_B256;
         const EXPECTED_WIDTH: usize = WIDTH_OF_U32 + INNER_TUPLE_WIDTH;
@@ -1301,125 +1443,236 @@ mod tests {
     }
 
     #[test]
-    fn contains_nested_heap_types_false_on_simple_types() -> Result<()> {
-        // Simple types cannot have nested heap types
-        assert!(!ParamType::Unit.contains_nested_heap_types());
-        assert!(!ParamType::U8.contains_nested_heap_types());
-        assert!(!ParamType::U16.contains_nested_heap_types());
-        assert!(!ParamType::U32.contains_nested_heap_types());
-        assert!(!ParamType::U64.contains_nested_heap_types());
-        assert!(!ParamType::Bool.contains_nested_heap_types());
-        assert!(!ParamType::B256.contains_nested_heap_types());
-        assert!(!ParamType::StringArray(10).contains_nested_heap_types());
-        assert!(!ParamType::RawSlice.contains_nested_heap_types());
-        assert!(!ParamType::Bytes.contains_nested_heap_types());
-        assert!(!ParamType::String.contains_nested_heap_types());
+    fn validate_is_decodable_simple_types() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        assert!(ParamType::U8.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::U16.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::U32.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::U64.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::U128.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::U256.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::Bool.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::B256.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::Unit.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::StringSlice
+            .validate_is_decodable(max_depth)
+            .is_ok());
+        assert!(ParamType::StringArray(10)
+            .validate_is_decodable(max_depth)
+            .is_ok());
+        assert!(ParamType::RawSlice.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::Bytes.validate_is_decodable(max_depth).is_ok());
+        assert!(ParamType::String.validate_is_decodable(max_depth).is_ok());
         Ok(())
     }
 
     #[test]
-    fn test_complex_types_for_nested_heap_types_containing_vectors() -> Result<()> {
-        let base_vector = ParamType::Vector(Box::from(ParamType::U8));
-        let param_types_no_nested_vec = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_vec = vec![ParamType::Unit, ParamType::Bool, base_vector.clone()];
+    fn validate_is_decodable_complex_types_containing_bytes() -> Result<()> {
+        let param_types_containing_bytes = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
+        let param_types_no_bytes = vec![ParamType::U64, ParamType::U32];
+        let max_depth = DecoderConfig::default().max_depth;
+        let nested_heap_type_error_message = |p: ParamType| {
+            format!(
+                "Invalid type: type {:?} is not decodable: nested heap types are currently not \
+        supported except in Enums.",
+                DebugWithDepth::new(&p, max_depth)
+            )
+        };
+        let cannot_be_decoded = |p: ParamType| {
+            assert_eq!(
+                p.validate_is_decodable(max_depth)
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .to_string(),
+                nested_heap_type_error_message(p)
+            )
+        };
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
 
-        let is_nested = |param_type: ParamType| assert!(param_type.contains_nested_heap_types());
-        let not_nested = |param_type: ParamType| assert!(!param_type.contains_nested_heap_types());
+        can_be_decoded(ParamType::Array(Box::new(ParamType::U64), 10usize));
+        cannot_be_decoded(ParamType::Array(Box::new(ParamType::Bytes), 10usize));
 
-        not_nested(base_vector.clone());
-        is_nested(ParamType::Vector(Box::from(base_vector.clone())));
+        can_be_decoded(ParamType::Vector(Box::new(ParamType::U64)));
+        cannot_be_decoded(ParamType::Vector(Box::new(ParamType::Bytes)));
 
-        not_nested(ParamType::Array(Box::from(ParamType::U8), 10));
-        is_nested(ParamType::Array(Box::from(base_vector), 10));
-
-        not_nested(ParamType::Tuple(param_types_no_nested_vec.clone()));
-        is_nested(ParamType::Tuple(param_types_nested_vec.clone()));
-
-        not_nested(ParamType::Struct {
-            generics: param_types_no_nested_vec.clone(),
-            fields: param_types_no_nested_vec.clone(),
+        can_be_decoded(ParamType::Struct {
+            generics: param_types_no_bytes.clone(),
+            fields: param_types_no_bytes.clone(),
         });
-        is_nested(ParamType::Struct {
-            generics: param_types_nested_vec.clone(),
-            fields: param_types_no_nested_vec.clone(),
-        });
-        is_nested(ParamType::Struct {
-            generics: param_types_no_nested_vec.clone(),
-            fields: param_types_nested_vec.clone(),
+        cannot_be_decoded(ParamType::Struct {
+            fields: param_types_containing_bytes.clone(),
+            generics: param_types_no_bytes.clone(),
         });
 
-        not_nested(ParamType::Enum {
-            variants: EnumVariants::new(param_types_no_nested_vec.clone())?,
-            generics: param_types_no_nested_vec.clone(),
-        });
-        is_nested(ParamType::Enum {
-            variants: EnumVariants::new(param_types_nested_vec.clone())?,
-            generics: param_types_no_nested_vec.clone(),
-        });
-        is_nested(ParamType::Enum {
-            variants: EnumVariants::new(param_types_no_nested_vec)?,
-            generics: param_types_nested_vec,
-        });
+        can_be_decoded(ParamType::Tuple(param_types_no_bytes.clone()));
+        cannot_be_decoded(ParamType::Tuple(param_types_containing_bytes.clone()));
+
         Ok(())
     }
 
     #[test]
-    fn test_complex_types_for_nested_heap_types_containing_bytes() -> Result<()> {
-        let base_bytes = ParamType::Bytes;
-        let param_types_no_nested_bytes = vec![ParamType::U64, ParamType::U32];
-        let param_types_nested_bytes = vec![ParamType::Unit, ParamType::Bool, base_bytes.clone()];
-
-        let is_nested = |param_type: ParamType| assert!(param_type.contains_nested_heap_types());
-        let not_nested = |param_type: ParamType| assert!(!param_type.contains_nested_heap_types());
-
-        not_nested(base_bytes.clone());
-        is_nested(ParamType::Vector(Box::from(base_bytes.clone())));
-
-        not_nested(ParamType::Array(Box::from(ParamType::U8), 10));
-        is_nested(ParamType::Array(Box::from(base_bytes), 10));
-
-        not_nested(ParamType::Tuple(param_types_no_nested_bytes.clone()));
-        is_nested(ParamType::Tuple(param_types_nested_bytes.clone()));
-
-        let not_nested_struct = ParamType::Struct {
-            generics: param_types_no_nested_bytes.clone(),
-            fields: param_types_no_nested_bytes.clone(),
-        };
-        not_nested(not_nested_struct);
-
-        let nested_struct = ParamType::Struct {
-            generics: param_types_nested_bytes.clone(),
-            fields: param_types_no_nested_bytes.clone(),
-        };
-        is_nested(nested_struct);
-
-        let nested_struct = ParamType::Struct {
-            generics: param_types_no_nested_bytes.clone(),
-            fields: param_types_nested_bytes.clone(),
-        };
-        is_nested(nested_struct);
-
-        let not_nested_enum = ParamType::Enum {
-            variants: EnumVariants::new(param_types_no_nested_bytes.clone())?,
-            generics: param_types_no_nested_bytes.clone(),
-        };
-        not_nested(not_nested_enum);
-
-        let nested_enum = ParamType::Enum {
-            variants: EnumVariants::new(param_types_nested_bytes.clone())?,
-            generics: param_types_no_nested_bytes.clone(),
-        };
-        is_nested(nested_enum);
-
-        let nested_enum = ParamType::Enum {
-            variants: EnumVariants::new(param_types_no_nested_bytes)?,
-            generics: param_types_nested_bytes,
-        };
-        is_nested(nested_enum);
+    fn validate_is_decodable_enum_containing_bytes() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
+        let param_types_containing_bytes = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
+        let param_types_no_bytes = vec![ParamType::U64, ParamType::U32];
+        let variants_no_bytes_type = EnumVariants::new(param_types_no_bytes.clone())?;
+        let variants_one_bytes_type = EnumVariants::new(param_types_containing_bytes.clone())?;
+        let variants_two_bytes_type = EnumVariants::new(vec![ParamType::Bytes, ParamType::Bytes])?;
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_bytes_type.clone(),
+            generics: param_types_no_bytes.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_bytes_type.clone(),
+            generics: param_types_no_bytes.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_bytes_type.clone(),
+                generics: param_types_no_bytes.clone(),
+            }
+            .validate_is_decodable(max_depth)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_bytes_type,
+            generics: param_types_containing_bytes.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_bytes_type,
+            generics: param_types_containing_bytes.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_bytes_type.clone(),
+                generics: param_types_containing_bytes.clone(),
+            }
+            .validate_is_decodable(max_depth)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
 
         Ok(())
     }
 
+    #[test]
+    fn validate_is_decodable_complex_types_containing_vector() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        let param_types_containing_vector = vec![
+            ParamType::Vector(Box::new(ParamType::U32)),
+            ParamType::U64,
+            ParamType::Bool,
+        ];
+        let param_types_no_vector = vec![ParamType::U64, ParamType::U32];
+        let nested_heap_type_error_message = |p: ParamType| {
+            format!(
+                "Invalid type: type {:?} is not decodable: nested heap types \
+        are currently not supported except in Enums.",
+                DebugWithDepth::new(&p, max_depth)
+            )
+        };
+        let cannot_be_decoded = |p: ParamType| {
+            assert_eq!(
+                p.validate_is_decodable(max_depth)
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .to_string(),
+                nested_heap_type_error_message(p)
+            )
+        };
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
+
+        can_be_decoded(ParamType::Array(Box::new(ParamType::U64), 10usize));
+        cannot_be_decoded(ParamType::Array(
+            Box::new(ParamType::Vector(Box::new(ParamType::U8))),
+            10usize,
+        ));
+
+        can_be_decoded(ParamType::Vector(Box::new(ParamType::U64)));
+        cannot_be_decoded(ParamType::Vector(Box::new(ParamType::Vector(Box::new(
+            ParamType::U8,
+        )))));
+
+        can_be_decoded(ParamType::Struct {
+            fields: param_types_no_vector.clone(),
+            generics: param_types_no_vector.clone(),
+        });
+        cannot_be_decoded(ParamType::Struct {
+            generics: param_types_no_vector.clone(),
+            fields: param_types_containing_vector.clone(),
+        });
+
+        can_be_decoded(ParamType::Tuple(param_types_no_vector.clone()));
+        cannot_be_decoded(ParamType::Tuple(param_types_containing_vector.clone()));
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_is_decodable_enum_containing_vector() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
+        let param_types_containing_vector = vec![
+            ParamType::Vector(Box::new(ParamType::Bool)),
+            ParamType::U64,
+            ParamType::Bool,
+        ];
+        let param_types_no_vector = vec![ParamType::U64, ParamType::U32];
+        let variants_no_vector_type = EnumVariants::new(param_types_no_vector.clone())?;
+        let variants_one_vector_type = EnumVariants::new(param_types_containing_vector.clone())?;
+        let variants_two_vector_type = EnumVariants::new(vec![
+            ParamType::Vector(Box::new(ParamType::U8)),
+            ParamType::Vector(Box::new(ParamType::U16)),
+        ])?;
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_vector_type.clone(),
+            generics: param_types_no_vector.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_vector_type.clone(),
+            generics: param_types_no_vector.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_vector_type.clone(),
+                generics: param_types_no_vector.clone(),
+            }
+            .validate_is_decodable(max_depth)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_vector_type,
+            generics: param_types_containing_vector.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_vector_type,
+            generics: param_types_containing_vector.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_vector_type.clone(),
+                generics: param_types_containing_vector.clone(),
+            }
+            .validate_is_decodable(max_depth)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
+
+        Ok(())
+    }
     #[test]
     fn try_vector_is_type_path_backward_compatible() {
         // TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.

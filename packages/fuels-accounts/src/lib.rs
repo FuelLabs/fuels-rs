@@ -28,6 +28,7 @@ mod accounts_utils;
 mod coin_cache;
 pub mod predicate;
 pub mod provider;
+mod supported_versions;
 pub mod wallet;
 
 /// Trait for signing transactions and messages

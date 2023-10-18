@@ -11,7 +11,9 @@ use fuel_tx::{
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -27,9 +29,6 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
-
-use super::{chain_info::ChainInfo, coin_type::CoinTypeId, node_info::NodeInfo};
-use itertools::Itertools;
 
 #[derive(Debug, Clone)]
 pub struct NetworkInfo {
@@ -54,8 +53,9 @@ impl NetworkInfo {
     }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Zeroize, ZeroizeOnDrop)]
 struct UnresolvedSignatures {
+    #[zeroize(skip)]
     addr_idx_offset_map: HashMap<Bech32Address, u8>,
     secret_keys: Vec<SecretKey>,
 }

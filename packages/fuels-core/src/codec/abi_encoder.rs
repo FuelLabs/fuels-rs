@@ -115,7 +115,7 @@ impl ABIEncoder {
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
             let variant_param_type = variants.param_type_of_variant(*discriminant)?;
-            let padding_amount = variants.compute_padding_amount(variant_param_type);
+            let padding_amount = variants.compute_padding_amount(variant_param_type)?;
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
 
@@ -154,16 +154,17 @@ impl ABIEncoder {
             .collect::<Vec<_>>();
 
         let num_bytes = data.len() * WORD_SIZE;
-
         let len = Self::encode_u64(num_bytes as u64);
+
         Ok(vec![Data::Dynamic(encoded_data), len])
     }
 
     fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {
-        let encoded_data = Data::Inline(arg_string.get_encodable_str()?.as_bytes().to_vec());
+        let encodable_str = arg_string.get_encodable_str()?;
 
-        let num_bytes = arg_string.get_encodable_str()?.len();
-        let len = Self::encode_u64(num_bytes as u64);
+        let encoded_data = Data::Inline(encodable_str.as_bytes().to_vec());
+        let len = Self::encode_u64(encodable_str.len() as u64);
+
         Ok(vec![Data::Dynamic(vec![encoded_data]), len])
     }
 
@@ -1198,6 +1199,19 @@ mod tests {
 
         assert_eq!(expected_encoded_std_string, encoded_std_string);
 
+        Ok(())
+    }
+
+    #[test]
+    fn encoding_large_unsigned_integers() -> Result<()> {
+        let token = Token::U128(u128::MAX);
+        let expected_encoding = [255; 16];
+        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        assert_eq!(result, expected_encoding);
+        let token = Token::U256(U256::MAX);
+        let expected_encoding = [255; 32];
+        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        assert_eq!(result, expected_encoding);
         Ok(())
     }
 }

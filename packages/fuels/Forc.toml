@@ -58,6 +58,7 @@ members = [
   'tests/types/contracts/enum_inside_struct',
   'tests/types/contracts/evm_address',
   'tests/types/contracts/generics',
+  'tests/types/contracts/heap_type_in_enums',
   'tests/types/contracts/identity',
   'tests/types/contracts/native_types',
   'tests/types/contracts/nested_structs',
@@ -66,6 +67,7 @@ members = [
   'tests/types/contracts/results',
   'tests/types/contracts/std_lib_string',
   'tests/types/contracts/str_in_array',
+  'tests/types/contracts/string_slice',
   'tests/types/contracts/tuples',
   'tests/types/contracts/two_structs',
   'tests/types/contracts/type_inside_enum',
@@ -89,7 +91,9 @@ members = [
   'tests/types/scripts/options_results',
   'tests/types/scripts/script_bytes',
   'tests/types/scripts/script_generics',
-  'tests/types/scripts/script_raw_slice',
+  #TODO: Decide what to do with this test project once
+  # https://github.com/FuelLabs/sway/issues/5145 is resolved
+  # 'tests/types/scripts/script_raw_slice',
   'tests/types/scripts/script_std_lib_string',
   'tests/types/scripts/script_tuples',
   'tests/types/scripts/script_u128',

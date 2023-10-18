@@ -14,7 +14,6 @@ async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }
 eth-keystore =  { workspace = true }
-fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, features = ["default"] }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
@@ -23,9 +22,12 @@ fuel-vm = { workspace = true }
 fuels-core = { workspace = true }
 hex = { workspace = true, default-features = false, features = ["std"] }
 rand = { workspace = true, default-features = false }
+semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"] }
+tracing = { workspace = true }
+zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 hex = { workspace = true, default-features = false, features = ["std"] }

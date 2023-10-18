@@ -4,8 +4,6 @@ mod retry_util;
 mod retryable_client;
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::{Config, FuelService};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
@@ -36,7 +34,10 @@ use tai64::Tai64;
 use thiserror::Error;
 use tokio::sync::Mutex;
 
-use crate::provider::retryable_client::RetryableClient;
+use crate::{
+    provider::retryable_client::RetryableClient,
+    supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
+};
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -128,6 +129,13 @@ pub enum ProviderError {
     ClientRequestError(#[from] io::Error),
     #[error("Receipts have not yet been propagated. Retry the request later.")]
     ReceiptsNotPropagatedYet,
+    #[error("Invalid Fuel client version: {0}")]
+    InvalidFuelClientVersion(#[from] semver::Error),
+    #[error("Unsupported Fuel client version. Current version: {current}, supported version: {supported}")]
+    UnsupportedFuelClientVersion {
+        current: semver::Version,
+        supported: semver::Version,
+    },
 }
 
 impl From<ProviderError> for Error {
@@ -261,17 +269,10 @@ impl Provider {
                 }
             }
             TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { .. } => TxStatus::SqueezedOut,
+            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
         };
 
         Ok(status)
-    }
-
-    #[cfg(feature = "fuel-core-lib")]
-    /// Launches a local `fuel-core` network based on provided config.
-    pub async fn launch(config: Config) -> Result<FuelClient> {
-        let srv = FuelService::new_node(config).await.unwrap();
-        Ok(FuelClient::from(srv.bound_address))
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
@@ -286,7 +287,34 @@ impl Provider {
         let node_info = self.node_info().await?;
         let chain_info = self.chain_info().await?;
 
+        Self::ensure_client_version_is_supported(&node_info)?;
+
         Ok(NetworkInfo::new(node_info, chain_info))
+    }
+
+    fn ensure_client_version_is_supported(node_info: &NodeInfo) -> ProviderResult<()> {
+        let node_version = node_info.node_version.parse::<semver::Version>()?;
+        let VersionCompatibility {
+            supported_version,
+            is_major_supported,
+            is_minor_supported,
+            is_patch_supported,
+        } = check_fuel_core_version_compatibility(node_version.clone());
+
+        if !is_major_supported || !is_minor_supported {
+            return Err(ProviderError::UnsupportedFuelClientVersion {
+                current: node_version,
+                supported: supported_version,
+            });
+        } else if !is_patch_supported {
+            tracing::warn!(
+                fuel_client_version = %node_version,
+                supported_version = %supported_version,
+                "The patch versions of the client and SDK differ.",
+            );
+        };
+
+        Ok(())
     }
 
     pub fn chain_id(&self) -> ChainId {
@@ -297,32 +325,27 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
+    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<TxStatus> {
         let receipts = self.dry_run(tx).await?;
-        Self::has_script_succeeded(&receipts)?;
-
-        Ok(receipts)
+        Ok(Self::tx_status_from_receipts(receipts))
     }
 
-    fn has_script_succeeded(receipts: &[Receipt]) -> Result<()> {
-        receipts
-            .iter()
-            .find_map(|receipt| match receipt {
-                Receipt::ScriptResult { result, .. }
-                    if *result != ScriptExecutionResult::Success =>
-                {
-                    Some(format!("{result:?}"))
-                }
-                _ => None,
-            })
-            .map(|error_message| {
-                Err(Error::RevertTransactionError {
-                    reason: error_message,
-                    revert_id: 0,
-                    receipts: receipts.to_owned(),
-                })
-            })
-            .unwrap_or(Ok(()))
+    fn tx_status_from_receipts(receipts: Vec<Receipt>) -> TxStatus {
+        let revert_reason = receipts.iter().find_map(|receipt| match receipt {
+            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
+                Some(format!("{result:?}"))
+            }
+            _ => None,
+        });
+
+        match revert_reason {
+            Some(reason) => TxStatus::Revert {
+                receipts,
+                reason,
+                id: 0,
+            },
+            None => TxStatus::Success { receipts },
+        }
     }
 
     pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
@@ -422,6 +445,7 @@ impl Provider {
             .flatten()
             .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
             .collect::<ProviderResult<Vec<CoinType>>>()?;
+
         Ok(res)
     }
 

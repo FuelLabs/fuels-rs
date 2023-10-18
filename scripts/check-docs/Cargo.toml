@@ -5,6 +5,6 @@ edition = { workspace = true }
 publish = false
 
 [dependencies]
-anyhow = "1.0.62"
-itertools = "0.10.3"
-regex = "1.6.0"
+anyhow = "1.0.75"
+itertools = { workspace = true }
+regex = { workspace = true }
