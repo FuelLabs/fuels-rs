@@ -878,16 +878,16 @@ async fn create_transfer(
 
 #[tokio::test]
 async fn test_caching() -> Result<()> {
-    let block_time = 7u32; // seconds
     let provider_config = Config {
         block_production: Trigger::Interval {
-            block_time: std::time::Duration::from_secs(block_time.into()),
+            block_time: std::time::Duration::from_secs(1),
         },
         ..Config::local_node()
     };
     let amount = 1000;
+    let num_coins = 3;
     let mut wallets = launch_custom_provider_and_get_wallets(
-        WalletsConfig::new(Some(2), Some(3), Some(amount)),
+        WalletsConfig::new(Some(2), Some(num_coins), Some(amount)),
         Some(provider_config),
         None,
     )
@@ -895,35 +895,15 @@ async fn test_caching() -> Result<()> {
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 
-    let provider = wallet_1.try_provider()?;
+    for _ in 0..3 {
+        create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+    }
+    sleep(std::time::Duration::from_secs(3)).await;
 
-    dbg!("1");
-
-    let tx_1 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
-    let tx_1_id = provider.send_transaction(tx_1).await?;
-
-    dbg!("2");
-
-    let tx_2 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
-    let tx_2_id = provider.send_transaction(tx_2).await?;
-
-    dbg!("3");
-
-    let tx_3 = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
-    let tx_3_id = provider.send_transaction(tx_3).await?;
-
-    sleep(std::time::Duration::from_secs(30)).await;
-
-    let status_1 = provider.tx_status(&tx_1_id).await?;
-    dbg!(status_1);
-
-    let status_2 = provider.tx_status(&tx_2_id).await?;
-    dbg!(status_2);
-
-    let status_3 = provider.tx_status(&tx_3_id).await?;
-    dbg!(status_3);
-
-    dbg!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?);
+    assert_eq!(
+        wallet_2.get_asset_balance(&BASE_ASSET_ID).await?,
+        amount * num_coins
+    );
 
     Ok(())
 }

@@ -233,7 +233,7 @@ impl Provider {
 
         let used_utxos = tx.used_coins();
         let tx_id = self.client.submit(&tx.into()).await?;
-        self.cache.lock().await.extend(used_utxos);
+        self.cache.lock().await.insert_multiple(used_utxos);
 
         Ok(tx_id)
     }

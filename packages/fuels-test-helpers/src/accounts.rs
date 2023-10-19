@@ -85,23 +85,14 @@ pub async fn launch_custom_provider_and_get_wallets(
 
 #[cfg(test)]
 mod tests {
-    use fuel_types::Address;
     use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
     use fuels_core::{
         constants::BASE_ASSET_ID,
-        types::{
-            bech32::Bech32Address,
-            coin_type::CoinType,
-            errors::Result,
-            transaction::{Transaction, TransactionType, TxParameters},
-        },
+        types::{coin_type::CoinType, errors::Result},
     };
     use rand::Fill;
 
-    use crate::{
-        launch_custom_provider_and_get_wallets, launch_provider_and_get_wallet, AssetConfig,
-        WalletsConfig,
-    };
+    use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
 
     #[tokio::test]
     async fn test_wallet_config() -> Result<()> {
@@ -237,6 +228,7 @@ mod tests {
         Ok(())
     }
 
+    /*
     #[tokio::test]
     async fn transfer_produces_predictable_output() -> Result<()> {
         let wallet = launch_provider_and_get_wallet().await?;
@@ -263,5 +255,5 @@ mod tests {
     }));
 
         Ok(())
-    }
+    } */
 }

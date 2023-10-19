@@ -8,10 +8,18 @@ use fuels_core::types::coin_type::CoinTypeId;
 
 type CoinCacheKey = (Bech32Address, AssetId);
 
-#[derive(Debug, Default)]
+const DEFAULT_TTL: u64 = 30;
+
+#[derive(Debug)]
 pub struct CoinsCache {
     pub ttl: Duration,
     pub items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
+}
+
+impl Default for CoinsCache {
+    fn default() -> Self {
+        Self::new(Duration::from_secs(DEFAULT_TTL))
+    }
 }
 
 impl CoinsCache {
@@ -22,9 +30,13 @@ impl CoinsCache {
         }
     }
 
-    pub fn append(&mut self, key: &CoinCacheKey, item: CoinCacheItem) {
-        let items = self.items.entry(key.clone()).or_default();
-        items.insert(item);
+    pub fn insert_multiple(&mut self, coin_ids: HashMap<CoinCacheKey, Vec<CoinTypeId>>) {
+        coin_ids.into_iter().for_each(|(key, ids)| {
+            let new_items = ids.into_iter().map(|coin_id| CoinCacheItem::new(coin_id));
+
+            let items = self.items.entry(key.clone()).or_default();
+            items.extend(new_items);
+        });
     }
 
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
@@ -81,55 +93,55 @@ mod tests {
 
     use super::*;
 
-    fn get_items() -> (CoinCacheItem, CoinCacheItem) {
-        let id1 = Bytes32::from([1u8; 32]);
-
+    fn get_items() -> (CoinTypeId, CoinTypeId) {
         let utxo_id = UtxoId::new(Bytes32::from([1u8; 32]), 0);
         let nonce = Nonce::new([2u8; 32]);
 
-        let item1 = CoinCacheItem::new(CoinTypeId::UtxoId(utxo_id));
-        let item2 = CoinCacheItem::new(CoinTypeId::Nonce(nonce));
-
-        (item1, item2)
+        (CoinTypeId::UtxoId(utxo_id), CoinTypeId::Nonce(nonce))
     }
 
     #[test]
     fn test_insert_and_get_active() {
         let mut cache = CoinsCache::new(Duration::from_secs(60));
 
-        let key = Default::default();
+        let key: CoinCacheKey = Default::default();
         let (item1, item2) = get_items();
+        let items = HashMap::from(HashMap::from([(
+            key.clone(),
+            vec![item1.clone(), item2.clone()],
+        )]));
 
-        cache.append(&key, item1.clone());
-        cache.append(&key, item2.clone());
+        cache.insert_multiple(items);
 
         let active_coins = cache.get_active(&key);
 
         assert_eq!(active_coins.len(), 2);
-        assert!(active_coins.contains(&item1.id));
-        assert!(active_coins.contains(&item2.id));
+        assert!(active_coins.contains(&item1));
+        assert!(active_coins.contains(&item2));
     }
 
     #[test]
     fn test_insert_and_expire_items() {
         let mut cache = CoinsCache::new(Duration::from_secs(1));
 
-        let key = Default::default();
+        let key: CoinCacheKey = Default::default();
         let (item1, _) = get_items();
+        let items = HashMap::from(HashMap::from([(key.clone(), vec![item1.clone()])]));
 
-        cache.append(&key, item1.clone());
+        cache.insert_multiple(items);
 
         // Sleep for more than the cache's TTL
         std::thread::sleep(Duration::from_secs(2));
 
         let (_, item2) = get_items();
-        cache.append(&key, item2.clone());
+        let items = HashMap::from(HashMap::from([(key.clone(), vec![item2.clone()])]));
+        cache.insert_multiple(items);
 
         let active_coins = cache.get_active(&key);
 
         assert_eq!(active_coins.len(), 1);
-        assert!(!active_coins.contains(&item1.id));
-        assert!(active_coins.contains(&item2.id));
+        assert!(!active_coins.contains(&item1));
+        assert!(active_coins.contains(&item2));
     }
 
     #[test]

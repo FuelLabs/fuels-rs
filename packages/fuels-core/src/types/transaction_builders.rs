@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
@@ -11,10 +11,9 @@ use fuel_tx::{
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
-use itertools::Itertools;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::{chain_info::ChainInfo, coin_type::CoinTypeId, node_info::NodeInfo};
+use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
@@ -87,8 +86,6 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
-                let used_coins = compute_used_coins(&self);
-
                 let uses_predicates = self.is_using_predicates();
                 let base_offset = if uses_predicates {
                     self.base_offset()
@@ -107,7 +104,7 @@ macro_rules! impl_tx_trait {
                     estimate_predicates(&mut tx, &network_info)?;
                 };
 
-                Ok($tx_ty { tx, used_coins })
+                Ok($tx_ty { tx })
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
@@ -719,23 +716,6 @@ where
     *tx.gas_limit_mut() = gas_limit;
 
     Ok(())
-}
-
-fn compute_used_coins(tb: &impl TransactionBuilder) -> HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>> {
-    tb.inputs()
-        .iter()
-        .filter_map(|input| match input {
-            Input::CoinSigned { resource, .. } | Input::CoinPredicate { resource, .. } => {
-                Some(((resource.owner().to_owned(), resource.asset_id()), resource.id()))
-            }
-            _ => None,
-        })
-        .into_group_map()
-        .into_iter()
-        .map(|(key, value)| {
-            (key, HashSet::from_iter(value.into_iter()))
-        })
-        .collect()
 }
 
 #[cfg(test)]
