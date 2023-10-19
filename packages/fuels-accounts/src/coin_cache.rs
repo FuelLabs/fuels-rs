@@ -8,7 +8,7 @@ use fuels_core::types::coin_type::CoinTypeId;
 
 type CoinCacheKey = (Bech32Address, AssetId);
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CoinsCache {
     pub ttl: Duration,
     pub items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,

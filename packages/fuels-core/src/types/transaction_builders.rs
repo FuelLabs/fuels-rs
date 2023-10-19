@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
@@ -721,16 +721,21 @@ where
     Ok(())
 }
 
-fn compute_used_coins(tb: &impl TransactionBuilder) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
+fn compute_used_coins(tb: &impl TransactionBuilder) -> HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>> {
     tb.inputs()
         .iter()
         .filter_map(|input| match input {
             Input::CoinSigned { resource, .. } | Input::CoinPredicate { resource, .. } => {
-                Some((resource.owner().to_owned(), resource.id()))
+                Some(((resource.owner().to_owned(), resource.asset_id()), resource.id()))
             }
             _ => None,
         })
         .into_group_map()
+        .into_iter()
+        .map(|(key, value)| {
+            (key, HashSet::from_iter(value.into_iter()))
+        })
+        .collect()
 }
 
 #[cfg(test)]

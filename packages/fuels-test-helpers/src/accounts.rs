@@ -239,7 +239,7 @@ mod tests {
 
     #[tokio::test]
     async fn transfer_produces_predictable_output() -> Result<()> {
-        let wallet = launch_provider_and_get_wallet().await;
+        let wallet = launch_provider_and_get_wallet().await?;
         let provider = wallet.try_provider()?;
         let sender_address: Address = wallet.address().into();
 

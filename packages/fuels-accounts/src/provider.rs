@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, collections::HashMap, fmt::Debug, io, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr, sync::Arc};
 
 mod retry_util;
 mod retryable_client;
@@ -35,6 +35,7 @@ use thiserror::Error;
 use tokio::sync::Mutex;
 
 use crate::{
+    coin_cache::CoinsCache,
     provider::retryable_client::RetryableClient,
     supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
 };
@@ -151,7 +152,7 @@ impl From<ProviderError> for Error {
 pub struct Provider {
     client: RetryableClient,
     consensus_parameters: ConsensusParameters,
-    cache: Arc<Mutex<HashMap<Bech32Address, Vec<CoinTypeId>>>>,
+    cache: Arc<Mutex<CoinsCache>>,
 }
 
 impl Provider {
@@ -401,35 +402,31 @@ impl Provider {
         &self,
         mut filter: ResourceFilter,
     ) -> ProviderResult<Vec<CoinType>> {
-        let cache = self.cache.lock().await;
-        dbg!(cache.clone());
-        let used_coins = cache.get(&filter.from);
+        let mut cache = self.cache.lock().await;
+        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id.clone()));
 
-        if let Some(used_coins) = used_coins {
-            let excluded_utxos = used_coins
-                .iter()
-                .filter_map(|coin_id| match coin_id {
-                    CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
-                    _ => None,
-                })
-                .cloned()
-                .collect::<Vec<_>>();
+        let excluded_utxos = used_coins
+            .iter()
+            .filter_map(|coin_id| match coin_id {
+                CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
 
-            let excluded_message_nonces = used_coins
-                .iter()
-                .filter_map(|coin_id| match coin_id {
-                    CoinTypeId::Nonce(nonce) => Some(nonce),
-                    _ => None,
-                })
-                .cloned()
-                .collect::<Vec<_>>();
+        let excluded_message_nonces = used_coins
+            .iter()
+            .filter_map(|coin_id| match coin_id {
+                CoinTypeId::Nonce(nonce) => Some(nonce),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
 
-            dbg!(excluded_utxos.clone());
-            filter.excluded_utxos.extend(excluded_utxos);
-            filter
-                .excluded_message_nonces
-                .extend(excluded_message_nonces);
-        }
+        filter.excluded_utxos.extend(excluded_utxos);
+        filter
+            .excluded_message_nonces
+            .extend(excluded_message_nonces);
 
         let queries = filter.resource_queries();
 

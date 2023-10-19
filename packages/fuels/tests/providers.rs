@@ -891,7 +891,7 @@ async fn test_caching() -> Result<()> {
         Some(provider_config),
         None,
     )
-    .await;
+    .await?;
     let wallet_1 = wallets.pop().unwrap();
     let wallet_2 = wallets.pop().unwrap();
 

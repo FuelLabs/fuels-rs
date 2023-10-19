@@ -346,7 +346,7 @@ async fn test_wallet_get_coins() -> Result<()> {
     Ok(())
 }
 
-async fn setup_transfer_test(amount: u64) -> (WalletUnlocked, WalletUnlocked) {
+async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnlocked)> {
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None);
 

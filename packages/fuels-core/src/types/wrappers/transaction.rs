@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 
 use crate::types::{coin::Coin, coin_type::CoinType};
@@ -14,7 +14,7 @@ use fuel_tx::{
     Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, UtxoId, Witness,
 };
-use fuel_types::ChainId;
+use fuel_types::{ChainId, AssetId};
 
 use crate::types::bech32::Bech32Address;
 use crate::types::Result;
@@ -110,7 +110,7 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> usize;
 
-    fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>>;
+    fn used_coins(&self) -> &HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>> ;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -232,7 +232,7 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
+    fn used_coins(&self) -> &HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>>  {
         match self {
             TransactionType::Script(tx) => self.used_coins(),
             TransactionType::Create(tx) => self.used_coins(),
@@ -283,7 +283,7 @@ macro_rules! impl_tx_wrapper {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
             pub(crate) tx: $wrapped,
-            pub(crate) used_coins: HashMap<Bech32Address, Vec<CoinTypeId>>,
+            pub(crate) used_coins: HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>>,
         }
 
         impl From<$wrapper> for $wrapped {
@@ -379,8 +379,8 @@ macro_rules! impl_tx_wrapper {
                 idx
             }
 
-            fn used_coins(&self) -> HashMap<Bech32Address, Vec<CoinTypeId>> {
-                self.used_coins.clone()
+            fn used_coins(&self) -> &HashMap<(Bech32Address, AssetId), HashSet<CoinTypeId>> {
+                &self.used_coins
             }
         }
     };
