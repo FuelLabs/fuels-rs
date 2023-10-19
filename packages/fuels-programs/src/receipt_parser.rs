@@ -43,7 +43,7 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
-        output_param.validate_is_decodable()?;
+        output_param.validate_is_decodable(self.decoder.config.max_depth)?;
 
         let data = self
             .extract_raw_data(output_param, &contract_id)

@@ -28,7 +28,7 @@ impl Default for DecoderConfig {
 
 #[derive(Default)]
 pub struct ABIDecoder {
-    config: DecoderConfig,
+    pub config: DecoderConfig,
 }
 
 impl ABIDecoder {
@@ -86,8 +86,10 @@ mod tests {
     use super::*;
     use crate::{
         constants::WORD_SIZE,
+        traits::Parameterize,
         types::{enum_variants::EnumVariants, errors::Error, StaticStringToken, U256},
     };
+    use ParamType::*;
 
     #[test]
     fn decode_int() -> Result<()> {
@@ -518,6 +520,87 @@ mod tests {
         let expected_msg = "Discriminant '1' doesn't point to any variant: ";
         assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
         Ok(())
+    }
+
+    #[test]
+    pub fn division_by_zero() {
+        let param_type = Vec::<[u16; 0]>::param_type();
+        let result = ABIDecoder::default().decode(&param_type, &[]);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    pub fn multiply_overflow_enum() {
+        let result = ABIDecoder::default().decode(
+            &Enum {
+                variants: EnumVariants::new(vec![
+                    Array(Box::new(Array(Box::new(RawSlice), 8)), usize::MAX),
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                    B256,
+                ])
+                .unwrap(),
+                generics: vec![U16],
+            },
+            &[],
+        );
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    pub fn multiply_overflow_vector() {
+        let param_type = Vec::<[(); usize::MAX]>::param_type();
+        let result = ABIDecoder::default().decode(&param_type, &[]);
+        assert!(matches!(result, Err(Error::InvalidData(_))));
+    }
+
+    #[test]
+    pub fn multiply_overflow_arith() {
+        let mut param_type: ParamType = U16;
+        for _ in 0..50 {
+            param_type = Array(Box::new(param_type), 8);
+        }
+        let result = ABIDecoder::default().decode(
+            &Enum {
+                variants: EnumVariants::new(vec![param_type]).unwrap(),
+                generics: vec![U16],
+            },
+            &[],
+        );
+        assert!(matches!(result, Err(Error::InvalidData(_))));
+    }
+
+    #[test]
+    pub fn capacity_overflow() {
+        let result = ABIDecoder::default().decode(
+            &Array(Box::new(Array(Box::new(Tuple(vec![])), usize::MAX)), 1),
+            &[],
+        );
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    pub fn stack_overflow() {
+        let mut param_type: ParamType = U16;
+        for _ in 0..13500 {
+            param_type = Vector(Box::new(param_type));
+        }
+        let result = ABIDecoder::default().decode(&param_type, &[]);
+        assert!(matches!(result, Err(Error::InvalidType(_))));
+    }
+
+    #[test]
+    pub fn capacity_maloc() {
+        let param_type = Array(Box::new(U8), usize::MAX);
+        let result = ABIDecoder::default().decode(&param_type, &[]);
+        assert!(matches!(result, Err(Error::InvalidData(_))));
     }
 
     #[test]
