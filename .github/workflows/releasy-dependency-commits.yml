@@ -1,0 +1,15 @@
+on:
+  repository_dispatch:
+    types: [new-commit-to-dependency]
+
+jobs:
+  new_commit_to_dependency:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+    - uses: actions/checkout@v4
+    - run: |
+        git clone https://github.com/FuelLabs/releasy && cd releasy && git checkout kayagokalp/releasy-handle && cd ..
+        cargo install --path ./releasy/releasy-handler
+        releasy-handler --event new-commit-to-dependency --event-repo-name ${{ github.event.client_payload.repo.name }} --event-repo-owner ${{ github.event.client_payload.repo.owner }} --event-commit-hash ${{ github.event.client_payload.details.commit_hash}} --path ./.github/workflows/repo-plan.toml 
