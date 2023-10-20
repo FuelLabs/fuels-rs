@@ -1,6 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
-use std::time::{Duration, SystemTime};
+use tokio::time::{Duration, Instant};
 
 use fuel_types::AssetId;
 use fuels_core::types::bech32::Bech32Address;
@@ -40,10 +40,7 @@ impl CoinsCache {
     }
 
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
-        // remove expired entries
-        self.items
-            .get_mut(key)
-            .map(|entry| entry.retain(|item| item.is_valid(self.ttl)));
+        self.remove_expired_entries(key);
 
         self.items
             .get(key)
@@ -53,11 +50,17 @@ impl CoinsCache {
             .map(|item| item.id)
             .collect()
     }
+
+    fn remove_expired_entries(&mut self, key: &CoinCacheKey) {
+        self.items
+            .get_mut(key)
+            .map(|entry| entry.retain(|item| item.is_valid(self.ttl)));
+    }
 }
 
 #[derive(Eq, Debug, Clone)]
 pub struct CoinCacheItem {
-    created_at: SystemTime,
+    created_at: Instant,
     pub id: CoinTypeId,
 }
 
@@ -76,13 +79,13 @@ impl Hash for CoinCacheItem {
 impl CoinCacheItem {
     pub fn new(id: CoinTypeId) -> Self {
         Self {
-            created_at: SystemTime::now(),
+            created_at: Instant::now(),
             id,
         }
     }
 
     pub fn is_valid(&self, ttl: Duration) -> bool {
-        self.created_at + ttl > SystemTime::now()
+        self.created_at + ttl > Instant::now()
     }
 }
 
@@ -120,9 +123,9 @@ mod tests {
         assert!(active_coins.contains(&item2));
     }
 
-    #[test]
-    fn test_insert_and_expire_items() {
-        let mut cache = CoinsCache::new(Duration::from_secs(1));
+    #[tokio::test]
+    async fn test_insert_and_expire_items() {
+        let mut cache = CoinsCache::new(Duration::from_secs(10));
 
         let key: CoinCacheKey = Default::default();
         let (item1, _) = get_items();
@@ -130,8 +133,9 @@ mod tests {
 
         cache.insert_multiple(items);
 
-        // Sleep for more than the cache's TTL
-        std::thread::sleep(Duration::from_secs(2));
+        // Advance time by more than the cache's TTL
+        tokio::time::pause();
+        tokio::time::advance(Duration::from_secs(12)).await;
 
         let (_, item2) = get_items();
         let items = HashMap::from(HashMap::from([(key.clone(), vec![item2.clone()])]));

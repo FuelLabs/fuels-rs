@@ -8,7 +8,6 @@ use fuels_accounts::{
 };
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
-    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{

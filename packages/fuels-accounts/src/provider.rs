@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr, sync::Arc};
+use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
 
 mod retry_util;
 mod retryable_client;
@@ -18,7 +18,7 @@ use fuels_core::{
         block::Block,
         chain_info::ChainInfo,
         coin::Coin,
-        coin_type::{CoinType, CoinTypeId},
+        coin_type::CoinType,
         errors::{error, Error, Result},
         message::Message,
         message_proof::MessageProof,
@@ -32,13 +32,21 @@ use fuels_core::{
 pub use retry_util::{Backoff, RetryConfig};
 use tai64::Tai64;
 use thiserror::Error;
-use tokio::sync::Mutex;
 
 use crate::{
-    coin_cache::CoinsCache,
     provider::retryable_client::RetryableClient,
     supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
 };
+
+#[cfg(feature = "coin-cache")]
+use crate::coin_cache::CoinsCache;
+#[cfg(feature = "coin-cache")]
+use tokio::sync::Mutex;
+#[cfg(feature = "coin-cache")]
+use std::sync::Arc;
+#[cfg(feature = "coin-cache")]
+use fuels_core::types::coin_type::CoinTypeId;
+
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -152,6 +160,7 @@ impl From<ProviderError> for Error {
 pub struct Provider {
     client: RetryableClient,
     consensus_parameters: ConsensusParameters,
+    #[cfg(feature = "coin-cache")]
     cache: Arc<Mutex<CoinsCache>>,
 }
 
@@ -162,6 +171,7 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            #[cfg(feature = "coin-cache")]
             cache: Default::default(),
         })
     }
@@ -183,6 +193,7 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            #[cfg(feature = "coin-cache")]
             cache: Default::default(),
         })
     }
@@ -231,8 +242,20 @@ impl Provider {
             &self.consensus_parameters(),
         )?;
 
+        let tx_id = self.submit(tx).await?;
+
+        Ok(tx_id)
+    }
+
+    #[cfg(any(not(feature = "coin-cache")))]
+    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+        Ok(self.client.submit(&tx.into()).await?)
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let used_utxos = tx.used_coins();
-        let tx_id = self.client.submit(&tx.into()).await?;
+        let tx_id = self.client.submit(&tx.into()).await?;        
         self.cache.lock().await.insert_multiple(used_utxos);
 
         Ok(tx_id)
@@ -395,13 +418,54 @@ impl Provider {
         Ok(coins)
     }
 
+    async fn request_coins_to_spend(
+        &self,
+        filter: ResourceFilter,
+    ) -> ProviderResult<Vec<CoinType>> {
+        let queries = filter.resource_queries();
+
+        let res = self
+            .client
+            .coins_to_spend(
+                &filter.owner(),
+                queries.spend_query(),
+                queries.exclusion_query(),
+            )
+            .await?
+            .into_iter()
+            .flatten()
+            .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
+            .collect::<ProviderResult<Vec<CoinType>>>()?;
+
+        Ok(res)
+    }
+
     /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
+    #[cfg(any(not(feature = "coin-cache")))]
+    pub async fn get_spendable_resources(
+        &self,
+        filter: ResourceFilter,
+    ) -> ProviderResult<Vec<CoinType>> {
+        self.request_coins_to_spend(filter).await
+    }
+
+    /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is optimized to prevent dust accumulation.
+    /// Coins that were recently submitted inside a tx will be ignored from the results.
+    #[cfg(feature = "coin-cache")]
     pub async fn get_spendable_resources(
         &self,
         mut filter: ResourceFilter,
     ) -> ProviderResult<Vec<CoinType>> {
+        self.extend_filter_with_cached(&mut filter).await;
+        self.request_coins_to_spend(filter).await
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
         let mut cache = self.cache.lock().await;
         let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id.clone()));
 
@@ -427,23 +491,6 @@ impl Provider {
         filter
             .excluded_message_nonces
             .extend(excluded_message_nonces);
-
-        let queries = filter.resource_queries();
-
-        let res = self
-            .client
-            .coins_to_spend(
-                &filter.owner(),
-                queries.spend_query(),
-                queries.exclusion_query(),
-            )
-            .await?
-            .into_iter()
-            .flatten()
-            .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
-            .collect::<ProviderResult<Vec<CoinType>>>()?;
-
-        Ok(res)
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different

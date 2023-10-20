@@ -18,7 +18,6 @@ use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     Bits256,
 };
-use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -853,6 +852,7 @@ async fn test_sway_timestamp() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "coin-cache")]
 async fn create_transfer(
     wallet: &WalletUnlocked,
     amount: u64,
@@ -876,6 +876,7 @@ async fn create_transfer(
     tb.build()
 }
 
+#[cfg(feature = "coin-cache")]
 #[tokio::test]
 async fn test_caching() -> Result<()> {
     let provider_config = Config {
@@ -898,7 +899,10 @@ async fn test_caching() -> Result<()> {
     for _ in 0..3 {
         create_transfer(&wallet_1, 100, wallet_2.address()).await?;
     }
-    sleep(std::time::Duration::from_secs(3)).await;
+
+    // Advnace time until txs are executed
+    tokio::time::pause();
+    tokio::time::advance(tokio::time::Duration::from_secs(3)).await;
 
     assert_eq!(
         wallet_2.get_asset_balance(&BASE_ASSET_ID).await?,

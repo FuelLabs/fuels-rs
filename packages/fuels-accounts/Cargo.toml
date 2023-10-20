@@ -25,7 +25,7 @@ rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full", "time", "test-util"] }
 tracing = { workspace = true }
 zeroize = { workspace = true, features = ["derive"] }
 
@@ -36,3 +36,4 @@ tempfile = { workspace = true }
 [features]
 default = ["std"]
 std = ["fuels-core/std"]
+coin-cache = []

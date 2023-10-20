@@ -24,8 +24,9 @@ use fuels_core::{
 };
 use provider::{Provider, ResourceFilter};
 
-mod accounts_utils;
+#[cfg(feature = "coin-cache")]
 mod coin_cache;
+mod accounts_utils;
 pub mod predicate;
 pub mod provider;
 mod supported_versions;
