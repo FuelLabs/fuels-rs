@@ -18,8 +18,7 @@ use fuel_tx::{
 };
 use fuel_types::{AssetId, ChainId};
 
-use crate::types::bech32::Bech32Address;
-use crate::types::Result;
+use crate::types::{bech32::Bech32Address, coin_type::CoinTypeId, Result};
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
@@ -66,8 +65,6 @@ impl TxParameters {
 }
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
-
-use crate::types::coin_type::CoinTypeId;
 
 #[derive(Debug, Clone)]
 pub enum TransactionType {
