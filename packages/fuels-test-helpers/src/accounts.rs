@@ -227,33 +227,4 @@ mod tests {
 
         Ok(())
     }
-
-    /*
-    #[tokio::test]
-    async fn transfer_produces_predictable_output() -> Result<()> {
-        let wallet = launch_provider_and_get_wallet().await?;
-        let provider = wallet.try_provider()?;
-        let sender_address: Address = wallet.address().into();
-
-        let (tx_id, _) = wallet
-            .transfer(
-                &Bech32Address::default(),
-                1000,
-                BASE_ASSET_ID,
-                TxParameters::default(),
-            )
-            .await?;
-
-        let tx_response = provider.get_transaction_by_id(&tx_id).await?.unwrap();
-        let outputs = match tx_response.transaction {
-            TransactionType::Script(script) => script.outputs().clone(),
-            _ => panic!("Transfers must be a Script transaction!"),
-        };
-
-        assert!(outputs.iter().any(|output| {
-        matches!(output, fuel_tx::Output::Coin { to, asset_id, .. } if to == &sender_address && asset_id == &BASE_ASSET_ID)
-    }));
-
-        Ok(())
-    } */
 }

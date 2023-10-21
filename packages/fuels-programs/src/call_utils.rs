@@ -471,7 +471,7 @@ fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
     asset_inputs
         .iter()
         .filter_map(|input| match input {
-            Input::CoinSigned { resource, .. } | Input::CoinPredicate { resource, .. } => {
+            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
                 Some(resource.asset_id())
             }
             _ => None,

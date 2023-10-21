@@ -9,10 +9,10 @@ use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input {
-    CoinSigned {
+    ResourceSigned {
         resource: CoinType,
     },
-    CoinPredicate {
+    ResourcePredicate {
         resource: CoinType,
         code: Vec<u8>,
         data: UnresolvedBytes,
@@ -28,7 +28,7 @@ pub enum Input {
 
 impl Input {
     pub const fn resource_signed(resource: CoinType) -> Self {
-        Self::CoinSigned { resource }
+        Self::ResourceSigned { resource }
     }
 
     pub const fn resource_predicate(
@@ -36,7 +36,7 @@ impl Input {
         code: Vec<u8>,
         data: UnresolvedBytes,
     ) -> Self {
-        Self::CoinPredicate {
+        Self::ResourcePredicate {
             resource,
             code,
             data,
@@ -45,7 +45,7 @@ impl Input {
 
     pub fn amount(&self) -> Option<u64> {
         match self {
-            Self::CoinSigned { resource, .. } | Self::CoinPredicate { resource, .. } => {
+            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
                 Some(resource.amount())
             }
             _ => None,
@@ -54,7 +54,7 @@ impl Input {
 
     pub fn asset_id(&self) -> Option<AssetId> {
         match self {
-            Self::CoinSigned { resource, .. } | Self::CoinPredicate { resource, .. } => {
+            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
                 Some(resource.asset_id())
             }
             _ => None,
@@ -63,11 +63,11 @@ impl Input {
 
     pub fn contains_data(&self) -> bool {
         match self {
-            Self::CoinSigned {
+            Self::ResourceSigned {
                 resource: CoinType::Message(msg),
                 ..
             }
-            | Self::CoinPredicate {
+            | Self::ResourcePredicate {
                 resource: CoinType::Message(msg),
                 ..
             } => !msg.data.is_empty(),

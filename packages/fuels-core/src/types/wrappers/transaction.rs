@@ -249,7 +249,7 @@ fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
         return Some(CoinTypeId::Nonce(*nonce));
     }
 
-    return None;
+    None
 }
 
 pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {

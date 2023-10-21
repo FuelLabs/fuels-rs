@@ -26,23 +26,6 @@ pub struct Coin {
     pub status: CoinStatus,
 }
 
-impl Coin {
-    pub fn new_unspent(
-        amount: u64,
-        asset_id: AssetId,
-        utxo_id: UtxoId,
-        owner: Bech32Address,
-    ) -> Self {
-        Self {
-            amount,
-            asset_id,
-            utxo_id,
-            owner,
-            ..Default::default()
-        }
-    }
-}
-
 impl From<ClientCoin> for Coin {
     fn from(coin: ClientCoin) -> Self {
         Self {

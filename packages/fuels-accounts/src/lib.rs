@@ -24,9 +24,9 @@ use fuels_core::{
 };
 use provider::{Provider, ResourceFilter};
 
+mod accounts_utils;
 #[cfg(feature = "coin-cache")]
 mod coin_cache;
-mod accounts_utils;
 pub mod predicate;
 pub mod provider;
 mod supported_versions;
@@ -145,38 +145,6 @@ pub trait Account: ViewOnlyAccount {
         ]
     }
 
-    /*
-    // Create a change output with a fixed amount so that it can be used for
-    // caching and spending expected outputs optimistically
-    fn get_calculated_change_output(
-        &self,
-        tx_builder: &impl TransactionBuilder,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Output> {
-        let max_fee = tx_builder
-            .fee_checked_from_tx()?
-            .expect("Failed to calculate tx fee.")
-            .max_fee();
-        let total_input_amount = tx_builder
-            .inputs()
-            .iter()
-            .filter_map(|input| input.amount())
-            .sum();
-
-        let mut expected_amount = total_input_amount;
-        if asset_id == BASE_ASSET_ID {
-            expected_amount -= max_fee;
-        }
-        expected_amount -= amount;
-
-        Ok(Output::coin(
-            self.address().into(),
-            expected_amount,
-            asset_id,
-        ))
-    } */
-
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
     /// in the transaction's list of witnesses. In the validation process, the node will
@@ -247,15 +215,10 @@ pub trait Account: ViewOnlyAccount {
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
 
-        //let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-
         let tx_builder =
             ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters, network_info);
 
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-        //let expected_change_output =
-        //    self.get_calculated_change_output(&tx_builder, asset_id, amount)?;
-        //outputs.push(expected_change_output);
         let mut tx_builder = tx_builder.with_outputs(outputs);
 
         self.adjust_for_fee(&mut tx_builder, amount).await?;
@@ -283,7 +246,7 @@ pub trait Account: ViewOnlyAccount {
     async fn force_transfer_to_contract(
         &self,
         to: &Bech32ContractId,
-        amount: u64,
+        balance: u64,
         asset_id: AssetId,
         tx_parameters: TxParameters,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
@@ -301,7 +264,7 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(self.get_asset_inputs_for_amount(asset_id, amount).await?);
+        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -311,7 +274,7 @@ pub trait Account: ViewOnlyAccount {
         // Build transaction and sign it
         let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
-            amount,
+            balance,
             asset_id,
             inputs,
             outputs,
@@ -319,7 +282,7 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        self.adjust_for_fee(&mut tb, amount).await?;
+        self.adjust_for_fee(&mut tb, balance).await?;
         let tx = self.finalize_tx(tb)?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
@@ -435,7 +398,7 @@ mod tests {
         };
         // Set up a transaction
         let mut tb = {
-            let input_coin = Input::CoinSigned {
+            let input_coin = Input::ResourceSigned {
                 resource: CoinType::Coin(Coin {
                     amount: 10000000,
                     owner: wallet.address().clone(),

@@ -185,7 +185,7 @@ macro_rules! impl_tx_trait {
             fn is_using_predicates(&self) -> bool {
                 self.inputs()
                     .iter()
-                    .any(|input| matches!(input, Input::CoinPredicate { .. }))
+                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
             fn num_witnesses(&self) -> Result<u8> {
@@ -505,13 +505,13 @@ fn resolve_fuel_inputs(
     inputs
         .into_iter()
         .map(|input| match input {
-            Input::CoinSigned { resource } => resolve_signed_resource(
+            Input::ResourceSigned { resource } => resolve_signed_resource(
                 resource,
                 &mut data_offset,
                 num_witnesses,
                 unresolved_signatures,
             ),
-            Input::CoinPredicate {
+            Input::ResourcePredicate {
                 resource,
                 code,
                 data,

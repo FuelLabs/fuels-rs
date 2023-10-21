@@ -41,12 +41,11 @@ use crate::{
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
 #[cfg(feature = "coin-cache")]
-use tokio::sync::Mutex;
+use fuels_core::types::coin_type::CoinTypeId;
 #[cfg(feature = "coin-cache")]
 use std::sync::Arc;
 #[cfg(feature = "coin-cache")]
-use fuels_core::types::coin_type::CoinTypeId;
-
+use tokio::sync::Mutex;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -247,7 +246,7 @@ impl Provider {
         Ok(tx_id)
     }
 
-    #[cfg(any(not(feature = "coin-cache")))]
+    #[cfg(not(feature = "coin-cache"))]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         Ok(self.client.submit(&tx.into()).await?)
     }
@@ -255,7 +254,7 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let used_utxos = tx.used_coins();
-        let tx_id = self.client.submit(&tx.into()).await?;        
+        let tx_id = self.client.submit(&tx.into()).await?;
         self.cache.lock().await.insert_multiple(used_utxos);
 
         Ok(tx_id)
@@ -443,7 +442,7 @@ impl Provider {
     /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    #[cfg(any(not(feature = "coin-cache")))]
+    #[cfg(not(feature = "coin-cache"))]
     pub async fn get_spendable_resources(
         &self,
         filter: ResourceFilter,
