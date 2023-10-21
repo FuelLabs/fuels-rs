@@ -18,7 +18,7 @@ use fuel_tx::{
 };
 use fuel_types::{AssetId, ChainId};
 
-use crate::types::{bech32::Bech32Address, coin_type::CoinTypeId, Result};
+use crate::types::{bech32::Bech32Address, wrappers::coin_type::CoinTypeId, Result};
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
