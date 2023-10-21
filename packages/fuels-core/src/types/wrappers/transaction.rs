@@ -67,7 +67,7 @@ impl TxParameters {
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
-use super::coin_type::CoinTypeId;
+use crate::types::coin_type::CoinTypeId;
 
 #[derive(Debug, Clone)]
 pub enum TransactionType {
