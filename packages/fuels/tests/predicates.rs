@@ -730,7 +730,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(predicate.address(), BASE_ASSET_ID, 1, amount);
+    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -758,7 +758,8 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         network_info,
     );
 
-    predicate.adjust_for_fee(&mut tb, 0).await?;
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, 0).await?;
     let tx = tb.build()?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;

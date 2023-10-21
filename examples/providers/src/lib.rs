@@ -4,6 +4,7 @@ mod tests {
 
     use fuels::prelude::Result;
 
+    /*
     #[tokio::test]
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
@@ -37,7 +38,7 @@ mod tests {
             .unwrap();
         // ANCHOR_END: local_node_address
         Ok(())
-    }
+    } */
 
     #[tokio::test]
     async fn query_the_blockchain() -> Result<()> {

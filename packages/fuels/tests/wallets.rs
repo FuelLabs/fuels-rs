@@ -144,8 +144,10 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         TxParameters::default(),
         network_info,
     );
+
+    wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    let tx = wallet.finalize_tx(tb)?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -187,8 +189,9 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         TxParameters::default(),
         network_info,
     );
+    wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
-    let tx = wallet.finalize_tx(tb)?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(

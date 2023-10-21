@@ -14,7 +14,7 @@ use fuels_core::{
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxParameters},
-        transaction_builders::ScriptTransactionBuilder,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     },
 };
 use itertools::{chain, Itertools};
@@ -139,8 +139,9 @@ pub(crate) async fn build_tx_from_contract_calls(
         .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
         .unwrap_or_default();
 
+    account.add_witnessses(&mut tb);
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
-    account.finalize_tx(tb)
+    tb.build()
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return

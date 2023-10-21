@@ -19,7 +19,7 @@ use fuels_core::{
         errors::{error, Error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::CreateTransactionBuilder,
+        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -311,11 +311,12 @@ impl Contract {
             network_info,
         );
 
+        account.add_witnessses(&mut tb);
         account
             .adjust_for_fee(&mut tb, 0)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
-        let tx = account.finalize_tx(tb)?;
+        let tx = tb.build()?;
 
         let provider = account
             .try_provider()

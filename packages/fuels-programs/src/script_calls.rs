@@ -15,7 +15,7 @@ use fuels_core::{
         errors::Result,
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::ScriptTransactionBuilder,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
     },
 };
@@ -209,9 +209,10 @@ where
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         let mut tb = self.prepare_builder().await?;
+        self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
 
-        self.account.finalize_tx(tb)
+        tb.build()
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -275,8 +276,10 @@ where
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
         let mut tb = self.prepare_builder().await?;
+
+        self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
-        let tx = self.account.finalize_tx(tb)?;
+        let tx = tb.build()?;
 
         let transaction_cost = self
             .provider

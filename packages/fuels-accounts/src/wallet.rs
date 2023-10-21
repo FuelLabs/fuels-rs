@@ -255,9 +255,8 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    fn finalize_tx<Tb: TransactionBuilder>(&self, mut tb: Tb) -> Result<Tb::TxType> {
-        self.sign_transaction(&mut tb);
-        tb.build()
+    fn add_witnessses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
+        self.sign_transaction(tb);
     }
 }
 

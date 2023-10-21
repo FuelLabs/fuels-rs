@@ -56,10 +56,6 @@ impl AccountError {
     pub fn no_provider() -> Self {
         Self("No provider was setup: make sure to set_provider in your account!".to_string())
     }
-
-    pub fn no_resources() -> Self {
-        Self("Not enough resources could be found!".to_string())
-    }
 }
 
 impl Display for AccountError {
@@ -185,7 +181,7 @@ pub trait Account: ViewOnlyAccount {
         tb: &mut Tb,
         used_base_amount: u64,
     ) -> Result<()> {
-        let missing_base_amount = calculate_missing_base_amount(self, tb, used_base_amount)?;
+        let missing_base_amount = calculate_missing_base_amount(tb, used_base_amount)?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
@@ -198,7 +194,8 @@ pub trait Account: ViewOnlyAccount {
         Ok(())
     }
 
-    fn finalize_tx<Tb: TransactionBuilder>(&self, tb: Tb) -> Result<Tb::TxType>;
+    // Add signatures to the builder if the underlying accoutn is a wallet
+    fn add_witnessses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
 
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
@@ -221,9 +218,10 @@ pub trait Account: ViewOnlyAccount {
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
         let mut tx_builder = tx_builder.with_outputs(outputs);
 
+        self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
 
-        let tx = self.finalize_tx(tx_builder)?;
+        let tx = tx_builder.build()?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -282,8 +280,9 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
+        self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
-        let tx = self.finalize_tx(tb)?;
+        let tx = tb.build()?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -319,8 +318,9 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
+        self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
-        let tx = self.finalize_tx(tb)?;
+        let tx = tb.build()?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider

@@ -6,26 +6,20 @@ use fuels_core::{
         bech32::Bech32Address,
         errors::{error, Error, Result},
         input::Input,
-        transaction::Transaction,
         transaction_builders::TransactionBuilder,
     },
 };
-
-use crate::Account;
 
 pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
     receipts.iter().find_map(|m| m.message_id())
 }
 
 pub fn calculate_missing_base_amount(
-    account: &impl Account,
     tb: &impl TransactionBuilder,
     used_base_amount: u64,
 ) -> Result<u64> {
-    let consensus_parameters = tb.consensus_parameters();
-    let tx = account.finalize_tx(tb.clone())?;
-    let transaction_fee = tx
-        .fee_checked_from_tx(&consensus_parameters)
+    let transaction_fee = tb
+        .fee_checked_from_tx()?
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
     let available_amount: u64 = available_base_amount(tb);
