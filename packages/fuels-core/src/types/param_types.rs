@@ -1558,7 +1558,108 @@ mod tests {
             .to_string(),
             expected
         );
+        Ok(())
+    }
 
+    #[test]
+    fn validate_is_decodable_complex_types_containing_string() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        let base_string = ParamType::String;
+        let param_types_no_nested_string = vec![ParamType::U64, ParamType::U32];
+        let param_types_nested_string = vec![ParamType::Unit, ParamType::Bool, base_string.clone()];
+        let nested_heap_type_error_message = |p: ParamType| {
+            format!(
+                "Invalid type: type {:?} is not decodable: nested heap types \
+        are currently not supported except in Enums.",
+                DebugWithDepth::new(&p, max_depth)
+            )
+        };
+        let cannot_be_decoded = |p: ParamType| {
+            assert_eq!(
+                p.validate_is_decodable(max_depth)
+                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .to_string(),
+                nested_heap_type_error_message(p)
+            )
+        };
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
+
+        can_be_decoded(base_string.clone());
+        cannot_be_decoded(ParamType::Vector(Box::from(base_string.clone())));
+
+        can_be_decoded(ParamType::Array(Box::from(ParamType::U8), 10));
+        cannot_be_decoded(ParamType::Array(Box::from(base_string), 10));
+
+        can_be_decoded(ParamType::Tuple(param_types_no_nested_string.clone()));
+        cannot_be_decoded(ParamType::Tuple(param_types_nested_string.clone()));
+
+        can_be_decoded(ParamType::Struct {
+            generics: param_types_no_nested_string.clone(),
+            fields: param_types_no_nested_string.clone(),
+        });
+
+        can_be_decoded(ParamType::Struct {
+            generics: param_types_nested_string.clone(),
+            fields: param_types_no_nested_string.clone(),
+        });
+
+        cannot_be_decoded(ParamType::Struct {
+            generics: param_types_no_nested_string.clone(),
+            fields: param_types_nested_string.clone(),
+        });
+
+        Ok(())
+    }
+
+    #[test]
+    fn validate_is_decodable_enum_containing_string() -> Result<()> {
+        let max_depth = DecoderConfig::default().max_depth;
+        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
+        let param_types_containing_string = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
+        let param_types_no_string = vec![ParamType::U64, ParamType::U32];
+        let variants_no_string_type = EnumVariants::new(param_types_no_string.clone())?;
+        let variants_one_string_type = EnumVariants::new(param_types_containing_string.clone())?;
+        let variants_two_string_type = EnumVariants::new(vec![ParamType::Bytes, ParamType::Bytes])?;
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_string_type.clone(),
+            generics: param_types_no_string.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_string_type.clone(),
+            generics: param_types_no_string.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_string_type.clone(),
+                generics: param_types_no_string.clone(),
+            }
+            .validate_is_decodable(1)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
+        can_be_decoded(ParamType::Enum {
+            variants: variants_no_string_type,
+            generics: param_types_containing_string.clone(),
+        });
+        can_be_decoded(ParamType::Enum {
+            variants: variants_one_string_type,
+            generics: param_types_containing_string.clone(),
+        });
+        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
+            .to_string();
+        assert_eq!(
+            ParamType::Enum {
+                variants: variants_two_string_type.clone(),
+                generics: param_types_containing_string.clone(),
+            }
+            .validate_is_decodable(1)
+            .expect_err("Should not be decodable")
+            .to_string(),
+            expected
+        );
         Ok(())
     }
 
