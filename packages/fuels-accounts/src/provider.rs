@@ -41,7 +41,7 @@ use crate::{
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
 #[cfg(feature = "coin-cache")]
-use fuels_core::types::coin_type::CoinTypeId;
+use fuels_core::types::coin_type_id::CoinTypeId;
 #[cfg(feature = "coin-cache")]
 use std::sync::Arc;
 #[cfg(feature = "coin-cache")]

@@ -4,7 +4,7 @@ use tokio::time::{Duration, Instant};
 
 use fuel_types::AssetId;
 use fuels_core::types::bech32::Bech32Address;
-use fuels_core::types::coin_type::CoinTypeId;
+use fuels_core::types::coin_type_id::CoinTypeId;
 
 type CoinCacheKey = (Bech32Address, AssetId);
 
