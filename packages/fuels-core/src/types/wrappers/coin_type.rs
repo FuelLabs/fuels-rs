@@ -1,19 +1,14 @@
 #![cfg(feature = "std")]
 
 use fuel_core_client::client::types::CoinType as ClientCoinType;
-use fuel_tx::UtxoId;
-use fuel_types::{AssetId, Nonce};
+use fuel_types::AssetId;
 
 use crate::{
     constants::BASE_ASSET_ID,
     types::{bech32::Bech32Address, coin::Coin, message::Message},
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum CoinTypeId {
-    UtxoId(UtxoId),
-    Nonce(Nonce),
-}
+use super::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
