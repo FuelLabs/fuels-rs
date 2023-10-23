@@ -1,16 +1,16 @@
 use std::{fmt::Debug, fs};
 
-use fuel_tx::ConsensusParameters;
-use fuel_types::AssetId;
+#[cfg(feature = "std")]
 use fuels_core::{
     constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address, errors::Result, input::Input,
-        transaction_builders::TransactionBuilder, unresolved_bytes::UnresolvedBytes,
-    },
+    types::{input::Input, transaction_builders::TransactionBuilder, AssetId},
+};
+use fuels_core::{
+    types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,
 };
 
+#[cfg(feature = "std")]
 use crate::{
     accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::Provider,
@@ -22,6 +22,8 @@ pub struct Predicate {
     address: Bech32Address,
     code: Vec<u8>,
     data: UnresolvedBytes,
+    chain_id: u64,
+    #[cfg(feature = "std")]
     provider: Option<Provider>,
 }
 
@@ -38,48 +40,25 @@ impl Predicate {
         &self.data
     }
 
-    pub fn provider(&self) -> Option<&Provider> {
-        self.provider.as_ref()
-    }
-
-    pub fn set_provider(&mut self, provider: Provider) {
-        self.address = Self::calculate_address(&self.code, provider.chain_id().into());
-        self.provider = Some(provider);
-    }
-
-    pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, provider.chain_id().into());
-        Self {
-            address,
-            provider: Some(provider),
-            ..self
-        }
-    }
-
     pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
         fuel_tx::Input::predicate_owner(code, &chain_id.into()).into()
     }
 
-    fn consensus_parameters(&self) -> ConsensusParameters {
-        self.provider()
-            .map(|p| p.consensus_parameters())
-            .unwrap_or_default()
-    }
-
-    /// Uses default `ConsensusParameters`
-    pub fn from_code(code: Vec<u8>) -> Self {
-        Self {
-            address: Self::calculate_address(&code, ConsensusParameters::default().chain_id.into()),
-            code,
-            data: Default::default(),
-            provider: None,
-        }
-    }
-
-    /// Uses default `ConsensusParameters`
+    /// Uses default `ChainId`
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
-        Ok(Self::from_code(code))
+        Ok(Self::from_code(code, 0))
+    }
+
+    pub fn from_code(code: Vec<u8>, chain_id: u64) -> Self {
+        Self {
+            address: Self::calculate_address(&code, chain_id),
+            chain_id,
+            code,
+            data: Default::default(),
+            #[cfg(feature = "std")]
+            provider: None,
+        }
     }
 
     pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
@@ -88,7 +67,7 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
-        let address = Self::calculate_address(&code, self.consensus_parameters().chain_id.into());
+        let address = Self::calculate_address(&code, self.chain_id);
         Self {
             code,
             address,
@@ -99,13 +78,36 @@ impl Predicate {
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-        let address =
-            Self::calculate_address(&self.code, self.consensus_parameters().chain_id.into());
+        let address = Self::calculate_address(&self.code, self.chain_id);
         self.address = address;
         self
     }
 }
 
+#[cfg(feature = "std")]
+impl Predicate {
+    pub fn provider(&self) -> Option<&Provider> {
+        self.provider.as_ref()
+    }
+
+    pub fn set_provider(&mut self, provider: Provider) {
+        self.address = Self::calculate_address(&self.code, provider.chain_id().into());
+        self.chain_id = provider.chain_id().into();
+        self.provider = Some(provider);
+    }
+
+    pub fn with_provider(self, provider: Provider) -> Self {
+        let address = Self::calculate_address(&self.code, provider.chain_id().into());
+        Self {
+            address,
+            chain_id: provider.chain_id().into(),
+            provider: Some(provider),
+            ..self
+        }
+    }
+}
+
+#[cfg(feature = "std")]
 impl ViewOnlyAccount for Predicate {
     fn address(&self) -> &Bech32Address {
         self.address()
@@ -116,6 +118,7 @@ impl ViewOnlyAccount for Predicate {
     }
 }
 
+#[cfg(feature = "std")]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for Predicate {
     async fn get_asset_inputs_for_amount(

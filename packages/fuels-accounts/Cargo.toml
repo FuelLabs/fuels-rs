@@ -13,26 +13,25 @@ description = "Fuel Rust SDK accounts."
 async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }
-eth-keystore =  { workspace = true }
-fuel-core-client = { workspace = true, features = ["default"] }
+eth-keystore =  { workspace = true, optional = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
 fuel-vm = { workspace = true }
-fuels-core = { workspace = true }
+fuel-core-client = { workspace = true, optional = true }
+fuels-core = { workspace = true, default-features = false }
 hex = { workspace = true, default-features = false, features = ["std"] }
 rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full"], optional = true}
 tracing = { workspace = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
-hex = { workspace = true, default-features = false, features = ["std"] }
 tempfile = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["fuels-core/std"]
+std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:eth-keystore"]

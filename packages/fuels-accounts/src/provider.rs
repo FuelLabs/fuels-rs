@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
 
 mod retry_util;
 mod retryable_client;
+mod supported_versions;
 
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
@@ -30,13 +31,11 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
+use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
 use tai64::Tai64;
 use thiserror::Error;
 
-use crate::{
-    provider::retryable_client::RetryableClient,
-    supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
-};
+use crate::provider::retryable_client::RetryableClient;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
