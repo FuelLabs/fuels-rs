@@ -187,6 +187,8 @@ jobs:
             args:
           - command: test_against_live_node
             args:
+            download_sway_artifacts: sway-examples-w-type-paths
+            install_fuel_core: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
