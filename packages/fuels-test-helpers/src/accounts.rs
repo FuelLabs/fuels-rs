@@ -1,7 +1,12 @@
 use std::mem::size_of;
+use std::str::FromStr;
 
-use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
-use fuels_core::types::errors::Result;
+use fuels_accounts::{
+    fuel_crypto::SecretKey, provider::Provider, wallet::WalletUnlocked, ViewOnlyAccount,
+};
+use fuels_core::constants::TESTNET_NODE_URL;
+use fuels_core::error;
+use fuels_core::types::errors::{Error, Result};
 
 use crate::{
     node_types::{ChainConfig, Config},
@@ -83,6 +88,30 @@ pub async fn launch_custom_provider_and_get_wallets(
         wallet.set_provider(provider.clone());
     }
 
+    Ok(wallets)
+}
+
+pub async fn connect_to_testnet_node_and_get_wallets(
+    num_wallets: usize,
+) -> Result<Vec<WalletUnlocked>> {
+    if num_wallets > 3 {
+        error!(
+            InvalidData,
+            "Trying to get more than 3 wallets from beta node"
+        );
+    }
+    let provider = Provider::connect(TESTNET_NODE_URL)
+        .await
+        .expect("Should be able to connect to {TESTNET_NODE_URL}");
+    let wallets = (1..=num_wallets)
+        .map(|wallet_counter| {
+            let private_key_string = std::env::var(format!("SECRET_KEY_{wallet_counter}"))
+                .expect("Should find private key in ENV");
+            let private_key = SecretKey::from_str(private_key_string.as_str())
+                .expect("Should be able to transform into private key");
+            WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()))
+        })
+        .collect::<Vec<WalletUnlocked>>();
     Ok(wallets)
 }
 

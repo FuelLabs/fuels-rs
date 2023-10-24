@@ -29,13 +29,14 @@ pub(crate) struct TestProgramCommands {
     pub(crate) generate_bindings: AbigenCommand,
     pub(crate) deploy_contract: Vec<DeployContractCommand>,
     pub(crate) load_scripts: Vec<LoadScriptCommand>,
+    pub(crate) run_on_live_node: bool,
 }
 
 command_parser!(
     Wallets -> InitializeWalletCommand,
     Abigen -> AbigenCommand,
     Deploy -> DeployContractCommand,
-    LoadScript -> LoadScriptCommand
+    LoadScript -> LoadScriptCommand,
 );
 
 impl Parse for TestProgramCommands {
@@ -57,6 +58,7 @@ impl Parse for TestProgramCommands {
             generate_bindings: abigen_command,
             deploy_contract: parsed_commands.Deploy,
             load_scripts: parsed_commands.LoadScript,
+            run_on_live_node: parsed_commands.run_on_live_node,
         })
     }
 }

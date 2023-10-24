@@ -21,7 +21,10 @@ env:
   FORC_VERSION: 0.46.0
   FORC_PATCH_BRANCH: "xunilrj/fix-implicit-std-env-vars"
   FORC_PATCH_REVISION: ""
-  FORC_IMPLICIT_STD_GIT_BRANCH: "xunilrj/fix-implicit-std-env-vars" 
+  FORC_IMPLICIT_STD_GIT_BRANCH: "xunilrj/fix-implicit-std-env-vars"
+  SECRET_KEY_1: ${{ secrets.SECRET_KEY_1 }}
+  SECRET_KEY_2: ${{ secrets.SECRET_KEY_2 }}
+  SECRET_KEY_3: ${{ secrets.SECRET_KEY_3 }}
 
 jobs:
   setup-test-projects:
@@ -279,3 +282,11 @@ jobs:
         with:
           publish-delay: 30000
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+
+  run_against_live_node:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    steps:
+      run: |
+        cargo test --features test-against-live-node

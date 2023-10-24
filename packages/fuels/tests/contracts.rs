@@ -41,9 +41,25 @@ async fn test_multiple_args() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_calling_contract() -> Result<()> {
+#[cfg_attr(feature = "test-against-live-node", ignore)]
+async fn test_contract_calling_contract_on_local_node() -> Result<()> {
+    let run_on_live_node = false;
+    test_contract_calling_contract(run_on_live_node).await?;
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg_attr(not(feature = "test-against-live-node"), ignore)]
+async fn test_contract_calling_contract_on_live_node() -> Result<()> {
+    let run_on_live_node = true;
+    test_contract_calling_contract(run_on_live_node).await?;
+    Ok(())
+}
+
+async fn test_contract_calling_contract(run_on_live_node: bool) -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     setup_program_test!(
+        RunOnLiveNode(false),
         Wallets("wallet"),
         Abigen(
             Contract(
@@ -71,6 +87,37 @@ async fn test_contract_calling_contract() -> Result<()> {
             wallet = "wallet"
         ),
     );
+    if run_on_live_node {
+        setup_program_test!(
+            RunOnLiveNode(true),
+            Wallets("wallet"),
+            Abigen(
+                Contract(
+                    name = "LibContract",
+                    project = "packages/fuels/tests/contracts/lib_contract"
+                ),
+                Contract(
+                    name = "LibContractCaller",
+                    project = "packages/fuels/tests/contracts/lib_contract_caller"
+                ),
+            ),
+            Deploy(
+                name = "lib_contract_instance",
+                contract = "LibContract",
+                wallet = "wallet"
+            ),
+            Deploy(
+                name = "lib_contract_instance2",
+                contract = "LibContract",
+                wallet = "wallet"
+            ),
+            Deploy(
+                name = "contract_caller_instance",
+                contract = "LibContractCaller",
+                wallet = "wallet"
+            ),
+        );
+    };
     let lib_contract_id = lib_contract_instance.contract_id();
     let lib_contract_id2 = lib_contract_instance2.contract_id();
 
@@ -1501,8 +1548,24 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_submit_and_response() -> Result<()> {
+#[cfg_attr(feature = "test-against-live-node", ignore)]
+async fn contract_submit_and_response_local_node() -> Result<()> {
+    let run_on_live_node = false;
+    test_contract_submit_and_response(run_on_live_node).await?;
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg_attr(not(feature = "test-against-live-node"), ignore)]
+async fn contract_submit_and_response_live_node() -> Result<()> {
+    let run_on_live_node = true;
+    test_contract_submit_and_response(run_on_live_node).await?;
+    Ok(())
+}
+
+async fn test_contract_submit_and_response(run_on_live_node: bool) -> Result<()> {
     setup_program_test!(
+        RunOnLiveNode(false),
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
@@ -1514,6 +1577,21 @@ async fn test_contract_submit_and_response() -> Result<()> {
             wallet = "wallet"
         ),
     );
+    if run_on_live_node {
+        setup_program_test!(
+            RunOnLiveNode(true),
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "TestContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
+            Deploy(
+                name = "contract_instance",
+                contract = "TestContract",
+                wallet = "wallet"
+            ),
+        );
+    }
 
     let contract_methods = contract_instance.methods();
 

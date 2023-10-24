@@ -12,10 +12,12 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, message::Message},
 };
-
-use fuels_core::types::{
-    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-    Bits256,
+use fuels_core::{
+    constants::TESTNET_NODE_URL,
+    types::{
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        Bits256,
+    },
 };
 
 #[tokio::test]
@@ -634,7 +636,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
+    let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
 
     // Setup the private key.
     let secret =
