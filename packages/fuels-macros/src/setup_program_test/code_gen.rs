@@ -84,7 +84,7 @@ fn wallet_initialization_code(
     }
 
     let num_wallets = wallet_names.len();
-    return if run_on_live_node {
+    if run_on_live_node {
         if num_wallets > 3 {
             return Err(syn::Error::new_spanned(
                 "",
@@ -114,7 +114,7 @@ fn wallet_initialization_code(
             .try_into()
             .expect("Should have the exact number of wallets");
         })
-    };
+    }
 }
 
 fn extract_wallet_names(command: &InitializeWalletCommand) -> Vec<Ident> {
