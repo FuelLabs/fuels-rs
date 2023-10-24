@@ -1,14 +1,16 @@
-use fuels_core::types::errors::{Error, Result as FuelResult};
-use tempfile::NamedTempFile;
+use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
-use std::{net::SocketAddr, path::PathBuf, time::Duration};
+use fuels_core::{
+    error,
+    types::errors::{Error, Result as FuelResult},
+};
+use portpicker::{is_free, pick_unused_port};
+use tempfile::NamedTempFile;
+use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 use crate::node_types::{Config, DbType, Trigger};
-use fuels_core::error;
-use portpicker::{is_free, pick_unused_port};
-use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
 #[derive(Debug)]
 struct ExtendedConfig {

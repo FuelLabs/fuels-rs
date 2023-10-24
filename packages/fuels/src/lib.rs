@@ -40,7 +40,6 @@ pub mod core {
     pub use fuels_core::{codec, constants, offsets, traits, Configurables};
 }
 
-#[cfg(feature = "std")]
 pub mod accounts {
     pub use fuels_accounts::*;
 }

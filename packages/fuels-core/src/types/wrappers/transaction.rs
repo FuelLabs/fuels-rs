@@ -6,17 +6,13 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
-    input::{
-        coin::{CoinPredicate, CoinSigned},
-        message::{
-            MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
-        },
-    },
-    Bytes32, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Output,
-    Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
-use fuel_types::{AssetId, ChainId};
+
+use fuel_types::ChainId;
+use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
 
 use crate::types::{bech32::Bech32Address, Result};
 
@@ -107,6 +103,21 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
     fn outputs(&self) -> &Vec<Output>;
 
     fn witnesses(&self) -> &Vec<Witness>;
+
+    fn is_using_predicates(&self) -> bool;
+
+    /// Precompute transaction metadata. The metadata is required for
+    /// `check_without_signatures` validation.
+    fn precompute(&mut self, chain_id: &ChainId) -> Result<()>;
+
+    /// If a transactions contains predicates, we have to estimate them
+    /// before sending the transaction to the node. The estimation will check
+    /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
+    fn estimate_predicates(
+        &mut self,
+        consensus_parameters: &ConsensusParameters,
+        gas_costs: &GasCosts,
+    ) -> Result<()>;
 
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> usize;
@@ -226,6 +237,31 @@ impl Transaction for TransactionType {
         }
     }
 
+    fn is_using_predicates(&self) -> bool {
+        match self {
+            TransactionType::Script(tx) => tx.is_using_predicates(),
+            TransactionType::Create(tx) => tx.is_using_predicates(),
+        }
+    }
+
+    fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
+        match self {
+            TransactionType::Script(tx) => tx.precompute(chain_id),
+            TransactionType::Create(tx) => tx.precompute(chain_id),
+        }
+    }
+
+    fn estimate_predicates(
+        &mut self,
+        consensus_parameters: &ConsensusParameters,
+        gas_costs: &GasCosts,
+    ) -> Result<()> {
+        match self {
+            TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
+            TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
+        }
+    }
+
     fn append_witness(&mut self, witness: Witness) -> usize {
         match self {
             TransactionType::Script(tx) => tx.append_witness(witness),
@@ -270,6 +306,7 @@ macro_rules! impl_tx_wrapper {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
             pub(crate) tx: $wrapped,
+            pub(crate) is_using_predicates: bool,
         }
 
         impl From<$wrapper> for $wrapped {
@@ -286,7 +323,19 @@ macro_rules! impl_tx_wrapper {
 
         impl From<$wrapped> for $wrapper {
             fn from(tx: $wrapped) -> Self {
-                $wrapper { tx }
+                let is_using_predicates = tx.inputs().iter().any(|input| {
+                    matches!(
+                        input,
+                        Input::CoinPredicate { .. }
+                            | Input::MessageCoinPredicate { .. }
+                            | Input::MessageDataPredicate { .. }
+                    )
+                });
+
+                $wrapper {
+                    tx,
+                    is_using_predicates,
+                }
             }
         }
 
@@ -353,6 +402,32 @@ macro_rules! impl_tx_wrapper {
 
             fn witnesses(&self) -> &Vec<Witness> {
                 self.tx.witnesses()
+            }
+
+            fn is_using_predicates(&self) -> bool {
+                self.is_using_predicates
+            }
+
+            fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
+                Ok(self.tx.precompute(chain_id)?)
+            }
+
+            fn estimate_predicates(
+                &mut self,
+                consensus_parameters: &ConsensusParameters,
+                gas_costs: &GasCosts,
+            ) -> Result<()> {
+                let gas_price = *self.tx.gas_price();
+                let gas_limit = *self.tx.gas_limit();
+                *self.tx.gas_price_mut() = 0;
+                *self.tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
+
+                self.tx
+                    .estimate_predicates(consensus_parameters, gas_costs)?;
+                *self.tx.gas_price_mut() = gas_price;
+                *self.tx.gas_limit_mut() = gas_limit;
+
+                Ok(())
             }
 
             fn append_witness(&mut self, witness: Witness) -> usize {

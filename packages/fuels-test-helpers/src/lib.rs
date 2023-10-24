@@ -1,11 +1,9 @@
 //! Testing helpers/utilities for Fuel SDK.
 extern crate core;
 
-use fuel_core_chain_config::StateConfig;
-
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
-
+use fuel_core_chain_config::StateConfig;
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
@@ -18,12 +16,10 @@ use fuels_core::{
         message::{Message, MessageStatus},
     },
 };
-
+pub use node_types::*;
 use rand::Fill;
 use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
-
-pub use node_types::*;
 mod node_types;
 
 #[cfg(not(feature = "fuel-core-lib"))]

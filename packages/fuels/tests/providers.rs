@@ -1,7 +1,6 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-
 use fuel_core_types::{
     fuel_crypto::rand::{self, Rng},
     tai64::Tai64,

@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
 
 mod retry_util;
 mod retryable_client;
+mod supported_versions;
 
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
@@ -30,13 +31,11 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
+use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
 use tai64::Tai64;
 use thiserror::Error;
 
-use crate::{
-    provider::retryable_client::RetryableClient,
-    supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility},
-};
+use crate::provider::retryable_client::RetryableClient;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
@@ -209,7 +208,25 @@ impl Provider {
         Ok(tx_id)
     }
 
-    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+        tx.precompute(&self.chain_id())?;
+
+        let chain_info = self.chain_info().await?;
+        tx.check_without_signatures(
+            chain_info.latest_block.header.height,
+            &self.consensus_parameters(),
+        )?;
+
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(&self.consensus_parameters, &chain_info.gas_costs)?;
+        }
+
+        self.validate_transaction(tx.clone()).await?;
+
+        Ok(self.client.submit(&tx.into()).await?)
+    }
+
+    async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -235,17 +252,9 @@ impl Provider {
             ));
         }
 
-        let chain_info = self.chain_info().await?;
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &self.consensus_parameters(),
-        )?;
-
-        let tx_id = self.submit(tx).await?;
-
-        Ok(tx_id)
+        Ok(())
     }
-
+  
     #[cfg(not(feature = "coin-cache"))]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         Ok(self.client.submit(&tx.into()).await?)

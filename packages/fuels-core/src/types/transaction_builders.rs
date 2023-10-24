@@ -5,12 +5,11 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::{GasLimit, GasPrice, Witnesses},
-    Cacheable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
+    field::Witnesses, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
-use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
+use fuel_vm::gas::GasCosts;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -87,25 +86,20 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
             fn build(self) -> Result<$tx_ty> {
-                let uses_predicates = self.is_using_predicates();
-                let base_offset = if uses_predicates {
+                let is_using_predicates = self.is_using_predicates();
+                let base_offset = if is_using_predicates {
                     self.base_offset()
                 } else {
                     0
                 };
 
-                let network_info = self.network_info.clone();
-
                 let num_witnesses = self.num_witnesses()?;
-                let mut tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
+                let tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
 
-                tx.precompute(&network_info.chain_id())?;
-
-                if uses_predicates {
-                    estimate_predicates(&mut tx, &network_info)?;
-                };
-
-                Ok($tx_ty { tx })
+                Ok($tx_ty {
+                    tx,
+                    is_using_predicates,
+                })
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
@@ -119,6 +113,14 @@ macro_rules! impl_tx_trait {
             fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
                 // partially build tx for estimation
                 let tx = self.clone().resolve_fuel_tx(0, 0)?;
+                
+                if tx.is_using_predicates() {
+                    tx.estimate_predicates(
+                        &self.network_info.consensus_parameters,
+                        &self.network_info.gas_costs,
+                    )?;
+                };
+              
                 Ok(TransactionFee::checked_from_tx(
                     &self.network_info.consensus_parameters,
                     &tx,
@@ -708,24 +710,6 @@ fn generate_missing_witnesses(
             Witness::from(signature.as_ref())
         })
         .collect()
-}
-
-fn estimate_predicates<T>(tx: &mut T, network_info: &NetworkInfo) -> Result<()>
-where
-    T: GasLimit + GasPrice + EstimatePredicates,
-{
-    let consensus_parameters = &network_info.consensus_parameters;
-
-    let gas_price = *tx.gas_price();
-    let gas_limit = *tx.gas_limit();
-    *tx.gas_price_mut() = 0;
-    *tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
-
-    tx.estimate_predicates(consensus_parameters, &network_info.gas_costs)?;
-    *tx.gas_price_mut() = gas_price;
-    *tx.gas_limit_mut() = gas_limit;
-
-    Ok(())
 }
 
 #[cfg(test)]
