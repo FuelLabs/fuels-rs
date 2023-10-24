@@ -185,6 +185,8 @@ jobs:
             args:
           - command: check_doc_unresolved_links
             args:
+          - command: test_against_live_node
+            args:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -255,9 +257,11 @@ jobs:
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
+
       - name: Run some tests against live node
-        run: cargo test --features test-against-live-node
         continue-on-error: true
+        if: ${{ matrix.command == 'test_against_live_node' }}
+        run: cargo test --features test-against-live-node
 
   publish:
     needs:
