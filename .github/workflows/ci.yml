@@ -255,6 +255,9 @@ jobs:
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
+      - name: Run some tests against live node
+        run: cargo test --features test-against-live-node
+        continue-on-error: true
 
   publish:
     needs:
@@ -284,11 +287,4 @@ jobs:
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
 
 
-  run_against_live_node:
-    runs-on: ubuntu-latest
-    #    if: github.event_name == 'push'
-    continue-on-error: true
-    steps:
-      - name: Run some tests against live node
-        run: cargo test --features test-against-live-node
 
