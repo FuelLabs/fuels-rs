@@ -286,7 +286,7 @@ jobs:
 
   run_against_live_node:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+#    if: github.event_name == 'push'
     steps:
       run: |
         cargo test --features test-against-live-node
