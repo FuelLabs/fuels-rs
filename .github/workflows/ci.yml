@@ -185,10 +185,6 @@ jobs:
             args:
           - command: check_doc_unresolved_links
             args:
-          - command: test_against_live_node
-            args:
-            download_sway_artifacts: sway-examples-w-type-paths
-            install_fuel_core: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -260,10 +256,6 @@ jobs:
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
-      - name: Run some tests against live node
-        continue-on-error: true
-        if: ${{ matrix.command == 'test_against_live_node' }}
-        run: cargo test --features test-against-live-node
 
   publish:
     needs:
@@ -291,6 +283,22 @@ jobs:
         with:
           publish-delay: 30000
           registry-token: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+  run-against-live-node:
+    needs:
+      - cargo-verifications
+      - publish-crates-check
+    # Only do this job if publishing a release
+    #    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Run on a live node
+        run: cargo test --features test-against-live-node
+
+
 
 
 
