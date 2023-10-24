@@ -6,7 +6,11 @@ use std::constants::ZERO_B256;
 
 abi ContractCaller {
     fn increment_from_contract(contract_id: ContractId, value: u64) -> u64;
-    fn increment_from_contracts(contract_id: ContractId, contract_id2: ContractId, value: u64) -> u64;
+    fn increment_from_contracts(
+        contract_id: ContractId,
+        contract_id2: ContractId,
+        value: u64,
+    ) -> u64;
     fn mint_then_increment_from_contract(contract_id: ContractId, amount: u64, address: Address);
     fn require_from_contract(contract_id: ContractId);
 }

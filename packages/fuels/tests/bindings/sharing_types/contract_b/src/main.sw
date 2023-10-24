@@ -15,9 +15,17 @@ enum EnumSameNameButDifferentInternals {
 }
 
 abi MyContract {
-    fn uses_shared_type(arg1: SharedStruct2<u32>, arg2: SharedEnum<u64>) -> (SharedStruct2<u32>, SharedEnum<u64>);
-    fn uses_types_that_share_only_names(arg1: StructSameNameButDifferentInternals, arg2: EnumSameNameButDifferentInternals) -> (StructSameNameButDifferentInternals, EnumSameNameButDifferentInternals);
-    fn uses_shared_type_inside_owned_one(arg1: UniqueStructToContractB<SharedStruct2<u8>>) -> UniqueStructToContractB<SharedStruct2<u8>>;
+    fn uses_shared_type(
+        arg1: SharedStruct2<u32>,
+        arg2: SharedEnum<u64>,
+    ) -> (SharedStruct2<u32>, SharedEnum<u64>);
+    fn uses_types_that_share_only_names(
+        arg1: StructSameNameButDifferentInternals,
+        arg2: EnumSameNameButDifferentInternals,
+    ) -> (StructSameNameButDifferentInternals, EnumSameNameButDifferentInternals);
+    fn uses_shared_type_inside_owned_one(
+        arg1: UniqueStructToContractB<SharedStruct2<u8>>,
+    ) -> UniqueStructToContractB<SharedStruct2<u8>>;
 }
 
 impl MyContract for Contract {

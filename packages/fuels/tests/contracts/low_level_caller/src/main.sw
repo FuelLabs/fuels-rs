@@ -5,7 +5,12 @@ use std::low_level_call::{call_with_function_selector, CallParams};
 use std::bytes::Bytes;
 
 abi MyCallerContract {
-    fn call_low_level_call(target: ContractId, function_selector: Bytes, calldata: Bytes, single_value_type_arg: bool);
+    fn call_low_level_call(
+        target: ContractId,
+        function_selector: Bytes,
+        calldata: Bytes,
+        single_value_type_arg: bool,
+    );
 }
 
 impl MyCallerContract for Contract {

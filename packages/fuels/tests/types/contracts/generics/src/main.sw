@@ -61,9 +61,18 @@ impl Hash for str[3] {
 }
 
 abi MyContract {
-    fn unused_generic_args(arg_1: StructOneUnusedGenericParam<u64>, arg_2: EnumOneUnusedGenericParam<u32>);
-    fn two_unused_generic_args(arg_1: StructTwoUnusedGenericParams<u32, u64>, arg_2: EnumTwoUnusedGenericParams<u64, u32>);
-    fn used_and_unused_generic_args(arg_1: StructUsedAndUnusedGenericParams<u32, u8, u64>, arg_2: EnumUsedAndUnusedGenericParams<u64, u8, u32>) -> (StructUsedAndUnusedGenericParams<u64, u8, u32>, EnumUsedAndUnusedGenericParams<u32, u8, u64>);
+    fn unused_generic_args(
+        arg_1: StructOneUnusedGenericParam<u64>,
+        arg_2: EnumOneUnusedGenericParam<u32>,
+    );
+    fn two_unused_generic_args(
+        arg_1: StructTwoUnusedGenericParams<u32, u64>,
+        arg_2: EnumTwoUnusedGenericParams<u64, u32>,
+    );
+    fn used_and_unused_generic_args(
+        arg_1: StructUsedAndUnusedGenericParams<u32, u8, u64>,
+        arg_2: EnumUsedAndUnusedGenericParams<u64, u8, u32>,
+    ) -> (StructUsedAndUnusedGenericParams<u64, u8, u32>, EnumUsedAndUnusedGenericParams<u32, u8, u64>);
     fn struct_w_generic(arg1: SimpleGeneric<u64>) -> SimpleGeneric<u64>;
     fn struct_delegating_generic(arg1: PassTheGenericOn<str[3]>) -> PassTheGenericOn<str[3]>;
     fn struct_w_generic_in_array(arg1: StructWArrayGeneric<u32>) -> StructWArrayGeneric<u32>;
