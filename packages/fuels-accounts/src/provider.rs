@@ -223,7 +223,7 @@ impl Provider {
 
         self.validate_transaction(tx.clone()).await?;
 
-        Ok(self.client.submit(&tx.into()).await?)
+        self.submit(tx).await
     }
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
@@ -254,7 +254,7 @@ impl Provider {
 
         Ok(())
     }
-  
+
     #[cfg(not(feature = "coin-cache"))]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         Ok(self.client.submit(&tx.into()).await?)

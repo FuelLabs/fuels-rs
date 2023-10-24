@@ -6,12 +6,18 @@ use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
+    input::{
+        coin::{CoinPredicate, CoinSigned},
+        message::{
+            MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
+        },
+    },
     Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
 
-use fuel_types::ChainId;
+use fuel_types::{AssetId, ChainId};
 use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
 
 use crate::types::{bech32::Bech32Address, Result};

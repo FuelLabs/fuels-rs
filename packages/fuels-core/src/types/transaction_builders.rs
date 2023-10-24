@@ -5,11 +5,12 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::Witnesses, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    field::GasLimit, field::GasPrice, field::Witnesses, ConsensusParameters, Create,
+    Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
-use fuel_vm::gas::GasCosts;
+use fuel_vm::{checked_transaction::EstimatePredicates, gas::GasCosts};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -112,15 +113,21 @@ macro_rules! impl_tx_trait {
 
             fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
                 // partially build tx for estimation
-                let tx = self.clone().resolve_fuel_tx(0, 0)?;
-                
-                if tx.is_using_predicates() {
-                    tx.estimate_predicates(
-                        &self.network_info.consensus_parameters,
-                        &self.network_info.gas_costs,
-                    )?;
-                };
-              
+                let mut tx = self.clone().resolve_fuel_tx(0, 0)?;
+
+                let gas_price = *tx.gas_price();
+                let gas_limit = *tx.gas_limit();
+                *tx.gas_price_mut() = 0;
+                *tx.gas_limit_mut() = self.network_info.consensus_parameters.max_gas_per_tx;
+
+                tx.estimate_predicates(
+                    &self.network_info.consensus_parameters,
+                    &self.network_info.gas_costs,
+                )?;
+
+                *tx.gas_price_mut() = gas_price;
+                *tx.gas_limit_mut() = gas_limit;
+
                 Ok(TransactionFee::checked_from_tx(
                     &self.network_info.consensus_parameters,
                     &tx,

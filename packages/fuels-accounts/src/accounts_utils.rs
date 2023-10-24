@@ -6,7 +6,7 @@ use fuels_core::{
         bech32::Bech32Address,
         errors::{error, Error, Result},
         input::Input,
-        transaction_builders::{NetworkInfo, TransactionBuilder},
+        transaction_builders::TransactionBuilder,
     },
 };
 

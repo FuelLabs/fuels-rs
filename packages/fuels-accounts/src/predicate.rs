@@ -1,21 +1,14 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{input::Input, transaction_builders::TransactionBuilder, AssetId},
-};
+use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
     types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,
 };
 
 #[cfg(feature = "std")]
-use crate::{
-    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
-    Account, AccountError, AccountResult, ViewOnlyAccount,
-};
+use crate::{provider::Provider, Account, AccountError, AccountResult, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
