@@ -1644,7 +1644,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     )?
     .with_data(data)
     .with_provider(provider);
-    let wallet: WalletUnlocked = wallet;
+
     wallet
         .transfer(
             predicate.address(),

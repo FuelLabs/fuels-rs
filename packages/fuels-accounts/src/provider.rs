@@ -193,7 +193,25 @@ impl Provider {
         Ok(tx_id)
     }
 
-    pub async fn send_transaction<T: Transaction>(&self, tx: T) -> Result<TxId> {
+    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+        tx.precompute(&self.chain_id())?;
+
+        let chain_info = self.chain_info().await?;
+        tx.check_without_signatures(
+            chain_info.latest_block.header.height,
+            &self.consensus_parameters(),
+        )?;
+
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(&self.consensus_parameters, &chain_info.gas_costs)?;
+        }
+
+        self.validate_transaction(tx.clone()).await?;
+
+        Ok(self.client.submit(&tx.into()).await?)
+    }
+
+    async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
         let tolerance = 0.0;
         let TransactionCost {
             gas_used,
@@ -219,14 +237,7 @@ impl Provider {
             ));
         }
 
-        let chain_info = self.chain_info().await?;
-        tx.check_without_signatures(
-            chain_info.latest_block.header.height,
-            &self.consensus_parameters(),
-        )?;
-
-        let tx_id = self.client.submit(&tx.into()).await?;
-        Ok(tx_id)
+        Ok(())
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {

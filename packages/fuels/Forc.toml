@@ -35,6 +35,7 @@ members = [
   'tests/logs/script_with_contract_logs',
   'tests/predicates/basic_predicate',
   'tests/predicates/predicate_configurables',
+  'tests/predicates/predicate_witnesses',
   'tests/predicates/signatures',
   'tests/scripts/arguments',
   'tests/scripts/basic_script',
