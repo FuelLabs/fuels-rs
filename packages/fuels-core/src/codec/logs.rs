@@ -8,13 +8,15 @@ use std::{
 use fuel_tx::{ContractId, Receipt};
 
 use crate::{
-    codec::{try_from_bytes, DecoderConfig},
+    codec::DecoderConfig,
     traits::{Parameterize, Tokenizable},
     types::{
         errors::{error, Error, Result},
         param_types::ParamType,
     },
 };
+
+use super::ABIDecoder;
 
 #[derive(Clone)]
 pub struct LogFormatter {
@@ -35,7 +37,9 @@ impl LogFormatter {
         bytes: &[u8],
     ) -> Result<String> {
         Self::can_decode_log_with_type::<T>()?;
-        Ok(format!("{:?}", try_from_bytes::<T>(bytes, decoder_config)?))
+        let token =
+            ABIDecoder::new(decoder_config).decode_receipt_return(&T::param_type(), bytes)?;
+        Ok(format!("{:?}", T::from_token(token)?))
     }
 
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
@@ -185,10 +189,12 @@ impl LogDecoder {
         receipts
             .iter()
             .extract_log_id_and_data()
-            .filter_map(|(log_id, data)| {
-                target_ids
-                    .contains(&log_id)
-                    .then_some(try_from_bytes(&data, self.decoder_config))
+            .filter_map(|(log_id, bytes)| {
+                target_ids.contains(&log_id).then(|| {
+                    let token = ABIDecoder::new(self.decoder_config)
+                        .decode_receipt_return(&T::param_type(), &bytes)?;
+                    T::from_token(token)
+                })
             })
             .collect()
     }

@@ -98,7 +98,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
         hex::encode(encoded_args)
     );
 
-    assert_eq!("00000000cb0b2f05000000000000000a0000000000000001", encoded);
+    assert_eq!("00000000cb0b2f050a000000000000000100000000000000", encoded);
     Ok(())
 }
 
@@ -213,6 +213,6 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
         hex::encode(encoded_args)
     );
 
-    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000088bf8a1b000000000000000a0100000000000000", encoded);
     Ok(())
 }
