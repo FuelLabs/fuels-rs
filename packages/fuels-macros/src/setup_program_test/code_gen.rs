@@ -78,18 +78,14 @@ fn wallet_initialization_code(
     };
 
     let wallet_names = extract_wallet_names(&command);
-
-    if wallet_names.is_empty() {
-        return Ok(Default::default());
-    }
-
     let num_wallets = wallet_names.len();
+
     if run_on_live_node {
         if num_wallets > 3 {
-            return Err(syn::Error::new_spanned(
-                "",
+            return Err(syn::Error::new(
+                command.span,
                 format!(
-                    "Expected at most 3 wallet names inside 'Wallet' command, because 'RunOnLiveNode` command is 'true', found {} wallet names.",
+                    "'RunOnLiveNode` supports at most 3 wallet names inside the 'Wallets' command. Found {}.",
                     num_wallets
                 ),
             ));

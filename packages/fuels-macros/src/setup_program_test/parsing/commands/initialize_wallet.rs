@@ -15,11 +15,19 @@ impl TryFrom<Command> for InitializeWalletCommand {
     type Error = Error;
 
     fn try_from(command: Command) -> Result<Self, Self::Error> {
-        let wallets = UniqueLitStrs::new(command.contents)?;
+        let wallets = UniqueLitStrs::new(command.contents.clone())?;
+        let names: Vec<LitStr> = wallets.into_iter().collect();
+
+        if names.is_empty() {
+            return Err(Error::new(
+                command.name.span(),
+                "`Wallets` command can not be empty",
+            ));
+        }
 
         Ok(Self {
             span: command.name.span(),
-            names: wallets.into_iter().collect(),
+            names,
         })
     }
 }

@@ -5,6 +5,7 @@ use syn::{
     token::Comma,
     Error, Meta,
     Meta::List,
+    Meta::Path,
 };
 
 #[derive(Debug)]
@@ -23,23 +24,34 @@ impl Command {
     }
 
     pub fn new(meta: Meta) -> syn::Result<Self> {
-        if let List(meta_list) = meta {
-            let name = meta_list.path.get_ident().cloned().ok_or_else(|| {
-                Error::new_spanned(
-                    &meta_list.path,
-                    "Command name cannot be a Path -- i.e. contain ':'.",
-                )
-            })?;
+        match meta {
+            List(meta_list) => {
+                let name = meta_list.path.get_ident().cloned().ok_or_else(|| {
+                    Error::new_spanned(
+                        &meta_list.path,
+                        "Command name cannot be a Path -- i.e. contain ':'.",
+                    )
+                })?;
 
-            Ok(Self {
-                name,
-                contents: meta_list.tokens,
-            })
-        } else {
-            Err(Error::new_spanned(
+                Ok(Self {
+                    name,
+                    contents: meta_list.tokens,
+                })
+            }
+            Path(ref path) => {
+                let name = path.get_ident().cloned().ok_or_else(|| {
+                    Error::new_spanned(path, "Command name cannot be a Path -- i.e. contain ':'.")
+                })?;
+
+                Ok(Self {
+                    name,
+                    contents: Default::default(),
+                })
+            }
+            _ => Err(Error::new_spanned(
                 meta,
-                "Expected a command name literal -- e.g. `Something(...)`",
-            ))
+                "Expected a command name literal or Path -- e.g. `Something(...)` or `Something`",
+            )),
         }
     }
 
