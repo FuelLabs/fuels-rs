@@ -41,22 +41,7 @@ async fn test_multiple_args() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", ignore)]
-async fn test_contract_calling_contract_on_local_node() -> Result<()> {
-    let run_on_live_node = false;
-    test_contract_calling_contract(run_on_live_node).await?;
-    Ok(())
-}
-
-#[tokio::test]
-#[cfg_attr(not(feature = "test-against-live-node"), ignore)]
-async fn test_contract_calling_contract_on_live_node() -> Result<()> {
-    let run_on_live_node = true;
-    test_contract_calling_contract(run_on_live_node).await?;
-    Ok(())
-}
-
-async fn test_contract_calling_contract(run_on_live_node: bool) -> Result<()> {
+async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     setup_program_test!(
         RunOnLiveNode(false),
@@ -87,7 +72,8 @@ async fn test_contract_calling_contract(run_on_live_node: bool) -> Result<()> {
             wallet = "wallet"
         ),
     );
-    if run_on_live_node {
+    if cfg!(feature = "test-against-live-node") {
+        println!("Testing against live node");
         setup_program_test!(
             RunOnLiveNode(true),
             Wallets("wallet"),
