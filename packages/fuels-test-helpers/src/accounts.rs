@@ -105,8 +105,9 @@ pub async fn connect_to_testnet_node_and_get_wallets(
         .expect("Should be able to connect to {TESTNET_NODE_URL}");
     let wallets = (1..=num_wallets)
         .map(|wallet_counter| {
-            let private_key_string = std::env::var(format!("SECRET_KEY_{wallet_counter}"))
-                .expect("Should find private key in ENV");
+            let private_key_string =
+                std::env::var(format!("TEST_WALLET_SECRET_KEY_{wallet_counter}"))
+                    .expect("Should find private key in ENV");
             let private_key = SecretKey::from_str(private_key_string.as_str())
                 .expect("Should be able to transform into private key");
             WalletUnlocked::new_from_private_key(private_key, Some(provider.clone()))
