@@ -255,16 +255,17 @@ jobs:
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}
         run: cargo run --bin check-docs
 
+      - name: Run some tests against live node
+        continue-on-error: true
+#          if: github.event_name == "push" && ${{ matrix.command == 'test_against_live_node' }}
+        if: ${{ matrix.command == 'test_against_live_node' }}
+        run: cargo test --features test-against-live-node
+
       - name: Check for unresolved documentation links
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
-      - name: Run some tests against live node
-        continue-on-error: true
-        #        if: github.event_name == "push" && ${{ matrix.command == 'test_against_live_node' }}
-        if: ${{ matrix.command == 'test_against_live_node' }}
-        run: cargo test --features test-against-live-node
 
   publish:
     needs:
