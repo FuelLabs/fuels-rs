@@ -286,10 +286,11 @@ jobs:
       - name: Download sway example artifacts
         uses: actions/download-artifact@v3
         with:
-          name: sway-examples-w-types-paths
+          name: sway-examples-w-type-paths
           path: packages/fuels/tests/
       - name: Test against live node
         run: cargo test --features test-against-live-node
+
   publish:
     needs:
       - cargo-verifications
