@@ -264,7 +264,6 @@ jobs:
       - verify-rust-version
       - get-workspace-members
       - publish-crates-check
-      - cargo-verifications
     runs-on: ubuntu-latest
     continue-on-error: true
 
