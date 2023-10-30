@@ -265,8 +265,6 @@ jobs:
       - get-workspace-members
       - publish-crates-check
     runs-on: ubuntu-latest
-    continue-on-error: true
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
