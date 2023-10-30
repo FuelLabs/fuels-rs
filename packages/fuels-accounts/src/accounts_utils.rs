@@ -22,7 +22,7 @@ pub fn calculate_missing_base_amount(
         .fee_checked_from_tx()?
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
-    let available_amount: u64 = available_base_amount(tb);
+    let available_amount = available_base_amount(tb);
 
     let total_used = transaction_fee.max_fee() + used_base_amount;
     let missing_amount = if total_used > available_amount {
