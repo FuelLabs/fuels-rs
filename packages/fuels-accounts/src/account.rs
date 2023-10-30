@@ -188,7 +188,7 @@ pub trait Account: ViewOnlyAccount {
         Ok(())
     }
 
-    // Add signatures to the builder if the underlying accoutn is a wallet
+    // Add signatures to the builder if the underlying account is a wallet
     fn add_witnessses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
 
     /// Transfer funds from this account to another `Address`.
