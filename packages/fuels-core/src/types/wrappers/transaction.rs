@@ -444,7 +444,6 @@ macro_rules! impl_tx_wrapper {
             }
 
             fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
-                //std::mem::take(&mut self.used_coins)
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {
