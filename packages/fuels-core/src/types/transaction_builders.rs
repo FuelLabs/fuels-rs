@@ -130,7 +130,7 @@ macro_rules! impl_tx_trait {
 
                 Ok(TransactionFee::checked_from_tx(
                     &self.network_info.consensus_parameters,
-                    &tx,
+                    &tx.tx,
                 ))
             }
 
