@@ -299,7 +299,6 @@ impl Contract {
         tx_parameters: TxParameters,
     ) -> Result<Bech32ContractId> {
         let network_info = account.try_provider()?.network_info().await?;
-        let _chain_id = network_info.chain_id();
 
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
