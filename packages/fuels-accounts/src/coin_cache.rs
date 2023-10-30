@@ -32,7 +32,7 @@ impl CoinsCache {
 
     pub fn insert_multiple(&mut self, coin_ids: HashMap<CoinCacheKey, Vec<CoinTypeId>>) {
         coin_ids.into_iter().for_each(|(key, ids)| {
-            let new_items = ids.into_iter().map(|coin_id| CoinCacheItem::new(coin_id));
+            let new_items = ids.into_iter().map(CoinCacheItem::new);
 
             let items = self.items.entry(key.clone()).or_default();
             items.extend(new_items);
