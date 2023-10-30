@@ -136,7 +136,9 @@ impl FuelService {
             config_file: NamedTempFile::new()?,
         };
 
+        let addr = extended_config.config.addr;
         let handle = run_node(extended_config).await?;
+        server_health_check(addr).await?;
 
         Ok(FuelService {
             bound_address,
@@ -150,7 +152,9 @@ impl FuelService {
     }
 }
 
-async fn server_health_check(client: &FuelClient) -> FuelResult<()> {
+async fn server_health_check(address: SocketAddr) -> FuelResult<()> {
+    let client = FuelClient::from(address);
+
     let mut attempts = 5;
     let mut healthy = client.health().await.unwrap_or(false);
     let between_attempts = Duration::from_millis(300);
@@ -205,11 +209,9 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let mut command = Command::new(path);
     let running_node = command.args(args).kill_on_drop(true).output();
 
-    let address = extended_config.config.addr;
-    let client = FuelClient::from(address);
-    server_health_check(&client).await?;
-
     let join_handle = spawn(async move {
+        // ensure drop is not called on the tmp file and it lives throughout the lifetime of the node
+        let _unused = extended_config;
         let result = running_node
             .await
             .expect("error: Couldn't find fuel-core in PATH.");
