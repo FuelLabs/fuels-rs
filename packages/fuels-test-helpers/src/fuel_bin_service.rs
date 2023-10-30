@@ -210,6 +210,8 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let running_node = command.args(args).kill_on_drop(true).output();
 
     let join_handle = spawn(async move {
+        // ensure drop is not called on the tmp file and it lives throughout the lifetime of the node
+        let _unused = extended_config;
         let result = running_node
             .await
             .expect("error: Couldn't find fuel-core in PATH.");
