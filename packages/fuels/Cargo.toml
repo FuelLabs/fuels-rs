@@ -22,6 +22,7 @@ fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
 fuels-programs = { workspace = true, optional = true }
 fuels-test-helpers = { workspace = true, optional = true }
+rand = "0.8.5"
 
 [dev-dependencies]
 fuels-code-gen = { workspace = true }
