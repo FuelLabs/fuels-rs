@@ -158,8 +158,7 @@ pub trait Account: ViewOnlyAccount {
             from: self.address().clone(),
             asset_id,
             amount,
-            excluded_utxos: vec![],
-            excluded_message_nonces: vec![],
+            ..Default::default()
         };
 
         self.try_provider()?
