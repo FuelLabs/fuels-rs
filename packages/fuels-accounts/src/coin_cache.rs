@@ -138,7 +138,7 @@ mod tests {
         tokio::time::advance(Duration::from_secs(12)).await;
 
         let (_, item2) = get_items();
-        let items = HashMap::from(HashMap::from([(key.clone(), vec![item2.clone()])]));
+        let items = HashMap::from([(key.clone(), vec![item2.clone()])]);
         cache.insert_multiple(items);
 
         let active_coins = cache.get_active(&key);
