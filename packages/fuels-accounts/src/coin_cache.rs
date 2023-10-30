@@ -129,7 +129,7 @@ mod tests {
 
         let key: CoinCacheKey = Default::default();
         let (item1, _) = get_items();
-        let items = HashMap::from(HashMap::from([(key.clone(), vec![item1.clone()])]));
+        let items = HashMap::from([(key.clone(), vec![item1.clone()])]);
 
         cache.insert_multiple(items);
 
