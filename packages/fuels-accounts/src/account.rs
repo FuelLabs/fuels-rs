@@ -205,12 +205,14 @@ pub trait Account: ViewOnlyAccount {
         let network_info = provider.network_info().await?;
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
-
-        let tx_builder =
-            ScriptTransactionBuilder::prepare_transfer(inputs, vec![], tx_parameters, network_info);
-
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
-        let mut tx_builder = tx_builder.with_outputs(outputs);
+
+        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
+            inputs,
+            outputs,
+            tx_parameters,
+            network_info,
+        );
 
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;

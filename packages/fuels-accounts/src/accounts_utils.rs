@@ -26,7 +26,7 @@ pub fn calculate_missing_base_amount(
 
     let total_used = transaction_fee.max_fee() + used_base_amount;
     let missing_amount = if total_used > available_amount {
-        available_amount.abs_diff(total_used)
+        total_used - available_amount
     } else if !is_consuming_utxos(tb) {
         // A tx needs to have at least 1 spendable input
         // Enforce a minimum required amount on the base asset if no other inputs are present

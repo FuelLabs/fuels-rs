@@ -52,9 +52,9 @@ impl CoinsCache {
     }
 
     fn remove_expired_entries(&mut self, key: &CoinCacheKey) {
-        self.items
-            .get_mut(key)
-            .map(|entry| entry.retain(|item| item.is_valid(self.ttl)));
+        if let Some(entry) = self.items.get_mut(key) {
+            entry.retain(|item| item.is_valid(self.ttl));
+        }
     }
 }
 
