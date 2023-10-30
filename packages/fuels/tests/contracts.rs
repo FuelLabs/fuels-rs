@@ -1666,3 +1666,67 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_arguments_with_gas_forwarded() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(
+            Contract(
+                name = "TestContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            ),
+            Contract(
+                name = "VectorOutputContract",
+                project = "packages/fuels/tests/types/contracts/vectors"
+            )
+        ),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+        Deploy(
+            name = "contract_instance_2",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let x = 128;
+    let vec_input = vec![0, 1, 2];
+    {
+        let response = contract_instance
+            .methods()
+            .get_single(x)
+            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call()
+            .await?;
+
+        assert_eq!(response.value, x);
+    }
+    {
+        contract_instance_2
+            .methods()
+            .u32_vec(vec_input.clone())
+            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call()
+            .await?;
+    }
+    {
+        let call_handler_1 = contract_instance.methods().get_single(x);
+        let call_handler_2 = contract_instance_2.methods().u32_vec(vec_input);
+
+        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+
+        multi_call_handler
+            .add_call(call_handler_1)
+            .add_call(call_handler_2);
+
+        let (value, _): (u64, ()) = multi_call_handler.call().await?.value;
+
+        assert_eq!(value, x);
+    }
+
+    Ok(())
+}
