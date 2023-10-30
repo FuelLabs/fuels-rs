@@ -475,7 +475,7 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
         let mut cache = self.cache.lock().await;
-        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id.clone()));
+        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id));
 
         let excluded_utxos = used_coins
             .iter()
