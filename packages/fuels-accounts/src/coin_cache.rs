@@ -124,7 +124,7 @@ mod tests {
     async fn test_insert_and_expire_items() {
         let mut cache = CoinsCache::new(Duration::from_secs(10));
 
-        let key: CoinCacheKey = Default::default();
+        let key = CoinCacheKey::default();
         let (item1, _) = get_items();
         let items = HashMap::from([(key.clone(), vec![item1.clone()])]);
 
