@@ -30,7 +30,10 @@ impl CoinsCache {
         }
     }
 
-    pub fn insert_multiple(&mut self, coin_ids: HashMap<CoinCacheKey, Vec<CoinTypeId>>) {
+    pub fn insert_multiple(
+        &mut self,
+        coin_ids: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
+    ) {
         coin_ids.into_iter().for_each(|(key, ids)| {
             let new_items = ids.into_iter().map(CoinCacheItem::new);
 
