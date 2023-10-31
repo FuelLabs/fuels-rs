@@ -6,15 +6,17 @@ mod tests {
 
     use fuels::{
         accounts::predicate::Predicate,
-        core::{codec::ABIEncoder, traits::Tokenizable, Configurables},
+        core::{codec::ABIEncoder, traits::Tokenizable},
         macros::wasm_abigen,
         types::{bech32::Bech32Address, errors::Result},
     };
     use wasm_bindgen_test::wasm_bindgen_test;
 
-    wasm_abigen!(Contract(
-        name = "no_name",
-        abi = r#"
+    #[wasm_bindgen_test]
+    fn decoding_and_encoding() -> Result<()> {
+        wasm_abigen!(Contract(
+            name = "no_name",
+            abi = r#"
                 {
                   "types": [
                     {
@@ -106,10 +108,8 @@ mod tests {
                   "messagesTypes": [],
                   "configurables": []
         }"#
-    ));
+        ));
 
-    #[wasm_bindgen_test]
-    fn decoding_and_encoding() -> Result<()> {
         let original = SomeEnum::V2(SomeStruct { a: 123, b: false });
 
         let bytes = ABIEncoder::encode(&[original.clone().into_token()])?.resolve(0);
@@ -122,19 +122,84 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn predicate_from_code_with_configurables() -> Result<()> {
-        let code = vec![0, 1, 2, 3];
-        let chain_id = 0;
-        let configurables = Configurables::new(vec![(1, vec![5, 6])]);
+    fn predicate_abigen() -> Result<()> {
+        wasm_abigen!(Predicate(
+            name = "MyPredicate",
+            abi = r#"
+                    {
+                      "types": [
+                        {
+                          "typeId": 0,
+                          "type": "bool",
+                          "components": null,
+                          "typeParameters": null
+                        },
+                        {
+                          "typeId": 1,
+                          "type": "u64",
+                          "components": null,
+                          "typeParameters": null
+                        }
+                      ],
+                      "functions": [
+                        {
+                          "inputs": [
+                            {
+                              "name": "arg",
+                              "type": 1,
+                              "typeArguments": null
+                            }
+                          ],
+                          "name": "main",
+                          "output": {
+                            "name": "",
+                            "type": 0,
+                            "typeArguments": null
+                          },
+                          "attributes": null
+                        }
+                      ],
+                      "loggedTypes": [],
+                      "messagesTypes": [],
+                      "configurables": [
+                        {
+                          "name": "U64",
+                          "configurableType": {
+                            "name": "",
+                            "type": 1,
+                            "typeArguments": null
+                          },
+                          "offset": 100
+                        }
+                      ]
+                    }"#
+        ));
 
-        let predicate = Predicate::from_code(code, chain_id).with_configurables(configurables);
+        let code = vec![
+            116, 0, 0, 3, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 93, 252, 192, 1, 16, 255, 243, 0,
+            26, 236, 80, 0, 145, 0, 0, 0, 113, 68, 0, 3, 97, 73, 17, 1, 118, 72, 0, 2, 97, 65, 17,
+            13, 116, 0, 0, 7, 114, 76, 0, 2, 19, 73, 36, 192, 90, 73, 32, 1, 118, 72, 0, 2, 97, 65,
+            17, 31, 116, 0, 0, 1, 36, 0, 0, 0, 93, 65, 0, 0, 93, 71, 240, 0, 19, 65, 4, 64, 36, 64,
+            0, 0, 71, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42,
+        ];
+        let value = 128;
 
-        let expected_code = vec![0u8, 5, 6, 3];
+        let predicate_data = MyPredicateEncoder::encode_data(value);
+        let configurables = MyPredicateConfigurables::new().with_U64(value);
+
+        let predicate: Predicate = Predicate::from_code(code.clone(), 0)
+            .with_data(predicate_data)
+            .with_configurables(configurables);
+
+        let mut expected_code = code.clone();
+        *expected_code.last_mut().unwrap() = value as u8;
+
         assert_eq!(*predicate.code(), expected_code);
 
         let expected_address = Bech32Address::from_str(
-            "fuel1cc9jrur8n535cnh205qdjd8jpxzhy8efpxr9zfjm8lyzjspa262scpm0ww",
+            "fuel1z62vtmg8a3p5nlpmfkjundcd9aus2kpwaapuez0tf9yyq0a8kvsqtdesqq",
         )?;
+
         assert_eq!(*predicate.address(), expected_address);
 
         Ok(())
