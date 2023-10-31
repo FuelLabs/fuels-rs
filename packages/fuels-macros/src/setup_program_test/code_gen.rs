@@ -30,8 +30,6 @@ pub(crate) fn generate_setup_program_test_code(
     let script_code = script_loading_code(&load_scripts, &project_lookup);
 
     Ok(quote! {
-        // Necessary for salt generation
-        use rand::{rngs::StdRng, Rng, SeedableRng};
        #abigen_code
        #wallet_code
        #deploy_code
