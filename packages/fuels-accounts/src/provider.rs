@@ -268,7 +268,7 @@ impl Provider {
                 TxStatus::Revert {
                     receipts,
                     reason,
-                    id: revert_id,
+                    revert_id,
                 }
             }
             TransactionStatus::Submitted { .. } => TxStatus::Submitted,
@@ -345,7 +345,7 @@ impl Provider {
             Some(reason) => TxStatus::Revert {
                 receipts,
                 reason,
-                id: 0,
+                revert_id: 0,
             },
             None => TxStatus::Success { receipts },
         }
