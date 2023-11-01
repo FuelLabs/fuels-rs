@@ -6,7 +6,6 @@ use std::{
 use fuels_code_gen::{utils::ident, Abigen, AbigenTarget, ProgramType};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use rand::{rngs::StdRng, Rng, SeedableRng};
 use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
@@ -109,9 +108,6 @@ fn contract_deploying_code(
     commands
         .iter()
         .map(|command| {
-            // Generate random salt for contract deployment
-            let mut rng = StdRng::from_entropy();
-            let salt: [u8; 32] = rng.gen();
 
             let contract_instance_name = ident(&command.name);
             let contract_struct_name = ident(&command.contract.value());
@@ -123,8 +119,14 @@ fn contract_deploying_code(
             let bin_path = project.bin_path();
 
             quote! {
+                // Generate random salt for contract deployment.
+                // These lines must be inside the `quote!` macro, otherwise the salt remains
+                // identical between macro compilation, causing contract id collision.
+                let mut rng = <::rand::rngs::StdRng as ::rand::SeedableRng>::from_entropy();
+                let salt: [u8; 32] = <::rand::rngs::StdRng as ::rand::Rng>::gen(&mut rng);
+
                 let #contract_instance_name = {
-                    let load_config = LoadConfiguration::default().with_salt([#(#salt),*]);
+                    let load_config = LoadConfiguration::default().with_salt(salt);
 
                     let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
 
