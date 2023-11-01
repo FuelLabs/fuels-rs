@@ -565,6 +565,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
+    use fuel_asm::Instruction;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::{
         codec::ABIEncoder,
@@ -917,5 +918,12 @@ mod test {
             asset_id_amounts.into_iter().collect::<HashSet<_>>(),
             expected_asset_id_amounts
         )
+    }
+
+    #[test]
+    fn test_compute_calls_instructions_len() {
+        let call = ContractCall::new_with_random_id();
+        let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+        assert_eq!(instructions_len, Instruction::SIZE * 5);
     }
 }
