@@ -8,17 +8,15 @@ use fuels_core::types::coin_type_id::CoinTypeId;
 
 type CoinCacheKey = (Bech32Address, AssetId);
 
-const DEFAULT_TTL: u64 = 30;
-
 #[derive(Debug)]
-pub struct CoinsCache {
-    pub ttl: Duration,
-    pub items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
+struct CoinsCache {
+    ttl: Duration,
+    items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
 }
 
 impl Default for CoinsCache {
     fn default() -> Self {
-        Self::new(Duration::from_secs(DEFAULT_TTL))
+        Self::new(Duration::from_secs(30))
     }
 }
 
@@ -32,7 +30,7 @@ impl CoinsCache {
 
     pub fn insert_multiple(
         &mut self,
-        coin_ids: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
+        coin_ids: impl IntoIterator<Item = ((Bech32Address, AssetId), Vec<CoinTypeId>)>,
     ) {
         coin_ids.into_iter().for_each(|(key, ids)| {
             let new_items = ids.into_iter().map(CoinCacheItem::new);
@@ -62,7 +60,7 @@ impl CoinsCache {
 }
 
 #[derive(Eq, Debug, Clone)]
-pub struct CoinCacheItem {
+struct CoinCacheItem {
     created_at: Instant,
     pub id: CoinTypeId,
 }

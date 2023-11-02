@@ -34,5 +34,5 @@ tempfile = { workspace = true }
 
 [features]
 default = ["std"]
-coin-cache = []
+coin-cache = ["tokio?/time", "tokio?/test-util"]
 std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:eth-keystore"]
