@@ -120,7 +120,7 @@ macro_rules! impl_tx_trait {
                 }
 
                 Ok(TransactionFee::checked_from_tx(
-                    &self.network_info.consensus_parameters,
+                    &self.consensus_parameters(),
                     &tx.tx,
                 ))
             }
@@ -293,7 +293,7 @@ impl ScriptTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_script(&self.network_info.consensus_parameters)
+        offsets::base_offset_script(&self.consensus_parameters())
             + padded_len_usize(self.script_data.len())
             + padded_len_usize(self.script.len())
     }
@@ -455,7 +455,7 @@ impl CreateTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_create(&self.network_info.consensus_parameters)
+        offsets::base_offset_create(&self.consensus_parameters())
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {

@@ -25,14 +25,15 @@ rand = { workspace = true, default-features = false }
 semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
-tokio = { workspace = true, features = ["full", "time", "test-util"], optional = true}
+tokio = { workspace = true, features = ["full"], optional = true}
 tracing = { workspace = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }
+tokio = { workspace = true, features = ["test-util"]}
 
 [features]
 default = ["std"]
-coin-cache = ["tokio?/time", "tokio?/test-util"]
+coin-cache = ["tokio?/time"]
 std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:eth-keystore"]

@@ -9,7 +9,7 @@ use fuels_core::types::coin_type_id::CoinTypeId;
 type CoinCacheKey = (Bech32Address, AssetId);
 
 #[derive(Debug)]
-struct CoinsCache {
+pub(crate) struct CoinsCache {
     ttl: Duration,
     items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
 }
@@ -50,6 +50,24 @@ impl CoinsCache {
             .into_iter()
             .map(|item| item.id)
             .collect()
+    }
+
+    pub fn remove_items(
+        &mut self,
+        inputs: impl IntoIterator<Item = ((Bech32Address, AssetId), Vec<CoinTypeId>)>,
+    ) {
+        inputs.into_iter().for_each(|(key, ids)| {
+            ids.into_iter().for_each(|id| {
+                self.remove(&key, id);
+            })
+        })
+    }
+
+    fn remove(&mut self, key: &CoinCacheKey, id: CoinTypeId) {
+        if let Some(ids) = self.items.get_mut(key) {
+            let item = CoinCacheItem::new(id);
+            ids.remove(&item);
+        }
     }
 
     fn remove_expired_entries(&mut self, key: &CoinCacheKey) {
@@ -154,5 +172,25 @@ mod tests {
         let active_coins = cache.get_active(&key);
 
         assert!(active_coins.is_empty());
+    }
+
+    #[test]
+    fn test_remove_items() {
+        let mut cache = CoinsCache::new(Duration::from_secs(60));
+
+        let key: CoinCacheKey = Default::default();
+        let (item1, item2) = get_items();
+
+        let items_to_insert = [(key.clone(), vec![item1.clone(), item2.clone()])];
+        cache.insert_multiple(items_to_insert.iter().cloned());
+
+        let items_to_remove = [(key.clone(), vec![item1.clone()])];
+        cache.remove_items(items_to_remove.iter().cloned());
+
+        let active_coins = cache.get_active(&key);
+
+        assert_eq!(active_coins.len(), 1);
+        assert!(!active_coins.contains(&item1));
+        assert!(active_coins.contains(&item2));
     }
 }

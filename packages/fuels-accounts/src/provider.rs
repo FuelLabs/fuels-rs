@@ -203,7 +203,17 @@ impl Provider {
     /// Sends a transaction to the underlying Provider's client.
     pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tx_id = self.send_transaction(tx.clone()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
+        let _status = self.client.await_transaction_commit(&tx_id).await?;
+
+        #[cfg(feature = "coin-cache")]
+        {
+            if matches!(
+                _status,
+                TransactionStatus::SqueezedOut { .. } | TransactionStatus::Failure { .. }
+            ) {
+                self.cache.lock().await.remove_items(tx.used_coins())
+            }
+        }
 
         Ok(tx_id)
     }
