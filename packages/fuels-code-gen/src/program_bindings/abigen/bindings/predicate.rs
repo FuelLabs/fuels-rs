@@ -19,10 +19,6 @@ pub(crate) fn predicate_bindings(
     abi: FullProgramABI,
     no_std: bool,
 ) -> Result<GeneratedCode> {
-    if no_std {
-        return Ok(GeneratedCode::default());
-    }
-
     let encode_function = expand_fn(&abi)?;
     let encoder_struct_name = ident(&format!("{name}Encoder"));
 
