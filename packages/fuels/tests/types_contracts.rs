@@ -669,14 +669,14 @@ async fn enum_as_input() -> Result<()> {
         ),
     );
 
-    let expected = StandardEnum::Two(12345);
-    let contract_methods = contract_instance.methods();
-    let actual = contract_methods.get_standard_enum().call().await?.value;
-    assert_eq!(expected, actual);
-
     let expected = MaxedOutVariantsEnum::Variant255(11);
     let contract_methods = contract_instance.methods();
     let actual = contract_methods.get_max_variant().call().await?.value;
+    assert_eq!(expected, actual);
+
+    let expected = StandardEnum::Two(12345);
+    let contract_methods = contract_instance.methods();
+    let actual = contract_methods.get_standard_enum().call().await?.value;
     assert_eq!(expected, actual);
 
     let fuelvm_judgement = contract_methods
