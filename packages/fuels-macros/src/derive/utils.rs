@@ -75,12 +75,16 @@ pub(crate) fn extract_variants(
             } else {
                 validate_variant_type(&variant)?;
 
+                let discriminant = discriminant.try_into().map_err(|_| {
+                    Error::new_spanned(&variant.ident, "Enums can not have more than 256 variants")
+                })?;
+
                 Ok(ExtractedVariant::Normal {
                     info: VariantInfo {
                         name: variant.ident,
                         is_unit,
                     },
-                    discriminant: discriminant as u8,
+                    discriminant,
                 })
             }
         })
