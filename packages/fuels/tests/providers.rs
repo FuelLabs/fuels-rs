@@ -949,8 +949,12 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 async fn test_cache_invalidation_on_await() -> Result<()> {
     use fuels_core::types::tx_status::TxStatus;
 
+    let block_time = 1u32;
     let provider_config = Config {
         manual_blocks_enabled: true,
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
         ..Config::local_node()
     };
 
@@ -967,12 +971,10 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     let provider = wallet.provider().unwrap();
     let tx = create_revert_tx(&wallet).await?;
 
-    // Pause time so that cache doesn't invalidate items base on TTL
+    // Pause time so that the cache doesn't invalidate items based on TTL
     tokio::time::pause();
 
-    provider.produce_blocks(1, None).await?;
-
-    // tx inputs should be cached and invalidated due to the tx failing
+    // tx inputs should be cached and then invalidated due to the tx failing
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
     let status = provider.tx_status(&tx_id).await?;
     assert!(matches!(status, TxStatus::Revert { .. }));
