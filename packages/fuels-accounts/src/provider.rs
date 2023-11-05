@@ -186,14 +186,17 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let tx_id = self.send_transaction(tx.clone()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
-
+    pub async fn send_transaction_and_await_commit<T: Transaction>(
+        &self,
+        mut tx: T,
+    ) -> Result<TxId> {
+        self.prepare_transaction_for_sending(&mut tx).await?;
+        let tx_id = tx.id(self.chain_id());
+        let _tx_status = self.client.submit_and_await_commit(&tx.into()).await?;
         Ok(tx_id)
     }
 
-    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+    async fn prepare_transaction_for_sending<T: Transaction>(&self, tx: &mut T) -> Result<()> {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
@@ -207,7 +210,11 @@ impl Provider {
         }
 
         self.validate_transaction(tx.clone()).await?;
+        Ok(())
+    }
 
+    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+        self.prepare_transaction_for_sending(&mut tx).await?;
         Ok(self.client.submit(&tx.into()).await?)
     }
 
