@@ -32,12 +32,12 @@ impl CoinsCache {
         &mut self,
         coin_ids: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
     ) {
-        coin_ids.into_iter().for_each(|(key, ids)| {
+        for (key, ids) in coin_ids {
             let new_items = ids.into_iter().map(CoinCacheItem::new);
 
             let items = self.items.entry(key.clone()).or_default();
             items.extend(new_items);
-        });
+        }
     }
 
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
@@ -56,11 +56,11 @@ impl CoinsCache {
         &mut self,
         inputs: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
     ) {
-        inputs.into_iter().for_each(|(key, ids)| {
-            ids.into_iter().for_each(|id| {
+        for (key, ids) in inputs {
+            for id in ids {
                 self.remove(&key, id);
-            })
-        })
+            }
+        }
     }
 
     fn remove(&mut self, key: &CoinCacheKey, id: CoinTypeId) {
