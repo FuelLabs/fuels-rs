@@ -30,7 +30,7 @@ impl CoinsCache {
 
     pub fn insert_multiple(
         &mut self,
-        coin_ids: impl IntoIterator<Item = ((Bech32Address, AssetId), Vec<CoinTypeId>)>,
+        coin_ids: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
     ) {
         coin_ids.into_iter().for_each(|(key, ids)| {
             let new_items = ids.into_iter().map(CoinCacheItem::new);
@@ -54,7 +54,7 @@ impl CoinsCache {
 
     pub fn remove_items(
         &mut self,
-        inputs: impl IntoIterator<Item = ((Bech32Address, AssetId), Vec<CoinTypeId>)>,
+        inputs: impl IntoIterator<Item = (CoinCacheKey, Vec<CoinTypeId>)>,
     ) {
         inputs.into_iter().for_each(|(key, ids)| {
             ids.into_iter().for_each(|id| {
