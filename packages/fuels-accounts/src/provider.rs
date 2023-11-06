@@ -218,6 +218,14 @@ impl Provider {
         Ok(self.client.submit(&tx.into()).await?)
     }
 
+    pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
+        Ok(self
+            .client
+            .await_transaction_commit(&id.into())
+            .await?
+            .into())
+    }
+
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
         let tolerance = 0.0;
         let TransactionCost {
