@@ -60,10 +60,10 @@ pub(crate) fn extract_variants(
     contents: impl IntoIterator<Item = Variant>,
     fuels_core_path: TokenStream,
 ) -> Result<ExtractedVariants> {
-    let mut discriminant = 0;
     let variants = contents
         .into_iter()
-        .map(|variant| -> Result<_> {
+        .enumerate()
+        .map(|(discriminant, variant)| -> Result<_> {
             let is_unit = matches!(variant.fields, Fields::Unit);
             if has_ignore_attr(&variant.attrs) {
                 Ok(ExtractedVariant::Ignored {
@@ -75,15 +75,16 @@ pub(crate) fn extract_variants(
             } else {
                 validate_variant_type(&variant)?;
 
-                let current_discriminant = discriminant;
-                discriminant += 1;
+                let discriminant = discriminant.try_into().map_err(|_| {
+                    Error::new_spanned(&variant.ident, "Enums can not have more than 256 variants")
+                })?;
 
                 Ok(ExtractedVariant::Normal {
                     info: VariantInfo {
                         name: variant.ident,
                         is_unit,
                     },
-                    discriminant: current_discriminant,
+                    discriminant,
                 })
             }
         })
