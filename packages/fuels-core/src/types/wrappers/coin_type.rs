@@ -8,6 +8,8 @@ use crate::{
     types::{bech32::Bech32Address, coin::Coin, message::Message},
 };
 
+use super::coin_type_id::CoinTypeId;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {
     Coin(Coin),
@@ -30,6 +32,13 @@ impl TryFrom<ClientCoinType> for CoinType {
 }
 
 impl CoinType {
+    pub fn id(&self) -> CoinTypeId {
+        match self {
+            CoinType::Coin(coin) => CoinTypeId::UtxoId(coin.utxo_id),
+            CoinType::Message(message) => CoinTypeId::Nonce(message.nonce),
+        }
+    }
+
     pub fn amount(&self) -> u64 {
         match self {
             CoinType::Coin(coin) => coin.amount,

@@ -64,7 +64,7 @@ pub trait TransactionBuilder: Send {
 
     fn build(self) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    fn fee_checked_from_tx(&self, network_info: &NetworkInfo) -> Result<Option<TransactionFee>>;
+    fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_gas_limit(self, gas_limit: u64) -> Self;
@@ -78,6 +78,7 @@ pub trait TransactionBuilder: Send {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
+    fn consensus_parameters(&self) -> ConsensusParameters;
 }
 
 macro_rules! impl_tx_trait {
@@ -109,21 +110,17 @@ macro_rules! impl_tx_trait {
                     .insert(owner, index_offset);
             }
 
-            fn fee_checked_from_tx(
-                &self,
-                network_info: &NetworkInfo,
-            ) -> Result<Option<TransactionFee>> {
+            fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
                 let mut tx = self.clone().build()?;
-
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(
-                        &network_info.consensus_parameters,
-                        &network_info.gas_costs,
+                        &self.consensus_parameters(),
+                        &self.network_info.gas_costs,
                     )?;
-                };
+                }
 
                 Ok(TransactionFee::checked_from_tx(
-                    &network_info.consensus_parameters,
+                    &self.consensus_parameters(),
                     &tx.tx,
                 ))
             }
@@ -187,6 +184,10 @@ macro_rules! impl_tx_trait {
 
             fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
                 &mut self.witnesses
+            }
+
+            fn consensus_parameters(&self) -> ConsensusParameters {
+                self.network_info.consensus_parameters
             }
         }
 
@@ -292,7 +293,7 @@ impl ScriptTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_script(&self.network_info.consensus_parameters)
+        offsets::base_offset_script(&self.consensus_parameters())
             + padded_len_usize(self.script_data.len())
             + padded_len_usize(self.script.len())
     }
@@ -454,7 +455,7 @@ impl CreateTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_create(&self.network_info.consensus_parameters)
+        offsets::base_offset_create(&self.consensus_parameters())
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {

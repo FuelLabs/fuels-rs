@@ -33,10 +33,12 @@ hex = { workspace = true, default-features = false }
 rand = { workspace = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["time", "test-util"] }
 
 [features]
-default = ["std", "fuels-test-helpers?/fuels-accounts"]
+default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]
+coin-cache = ["fuels-accounts/coin-cache"]
+
 # The crates enabled via `dep:` below are not currently wasm compatible, as
 # such they are only available if `std` is enabled. The `dep:` syntax was
 # used so that we don't get a new feature flag for every optional dependency.

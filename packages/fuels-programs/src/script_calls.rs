@@ -8,7 +8,6 @@ use fuels_accounts::{
 };
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
-    constants::BASE_ASSET_ID,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
@@ -16,7 +15,7 @@ use fuels_core::{
         errors::Result,
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::ScriptTransactionBuilder,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
     },
 };
@@ -207,28 +206,13 @@ where
         Ok(tb)
     }
 
-    fn calculate_base_asset_sum(&self) -> u64 {
-        self.script_call
-            .inputs
-            .iter()
-            .map(|input| match input {
-                Input::ResourceSigned { resource, .. }
-                | Input::ResourcePredicate { resource, .. }
-                    if resource.asset_id() == BASE_ASSET_ID =>
-                {
-                    resource.amount()
-                }
-                _ => 0,
-            })
-            .sum()
-    }
-
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        let tb = self.prepare_builder().await?;
-        let base_amount = self.calculate_base_asset_sum();
+        let mut tb = self.prepare_builder().await?;
+        self.account.add_witnessses(&mut tb);
+        self.account.adjust_for_fee(&mut tb, 0).await?;
 
-        self.account.add_fee_resources(tb, base_amount).await
+        tb.build()
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -238,6 +222,7 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
+
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let tx_status = if simulate {
@@ -290,8 +275,11 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let tb = self.prepare_builder().await?;
-        let tx = self.account.add_fee_resources(tb, 0).await?;
+        let mut tb = self.prepare_builder().await?;
+
+        self.account.add_witnessses(&mut tb);
+        self.account.adjust_for_fee(&mut tb, 0).await?;
+        let tx = tb.build()?;
 
         let transaction_cost = self
             .provider

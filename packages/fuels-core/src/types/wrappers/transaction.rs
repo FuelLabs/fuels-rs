@@ -1,18 +1,26 @@
+use itertools::Itertools;
+use std::collections::HashMap;
 use std::fmt::Debug;
 
 use fuel_tx::{
     field::{
         GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
     },
+    input::{
+        coin::{CoinPredicate, CoinSigned},
+        message::{
+            MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
+        },
+    },
     Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
 
-use fuel_types::ChainId;
+use fuel_types::{AssetId, ChainId};
 use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
 
-use crate::types::Result;
+use crate::types::{bech32::Bech32Address, Result};
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
@@ -59,6 +67,8 @@ impl TxParameters {
 }
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+
+use super::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone)]
 pub enum TransactionType {
@@ -117,6 +127,8 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
 
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> usize;
+
+    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -262,6 +274,37 @@ impl Transaction for TransactionType {
             TransactionType::Create(tx) => tx.append_witness(witness),
         }
     }
+
+    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+        match self {
+            TransactionType::Script(tx) => tx.used_coins(),
+            TransactionType::Create(tx) => tx.used_coins(),
+        }
+    }
+}
+
+fn extract_coin_type_id(input: &Input) -> Option<CoinTypeId> {
+    if let Some(utxo_id) = input.utxo_id() {
+        return Some(CoinTypeId::UtxoId(*utxo_id));
+    } else if let Some(nonce) = input.nonce() {
+        return Some(CoinTypeId::Nonce(*nonce));
+    }
+
+    None
+}
+
+pub fn extract_owner_or_recipient(input: &Input) -> Option<Bech32Address> {
+    let addr = match input {
+        Input::CoinSigned(CoinSigned { owner, .. })
+        | Input::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+        Input::MessageCoinSigned(MessageCoinSigned { recipient, .. })
+        | Input::MessageCoinPredicate(MessageCoinPredicate { recipient, .. })
+        | Input::MessageDataSigned(MessageDataSigned { recipient, .. })
+        | Input::MessageDataPredicate(MessageDataPredicate { recipient, .. }) => Some(recipient),
+        Input::Contract(_) => None,
+    };
+
+    addr.map(|addr| Bech32Address::from(*addr))
 }
 
 macro_rules! impl_tx_wrapper {
@@ -398,6 +441,22 @@ macro_rules! impl_tx_wrapper {
                 self.tx.witnesses_mut().push(witness);
 
                 idx
+            }
+
+            fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+                self.inputs()
+                    .iter()
+                    .filter_map(|input| match input {
+                        Input::Contract { .. } => None,
+                        _ => {
+                            // not a contract, it's safe to unwrap
+                            let owner = extract_owner_or_recipient(input).unwrap();
+                            let asset_id = input.asset_id().unwrap().to_owned();
+                            let id = extract_coin_type_id(input).unwrap();
+                            Some(((owner, asset_id), id))
+                        }
+                    })
+                    .into_group_map()
             }
         }
     };
