@@ -221,7 +221,7 @@ impl Provider {
     pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
         Ok(self
             .client
-            .await_transaction_commit(&id.into())
+            .await_transaction_commit(&id)
             .await?
             .into())
     }
