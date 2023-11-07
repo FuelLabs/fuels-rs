@@ -164,7 +164,7 @@ jobs:
             args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths" --workspace
+            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace
             download_sway_artifacts: sway-examples-w-type-paths
             install_fuel_core: true
           - cargo_command: nextest

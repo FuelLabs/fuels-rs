@@ -19,7 +19,7 @@ use fuels_core::{
         errors::{error, Error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::CreateTransactionBuilder,
+        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -300,7 +300,7 @@ impl Contract {
     ) -> Result<Bech32ContractId> {
         let network_info = account.try_provider()?.network_info().await?;
 
-        let tb = CreateTransactionBuilder::prepare_contract_deployment(
+        let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
             self.contract_id,
             self.state_root,
@@ -310,10 +310,12 @@ impl Contract {
             network_info,
         );
 
-        let tx = account
-            .add_fee_resources(tb, 0)
+        account.add_witnessses(&mut tb);
+        account
+            .adjust_for_fee(&mut tb, 0)
             .await
             .map_err(|err| error!(ProviderError, "{err}"))?;
+        let tx = tb.build()?;
 
         let provider = account
             .try_provider()
@@ -617,7 +619,8 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let chain_id = provider.chain_id();
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
@@ -903,8 +906,9 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
+        let chain_id = provider.chain_id();
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?

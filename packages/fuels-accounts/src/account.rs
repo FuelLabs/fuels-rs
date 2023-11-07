@@ -23,7 +23,7 @@ use fuels_core::{
 };
 
 use crate::{
-    accounts_utils::extract_message_id,
+    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_id},
     provider::{Provider, ResourceFilter},
 };
 
@@ -117,26 +117,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             .await
             .map_err(Into::into)
     }
-
-    // /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
-    // /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    // /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<CoinType>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -166,11 +146,50 @@ pub trait Account: ViewOnlyAccount {
         ]
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder>(
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    async fn get_spendable_resources(
         &self,
-        tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType>;
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<CoinType>> {
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            ..Default::default()
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+    }
+
+    /// Add base asset inputs to the transaction to cover the estimated fee.
+    /// Requires contract inputs to be at the start of the transactions inputs vec
+    /// so that their indexes are retained
+    async fn adjust_for_fee<Tb: TransactionBuilder>(
+        &self,
+        tb: &mut Tb,
+        used_base_amount: u64,
+    ) -> Result<()> {
+        let missing_base_amount = calculate_missing_base_amount(tb, used_base_amount)?;
+
+        if missing_base_amount > 0 {
+            let new_base_inputs = self
+                .get_asset_inputs_for_amount(BASE_ASSET_ID, missing_base_amount)
+                .await?;
+
+            adjust_inputs_outputs(tb, new_base_inputs, self.address());
+        };
+
+        Ok(())
+    }
+
+    // Add signatures to the builder if the underlying account is a wallet
+    fn add_witnessses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
 
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
@@ -186,26 +205,19 @@ pub trait Account: ViewOnlyAccount {
         let network_info = provider.network_info().await?;
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
-
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let tx_builder = ScriptTransactionBuilder::prepare_transfer(
+        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
             tx_parameters,
             network_info,
         );
 
-        // if we are not transferring the base asset, previous base amount is 0
-        let previous_base_amount = if asset_id == AssetId::default() {
-            amount
-        } else {
-            0
-        };
+        self.add_witnessses(&mut tx_builder);
+        self.adjust_for_fee(&mut tx_builder, amount).await?;
 
-        let tx = self
-            .add_fee_resources(tx_builder, previous_base_amount)
-            .await?;
+        let tx = tx_builder.build()?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -254,7 +266,7 @@ pub trait Account: ViewOnlyAccount {
         ];
 
         // Build transaction and sign it
-        let tb = ScriptTransactionBuilder::prepare_contract_transfer(
+        let mut tb = ScriptTransactionBuilder::prepare_contract_transfer(
             plain_contract_id,
             balance,
             asset_id,
@@ -264,14 +276,9 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        // if we are not transferring the base asset, previous base amount is 0
-        let base_amount = if asset_id == AssetId::default() {
-            balance
-        } else {
-            0
-        };
-
-        let tx = self.add_fee_resources(tb, base_amount).await?;
+        self.add_witnessses(&mut tb);
+        self.adjust_for_fee(&mut tb, balance).await?;
+        let tx = tb.build()?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -299,7 +306,7 @@ pub trait Account: ViewOnlyAccount {
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
             .await?;
 
-        let tb = ScriptTransactionBuilder::prepare_message_to_output(
+        let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
             to.into(),
             amount,
             inputs,
@@ -307,7 +314,9 @@ pub trait Account: ViewOnlyAccount {
             network_info,
         );
 
-        let tx = self.add_fee_resources(tb, amount).await?;
+        self.add_witnessses(&mut tb);
+        self.adjust_for_fee(&mut tb, amount).await?;
+        let tx = tb.build()?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
