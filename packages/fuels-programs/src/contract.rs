@@ -19,7 +19,10 @@ use fuels_core::{
         errors::{error, Error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+        transaction_builders::{
+            CreateTransactionBuilder, ScriptTransactionBuilder, TransactionBuilder,
+        },
+        tx_status::TxStatus,
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -28,7 +31,10 @@ use fuels_core::{
 
 use crate::{
     call_response::FuelCallResponse,
-    call_utils::{build_tx_from_contract_calls, new_variable_outputs, TxDependencyExtension},
+    call_utils::{
+        build_tx_from_contract_calls, new_variable_outputs,
+        transaction_builder_from_contract_calls, TxDependencyExtension,
+    },
     receipt_parser::ReceiptParser,
     submit_response::{SubmitResponse, SubmitResponseMultiple},
 };
@@ -571,6 +577,15 @@ where
         Ok(self)
     }
 
+    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
+        transaction_builder_from_contract_calls(
+            std::slice::from_ref(&self.contract_call),
+            self.tx_parameters,
+            &self.account,
+        )
+        .await
+    }
+
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
@@ -660,6 +675,13 @@ where
             self.log_decoder.clone(),
             self.cached_tx_id,
         ))
+    }
+
+    /// Create a [`FuelCallResponse`] from `TxStatus`
+    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<FuelCallResponse<D>> {
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
     }
 }
 
@@ -855,6 +877,17 @@ impl<T: Account> MultiContractCallHandler<T> {
                 "`MultiContractCallHandler` can have only one call that returns a heap type"
             )),
         }
+    }
+
+    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
+        self.validate_contract_calls()?;
+
+        transaction_builder_from_contract_calls(
+            &self.contract_calls,
+            self.tx_parameters,
+            &self.account,
+        )
+        .await
     }
 
     /// Returns the script that executes the contract calls

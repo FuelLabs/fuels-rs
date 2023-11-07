@@ -1,18 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{
-        prelude::Result,
-        types::{
-            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-            Bits256,
-        },
-    };
+    use fuels::prelude::Result;
 
     #[tokio::test]
     async fn liquidity() -> Result<()> {
         use fuels::{
             prelude::*,
             test_helpers::{AssetConfig, WalletsConfig},
+            types::Bits256,
         };
 
         // ANCHOR: liquidity_abigen

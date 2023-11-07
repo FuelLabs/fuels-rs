@@ -871,4 +871,37 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn contract_custom_call() -> Result<()> {
+        use fuels::prelude::*;
+
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_custom_call/out/debug/contract_custom_call-abi.json"
+        ));
+        // ANCHOR: storage_slots_disable_autoload
+        // ANCHOR_END: storage_slots_disable_autoload
+
+        let wallet = launch_provider_and_get_wallet().await?;
+        let provider = wallet.try_provider()?;
+        let receiver = WalletUnlocked::new_random(Some(provider.clone()));
+
+        let contract_id = Contract::load_from(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
+        )?
+        .deploy(&wallet, TxParameters::default())
+        .await?;
+
+        // ANCHOR: contract_call_cost_estimation
+        let contract_call = MyContract::new(contract_id, wallet)
+            .methods()
+            .check_inputs_and_witnesses();
+
+        let tb = contract_call.transaction_builder().await?;
+        let tb = tb.with_inputs(vec![]);
+
+        Ok(())
+    }
 }
