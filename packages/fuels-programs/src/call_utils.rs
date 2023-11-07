@@ -565,7 +565,6 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
-    use fuel_asm::Instruction;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::{
         codec::ABIEncoder,
@@ -920,10 +919,83 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_compute_calls_instructions_len() {
-        let call = ContractCall::new_with_random_id();
-        let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-        assert_eq!(instructions_len, Instruction::SIZE * 5);
+    mod compute_calls_instructions_len {
+        use fuel_asm::Instruction;
+        use fuels_core::types::{enum_variants::EnumVariants, param_types::ParamType};
+
+        use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
+
+        const BASE_INSTRUCTION_COUNT: usize = 5;
+
+        #[test]
+        fn test_simple() {
+            let call = ContractCall::new_with_random_id();
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(instructions_len, Instruction::SIZE * BASE_INSTRUCTION_COUNT);
+        }
+
+        #[test]
+        fn test_with_gas_offset() {
+            let mut call = ContractCall::new_with_random_id();
+            call.call_parameters = call.call_parameters.with_gas_forwarded(0);
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(
+                instructions_len,
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2)
+            );
+        }
+
+        #[test]
+        fn test_with_heap_type() {
+            let mut call = ContractCall::new_with_random_id();
+            call.output_param = ParamType::Vector(Box::new(ParamType::U8));
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(
+                instructions_len,
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
+            );
+        }
+
+        #[test]
+        fn test_with_gas_offset_and_heap_type() {
+            let mut call = ContractCall::new_with_random_id();
+            call.call_parameters = call.call_parameters.with_gas_forwarded(0);
+            call.output_param = ParamType::Vector(Box::new(ParamType::U8));
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(
+                instructions_len,
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2 + 4)
+            );
+        }
+
+        #[test]
+        fn test_with_nested_heap_type() {
+            let mut call = ContractCall::new_with_random_id();
+            call.output_param =
+                ParamType::Vector(Box::new(ParamType::Vector(Box::new(ParamType::U8))));
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(
+                instructions_len,
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
+            );
+        }
+
+        #[test]
+        fn test_with_enum_with_heap_type_variants() {
+            let mut call = ContractCall::new_with_random_id();
+            call.output_param = ParamType::Enum {
+                variants: EnumVariants::new(vec![
+                    ParamType::Vector(Box::new(ParamType::U8)),
+                    ParamType::Vector(Box::new(ParamType::B256)),
+                ])
+                .unwrap(),
+                generics: Vec::new(),
+            };
+            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+            assert_eq!(
+                instructions_len,
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 8)
+            );
+        }
     }
 }
