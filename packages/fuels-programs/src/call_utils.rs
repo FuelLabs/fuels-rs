@@ -107,7 +107,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     let consensus_parameters = account.try_provider()?.consensus_parameters();
 
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
-    let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
+    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset);

@@ -91,16 +91,26 @@ mod tests {
     #[tokio::test]
     async fn custom_chain() -> Result<()> {
         // ANCHOR: custom_chain_import
-        use fuels::{prelude::*, tx::ConsensusParameters};
+        use fuels::{
+            prelude::*,
+            tx::{ConsensusParameters, FeeParameters, FuelTxParameters},
+        };
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
-        let consensus_parameters_config = ConsensusParameters::DEFAULT
-            .with_max_gas_per_tx(1000)
-            .with_gas_price_factor(10)
+        let tx_params = FuelTxParameters::default()
+            .with_max_gas_per_tx(1_000)
             .with_max_inputs(2);
+        let fee_params = FeeParameters::default().with_gas_price_factor(10);
+
+        let consensus_parameters = ConsensusParameters {
+            tx_params,
+            fee_params,
+            ..Default::default()
+        };
+
         let chain_config = ChainConfig {
-            transaction_parameters: consensus_parameters_config,
+            consensus_parameters,
             ..ChainConfig::default()
         };
         // ANCHOR_END: custom_chain_consensus
@@ -120,6 +130,7 @@ mod tests {
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
         // ANCHOR_END: custom_chain_provider
+
         Ok(())
     }
 

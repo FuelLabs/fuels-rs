@@ -6,7 +6,7 @@ use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
+use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -23,7 +23,7 @@ use fuels_core::{
 };
 
 use crate::{
-    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_id},
+    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
     provider::{Provider, ResourceFilter},
 };
 
@@ -298,7 +298,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_parameters: TxParameters,
-    ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
+    ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
 
@@ -324,10 +324,10 @@ pub trait Account: ViewOnlyAccount {
             .await?
             .take_receipts_checked(None)?;
 
-        let message_id = extract_message_id(&receipts)
+        let nonce = extract_message_nonce(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, message_id, receipts))
+        Ok((tx_id, nonce, receipts))
     }
 }
 
@@ -390,7 +390,6 @@ mod tests {
             consensus_parameters: Default::default(),
             max_gas_per_tx: 0,
             min_gas_price: 0,
-            gas_costs: Default::default(),
         };
         // Set up a transaction
         let mut tb = {

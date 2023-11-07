@@ -150,11 +150,18 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{test_helpers::ChainConfig, tx::ConsensusParameters, types::coin::Coin};
+    use fuels::{
+        test_helpers::ChainConfig,
+        tx::{ConsensusParameters, FuelTxParameters},
+        types::coin::Coin,
+    };
 
-    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+    let consensus_parameters = ConsensusParameters {
+        tx_params: FuelTxParameters::default().with_max_inputs(128),
+        ..Default::default()
+    };
     let chain_config = ChainConfig {
-        transaction_parameters: consensus_parameters_config,
+        consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
     };
 
@@ -168,7 +175,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     );
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    assert_eq!(provider.consensus_parameters(), consensus_parameters_config);
+    assert_eq!(*provider.consensus_parameters(), consensus_parameters);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(

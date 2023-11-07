@@ -8,8 +8,7 @@ use fuel_tx::{
     field::Witnesses, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
-use fuel_vm::gas::GasCosts;
+use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, Salt};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -34,16 +33,14 @@ pub struct NetworkInfo {
     pub consensus_parameters: ConsensusParameters,
     pub max_gas_per_tx: u64,
     pub min_gas_price: u64,
-    pub gas_costs: GasCosts,
 }
 
 impl NetworkInfo {
     pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
         Self {
-            max_gas_per_tx: chain_info.consensus_parameters.max_gas_per_tx,
-            consensus_parameters: chain_info.consensus_parameters.into(),
+            max_gas_per_tx: chain_info.consensus_parameters.tx_params().max_gas_per_tx,
+            consensus_parameters: chain_info.consensus_parameters,
             min_gas_price: node_info.min_gas_price,
-            gas_costs: chain_info.gas_costs,
         }
     }
 
@@ -78,7 +75,7 @@ pub trait TransactionBuilder: Send {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-    fn consensus_parameters(&self) -> ConsensusParameters;
+    fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 macro_rules! impl_tx_trait {
@@ -113,14 +110,12 @@ macro_rules! impl_tx_trait {
             fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
                 let mut tx = self.clone().build()?;
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(
-                        &self.consensus_parameters(),
-                        &self.network_info.gas_costs,
-                    )?;
+                    tx.estimate_predicates(&self.consensus_parameters())?;
                 }
 
                 Ok(TransactionFee::checked_from_tx(
-                    &self.consensus_parameters(),
+                    &self.consensus_parameters().gas_costs,
+                    &self.consensus_parameters().fee_params,
                     &tx.tx,
                 ))
             }
@@ -186,8 +181,8 @@ macro_rules! impl_tx_trait {
                 &mut self.witnesses
             }
 
-            fn consensus_parameters(&self) -> ConsensusParameters {
-                self.network_info.consensus_parameters
+            fn consensus_parameters(&self) -> &ConsensusParameters {
+                &self.network_info.consensus_parameters
             }
         }
 
@@ -293,7 +288,7 @@ impl ScriptTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_script(&self.consensus_parameters())
+        offsets::base_offset_script(self.consensus_parameters())
             + padded_len_usize(self.script_data.len())
             + padded_len_usize(self.script.len())
     }
@@ -436,7 +431,7 @@ impl CreateTransactionBuilder {
             self.storage_slots,
             resolve_fuel_inputs(
                 self.inputs,
-                base_offset + num_of_storage_slots * StorageSlot::LEN,
+                base_offset + num_of_storage_slots * StorageSlot::SLOT_SIZE,
                 num_witnesses,
                 &self.unresolved_signatures,
             )?,
@@ -455,7 +450,7 @@ impl CreateTransactionBuilder {
     }
 
     fn base_offset(&self) -> usize {
-        offsets::base_offset_create(&self.consensus_parameters())
+        offsets::base_offset_create(self.consensus_parameters())
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {
@@ -723,7 +718,6 @@ mod tests {
         let network_info = NetworkInfo {
             max_gas_per_tx: 0,
             min_gas_price: 0,
-            gas_costs: Default::default(),
             consensus_parameters: Default::default(),
         };
         let builder =

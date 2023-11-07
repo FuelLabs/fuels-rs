@@ -282,7 +282,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 476;
     let expected_metered_bytes_size = 712;
-    let expected_total_fee = 333;
+    let expected_total_fee = 633;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -1007,9 +1007,15 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{tx::ConsensusParameters, types::coin::Coin};
+    use fuels::{
+        tx::{ConsensusParameters, FuelTxParameters},
+        types::coin::Coin,
+    };
 
-    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
+    let consensus_parameters = ConsensusParameters {
+        tx_params: FuelTxParameters::default().with_max_inputs(123),
+        ..Default::default()
+    };
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -1020,13 +1026,13 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
     let chain_config = ChainConfig {
-        transaction_parameters: consensus_parameters_config,
+        consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
     };
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
-    assert_eq!(consensus_parameters_config, provider.consensus_parameters());
+    assert_eq!(consensus_parameters, *provider.consensus_parameters());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1197,7 +1203,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     ));
 
     let wallet = WalletUnlocked::new_random(None);
-    let predicate = Predicate::from_code(vec![], 0);
+    let predicate = Predicate::from_code(vec![]);
 
     let contract_methods_wallet =
         MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
@@ -1354,17 +1360,15 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-            let mut node_config = Config {
+            let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
                 ..Config::local_node()
             };
 
-            node_config.manual_blocks_enabled = true;
-
             let chain_config = ChainConfig {
                 chain_name: temp_dir_name.clone(),
                 initial_state: None,
-                transaction_parameters: Default::default(),
+                consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
 

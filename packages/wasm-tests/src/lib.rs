@@ -187,7 +187,7 @@ mod tests {
         let predicate_data = MyPredicateEncoder::encode_data(value);
         let configurables = MyPredicateConfigurables::new().with_U64(value);
 
-        let predicate: Predicate = Predicate::from_code(code.clone(), 0)
+        let predicate: Predicate = Predicate::from_code(code.clone())
             .with_data(predicate_data)
             .with_configurables(configurables);
 

@@ -344,13 +344,9 @@ mod tests {
 
         use fuels::prelude::*;
 
-        let config = Config {
-            manual_blocks_enabled: true,
-            ..Config::local_node()
-        };
         let wallets = launch_custom_provider_and_get_wallets(
             WalletsConfig::new(Some(1), None, None),
-            Some(config),
+            None,
             None,
         )
         .await?;

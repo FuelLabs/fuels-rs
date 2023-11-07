@@ -18,9 +18,12 @@ use fuel_tx::{
 };
 
 use fuel_types::{AssetId, ChainId};
-use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
+use fuel_vm::checked_transaction::EstimatePredicates;
 
-use crate::types::{bech32::Bech32Address, Result};
+use crate::{
+    constants::BASE_ASSET_ID,
+    types::{bech32::Bech32Address, Result},
+};
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
@@ -119,11 +122,7 @@ pub trait Transaction: Into<FuelTransaction> + Clone {
     /// If a transactions contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
-    fn estimate_predicates(
-        &mut self,
-        consensus_parameters: &ConsensusParameters,
-        gas_costs: &GasCosts,
-    ) -> Result<()>;
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()>;
 
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> usize;
@@ -257,14 +256,10 @@ impl Transaction for TransactionType {
         }
     }
 
-    fn estimate_predicates(
-        &mut self,
-        consensus_parameters: &ConsensusParameters,
-        gas_costs: &GasCosts,
-    ) -> Result<()> {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         match self {
-            TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
-            TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
+            TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters),
+            TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters),
         }
     }
 
@@ -350,7 +345,11 @@ macro_rules! impl_tx_wrapper {
                 &self,
                 consensus_parameters: &ConsensusParameters,
             ) -> Option<TransactionFee> {
-                TransactionFee::checked_from_tx(consensus_parameters, &self.tx)
+                TransactionFee::checked_from_tx(
+                    &consensus_parameters.gas_costs,
+                    consensus_parameters.fee_params(),
+                    &self.tx,
+                )
             }
 
             fn check_without_signatures(
@@ -421,15 +420,13 @@ macro_rules! impl_tx_wrapper {
             fn estimate_predicates(
                 &mut self,
                 consensus_parameters: &ConsensusParameters,
-                gas_costs: &GasCosts,
             ) -> Result<()> {
                 let gas_price = *self.tx.gas_price();
                 let gas_limit = *self.tx.gas_limit();
                 *self.tx.gas_price_mut() = 0;
-                *self.tx.gas_limit_mut() = consensus_parameters.max_gas_per_tx;
+                *self.tx.gas_limit_mut() = consensus_parameters.tx_params().max_gas_per_tx;
 
-                self.tx
-                    .estimate_predicates(consensus_parameters, gas_costs)?;
+                self.tx.estimate_predicates(&consensus_parameters.into())?;
                 *self.tx.gas_price_mut() = gas_price;
                 *self.tx.gas_limit_mut() = gas_limit;
 
@@ -451,7 +448,7 @@ macro_rules! impl_tx_wrapper {
                         _ => {
                             // not a contract, it's safe to unwrap
                             let owner = extract_owner_or_recipient(input).unwrap();
-                            let asset_id = input.asset_id().unwrap().to_owned();
+                            let asset_id = input.asset_id(&BASE_ASSET_ID).unwrap().to_owned();
                             let id = extract_coin_type_id(input).unwrap();
                             Some(((owner, asset_id), id))
                         }

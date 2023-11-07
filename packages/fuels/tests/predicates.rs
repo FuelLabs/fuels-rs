@@ -93,11 +93,7 @@ async fn setup_predicate_test(
         amount,
     ));
 
-    let config = Config {
-        manual_blocks_enabled: true,
-        ..Config::local_node()
-    };
-    let provider = setup_test_provider(coins, messages, Some(config), None).await?;
+    let provider = setup_test_provider(coins, messages, None, None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -356,8 +352,6 @@ async fn predicate_contract_transfer() -> Result<()> {
 async fn predicate_transfer_to_base_layer() -> Result<()> {
     use std::str::FromStr;
 
-    use fuels::prelude::*;
-
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
@@ -385,7 +379,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
             .expect("Invalid address.");
     let base_layer_address = Bech32Address::from(base_layer_address);
 
-    let (tx_id, msg_id, _receipts) = predicate
+    let (tx_id, msg_nonce, _receipts) = predicate
         .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
         .await?;
 
@@ -394,7 +388,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id, None, Some(2))
+        .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
         .await?
         .expect("Failed to retrieve message proof.");
 

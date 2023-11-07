@@ -26,7 +26,7 @@ pub enum Error {
     #[error("Provider error: {0}")]
     ProviderError(String),
     #[error("Validation error: {0}")]
-    ValidationError(#[from] CheckError),
+    ValidationError(String),
     #[error("Tried to forward assets to a contract method that is not payable.")]
     AssetsForwardedToNonPayableMethod,
     #[error("Revert transaction error: {reason},\n receipts: {receipts:?}")]
@@ -66,3 +66,4 @@ macro_rules! impl_error_from {
 
 impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
+impl_error_from!(ValidationError, CheckError);

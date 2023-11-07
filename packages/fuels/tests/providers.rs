@@ -197,13 +197,8 @@ async fn test_input_message_pays_fee() -> Result<()> {
 #[tokio::test]
 async fn can_increase_block_height() -> Result<()> {
     // ANCHOR: use_produce_blocks_to_increase_block_height
-    let config = Config {
-        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
-        ..Config::local_node()
-    };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
-            .await?;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -221,7 +216,6 @@ async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
     let block_time = 20u32; // seconds
     let config = Config {
-        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
         // This is how you specify the time between blocks
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
@@ -236,11 +230,9 @@ async fn can_set_custom_block_time() -> Result<()> {
 
     assert_eq!(provider.latest_block_height().await?, 0u32);
     let origin_block_time = provider.latest_block_time().await?.unwrap();
-    let blocks_to_produce = 3u32;
+    let blocks_to_produce = 3;
 
-    provider
-        .produce_blocks(blocks_to_produce.into(), None)
-        .await?;
+    provider.produce_blocks(blocks_to_produce, None).await?;
     assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
     let expected_latest_block_time = origin_block_time
         .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
@@ -266,7 +258,7 @@ async fn can_set_custom_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn can_retrieve_latest_block_time() -> Result<()> {
-    let provider = given_a_provider().await?;
+    let provider = setup_test_provider(vec![], vec![], None, None).await?;
     let since_epoch = 1676039910;
 
     let latest_timestamp = Utc.timestamp_opt(since_epoch, 0).unwrap();
@@ -280,25 +272,12 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
     Ok(())
 }
 
-async fn given_a_provider() -> Result<Provider> {
-    let config = Config {
-        manual_blocks_enabled: true, // Necessary so the `produce_blocks` API can be used locally
-        ..Config::local_node()
-    };
-    setup_test_provider(vec![], vec![], Some(config), None).await
-}
-
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
     abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
 
-    let config = Config {
-        manual_blocks_enabled: true,
-        ..Config::local_node()
-    };
     let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
-            .await?;
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
     let wallet = &wallets[0];
     let provider = wallet.try_provider()?;
 
@@ -312,16 +291,16 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         })
     };
 
-    let err = deploy_w_maturity(1u32)?.await.expect_err("Should not have been able to deploy the contract since the block height (0) is less than the requested maturity (1)");
-    assert!(matches!(
-        err,
-        Error::ValidationError(fuel_tx::CheckError::TransactionMaturity)
-    ));
+    let err = deploy_w_maturity(1u32)?.await.expect_err(
+        "Should not deploy contract since block height (0) is less than the requested maturity (1)",
+    );
+    assert!(matches!(err, Error::ValidationError(s) if s == "TransactionMaturity"));
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1u32)?
         .await
-        .expect("Should be able to deploy now since maturity (1) is <= than the block height (1)");
+        .expect("Should deploy contract since maturity (1) is <= than the block height (1)");
+
     Ok(())
 }
 
@@ -347,7 +326,7 @@ async fn test_default_tx_params_match_network() -> Result<()> {
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
-    assert_eq!(tx.gas_limit(), consensus_params.max_gas_per_tx);
+    assert_eq!(tx.gas_limit(), consensus_params.tx_params().max_gas_per_tx);
 
     Ok(())
 }
@@ -620,6 +599,7 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
     // This test depends on:
@@ -795,7 +775,6 @@ fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
 async fn test_sway_timestamp() -> Result<()> {
     let block_time = 1u32; // seconds
     let provider_config = Config {
-        manual_blocks_enabled: true,
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
@@ -830,9 +809,7 @@ async fn test_sway_timestamp() -> Result<()> {
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
 
     let blocks_to_produce = 600;
-    provider
-        .produce_blocks(blocks_to_produce.into(), None)
-        .await?;
+    provider.produce_blocks(blocks_to_produce, None).await?;
 
     let response = methods.return_timestamp().call().await?;
 
@@ -879,15 +856,11 @@ async fn create_transfer(
 async fn test_caching() -> Result<()> {
     use fuels_core::types::tx_status::TxStatus;
 
-    let provider_config = Config {
-        manual_blocks_enabled: true,
-        ..Config::local_node()
-    };
     let amount = 1000;
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
-        Some(provider_config),
+        Some(Config::local_node()),
         None,
     )
     .await?;
@@ -951,7 +924,6 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     let block_time = 1u32;
     let provider_config = Config {
-        manual_blocks_enabled: true,
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
