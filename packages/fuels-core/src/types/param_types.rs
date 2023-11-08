@@ -166,14 +166,10 @@ impl ParamType {
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
     pub fn heap_inner_element_size(&self, top_level_type: bool) -> Option<usize> {
         match &self {
-            ParamType::Vector(inner_param_type) => {
-                inner_param_type.compute_encoding_in_bytes()
-            }
+            ParamType::Vector(inner_param_type) => inner_param_type.compute_encoding_in_bytes(),
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
-            ParamType::RawSlice if !top_level_type => {
-                ParamType::U64.compute_encoding_in_bytes()
-            }
+            ParamType::RawSlice if !top_level_type => ParamType::U64.compute_encoding_in_bytes(),
             _ => None,
         }
     }
@@ -186,15 +182,15 @@ impl ParamType {
             ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Some(16),
             ParamType::U256 | ParamType::B256 => Some(32),
             ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Some(24),
-            ParamType::Array(param, count) => param.compute_encoding_in_bytes()?.checked_mul(*count),
+            ParamType::Array(param, count) => {
+                param.compute_encoding_in_bytes()?.checked_mul(*count)
+            }
             ParamType::StringArray(len) => Some(round_up_to_word_alignment(*len)),
             ParamType::Tuple(fields) | ParamType::Struct { fields, .. } => {
-                fields
-                    .iter()
-                    .fold(Some(0), |a, param_type| {
-                        let size = round_up_to_word_alignment(param_type.compute_encoding_in_bytes()?);
-                        Some(a? + size)
-                    })
+                fields.iter().fold(Some(0), |a, param_type| {
+                    let size = round_up_to_word_alignment(param_type.compute_encoding_in_bytes()?);
+                    Some(a? + size)
+                })
             }
             ParamType::Enum { variants, .. } => variants.compute_enum_width_in_bytes(),
         }

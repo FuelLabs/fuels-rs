@@ -2075,7 +2075,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
     // // dbg!(&resp);
     // // let expected = Ok(Bytes(vec![1, 1, 1, 1]));
     // // assert_eq!(resp.value, expected);
-    
+
     // let resp = contract_methods.returns_bytes_result(false).call().await?;
     // let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
     // assert_eq!(resp.value, expected);

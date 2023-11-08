@@ -367,14 +367,20 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
                 return Ok(vec![]);
             };
 
-            let param_type_width = param_type.compute_encoding_in_bytes().ok_or(fuels_core::error!(
-                InvalidData,
-                "Error calculating enum width in bytes"
-            ))?;
-            let heap_type_width = heap_type.compute_encoding_in_bytes().ok_or( fuels_core::error!(
-                InvalidData,
-                "Error calculating enum width in bytes"
-            ))?;
+            let param_type_width =
+                param_type
+                    .compute_encoding_in_bytes()
+                    .ok_or(fuels_core::error!(
+                        InvalidData,
+                        "Error calculating enum width in bytes"
+                    ))?;
+            let heap_type_width =
+                heap_type
+                    .compute_encoding_in_bytes()
+                    .ok_or(fuels_core::error!(
+                        InvalidData,
+                        "Error calculating enum width in bytes"
+                    ))?;
 
             let ptr_offset = (param_type_width - heap_type_width) as u16;
 

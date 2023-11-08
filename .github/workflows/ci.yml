@@ -19,8 +19,9 @@ env:
   FUEL_CORE_VERSION: 0.20.6
   RUST_VERSION: 1.72.1
   FORC_VERSION: 0.46.0
-  FORC_PATCH_BRANCH: "IGI-111/int-memory-repr"
+  FORC_PATCH_BRANCH: "master"
   FORC_PATCH_REVISION: ""
+  FORC_IMPLICIT_STD_BRANCH: "master" 
 
 jobs:
   setup-test-projects:
@@ -164,7 +165,7 @@ jobs:
             args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace
+            args: run --all-targets --features "default fuel-core-lib test-type-paths" --workspace
             download_sway_artifacts: sway-examples-w-type-paths
             install_fuel_core: true
           - cargo_command: nextest

@@ -53,12 +53,10 @@ impl EnumVariants {
             return Some(ENUM_DISCRIMINANT_BYTE_WIDTH);
         }
 
-        let width = self.param_types()
-            .iter()
-            .fold(Some(0), |a, p| {
-                let size = p.compute_encoding_in_bytes()?;
-                Some(a?.max(size))
-            })?;
+        let width = self.param_types().iter().fold(Some(0), |a, p| {
+            let size = p.compute_encoding_in_bytes()?;
+            Some(a?.max(size))
+        })?;
 
         Some(round_up_to_word_alignment(width) + ENUM_DISCRIMINANT_BYTE_WIDTH)
     }
@@ -66,15 +64,16 @@ impl EnumVariants {
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
     pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
-        let enum_width = self.compute_enum_width_in_bytes().ok_or( error!(
-            InvalidData,
-            "Error calculating enum width in bytes"
-        ))?;
+        let enum_width = self
+            .compute_enum_width_in_bytes()
+            .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
         let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
-        let variant_width = variant_param_type.compute_encoding_in_bytes().ok_or( error!(
-            InvalidData,
-            "Error calculating pagging amount in bytes"
-        ))?;
+        let variant_width = variant_param_type
+            .compute_encoding_in_bytes()
+            .ok_or(error!(
+                InvalidData,
+                "Error calculating pagging amount in bytes"
+            ))?;
         Ok(biggest_variant_width - variant_width)
     }
 }
