@@ -12,6 +12,7 @@ use fuels::{
     tx::Receipt,
     types::{block::Block, coin_type::CoinType, message::Message},
 };
+
 use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     Bits256,
@@ -846,5 +847,140 @@ async fn test_sway_timestamp() -> Result<()> {
         provider.latest_block_time().await?.unwrap(),
         expected_datetime
     );
+    Ok(())
+}
+
+#[cfg(feature = "coin-cache")]
+async fn create_transfer(
+    wallet: &WalletUnlocked,
+    amount: u64,
+    to: &Bech32Address,
+) -> Result<ScriptTransaction> {
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
+
+    let network_info = wallet.try_provider()?.network_info().await?;
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    );
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, amount).await?;
+    tb.build()
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn test_caching() -> Result<()> {
+    use fuels_core::types::tx_status::TxStatus;
+
+    let provider_config = Config {
+        manual_blocks_enabled: true,
+        ..Config::local_node()
+    };
+    let amount = 1000;
+    let num_coins = 10;
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
+        Some(provider_config),
+        None,
+    )
+    .await?;
+    let wallet_1 = wallets.pop().unwrap();
+    let provider = wallet_1.provider().unwrap();
+    let wallet_2 = WalletUnlocked::new_random(Some(provider.clone()));
+
+    // Consecutively send transfer txs. Without caching, the txs will
+    // end up trying to use the same input coins because 'get_spendable_coins()'
+    // won't filter out recently used coins.
+    let mut tx_ids = vec![];
+    for _ in 0..10 {
+        let tx = create_transfer(&wallet_1, 100, wallet_2.address()).await?;
+        let tx_id = provider.send_transaction(tx).await?;
+        tx_ids.push(tx_id);
+    }
+
+    provider.produce_blocks(10, None).await?;
+
+    // Confirm all txs are settled
+    for tx_id in tx_ids {
+        let status = provider.tx_status(&tx_id).await?;
+        assert!(matches!(status, TxStatus::Success { .. }));
+    }
+
+    // Verify the transfers were succesful
+    assert_eq!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?, 1000);
+
+    Ok(())
+}
+
+#[cfg(feature = "coin-cache")]
+async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> {
+    use fuel_core_types::fuel_asm::Opcode;
+
+    let amount = 1;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, amount);
+    let network_info = wallet.try_provider()?.network_info().await?;
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxParameters::default(),
+        network_info,
+    )
+    .with_script(vec![Opcode::RVRT.into()]);
+
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, amount).await?;
+    tb.build()
+}
+
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn test_cache_invalidation_on_await() -> Result<()> {
+    use fuels_core::types::tx_status::TxStatus;
+
+    let block_time = 1u32;
+    let provider_config = Config {
+        manual_blocks_enabled: true,
+        block_production: Trigger::Interval {
+            block_time: std::time::Duration::from_secs(block_time.into()),
+        },
+        ..Config::local_node()
+    };
+
+    // create wallet with 1 coin so that the cache prevents further
+    // spending unless the coin is invalidated from the cache
+    let mut wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(1), Some(1), Some(100)),
+        Some(provider_config),
+        None,
+    )
+    .await?;
+    let wallet = wallets.pop().unwrap();
+
+    let provider = wallet.provider().unwrap();
+    let tx = create_revert_tx(&wallet).await?;
+
+    // Pause time so that the cache doesn't invalidate items based on TTL
+    tokio::time::pause();
+
+    // tx inputs should be cached and then invalidated due to the tx failing
+    let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+    let status = provider.tx_status(&tx_id).await?;
+    assert!(matches!(status, TxStatus::Revert { .. }));
+
+    let coins = wallet.get_spendable_resources(BASE_ASSET_ID, 1).await?;
+    assert_eq!(coins.len(), 1);
+
     Ok(())
 }

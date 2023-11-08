@@ -4,22 +4,18 @@ use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::{Bech32Address, FUEL_BECH32_HRP},
-        errors::{Error, Result},
-        input::Input,
-        transaction_builders::TransactionBuilder,
-        AssetId,
-    },
+use fuels_core::types::{
+    bech32::{Bech32Address, FUEL_BECH32_HRP},
+    errors::{Error, Result},
+    input::Input,
+    transaction_builders::TransactionBuilder,
+    AssetId,
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
-    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
     provider::{Provider, ProviderError},
     Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
 };
@@ -259,23 +255,8 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    async fn add_fee_resources<Tb: TransactionBuilder>(
-        &self,
-        mut tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType> {
-        let network_info = self.try_provider()?.network_info().await?;
-        self.sign_transaction(&mut tb);
-
-        let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &network_info, previous_base_amount)?;
-
-        let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
-            .await?;
-        adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address(), new_base_amount);
-        tb.build()
+    fn add_witnessses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
+        self.sign_transaction(tb);
     }
 }
 

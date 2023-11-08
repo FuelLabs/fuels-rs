@@ -1,0 +1,5 @@
+error: Enums can not have more than 256 variants
+   --> tests/ui/derive/tokenizable/enum_size_not_supported.rs:261:5
+    |
+261 |     Variant256(u8),
+    |     ^^^^^^^^^^

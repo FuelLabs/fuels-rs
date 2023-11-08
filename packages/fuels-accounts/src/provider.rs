@@ -37,6 +37,15 @@ use thiserror::Error;
 
 use crate::provider::retryable_client::RetryableClient;
 
+#[cfg(feature = "coin-cache")]
+use crate::coin_cache::CoinsCache;
+#[cfg(feature = "coin-cache")]
+use fuels_core::types::coin_type_id::CoinTypeId;
+#[cfg(feature = "coin-cache")]
+use std::sync::Arc;
+#[cfg(feature = "coin-cache")]
+use tokio::sync::Mutex;
+
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
 #[derive(Debug)]
@@ -149,6 +158,8 @@ impl From<ProviderError> for Error {
 pub struct Provider {
     client: RetryableClient,
     consensus_parameters: ConsensusParameters,
+    #[cfg(feature = "coin-cache")]
+    cache: Arc<Mutex<CoinsCache>>,
 }
 
 impl Provider {
@@ -158,6 +169,8 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            #[cfg(feature = "coin-cache")]
+            cache: Default::default(),
         })
     }
 
@@ -178,6 +191,8 @@ impl Provider {
         Ok(Self {
             client,
             consensus_parameters,
+            #[cfg(feature = "coin-cache")]
+            cache: Default::default(),
         })
     }
 
@@ -188,7 +203,17 @@ impl Provider {
     /// Sends a transaction to the underlying Provider's client.
     pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tx_id = self.send_transaction(tx.clone()).await?;
-        self.client.await_transaction_commit(&tx_id).await?;
+        let _status = self.client.await_transaction_commit(&tx_id).await?;
+
+        #[cfg(feature = "coin-cache")]
+        {
+            if matches!(
+                _status,
+                TransactionStatus::SqueezedOut { .. } | TransactionStatus::Failure { .. }
+            ) {
+                self.cache.lock().await.remove_items(tx.used_coins())
+            }
+        }
 
         Ok(tx_id)
     }
@@ -208,7 +233,7 @@ impl Provider {
 
         self.validate_transaction(tx.clone()).await?;
 
-        Ok(self.client.submit(&tx.into()).await?)
+        self.submit(tx).await
     }
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
@@ -238,6 +263,20 @@ impl Provider {
         }
 
         Ok(())
+    }
+
+    #[cfg(not(feature = "coin-cache"))]
+    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+        Ok(self.client.submit(&tx.into()).await?)
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
+        let used_utxos = tx.used_coins();
+        let tx_id = self.client.submit(&tx.into()).await?;
+        self.cache.lock().await.insert_multiple(used_utxos);
+
+        Ok(tx_id)
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
@@ -397,10 +436,7 @@ impl Provider {
         Ok(coins)
     }
 
-    /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
-    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
-    /// of coins (UXTOs) is optimized to prevent dust accumulation.
-    pub async fn get_spendable_resources(
+    async fn request_coins_to_spend(
         &self,
         filter: ResourceFilter,
     ) -> ProviderResult<Vec<CoinType>> {
@@ -420,6 +456,59 @@ impl Provider {
             .collect::<ProviderResult<Vec<CoinType>>>()?;
 
         Ok(res)
+    }
+
+    /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is optimized to prevent dust accumulation.
+    #[cfg(not(feature = "coin-cache"))]
+    pub async fn get_spendable_resources(
+        &self,
+        filter: ResourceFilter,
+    ) -> ProviderResult<Vec<CoinType>> {
+        self.request_coins_to_spend(filter).await
+    }
+
+    /// Get some spendable coins of asset `asset_id` for address `from` that add up at least to
+    /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
+    /// of coins (UXTOs) is optimized to prevent dust accumulation.
+    /// Coins that were recently submitted inside a tx will be ignored from the results.
+    #[cfg(feature = "coin-cache")]
+    pub async fn get_spendable_resources(
+        &self,
+        mut filter: ResourceFilter,
+    ) -> ProviderResult<Vec<CoinType>> {
+        self.extend_filter_with_cached(&mut filter).await;
+        self.request_coins_to_spend(filter).await
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
+        let mut cache = self.cache.lock().await;
+        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id));
+
+        let excluded_utxos = used_coins
+            .iter()
+            .filter_map(|coin_id| match coin_id {
+                CoinTypeId::UtxoId(utxo_id) => Some(utxo_id),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        let excluded_message_nonces = used_coins
+            .iter()
+            .filter_map(|coin_id| match coin_id {
+                CoinTypeId::Nonce(nonce) => Some(nonce),
+                _ => None,
+            })
+            .cloned()
+            .collect::<Vec<_>>();
+
+        filter.excluded_utxos.extend(excluded_utxos);
+        filter
+            .excluded_message_nonces
+            .extend(excluded_message_nonces);
     }
 
     /// Get the balance of all spendable coins `asset_id` for address `address`. This is different

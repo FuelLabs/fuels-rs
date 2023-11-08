@@ -1,21 +1,14 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{input::Input, transaction_builders::TransactionBuilder, AssetId},
-};
+use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
     types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,
 };
 
 #[cfg(feature = "std")]
-use crate::{
-    accounts_utils::{adjust_inputs, adjust_outputs, calculate_base_amount_with_fee},
-    provider::Provider,
-    Account, AccountError, AccountResult, ViewOnlyAccount,
-};
+use crate::{provider::Provider, Account, AccountError, AccountResult, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -134,31 +127,5 @@ impl Account for Predicate {
                 Input::resource_predicate(resource, self.code.clone(), self.data.clone())
             })
             .collect::<Vec<Input>>())
-    }
-
-    /// Add base asset inputs to the transaction to cover the estimated fee.
-    /// The original base asset amount cannot be calculated reliably from
-    /// the existing transaction inputs because the selected resources may exceed
-    /// the required amount to avoid dust. Therefore we require it as an argument.
-    ///
-    /// Requires contract inputs to be at the start of the transactions inputs vec
-    /// so that their indexes are retained
-    async fn add_fee_resources<Tb: TransactionBuilder>(
-        &self,
-        mut tb: Tb,
-        previous_base_amount: u64,
-    ) -> Result<Tb::TxType> {
-        let network_info = self.try_provider()?.network_info().await?;
-        let new_base_amount =
-            calculate_base_amount_with_fee(&tb, &network_info, previous_base_amount)?;
-
-        let new_base_inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, new_base_amount)
-            .await?;
-
-        adjust_inputs(&mut tb, new_base_inputs);
-        adjust_outputs(&mut tb, self.address(), new_base_amount);
-
-        tb.build()
     }
 }
