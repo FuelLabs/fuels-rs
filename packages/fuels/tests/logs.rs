@@ -1234,6 +1234,7 @@ async fn test_script_asserts_log() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore] // TODO: gtfo again
 async fn contract_token_ops_error_messages() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

@@ -76,13 +76,12 @@ zeroize = "1.6.0"
 # fuel-core-chain-config = { version = "0.20.7", default-features = false }
 # fuel-core-client = { version = "0.20.7", default-features = false }
 # fuel-core-types = { version = "0.20.7", default-features = false }
-
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "master", default-features = false }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.40.0"}
@@ -93,7 +92,6 @@ fuel-tx = { version = "0.40.0"}
 fuel-types = { version = "0.40.0"}
 fuel-vm = { version = "0.40.0"}
 
-
 # Workspace projects
 fuels = { version = "0.50.1", path = "./packages/fuels" }
 fuels-accounts = { version = "0.50.1", path = "./packages/fuels-accounts", default-features = false }
@@ -102,3 +100,12 @@ fuels-core = { version = "0.50.1", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.50.1", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.50.1", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.50.1", path = "./packages/fuels-test-helpers", default-features = false }
+
+[patch.crates-io]
+fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-types = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }
+fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "feature/transaction-policy" }

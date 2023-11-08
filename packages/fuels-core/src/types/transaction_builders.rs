@@ -5,8 +5,9 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::Witnesses, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    field::Witnesses, policies::Policies, Buildable, Chargeable, ConsensusParameters, Create,
+    Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
+    TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, Salt};
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -22,7 +23,9 @@ use crate::{
         errors::{error, Error, Result},
         input::Input,
         message::Message,
-        transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
+        transaction::{
+            CreateTransaction, EstimateablePredicates, ScriptTransaction, Transaction, TxParameters,
+        },
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
@@ -64,7 +67,6 @@ pub trait TransactionBuilder: Send {
     fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
-    fn with_gas_limit(self, gas_limit: u64) -> Self;
     fn with_tx_params(self, tx_params: TxParameters) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -130,16 +132,8 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-                self.gas_limit = Some(gas_limit);
-                self
-            }
-
-            fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
-                self.gas_limit = tx_params.gas_limit();
-                self.gas_price = tx_params.gas_price();
-
-                self.with_maturity(tx_params.maturity().into())
+            fn with_tx_params(self, tx_params: TxParameters) -> Self {
+                self.with_tx_params(tx_params)
             }
 
             fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -213,6 +207,8 @@ macro_rules! impl_tx_trait {
 pub struct ScriptTransactionBuilder {
     pub gas_price: Option<u64>,
     pub gas_limit: Option<u64>,
+    pub witness_limit: Option<u64>,
+    pub max_fee: Option<u64>,
     pub maturity: u32,
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -226,8 +222,9 @@ pub struct ScriptTransactionBuilder {
 #[derive(Debug, Clone)]
 pub struct CreateTransactionBuilder {
     pub gas_price: Option<u64>,
-    pub gas_limit: Option<u64>,
     pub maturity: u32,
+    pub witness_limit: Option<u64>,
+    pub max_fee: Option<u64>,
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
     pub storage_slots: Vec<StorageSlot>,
@@ -247,6 +244,8 @@ impl ScriptTransactionBuilder {
         ScriptTransactionBuilder {
             gas_price: None,
             gas_limit: None,
+            witness_limit: None,
+            max_fee: None,
             maturity: 0,
             script: vec![],
             script_data: vec![],
@@ -262,12 +261,22 @@ impl ScriptTransactionBuilder {
         let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
         let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
 
+        // TODO: make nice limit
+        let witness_limit = self.witness_limit.unwrap_or(10_000);
+        // TODO: make nice max fee
+        let max_fee = self.max_fee.unwrap_or(1_000_000_000);
+
+        let policies = Policies::default()
+            .with_gas_price(gas_price)
+            .with_witness_limit(witness_limit)
+            .with_maturity(self.maturity.into())
+            .with_max_fee(max_fee);
+
         let mut tx = FuelTransaction::script(
-            gas_price,
             gas_limit,
-            self.maturity.into(),
             self.script,
             self.script_data,
+            policies,
             resolve_fuel_inputs(
                 self.inputs,
                 base_offset,
@@ -283,6 +292,17 @@ impl ScriptTransactionBuilder {
             &self.unresolved_signatures,
         );
         tx.witnesses_mut().extend(missing_witnesses);
+
+        //TODO: make it nicer
+        // Lower max gas
+        if gas_limit == self.network_info.max_gas_per_tx {
+            let cp = &self.network_info.consensus_parameters;
+            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params());
+            let gas_limit = self.network_info.max_gas_per_tx
+                - ((max_gas - self.network_info.max_gas_per_tx) as f64 * 1.1) as u64;
+
+            tx.set_script_gas_limit(gas_limit);
+        }
 
         Ok(tx)
     }
@@ -396,13 +416,26 @@ impl ScriptTransactionBuilder {
             .with_inputs(inputs)
             .with_outputs(outputs)
     }
+
+    pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
+        self.gas_limit = Some(gas_limit);
+        self
+    }
+
+    fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
+        self.gas_limit = tx_params.gas_limit();
+        self.gas_price = tx_params.gas_price();
+
+        self.with_maturity(tx_params.maturity())
+    }
 }
 
 impl CreateTransactionBuilder {
     fn new(network_info: NetworkInfo) -> CreateTransactionBuilder {
         CreateTransactionBuilder {
             gas_price: None,
-            gas_limit: None,
+            witness_limit: None,
+            max_fee: None,
             maturity: 0,
             bytecode_length: 0,
             bytecode_witness_index: 0,
@@ -420,13 +453,21 @@ impl CreateTransactionBuilder {
         let num_of_storage_slots = self.storage_slots.len();
 
         let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
-        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
+
+        // TODO: make nice limit
+        let witness_limit = self.witness_limit.unwrap_or(100_000);
+        // TODO: make nice max fee
+        let max_fee = self.max_fee.unwrap_or(1_000_000_000);
+
+        let policies = Policies::default()
+            .with_gas_price(gas_price)
+            .with_witness_limit(witness_limit)
+            .with_maturity(self.maturity.into())
+            .with_max_fee(max_fee);
 
         let mut tx = FuelTransaction::create(
-            gas_price,
-            gas_limit,
-            self.maturity.into(),
             self.bytecode_witness_index,
+            policies,
             self.salt,
             self.storage_slots,
             resolve_fuel_inputs(
@@ -496,6 +537,12 @@ impl CreateTransactionBuilder {
             .with_storage_slots(storage_slots)
             .with_outputs(outputs)
             .with_witnesses(witnesses)
+    }
+
+    fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
+        self.gas_price = tx_params.gas_price();
+
+        self.with_maturity(tx_params.maturity())
     }
 }
 

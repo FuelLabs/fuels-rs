@@ -246,21 +246,9 @@ impl Provider {
             .estimate_transaction_cost(tx.clone(), Some(tolerance))
             .await?;
 
-        if gas_used > tx.gas_limit() {
-            return Err(error!(
-                ProviderError,
-                "gas_limit({}) is lower than the estimated gas_used({})",
-                tx.gas_limit(),
-                gas_used
-            ));
-        } else if min_gas_price > tx.gas_price() {
-            return Err(error!(
-                ProviderError,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                tx.gas_price(),
-                min_gas_price
-            ));
-        }
+        tx.validate_gas(min_gas_price, gas_used)?;
+
+        //TODO: set gas_used as gas_limit
 
         Ok(())
     }
@@ -691,17 +679,16 @@ impl Provider {
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
         // Remove limits from an existing Transaction for accurate gas estimation
-        let dry_run_tx = self.generate_dry_run_tx(tx.clone());
+        let tx_for_estimation = self.generate_dry_run_tx(tx.clone());
         let gas_used = self
-            .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
+            .get_gas_used_with_tolerance(tx_for_estimation, tolerance)
             .await?;
 
         // Update the tx with estimated gas_used and correct gas price to calculate the total_fee
-        let dry_run_tx = dry_run_tx
-            .with_gas_price(gas_price)
-            .with_gas_limit(gas_used);
+        // TODO: set gas_used instead of the original limit ??
+        let tx_for_fee_calc = tx.clone().with(gas_price, gas_used);
 
-        let transaction_fee = dry_run_tx
+        let transaction_fee = tx_for_fee_calc
             .fee_checked_from_tx(&self.consensus_parameters)
             .expect("Error calculating TransactionFee");
 
@@ -709,7 +696,7 @@ impl Provider {
             min_gas_price,
             gas_price,
             gas_used,
-            metered_bytes_size: dry_run_tx.metered_bytes_size() as u64,
+            metered_bytes_size: tx_for_fee_calc.metered_bytes_size() as u64,
             total_fee: transaction_fee.max_fee(),
         })
     }
@@ -717,8 +704,21 @@ impl Provider {
     // Remove limits from an existing Transaction to get an accurate gas estimation
     fn generate_dry_run_tx<T: Transaction>(&self, tx: T) -> T {
         // Simulate the contract call with max gas to get the complete gas_used
-        let max_gas_per_tx = self.consensus_parameters.tx_params().max_gas_per_tx;
-        tx.clone().with_gas_limit(max_gas_per_tx).with_gas_price(0)
+
+        // TODO: make this nicer!
+        let cp = &self.consensus_parameters;
+        let max_gas_per_tx = cp.tx_params().max_gas_per_tx;
+        let tx = tx.clone().with(0, max_gas_per_tx);
+
+        let max_gas = tx.max_gas(cp);
+
+        let max_gas_per_tx = if max_gas > max_gas_per_tx {
+            max_gas_per_tx - (max_gas - max_gas_per_tx)
+        } else {
+            max_gas
+        };
+
+        tx.clone().with(0, max_gas_per_tx)
     }
 
     // Increase estimated gas by the provided tolerance
