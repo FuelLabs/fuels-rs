@@ -2,7 +2,11 @@ use fuel_abi_types::error_codes::{
     FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
+#[cfg(feature = "std")]
+use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
 use fuel_tx::Receipt;
+#[cfg(feature = "std")]
+use fuel_vm::state::ProgramState;
 
 use crate::{
     codec::LogDecoder,
@@ -21,7 +25,7 @@ pub enum TxStatus {
     Revert {
         receipts: Vec<Receipt>,
         reason: String,
-        id: u64,
+        revert_id: u64,
     },
 }
 
@@ -32,7 +36,7 @@ impl TxStatus {
             Self::Revert {
                 receipts,
                 reason,
-                id,
+                revert_id: id,
             } => Self::map_revert_error(receipts, reason, *id, log_decoder),
             _ => Ok(()),
         }
@@ -80,6 +84,33 @@ impl TxStatus {
         match self {
             TxStatus::Success { receipts } | TxStatus::Revert { receipts, .. } => receipts,
             _ => vec![],
+        }
+    }
+}
+#[cfg(feature = "std")]
+impl From<ClientTransactionStatus> for TxStatus {
+    fn from(client_status: ClientTransactionStatus) -> Self {
+        match client_status {
+            ClientTransactionStatus::Submitted { .. } => TxStatus::Submitted {},
+            ClientTransactionStatus::Success { .. } => TxStatus::Success { receipts: vec![] },
+            ClientTransactionStatus::Failure {
+                reason,
+                program_state,
+                ..
+            } => {
+                let revert_id = program_state
+                    .and_then(|state| match state {
+                        ProgramState::Revert(revert_id) => Some(revert_id),
+                        _ => None,
+                    })
+                    .expect("Transaction failed without a `revert_id`");
+                TxStatus::Revert {
+                    receipts: vec![],
+                    reason,
+                    revert_id,
+                }
+            }
+            ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
         }
     }
 }

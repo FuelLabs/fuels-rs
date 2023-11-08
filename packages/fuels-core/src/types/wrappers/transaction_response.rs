@@ -10,21 +10,14 @@ use fuel_tx::Transaction;
 use fuel_types::Bytes32;
 
 use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
+use crate::types::tx_status::TxStatus;
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {
     pub transaction: TransactionType,
-    pub status: TransactionStatus,
+    pub status: TxStatus,
     pub block_id: Option<Bytes32>,
     pub time: Option<DateTime<Utc>>,
-}
-
-#[derive(Debug, Clone)]
-pub enum TransactionStatus {
-    Submitted(),
-    Success(),
-    Failure(),
-    SqueezedOut(),
 }
 
 impl From<ClientTransactionResponse> for TransactionResponse {
@@ -60,17 +53,6 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             status: client_response.status.into(),
             block_id,
             time,
-        }
-    }
-}
-
-impl From<ClientTransactionStatus> for TransactionStatus {
-    fn from(client_status: ClientTransactionStatus) -> Self {
-        match client_status {
-            ClientTransactionStatus::Submitted { .. } => TransactionStatus::Submitted(),
-            ClientTransactionStatus::Success { .. } => TransactionStatus::Success(),
-            ClientTransactionStatus::Failure { .. } => TransactionStatus::Failure(),
-            ClientTransactionStatus::SqueezedOut { .. } => TransactionStatus::SqueezedOut(),
         }
     }
 }
