@@ -100,7 +100,10 @@ impl MyContract for Contract {
         if let EnumUsedAndUnusedGenericParams::Two(val) = arg_2 {
             assert_eq(val, 11u8);
         } else {
-            require(false, "Expected the variant EnumUsedAndUnusedGenericParams::Two");
+            require(
+                false,
+                "Expected the variant EnumUsedAndUnusedGenericParams::Two",
+            );
         }
         (
             StructUsedAndUnusedGenericParams { field: 12u8 },
@@ -124,7 +127,9 @@ impl MyContract for Contract {
             },
         };
 
-        assert(sha256(from_str_array(expected.one.single_generic_param)) == sha256(from_str_array(arg1.one.single_generic_param)));
+        assert(
+            sha256(from_str_array(expected.one.single_generic_param)) == sha256(from_str_array(arg1.one.single_generic_param)),
+        );
 
         expected
     }
