@@ -24,8 +24,8 @@ if [ -z "$MANIFEST" ]; then
 fi
 
 # strip preceeding 'v' if it exists on tag
-REF="'${REF/#v}'"
-TOML_VERSION=$(cat $MANIFEST | dasel -r toml 'workspace.package.version')
+REF=${REF/#v}
+TOML_VERSION=$(cat $MANIFEST | dasel -r toml -w plain 'workspace.package.version')
 
 if [ "$TOML_VERSION" != "$REF" ]; then
     err "Crate version $TOML_VERSION, doesn't match tag version $REF"
