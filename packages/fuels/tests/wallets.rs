@@ -2,7 +2,7 @@ use std::iter::repeat;
 
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
 use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
-use fuels_accounts::wallet::{Wallet, WalletUnlocked};
+use fuels_accounts::wallet::WalletUnlocked;
 use fuels_core::types::transaction_builders::TransactionBuilder;
 use fuels_test_helpers::setup_test_provider;
 
@@ -130,7 +130,7 @@ fn base_asset_wallet_config(num_wallets: u64) -> WalletsConfig {
 }
 
 #[tokio::test]
-async fn add_fee_resources_empty_transaction() -> Result<()> {
+async fn adjust_fee_empty_transaction() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await?
@@ -138,13 +138,16 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
         .unwrap();
 
     let network_info = wallet.try_provider()?.network_info().await?;
-    let tb = ScriptTransactionBuilder::prepare_transfer(
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![],
         vec![],
         TxParameters::default(),
         network_info,
     );
-    let tx = wallet.add_fee_resources(tb, 0).await?;
+
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, 0).await?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -165,7 +168,7 @@ async fn add_fee_resources_empty_transaction() -> Result<()> {
 }
 
 #[tokio::test]
-async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
+async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let wallet_config = base_asset_wallet_config(1);
     let wallet = launch_custom_provider_and_get_wallets(wallet_config, None, None)
         .await?
@@ -180,13 +183,15 @@ async fn add_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
     let network_info = wallet.try_provider()?.network_info().await?;
-    let tb = ScriptTransactionBuilder::prepare_transfer(
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxParameters::default(),
         network_info,
     );
-    let tx = wallet.add_fee_resources(tb, base_amount).await?;
+    wallet.sign_transaction(&mut tb);
+    wallet.adjust_for_fee(&mut tb, base_amount).await?;
+    let tx = tb.build()?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -344,9 +349,9 @@ async fn test_wallet_get_coins() -> Result<()> {
     Ok(())
 }
 
-async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, Wallet)> {
+async fn setup_transfer_test(amount: u64) -> Result<(WalletUnlocked, WalletUnlocked)> {
     let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallet_2 = WalletUnlocked::new_random(None);
 
     let coins = setup_single_asset_coins(wallet_1.address(), BASE_ASSET_ID, 1, amount);
 
@@ -383,7 +388,7 @@ async fn transfer_more_than_owned() -> Result<()> {
 async fn transfer_coins_of_non_base_asset() -> Result<()> {
     const AMOUNT: u64 = 10000;
     let mut wallet_1 = WalletUnlocked::new_random(None);
-    let mut wallet_2 = WalletUnlocked::new_random(None).lock();
+    let mut wallet_2 = WalletUnlocked::new_random(None);
 
     let asset_id: AssetId = AssetId::from([1; 32usize]);
     let mut coins = setup_single_asset_coins(wallet_1.address(), asset_id, 1, AMOUNT);

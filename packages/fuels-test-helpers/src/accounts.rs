@@ -88,7 +88,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 
 #[cfg(test)]
 mod tests {
-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
     use fuels_core::{
         constants::BASE_ASSET_ID,
         types::{coin_type::CoinType, errors::Result},

@@ -2,6 +2,7 @@ pub mod block;
 pub mod chain_info;
 pub mod coin;
 pub mod coin_type;
+pub mod coin_type_id;
 pub mod input;
 pub mod message;
 pub mod message_proof;
