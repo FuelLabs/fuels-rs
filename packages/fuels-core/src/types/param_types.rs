@@ -187,9 +187,9 @@ impl ParamType {
             }
             ParamType::StringArray(len) => Some(round_up_to_word_alignment(*len)),
             ParamType::Tuple(fields) | ParamType::Struct { fields, .. } => {
-                fields.iter().fold(Some(0), |a, param_type| {
+                fields.iter().try_fold(0, |a, param_type| {
                     let size = round_up_to_word_alignment(param_type.compute_encoding_in_bytes()?);
-                    Some(a? + size)
+                    Some(a + size)
                 })
             }
             ParamType::Enum { variants, .. } => variants.compute_enum_width_in_bytes(),

@@ -53,9 +53,9 @@ impl EnumVariants {
             return Some(ENUM_DISCRIMINANT_BYTE_WIDTH);
         }
 
-        let width = self.param_types().iter().fold(Some(0), |a, p| {
+        let width = self.param_types().iter().try_fold(0, |a, p| {
             let size = p.compute_encoding_in_bytes()?;
-            Some(a?.max(size))
+            Some(a.max(size))
         })?;
 
         Some(round_up_to_word_alignment(width) + ENUM_DISCRIMINANT_BYTE_WIDTH)
