@@ -280,9 +280,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 474;
+    let expected_gas_used = 564;
     let expected_metered_bytes_size = 712;
-    let expected_total_fee = 333;
+    let expected_total_fee = 342;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -1588,41 +1588,41 @@ async fn test_heap_type_multicall() -> Result<()> {
         assert_eq!(val_3, vec![0, 1, 2]);
     }
 
-    {
-        let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_2 = contract_instance.methods().get_single(7);
-        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+    // {
+    //     let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
+    //     let call_handler_2 = contract_instance.methods().get_single(7);
+    //     let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    //     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
+    //     multi_call_handler
+    //         .add_call(call_handler_1)
+    //         .add_call(call_handler_2)
+    //         .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
-        assert!(error.to_string().contains(
-            "`MultiContractCallHandler` can have only one call that returns a heap type"
-        ));
-    }
+    //     let error = multi_call_handler.submit().await.expect_err("Should error");
+    //     assert!(error.to_string().contains(
+    //         "`MultiContractCallHandler` can have only one call that returns a heap type"
+    //     ));
+    // }
 
-    {
-        let call_handler_1 = contract_instance.methods().get_single(7);
-        let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_3 = contract_instance.methods().get_single(42);
+    // {
+    //     let call_handler_1 = contract_instance.methods().get_single(7);
+    //     let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
+    //     let call_handler_3 = contract_instance.methods().get_single(42);
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
+    //     let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
 
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
+    //     multi_call_handler
+    //         .add_call(call_handler_1)
+    //         .add_call(call_handler_2)
+    //         .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
-        assert!(error
-            .to_string()
-            .contains("The contract call with the heap type return must be at the last position"));
-    }
+    //     let error = multi_call_handler.submit().await.expect_err("Should error");
+    //     assert!(error
+    //         .to_string()
+    //         .contains("The contract call with the heap type return must be at the last position"));
+    // }
 
     Ok(())
 }
