@@ -20,6 +20,7 @@ impl MyContract for Contract {
         arg + U256::from((3, 4, 5, 6))
     }
 
+    #[allow(deprecated)]
     fn u256_in_enum_input(some_enum: SomeEnum<U256>) {
         if let SomeEnum::B(some_u256) = some_enum {
             let expected_u256 = U256::from((2, 3, 4, 5));
@@ -32,6 +33,7 @@ impl MyContract for Contract {
         }
     }
 
+    #[allow(deprecated)]
     fn u256_in_enum_output() -> SomeEnum<U256> {
         SomeEnum::B(U256::from((1, 2, 3, 4)))
     }
