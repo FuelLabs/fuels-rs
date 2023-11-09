@@ -134,12 +134,12 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
     // ANCHOR: script_with_tx_params
-    let parameters = TxPolicies::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(1)
         .with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
-        .tx_params(parameters)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
     // ANCHOR_END: script_with_tx_params
@@ -202,10 +202,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
 #[tokio::test]
 async fn test_script_signing() -> Result<()> {
     let wallet_config = WalletsConfig::new(Some(1), None, None);
-    let provider_config = Config {
-        utxo_validation: true,
-        ..Config::local_node()
-    };
+    let provider_config = Config::local_node();
 
     let wallets =
         launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await?;

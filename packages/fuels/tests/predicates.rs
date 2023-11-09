@@ -219,7 +219,7 @@ async fn pay_with_predicate() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxPolicies::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(1)
         .with_script_gas_limit(1000000);
 
@@ -227,7 +227,7 @@ async fn pay_with_predicate() -> Result<()> {
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -275,7 +275,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxPolicies::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(1)
         .with_script_gas_limit(1000000);
 
@@ -283,7 +283,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -523,7 +523,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxPolicies::default().with_gas_price(1);
+    let tx_policies = TxPolicies::default().with_gas_price(1);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
@@ -533,7 +533,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     {
         let response = contract_methods
             .get_msg_amount()
-            .tx_params(my_tx_params)
+            .with_tx_policies(tx_policies)
             .call_params(call_params.clone())?
             .call()
             .await?;

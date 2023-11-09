@@ -76,7 +76,7 @@ impl ScriptCall {
 /// Helper that handles submitting a script call to a client and formatting the response
 pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
-    pub tx_parameters: TxPolicies,
+    pub tx_policies: TxPolicies,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
@@ -107,7 +107,7 @@ where
         };
         Self {
             script_call,
-            tx_parameters: TxPolicies::default(),
+            tx_policies: TxPolicies::default(),
             cached_tx_id: None,
             account,
             provider,
@@ -117,15 +117,15 @@ where
         }
     }
 
-    /// Sets the transaction parameters for a given transaction.
+    /// Sets the transaction policies for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// instance.main(...).tx_params(params).call()
+    /// let tx_policies = TxPolicies::default().with_gas_price(100);
+    /// instance.main(...).with_tx_policies(tx_policies).call()
     /// ```
-    pub fn tx_params(mut self, params: TxPolicies) -> Self {
-        self.tx_parameters = params;
+    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.tx_policies = tx_policies;
         self
     }
 
@@ -197,7 +197,7 @@ where
         let tb = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
-            self.tx_parameters,
+            self.tx_policies,
             network_info,
         )
         .with_script(self.script_call.script_binary.clone())

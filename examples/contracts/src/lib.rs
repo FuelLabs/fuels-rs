@@ -103,7 +103,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 397);
+        assert_eq!(transaction_cost.gas_used, 395);
 
         Ok(())
     }
@@ -143,7 +143,7 @@ mod tests {
             .with_salt(salt);
 
         // Optional: Configure deployment parameters
-        let tx_parameters = TxPolicies::default()
+        let tx_policies = TxPolicies::default()
             .with_gas_price(0)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
@@ -152,7 +152,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             configuration,
         )?
-        .deploy(&wallet, tx_parameters)
+        .deploy(&wallet, tx_policies)
         .await?;
 
         println!("Contract deployed @ {contract_id_2}");
@@ -231,7 +231,7 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42)
-            .tx_params(TxPolicies::default().with_script_gas_limit(1_000_000))
+            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
@@ -250,7 +250,7 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .tx_params(TxPolicies::default().with_script_gas_limit(1_000_000))
+            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
@@ -280,14 +280,14 @@ mod tests {
         // ANCHOR: tx_parameters
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
-        let my_tx_parameters = TxPolicies::default()
+        let tx_policies = TxPolicies::default()
             .with_gas_price(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
         let response = contract_methods
             .initialize_counter(42) // Our contract method.
-            .tx_params(my_tx_parameters) // Chain the tx params setting method.
+            .with_tx_policies(tx_policies) // Chain the tx params setting method.
             .call() // Perform the contract call.
             .await?; // This is an async call, `.await` for it.
                      // ANCHOR_END: tx_parameters
@@ -295,7 +295,7 @@ mod tests {
         // ANCHOR: tx_parameters_default
         let response = contract_methods
             .initialize_counter(42)
-            .tx_params(TxPolicies::default())
+            .with_tx_policies(TxPolicies::default())
             .call()
             .await?;
 
@@ -304,7 +304,7 @@ mod tests {
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
-        let tx_params = TxPolicies::default();
+        let tx_policies = TxPolicies::default();
 
         // Forward 1_000_000 coin amount of base asset_id
         // this is a big number for checking that amount can be a u64
@@ -312,7 +312,7 @@ mod tests {
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .tx_params(tx_params) // Chain the tx params setting method.
+            .with_tx_policies(tx_policies) // Chain the tx params setting method.
             .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;
@@ -543,12 +543,12 @@ mod tests {
         // Set the transaction `gas_limit` to 1_000_000 and `gas_forwarded` to 4300 to specify that
         // the contract call transaction may consume up to 1_000_000 gas, while the actual call may
         // only use 4300 gas
-        let tx_params = TxPolicies::default().with_script_gas_limit(1_000_000);
+        let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
         let call_params = CallParameters::default().with_gas_forwarded(4300);
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .tx_params(tx_params) // Chain the tx params setting method.
+            .with_tx_policies(tx_policies) // Chain the tx params setting method.
             .call_params(call_params)? // Chain the call params setting method.
             .call() // Perform the contract call.
             .await?;

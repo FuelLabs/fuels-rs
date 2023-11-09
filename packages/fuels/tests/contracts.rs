@@ -280,14 +280,14 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 476;
+    let expected_gas_used = 474;
     let expected_metered_bytes_size = 808;
     let expected_total_fee = 4643;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(
+        .with_tx_policies(
             TxPolicies::default()
                 .with_gas_price(gas_price)
                 .with_script_gas_limit(gas_limit),
@@ -398,7 +398,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxPolicies::default().with_maturity(maturity))
+            .with_tx_policies(TxPolicies::default().with_maturity(maturity))
     };
 
     call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -408,7 +408,6 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: make sway use the new constants
 async fn test_auth_msg_sender_from_sdk() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -619,13 +618,13 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR_END: contract_setup_macro_manual_wallet
 
     // pay for call with wallet
-    let tx_params = TxPolicies::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(10)
         .with_script_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -638,7 +637,7 @@ async fn test_connect_wallet() -> Result<()> {
         .with_account(wallet_2.clone())?
         .methods()
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -674,7 +673,6 @@ async fn setup_output_variable_estimation_test(
 }
 
 #[tokio::test]
-#[ignore] // TODO: gtfo again
 async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -733,7 +731,6 @@ async fn test_output_variable_estimation() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: gtfo again
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -763,7 +760,6 @@ async fn test_output_variable_estimation_default_attempts() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: gtfo again
 async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
@@ -980,7 +976,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     let contract_methods = contract_caller_instance.methods();
 
     let mut multi_call_handler =
-        MultiContractCallHandler::new(wallet.clone()).tx_params(Default::default());
+        MultiContractCallHandler::new(wallet.clone()).with_tx_policies(Default::default());
 
     (0..3).for_each(|_| {
         let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
@@ -1631,8 +1627,6 @@ async fn test_heap_type_multicall() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: enable this - probably problem with offset now that gas_limit is not there
-          // anymore
 async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

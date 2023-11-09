@@ -9,7 +9,7 @@ use fuel_tx::{
     Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
     TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, Salt};
+use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -257,7 +257,7 @@ impl ScriptTransactionBuilder {
         }
     }
 
-    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
+    fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Script> {
         let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
         let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
 
@@ -267,10 +267,13 @@ impl ScriptTransactionBuilder {
         let max_fee = self.max_fee.unwrap_or(1_000_000_000);
 
         let policies = Policies::default()
-            .with_gas_price(gas_price)
-            .with_witness_limit(witness_limit)
-            .with_maturity(self.maturity.into())
-            .with_max_fee(max_fee);
+            .with_gas_price(gas_price) // always
+            .with_witness_limit(witness_limit) // must be
+            .with_maturity(self.maturity.into()) // optional  better not set TODO:
+            .with_max_fee(max_fee); // optional better not set
+
+        //Add policies size to offset TODO: find best location for this
+        base_offset += policies.size_dynamic();
 
         let mut tx = FuelTransaction::script(
             gas_limit,
