@@ -128,7 +128,7 @@ pub trait GasValidation {
 }
 
 pub trait Transaction:
-    Into<FuelTransaction> + UpdateGas + EstimateablePredicates + GasValidation + Clone
+    Into<FuelTransaction> + UpdateGas + EstimateablePredicates + GasValidation + Clone + Debug
 {
     fn fee_checked_from_tx(
         &self,
