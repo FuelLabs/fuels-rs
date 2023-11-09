@@ -259,7 +259,9 @@ impl ScriptTransactionBuilder {
 
     fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Script> {
         let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
-        let gas_limit = self.gas_limit.unwrap_or(self.network_info.max_gas_per_tx);
+        let gas_limit = self
+            .gas_limit
+            .unwrap_or(self.network_info.max_gas_per_tx / 2);
 
         // TODO: make nice limit
         let witness_limit = self.witness_limit.unwrap_or(10_000);
