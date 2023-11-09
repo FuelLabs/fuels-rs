@@ -1,7 +1,7 @@
 use crate::{
     constants::ENUM_DISCRIMINANT_BYTE_WIDTH,
     types::{
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
     },
     utils::round_up_to_word_alignment,

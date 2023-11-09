@@ -3,7 +3,7 @@ use fuel_types::{Address, AssetId, ContractId};
 use crate::{
     traits::Parameterize,
     types::{
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
         AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StaticStringToken, Token,
     },

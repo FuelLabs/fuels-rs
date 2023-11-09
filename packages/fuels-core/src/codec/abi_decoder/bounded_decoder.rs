@@ -7,7 +7,7 @@ use crate::{
     traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
         StaticStringToken, Token, U256,
     },
