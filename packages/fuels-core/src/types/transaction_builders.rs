@@ -290,22 +290,22 @@ impl ScriptTransactionBuilder {
             self.witnesses,
         );
 
+        //TODO: make it nicer
+        // Lower max gas
+        if gas_limit == self.network_info.max_gas_per_tx {
+            let cp = &self.network_info.consensus_parameters;
+            tx.set_script_gas_limit(0);
+            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params());
+            let gas_limit = self.network_info.max_gas_per_tx - max_gas;
+
+            tx.set_script_gas_limit(gas_limit);
+        }
+
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&self.network_info.chain_id()),
             &self.unresolved_signatures,
         );
         tx.witnesses_mut().extend(missing_witnesses);
-
-        //TODO: make it nicer
-        // Lower max gas
-        if gas_limit == self.network_info.max_gas_per_tx {
-            let cp = &self.network_info.consensus_parameters;
-            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params());
-            let gas_limit = self.network_info.max_gas_per_tx
-                - ((max_gas - self.network_info.max_gas_per_tx) as f64 * 1.1) as u64;
-
-            tx.set_script_gas_limit(gas_limit);
-        }
 
         Ok(tx)
     }
