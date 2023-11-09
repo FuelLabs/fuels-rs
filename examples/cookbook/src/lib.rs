@@ -47,7 +47,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(wallet, TxParameters::default())
+        .deploy(wallet, TxPolicies::default())
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
@@ -181,7 +181,7 @@ mod tests {
         let mut tb = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
-            TxParameters::default(),
+            TxPolicies::default(),
             network_info,
         );
         wallet_1.sign_transaction(&mut tb);

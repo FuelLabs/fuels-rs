@@ -16,7 +16,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::TxParameters,
+        transaction::TxPolicies,
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         transaction_response::TransactionResponse,
     },
@@ -199,7 +199,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_parameters: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -242,7 +242,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32ContractId,
         balance: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_parameters: TxPolicies,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -297,7 +297,7 @@ pub trait Account: ViewOnlyAccount {
         &self,
         to: &Bech32Address,
         amount: u64,
-        tx_parameters: TxParameters,
+        tx_parameters: TxPolicies,
     ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;

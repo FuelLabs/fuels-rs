@@ -31,28 +31,28 @@ use crate::{
 };
 
 #[derive(Default, Debug, Copy, Clone)]
-pub struct TxParameters {
+pub struct TxPolicies {
     gas_price: Option<u64>,
-    gas_limit: Option<u64>,
     witness_limit: Option<u64>,
-    max_fee: Option<u64>,
     maturity: u32,
+    max_fee: Option<u64>,
+    script_gas_limit: Option<u64>,
 }
 
-impl TxParameters {
+impl TxPolicies {
     pub fn new(
         gas_price: Option<u64>,
-        gas_limit: Option<u64>,
         witness_limit: Option<u64>,
-        max_fee: Option<u64>,
         maturity: u32,
+        max_fee: Option<u64>,
+        script_gas_limit: Option<u64>,
     ) -> Self {
         Self {
             gas_price,
-            gas_limit,
             witness_limit,
-            max_fee,
             maturity,
+            max_fee,
+            script_gas_limit,
         }
     }
 
@@ -65,15 +65,6 @@ impl TxParameters {
         self.gas_price
     }
 
-    pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-        self.gas_limit = Some(gas_limit);
-        self
-    }
-
-    pub fn gas_limit(&self) -> Option<u64> {
-        self.gas_limit
-    }
-
     pub fn with_witness_limit(mut self, witness_limit: u64) -> Self {
         self.witness_limit = Some(witness_limit);
         self
@@ -81,6 +72,15 @@ impl TxParameters {
 
     pub fn witness_limit(&self) -> Option<u64> {
         self.witness_limit
+    }
+
+    pub fn with_maturity(mut self, maturity: u32) -> Self {
+        self.maturity = maturity;
+        self
+    }
+
+    pub fn maturity(&self) -> u32 {
+        self.maturity
     }
 
     pub fn with_max_fee(mut self, max_fee: u64) -> Self {
@@ -92,13 +92,13 @@ impl TxParameters {
         self.max_fee
     }
 
-    pub fn with_maturity(mut self, maturity: u32) -> Self {
-        self.maturity = maturity;
+    pub fn with_script_gas_limit(mut self, script_gas_limit: u64) -> Self {
+        self.script_gas_limit = Some(script_gas_limit);
         self
     }
 
-    pub fn maturity(&self) -> u32 {
-        self.maturity
+    pub fn script_gas_limit(&self) -> Option<u64> {
+        self.script_gas_limit
     }
 }
 

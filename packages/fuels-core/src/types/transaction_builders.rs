@@ -24,7 +24,7 @@ use crate::{
         input::Input,
         message::Message,
         transaction::{
-            CreateTransaction, EstimateablePredicates, ScriptTransaction, Transaction, TxParameters,
+            CreateTransaction, EstimateablePredicates, ScriptTransaction, Transaction, TxPolicies,
         },
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
@@ -67,7 +67,7 @@ pub trait TransactionBuilder: Send {
     fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
-    fn with_tx_params(self, tx_params: TxParameters) -> Self;
+    fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
     fn with_witnesses(self, witnesses: Vec<Witness>) -> Self;
@@ -132,8 +132,8 @@ macro_rules! impl_tx_trait {
                 self
             }
 
-            fn with_tx_params(self, tx_params: TxParameters) -> Self {
-                self.with_tx_params(tx_params)
+            fn with_tx_policies(self, tx_policies: TxPolicies) -> Self {
+                self.with_tx_policies(tx_policies)
             }
 
             fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -326,13 +326,13 @@ impl ScriptTransactionBuilder {
     pub fn prepare_transfer(
         inputs: Vec<Input>,
         outputs: Vec<Output>,
-        params: TxParameters,
+        tx_policies: TxPolicies,
         network_info: NetworkInfo,
     ) -> Self {
         ScriptTransactionBuilder::new(network_info)
             .with_inputs(inputs)
             .with_outputs(outputs)
-            .with_tx_params(params)
+            .with_tx_policies(tx_policies)
     }
 
     /// Craft a transaction used to transfer funds to a contract.
@@ -342,7 +342,7 @@ impl ScriptTransactionBuilder {
         asset_id: AssetId,
         inputs: Vec<Input>,
         outputs: Vec<Output>,
-        params: TxParameters,
+        tx_policies: TxPolicies,
         network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [
@@ -372,7 +372,7 @@ impl ScriptTransactionBuilder {
         .collect();
 
         ScriptTransactionBuilder::new(network_info)
-            .with_tx_params(params)
+            .with_tx_policies(tx_policies)
             .with_script(script)
             .with_script_data(script_data)
             .with_inputs(inputs)
@@ -384,7 +384,7 @@ impl ScriptTransactionBuilder {
         to: Address,
         amount: u64,
         inputs: Vec<Input>,
-        params: TxParameters,
+        tx_policies: TxPolicies,
         network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
@@ -410,7 +410,7 @@ impl ScriptTransactionBuilder {
         let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
 
         ScriptTransactionBuilder::new(network_info)
-            .with_tx_params(params)
+            .with_tx_policies(tx_policies)
             .with_script(script)
             .with_script_data(script_data)
             .with_inputs(inputs)
@@ -422,11 +422,11 @@ impl ScriptTransactionBuilder {
         self
     }
 
-    fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
-        self.gas_limit = tx_params.gas_limit();
-        self.gas_price = tx_params.gas_price();
+    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.gas_limit = tx_policies.script_gas_limit();
+        self.gas_price = tx_policies.gas_price();
 
-        self.with_maturity(tx_params.maturity())
+        self.with_maturity(tx_policies.maturity())
     }
 }
 
@@ -523,7 +523,7 @@ impl CreateTransactionBuilder {
         state_root: Bytes32,
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
-        params: TxParameters,
+        tx_policies: TxPolicies,
         network_info: NetworkInfo,
     ) -> Self {
         let bytecode_witness_index = 0;
@@ -531,7 +531,7 @@ impl CreateTransactionBuilder {
         let witnesses = vec![binary.into()];
 
         CreateTransactionBuilder::new(network_info)
-            .with_tx_params(params)
+            .with_tx_policies(tx_policies)
             .with_bytecode_witness_index(bytecode_witness_index)
             .with_salt(salt)
             .with_storage_slots(storage_slots)
@@ -539,10 +539,10 @@ impl CreateTransactionBuilder {
             .with_witnesses(witnesses)
     }
 
-    fn with_tx_params(mut self, tx_params: TxParameters) -> Self {
-        self.gas_price = tx_params.gas_price();
+    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.gas_price = tx_policies.gas_price();
 
-        self.with_maturity(tx_params.maturity())
+        self.with_maturity(tx_policies.maturity())
     }
 }
 

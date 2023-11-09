@@ -288,9 +288,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         .methods()
         .initialize_counter(42)
         .tx_params(
-            TxParameters::default()
+            TxPolicies::default()
                 .with_gas_price(gas_price)
-                .with_gas_limit(gas_limit),
+                .with_script_gas_limit(gas_limit),
         )
         .estimate_transaction_cost(Some(tolerance))
         .await?;
@@ -398,7 +398,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxParameters::default().with_maturity(maturity))
+            .tx_params(TxPolicies::default().with_maturity(maturity))
     };
 
     call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -619,9 +619,9 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR_END: contract_setup_macro_manual_wallet
 
     // pay for call with wallet
-    let tx_params = TxParameters::default()
+    let tx_params = TxPolicies::default()
         .with_gas_price(10)
-        .with_gas_limit(1_000_000);
+        .with_script_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)
@@ -659,7 +659,7 @@ async fn setup_output_variable_estimation_test(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallets[0], TxParameters::default())
+    .deploy(&wallets[0], TxPolicies::default())
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
@@ -790,7 +790,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
             &contract_id,
             total_amount,
             AssetId::BASE,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await
         .unwrap();
@@ -842,12 +842,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     // Transfer an amount to the contract
     let amount = 8;
     wallet
-        .force_transfer_to_contract(
-            contract_id,
-            amount,
-            *random_asset_id,
-            TxParameters::default(),
-        )
+        .force_transfer_to_contract(contract_id, amount, *random_asset_id, TxPolicies::default())
         .await?;
 
     // Check that the contract now has 1 coin
@@ -1660,7 +1655,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
             predicate.address(),
             10_000,
             BASE_ASSET_ID,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -1671,7 +1666,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         "tests/contracts/storage/out/debug/storage.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
     Ok(())

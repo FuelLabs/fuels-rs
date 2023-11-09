@@ -14,7 +14,7 @@ use fuels_core::{
         bech32::Bech32ContractId,
         errors::Result,
         input::Input,
-        transaction::{ScriptTransaction, Transaction, TxParameters},
+        transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
     },
@@ -76,7 +76,7 @@ impl ScriptCall {
 /// Helper that handles submitting a script call to a client and formatting the response
 pub struct ScriptCallHandler<T: Account, D> {
     pub script_call: ScriptCall,
-    pub tx_parameters: TxParameters,
+    pub tx_parameters: TxPolicies,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
@@ -107,7 +107,7 @@ where
         };
         Self {
             script_call,
-            tx_parameters: TxParameters::default(),
+            tx_parameters: TxPolicies::default(),
             cached_tx_id: None,
             account,
             provider,
@@ -124,7 +124,7 @@ where
     /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
     /// instance.main(...).tx_params(params).call()
     /// ```
-    pub fn tx_params(mut self, params: TxParameters) -> Self {
+    pub fn tx_params(mut self, params: TxPolicies) -> Self {
         self.tx_parameters = params;
         self
     }

@@ -141,7 +141,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![],
         vec![],
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
 
@@ -186,7 +186,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
     wallet.sign_transaction(&mut tb);
@@ -240,7 +240,7 @@ async fn test_transfer() -> Result<()> {
             wallet_2.address(),
             1,
             Default::default(),
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await
         .unwrap();
@@ -262,7 +262,7 @@ async fn send_transfer_transactions() -> Result<()> {
     let gas_limit = 500_000;
     let maturity = 0u32;
 
-    let tx_params = TxParameters::new(Some(gas_price), Some(gas_limit), None, None, maturity);
+    let tx_params = TxPolicies::new(Some(gas_price), None, maturity, None, Some(gas_limit));
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
@@ -312,7 +312,7 @@ async fn transfer_coins_with_change() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             BASE_ASSET_ID,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -374,7 +374,7 @@ async fn transfer_more_than_owned() -> Result<()> {
             wallet_2.address(),
             AMOUNT * 2,
             Default::default(),
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await;
 
@@ -407,7 +407,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -455,7 +455,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
 

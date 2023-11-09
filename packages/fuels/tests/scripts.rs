@@ -134,9 +134,9 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
     // ANCHOR: script_with_tx_params
-    let parameters = TxParameters::default()
+    let parameters = TxPolicies::default()
         .with_gas_price(1)
-        .with_gas_limit(1_000_000);
+        .with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .tx_params(parameters)

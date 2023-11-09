@@ -13,7 +13,7 @@ use fuels_core::{
         errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
-        transaction::{ScriptTransaction, TxParameters},
+        transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
     },
 };
@@ -101,7 +101,7 @@ pub trait TxDependencyExtension: Sized {
 /// transaction inputs/outputs consisting of assets and contracts.
 pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: TxParameters,
+    tx_parameters: TxPolicies,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.try_provider()?.consensus_parameters();
