@@ -5,4 +5,3 @@ license = "Apache-2.0"
 name = "heap_type_in_enums"
 
 [dependencies]
-std = { path = "/home/xunilrj/github/sway/sway-lib-std" }
