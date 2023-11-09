@@ -15,6 +15,7 @@ abi MyContract {
 }
 
 impl MyContract for Contract {
+    #[allow(deprecated)]
     fn u256_sum_and_ret(arg: U256) -> U256 {
         arg + U256::from((3, 4, 5, 6))
     }
