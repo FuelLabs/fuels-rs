@@ -21,8 +21,6 @@ env:
   FORC_VERSION: 0.46.0
   FORC_PATCH_BRANCH: "master"
   FORC_PATCH_REVISION: ""
-  FORC_IMPLICIT_STD_GIT_BRANCH: "master"
-  FORC_IMPLICIT_STD_GIT_TAG: "master+95481fc8c165eea954edd1c043ece60306ba227a"
 
 jobs:
   setup-test-projects:
