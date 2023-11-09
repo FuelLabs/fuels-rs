@@ -203,7 +203,6 @@ impl Provider {
     /// Sends a transaction to the underlying Provider's client.
     pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
         let tx_id = self.send_transaction(tx.clone()).await?;
-        dbg!("halil-");
         let _status = self.client.await_transaction_commit(&tx_id).await?;
 
         #[cfg(feature = "coin-cache")]
@@ -221,8 +220,6 @@ impl Provider {
 
     pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
         tx.precompute(&self.chain_id())?;
-
-        dbg!(&tx);
 
         let chain_info = self.chain_info().await?;
         tx.check_without_signatures(
