@@ -295,7 +295,7 @@ impl ScriptTransactionBuilder {
         if gas_limit == self.network_info.max_gas_per_tx {
             let cp = &self.network_info.consensus_parameters;
             tx.set_script_gas_limit(0);
-            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params());
+            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params()) + 1;
             let gas_limit = self.network_info.max_gas_per_tx - max_gas;
 
             tx.set_script_gas_limit(gas_limit);
