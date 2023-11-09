@@ -819,7 +819,6 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     tx.append_witness(witness.into());
     tx.append_witness(witness2.into());
-    
 
     provider.send_transaction_and_await_commit(tx).await?;
 
