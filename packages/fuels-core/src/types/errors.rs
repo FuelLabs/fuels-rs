@@ -1,6 +1,7 @@
 use std::{array::TryFromSliceError, str::Utf8Error};
 
-use fuel_tx::{CheckError, Receipt};
+use fuel_tx::{Receipt, ValidityError};
+use fuel_vm::checked_transaction::CheckError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -64,6 +65,12 @@ macro_rules! impl_error_from {
     };
 }
 
+impl From<CheckError> for Error {
+    fn from(err: CheckError) -> Error {
+        Error::ValidationError(format!("{:?}", err))
+    }
+}
+
 impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
-impl_error_from!(ValidationError, CheckError);
+impl_error_from!(ValidationError, ValidityError);

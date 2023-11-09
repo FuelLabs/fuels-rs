@@ -84,21 +84,13 @@ fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "
 fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-# fuel-asm = { version = "0.41.0"}
-# fuel-crypto = { version = "0.41.0"}
-# fuel-merkle = { version = "0.41.0"}
-# fuel-storage = { version = "0.41.0"}
-# fuel-tx = { version = "0.41.0"}
-# fuel-types = { version = "0.41.0"}
-# fuel-vm = { version = "0.41.0"}
-
-fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-types = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-asm = { version = "0.41.0"}
+fuel-crypto = { version = "0.41.0"}
+fuel-merkle = { version = "0.41.0"}
+fuel-storage = { version = "0.41.0"}
+fuel-tx = { version = "0.41.0"}
+fuel-types = { version = "0.41.0"}
+fuel-vm = { version = "0.41.0"}
 
 # Workspace projects
 fuels = { version = "0.50.1", path = "./packages/fuels" }
@@ -108,3 +100,12 @@ fuels-core = { version = "0.50.1", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.50.1", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.50.1", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.50.1", path = "./packages/fuels-test-helpers", default-features = false }
+
+[patch.crates-io]
+fuel-asm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-crypto = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-merkle = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-types = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
+fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }

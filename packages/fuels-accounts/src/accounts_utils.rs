@@ -18,9 +18,11 @@ pub fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
     used_base_amount: u64,
 ) -> Result<u64> {
+    dbg!("nani");
     let transaction_fee = tb
         .fee_checked_from_tx()?
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
+    dbg!("halil");
 
     let available_amount = available_base_amount(tb);
 
