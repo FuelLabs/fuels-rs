@@ -7,11 +7,12 @@ use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
     field::Witnesses,
     policies::{Policies, PolicyType},
-    Buildable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
-    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
-    Witness,
+    Buildable, Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output,
+    Script, StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer,
+    UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
+use fuel_vm::checked_transaction::EstimatePredicates;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -273,6 +274,94 @@ impl ScriptTransactionBuilder {
             network_info,
             unresolved_signatures: Default::default(),
         }
+    }
+
+    pub async fn build_with_provider(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+        let base_offset = if is_using_predicates {
+            self.base_offset()
+        } else {
+            0
+        };
+
+        let num_witnesses = self.num_witnesses()?;
+        let tx = self
+            .resolve_fuel_tx_provider(base_offset, num_witnesses, provider)
+            .await?;
+
+        Ok(ScriptTransaction {
+            tx,
+            is_using_predicates,
+        })
+    }
+
+    async fn resolve_fuel_tx_provider(
+        self,
+        base_offset: usize,
+        num_witnesses: u8,
+        provider: &impl DryRunner,
+    ) -> Result<Script> {
+        let mut policies = self.generate_common_fuel_policies();
+        policies.set(
+            PolicyType::WitnessLimit,
+            self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
+        );
+
+        let mut tx = FuelTransaction::script(
+            0, // use temporarily
+            self.script,
+            self.script_data,
+            policies,
+            resolve_fuel_inputs(
+                self.inputs,
+                base_offset + policies.size_dynamic(),
+                num_witnesses,
+                &self.unresolved_signatures,
+            )?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        if let Some(gas_limit) = self.gas_limit {
+            tx.set_script_gas_limit(gas_limit);
+        } else {
+            let consensus_params = &self.network_info.consensus_parameters;
+            // Add `1` because of rounding
+            let max_gas =
+                tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+
+            // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
+            tx.set_script_gas_limit((self.network_info.max_gas_per_tx) - max_gas);
+        }
+
+        let should_remove_witness = if tx.witnesses().is_empty() {
+            tx.witnesses_mut().push(Default::default());
+
+            true
+        } else {
+            false
+        };
+
+        //TODO: add tolerance setting
+        let gas_used = provider.dry_run(tx.clone().into(), 0.1).await?;
+
+        if should_remove_witness {
+            tx.witnesses_mut().pop();
+        }
+
+        tx.set_script_gas_limit(gas_used);
+
+        let missing_witnesses = generate_missing_witnesses(
+            tx.id(&self.network_info.chain_id()),
+            &self.unresolved_signatures,
+        );
+        tx.witnesses_mut().extend(missing_witnesses);
+
+        tx.precompute(&self.network_info.chain_id())?;
+
+        tx.estimate_predicates(&self.network_info.consensus_parameters.clone().into())?;
+
+        Ok(tx)
     }
 
     fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
@@ -828,4 +917,11 @@ mod tests {
             status: MessageStatus::Unspent,
         }
     }
+}
+
+use async_trait::async_trait;
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait DryRunner {
+    async fn dry_run(&self, tx: FuelTransaction, tolerance: f64) -> Result<u64>;
 }

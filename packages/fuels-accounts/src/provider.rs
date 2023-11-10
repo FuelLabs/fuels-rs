@@ -9,7 +9,10 @@ use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
+use fuel_tx::{
+    AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
+    TxId, UtxoId,
+};
 use fuel_types::{Address, Bytes32, ChainId, Nonce};
 use fuel_vm::state::ProgramState;
 use fuels_core::{
@@ -25,7 +28,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::Transaction,
-        transaction_builders::NetworkInfo,
+        transaction_builders::{DryRunner, NetworkInfo},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -726,6 +729,7 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+        // TODO: check this math
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -780,5 +784,15 @@ impl Provider {
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.client.set_retry_config(retry_config);
         self
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl DryRunner for Provider {
+    async fn dry_run(&self, tx: FuelTransaction, tolerance: f64) -> Result<u64> {
+        let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
+        let gas_used = self.get_gas_used(&receipts);
+        // TODO: check this math
+        Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 }

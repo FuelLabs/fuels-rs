@@ -960,3 +960,39 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn test_build_with_provider() -> Result<()> {
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?;
+
+    let receiver = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), BASE_ASSET_ID, 100);
+
+    let network_info = provider.network_info().await?;
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(
+        inputs,
+        outputs,
+        TxPolicies::default(),
+        network_info,
+    );
+
+    dbg!("halil");
+    wallet.sign_transaction(&mut tb);
+    let tx = tb.build_with_provider(provider).await?;
+
+    dbg!("2halil");
+    dbg!(&tx);
+
+    provider.send_transaction_and_await_commit(tx).await?;
+
+    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+
+    assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
