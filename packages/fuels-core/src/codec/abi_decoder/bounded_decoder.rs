@@ -36,12 +36,8 @@ impl BoundedDecoder {
         }
     }
 
-    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         param_type.validate_is_decodable(self.config.max_depth)?;
-        Ok(self.decode_param(param_type, bytes)?.token)
-    }
-
-    pub fn decode_receipt_return(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         match param_type {
             // Unit, U8 and Bool are returned as u64 from receipt "Return"
             ParamType::Unit => Ok(Token::Unit),
@@ -53,7 +49,7 @@ impl BoundedDecoder {
             }),
             ParamType::Bool => Self::decode_u64(bytes).map(|r| {
                 Token::Bool(match r.token {
-                    Token::U64(v) => v == 1,
+                    Token::U64(v) => v != 0,
                     _ => unreachable!("decode_u64 returning unexpected token"),
                 })
             }),
