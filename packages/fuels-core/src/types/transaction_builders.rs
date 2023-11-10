@@ -5,16 +5,20 @@ use std::collections::HashMap;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::Witnesses, policies::Policies, Buildable, Chargeable, ConsensusParameters, Create,
-    Input as FuelInput, Output, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, TxPointer, UniqueIdentifier, Witness,
+    field::Witnesses,
+    policies::{Policies, PolicyType},
+    Buildable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Witness,
 };
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
-    constants::{BASE_ASSET_ID, WORD_SIZE},
+    constants::{
+        BASE_ASSET_ID, DEFAULT_CREATE_WITNESS_LIMIT, DEFAULT_SCRIPT_WITNESS_LIMIT, WORD_SIZE,
+    },
     offsets,
     types::{
         bech32::Bech32Address,
@@ -181,6 +185,20 @@ macro_rules! impl_tx_trait {
         }
 
         impl $ty {
+            fn generate_common_fuel_policies(&self) -> Policies {
+                let mut policies = Policies::default();
+
+                policies.set(PolicyType::MaxFee, self.max_fee);
+                policies.set(PolicyType::Maturity, Some(self.maturity as u64));
+
+                policies.set(
+                    PolicyType::GasPrice,
+                    self.gas_price.or(Some(self.network_info.min_gas_price)),
+                );
+
+                policies
+            }
+
             fn is_using_predicates(&self) -> bool {
                 self.inputs()
                     .iter()
@@ -257,34 +275,21 @@ impl ScriptTransactionBuilder {
         }
     }
 
-    fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Script> {
-        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
-        let gas_limit = self
-            .gas_limit
-            .unwrap_or(self.network_info.max_gas_per_tx / 2);
-
-        // TODO: make nice limit
-        let witness_limit = self.witness_limit.unwrap_or(10_000);
-        // TODO: make nice max fee
-        let max_fee = self.max_fee.unwrap_or(1_000_000_000);
-
-        let policies = Policies::default()
-            .with_gas_price(gas_price) // always
-            .with_witness_limit(witness_limit) // must be
-            .with_maturity(self.maturity.into()) // optional  better not set TODO:
-            .with_max_fee(max_fee); // optional better not set
-
-        //Add policies size to offset TODO: find best location for this
-        base_offset += policies.size_dynamic();
+    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
+        let mut policies = self.generate_common_fuel_policies();
+        policies.set(
+            PolicyType::WitnessLimit,
+            self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
+        );
 
         let mut tx = FuelTransaction::script(
-            gas_limit,
+            0, // use temporarily
             self.script,
             self.script_data,
             policies,
             resolve_fuel_inputs(
                 self.inputs,
-                base_offset,
+                base_offset + policies.size_dynamic(),
                 num_witnesses,
                 &self.unresolved_signatures,
             )?,
@@ -292,16 +297,16 @@ impl ScriptTransactionBuilder {
             self.witnesses,
         );
 
-        //TODO: make it nicer
-        // Lower max gas
-        if gas_limit == self.network_info.max_gas_per_tx {
-            let cp = &self.network_info.consensus_parameters;
-            tx.set_script_gas_limit(0);
-            let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params()) + 1;
-            let gas_limit = self.network_info.max_gas_per_tx - max_gas; //TODO: check for this
-                                                                        //substraction
-
+        if let Some(gas_limit) = self.gas_limit {
             tx.set_script_gas_limit(gas_limit);
+        } else {
+            let consensus_params = &self.network_info.consensus_parameters;
+            // Add `1` because of rounding
+            let max_gas =
+                tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+
+            // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
+            tx.set_script_gas_limit((self.network_info.max_gas_per_tx / 2) - max_gas);
         }
 
         let missing_witnesses = generate_missing_witnesses(
@@ -456,23 +461,14 @@ impl CreateTransactionBuilder {
     }
 
     fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Create> {
-        let num_of_storage_slots = self.storage_slots.len();
+        let mut policies = self.generate_common_fuel_policies();
+        policies.set(
+            PolicyType::WitnessLimit,
+            self.witness_limit.or(Some(DEFAULT_CREATE_WITNESS_LIMIT)),
+        );
 
-        let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
-
-        // TODO: make nice limit
-        let witness_limit = self.witness_limit.unwrap_or(100_000);
-        // TODO: make nice max fee
-        let max_fee = self.max_fee.unwrap_or(1_000_000_000);
-
-        let policies = Policies::default()
-            .with_gas_price(gas_price)
-            .with_witness_limit(witness_limit)
-            .with_maturity(self.maturity.into())
-            .with_max_fee(max_fee);
-
-        //Add policies size to offset TODO: find best location for this
-        base_offset += num_of_storage_slots * StorageSlot::SLOT_SIZE + policies.size_dynamic();
+        let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
+        base_offset += storage_slots_offset + policies.size_dynamic();
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,

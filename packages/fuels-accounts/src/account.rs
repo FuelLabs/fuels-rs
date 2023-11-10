@@ -429,7 +429,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("7989459984fd7927411519da40e0ce7b9313f59792ac51d2a9d3f073611791dd6198a2523180165ccb2cb6b65ff78c984de60e0a7d0aae6c13212d270aeeb2dc")?);
+        assert_eq!(signature, Signature::from_str("4ea553d4c779aa04eef7e3cabf94b5008a70c0c1718fcda505117adf1fab7c97b22bc672f6f591450a71cf36d087fb8394c414bc456056873cbcff4bf3a9578c")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

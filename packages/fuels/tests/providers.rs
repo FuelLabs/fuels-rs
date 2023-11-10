@@ -327,8 +327,9 @@ async fn test_default_tx_policies_match_network() -> Result<()> {
     let tx = tb.build()?;
 
     assert_eq!(
-        tx.gas_limit(),
-        consensus_params.tx_params().max_gas_per_tx / 2 //TODO: decide what to do here!
+        tx.max_gas(consensus_params),
+        consensus_params.tx_params().max_gas_per_tx / 2 - 1 //TODO: update this .. use the
+                                                            //provider
     );
 
     Ok(())

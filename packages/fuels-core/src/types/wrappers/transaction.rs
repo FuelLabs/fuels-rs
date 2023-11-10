@@ -566,14 +566,11 @@ impl UpdateGas for ScriptTransaction {
 impl EstimateablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         let gas_price = self.tx.gas_price();
-        let gas_limit = consensus_parameters.tx_params().max_gas_per_tx / 2; //TODO: make this nicer
-        self.tx.set_script_gas_limit(gas_limit);
         self.tx.set_gas_price(0);
 
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 
         self.tx.set_gas_price(gas_price);
-        self.tx.set_script_gas_limit(gas_limit);
 
         Ok(())
     }

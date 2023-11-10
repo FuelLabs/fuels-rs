@@ -248,8 +248,6 @@ impl Provider {
 
         tx.validate_gas(min_gas_price, gas_used)?;
 
-        //TODO: set gas_used as gas_limit
-
         Ok(())
     }
 
