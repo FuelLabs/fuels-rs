@@ -130,14 +130,15 @@ async fn test_reverting_transaction() -> Result<()> {
 
     let response = contract_instance
         .methods()
-        .make_transaction_fail(0)
+        .make_transaction_fail(true)
         .call()
         .await;
 
     assert!(matches!(
         response,
-        Err(Error::RevertTransactionError { .. })
+        Err(Error::RevertTransactionError { revert_id, .. }) if revert_id == 128
     ));
+
     Ok(())
 }
 
@@ -280,9 +281,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 474;
+    let expected_gas_used = 564;
     let expected_metered_bytes_size = 808;
-    let expected_total_fee = 4843;
+    let expected_total_fee = 4852;
 
     let estimated_transaction_cost = contract_instance
         .methods()

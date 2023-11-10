@@ -1167,7 +1167,6 @@ async fn test_script_asserts_log() -> Result<()> {
             wallet = "wallet"
         )
     );
-
     {
         let a = 32;
         let b = 64;
@@ -1214,27 +1213,26 @@ async fn test_script_asserts_log() -> Result<()> {
 
         assert_assert_eq_containing_msg(test_struct, test_struct2, error);
     }
-    // {
-    //     let test_enum = TestEnum::VariantOne;
-    //     let test_enum2 = TestEnum::VariantTwo;
+    {
+        let test_enum = TestEnum::VariantOne;
+        let test_enum2 = TestEnum::VariantTwo;
 
-    //     let error = script_instance
-    //         .main(MatchEnum::AssertEqEnum((
-    //             test_enum.clone(),
-    //             test_enum2.clone(),
-    //         )))
-    //         .call()
-    //         .await
-    //         .expect_err("should return a revert error");
+        let error = script_instance
+            .main(MatchEnum::AssertEqEnum((
+                test_enum.clone(),
+                test_enum2.clone(),
+            )))
+            .call()
+            .await
+            .expect_err("should return a revert error");
 
-    //     assert_assert_eq_containing_msg(test_enum, test_enum2, error);
-    // }
+        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+    }
 
     Ok(())
 }
 
 #[tokio::test]
-#[ignore] // TODO: gtfo again
 async fn contract_token_ops_error_messages() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

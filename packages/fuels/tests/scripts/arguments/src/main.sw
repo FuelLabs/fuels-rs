@@ -1,5 +1,4 @@
 script;
-use std::logging::log;
 
 struct Bimbam {
     val: u64,

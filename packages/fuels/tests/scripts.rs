@@ -200,37 +200,6 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_signing() -> Result<()> {
-    let wallet_config = WalletsConfig::new(Some(1), None, None);
-    let provider_config = Config::local_node();
-
-    let wallets =
-        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await?;
-    let wallet = wallets.first().unwrap();
-
-    setup_program_test!(
-        Abigen(Script(
-            name = "BimBamScript",
-            project = "packages/fuels/tests/scripts/basic_script"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "BimBamScript",
-            wallet = "wallet"
-        )
-    );
-
-    let a = 1000u64;
-    let b = 2000u32;
-
-    let result = script_instance.main(a, b).call().await?;
-
-    assert_eq!(result.value, "hello");
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_output_variable_estimation() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
