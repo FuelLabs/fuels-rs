@@ -250,10 +250,7 @@ async fn compile_bindings_bool_array_input() -> Result<()> {
         hex::encode(encoded_args)
     );
 
-    assert_eq!(
-        "000000000c228226000000000000000100000000000000000000000000000001",
-        encoded
-    );
+    assert_eq!("000000000c2282260100010000000000", encoded);
 
     Ok(())
 }
@@ -566,10 +563,7 @@ async fn compile_bindings_struct_input() -> Result<()> {
         hex::encode(encoded_args)
     );
 
-    assert_eq!(
-        "000000008d4ab9b0000000000000000a00000000000000026675656c00000000",
-        encoded
-    );
+    assert_eq!("000000008d4ab9b00a020000000000006675656c00000000", encoded);
 
     Ok(())
 }
@@ -676,7 +670,7 @@ async fn compile_bindings_nested_struct_input() -> Result<()> {
         hex::encode(encoded_args)
     );
 
-    assert_eq!("0000000088bf8a1b000000000000000a0000000000000001", encoded);
+    assert_eq!("0000000088bf8a1b000000000000000a0100000000000000", encoded);
 
     Ok(())
 }

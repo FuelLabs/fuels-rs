@@ -31,20 +31,40 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn accept_bytes(bytes: Bytes) {
-        require(bytes == expected_bytes(), "given bytes didn't match the expected bytes");
+        require(
+            bytes == expected_bytes(),
+            "given bytes didn't match the expected bytes",
+        );
     }
 
     fn accept_nested_bytes(wrapper: Wrapper<Vec<Bytes>>) {
         if let SomeEnum::Second(enum_bytes) = wrapper.inner_enum {
-            require(enum_bytes == expected_bytes(), "wrapper.inner_enum didn't carry the expected bytes");
+            require(
+                enum_bytes == expected_bytes(),
+                "wrapper.inner_enum didn't carry the expected bytes",
+            );
         } else {
             require(false, "enum was not of variant Second");
         }
 
         let inner_vec = wrapper.inner;
-        require(inner_vec.len() == 2, "Expected wrapper.inner vector to have 2 elements");
-        require(inner_vec.get(0).unwrap() == expected_bytes(), "wrapper.inner[0] didn't match expectation");
-        require(inner_vec.get(1).unwrap() == expected_bytes(), "wrapper.inner[1] didn't match expectation");
+        require(
+            inner_vec
+                .len() == 2,
+            "Expected wrapper.inner vector to have 2 elements",
+        );
+        require(
+            inner_vec
+                .get(0)
+                .unwrap() == expected_bytes(),
+            "wrapper.inner[0] didn't match expectation",
+        );
+        require(
+            inner_vec
+                .get(1)
+                .unwrap() == expected_bytes(),
+            "wrapper.inner[1] didn't match expectation",
+        );
     }
 
     fn return_bytes(len: u8) -> Bytes {
