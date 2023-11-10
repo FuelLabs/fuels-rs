@@ -169,6 +169,7 @@ impl ParamType {
             ParamType::Vector(inner_param_type) => inner_param_type.compute_encoding_in_bytes(),
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
+            ParamType::StringSlice if !top_level_type => ParamType::U8.compute_encoding_in_bytes(),
             ParamType::RawSlice if !top_level_type => ParamType::U64.compute_encoding_in_bytes(),
             _ => None,
         }

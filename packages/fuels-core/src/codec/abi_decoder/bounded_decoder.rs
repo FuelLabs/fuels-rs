@@ -344,16 +344,18 @@ impl BoundedDecoder {
         let discriminant = peek_u64(bytes)?;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
-        // let skip_extra_in_bytes = variants
-        //     .heap_type_variant()
-        //     .and_then(|(heap_discriminant, heap_type)| {
-        //         (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_in_bytes())
-        //     })
-        //     .unwrap_or_default();
+        let skip_extra_in_bytes = variants
+            .heap_type_variant()
+            .and_then(|(heap_discriminant, heap_type)| {
+                (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_in_bytes())
+            })
+            .unwrap_or_default()
+            .unwrap_or_default();
         let bytes_to_skip = enum_width_in_bytes
             - selected_variant
                 .compute_encoding_in_bytes()
-                .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
+                .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?
+            + skip_extra_in_bytes;
 
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;

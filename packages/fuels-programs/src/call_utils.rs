@@ -382,7 +382,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
                         "Error calculating enum width in bytes"
                     ))?;
 
-            let ptr_offset = (param_type_width - heap_type_width) as u16;
+            let ptr_offset = ((param_type_width - heap_type_width) / 8) as u16;
 
             Ok([
                 vec![
