@@ -1003,12 +1003,12 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     use fuels::{
-        tx::{ConsensusParameters, FuelTxParameters},
+        tx::{ConsensusParameters, TxParameters},
         types::coin::Coin,
     };
 
     let consensus_parameters = ConsensusParameters {
-        tx_params: FuelTxParameters::default().with_max_inputs(123),
+        tx_params: TxParameters::default().with_max_inputs(123),
         ..Default::default()
     };
 

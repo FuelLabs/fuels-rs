@@ -101,7 +101,7 @@ pub trait TxDependencyExtension: Sized {
 /// transaction inputs/outputs consisting of assets and contracts.
 pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: TxPolicies,
+    tx_policies: TxPolicies,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.try_provider()?.consensus_parameters();
@@ -130,7 +130,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let network_info = account.try_provider()?.network_info().await?;
     let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters, network_info)
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info)
             .with_script(script)
             .with_script_data(script_data.clone());
 

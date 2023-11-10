@@ -259,15 +259,18 @@ async fn send_transfer_transactions() -> Result<()> {
 
     // Configure transaction parameters.
     let gas_price = 1;
-    let gas_limit = 500_000;
+    let script_gas_limit = 500_000;
     let maturity = 0u32;
 
-    let tx_params = TxPolicies::new(Some(gas_price), None, maturity, None, Some(gas_limit));
+    let tx_policies = TxPolicies::default()
+        .with_gas_price(gas_price)
+        .with_maturity(maturity)
+        .with_script_gas_limit(script_gas_limit);
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let (tx_id, _receipts) = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_params)
+        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_policies)
         .await?;
 
     // Assert that the transaction was properly configured.
@@ -281,7 +284,7 @@ async fn send_transfer_transactions() -> Result<()> {
         TransactionType::Script(tx) => tx,
         _ => panic!("Received unexpected tx type!"),
     };
-    assert_eq!(script.gas_limit(), gas_limit);
+    assert_eq!(script.gas_limit(), script_gas_limit);
     assert_eq!(script.gas_price(), gas_price);
     assert_eq!(script.maturity(), maturity);
 

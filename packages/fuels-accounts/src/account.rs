@@ -199,7 +199,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: TxPolicies,
+        tx_policies: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -207,12 +207,8 @@ pub trait Account: ViewOnlyAccount {
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            tx_parameters,
-            network_info,
-        );
+        let mut tx_builder =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info);
 
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
@@ -242,7 +238,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32ContractId,
         balance: u64,
         asset_id: AssetId,
-        tx_parameters: TxPolicies,
+        tx_policies: TxPolicies,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -272,7 +268,7 @@ pub trait Account: ViewOnlyAccount {
             asset_id,
             inputs,
             outputs,
-            tx_parameters,
+            tx_policies,
             network_info,
         );
 
@@ -297,7 +293,7 @@ pub trait Account: ViewOnlyAccount {
         &self,
         to: &Bech32Address,
         amount: u64,
-        tx_parameters: TxPolicies,
+        tx_policies: TxPolicies,
     ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -310,7 +306,7 @@ pub trait Account: ViewOnlyAccount {
             to.into(),
             amount,
             inputs,
-            tx_parameters,
+            tx_policies,
             network_info,
         );
 

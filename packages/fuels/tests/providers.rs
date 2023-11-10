@@ -305,7 +305,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_default_tx_params_match_network() -> Result<()> {
+async fn test_default_tx_policies_match_network() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;
     let consensus_params = provider.consensus_parameters();
@@ -328,7 +328,7 @@ async fn test_default_tx_params_match_network() -> Result<()> {
 
     assert_eq!(
         tx.gas_limit(),
-        consensus_params.tx_params().max_gas_per_tx / 2
+        consensus_params.tx_params().max_gas_per_tx / 2 //TODO: decide what to do here!
     );
 
     Ok(())

@@ -164,9 +164,7 @@ pub async fn setup_test_provider(
 mod tests {
     use std::net::{Ipv4Addr, SocketAddr};
 
-    use fuel_tx::{
-        ConsensusParameters, ContractParameters, FeeParameters, TxParameters as FuelTxParameters,
-    };
+    use fuel_tx::{ConsensusParameters, ContractParameters, FeeParameters, TxParameters};
     use fuels_core::types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
@@ -315,7 +313,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_client_consensus_parameters_config() -> Result<()> {
-        let tx_params = FuelTxParameters::default()
+        let tx_params = TxParameters::default()
             .with_max_gas_per_tx(2)
             .with_max_inputs(58);
         let fee_params = FeeParameters::default().with_gas_per_byte(2);
@@ -344,7 +342,7 @@ mod tests {
     #[tokio::test]
     async fn test_chain_config_and_consensus_parameters() -> Result<()> {
         let max_inputs = 123;
-        let tx_params = FuelTxParameters::default().with_max_inputs(max_inputs);
+        let tx_params = TxParameters::default().with_max_inputs(max_inputs);
         let gas_per_byte = 456;
         let fee_params = FeeParameters::default().with_gas_per_byte(gas_per_byte);
 

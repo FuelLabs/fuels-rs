@@ -93,12 +93,12 @@ mod tests {
         // ANCHOR: custom_chain_import
         use fuels::{
             prelude::*,
-            tx::{ConsensusParameters, FeeParameters, FuelTxParameters},
+            tx::{ConsensusParameters, FeeParameters, TxParameters},
         };
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
-        let tx_params = FuelTxParameters::default()
+        let tx_params = TxParameters::default()
             .with_max_gas_per_tx(1_000)
             .with_max_inputs(2);
         let fee_params = FeeParameters::default().with_gas_price_factor(10);

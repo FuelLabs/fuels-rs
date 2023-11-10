@@ -115,7 +115,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_basic_script_with_tx_parameters() -> Result<()> {
+async fn test_basic_script_with_tx_policies() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -133,7 +133,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     let b = 2000u32;
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
-    // ANCHOR: script_with_tx_params
+    // ANCHOR: script_with_tx_policies
     let tx_policies = TxPolicies::default()
         .with_gas_price(1)
         .with_script_gas_limit(1_000_000);
@@ -142,7 +142,7 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
         .with_tx_policies(tx_policies)
         .call()
         .await?;
-    // ANCHOR_END: script_with_tx_params
+    // ANCHOR_END: script_with_tx_policies
     assert_eq!(result.value, "hello");
 
     Ok(())
@@ -152,12 +152,12 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels::{
         test_helpers::ChainConfig,
-        tx::{ConsensusParameters, FuelTxParameters},
+        tx::{ConsensusParameters, TxParameters},
         types::coin::Coin,
     };
 
     let consensus_parameters = ConsensusParameters {
-        tx_params: FuelTxParameters::default().with_max_inputs(128),
+        tx_params: TxParameters::default().with_max_inputs(128),
         ..Default::default()
     };
     let chain_config = ChainConfig {

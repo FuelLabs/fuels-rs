@@ -277,7 +277,7 @@ mod tests {
         .await?;
 
         println!("Contract deployed @ {contract_id}");
-        // ANCHOR: tx_parameters
+        // ANCHOR: tx_policies
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
@@ -286,20 +286,20 @@ mod tests {
             .with_maturity(0);
 
         let response = contract_methods
-            .initialize_counter(42) // Our contract method.
-            .with_tx_policies(tx_policies) // Chain the tx params setting method.
-            .call() // Perform the contract call.
-            .await?; // This is an async call, `.await` for it.
-                     // ANCHOR_END: tx_parameters
+            .initialize_counter(42) // Our contract method
+            .with_tx_policies(tx_policies) // Chain the tx policies
+            .call() // Perform the contract call
+            .await?; // This is an async call, `.await` it.
+                     // ANCHOR_END: tx_policies
 
-        // ANCHOR: tx_parameters_default
+        // ANCHOR: tx_policies_default
         let response = contract_methods
             .initialize_counter(42)
             .with_tx_policies(TxPolicies::default())
             .call()
             .await?;
 
-        // ANCHOR_END: tx_parameters_default
+        // ANCHOR_END: tx_policies_default
 
         // ANCHOR: call_parameters
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
@@ -312,8 +312,8 @@ mod tests {
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .with_tx_policies(tx_policies) // Chain the tx params setting method.
-            .call_params(call_params)? // Chain the call params setting method.
+            .with_tx_policies(tx_policies) // Chain the tx policies.
+            .call_params(call_params)? // Chain the call parameters.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_parameters
@@ -548,8 +548,8 @@ mod tests {
 
         let response = contract_methods
             .get_msg_amount() // Our contract method.
-            .with_tx_policies(tx_policies) // Chain the tx params setting method.
-            .call_params(call_params)? // Chain the call params setting method.
+            .with_tx_policies(tx_policies) // Chain the tx policies.
+            .call_params(call_params)? // Chain the call parameters.
             .call() // Perform the contract call.
             .await?;
         // ANCHOR_END: call_params_gas

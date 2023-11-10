@@ -3,6 +3,7 @@
 <!-- This section should explain what the tx params are and how to configure them -->
 <!-- tx_params:example:start -->
 The parameters for a transaction are:
+//TODO: Fix docs to use Policies
 
 1. Gas price
 2. Gas limit
@@ -12,7 +13,7 @@ You can configure these parameters by creating an instance of `TxParameters` and
 <!-- tx_params:example:end-->
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:tx_parameters}}
+{{#include ../../../examples/contracts/src/lib.rs:tx_policies}}
 ```
 
 <!-- This section should explain how to use the defauly tx params -->
@@ -23,7 +24,7 @@ You can also use `TxParameters::default()` to use the default values. If `gas_pr
 This way:
 
 ```rust,ignore
-{{#include ../../../examples/contracts/src/lib.rs:tx_parameters_default}}
+{{#include ../../../examples/contracts/src/lib.rs:tx_policies_default}}
 ```
 
 As you might have noticed already, `TxParameters` can also be specified when deploying contracts or transfering assets by passing it to the respective methods.
