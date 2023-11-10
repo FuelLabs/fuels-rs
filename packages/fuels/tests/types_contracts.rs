@@ -2071,30 +2071,34 @@ async fn test_heap_type_in_enums() -> Result<()> {
     );
     let contract_methods = contract_instance.methods();
 
+    // Uncomment this after the new codec in finished
+    // Currently Bytes is returning the pointer to the data buffer
     // let resp = contract_methods.returns_bytes_result(true).call().await?;
-    // // dbg!(&resp);
-    // // let expected = Ok(Bytes(vec![1, 1, 1, 1]));
-    // // assert_eq!(resp.value, expected);
-
-    // let resp = contract_methods.returns_bytes_result(false).call().await?;
-    // let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
+    // let expected = Ok(Bytes(vec![1, 1, 1, 1]));
     // assert_eq!(resp.value, expected);
 
-    // // let resp = contract_methods.returns_vec_result(true).call().await?;
-    // // let expected = Ok(vec![2, 2, 2, 2, 2]);
-    // // assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_bytes_result(false).call().await?;
+    let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
+    assert_eq!(resp.value, expected);
 
-    // let resp = contract_methods.returns_vec_result(false).call().await?;
-    // let expected = Err(TestError::Else(7777));
+    // Uncomment this after the new codec in finished
+    // Currently Vec is returning the pointer to the data buffer
+    // let resp = contract_methods.returns_vec_result(true).call().await?;
+    // let expected = Ok(vec![2, 2, 2, 2, 2]);
     // assert_eq!(resp.value, expected);
 
-    // // let resp = contract_methods.returns_string_result(true).call().await?;
-    // // let expected = Ok("Hello World".to_string());
-    // // assert_eq!(resp.value, expected);
+    let resp = contract_methods.returns_vec_result(false).call().await?;
+    let expected = Err(TestError::Else(7777));
+    assert_eq!(resp.value, expected);
 
-    // let resp = contract_methods.returns_string_result(false).call().await?;
-    // let expected = Err(TestError::Else(3333));
+    // Uncomment this after the new codec in finished
+    // let resp = contract_methods.returns_string_result(true).call().await?;
+    // let expected = Ok("Hello World".to_string());
     // assert_eq!(resp.value, expected);
+
+    let resp = contract_methods.returns_string_result(false).call().await?;
+    let expected = Err(TestError::Else(3333));
+    assert_eq!(resp.value, expected);
 
     // let resp = contract_methods.returns_str_result(true).call().await?;
     // let expected = Ok("Hello World".try_into()?);
