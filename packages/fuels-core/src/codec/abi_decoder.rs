@@ -62,7 +62,7 @@ impl ABIDecoder {
 
     /// Decode data from one of the receipt returns.
     pub fn decode_receipt_return(&self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        BoundedDecoder::new(self.config).decode_receipt_return(param_type, bytes)
+        BoundedDecoder::new(self.config).decode(param_type, bytes)
     }
 
     /// Same as `decode` but decodes multiple `ParamType`s in one go.
@@ -417,14 +417,8 @@ mod tests {
 
         let u8_arr = ParamType::Array(Box::new(ParamType::U8), 2);
         let b256 = ParamType::B256;
-        let s = ParamType::StringArray(3);
-        let ss = ParamType::StringSlice;
 
-        let types = [
-            nested_struct,
-            u8_arr,
-            b256, // s, ss
-        ];
+        let types = [nested_struct, u8_arr, b256];
 
         let bytes = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // u16
@@ -461,14 +455,7 @@ mod tests {
             0xf3, 0x1e, 0x93, 0xb,
         ]);
 
-        let ss = Token::StringSlice(StaticStringToken::new(
-            "This is a full sentence".into(),
-            None,
-        ));
-
-        let s = Token::StringArray(StaticStringToken::new("foo".into(), Some(3)));
-
-        let expected: Vec<Token> = vec![foo, u8_arr, b256 /*s, ss*/];
+        let expected: Vec<Token> = vec![foo, u8_arr, b256];
 
         assert_eq!(decoded, expected);
         Ok(())
