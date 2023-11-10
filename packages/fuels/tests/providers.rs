@@ -326,7 +326,10 @@ async fn test_default_tx_params_match_network() -> Result<()> {
     wallet.sign_transaction(&mut tb);
     let tx = tb.build()?;
 
-    assert_eq!(tx.gas_limit(), consensus_params.tx_params().max_gas_per_tx);
+    assert_eq!(
+        tx.gas_limit(),
+        consensus_params.tx_params().max_gas_per_tx / 2
+    );
 
     Ok(())
 }
@@ -510,7 +513,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: gas_limit(";
+    let expected = "Validation error: gas_limit(";
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
@@ -567,7 +570,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Provider error: gas_limit(";
+    let expected = "Validation error: gas_limit(";
     assert!(response.to_string().starts_with(expected));
     Ok(())
 }

@@ -388,7 +388,7 @@ mod tests {
 
         let network_info = NetworkInfo {
             consensus_parameters: Default::default(),
-            max_gas_per_tx: 0,
+            max_gas_per_tx: 1_000_000,
             min_gas_price: 0,
         };
         // Set up a transaction
@@ -433,7 +433,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("51198e39c541cd3197785fd8add8cdbec3dc5aba7f8fbb23eb09455dd1003a8b78d94f247df8e1577805ea7eebd6d58336393942fd98484609e9e7d6d7a55f28")?);
+        assert_eq!(signature, Signature::from_str("7989459984fd7927411519da40e0ce7b9313f59792ac51d2a9d3f073611791dd6198a2523180165ccb2cb6b65ff78c984de60e0a7d0aae6c13212d270aeeb2dc")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

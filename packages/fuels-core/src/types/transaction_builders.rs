@@ -263,6 +263,8 @@ impl ScriptTransactionBuilder {
             .gas_limit
             .unwrap_or(self.network_info.max_gas_per_tx / 2);
 
+        dbg!(gas_limit);
+
         // TODO: make nice limit
         let witness_limit = self.witness_limit.unwrap_or(10_000);
         // TODO: make nice max fee
@@ -298,7 +300,8 @@ impl ScriptTransactionBuilder {
             let cp = &self.network_info.consensus_parameters;
             tx.set_script_gas_limit(0);
             let max_gas = tx.max_gas(cp.gas_costs(), cp.fee_params()) + 1;
-            let gas_limit = self.network_info.max_gas_per_tx - max_gas;
+            let gas_limit = self.network_info.max_gas_per_tx - max_gas; //TODO: check for this
+                                                                        //substraction
 
             tx.set_script_gas_limit(gas_limit);
         }
@@ -454,7 +457,7 @@ impl CreateTransactionBuilder {
         }
     }
 
-    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Create> {
+    fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Create> {
         let num_of_storage_slots = self.storage_slots.len();
 
         let gas_price = self.gas_price.unwrap_or(self.network_info.min_gas_price);
@@ -470,6 +473,9 @@ impl CreateTransactionBuilder {
             .with_maturity(self.maturity.into())
             .with_max_fee(max_fee);
 
+        //Add policies size to offset TODO: find best location for this
+        base_offset += num_of_storage_slots * StorageSlot::SLOT_SIZE + policies.size_dynamic();
+
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
             policies,
@@ -477,7 +483,7 @@ impl CreateTransactionBuilder {
             self.storage_slots,
             resolve_fuel_inputs(
                 self.inputs,
-                base_offset + num_of_storage_slots * StorageSlot::SLOT_SIZE,
+                base_offset,
                 num_witnesses,
                 &self.unresolved_signatures,
             )?,
