@@ -2086,7 +2086,13 @@ let is_error = response.is_err();
             gas: 10_000,
         };
 
-        call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
+        call_with_function_selector(
+            target,
+            function_selector,
+            calldata,
+            single_value_type_arg,
+            call_params,
+        );
     }
 </code></pre>
 <p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
@@ -3373,7 +3379,9 @@ abi LiquidityPool {
     fn withdraw(recipient: Address);
 }
 
-const BASE_TOKEN: AssetId = AssetId::from(0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c);
+const BASE_TOKEN: AssetId = AssetId::from(
+    0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c,
+);
 
 impl LiquidityPool for Contract {
     #[payable]

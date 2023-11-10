@@ -160,7 +160,13 @@
             gas: 10_000,
         };
 
-        call_with_function_selector(target, function_selector, calldata, single_value_type_arg, call_params);
+        call_with_function_selector(
+            target,
+            function_selector,
+            calldata,
+            single_value_type_arg,
+            call_params,
+        );
     }
 </code></pre>
 <p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
