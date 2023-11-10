@@ -311,7 +311,7 @@ macro_rules! impl_tx_wrapper {
     ($wrapper: ident, $wrapped: ident) => {
         #[derive(Debug, Clone)]
         pub struct $wrapper {
-            pub tx: $wrapped,
+            pub(crate) tx: $wrapped,
             pub(crate) is_using_predicates: bool,
         }
 
