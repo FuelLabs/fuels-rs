@@ -72,7 +72,7 @@ impl EnumVariants {
             .compute_encoding_in_bytes()
             .ok_or(error!(
                 InvalidData,
-                "Error calculating pagging amount in bytes"
+                "Error calculating padding amount in bytes"
             ))?;
         Ok(biggest_variant_width - variant_width)
     }

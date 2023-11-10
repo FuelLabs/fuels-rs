@@ -14,9 +14,9 @@ use crate::{
 /// Insert zero following the padding strategy
 #[derive(Clone, Copy)]
 pub enum InsertPadding {
-    /// Zeros are inserted on the left until it fills an interget quantity of words
+    /// Zeros are inserted on the left until it fills an integer quantity of words
     Left,
-    /// Zeros are inserted on the right until it fills an interget quantity of words
+    /// Zeros are inserted on the right until it fills an integer quantity of words
     Right,
 }
 
