@@ -342,13 +342,11 @@ mod tests {
     #[tokio::test]
     async fn test_chain_config_and_consensus_parameters() -> Result<()> {
         let max_inputs = 123;
-        let tx_params = TxParameters::default().with_max_inputs(max_inputs);
         let gas_per_byte = 456;
-        let fee_params = FeeParameters::default().with_gas_per_byte(gas_per_byte);
 
         let consensus_parameters = ConsensusParameters {
-            tx_params,
-            fee_params,
+            tx_params: TxParameters::default().with_max_inputs(max_inputs),
+            fee_params: FeeParameters::default().with_gas_per_byte(gas_per_byte),
             ..Default::default()
         };
 

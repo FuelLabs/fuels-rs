@@ -195,10 +195,8 @@ mod tests {
 
     #[tokio::test]
     async fn generated_wallets_with_custom_chain_config() -> Result<()> {
-        let tx_params = TxParameters::default().with_max_gas_per_tx(10_000_000_000);
-
         let consensus_parameters = ConsensusParameters {
-            tx_params,
+            tx_params: TxParameters::default().with_max_gas_per_tx(10_000_000_000),
             ..Default::default()
         };
 

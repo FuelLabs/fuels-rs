@@ -85,9 +85,7 @@ impl Predicate {
     }
 
     pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code);
         Self {
-            address,
             provider: Some(provider),
             ..self
         }

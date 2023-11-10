@@ -486,7 +486,9 @@ macro_rules! impl_tx_wrapper {
                         _ => {
                             // not a contract, it's safe to unwrap
                             let owner = extract_owner_or_recipient(input).unwrap();
+                            // Can we just use `BASE_ASSET_ID` here ? cc @AhmedM
                             let asset_id = input.asset_id(&BASE_ASSET_ID).unwrap().to_owned();
+
                             let id = extract_coin_type_id(input).unwrap();
                             Some(((owner, asset_id), id))
                         }

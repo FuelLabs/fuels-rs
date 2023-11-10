@@ -298,7 +298,6 @@ mod tests {
             .with_tx_policies(TxPolicies::default())
             .call()
             .await?;
-
         // ANCHOR_END: tx_policies_default
 
         // ANCHOR: call_parameters

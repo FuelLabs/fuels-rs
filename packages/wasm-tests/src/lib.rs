@@ -197,7 +197,7 @@ mod tests {
         assert_eq!(*predicate.code(), expected_code);
 
         let expected_address = Bech32Address::from_str(
-            "fuel1z62vtmg8a3p5nlpmfkjundcd9aus2kpwaapuez0tf9yyq0a8kvsqtdesqq",
+            "fuel14z2xsxcp47z9zfhj9atrmd66ujvwy8ujgn4j0xsh95fjh2px4mcq4f7k3w",
         )?;
 
         assert_eq!(*predicate.address(), expected_address);

@@ -263,8 +263,6 @@ impl ScriptTransactionBuilder {
             .gas_limit
             .unwrap_or(self.network_info.max_gas_per_tx / 2);
 
-        dbg!(gas_limit);
-
         // TODO: make nice limit
         let witness_limit = self.witness_limit.unwrap_or(10_000);
         // TODO: make nice max fee

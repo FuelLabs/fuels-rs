@@ -130,7 +130,6 @@ mod tests {
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
         // ANCHOR_END: custom_chain_provider
-
         Ok(())
     }
 

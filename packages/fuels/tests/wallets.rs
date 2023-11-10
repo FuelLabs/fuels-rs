@@ -257,7 +257,7 @@ async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
-    // Configure transaction parameters.
+    // Configure transaction policies.
     let gas_price = 1;
     let script_gas_limit = 500_000;
     let maturity = 0u32;

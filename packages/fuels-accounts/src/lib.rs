@@ -14,4 +14,3 @@ pub use account::*;
 mod coin_cache;
 
 pub mod predicate;
-

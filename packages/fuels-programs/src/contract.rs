@@ -538,9 +538,8 @@ where
         self.contract_call.is_payable
     }
 
-    /// Sets the transaction parameters for a given transaction.
+    /// Sets the transaction policies for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-
     /// ```ignore
     /// let tx_policies = TxPolicies::default().with_gas_price(100);
     /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
@@ -811,7 +810,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         self
     }
 
-    /// Sets the transaction parameters for a given transaction.
+    /// Sets the transaction policies for a given transaction.
     /// Note that this is a builder method
     pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.tx_policies = tx_policies;
