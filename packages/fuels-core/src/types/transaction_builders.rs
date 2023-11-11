@@ -219,6 +219,7 @@ pub struct ScriptTransactionBuilder {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub witnesses: Vec<Witness>,
+    pub gas_estimation_tolerance: f32,
     pub(crate) network_info: NetworkInfo,
     unresolved_signatures: UnresolvedSignatures,
 }
@@ -257,6 +258,7 @@ impl ScriptTransactionBuilder {
             outputs: vec![],
             witnesses: vec![],
             network_info,
+            gas_estimation_tolerance: 0.05,
             unresolved_signatures: Default::default(),
         }
     }
@@ -280,6 +282,50 @@ impl ScriptTransactionBuilder {
         })
     }
 
+    fn create_dry_run_witnesses(&self, num_witnesses: u8) -> Vec<Witness> {
+        let unresolved_witnesses_len = self.unresolved_signatures.addr_idx_offset_map.len();
+        repeat(Default::default())
+            // Add one in case there is no witnesses at all
+            .take(num_witnesses as usize + unresolved_witnesses_len + 1)
+            .collect()
+    }
+
+    async fn set_script_gas_limit_to_gas_used(
+        tx: &mut Script,
+        provider: &impl DryRunner,
+        network_info: &NetworkInfo,
+        tolerance: f32,
+    ) -> Result<()> {
+        let consensus_params = &network_info.consensus_parameters;
+        // Add `1` because of rounding
+        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+
+        // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
+        // TODO: why do I need to / 2
+        tx.set_script_gas_limit((network_info.max_gas_per_tx / 2) - max_gas);
+
+        // Add temp coin for dry run
+        tx.inputs_mut().push(FuelInput::coin_signed(
+            Default::default(),
+            Default::default(),
+            1_000_000_000,
+            Default::default(),
+            TxPointer::default(),
+            0,
+            0u32.into(),
+        ));
+
+        //TODO: add tolerance setting
+        let gas_used = provider.dry_run(tx.clone().into(), tolerance).await?;
+
+        // Remove temp coin
+        tx.inputs_mut().pop();
+
+        tx.set_script_gas_limit(gas_used);
+
+        Ok(())
+    }
+
     async fn resolve_fuel_tx_provider(
         self,
         base_offset: usize,
@@ -292,18 +338,7 @@ impl ScriptTransactionBuilder {
             self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
         );
 
-        let us_len = self.unresolved_signatures.addr_idx_offset_map.len();
-        let mut tmp_witnesses: Vec<Witness> = self
-            .witnesses
-            .iter()
-            .cloned()
-            .chain(repeat(Default::default()).take(us_len))
-            .collect();
-
-        if tmp_witnesses.is_empty() {
-            tmp_witnesses.push(Default::default());
-        }
-
+        let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
         let mut tx = FuelTransaction::script(
             0, // use temporarily
             self.script,
@@ -316,37 +351,19 @@ impl ScriptTransactionBuilder {
                 &self.unresolved_signatures,
             )?,
             self.outputs,
-            tmp_witnesses, // Temporary witness for dry run
+            dry_run_witnesses,
         );
 
         if let Some(gas_limit) = self.gas_limit {
             tx.set_script_gas_limit(gas_limit);
         } else {
-            let consensus_params = &self.network_info.consensus_parameters;
-            // Add `1` because of rounding
-            let max_gas =
-                tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
-
-            // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
-            // TODO: why do I need to / 2
-            tx.set_script_gas_limit((self.network_info.max_gas_per_tx / 2) - max_gas);
-
-            tx.inputs_mut().push(FuelInput::coin_signed(
-                Default::default(),
-                Default::default(),
-                1_000_000_000,
-                Default::default(),
-                TxPointer::default(),
-                0,
-                0u32.into(),
-            ));
-
-            //TODO: add tolerance setting
-            let gas_used = provider.dry_run(tx.clone().into(), 0.05).await?;
-
-            tx.inputs_mut().pop();
-
-            tx.set_script_gas_limit(gas_used);
+            Self::set_script_gas_limit_to_gas_used(
+                &mut tx,
+                provider,
+                &self.network_info,
+                self.gas_estimation_tolerance,
+            )
+            .await?;
         }
 
         let missing_witnesses = generate_missing_witnesses(
@@ -414,6 +431,11 @@ impl ScriptTransactionBuilder {
 
     pub fn with_script_data(mut self, script_data: Vec<u8>) -> Self {
         self.script_data = script_data;
+        self
+    }
+
+    pub fn with_gas_estimation_tolerance(mut self, tolerance: f32) -> Self {
+        self.gas_estimation_tolerance = tolerance;
         self
     }
 
@@ -963,5 +985,5 @@ use async_trait::async_trait;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner {
-    async fn dry_run(&self, tx: FuelTransaction, tolerance: f64) -> Result<u64>;
+    async fn dry_run(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
 }

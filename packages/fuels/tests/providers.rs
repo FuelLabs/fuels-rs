@@ -480,7 +480,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "Validation error: gas_limit(";
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
@@ -535,7 +535,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "Validation error: gas_limit(";
     assert!(response.to_string().contains(expected));
     Ok(())
 }
