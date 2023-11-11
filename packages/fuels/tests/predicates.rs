@@ -2,11 +2,7 @@ use fuel_tx::Output;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{
-        coin::Coin,
-        message::Message,
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-    },
+    types::{coin::Coin, message::Message, transaction_builders::ScriptTransactionBuilder},
 };
 use fuels_core::{
     codec::ABIEncoder,
@@ -221,7 +217,7 @@ async fn pay_with_predicate() -> Result<()> {
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
         .with_gas_price(1)
-        .with_script_gas_limit(1000000);
+        .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -276,7 +272,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
         .with_gas_price(1)
-        .with_script_gas_limit(1000000);
+        .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
@@ -322,10 +318,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     .deploy(&predicate, TxPolicies::default())
     .await?;
 
-    let contract_balances = predicate
-        .try_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
+    let contract_balances = provider.get_contract_balances(&contract_id).await?;
     assert!(contract_balances.is_empty());
 
     let amount = 300;
@@ -465,7 +458,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         network_info,
     );
     wallet.sign_transaction(&mut tb);
-    let tx = tb.build()?;
+    let tx = tb.build_with_provider(&provider).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -703,7 +696,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
         network_info,
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
-    let tx = tb.build()?;
+    let tx = tb.build_with_provider(&provider).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
@@ -760,7 +753,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    let tx = tb.build()?;
+    let tx = tb.build_with_provider(&provider).await?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
     provider.tx_status(&tx_id).await?.check(None)?;
@@ -808,7 +801,8 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
         TxPolicies::default(),
         network_info.clone(),
     )
-    .build()?;
+    .build_with_provider(&provider)
+    .await?;
 
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
@@ -875,7 +869,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
         TxPolicies::default(),
         network_info.clone(),
     )
-    .build()?;
+    .build_with_provider(&provider)
+    .await?;
 
     let tx_id = tx.id(network_info.chain_id());
 

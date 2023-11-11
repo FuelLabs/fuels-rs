@@ -311,15 +311,10 @@ impl Contract {
         );
 
         account.add_witnessses(&mut tb);
-        account
-            .adjust_for_fee(&mut tb, 0)
-            .await
-            .map_err(|err| error!(ProviderError, "{err}"))?;
+        account.adjust_for_fee(&mut tb, 0).await?;
         let tx = tb.build()?;
 
-        let provider = account
-            .try_provider()
-            .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
+        let provider = account.try_provider()?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
         provider.tx_status(&tx_id).await?.check(None)?;

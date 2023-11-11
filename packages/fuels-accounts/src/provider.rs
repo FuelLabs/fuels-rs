@@ -234,7 +234,7 @@ impl Provider {
             tx.estimate_predicates(&self.consensus_parameters)?;
         }
 
-        self.validate_transaction(tx.clone()).await?;
+        // self.validate_transaction(tx.clone()).await?;
 
         self.submit(tx).await
     }

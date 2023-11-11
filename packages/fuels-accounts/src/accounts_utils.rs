@@ -10,16 +10,20 @@ use fuels_core::{
     },
 };
 
+use crate::provider::Provider;
+
 pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
     receipts.iter().find_map(|m| m.nonce().copied())
 }
 
-pub fn calculate_missing_base_amount(
+pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
     used_base_amount: u64,
+    provider: &Provider,
 ) -> Result<u64> {
     let transaction_fee = tb
-        .fee_checked_from_tx()?
+        .fee_checked_from_tx(provider)
+        .await?
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
     let available_amount = available_base_amount(tb);

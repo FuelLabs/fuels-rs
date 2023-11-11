@@ -1,18 +1,17 @@
 #![cfg(feature = "std")]
 
-use std::collections::HashMap;
+use std::{collections::HashMap, iter::repeat};
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
-    field::Witnesses,
+    field::{Inputs, Witnesses},
     policies::{Policies, PolicyType},
-    Buildable, Cacheable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output,
-    Script, StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer,
-    UniqueIdentifier, Witness,
+    Buildable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
+    StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
+    Witness,
 };
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
-use fuel_vm::checked_transaction::EstimatePredicates;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{chain_info::ChainInfo, node_info::NodeInfo};
@@ -64,12 +63,11 @@ struct UnresolvedSignatures {
     secret_keys: Vec<SecretKey>,
 }
 
-pub trait TransactionBuilder: Send {
+pub trait TransactionBuilder: CheckableFee + Send + Clone {
     type TxType: Transaction;
 
     fn build(self) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
@@ -112,19 +110,6 @@ macro_rules! impl_tx_trait {
                 self.unresolved_signatures
                     .addr_idx_offset_map
                     .insert(owner, index_offset);
-            }
-
-            fn fee_checked_from_tx(&self) -> Result<Option<TransactionFee>> {
-                let mut tx = self.clone().build()?;
-                if tx.is_using_predicates() {
-                    tx.estimate_predicates(&self.consensus_parameters())?;
-                }
-
-                Ok(TransactionFee::checked_from_tx(
-                    &self.consensus_parameters().gas_costs,
-                    &self.consensus_parameters().fee_params,
-                    &tx.tx,
-                ))
             }
 
             fn with_maturity(mut self, maturity: u32) -> Self {
@@ -307,6 +292,18 @@ impl ScriptTransactionBuilder {
             self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
         );
 
+        let us_len = self.unresolved_signatures.addr_idx_offset_map.len();
+        let mut tmp_witnesses: Vec<Witness> = self
+            .witnesses
+            .iter()
+            .cloned()
+            .chain(repeat(Default::default()).take(us_len))
+            .collect();
+
+        if tmp_witnesses.is_empty() {
+            tmp_witnesses.push(Default::default());
+        }
+
         let mut tx = FuelTransaction::script(
             0, // use temporarily
             self.script,
@@ -319,7 +316,7 @@ impl ScriptTransactionBuilder {
                 &self.unresolved_signatures,
             )?,
             self.outputs,
-            self.witnesses,
+            tmp_witnesses, // Temporary witness for dry run
         );
 
         if let Some(gas_limit) = self.gas_limit {
@@ -331,35 +328,32 @@ impl ScriptTransactionBuilder {
                 tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
 
             // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
-            tx.set_script_gas_limit((self.network_info.max_gas_per_tx) - max_gas);
+            // TODO: why do I need to / 2
+            tx.set_script_gas_limit((self.network_info.max_gas_per_tx / 2) - max_gas);
+
+            tx.inputs_mut().push(FuelInput::coin_signed(
+                Default::default(),
+                Default::default(),
+                1_000_000_000,
+                Default::default(),
+                TxPointer::default(),
+                0,
+                0u32.into(),
+            ));
+
+            //TODO: add tolerance setting
+            let gas_used = provider.dry_run(tx.clone().into(), 0.05).await?;
+
+            tx.inputs_mut().pop();
+
+            tx.set_script_gas_limit(gas_used);
         }
-
-        let should_remove_witness = if tx.witnesses().is_empty() {
-            tx.witnesses_mut().push(Default::default());
-
-            true
-        } else {
-            false
-        };
-
-        //TODO: add tolerance setting
-        let gas_used = provider.dry_run(tx.clone().into(), 0.1).await?;
-
-        if should_remove_witness {
-            tx.witnesses_mut().pop();
-        }
-
-        tx.set_script_gas_limit(gas_used);
 
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&self.network_info.chain_id()),
             &self.unresolved_signatures,
         );
-        tx.witnesses_mut().extend(missing_witnesses);
-
-        tx.precompute(&self.network_info.chain_id())?;
-
-        tx.estimate_predicates(&self.network_info.consensus_parameters.clone().into())?;
+        *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
     }
@@ -395,7 +389,7 @@ impl ScriptTransactionBuilder {
                 tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
 
             // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
-            tx.set_script_gas_limit((self.network_info.max_gas_per_tx / 2) - max_gas);
+            tx.set_script_gas_limit((self.network_info.max_gas_per_tx) - max_gas);
         }
 
         let missing_witnesses = generate_missing_witnesses(
@@ -530,6 +524,53 @@ impl ScriptTransactionBuilder {
     }
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait CheckableFee {
+    async fn fee_checked_from_tx<T: DryRunner + Sync>(
+        &self,
+        provider: &T,
+    ) -> Result<Option<TransactionFee>>;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl CheckableFee for ScriptTransactionBuilder {
+    async fn fee_checked_from_tx<T: DryRunner + Sync>(
+        &self,
+        provider: &T,
+    ) -> Result<Option<TransactionFee>> {
+        let mut tx = self.clone().build_with_provider(provider).await?;
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(self.consensus_parameters())?;
+        }
+
+        Ok(TransactionFee::checked_from_tx(
+            &self.consensus_parameters().gas_costs,
+            &self.consensus_parameters().fee_params,
+            &tx.tx,
+        ))
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl CheckableFee for CreateTransactionBuilder {
+    async fn fee_checked_from_tx<T: DryRunner + Sync>(
+        &self,
+        _: &T,
+    ) -> Result<Option<TransactionFee>> {
+        let mut tx = self.clone().build()?;
+
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(self.consensus_parameters())?;
+        }
+
+        Ok(TransactionFee::checked_from_tx(
+            &self.consensus_parameters().gas_costs,
+            &self.consensus_parameters().fee_params,
+            &tx.tx,
+        ))
+    }
+}
+
 impl CreateTransactionBuilder {
     fn new(network_info: NetworkInfo) -> CreateTransactionBuilder {
         CreateTransactionBuilder {
@@ -578,7 +619,6 @@ impl CreateTransactionBuilder {
             tx.id(&self.network_info.chain_id()),
             &self.unresolved_signatures,
         );
-
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)

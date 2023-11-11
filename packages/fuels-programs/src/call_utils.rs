@@ -14,7 +14,7 @@ use fuels_core::{
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::ScriptTransactionBuilder,
     },
 };
 use itertools::{chain, Itertools};
@@ -104,7 +104,8 @@ pub(crate) async fn build_tx_from_contract_calls(
     tx_policies: TxPolicies,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.try_provider()?.consensus_parameters();
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters();
 
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
@@ -128,7 +129,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let network_info = account.try_provider()?.network_info().await?;
+    let network_info = provider.network_info().await?;
     let mut tb =
         ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info)
             .with_script(script)
@@ -141,7 +142,8 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     account.add_witnessses(&mut tb);
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
-    tb.build()
+
+    tb.build_with_provider(provider).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return

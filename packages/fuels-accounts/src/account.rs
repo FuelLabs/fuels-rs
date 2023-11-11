@@ -170,12 +170,13 @@ pub trait Account: ViewOnlyAccount {
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    async fn adjust_for_fee<Tb: TransactionBuilder>(
+    async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
         &self,
         tb: &mut Tb,
         used_base_amount: u64,
     ) -> Result<()> {
-        let missing_base_amount = calculate_missing_base_amount(tb, used_base_amount)?;
+        let missing_base_amount =
+            calculate_missing_base_amount(tb, used_base_amount, self.try_provider()?).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
@@ -213,7 +214,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
 
-        let tx = tx_builder.build()?;
+        let tx = tx_builder.build_with_provider(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -274,7 +275,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
-        let tx = tb.build()?;
+        let tx = tb.build_with_provider(provider).await?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -312,7 +313,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
-        let tx = tb.build()?;
+        let tx = tb.build_with_provider(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -429,7 +430,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("4ea553d4c779aa04eef7e3cabf94b5008a70c0c1718fcda505117adf1fab7c97b22bc672f6f591450a71cf36d087fb8394c414bc456056873cbcff4bf3a9578c")?);
+        assert_eq!(signature, Signature::from_str("dd4a50099e6d9e5766d96319778df4ab12f25e7c1684333661e0d73052e9e7455355206434b2b7328a4835a5326d7f9640ec35bfe317b7ee53c8efef1817d21e")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

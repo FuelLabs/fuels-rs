@@ -2,10 +2,7 @@
 mod tests {
     use fuels::{
         prelude::Result,
-        types::{
-            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-            Bits256,
-        },
+        types::{transaction_builders::ScriptTransactionBuilder, Bits256},
     };
 
     #[tokio::test]
@@ -184,7 +181,7 @@ mod tests {
             network_info,
         );
         wallet_1.sign_transaction(&mut tb);
-        let tx = tb.build()?;
+        let tx = tb.build_with_provider(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
 
