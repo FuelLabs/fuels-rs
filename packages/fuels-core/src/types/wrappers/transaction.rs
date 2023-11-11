@@ -23,11 +23,7 @@ use fuel_vm::checked_transaction::EstimatePredicates;
 
 use crate::{
     constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address,
-        errors::{error, Error},
-        Result,
-    },
+    types::{bech32::Bech32Address, errors::error, Result},
 };
 
 #[derive(Default, Debug, Copy, Clone)]

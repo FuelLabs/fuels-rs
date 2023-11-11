@@ -1,9 +1,10 @@
 use crate::{
-    constants::{ENUM_DISCRIMINANT_WORD_WIDTH, WORD_SIZE},
+    constants::ENUM_DISCRIMINANT_BYTE_WIDTH,
     types::{
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
     },
+    utils::round_up_to_word_alignment,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -23,7 +24,7 @@ impl EnumVariants {
         &self.param_types
     }
 
-    pub fn param_type_of_variant(&self, discriminant: u8) -> Result<&ParamType> {
+    pub fn param_type_of_variant(&self, discriminant: u64) -> Result<&ParamType> {
         self.param_types.get(discriminant as usize).ok_or_else(|| {
             error!(
                 InvalidData,
@@ -33,11 +34,11 @@ impl EnumVariants {
         })
     }
 
-    pub fn heap_type_variant(&self) -> Option<(u8, &ParamType)> {
+    pub fn heap_type_variant(&self) -> Option<(u64, &ParamType)> {
         self.param_types()
             .iter()
             .enumerate()
-            .find_map(|(d, p)| p.is_extra_receipt_needed(false).then_some((d as u8, p)))
+            .find_map(|(d, p)| p.is_extra_receipt_needed(false).then_some((d as u64, p)))
     }
 
     pub fn only_units_inside(&self) -> bool {
@@ -46,33 +47,34 @@ impl EnumVariants {
             .all(|param_type| *param_type == ParamType::Unit)
     }
 
-    /// Calculates how many WORDs are needed to encode an enum.
-    pub fn compute_encoding_width_of_enum(&self) -> Result<usize> {
+    /// Calculates how many bytes are needed to encode an enum.
+    pub fn compute_enum_width_in_bytes(&self) -> Option<usize> {
         if self.only_units_inside() {
-            return Ok(ENUM_DISCRIMINANT_WORD_WIDTH);
+            return Some(ENUM_DISCRIMINANT_BYTE_WIDTH);
         }
-        self.param_types()
-            .iter()
-            .map(|p| p.compute_encoding_width())
-            .collect::<Result<Vec<_>>>()?
-            .iter()
-            .max()
-            .map(|width| width + ENUM_DISCRIMINANT_WORD_WIDTH)
-            .ok_or_else(|| {
-                error!(
-                    InvalidData,
-                    "EnumVariants was empty, must have at least one variant"
-                )
-            })
+
+        let width = self.param_types().iter().try_fold(0, |a, p| {
+            let size = p.compute_encoding_in_bytes()?;
+            Some(a.max(size))
+        })?;
+
+        Some(round_up_to_word_alignment(width) + ENUM_DISCRIMINANT_BYTE_WIDTH)
     }
 
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
-    pub fn compute_padding_amount(&self, variant_param_type: &ParamType) -> Result<usize> {
-        let biggest_variant_width =
-            self.compute_encoding_width_of_enum()? - ENUM_DISCRIMINANT_WORD_WIDTH;
-        let variant_width = variant_param_type.compute_encoding_width()?;
-        Ok((biggest_variant_width - variant_width) * WORD_SIZE)
+    pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
+        let enum_width = self
+            .compute_enum_width_in_bytes()
+            .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
+        let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
+        let variant_width = variant_param_type
+            .compute_encoding_in_bytes()
+            .ok_or(error!(
+                InvalidData,
+                "Error calculating padding amount in bytes"
+            ))?;
+        Ok(biggest_variant_width - variant_width)
     }
 }
 

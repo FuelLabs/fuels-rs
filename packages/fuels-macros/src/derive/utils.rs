@@ -52,8 +52,13 @@ pub(crate) struct VariantInfo {
 }
 
 pub(crate) enum ExtractedVariant {
-    Normal { info: VariantInfo, discriminant: u8 },
-    Ignored { info: VariantInfo },
+    Normal {
+        info: VariantInfo,
+        discriminant: u64,
+    },
+    Ignored {
+        info: VariantInfo,
+    },
 }
 
 pub(crate) fn extract_variants(

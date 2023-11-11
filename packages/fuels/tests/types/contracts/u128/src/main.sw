@@ -22,7 +22,10 @@ impl MyContract for Contract {
     fn u128_in_enum_input(some_enum: SomeEnum<U128>) {
         if let SomeEnum::B(some_u128) = some_enum {
             let expected_u128 = U128::from((3, 3));
-            require(some_u128 == expected_u128, "given u128 didn't match the expected u128");
+            require(
+                some_u128 == expected_u128,
+                "given u128 didn't match the expected u128",
+            );
         } else {
             require(false, "enum was not of variant B: u128");
         }
