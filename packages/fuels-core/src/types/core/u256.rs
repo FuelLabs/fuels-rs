@@ -6,7 +6,7 @@ use uint::construct_uint;
 use crate::{
     traits::{Parameterize, Tokenizable},
     types::{
-        errors::{error, Error, Result as FuelsResult},
+        errors::{error, Result as FuelsResult},
         param_types::ParamType,
         Token,
     },

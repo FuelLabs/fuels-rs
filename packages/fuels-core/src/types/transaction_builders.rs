@@ -20,7 +20,7 @@ use crate::{
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         input::Input,
         message::Message,
         transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},

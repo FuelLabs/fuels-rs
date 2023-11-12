@@ -1,14 +1,13 @@
 use std::{convert::TryInto, str};
 
-use fuel_types::bytes::padded_len_usize;
-
 use crate::{
     codec::DecoderConfig,
     constants::WORD_SIZE,
+    round_up_to_word_alignment,
     traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
         StaticStringToken, Token, U256,
     },
@@ -37,9 +36,25 @@ impl BoundedDecoder {
         }
     }
 
-    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         param_type.validate_is_decodable(self.config.max_depth)?;
-        Ok(self.decode_param(param_type, bytes)?.token)
+        match param_type {
+            // Unit, U8 and Bool are returned as u64 from receipt "Return"
+            ParamType::Unit => Ok(Token::Unit),
+            ParamType::U8 => Self::decode_u64(bytes).map(|r| {
+                Token::U8(match r.token {
+                    Token::U64(v) => v as u8,
+                    _ => unreachable!("decode_u64 returning unexpected token"),
+                })
+            }),
+            ParamType::Bool => Self::decode_u64(bytes).map(|r| {
+                Token::Bool(match r.token {
+                    Token::U64(v) => v != 0,
+                    _ => unreachable!("decode_u64 returning unexpected token"),
+                })
+            }),
+            _ => self.decode_param(param_type, bytes).map(|x| x.token),
+        }
     }
 
     pub(crate) fn decode_multiple(
@@ -130,7 +145,17 @@ impl BoundedDecoder {
     }
 
     fn decode_tuple(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
+        let mut tokens = vec![];
+
+        let mut bytes_read = 0;
+
+        for param_type in param_types.iter() {
+            // padding has to be taken into account
+            bytes_read = round_up_to_word_alignment(bytes_read);
+            let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
+            bytes_read += res.bytes_read;
+            tokens.push(res.token);
+        }
 
         Ok(Decoded {
             token: Token::Tuple(tokens),
@@ -139,7 +164,17 @@ impl BoundedDecoder {
     }
 
     fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
+        let mut tokens = vec![];
+
+        let mut bytes_read = 0;
+
+        for param_type in param_types.iter() {
+            // padding has to be taken into account
+            bytes_read = round_up_to_word_alignment(bytes_read);
+            let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
+            bytes_read += res.bytes_read;
+            tokens.push(res.token);
+        }
 
         Ok(Decoded {
             token: Token::Struct(tokens),
@@ -209,13 +244,12 @@ impl BoundedDecoder {
     }
 
     fn decode_string_array(bytes: &[u8], length: usize) -> Result<Decoded> {
-        let encoded_len = padded_len_usize(length);
-        let encoded_str = peek(bytes, encoded_len)?;
+        let encoded_str = peek(bytes, length)?;
 
-        let decoded = str::from_utf8(&encoded_str[..length])?;
+        let decoded = str::from_utf8(encoded_str)?;
         let result = Decoded {
             token: Token::StringArray(StaticStringToken::new(decoded.into(), Some(length))),
-            bytes_read: encoded_len,
+            bytes_read: round_up_to_word_alignment(length),
         };
         Ok(result)
     }
@@ -233,7 +267,7 @@ impl BoundedDecoder {
 
         let result = Decoded {
             token: Token::Bool(b),
-            bytes_read: WORD_SIZE,
+            bytes_read: 1,
         };
 
         Ok(result)
@@ -277,17 +311,17 @@ impl BoundedDecoder {
     fn decode_u8(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
             token: Token::U8(peek_u8(bytes)?),
-            bytes_read: WORD_SIZE,
+            bytes_read: 1,
         })
     }
 
     fn decode_unit(bytes: &[u8]) -> Result<Decoded> {
         // We don't need the data, we're doing this purely as a bounds
         // check.
-        peek_fixed::<WORD_SIZE>(bytes)?;
+        peek_fixed::<1>(bytes)?;
         Ok(Decoded {
             token: Token::Unit,
-            bytes_read: WORD_SIZE,
+            bytes_read: 1,
         })
     }
 
@@ -299,33 +333,33 @@ impl BoundedDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
-        let enum_width = variants.compute_encoding_width_of_enum()?;
+        let enum_width_in_bytes = variants
+            .compute_enum_width_in_bytes()
+            .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
 
-        let discriminant = peek_u32(bytes)? as u8;
+        let discriminant = peek_u64(bytes)?;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
-        let skip_extra = variants
+        let skip_extra_in_bytes = variants
             .heap_type_variant()
             .and_then(|(heap_discriminant, heap_type)| {
-                (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_width())
+                (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_in_bytes())
             })
-            .transpose()?
+            .unwrap_or_default()
             .unwrap_or_default();
+        let bytes_to_skip = enum_width_in_bytes
+            - selected_variant
+                .compute_encoding_in_bytes()
+                .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?
+            + skip_extra_in_bytes;
 
-        let words_to_skip = enum_width - selected_variant.compute_encoding_width()? + skip_extra;
-        let bytes_to_skip = words_to_skip.checked_mul(WORD_SIZE).ok_or_else(|| {
-            error!(
-                InvalidData,
-                "Overflow error while decoding enum {variants:?}"
-            )
-        })?;
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));
         Ok(Decoded {
             token: Token::Enum(selector),
-            bytes_read: enum_width * WORD_SIZE,
+            bytes_read: enum_width_in_bytes,
         })
     }
 
@@ -426,8 +460,8 @@ fn peek_u16(bytes: &[u8]) -> Result<u16> {
 fn peek_u8(bytes: &[u8]) -> Result<u8> {
     const BYTES: usize = std::mem::size_of::<u8>();
 
-    let slice = peek_fixed::<WORD_SIZE>(bytes)?;
-    let bytes = slice[WORD_SIZE - BYTES..]
+    let slice = peek_fixed::<1>(bytes)?;
+    let bytes = slice[1 - BYTES..]
         .try_into()
         .expect("peek_u8: You must use a slice containing exactly 1B.");
     Ok(u8::from_be_bytes(bytes))

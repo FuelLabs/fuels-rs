@@ -1,15 +1,24 @@
 use fuel_types::bytes::padded_len_usize;
-use itertools::Itertools;
 
 use crate::{
     constants::WORD_SIZE,
+    round_up_to_word_alignment,
     types::{
         errors::Result,
-        pad_string, pad_u16, pad_u32, pad_u8,
+        pad_u16, pad_u32,
         unresolved_bytes::{Data, UnresolvedBytes},
         EnumSelector, StaticStringToken, Token, U256,
     },
 };
+
+/// Insert zero following the padding strategy
+#[derive(Clone, Copy)]
+pub enum InsertPadding {
+    /// Zeros are inserted on the left until it fills an integer quantity of words
+    Left,
+    /// Zeros are inserted on the right until it fills an integer quantity of words
+    Right,
+}
 
 pub struct ABIEncoder;
 
@@ -17,28 +26,51 @@ impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(args: &[Token]) -> Result<UnresolvedBytes> {
-        let data = Self::encode_tokens(args)?;
+        let data = if args.len() == 1 {
+            match args[0] {
+                Token::Bool(arg_bool) => vec![Self::encode_bool_as_u64(arg_bool)],
+                Token::U8(arg_u8) => vec![Self::encode_u8_as_u64(arg_u8)],
+                _ => Self::encode_tokens(args, true)?,
+            }
+        } else {
+            Self::encode_tokens(args, true)?
+        };
 
         Ok(UnresolvedBytes::new(data))
     }
 
-    fn encode_tokens(tokens: &[Token]) -> Result<Vec<Data>> {
-        tokens
-            .iter()
-            .map(Self::encode_token)
-            .flatten_ok()
-            .collect::<Result<Vec<_>>>()
+    fn encode_tokens(tokens: &[Token], word_aligned: bool) -> Result<Vec<Data>> {
+        let mut offset_in_bytes = 0;
+        let mut data = vec![];
+
+        for token in tokens.iter() {
+            let mut new_data = Self::encode_token(token)?;
+            offset_in_bytes += new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>();
+
+            data.append(&mut new_data);
+
+            if word_aligned {
+                let padding =
+                    vec![0u8; round_up_to_word_alignment(offset_in_bytes) - offset_in_bytes];
+                if !padding.is_empty() {
+                    offset_in_bytes += padding.len();
+                    data.push(Data::Inline(padding));
+                }
+            }
+        }
+
+        Ok(data)
     }
 
     fn encode_token(arg: &Token) -> Result<Vec<Data>> {
         let encoded_token = match arg {
-            Token::U8(arg_u8) => vec![Self::encode_u8(*arg_u8)],
+            Token::Bool(arg_bool) => vec![Self::encode_bool_as_byte(*arg_bool)],
+            Token::U8(arg_u8) => vec![Self::encode_u8_as_byte(*arg_u8)],
             Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
             Token::U32(arg_u32) => vec![Self::encode_u32(*arg_u32)],
             Token::U64(arg_u64) => vec![Self::encode_u64(*arg_u64)],
             Token::U128(arg_u128) => vec![Self::encode_u128(*arg_u128)],
             Token::U256(arg_u256) => vec![Self::encode_u256(*arg_u256)],
-            Token::Bool(arg_bool) => vec![Self::encode_bool(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
             Token::Array(arg_array) => Self::encode_array(arg_array)?,
             Token::Vector(data) => Self::encode_vector(data)?,
@@ -58,27 +90,31 @@ impl ABIEncoder {
     }
 
     fn encode_unit() -> Data {
-        Data::Inline(vec![0; WORD_SIZE])
+        Data::Inline(vec![0u8])
     }
 
     fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(arg_tuple)
+        Self::encode_tokens(arg_tuple, true)
     }
 
     fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(subcomponents)
+        Self::encode_tokens(subcomponents, true)
     }
 
     fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(arg_array)
+        Self::encode_tokens(arg_array, false)
     }
 
     fn encode_b256(arg_bits256: &[u8; 32]) -> Data {
         Data::Inline(arg_bits256.to_vec())
     }
 
-    fn encode_bool(arg_bool: bool) -> Data {
-        Data::Inline(pad_u8(u8::from(arg_bool)).to_vec())
+    fn encode_bool_as_byte(arg_bool: bool) -> Data {
+        Data::Inline(vec![u8::from(arg_bool)])
+    }
+
+    fn encode_bool_as_u64(arg_bool: bool) -> Data {
+        Data::Inline(vec![0, 0, 0, 0, 0, 0, 0, u8::from(arg_bool)])
     }
 
     fn encode_u128(arg_u128: u128) -> Data {
@@ -103,8 +139,12 @@ impl ABIEncoder {
         Data::Inline(pad_u16(arg_u16).to_vec())
     }
 
-    fn encode_u8(arg_u8: u8) -> Data {
-        Data::Inline(pad_u8(arg_u8).to_vec())
+    fn encode_u8_as_byte(arg_u8: u8) -> Data {
+        Data::Inline(vec![arg_u8])
+    }
+
+    fn encode_u8_as_u64(arg_u8: u8) -> Data {
+        Data::Inline(vec![0, 0, 0, 0, 0, 0, 0, arg_u8])
     }
 
     fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>> {
@@ -115,7 +155,7 @@ impl ABIEncoder {
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
             let variant_param_type = variants.param_type_of_variant(*discriminant)?;
-            let padding_amount = variants.compute_padding_amount(variant_param_type)?;
+            let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
 
@@ -126,12 +166,12 @@ impl ABIEncoder {
         Ok(encoded_enum)
     }
 
-    fn encode_discriminant(discriminant: u8) -> Data {
-        Self::encode_u8(discriminant)
+    fn encode_discriminant(discriminant: u64) -> Data {
+        Self::encode_u64(discriminant)
     }
 
     fn encode_vector(data: &[Token]) -> Result<Vec<Data>> {
-        let encoded_data = Self::encode_tokens(data)?;
+        let encoded_data = Self::encode_tokens(data, false)?;
         let cap = data.len() as u64;
         let len = data.len() as u64;
 
@@ -169,7 +209,9 @@ impl ABIEncoder {
     }
 
     fn encode_string_array(arg_string: &StaticStringToken) -> Result<Data> {
-        Ok(Data::Inline(pad_string(arg_string.get_encodable_str()?)))
+        Ok(Data::Inline(crate::types::pad_string(
+            arg_string.get_encodable_str()?,
+        )))
     }
 
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
@@ -382,7 +424,9 @@ mod tests {
         let args: Vec<Token> = vec![first, second];
 
         let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, // u32::MAX
+            0x1,  // true
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
@@ -468,10 +512,7 @@ mod tests {
 
         let args: Vec<Token> = vec![arg_array];
 
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x3,
-        ];
+        let expected_encoded_abi = [0x1, 0x2, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
 
@@ -509,7 +550,7 @@ mod tests {
 
         let expected_encoded_abi = [
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c,
-            0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00,
+            0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0,
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
@@ -597,7 +638,10 @@ mod tests {
         let args: Vec<Token> = vec![arg];
 
         let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+            0x1, // 1u8
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
+            0x1, // true
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
@@ -701,12 +745,6 @@ mod tests {
         let deeper_enum_token =
             Token::StringArray(StaticStringToken::new("0123456789".into(), Some(10)));
 
-        let str_enc = vec![
-            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', 0x0, 0x0, 0x0, 0x0, 0x0,
-            0x0,
-        ];
-        let deeper_enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
-
         /*
         struct StructA {
             some_enum: DeeperEnum
@@ -730,7 +768,6 @@ mod tests {
             Token::Enum(Box::new((1, deeper_enum_token, deeper_enum_variants))),
             Token::U32(11332),
         ]);
-        let some_number_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2c, 0x44];
 
         /*
          enum TopLevelEnum {
@@ -744,19 +781,17 @@ mod tests {
         let top_level_enum_variants = EnumVariants::new(types)?;
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
-        let top_lvl_discriminant_enc = vec![0x0; 8];
 
         let encoded = ABIEncoder::encode(slice::from_ref(&top_level_enum_token))?.resolve(0);
 
         let correct_encoding: Vec<u8> = [
-            top_lvl_discriminant_enc,
-            deeper_enum_discriminant_enc,
-            str_enc,
-            some_number_enc,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // TopLevelEnum::v1 discriminant
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // DeeperEnum::v2 discriminant
+            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', // str[10]
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // DeeperEnum padding
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x44, // StructA.some_number
         ]
-        .into_iter()
-        .flatten()
-        .collect();
+        .into();
 
         assert_eq!(hex::encode(correct_encoding), hex::encode(encoded));
         Ok(())
@@ -797,8 +832,11 @@ mod tests {
         ])];
 
         let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0,
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // 10u16
+            0x1, // true
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
+            0x1, 0x2, // [1u8, 2u8]
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
@@ -881,18 +919,22 @@ mod tests {
 
         let expected_encoded_abi = [
             0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // foo.x == 10u16
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // foo.y.a == true
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // foo.b.0 == 1u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, // foo.b.1 == 2u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, // u8[2].0 == 1u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, // u8[2].0 == 2u8
-            0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, // b256
+            0x1, // foo.y.a == true
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // foo.y.a padding
+            0x1, // foo.y.b.0 == 1u8
+            0x2, // foo.y.b.1 == 2u8
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // foo.y.a
+            0x1, // u8[2].0 == 1u8
+            0x2, // u8[2].0 == 2u8
+            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f,
+            0x18, // b256
             0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44, 0xe4, 0xcb, // b256
             0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, // b256
             0xa8, 0xf8, 0x27, 0x43, 0xf3, 0x1e, 0x93, 0xb, // b256
             0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // str[23]
             0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // str[23]
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0, // str[23]
+            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // str[23]
+            0x0,
         ];
 
         let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
@@ -1086,14 +1128,8 @@ mod tests {
         let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
         let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
 
-        let expected = chain!(
-            vec1_ptr,
-            vec1_cap,
-            vec1_len,
-            [0, 0, 0, 0, 0, 0, 0, 9],
-            vec1_data
-        )
-        .collect::<Vec<u8>>();
+        let expected =
+            chain!(vec1_ptr, vec1_cap, vec1_len, [9], [0; 7], vec1_data).collect::<Vec<u8>>();
 
         assert_eq!(result, expected);
 
@@ -1120,7 +1156,7 @@ mod tests {
             .to_vec();
         let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 2];
         let vec2_len = [0, 0, 0, 0, 0, 0, 0, 2];
-        let vec2_data = [0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6];
+        let vec2_data = [5, 6];
 
         let vec1_data = chain!(vec2_ptr, vec2_cap, vec2_len, vec2_data).collect::<Vec<_>>();
 

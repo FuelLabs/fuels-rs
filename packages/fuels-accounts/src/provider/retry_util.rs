@@ -1,6 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
-use fuels_core::types::errors::{error, Error, Result as SdkResult};
+use fuels_core::types::errors::{error, Result as SdkResult};
 
 /// A set of strategies to control retry intervals between attempts.
 ///

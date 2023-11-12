@@ -4,7 +4,7 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::Bech32Address,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
     },
