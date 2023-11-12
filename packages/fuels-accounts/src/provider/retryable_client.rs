@@ -8,10 +8,7 @@ use fuel_core_client::client::{
 };
 use fuel_tx::{Receipt, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, MessageId, Nonce};
-use fuels_core::{
-    error,
-    types::errors::{Error, Result},
-};
+use fuels_core::{error, types::errors::Result};
 
 use crate::provider::{retry_util, RetryConfig};
 

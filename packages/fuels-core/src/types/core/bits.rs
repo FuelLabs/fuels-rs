@@ -1,7 +1,7 @@
 use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
-use crate::types::errors::{error, Error, Result};
+use crate::types::errors::{error, Result};
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`

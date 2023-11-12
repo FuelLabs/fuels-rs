@@ -5,7 +5,7 @@ use fuel_core::service::FuelService as CoreFuelService;
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_services::Service;
 use fuel_core_services::State;
-use fuels_core::types::errors::{error, Error, Result};
+use fuels_core::types::errors::{error, Result};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::fuel_bin_service::FuelService as BinFuelService;

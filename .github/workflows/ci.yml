@@ -19,8 +19,9 @@ env:
   FUEL_CORE_VERSION: 0.20.6
   RUST_VERSION: 1.72.1
   FORC_VERSION: 0.46.0
-  FORC_PATCH_BRANCH: ""
+  FORC_PATCH_BRANCH: "xunilrj/fix-implicit-std-env-vars"
   FORC_PATCH_REVISION: ""
+  FORC_IMPLICIT_STD_GIT_BRANCH: "xunilrj/fix-implicit-std-env-vars" 
 
 jobs:
   setup-test-projects:

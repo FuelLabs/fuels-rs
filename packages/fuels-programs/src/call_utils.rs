@@ -367,8 +367,22 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
                 return Ok(vec![]);
             };
 
-            let ptr_offset =
-                (param_type.compute_encoding_width()? - heap_type.compute_encoding_width()?) as u16;
+            let param_type_width =
+                param_type
+                    .compute_encoding_in_bytes()
+                    .ok_or(fuels_core::error!(
+                        InvalidData,
+                        "Error calculating enum width in bytes"
+                    ))?;
+            let heap_type_width =
+                heap_type
+                    .compute_encoding_in_bytes()
+                    .ok_or(fuels_core::error!(
+                        InvalidData,
+                        "Error calculating enum width in bytes"
+                    ))?;
+
+            let ptr_offset = ((param_type_width - heap_type_width) / 8) as u16;
 
             Ok([
                 vec![
@@ -399,7 +413,7 @@ fn extract_data_receipt(
     top_level_type: bool,
     param_type: &ParamType,
 ) -> Result<Vec<fuel_asm::Instruction>> {
-    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type)? else {
+    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
         return Ok(vec![]);
     };
 

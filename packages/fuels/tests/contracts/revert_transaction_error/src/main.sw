@@ -6,7 +6,10 @@ abi MyContract {
 
 impl MyContract for Contract {
     fn make_transaction_fail(input: u64) -> u64 {
-        revert(input);
+        // Work around DCE and revert
+        if true {
+            revert(input);
+        }
         42
     }
 }

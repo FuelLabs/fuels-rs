@@ -8,6 +8,14 @@ pub enum Data {
     // should be left behind to point to it.
     Dynamic(Vec<Data>),
 }
+impl Data {
+    pub(crate) fn size_in_bytes(&self) -> usize {
+        match self {
+            Data::Inline(data) => data.len(),
+            Data::Dynamic(_) => 8,
+        }
+    }
+}
 
 // To get the final encoded bytes, we need to know the address at which these
 // bytes are going to be loaded at. Once the address is given to `resolve`

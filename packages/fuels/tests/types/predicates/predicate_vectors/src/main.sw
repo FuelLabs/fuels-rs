@@ -26,16 +26,25 @@ fn main(
 
     result = result && (u32_vec.get(1).unwrap() == 4u32);
 
-    result = result && (vec_in_vec.get(0).unwrap().get(1).unwrap() == 2u32);
+    result = result && (vec_in_vec
+        .get(0)
+        .unwrap()
+        .get(1)
+        .unwrap() == 2u32);
 
     result = result && (struct_in_vec.get(0).unwrap().a == 8u32);
 
-    result = result && (vec_in_struct.a.get(1).unwrap() == 16u32);
+    result = result && (vec_in_struct
+        .a
+        .get(1)
+        .unwrap() == 16u32);
 
     let array: [u64; 2] = array_in_vec.get(1).unwrap();
     result = result && (array[0] == 32u64);
 
-    result = result && (vec_in_array[0].get(1).unwrap() == 64u32);
+    result = result && (vec_in_array[0]
+        .get(1)
+        .unwrap() == 64u32);
 
     if let SomeEnum::A(some_vec) = vec_in_enum {
         result = result && (some_vec.get(2).unwrap() == 128u32);
@@ -50,12 +59,21 @@ fn main(
         result = false;
     }
 
-    result = result && (tuple_in_vec.get(1).unwrap().0 == 128u32);
+    result = result && (tuple_in_vec
+        .get(1)
+        .unwrap().0 == 128u32);
 
     let (tuple_a, _) = vec_in_tuple;
     result = result && (tuple_a.get(1).unwrap() == 64u32);
 
-    result = result && (vec_in_a_vec_in_a_struct_in_a_vec.get(1).unwrap().a.get(1).unwrap().get(1).unwrap() == 32u32);
+    result = result && (vec_in_a_vec_in_a_struct_in_a_vec
+        .get(1)
+        .unwrap()
+        .a
+        .get(1)
+        .unwrap()
+        .get(1)
+        .unwrap() == 32u32);
 
     result
 }

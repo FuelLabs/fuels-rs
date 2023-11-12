@@ -49,7 +49,7 @@ impl ReceiptParser {
             .extract_raw_data(output_param, &contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
-        self.decoder.decode(output_param, &data)
+        self.decoder.decode_receipt_return(output_param, &data)
     }
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {
@@ -189,9 +189,7 @@ mod tests {
     use super::*;
 
     const RECEIPT_VAL: u64 = 225;
-    const RECEIPT_DATA: &[u8; 24] = &[
-        0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 8, 0, 0, 0, 0, 0, 0, 0, 3,
-    ];
+    const RECEIPT_DATA: &[u8; 3] = &[8, 8, 3];
     const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
 
     fn target_contract() -> ContractId {

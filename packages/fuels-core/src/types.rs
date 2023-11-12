@@ -22,7 +22,7 @@ mod wrappers;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = ByteArray;
-pub type EnumSelector = (u8, Token, EnumVariants);
+pub type EnumSelector = (u64, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct StaticStringToken {
@@ -106,13 +106,6 @@ impl Default for Token {
     fn default() -> Self {
         Token::U8(0)
     }
-}
-
-/// Converts a u8 to a right aligned array of 8 bytes.
-pub fn pad_u8(value: u8) -> ByteArray {
-    let mut padded = ByteArray::default();
-    padded[7] = value;
-    padded
 }
 
 /// Converts a u16 to a right aligned array of 8 bytes.

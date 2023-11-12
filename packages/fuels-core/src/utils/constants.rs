@@ -1,7 +1,7 @@
 use fuel_tx::Word;
 use fuel_types::AssetId;
 
-pub const ENUM_DISCRIMINANT_WORD_WIDTH: usize = 1;
+pub const ENUM_DISCRIMINANT_BYTE_WIDTH: usize = 8;
 pub const WORD_SIZE: usize = core::mem::size_of::<Word>();
 
 // ANCHOR: default_call_parameters

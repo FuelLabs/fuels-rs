@@ -49,7 +49,7 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[macro_export]
 macro_rules! error {
    ($err_variant:ident, $fmt_str: literal $(,$arg: expr)*) => {
-       Error::$err_variant(format!($fmt_str,$($arg),*))
+    $crate::types::errors::Error::$err_variant(format!($fmt_str,$($arg),*))
    }
 }
 pub use error;

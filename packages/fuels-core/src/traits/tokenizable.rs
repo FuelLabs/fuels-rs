@@ -3,7 +3,7 @@ use fuel_types::{Address, AssetId, ContractId};
 use crate::{
     traits::Parameterize,
     types::{
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
         AsciiString, Bits256, Bytes, RawSlice, SizedAsciiString, StaticStringToken, Token,
     },
@@ -381,8 +381,8 @@ where
     fn from_token(token: Token) -> Result<Self> {
         if let Token::Enum(enum_selector) = token {
             match *enum_selector {
-                (0u8, _, _) => Ok(None),
-                (1u8, token, _) => Ok(Option::<T>::Some(T::from_token(token)?)),
+                (0, _, _) => Ok(None),
+                (1, token, _) => Ok(Option::<T>::Some(T::from_token(token)?)),
                 (_, _, _) => Err(error!(
                     InstantiationError,
                     "Could not construct Option from enum_selector. Received: {:?}", enum_selector
@@ -397,8 +397,8 @@ where
     }
     fn into_token(self) -> Token {
         let (dis, tok) = match self {
-            None => (0u8, Token::Unit),
-            Some(value) => (1u8, value.into_token()),
+            None => (0, Token::Unit),
+            Some(value) => (1, value.into_token()),
         };
         if let ParamType::Enum { variants, .. } = Self::param_type() {
             let selector = (dis, tok, variants);
@@ -417,8 +417,8 @@ where
     fn from_token(token: Token) -> Result<Self> {
         if let Token::Enum(enum_selector) = token {
             match *enum_selector {
-                (0u8, token, _) => Ok(std::result::Result::<T, E>::Ok(T::from_token(token)?)),
-                (1u8, token, _) => Ok(std::result::Result::<T, E>::Err(E::from_token(token)?)),
+                (0, token, _) => Ok(std::result::Result::<T, E>::Ok(T::from_token(token)?)),
+                (1, token, _) => Ok(std::result::Result::<T, E>::Err(E::from_token(token)?)),
                 (_, _, _) => Err(error!(
                     InstantiationError,
                     "Could not construct Result from enum_selector. Received: {:?}", enum_selector
@@ -433,8 +433,8 @@ where
     }
     fn into_token(self) -> Token {
         let (dis, tok) = match self {
-            Ok(value) => (0u8, value.into_token()),
-            Err(value) => (1u8, value.into_token()),
+            Ok(value) => (0, value.into_token()),
+            Err(value) => (1, value.into_token()),
         };
         if let ParamType::Enum { variants, .. } = Self::param_type() {
             let selector = (dis, tok, variants);
