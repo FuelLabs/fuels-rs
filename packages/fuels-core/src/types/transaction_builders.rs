@@ -301,7 +301,7 @@ impl ScriptTransactionBuilder {
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
 
         // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
-        // TODO: why do I need to / 2
+        // TODO: @xgreenx why do I need to / 2
         tx.set_script_gas_limit((network_info.max_gas_per_tx / 2) - max_gas);
 
         // Add temp coin for dry run
@@ -315,7 +315,6 @@ impl ScriptTransactionBuilder {
             0u32.into(),
         ));
 
-        //TODO: add tolerance setting
         let gas_used = provider.dry_run(tx.clone().into(), tolerance).await?;
 
         // Remove temp coin
@@ -338,6 +337,7 @@ impl ScriptTransactionBuilder {
             self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
         );
 
+        let scritp_len = self.script.len();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
         let mut tx = FuelTransaction::script(
             0, // use temporarily
@@ -354,7 +354,10 @@ impl ScriptTransactionBuilder {
             dry_run_witnesses,
         );
 
-        if let Some(gas_limit) = self.gas_limit {
+        // If there is no script code `script_gas_limit` should be `0`
+        if scritp_len == 0 {
+            tx.set_script_gas_limit(0);
+        } else if let Some(gas_limit) = self.gas_limit {
             tx.set_script_gas_limit(gas_limit);
         } else {
             Self::set_script_gas_limit_to_gas_used(
@@ -488,11 +491,11 @@ impl ScriptTransactionBuilder {
         .collect();
 
         ScriptTransactionBuilder::new(network_info)
-            .with_tx_policies(tx_policies)
             .with_script(script)
             .with_script_data(script_data)
             .with_inputs(inputs)
             .with_outputs(outputs)
+            .with_tx_policies(tx_policies)
     }
 
     /// Craft a transaction used to transfer funds to the base chain.
