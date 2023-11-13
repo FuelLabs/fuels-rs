@@ -1,6 +1,4 @@
-use itertools::Itertools;
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use fuel_tx::{
     field::{
@@ -17,9 +15,9 @@ use fuel_tx::{
     Input, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
     TransactionFee, UniqueIdentifier, Witness,
 };
-
 use fuel_types::{AssetId, ChainId};
 use fuel_vm::checked_transaction::EstimatePredicates;
+use itertools::Itertools;
 
 use crate::{
     constants::BASE_ASSET_ID,

@@ -620,8 +620,7 @@ impl<'a> fmt::Debug for DebugWithDepth<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::constants::WORD_SIZE;
-    use crate::{codec::DecoderConfig, types::param_types::ParamType};
+    use crate::{codec::DecoderConfig, constants::WORD_SIZE, types::param_types::ParamType};
 
     const WIDTH_OF_B256: usize = 32;
     const WIDTH_OF_U32: usize = 8;

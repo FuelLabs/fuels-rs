@@ -35,6 +35,13 @@ use crate::{
     },
 };
 
+use async_trait::async_trait;
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait DryRunner {
+    async fn dry_run(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+}
+
 #[derive(Debug, Clone)]
 pub struct NetworkInfo {
     pub consensus_parameters: ConsensusParameters,
@@ -59,7 +66,7 @@ impl NetworkInfo {
 #[derive(Debug, Clone, Default, Zeroize, ZeroizeOnDrop)]
 struct UnresolvedSignatures {
     #[zeroize(skip)]
-    addr_idx_offset_map: HashMap<Bech32Address, u8>,
+    addr_idx_offset_map: HashMap<Bech32Address, u64>,
     secret_keys: Vec<SecretKey>,
 }
 
@@ -105,7 +112,7 @@ macro_rules! impl_tx_trait {
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
-                let index_offset = self.unresolved_signatures.secret_keys.len() as u8;
+                let index_offset = self.unresolved_signatures.secret_keys.len() as u64;
                 self.unresolved_signatures.secret_keys.push(secret_key);
                 self.unresolved_signatures
                     .addr_idx_offset_map
@@ -192,16 +199,12 @@ macro_rules! impl_tx_trait {
             }
 
             fn num_witnesses(&self) -> Result<u8> {
-                let num_witnesses = self.witnesses().len();
+                let num_witnesses =
+                    self.witnesses().len() + self.unresolved_signatures.secret_keys.len();
 
-                if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
-                    return Err(error!(
-                        InvalidData,
-                        "tx can not have more than 256 witnesses"
-                    ));
-                }
-
-                Ok(num_witnesses as u8)
+                num_witnesses
+                    .try_into()
+                    .map_err(|_| error!(InvalidData, "tx can not have more than 256 witnesses"))
             }
         }
     };
@@ -766,7 +769,7 @@ fn resolve_signed_resource(
                     "signature missing for coin with owner: `{owner:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_input(coin, num_witnesses + *witness_idx_offset)
+                    create_coin_input(coin, num_witnesses + *witness_idx_offset as u8)
                 })
         }
         CoinType::Message(message) => {
@@ -781,7 +784,7 @@ fn resolve_signed_resource(
                     "signature missing for message with recipient: `{recipient:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_message_input(message, num_witnesses + *witness_idx_offset)
+                    create_coin_message_input(message, num_witnesses + *witness_idx_offset as u8)
                 })
         }
     }
@@ -982,11 +985,4 @@ mod tests {
             status: MessageStatus::Unspent,
         }
     }
-}
-
-use async_trait::async_trait;
-
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait DryRunner {
-    async fn dry_run(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
 }
