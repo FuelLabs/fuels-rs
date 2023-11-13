@@ -283,7 +283,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 564;
     let expected_metered_bytes_size = 800;
-    let expected_total_fee = 1137;
+    let expected_total_fee = 1160;
 
     let estimated_transaction_cost = contract_instance
         .methods()

@@ -106,11 +106,7 @@ pub enum TransactionType {
     Create(CreateTransaction),
 }
 
-pub trait UpdateGas {
-    fn with(self, gas_price: u64, gas_limit: u64) -> Self;
-}
-
-pub trait EstimateablePredicates {
+pub trait EstimablePredicates {
     /// If a transactions contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
@@ -122,7 +118,7 @@ pub trait GasValidation {
 }
 
 pub trait Transaction:
-    Into<FuelTransaction> + UpdateGas + EstimateablePredicates + GasValidation + Clone + Debug
+    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug
 {
     fn fee_checked_from_tx(
         &self,
@@ -176,16 +172,7 @@ impl From<TransactionType> for FuelTransaction {
     }
 }
 
-impl UpdateGas for TransactionType {
-    fn with(self, gas_price: u64, gas_limit: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with(gas_price, gas_limit)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with(gas_price, gas_limit)),
-        }
-    }
-}
-
-impl EstimateablePredicates for TransactionType {
+impl EstimablePredicates for TransactionType {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         match self {
             TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters),
@@ -496,14 +483,7 @@ macro_rules! impl_tx_wrapper {
 impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 
-impl UpdateGas for CreateTransaction {
-    fn with(mut self, gas_price: u64, _gas_limit: u64) -> Self {
-        self.tx.set_gas_price(gas_price);
-        self
-    }
-}
-
-impl EstimateablePredicates for CreateTransaction {
+impl EstimablePredicates for CreateTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 
@@ -544,15 +524,7 @@ impl GasValidation for CreateTransaction {
     }
 }
 
-impl UpdateGas for ScriptTransaction {
-    fn with(mut self, gas_price: u64, gas_limit: u64) -> Self {
-        self.tx.set_gas_price(gas_price);
-        self.tx.set_script_gas_limit(gas_limit);
-        self
-    }
-}
-
-impl EstimateablePredicates for ScriptTransaction {
+impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 

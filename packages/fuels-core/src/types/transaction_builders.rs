@@ -28,7 +28,7 @@ use crate::{
         input::Input,
         message::Message,
         transaction::{
-            CreateTransaction, EstimateablePredicates, ScriptTransaction, Transaction, TxPolicies,
+            CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
         },
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
