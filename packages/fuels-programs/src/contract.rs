@@ -19,7 +19,7 @@ use fuels_core::{
         errors::{error, Error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+        transaction_builders::{CreateTransactionBuilder, TransactionBuilder, ScriptTransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -577,6 +577,18 @@ where
             std::slice::from_ref(&self.contract_call),
             self.tx_parameters,
             &self.account,
+            |_| {}
+        )
+        .await
+    }
+
+    /// Returns the script that executes the contract call
+    pub async fn config_and_build_tx(&self, config: impl Send + Sync + FnOnce(&mut ScriptTransactionBuilder)) -> Result<ScriptTransaction> {
+        build_tx_from_contract_calls(
+            std::slice::from_ref(&self.contract_call),
+            self.tx_parameters,
+            &self.account,
+            config
         )
         .await
     }
@@ -861,7 +873,13 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         self.validate_contract_calls()?;
 
-        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account, |_| {}).await
+    }
+
+    pub async fn config_and_build_tx(&self, config: impl Send + Sync + FnOnce(&mut ScriptTransactionBuilder)) -> Result<ScriptTransaction> {
+        self.validate_contract_calls()?;
+
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account, config).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

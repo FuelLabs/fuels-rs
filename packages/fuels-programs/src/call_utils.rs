@@ -103,6 +103,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
     tx_parameters: TxParameters,
     account: &impl Account,
+    config: impl Send + Sync + FnOnce(&mut ScriptTransactionBuilder),
 ) -> Result<ScriptTransaction> {
     let consensus_parameters = account.try_provider()?.consensus_parameters();
 
@@ -133,6 +134,7 @@ pub(crate) async fn build_tx_from_contract_calls(
         ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters, network_info)
             .with_script(script)
             .with_script_data(script_data.clone());
+    config(&mut tb);
 
     let used_base_amount = required_asset_amounts
         .iter()
