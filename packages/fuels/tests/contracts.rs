@@ -1358,7 +1358,7 @@ fn db_rocksdb() {
             const NUMBER_OF_ASSETS: u64 = 2;
             let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::local_node()
+                ..Config::default()
             };
 
             let chain_config = ChainConfig {
@@ -1392,7 +1392,7 @@ fn db_rocksdb() {
         .block_on(async {
             let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::local_node()
+                ..Config::default()
             };
 
             let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;

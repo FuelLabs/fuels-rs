@@ -68,22 +68,6 @@ pub struct Config {
     pub chain_conf: ChainConfig,
 }
 
-impl Config {
-    pub fn local_node() -> Self {
-        Self {
-            addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: Some(MAX_DATABASE_CACHE_SIZE),
-            database_type: DbType::InMemory,
-            utxo_validation: true,
-            debug: true,
-            block_production: Trigger::Instant,
-            vm_backtrace: false,
-            silent: true,
-            chain_conf: ChainConfig::local_testnet(),
-        }
-    }
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {

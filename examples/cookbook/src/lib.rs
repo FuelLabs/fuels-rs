@@ -126,7 +126,7 @@ mod tests {
         // ANCHOR_END: custom_chain_coins
 
         // ANCHOR: custom_chain_provider
-        let node_config = Config::local_node();
+        let node_config = Config::default();
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
         // ANCHOR_END: custom_chain_provider
@@ -208,7 +208,7 @@ mod tests {
         // ANCHOR: create_or_use_rocksdb
         let provider_config = Config {
             database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
-            ..Config::local_node()
+            ..Config::default()
         };
         // ANCHOR_END: create_or_use_rocksdb
 

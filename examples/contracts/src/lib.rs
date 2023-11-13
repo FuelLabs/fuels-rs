@@ -12,7 +12,7 @@ mod tests {
         use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::start(Config::local_node()).await?;
+        let server = FuelService::start(Config::default()).await?;
 
         // Create a client that will talk to the node created above.
         let client = Provider::from(server.bound_address()).await?;

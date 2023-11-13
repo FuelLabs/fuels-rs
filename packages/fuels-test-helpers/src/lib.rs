@@ -145,7 +145,7 @@ pub async fn setup_test_provider(
         ..StateConfig::default()
     });
 
-    let mut config = node_config.unwrap_or_else(Config::local_node);
+    let mut config = node_config.unwrap_or_default();
     config.chain_conf = chain_conf;
 
     let srv = FuelService::start(config).await?;
@@ -295,8 +295,7 @@ mod tests {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
         let config = Config {
             addr: socket,
-            utxo_validation: true,
-            ..Config::local_node()
+            ..Config::default()
         };
 
         let provider = setup_test_provider(vec![], vec![], Some(config.clone()), None).await?;

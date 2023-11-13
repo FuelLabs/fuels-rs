@@ -72,7 +72,7 @@ async fn test_network_error() -> Result<()> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let config = Config::local_node();
+    let config = Config::default();
     let service = FuelService::start(config).await?;
     let provider = Provider::connect(service.bound_address().to_string()).await?;
 
@@ -219,7 +219,7 @@ async fn can_set_custom_block_time() -> Result<()> {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::local_node()
+        ..Config::default()
     };
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
@@ -748,7 +748,7 @@ async fn test_sway_timestamp() -> Result<()> {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::local_node()
+        ..Config::default()
     };
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
@@ -832,7 +832,7 @@ async fn test_caching() -> Result<()> {
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
-        Some(Config::local_node()),
+        Some(Config::default()),
         None,
     )
     .await?;
@@ -901,7 +901,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::local_node()
+        ..Config::default()
     };
 
     // create wallet with 1 coin so that the cache prevents further
