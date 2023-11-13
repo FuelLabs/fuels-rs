@@ -80,13 +80,13 @@ fuel-core-services = { version = "0.20.8", default-features = false }
 fuel-core-types = { version = "0.20.8", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.41.0"}
-fuel-crypto = { version = "0.41.0"}
-fuel-merkle = { version = "0.41.0"}
-fuel-storage = { version = "0.41.0"}
-fuel-tx = { version = "0.41.0"}
-fuel-types = { version = "0.41.0"}
-fuel-vm = { version = "0.41.0"}
+fuel-asm = { version = "0.42.0"}
+fuel-crypto = { version = "0.42.0"}
+fuel-merkle = { version = "0.42.0"}
+fuel-storage = { version = "0.42.0"}
+fuel-tx = { version = "0.42.0"}
+fuel-types = { version = "0.42.0"}
+fuel-vm = { version = "0.42.0"}
 
 # Workspace projects
 fuels = { version = "0.50.1", path = "./packages/fuels" }
@@ -105,9 +105,9 @@ fuel-storage = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master"
 fuel-tx = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
 fuel-types = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
 fuel-vm = { git = "https://github.com/FuelLabs/fuel-vm/", branch = "master" }
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies", default-features = false }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/transaction-policies" }
