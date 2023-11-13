@@ -193,9 +193,15 @@ macro_rules! impl_tx_trait {
 
         impl $ty {
             fn is_using_predicates(&self) -> bool {
-                self.inputs()
-                    .iter()
-                    .any(|input| matches!(input, Input::ResourcePredicate { .. }))
+                self.inputs().iter().any(|input| {
+                    matches!(
+                        input,
+                        Input::ResourcePredicate { .. }
+                            | Input::FuelInput(FuelInput::CoinPredicate(_))
+                            | Input::FuelInput(FuelInput::MessageCoinPredicate(_))
+                            | Input::FuelInput(FuelInput::MessageDataPredicate(_))
+                    )
+                })
             }
 
             fn num_witnesses(&self) -> Result<u8> {
