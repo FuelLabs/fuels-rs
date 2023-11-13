@@ -333,8 +333,11 @@ mod tests {
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{Address, Output};
-    use fuels_core::types::{transaction::Transaction, transaction_builders::NetworkInfo};
+    use fuel_tx::{Address, Output, Transaction as FuelTransaction};
+    use fuels_core::types::{
+        transaction::Transaction,
+        transaction_builders::{DryRunner, NetworkInfo},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -373,6 +376,15 @@ mod tests {
         // ANCHOR_END: sign_message
 
         Ok(())
+    }
+
+    struct MockDryRunner {}
+
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    impl DryRunner for MockDryRunner {
+        async fn dry_run(&self, _: FuelTransaction, _: f32) -> Result<u64> {
+            Ok(0)
+        }
     }
 
     #[tokio::test]
@@ -416,7 +428,7 @@ mod tests {
 
         // Sign the transaction
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
-        let tx = tb.build()?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb.build_with_provider(&MockDryRunner {}).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
@@ -430,7 +442,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("dd4a50099e6d9e5766d96319778df4ab12f25e7c1684333661e0d73052e9e7455355206434b2b7328a4835a5326d7f9640ec35bfe317b7ee53c8efef1817d21e")?);
+        assert_eq!(signature, Signature::from_str("ffd15da2db6668e95e3056c5526aaa37f582e2e5e55927879bf896e813d7f57f14398297ada9205847d16a8e3bcc299a372c9a69c4cf91c4ce2c3804dc900e96")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

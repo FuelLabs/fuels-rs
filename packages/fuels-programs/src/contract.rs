@@ -19,7 +19,7 @@ use fuels_core::{
         errors::{error, Error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+        transaction_builders::CreateTransactionBuilder,
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },

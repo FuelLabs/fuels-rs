@@ -2,7 +2,11 @@ use fuel_tx::Output;
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, transaction_builders::ScriptTransactionBuilder},
+    types::{
+        coin::Coin,
+        message::Message,
+        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    },
 };
 use fuels_core::{
     codec::ABIEncoder,

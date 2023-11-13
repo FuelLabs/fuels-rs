@@ -2,7 +2,10 @@
 mod tests {
     use fuels::{
         prelude::Result,
-        types::{transaction_builders::ScriptTransactionBuilder, Bits256},
+        types::{
+            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+            Bits256,
+        },
     };
 
     #[tokio::test]

@@ -38,7 +38,7 @@ use crate::{
 use async_trait::async_trait;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait DryRunner {
+pub trait DryRunner: Sync {
     async fn dry_run(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
 }
 
@@ -70,10 +70,11 @@ struct UnresolvedSignatures {
     secret_keys: Vec<SecretKey>,
 }
 
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait TransactionBuilder: CheckableFee + Send + Clone {
     type TxType: Transaction;
 
-    fn build(self) -> Result<Self::TxType>;
+    async fn build_with_provider(self, provider: &impl DryRunner) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
@@ -92,23 +93,11 @@ pub trait TransactionBuilder: CheckableFee + Send + Clone {
 
 macro_rules! impl_tx_trait {
     ($ty: ty, $tx_ty: ident) => {
+        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
-            fn build(self) -> Result<$tx_ty> {
-                let is_using_predicates = self.is_using_predicates();
-                let base_offset = if is_using_predicates {
-                    self.base_offset()
-                } else {
-                    0
-                };
-
-                let num_witnesses = self.num_witnesses()?;
-                let tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
-
-                Ok($tx_ty {
-                    tx,
-                    is_using_predicates,
-                })
+            async fn build_with_provider(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+                self.build_with_provider(provider).await
             }
 
             fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
@@ -199,12 +188,16 @@ macro_rules! impl_tx_trait {
             }
 
             fn num_witnesses(&self) -> Result<u8> {
-                let num_witnesses =
-                    self.witnesses().len() + self.unresolved_signatures.secret_keys.len();
+                let num_witnesses = self.witnesses().len();
 
-                num_witnesses
-                    .try_into()
-                    .map_err(|_| error!(InvalidData, "tx can not have more than 256 witnesses"))
+                if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
+                    return Err(error!(
+                        InvalidData,
+                        "tx can not have more than 256 witnesses"
+                    ));
+                }
+
+                Ok(num_witnesses as u8)
             }
         }
     };
@@ -266,7 +259,7 @@ impl ScriptTransactionBuilder {
         }
     }
 
-    pub async fn build_with_provider(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build_with_provider(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset()
@@ -377,49 +370,6 @@ impl ScriptTransactionBuilder {
             &self.unresolved_signatures,
         );
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
-
-        Ok(tx)
-    }
-
-    fn resolve_fuel_tx(self, base_offset: usize, num_witnesses: u8) -> Result<Script> {
-        let mut policies = self.generate_common_fuel_policies();
-        policies.set(
-            PolicyType::WitnessLimit,
-            self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
-        );
-
-        let mut tx = FuelTransaction::script(
-            0, // use temporarily
-            self.script,
-            self.script_data,
-            policies,
-            resolve_fuel_inputs(
-                self.inputs,
-                base_offset + policies.size_dynamic(),
-                num_witnesses,
-                &self.unresolved_signatures,
-            )?,
-            self.outputs,
-            self.witnesses,
-        );
-
-        if let Some(gas_limit) = self.gas_limit {
-            tx.set_script_gas_limit(gas_limit);
-        } else {
-            let consensus_params = &self.network_info.consensus_parameters;
-            // Add `1` because of rounding
-            let max_gas =
-                tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
-
-            // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
-            tx.set_script_gas_limit((self.network_info.max_gas_per_tx) - max_gas);
-        }
-
-        let missing_witnesses = generate_missing_witnesses(
-            tx.id(&self.network_info.chain_id()),
-            &self.unresolved_signatures,
-        );
-        tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
     }
@@ -554,17 +504,17 @@ impl ScriptTransactionBuilder {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait CheckableFee {
-    async fn fee_checked_from_tx<T: DryRunner + Sync>(
+    async fn fee_checked_from_tx(
         &self,
-        provider: &T,
+        provider: &impl DryRunner,
     ) -> Result<Option<TransactionFee>>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl CheckableFee for ScriptTransactionBuilder {
-    async fn fee_checked_from_tx<T: DryRunner + Sync>(
+    async fn fee_checked_from_tx(
         &self,
-        provider: &T,
+        provider: &impl DryRunner,
     ) -> Result<Option<TransactionFee>> {
         let mut tx = self.clone().build_with_provider(provider).await?;
         if tx.is_using_predicates() {
@@ -581,10 +531,7 @@ impl CheckableFee for ScriptTransactionBuilder {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl CheckableFee for CreateTransactionBuilder {
-    async fn fee_checked_from_tx<T: DryRunner + Sync>(
-        &self,
-        _: &T,
-    ) -> Result<Option<TransactionFee>> {
+    async fn fee_checked_from_tx(&self, _: &impl DryRunner) -> Result<Option<TransactionFee>> {
         let mut tx = self.clone().build()?;
 
         if tx.is_using_predicates() {
@@ -616,6 +563,27 @@ impl CreateTransactionBuilder {
             network_info,
             unresolved_signatures: Default::default(),
         }
+    }
+
+    async fn build_with_provider(self, _: &impl DryRunner) -> Result<CreateTransaction> {
+        self.build()
+    }
+
+    pub fn build(self) -> Result<CreateTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+        let base_offset = if is_using_predicates {
+            self.base_offset()
+        } else {
+            0
+        };
+
+        let num_witnesses = self.num_witnesses()?;
+        let tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
+
+        Ok(CreateTransaction {
+            tx,
+            is_using_predicates,
+        })
     }
 
     fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Create> {
