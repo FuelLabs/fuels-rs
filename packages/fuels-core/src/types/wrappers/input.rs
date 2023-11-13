@@ -2,7 +2,7 @@
 
 use std::hash::Hash;
 
-use fuel_tx::{TxPointer, UtxoId};
+use fuel_tx::{TxPointer, UtxoId, Input as FuelInput};
 use fuel_types::{AssetId, Bytes32, ContractId};
 
 use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
@@ -24,6 +24,13 @@ pub enum Input {
         tx_pointer: TxPointer,
         contract_id: ContractId,
     },
+    FuelInput(FuelInput)
+}
+
+impl From<FuelInput> for Input {
+    fn from(value: FuelInput) -> Self {
+        Self::FuelInput(value)
+    }
 }
 
 impl Input {

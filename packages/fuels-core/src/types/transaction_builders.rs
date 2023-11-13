@@ -542,6 +542,7 @@ fn resolve_fuel_inputs(
                     contract_id,
                 ))
             }
+            Input::FuelInput(input) => Ok(input),
         })
         .collect()
 }
