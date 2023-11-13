@@ -212,7 +212,7 @@ where
         self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
 
-        tb.build_with_provider(self.account.try_provider()?).await
+        tb.build(self.account.try_provider()?).await
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a
@@ -279,7 +279,7 @@ where
 
         self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
-        let tx = tb.build_with_provider(self.account.try_provider()?).await?;
+        let tx = tb.build(self.account.try_provider()?).await?;
 
         let transaction_cost = self
             .provider

@@ -39,7 +39,7 @@ use async_trait::async_trait;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Sync {
-    async fn dry_run(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
 }
 
 #[derive(Debug, Clone)]
@@ -74,7 +74,7 @@ struct UnresolvedSignatures {
 pub trait TransactionBuilder: CheckableFee + Send + Clone {
     type TxType: Transaction;
 
-    async fn build_with_provider(self, provider: &impl DryRunner) -> Result<Self::TxType>;
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
@@ -96,7 +96,7 @@ macro_rules! impl_tx_trait {
         #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
-            async fn build_with_provider(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+            async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
                 self.build_with_provider(provider).await
             }
 
@@ -311,7 +311,9 @@ impl ScriptTransactionBuilder {
             0u32.into(),
         ));
 
-        let gas_used = provider.dry_run(tx.clone().into(), tolerance).await?;
+        let gas_used = provider
+            .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
+            .await?;
 
         // Remove temp coin
         tx.inputs_mut().pop();

@@ -184,7 +184,7 @@ mod tests {
             network_info,
         );
         wallet_1.sign_transaction(&mut tb);
-        let tx = tb.build_with_provider(&provider).await?;
+        let tx = tb.build(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
 

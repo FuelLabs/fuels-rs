@@ -214,7 +214,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
 
-        let tx = tx_builder.build_with_provider(provider).await?;
+        let tx = tx_builder.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -275,7 +275,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
-        let tx = tb.build_with_provider(provider).await?;
+        let tx = tb.build(provider).await?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -313,7 +313,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
-        let tx = tb.build_with_provider(provider).await?;
+        let tx = tb.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -382,7 +382,7 @@ mod tests {
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
-        async fn dry_run(&self, _: FuelTransaction, _: f32) -> Result<u64> {
+        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
             Ok(0)
         }
     }
@@ -428,7 +428,8 @@ mod tests {
 
         // Sign the transaction
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
-        let tx = tb.build_with_provider(&MockDryRunner {}).await?; // Resolve signatures and add corresponding witness indexes
+                                          // ANCHOR_END: sign_tx
+        let tx = tb.build(&MockDryRunner {}).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
@@ -451,7 +452,6 @@ mod tests {
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
-        // ANCHOR_END: sign_tx
 
         Ok(())
     }

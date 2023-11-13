@@ -143,7 +143,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     account.add_witnessses(&mut tb);
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
 
-    tb.build_with_provider(provider).await
+    tb.build(provider).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
