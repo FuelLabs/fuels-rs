@@ -12,17 +12,18 @@ use fuel_types::{bytes::padded_len_usize, Bytes32, ChainId, MemLayout, Salt};
 use fuel_vm::gas::GasCosts;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
     constants::{BASE_ASSET_ID, WORD_SIZE},
     offsets,
     types::{
         bech32::Bech32Address,
+        chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
         errors::{error, Result},
         input::Input,
         message::Message,
+        node_info::NodeInfo,
         transaction::{CreateTransaction, ScriptTransaction, Transaction, TxParameters},
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,

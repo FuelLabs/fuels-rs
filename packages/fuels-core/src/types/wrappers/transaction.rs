@@ -1,6 +1,4 @@
-use itertools::Itertools;
-use std::collections::HashMap;
-use std::fmt::Debug;
+use std::{collections::HashMap, fmt::Debug};
 
 use fuel_tx::{
     field::{
@@ -16,9 +14,9 @@ use fuel_tx::{
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
-
 use fuel_types::{AssetId, ChainId};
 use fuel_vm::{checked_transaction::EstimatePredicates, prelude::GasCosts};
+use itertools::Itertools;
 
 use crate::types::{bech32::Bech32Address, Result};
 
@@ -68,7 +66,7 @@ impl TxParameters {
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
-use super::coin_type_id::CoinTypeId;
+use crate::types::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone)]
 pub enum TransactionType {

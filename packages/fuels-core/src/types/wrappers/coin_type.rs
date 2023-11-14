@@ -5,10 +5,8 @@ use fuel_types::AssetId;
 
 use crate::{
     constants::BASE_ASSET_ID,
-    types::{bech32::Bech32Address, coin::Coin, message::Message},
+    types::{bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message},
 };
-
-use super::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum CoinType {

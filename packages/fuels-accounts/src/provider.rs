@@ -4,6 +4,9 @@ mod retry_util;
 mod retryable_client;
 mod supported_versions;
 
+#[cfg(feature = "coin-cache")]
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
@@ -12,6 +15,8 @@ use fuel_core_client::client::{
 use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
 use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
 use fuel_vm::state::ProgramState;
+#[cfg(feature = "coin-cache")]
+use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
@@ -34,17 +39,12 @@ pub use retry_util::{Backoff, RetryConfig};
 use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
 use tai64::Tai64;
 use thiserror::Error;
-
-use crate::provider::retryable_client::RetryableClient;
+#[cfg(feature = "coin-cache")]
+use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
-#[cfg(feature = "coin-cache")]
-use fuels_core::types::coin_type_id::CoinTypeId;
-#[cfg(feature = "coin-cache")]
-use std::sync::Arc;
-#[cfg(feature = "coin-cache")]
-use tokio::sync::Mutex;
+use crate::provider::retryable_client::RetryableClient;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
