@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        client::{PageDirection, PaginationRequest},
         core::codec::DecoderConfig,
         prelude::{Config, LoadConfiguration, StorageConfiguration},
         types::{errors::Result, Bits256},

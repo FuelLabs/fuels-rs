@@ -14,7 +14,6 @@ use fuels::{
 };
 use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
-    transaction_response::TransactionResponse,
     Bits256,
 };
 
