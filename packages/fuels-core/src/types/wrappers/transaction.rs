@@ -20,6 +20,53 @@ use itertools::Itertools;
 
 use crate::types::{bech32::Bech32Address, Result};
 
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct MintTransaction {
+    tx: Mint,
+}
+
+impl From<MintTransaction> for FuelTransaction {
+    fn from(mint: MintTransaction) -> Self {
+        mint.tx.into()
+    }
+}
+
+impl From<MintTransaction> for Mint {
+    fn from(tx: MintTransaction) -> Self {
+        tx.tx
+    }
+}
+
+impl From<Mint> for MintTransaction {
+    fn from(tx: Mint) -> Self {
+        MintTransaction { tx }
+    }
+}
+
+impl MintTransaction {
+    pub fn check_without_signatures(
+        &self,
+        block_height: u32,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()> {
+        Ok(self
+            .tx
+            .check_without_signatures(block_height.into(), consensus_parameters)?)
+    }
+
+    fn id(&self, chain_id: ChainId) -> Bytes32 {
+        self.tx.id(&chain_id)
+    }
+
+    fn outputs(&self) -> &Vec<Output> {
+        self.tx.outputs()
+    }
+
+    fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
+        Ok(self.tx.precompute(chain_id)?)
+    }
+}
+
 #[derive(Default, Debug, Copy, Clone)]
 pub struct TxParameters {
     gas_price: Option<u64>,
@@ -72,7 +119,7 @@ use crate::types::coin_type_id::CoinTypeId;
 pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
-    Mint(Mint),
+    Mint(MintTransaction),
 }
 
 pub trait Transaction: Into<FuelTransaction> + Clone {
@@ -135,7 +182,7 @@ impl From<TransactionType> for FuelTransaction {
         match value {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
-            TransactionType::Mint(tx) => tx.into(),
+            TransactionType::Mint(tx) => tx.tx.into(),
         }
     }
 }
@@ -169,7 +216,7 @@ impl Transaction for TransactionType {
                 tx.check_without_signatures(block_height, consensus_parameters)
             }
             TransactionType::Mint(tx) => {
-                Ok(tx.check_without_signatures(block_height.into(), consensus_parameters)?)
+                tx.check_without_signatures(block_height, consensus_parameters)
             }
         }
     }
@@ -178,7 +225,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.id(chain_id),
             TransactionType::Create(tx) => tx.id(chain_id),
-            TransactionType::Mint(tx) => tx.id(&chain_id),
+            TransactionType::Mint(tx) => tx.id(chain_id),
         }
     }
 
@@ -274,7 +321,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.precompute(chain_id),
             TransactionType::Create(tx) => tx.precompute(chain_id),
-            TransactionType::Mint(tx) => Ok(tx.precompute(chain_id)?),
+            TransactionType::Mint(tx) => tx.precompute(chain_id),
         }
     }
 

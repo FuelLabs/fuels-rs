@@ -1010,14 +1010,15 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         .await?
         .results;
 
-    let has_mint_transactions = transactions
+    // TODO: remove once (fuels-rs#1093)[https://github.com/FuelLabs/fuels-rs/issues/1093] is in
+    // until then the type is explicitly mentioned to check that we're reexporting it through fuels
+    let _: ::fuels::types::transaction::MintTransaction = transactions
         .into_iter()
-        .any(|tx| matches!(tx.transaction, TransactionType::Mint(..)));
-
-    assert!(
-        has_mint_transactions,
-        "Should have had at least one mint transaction"
-    );
+        .find_map(|tx| match tx.transaction {
+            TransactionType::Mint(tx) => Some(tx),
+            _ => None,
+        })
+        .expect("Should have had at least one mint transaction");
 
     Ok(())
 }
