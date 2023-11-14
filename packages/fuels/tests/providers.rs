@@ -15,6 +15,7 @@ use fuels::{
 
 use fuels_core::types::{
     transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    transaction_response::TransactionResponse,
     Bits256,
 };
 
@@ -981,6 +982,44 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     let coins = wallet.get_spendable_resources(BASE_ASSET_ID, 1).await?;
     assert_eq!(coins.len(), 1);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_fetch_mint_transactions() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let provider = wallet.try_provider()?;
+
+    let transactions = provider
+        .get_transactions(PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        })
+        .await?
+        .results;
+
+    let has_mint_transactions = transactions
+        .into_iter()
+        .any(|tx| matches!(tx.transaction, TransactionType::Mint(..)));
+
+    assert!(
+        has_mint_transactions,
+        "Should have had at least one mint transaction"
+    );
 
     Ok(())
 }

@@ -4,6 +4,7 @@ use std::vec;
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
+    client::{PageDirection, PaginationRequest},
     core::codec::{calldata, fn_selector},
     prelude::*,
     types::Bits256,

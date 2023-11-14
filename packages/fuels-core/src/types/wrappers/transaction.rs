@@ -12,7 +12,7 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
-    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Witness,
 };
@@ -74,6 +74,7 @@ use super::coin_type_id::CoinTypeId;
 pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
+    Mint(Mint),
 }
 
 pub trait Transaction: Into<FuelTransaction> + Clone {
@@ -136,8 +137,13 @@ impl From<TransactionType> for FuelTransaction {
         match value {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
+            TransactionType::Mint(tx) => tx.into(),
         }
     }
+}
+
+fn unsupported_mint_operation(operation: &str) -> ! {
+    unimplemented!("Calling `{operation}` on Mint transactions is unsupported!");
 }
 
 impl Transaction for TransactionType {
@@ -148,6 +154,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.fee_checked_from_tx(consensus_parameters),
             TransactionType::Create(tx) => tx.fee_checked_from_tx(consensus_parameters),
+            TransactionType::Mint(..) => unsupported_mint_operation("fee_checked_from_tx"),
         }
     }
 
@@ -163,6 +170,9 @@ impl Transaction for TransactionType {
             TransactionType::Create(tx) => {
                 tx.check_without_signatures(block_height, consensus_parameters)
             }
+            TransactionType::Mint(tx) => {
+                Ok(tx.check_without_signatures(block_height.into(), consensus_parameters)?)
+            }
         }
     }
 
@@ -170,6 +180,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.id(chain_id),
             TransactionType::Create(tx) => tx.id(chain_id),
+            TransactionType::Mint(tx) => tx.id(&chain_id),
         }
     }
 
@@ -177,6 +188,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.maturity(),
             TransactionType::Create(tx) => tx.maturity(),
+            TransactionType::Mint(..) => unsupported_mint_operation("maturity"),
         }
     }
 
@@ -184,6 +196,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
             TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
+            TransactionType::Mint(..) => unsupported_mint_operation("with_maturity"),
         }
     }
 
@@ -191,6 +204,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.gas_price(),
             TransactionType::Create(tx) => tx.gas_price(),
+            TransactionType::Mint(..) => unsupported_mint_operation("gas_price"),
         }
     }
 
@@ -198,6 +212,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
             TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
+            TransactionType::Mint(..) => unsupported_mint_operation("with_gas_price"),
         }
     }
 
@@ -205,6 +220,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.gas_limit(),
             TransactionType::Create(tx) => tx.gas_limit(),
+            TransactionType::Mint(..) => unsupported_mint_operation("gas_limit"),
         }
     }
 
@@ -212,6 +228,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
             TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
+            TransactionType::Mint(..) => unsupported_mint_operation("with_gas_limit"),
         }
     }
 
@@ -219,6 +236,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.metered_bytes_size(),
             TransactionType::Create(tx) => tx.metered_bytes_size(),
+            TransactionType::Mint(..) => unsupported_mint_operation("metered_bytes_size"),
         }
     }
 
@@ -226,6 +244,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.inputs(),
             TransactionType::Create(tx) => tx.inputs(),
+            TransactionType::Mint(..) => unsupported_mint_operation("inputs"),
         }
     }
 
@@ -233,6 +252,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.outputs(),
             TransactionType::Create(tx) => tx.outputs(),
+            TransactionType::Mint(tx) => tx.outputs(),
         }
     }
 
@@ -240,6 +260,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.witnesses(),
             TransactionType::Create(tx) => tx.witnesses(),
+            TransactionType::Mint(..) => unsupported_mint_operation("witnesses"),
         }
     }
 
@@ -247,6 +268,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.is_using_predicates(),
             TransactionType::Create(tx) => tx.is_using_predicates(),
+            TransactionType::Mint(..) => unsupported_mint_operation("is_using_predicates"),
         }
     }
 
@@ -254,6 +276,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.precompute(chain_id),
             TransactionType::Create(tx) => tx.precompute(chain_id),
+            TransactionType::Mint(tx) => Ok(tx.precompute(chain_id)?),
         }
     }
 
@@ -265,6 +288,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
             TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
+            TransactionType::Mint(..) => unsupported_mint_operation("estimate_predicates"),
         }
     }
 
@@ -272,6 +296,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.append_witness(witness),
             TransactionType::Create(tx) => tx.append_witness(witness),
+            TransactionType::Mint(..) => unsupported_mint_operation("append_witness"),
         }
     }
 
@@ -279,6 +304,7 @@ impl Transaction for TransactionType {
         match self {
             TransactionType::Script(tx) => tx.used_coins(),
             TransactionType::Create(tx) => tx.used_coins(),
+            TransactionType::Mint(..) => unsupported_mint_operation("used_coins"),
         }
     }
 }
