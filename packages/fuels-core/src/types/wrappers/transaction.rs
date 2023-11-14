@@ -182,7 +182,7 @@ impl From<TransactionType> for FuelTransaction {
         match value {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
-            TransactionType::Mint(tx) => tx.tx.into(),
+            TransactionType::Mint(tx) => tx.into(),
         }
     }
 }
