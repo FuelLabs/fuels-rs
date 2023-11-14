@@ -10,7 +10,7 @@ use fuel_tx::Transaction;
 use fuel_types::Bytes32;
 
 use crate::types::{
-    transaction::{CreateTransaction, MintTransaction, ScriptTransaction, TransactionType},
+    transaction::{CreateTransaction, ScriptTransaction, TransactionType},
     tx_status::TxStatus,
 };
 
