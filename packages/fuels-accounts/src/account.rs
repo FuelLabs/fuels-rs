@@ -117,6 +117,27 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             .await
             .map_err(Into::into)
     }
+
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<CoinType>> {
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            ..Default::default()
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -144,27 +165,6 @@ pub trait Account: ViewOnlyAccount {
             // Here we only have to tell the node who will own the change and its asset ID.
             Output::change(self.address().into(), 0, asset_id),
         ]
-    }
-
-    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
-    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<CoinType>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
     }
 
     /// Add base asset inputs to the transaction to cover the estimated fee.

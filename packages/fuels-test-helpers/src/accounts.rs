@@ -90,7 +90,7 @@ pub async fn launch_custom_provider_and_get_wallets(
 mod tests {
     use fuel_core_chain_config::ChainConfig;
     use fuel_tx::{ConsensusParameters, TxParameters};
-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
     use fuels_core::{
         constants::BASE_ASSET_ID,
         types::{coin_type::CoinType, errors::Result},

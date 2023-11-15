@@ -203,7 +203,6 @@ jobs:
       - name: Install Fuel Core
         if: ${{ matrix.install_fuel_core }}
         run: |
-
           if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
             cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --branch $FUEL_CORE_PATCH_BRANCH
           else
