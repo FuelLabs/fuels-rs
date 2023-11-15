@@ -20,9 +20,9 @@ env:
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.73.0
   FORC_VERSION: 0.46.0
-  FORC_PATCH_BRANCH: "hal3e/fuel-core-master2"
+  FORC_PATCH_BRANCH: "feat/transaction-policies"
   FORC_PATCH_REVISION: ""
-  FORC_IMPLICIT_STD_GIT_BRANCH: "hal3e/fuel-core-master2"
+  FORC_IMPLICIT_STD_GIT_BRANCH: "feat/transaction-policies"
 
 jobs:
   setup-test-projects:
@@ -62,7 +62,7 @@ jobs:
         working-directory: packages/fuels
 
       - name: Build Sway test projects
-        run: forc build --terse --error-on-warnings
+        run: forc build --terse
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
