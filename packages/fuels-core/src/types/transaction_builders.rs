@@ -278,6 +278,9 @@ impl ScriptTransactionBuilder {
         })
     }
 
+    // When dry running a tx with `utxo_validation` off, the node will not validate signatures.
+    // However, the node will check if the right number of witnesses is present.
+    // This function will create empty witnesses such that the total length matches the expected one.
     fn create_dry_run_witnesses(&self, num_witnesses: u8) -> Vec<Witness> {
         let unresolved_witnesses_len = self.unresolved_signatures.addr_idx_offset_map.len();
         repeat(Default::default())
@@ -286,6 +289,8 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
+    // When the `script_gas_limit` was not set by the user, `dry_run` the tx
+    // and set the `script_gas_limit` to the actual `gas_used`
     async fn set_script_gas_limit_to_gas_used(
         tx: &mut Script,
         provider: &impl DryRunner,
@@ -300,7 +305,8 @@ impl ScriptTransactionBuilder {
         // TODO: @xgreenx why do I need to / 2
         tx.set_script_gas_limit((network_info.max_gas_per_tx / 2) - max_gas);
 
-        // Add temp coin for dry run
+        // The `dry_run` validation will check if there is an input present that can cover
+        // the tx fees. If we are estimating without inputs we have to add a temporary one
         tx.inputs_mut().push(FuelInput::coin_signed(
             Default::default(),
             Default::default(),
@@ -315,7 +321,7 @@ impl ScriptTransactionBuilder {
             .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
             .await?;
 
-        // Remove temp coin
+        // Remove the temporary coin
         tx.inputs_mut().pop();
 
         tx.set_script_gas_limit(gas_used);
@@ -338,7 +344,7 @@ impl ScriptTransactionBuilder {
         let scritp_len = self.script.len();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
         let mut tx = FuelTransaction::script(
-            0, // use temporarily
+            0, // default value - will be overwritten
             self.script,
             self.script_data,
             policies,
@@ -355,6 +361,7 @@ impl ScriptTransactionBuilder {
         // If there is no script code `script_gas_limit` should be `0`
         if scritp_len == 0 {
             tx.set_script_gas_limit(0);
+        // Use the user defined value even if it makes the tx revert
         } else if let Some(gas_limit) = self.gas_limit {
             tx.set_script_gas_limit(gas_limit);
         } else {
