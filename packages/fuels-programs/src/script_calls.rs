@@ -199,21 +199,19 @@ where
 
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
         let network_info = self.account.try_provider()?.network_info().await?;
+        let (inputs, outputs) = self.prepare_inputs_outputs().await?;
 
         Ok(ScriptTransactionBuilder::new(network_info)
             .with_tx_params(self.tx_parameters)
             .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?))
+            .with_script_data(self.compute_script_data().await?)
+            .with_inputs(inputs)
+            .with_outputs(outputs))
     }
 
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        let (inputs, outputs) = self.prepare_inputs_outputs().await?;
-        let mut tb = self
-            .transaction_builder()
-            .await?
-            .with_inputs(inputs)
-            .with_outputs(outputs);
+        let mut tb = self.transaction_builder().await?;
 
         self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
