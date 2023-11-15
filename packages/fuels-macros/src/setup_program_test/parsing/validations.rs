@@ -8,7 +8,6 @@ use crate::{
     parse_utils::ErrorsExt,
     setup_program_test::parsing::{
         AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-        RunOnLiveNodeCommand,
     },
 };
 

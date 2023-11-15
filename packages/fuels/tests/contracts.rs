@@ -74,7 +74,6 @@ async fn test_contract_calling_contract() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
     let lib_contract_id = lib_contract_instance.contract_id();
     let lib_contract_id2 = lib_contract_instance2.contract_id();
 
