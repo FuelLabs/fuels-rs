@@ -3,24 +3,16 @@ macro_rules! command_parser {
         #[derive(Default)]
         #[allow(non_snake_case)]
         pub(crate) struct CommandParser {
-            pub(crate) run_on_live_node: bool,
             $(pub(crate) $command_name: Vec<$command_struct>),*
         }
 
         impl CommandParser {
             fn available_commands() -> impl Iterator<Item=&'static str> {
-                ["RunOnLiveNode", $(stringify!($command_name)),*].into_iter()
+                [$(stringify!($command_name)),*].into_iter()
             }
 
             pub(crate) fn parse_and_save(&mut self, command: $crate::parse_utils::Command) -> ::syn::Result<()>{
                 match command.name.to_string().as_str() {
-                    "RunOnLiveNode" => {
-                        if let Ok(content) = command.contents.to_string().parse() {
-                            self.run_on_live_node = content
-                        } else {
-                            return Err(::syn::Error::new(command.name.span(), format!("Expected 'true' or 'false' inside 'RunOnLiveNode' command")));
-                        }
-                    }
                     $(stringify!($command_name) => self.$command_name.push(command.try_into()?),)*
                     _ => {
                         let msg = Self::available_commands().map(|command| format!("'{command}'")).join(", ");
