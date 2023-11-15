@@ -43,39 +43,11 @@ async fn test_multiple_args() -> Result<()> {
 #[tokio::test]
 async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
-    #[cfg(not(feature = "test-against-live-node"))]
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
-        Abigen(
-            Contract(
-                name = "LibContract",
-                project = "packages/fuels/tests/contracts/lib_contract"
-            ),
-            Contract(
-                name = "LibContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller"
-            ),
-        ),
-        Deploy(
-            name = "lib_contract_instance",
-            contract = "LibContract",
-            wallet = "wallet"
-        ),
-        Deploy(
-            name = "lib_contract_instance2",
-            contract = "LibContract",
-            wallet = "wallet"
-        ),
-        Deploy(
-            name = "contract_caller_instance",
-            contract = "LibContractCaller",
-            wallet = "wallet"
-        ),
-    );
-    #[cfg(feature = "test-against-live-node")]
-    setup_program_test!(
-        RunOnLiveNode,
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -1534,24 +1506,11 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
-    #[cfg(not(feature = "test-against-live-node"))]
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
-
-    #[cfg(feature = "test-against-live-node")]
-    setup_program_test!(
-        RunOnLiveNode,
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"

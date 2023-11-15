@@ -6,7 +6,7 @@ use fuels_accounts::{
 };
 use fuels_core::constants::TESTNET_NODE_URL;
 use fuels_core::error;
-use fuels_core::types::errors::{Error, Result};
+use fuels_core::types::errors::Result;
 
 use crate::{
     node_types::{ChainConfig, Config},
@@ -114,6 +114,19 @@ pub async fn connect_to_testnet_node_and_get_wallets(
         })
         .collect::<Vec<WalletUnlocked>>();
     Ok(wallets)
+}
+
+pub async fn maybe_live_wallet(num_wallets: usize) -> Result<Vec<WalletUnlocked>> {
+    if cfg!(feature = "test-against-live-node") {
+        connect_to_testnet_node_and_get_wallets(num_wallets).await
+    } else {
+        launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(num_wallets as u64), None, None),
+            None,
+            None,
+        )
+        .await
+    }
 }
 
 #[cfg(test)]
