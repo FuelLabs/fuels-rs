@@ -1,6 +1,6 @@
 pub(crate) use commands::{
     AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-    RunOnLiveNodeCommand, TestProgramCommands,
+    TestProgramCommands,
 };
 
 mod command_parser;

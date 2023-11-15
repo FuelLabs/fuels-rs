@@ -21,12 +21,11 @@ pub(crate) fn generate_setup_program_test_code(
         generate_bindings,
         deploy_contract,
         load_scripts,
-        run_on_live_node,
     } = commands;
 
     let project_lookup = generate_project_lookup(&generate_bindings)?;
     let abigen_code = abigen_code(&project_lookup);
-    let wallet_code = wallet_initialization_code(initialize_wallets, run_on_live_node)?;
+    let wallet_code = wallet_initialization_code(initialize_wallets)?;
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
     let script_code = script_loading_code(&load_scripts, &project_lookup);
 
@@ -69,7 +68,6 @@ fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<Abi
 
 fn wallet_initialization_code(
     maybe_command: Option<InitializeWalletCommand>,
-    run_on_live_node: bool,
 ) -> syn::Result<TokenStream> {
     let command = if let Some(command) = maybe_command {
         command
@@ -80,37 +78,17 @@ fn wallet_initialization_code(
     let wallet_names = extract_wallet_names(&command);
     let num_wallets = wallet_names.len();
 
-    if run_on_live_node {
-        if num_wallets > 3 {
-            return Err(syn::Error::new(
-                command.span,
-                format!(
-                    "'RunOnLiveNode` supports at most 3 wallet names inside the 'Wallets' command. Found {}.",
-                    num_wallets
-                ),
-            ));
-        }
-
-        Ok(quote! {
-            let [#(#wallet_names),*]: [_; #num_wallets] = connect_to_testnet_node_and_get_wallets(#num_wallets)
-            .await
-            .expect("Error while trying to get wallets connected to testnet node")
-            .try_into()
-            .expect("Should have the exact number of wallets");
-        })
-    } else {
-        Ok(quote! {
-            let [#(#wallet_names),*]: [_; #num_wallets] = launch_custom_provider_and_get_wallets(
-                WalletsConfig::new(Some(#num_wallets as u64), None, None),
-                None,
-                None,
-            )
-            .await
-            .expect("Error while trying to fetch wallets from the custom provider")
-            .try_into()
-            .expect("Should have the exact number of wallets");
-        })
-    }
+    Ok(quote! {
+        let [#(#wallet_names),*]: [_; #num_wallets] = launch_custom_provider_and_get_wallets(
+            WalletsConfig::new(Some(#num_wallets as u64), None, None),
+            None,
+            None,
+        )
+        .await
+        .expect("Error while trying to fetch wallets from the custom provider")
+        .try_into()
+        .expect("Should have the exact number of wallets");
+    })
 }
 
 fn extract_wallet_names(command: &InitializeWalletCommand) -> Vec<Ident> {

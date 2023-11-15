@@ -78,19 +78,6 @@ pub(crate) fn validate_all_scripts_are_known(
         .validate_no_errors()
 }
 
-pub(crate) fn should_run_on_live_node_command(commands: &[RunOnLiveNodeCommand]) -> Result<bool> {
-    match commands.len() {
-        0 => Ok(false),
-        1 => Ok(true),
-        _ => commands
-            .iter()
-            .map(|command| Error::new(command.span, "Only one `RunOnLiveNode` command allowed"))
-            .combine_errors()
-            .map(Err)
-            .expect("Known to have at least one error"),
-    }
-}
-
 pub(crate) fn validate_zero_or_one_wallet_command_present(
     commands: &[InitializeWalletCommand],
 ) -> Result<()> {
