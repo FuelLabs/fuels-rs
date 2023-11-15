@@ -10,8 +10,8 @@ members = [
   'tests/contracts/auth_testing_contract',
   'tests/contracts/block_timestamp',
   'tests/contracts/configurables',
-  'tests/contracts/contract_custom_call',
   'tests/contracts/contract_test',
+  'tests/contracts/contract_witness_logs',
   'tests/contracts/large_return_data',
   'tests/contracts/lib_contract',
   'tests/contracts/lib_contract_abi',
@@ -104,3 +104,5 @@ members = [
 ]
 
 
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/fix-implicit-std-env-vars" }
