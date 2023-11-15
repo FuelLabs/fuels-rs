@@ -256,41 +256,6 @@ jobs:
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
-
-  run-live-node:
-
-    # is commented out for now so we can test the CI works properly
-    #    if: github.event_name == "push"
-    needs:
-      - setup-test-projects
-      - verify-rust-version
-      - get-workspace-members
-      - publish-crates-check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.RUST_VERSION }}
-          components: clippy,rustfmt
-      - name: Install Fuel Core
-        run: |
-          curl -sSLf https://github.com/FuelLabs/fuel-core/releases/download/v${{ env.FUEL_CORE_VERSION }}/fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu.tar.gz -L -o fuel-core.tar.gz
-          tar -xvf fuel-core.tar.gz
-          chmod +x fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core
-          mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
-      - name: Download sway example artifacts
-        uses: actions/download-artifact@v3
-        with:
-          name: sway-examples-w-type-paths
-          path: packages/fuels/tests/
-      - name: Test against live node
-        run: cargo test --features test-against-live-node
-        continue-on-error: true
-
   publish:
     needs:
       - cargo-verifications

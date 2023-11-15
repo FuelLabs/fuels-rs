@@ -76,6 +76,9 @@ fn wallet_initialization_code(
     };
 
     let wallet_names = extract_wallet_names(&command);
+    if wallet_names.is_empty() {
+        return Ok(Default::default());
+    }
     let num_wallets = wallet_names.len();
 
     Ok(quote! {
