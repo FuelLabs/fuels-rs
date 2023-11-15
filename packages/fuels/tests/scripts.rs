@@ -26,8 +26,11 @@ async fn test_transaction_script_workflow() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_script_workflow() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -404,8 +407,11 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "packages/fuels/tests/scripts/script_struct"
