@@ -73,7 +73,10 @@ struct UnresolvedSignatures {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction {
     type TxType: Transaction;
-
+    /// Build a `Transaction` from the `TransactionBuilder`. `DryRunner` is
+    /// used to return the actual `gas_used` which is set as the `script_gas_limit`.
+    /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner` is not used
+    /// in this case.
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 

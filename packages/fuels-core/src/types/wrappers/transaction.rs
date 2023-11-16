@@ -107,7 +107,7 @@ pub enum TransactionType {
 }
 
 pub trait EstimablePredicates {
-    /// If a transactions contains predicates, we have to estimate them
+    /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()>;
@@ -465,9 +465,12 @@ macro_rules! impl_tx_wrapper {
                     .filter_map(|input| match input {
                         Input::Contract { .. } => None,
                         _ => {
-                            // not a contract, it's safe to unwrap
-                            let owner = extract_owner_or_recipient(input).unwrap();
-                            let asset_id = input.asset_id(&BASE_ASSET_ID).unwrap().to_owned();
+                            // Not a contract, it's safe to unwrap.
+                            let owner = extract_owner_or_recipient(input).expect("has owner");
+                            let asset_id = input
+                                .asset_id(&BASE_ASSET_ID)
+                                .expect("has `asset_id`")
+                                .to_owned();
 
                             let id = extract_coin_type_id(input).unwrap();
                             Some(((owner, asset_id), id))
@@ -509,7 +512,9 @@ impl CreateTransaction {
 }
 
 impl GasValidation for CreateTransaction {
-    fn validate_gas(&self, min_gas_price: u64, _gas_used: u64) -> Result<()> {
+    // We're not using `gas_used` in this implementation
+    // because `CreateTransaction` has no gas_limit`
+    fn validate_gas(&self, min_gas_price: u64, _: u64) -> Result<()> {
         if min_gas_price > self.tx.gas_price() {
             return Err(error!(
                 ValidationError,
