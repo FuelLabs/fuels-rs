@@ -430,3 +430,41 @@ async fn test_script_submit_and_response() -> Result<()> {
     assert_eq!(value, 42);
     Ok(())
 }
+
+#[tokio::test]
+async fn test_script_transaction_builder() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/script_struct"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+    let provider = wallet.try_provider()?;
+
+    let my_struct = MyStruct {
+        number: 42,
+        boolean: true,
+    };
+
+    let script_call_handler = script_instance.main(my_struct);
+
+    let mut tb = script_call_handler.transaction_builder().await?;
+    wallet.adjust_for_fee(&mut tb, 0).await?;
+    wallet.sign_transaction(&mut tb);
+
+    let tx = tb.build()?;
+
+    let tx_id = provider.send_transaction(tx).await?;
+    let tx_status = provider.tx_status(&tx_id).await?;
+
+    let response = script_call_handler.get_response_from(tx_status)?;
+
+    assert_eq!(response.value, 42);
+    Ok(())
+}
