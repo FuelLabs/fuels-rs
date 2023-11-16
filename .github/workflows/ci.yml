@@ -22,7 +22,7 @@ env:
   FORC_VERSION: 0.46.0
   FORC_PATCH_BRANCH: "feat/transaction-policies"
   FORC_PATCH_REVISION: ""
-  FORC_IMPLICIT_STD_GIT_BRANCH: "feat/transaction-policies"
+  FORC_IMPLICIT_STD_GIT_BRANCH: ""
 
 jobs:
   setup-test-projects:
