@@ -465,7 +465,7 @@ macro_rules! impl_tx_wrapper {
                     .filter_map(|input| match input {
                         Input::Contract { .. } => None,
                         _ => {
-                            // Not a contract, it's safe to unwrap.
+                            // Not a contract, it's safe to expect.
                             let owner = extract_owner_or_recipient(input).expect("has owner");
                             let asset_id = input
                                 .asset_id(&BASE_ASSET_ID)

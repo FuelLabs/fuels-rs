@@ -38,8 +38,15 @@ use crate::{
 use async_trait::async_trait;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait DryRunner: Sync {
+pub trait DryRunner: Send + Sync {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl<T: DryRunner> DryRunner for &T {
+    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
+        (*self).dry_run_and_get_used_gas(tx, tolerance).await
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -77,13 +84,13 @@ pub trait BuildableTransaction {
     /// used to return the actual `gas_used` which is set as the `script_gas_limit`.
     /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner` is not used
     /// in this case.
-    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
-    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -91,7 +98,7 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
-    async fn build(self, _: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build(self, _: impl DryRunner) -> Result<Self::TxType> {
         self.build()
     }
 }
@@ -101,10 +108,8 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     type TxType: Transaction;
 
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    async fn fee_checked_from_tx(
-        &self,
-        provider: &impl DryRunner,
-    ) -> Result<Option<TransactionFee>>;
+    async fn fee_checked_from_tx(&self, provider: impl DryRunner)
+        -> Result<Option<TransactionFee>>;
     fn with_maturity(self, maturity: u32) -> Self;
     fn with_gas_price(self, gas_price: u64) -> Self;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
@@ -136,7 +141,7 @@ macro_rules! impl_tx_trait {
 
             async fn fee_checked_from_tx(
                 &self,
-                provider: &impl DryRunner,
+                provider: impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
                 let mut tx = BuildableTransaction::build(self.clone(), provider).await?;
 
@@ -302,7 +307,7 @@ impl ScriptTransactionBuilder {
         }
     }
 
-    async fn build(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset()
@@ -312,7 +317,7 @@ impl ScriptTransactionBuilder {
 
         let num_witnesses = self.num_witnesses()?;
         let tx = self
-            .resolve_fuel_tx_provider(base_offset, num_witnesses, provider)
+            .resolve_fuel_tx_provider(base_offset, num_witnesses, &provider)
             .await?;
 
         Ok(ScriptTransaction {
