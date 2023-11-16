@@ -13,7 +13,7 @@ use fuels_core::{
 use crate::provider::Provider;
 
 pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
-    receipts.iter().find_map(|m| m.nonce().copied())
+    receipts.iter().find_map(|m| m.nonce()).copied()
 }
 
 pub async fn calculate_missing_base_amount(

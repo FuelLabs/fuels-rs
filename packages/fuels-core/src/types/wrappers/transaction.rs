@@ -544,7 +544,7 @@ impl GasValidation for ScriptTransaction {
         if gas_used > *self.tx.script_gas_limit() {
             return Err(error!(
                 ValidationError,
-                "gas_limit({}) is lower than the estimated gas_used({})",
+                "script_gas_limit({}) is lower than the estimated gas_used({})",
                 self.tx.script_gas_limit(),
                 gas_used
             ));

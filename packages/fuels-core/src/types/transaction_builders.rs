@@ -331,9 +331,9 @@ impl ScriptTransactionBuilder {
     // This function will create empty witnesses such that the total length matches the expected one.
     fn create_dry_run_witnesses(&self, num_witnesses: u8) -> Vec<Witness> {
         let unresolved_witnesses_len = self.unresolved_signatures.addr_idx_offset_map.len();
-        repeat(Default::default())
+        repeat_with(Default::default)
             // Add one in case there is no witnesses at all
-            .take(num_witnesses as usize + unresolved_witnesses_len + 1)
+            .take(max(num_witnesses as usize + unresolved_witnesses_len, 1))
             .collect()
     }
 

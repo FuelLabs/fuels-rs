@@ -380,7 +380,7 @@ mod tests {
         Ok(())
     }
 
-    struct MockDryRunner {}
+    struct MockDryRunner;
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
