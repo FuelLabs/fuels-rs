@@ -399,7 +399,6 @@ mod tests {
 
         let network_info = NetworkInfo {
             consensus_parameters: Default::default(),
-            max_gas_per_tx: 1_000_000,
             min_gas_price: 0,
         };
         // Set up a transaction
@@ -431,7 +430,7 @@ mod tests {
         // Sign the transaction
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
                                           // ANCHOR_END: sign_tx
-        let tx = tb.build(MockDryRunner {}).await?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb.build(MockDryRunner).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;

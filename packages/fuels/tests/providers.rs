@@ -293,7 +293,11 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     let err = deploy_w_maturity(1u32)?.await.expect_err(
         "Should not deploy contract since block height (0) is less than the requested maturity (1)",
     );
-    assert!(matches!(err, Error::ValidationError(s) if s == "TransactionMaturity"));
+
+    let Error::ValidationError(s) = err else {
+        panic!("Expected a ValidationError, got: {err}");
+    };
+    assert_eq!(s, "TransactionMaturity");
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1u32)?

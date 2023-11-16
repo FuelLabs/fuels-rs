@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use std::{collections::HashMap, iter::repeat};
+use std::{cmp::max, collections::HashMap, iter::repeat_with};
 
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
@@ -52,17 +52,19 @@ impl<T: DryRunner> DryRunner for &T {
 #[derive(Debug, Clone)]
 pub struct NetworkInfo {
     pub consensus_parameters: ConsensusParameters,
-    pub max_gas_per_tx: u64,
     pub min_gas_price: u64,
 }
 
 impl NetworkInfo {
     pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
         Self {
-            max_gas_per_tx: chain_info.consensus_parameters.tx_params().max_gas_per_tx,
             consensus_parameters: chain_info.consensus_parameters,
             min_gas_price: node_info.min_gas_price,
         }
+    }
+
+    pub fn max_gas_per_tx(&self) -> u64 {
+        self.consensus_parameters.tx_params().max_gas_per_tx
     }
 
     pub fn chain_id(&self) -> ChainId {
@@ -80,16 +82,16 @@ struct UnresolvedSignatures {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction {
     type TxType: Transaction;
+
     /// Build a `Transaction` from the `TransactionBuilder`. `DryRunner` is
     /// used to return the actual `gas_used` which is set as the `script_gas_limit`.
-    /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner` is not used
-    /// in this case.
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
+
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
@@ -98,6 +100,9 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
+
+    /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner`
+    /// is not used in this case.
     async fn build(self, _: impl DryRunner) -> Result<Self::TxType> {
         self.build()
     }
@@ -349,9 +354,8 @@ impl ScriptTransactionBuilder {
         // Add `1` because of rounding
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
 
-        // If `gas_limit` was not set use `max_gas_per_tx` but subtract the tx's base maximum cost
         // TODO: @xgreenx why do I need to / 2
-        tx.set_script_gas_limit((network_info.max_gas_per_tx / 2) - max_gas);
+        tx.set_script_gas_limit((network_info.max_gas_per_tx() / 2) - max_gas);
 
         // The `dry_run` validation will check if there is an input present that can cover
         // the tx fees. If we are estimating without inputs we have to add a temporary one
@@ -389,7 +393,7 @@ impl ScriptTransactionBuilder {
             self.witness_limit.or(Some(DEFAULT_SCRIPT_WITNESS_LIMIT)),
         );
 
-        let script_len = self.script.len();
+        let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -406,8 +410,7 @@ impl ScriptTransactionBuilder {
             dry_run_witnesses,
         );
 
-        // If there is no script code `script_gas_limit` should be `0`
-        if script_len == 0 {
+        if has_no_code {
             tx.set_script_gas_limit(0);
         // Use the user defined value even if it makes the tx revert
         } else if let Some(gas_limit) = self.gas_limit {
@@ -908,7 +911,6 @@ mod tests {
         let sorted_storage_slots = [1, 2].map(given_a_storage_slot).to_vec();
 
         let network_info = NetworkInfo {
-            max_gas_per_tx: 0,
             min_gas_price: 0,
             consensus_parameters: Default::default(),
         };
