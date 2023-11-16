@@ -2,7 +2,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use fuel_tx::{
     field::{
-        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, Witnesses,
+        GasLimit, GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData,
+        TxPointer, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -54,16 +55,16 @@ impl MintTransaction {
             .check_without_signatures(block_height.into(), consensus_parameters)?)
     }
 
-    fn id(&self, chain_id: ChainId) -> Bytes32 {
+    pub fn id(&self, chain_id: ChainId) -> Bytes32 {
         self.tx.id(&chain_id)
     }
 
-    fn outputs(&self) -> &Vec<Output> {
-        self.tx.outputs()
+    pub fn tx_pointer(&self) -> &fuel_tx::TxPointer {
+        self.tx.tx_pointer()
     }
 
-    fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
-        Ok(self.tx.precompute(chain_id)?)
+    pub fn outputs(&self) -> &Vec<Output> {
+        self.tx.outputs()
     }
 }
 
@@ -183,173 +184,6 @@ impl From<TransactionType> for FuelTransaction {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
             TransactionType::Mint(tx) => tx.into(),
-        }
-    }
-}
-
-fn unsupported_mint_operation(operation: &str) -> ! {
-    unimplemented!("Calling `{operation}` on Mint transactions is unsupported!");
-}
-
-impl Transaction for TransactionType {
-    fn fee_checked_from_tx(
-        &self,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Option<TransactionFee> {
-        match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(consensus_parameters),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(consensus_parameters),
-            TransactionType::Mint(..) => unsupported_mint_operation("fee_checked_from_tx"),
-        }
-    }
-
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => {
-                tx.check_without_signatures(block_height, consensus_parameters)
-            }
-            TransactionType::Create(tx) => {
-                tx.check_without_signatures(block_height, consensus_parameters)
-            }
-            TransactionType::Mint(tx) => {
-                tx.check_without_signatures(block_height, consensus_parameters)
-            }
-        }
-    }
-
-    fn id(&self, chain_id: ChainId) -> Bytes32 {
-        match self {
-            TransactionType::Script(tx) => tx.id(chain_id),
-            TransactionType::Create(tx) => tx.id(chain_id),
-            TransactionType::Mint(tx) => tx.id(chain_id),
-        }
-    }
-
-    fn maturity(&self) -> u32 {
-        match self {
-            TransactionType::Script(tx) => tx.maturity(),
-            TransactionType::Create(tx) => tx.maturity(),
-            TransactionType::Mint(..) => unsupported_mint_operation("maturity"),
-        }
-    }
-
-    fn with_maturity(self, maturity: u32) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
-            TransactionType::Mint(..) => unsupported_mint_operation("with_maturity"),
-        }
-    }
-
-    fn gas_price(&self) -> u64 {
-        match self {
-            TransactionType::Script(tx) => tx.gas_price(),
-            TransactionType::Create(tx) => tx.gas_price(),
-            TransactionType::Mint(..) => unsupported_mint_operation("gas_price"),
-        }
-    }
-
-    fn with_gas_price(self, gas_price: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
-            TransactionType::Mint(..) => unsupported_mint_operation("with_gas_price"),
-        }
-    }
-
-    fn gas_limit(&self) -> u64 {
-        match self {
-            TransactionType::Script(tx) => tx.gas_limit(),
-            TransactionType::Create(tx) => tx.gas_limit(),
-            TransactionType::Mint(..) => unsupported_mint_operation("gas_limit"),
-        }
-    }
-
-    fn with_gas_limit(self, gas_limit: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_limit(gas_limit)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_limit(gas_limit)),
-            TransactionType::Mint(..) => unsupported_mint_operation("with_gas_limit"),
-        }
-    }
-
-    fn metered_bytes_size(&self) -> usize {
-        match self {
-            TransactionType::Script(tx) => tx.metered_bytes_size(),
-            TransactionType::Create(tx) => tx.metered_bytes_size(),
-            TransactionType::Mint(..) => unsupported_mint_operation("metered_bytes_size"),
-        }
-    }
-
-    fn inputs(&self) -> &Vec<Input> {
-        match self {
-            TransactionType::Script(tx) => tx.inputs(),
-            TransactionType::Create(tx) => tx.inputs(),
-            TransactionType::Mint(..) => unsupported_mint_operation("inputs"),
-        }
-    }
-
-    fn outputs(&self) -> &Vec<Output> {
-        match self {
-            TransactionType::Script(tx) => tx.outputs(),
-            TransactionType::Create(tx) => tx.outputs(),
-            TransactionType::Mint(tx) => tx.outputs(),
-        }
-    }
-
-    fn witnesses(&self) -> &Vec<Witness> {
-        match self {
-            TransactionType::Script(tx) => tx.witnesses(),
-            TransactionType::Create(tx) => tx.witnesses(),
-            TransactionType::Mint(..) => unsupported_mint_operation("witnesses"),
-        }
-    }
-
-    fn is_using_predicates(&self) -> bool {
-        match self {
-            TransactionType::Script(tx) => tx.is_using_predicates(),
-            TransactionType::Create(tx) => tx.is_using_predicates(),
-            TransactionType::Mint(..) => unsupported_mint_operation("is_using_predicates"),
-        }
-    }
-
-    fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.precompute(chain_id),
-            TransactionType::Create(tx) => tx.precompute(chain_id),
-            TransactionType::Mint(tx) => tx.precompute(chain_id),
-        }
-    }
-
-    fn estimate_predicates(
-        &mut self,
-        consensus_parameters: &ConsensusParameters,
-        gas_costs: &GasCosts,
-    ) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
-            TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters, gas_costs),
-            TransactionType::Mint(..) => unsupported_mint_operation("estimate_predicates"),
-        }
-    }
-
-    fn append_witness(&mut self, witness: Witness) -> usize {
-        match self {
-            TransactionType::Script(tx) => tx.append_witness(witness),
-            TransactionType::Create(tx) => tx.append_witness(witness),
-            TransactionType::Mint(..) => unsupported_mint_operation("append_witness"),
-        }
-    }
-
-    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
-        match self {
-            TransactionType::Script(tx) => tx.used_coins(),
-            TransactionType::Create(tx) => tx.used_coins(),
-            TransactionType::Mint(..) => unsupported_mint_operation("used_coins"),
         }
     }
 }
