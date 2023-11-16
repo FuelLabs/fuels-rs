@@ -53,6 +53,7 @@
   - [Structs and enums](./types/custom_types.md)
   - [String](./types/string.md)
   - [Bits256](./types/bits256.md)
+  - [Bytes](./types/bytes.md)
   - [B512](./types/B512.md)
   - [EvmAddress](./types/evm_address.md)
   - [Vectors](./types/vectors.md)
