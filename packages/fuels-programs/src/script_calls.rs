@@ -15,7 +15,7 @@ use fuels_core::{
         errors::Result,
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         unresolved_bytes::UnresolvedBytes,
     },
 };

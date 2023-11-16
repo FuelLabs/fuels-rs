@@ -5,7 +5,7 @@ use fuels::{
     types::{
         coin::Coin,
         message::Message,
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
     },
 };
 use fuels_core::{

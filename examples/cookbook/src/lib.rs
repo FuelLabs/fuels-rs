@@ -3,7 +3,7 @@ mod tests {
     use fuels::{
         prelude::Result,
         types::{
-            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+            transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
             Bits256,
         },
     };

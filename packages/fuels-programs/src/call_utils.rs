@@ -14,7 +14,7 @@ use fuels_core::{
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
     },
 };
 use itertools::{chain, Itertools};

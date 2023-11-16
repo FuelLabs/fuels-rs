@@ -17,7 +17,9 @@ use fuels_core::{
         input::Input,
         message::Message,
         transaction::TxPolicies,
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::{
+            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+        },
         transaction_response::TransactionResponse,
     },
 };

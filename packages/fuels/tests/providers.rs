@@ -13,7 +13,7 @@ use fuels::{
     types::{block::Block, coin_type::CoinType, message::Message},
 };
 use fuels_core::types::{
-    transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
     Bits256,
 };
 
