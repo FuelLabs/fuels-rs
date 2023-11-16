@@ -1,0 +1,1761 @@
+
+2023-11-16T22:20:47.4828985Z Requested labels: ubuntu-latest
+2023-11-16T22:20:47.4829277Z Job defined at: FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@refs/heads/master
+2023-11-16T22:20:47.4829596Z Reusable workflow chain:
+2023-11-16T22:20:47.4829760Z FuelLabs/fuels-rs/.github/workflows/docs.yml@refs/pull/1200/merge (f9ef43819e87ef7ebdcdda492d30ea5a19c1ea5a)
+2023-11-16T22:20:47.4829870Z -> FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@refs/heads/master (e7af1957c3205158caad18ec5a5d0c919d3cb4b2)
+2023-11-16T22:20:47.4830022Z Waiting for a runner to pick up this job...
+2023-11-16T22:20:48.1141596Z Job is waiting for a hosted runner to come online.
+2023-11-16T22:20:51.1652921Z Job is about to start running on the hosted runner: GitHub Actions 2 (hosted)
+2023-11-16T22:20:53.1230978Z Current runner version: '2.311.0'
+2023-11-16T22:20:53.1253767Z ##[group]Operating System
+2023-11-16T22:20:53.1254348Z Ubuntu
+2023-11-16T22:20:53.1254792Z 22.04.3
+2023-11-16T22:20:53.1255140Z LTS
+2023-11-16T22:20:53.1255430Z ##[endgroup]
+2023-11-16T22:20:53.1255907Z ##[group]Runner Image
+2023-11-16T22:20:53.1256377Z Image: ubuntu-22.04
+2023-11-16T22:20:53.1256739Z Version: 20231030.2.0
+2023-11-16T22:20:53.1257800Z Included Software: https://github.com/actions/runner-images/blob/ubuntu22/20231030.2/images/linux/Ubuntu2204-Readme.md
+2023-11-16T22:20:53.1259222Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu22%2F20231030.2
+2023-11-16T22:20:53.1260052Z ##[endgroup]
+2023-11-16T22:20:53.1260525Z ##[group]Runner Image Provisioner
+2023-11-16T22:20:53.1261001Z 2.0.312.1
+2023-11-16T22:20:53.1261313Z ##[endgroup]
+2023-11-16T22:20:53.1263512Z ##[group]GITHUB_TOKEN Permissions
+2023-11-16T22:20:53.1265116Z Actions: write
+2023-11-16T22:20:53.1265518Z Checks: write
+2023-11-16T22:20:53.1266178Z Contents: write
+2023-11-16T22:20:53.1266702Z Deployments: write
+2023-11-16T22:20:53.1267108Z Discussions: write
+2023-11-16T22:20:53.1267476Z Issues: write
+2023-11-16T22:20:53.1267901Z Metadata: read
+2023-11-16T22:20:53.1268274Z Packages: write
+2023-11-16T22:20:53.1268627Z Pages: write
+2023-11-16T22:20:53.1269063Z PullRequests: write
+2023-11-16T22:20:53.1269496Z RepositoryProjects: write
+2023-11-16T22:20:53.1269934Z SecurityEvents: write
+2023-11-16T22:20:53.1270408Z Statuses: write
+2023-11-16T22:20:53.1270817Z ##[endgroup]
+2023-11-16T22:20:53.1272786Z Secret source: Actions
+2023-11-16T22:20:53.1273448Z Prepare workflow directory
+2023-11-16T22:20:53.1887435Z Prepare all required actions
+2023-11-16T22:20:53.2042571Z Getting action download info
+2023-11-16T22:20:53.4352244Z Download action repository 'actions/checkout@v3' (SHA:f43a0e5ff2bd294095638e18286ca9a3d1956744)
+2023-11-16T22:20:53.5758748Z Download action repository 'gaurav-nelson/github-action-markdown-link-check@1.0.12' (SHA:0fe4911067fa322422f325b002d2038ba5602170)
+2023-11-16T22:20:53.9885573Z Uses: FuelLabs/github-actions/.github/workflows/mdbook-docs.yml@refs/heads/master (e7af1957c3205158caad18ec5a5d0c919d3cb4b2)
+2023-11-16T22:20:53.9888061Z ##[group] Inputs
+2023-11-16T22:20:53.9888559Z   docs-src-path: docs/src
+2023-11-16T22:20:53.9889708Z   pre-command: cargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"
+2023-11-16T22:20:53.9890724Z ##[endgroup]
+2023-11-16T22:20:53.9891425Z Complete job name: test / Check Links
+2023-11-16T22:20:54.0507422Z ##[group]Build container for action use: '/home/runner/work/_actions/gaurav-nelson/github-action-markdown-link-check/1.0.12/Dockerfile'.
+2023-11-16T22:20:54.0593102Z ##[command]/usr/bin/docker build -t 888ee0:4d88e6f23f4446fdb6699778c48534e3 -f "/home/runner/work/_actions/gaurav-nelson/github-action-markdown-link-check/1.0.12/Dockerfile" "/home/runner/work/_actions/gaurav-nelson/github-action-markdown-link-check/1.0.12"
+2023-11-16T22:20:54.5246440Z #0 building with "default" instance using docker driver
+2023-11-16T22:20:54.5247259Z
+2023-11-16T22:20:54.5247590Z #1 [internal] load .dockerignore
+2023-11-16T22:20:54.5248155Z #1 transferring context: 2B done
+2023-11-16T22:20:54.5248645Z #1 DONE 0.0s
+2023-11-16T22:20:54.5248942Z
+2023-11-16T22:20:54.5249262Z #2 [internal] load build definition from Dockerfile
+2023-11-16T22:20:54.5249949Z #2 transferring dockerfile: 200B done
+2023-11-16T22:20:54.5250470Z #2 DONE 0.0s
+2023-11-16T22:20:54.5250720Z
+2023-11-16T22:20:54.5251216Z #3 [auth] library/node:pull token for registry-1.docker.io
+2023-11-16T22:20:54.5251878Z #3 DONE 0.0s
+2023-11-16T22:20:54.5252136Z
+2023-11-16T22:20:54.5252444Z #4 [internal] load metadata for docker.io/library/node:alpine
+2023-11-16T22:20:54.7863677Z #4 DONE 0.4s
+2023-11-16T22:20:54.8947866Z
+2023-11-16T22:20:54.8948860Z #5 [internal] load build context
+2023-11-16T22:20:54.8949414Z #5 transferring context: 4.86kB done
+2023-11-16T22:20:54.8950021Z #5 DONE 0.0s
+2023-11-16T22:20:54.8950225Z
+2023-11-16T22:20:54.8951330Z #6 [1/4] FROM docker.io/library/node:alpine@sha256:4a512d1538b1a8281b58cab0b366a5c62436566bb63e7dcd4a6769c98edb3b5f
+2023-11-16T22:20:54.8952711Z #6 resolve docker.io/library/node:alpine@sha256:4a512d1538b1a8281b58cab0b366a5c62436566bb63e7dcd4a6769c98edb3b5f done
+2023-11-16T22:20:54.8954286Z #6 sha256:4a512d1538b1a8281b58cab0b366a5c62436566bb63e7dcd4a6769c98edb3b5f 1.43kB / 1.43kB done
+2023-11-16T22:20:54.8955639Z #6 sha256:226ad4a45572c340b25a580e4af43bf74bb8a5c8bc8c0b2f6838d41914734399 1.16kB / 1.16kB done
+2023-11-16T22:20:54.8957145Z #6 sha256:336ee465c31318105cbde9cba5c97452defcacadcc00d82bba77169c2a01b810 7.13kB / 7.13kB done
+2023-11-16T22:20:54.8958712Z #6 sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 1.05MB / 43.40MB 0.1s
+2023-11-16T22:20:54.8959820Z #6 sha256:96db98e07b425cdebdb39568420afdd62379175b2b9d2824652da874d0191b93 0B / 2.37MB 0.1s
+2023-11-16T22:20:54.8961207Z #6 sha256:8781e898ece14167d53d45ad03e6c15bfd28ba3e6f7498564b66382122334be1 450B / 450B 0.1s done
+2023-11-16T22:20:55.0089834Z #6 sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 14.68MB / 43.40MB 0.2s
+2023-11-16T22:20:55.0091973Z #6 sha256:96db98e07b425cdebdb39568420afdd62379175b2b9d2824652da874d0191b93 2.37MB / 2.37MB 0.1s done
+2023-11-16T22:20:55.1168912Z #6 sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 28.31MB / 43.40MB 0.3s
+2023-11-16T22:20:55.2674742Z #6 sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 36.70MB / 43.40MB 0.4s
+2023-11-16T22:20:55.4095856Z #6 sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 43.40MB / 43.40MB 0.5s done
+2023-11-16T22:20:55.4098632Z #6 extracting sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 0.1s
+2023-11-16T22:20:56.5541605Z #6 extracting sha256:441bc9ab57077b1c6f3a3491aadf4ad64e2b81814702cd42523c964b46dac894 1.2s done
+2023-11-16T22:20:56.8217794Z #6 extracting sha256:96db98e07b425cdebdb39568420afdd62379175b2b9d2824652da874d0191b93 0.1s done
+2023-11-16T22:20:56.9721678Z #6 extracting sha256:8781e898ece14167d53d45ad03e6c15bfd28ba3e6f7498564b66382122334be1 done
+2023-11-16T22:20:56.9722546Z #6 DONE 2.1s
+2023-11-16T22:20:56.9722736Z
+2023-11-16T22:20:56.9723022Z #7 [2/4] RUN apk add --no-cache bash>5.0.16-r0 git>2.26.0-r0
+2023-11-16T22:20:58.2991717Z #7 DONE 1.4s
+2023-11-16T22:20:58.4496061Z
+2023-11-16T22:20:58.4497017Z #8 [3/4] COPY entrypoint.sh /entrypoint.sh
+2023-11-16T22:20:58.4497723Z #8 DONE 0.0s
+2023-11-16T22:20:58.4497944Z
+2023-11-16T22:20:58.4498603Z #9 [4/4] RUN chmod +x /entrypoint.sh
+2023-11-16T22:20:58.7505400Z #9 DONE 0.3s
+2023-11-16T22:20:58.7505782Z
+2023-11-16T22:20:58.7505993Z #10 exporting to image
+2023-11-16T22:20:58.7506825Z #10 exporting layers
+2023-11-16T22:20:59.0112795Z #10 exporting layers 0.4s done
+2023-11-16T22:20:59.0242057Z #10 writing image sha256:f9515f9c37cd8320a92ed59d49d0c39d3d1bb68ac96b30cfa5cfada839e2e158 done
+2023-11-16T22:20:59.0243583Z #10 naming to docker.io/library/888ee0:4d88e6f23f4446fdb6699778c48534e3 done
+2023-11-16T22:20:59.0244616Z #10 DONE 0.4s
+2023-11-16T22:20:59.0288110Z ##[endgroup]
+2023-11-16T22:20:59.0655737Z ##[group]Run actions/checkout@v3
+2023-11-16T22:20:59.0656200Z with:
+2023-11-16T22:20:59.0656663Z   repository: FuelLabs/fuels-rs
+2023-11-16T22:20:59.0657262Z   token: ***
+2023-11-16T22:20:59.0657612Z   ssh-strict: true
+2023-11-16T22:20:59.0658041Z   persist-credentials: true
+2023-11-16T22:20:59.0658421Z   clean: true
+2023-11-16T22:20:59.0658763Z   sparse-checkout-cone-mode: true
+2023-11-16T22:20:59.0659246Z   fetch-depth: 1
+2023-11-16T22:20:59.0659594Z   fetch-tags: false
+2023-11-16T22:20:59.0659936Z   lfs: false
+2023-11-16T22:20:59.0660275Z   submodules: false
+2023-11-16T22:20:59.0660620Z   set-safe-directory: true
+2023-11-16T22:20:59.0660999Z ##[endgroup]
+2023-11-16T22:20:59.2631161Z Syncing repository: FuelLabs/fuels-rs
+2023-11-16T22:20:59.2633092Z ##[group]Getting Git version info
+2023-11-16T22:20:59.2633901Z Working directory is '/home/runner/work/fuels-rs/fuels-rs'
+2023-11-16T22:20:59.2634742Z [command]/usr/bin/git version
+2023-11-16T22:20:59.2635770Z git version 2.42.0
+2023-11-16T22:20:59.2637352Z ##[endgroup]
+2023-11-16T22:20:59.2648776Z Temporarily overriding HOME='/home/runner/work/_temp/e4d4c4a4-e2aa-46a3-85f2-4dc52775747e' before making global git config changes
+2023-11-16T22:20:59.2649993Z Adding repository directory to the temporary git global config as a safe directory
+2023-11-16T22:20:59.2650921Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/fuels-rs/fuels-rs
+2023-11-16T22:20:59.2681375Z Deleting the contents of '/home/runner/work/fuels-rs/fuels-rs'
+2023-11-16T22:20:59.2685561Z ##[group]Initializing the repository
+2023-11-16T22:20:59.2688972Z [command]/usr/bin/git init /home/runner/work/fuels-rs/fuels-rs
+2023-11-16T22:20:59.2768631Z hint: Using 'master' as the name for the initial branch. This default branch name
+2023-11-16T22:20:59.2769552Z hint: is subject to change. To configure the initial branch name to use in all
+2023-11-16T22:20:59.2770458Z hint: of your new repositories, which will suppress this warning, call:
+2023-11-16T22:20:59.2771001Z hint:
+2023-11-16T22:20:59.2771468Z hint: 	git config --global init.defaultBranch <name>
+2023-11-16T22:20:59.2772032Z hint:
+2023-11-16T22:20:59.2772527Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2023-11-16T22:20:59.2773319Z hint: 'development'. The just-created branch can be renamed via this command:
+2023-11-16T22:20:59.2773967Z hint:
+2023-11-16T22:20:59.2774291Z hint: 	git branch -m <name>
+2023-11-16T22:20:59.2805629Z Initialized empty Git repository in /home/runner/work/fuels-rs/fuels-rs/.git/
+2023-11-16T22:20:59.2817283Z [command]/usr/bin/git remote add origin https://github.com/FuelLabs/fuels-rs
+2023-11-16T22:20:59.2857974Z ##[endgroup]
+2023-11-16T22:20:59.2858618Z ##[group]Disabling automatic garbage collection
+2023-11-16T22:20:59.2861092Z [command]/usr/bin/git config --local gc.auto 0
+2023-11-16T22:20:59.2896521Z ##[endgroup]
+2023-11-16T22:20:59.2897103Z ##[group]Setting up auth
+2023-11-16T22:20:59.2902438Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2023-11-16T22:20:59.2938751Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2023-11-16T22:20:59.3280290Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2023-11-16T22:20:59.3315972Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2023-11-16T22:20:59.3557912Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2023-11-16T22:20:59.3601210Z ##[endgroup]
+2023-11-16T22:20:59.3602419Z ##[group]Fetching the repository
+2023-11-16T22:20:59.3611487Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +f9ef43819e87ef7ebdcdda492d30ea5a19c1ea5a:refs/remotes/pull/1200/merge
+2023-11-16T22:20:59.5922662Z remote: Enumerating objects: 817, done.
+2023-11-16T22:20:59.5931233Z remote: Counting objects:   0% (1/817)
+2023-11-16T22:20:59.5932206Z remote: Counting objects:   1% (9/817)
+2023-11-16T22:20:59.5932749Z remote: Counting objects:   2% (17/817)
+2023-11-16T22:20:59.5933257Z remote: Counting objects:   3% (25/817)
+2023-11-16T22:20:59.5933795Z remote: Counting objects:   4% (33/817)
+2023-11-16T22:20:59.5934299Z remote: Counting objects:   5% (41/817)
+2023-11-16T22:20:59.5934782Z remote: Counting objects:   6% (50/817)
+2023-11-16T22:20:59.5935297Z remote: Counting objects:   7% (58/817)
+2023-11-16T22:20:59.5935797Z remote: Counting objects:   8% (66/817)
+2023-11-16T22:20:59.5936311Z remote: Counting objects:   9% (74/817)
+2023-11-16T22:20:59.5936835Z remote: Counting objects:  10% (82/817)
+2023-11-16T22:20:59.5937629Z remote: Counting objects:  11% (90/817)
+2023-11-16T22:20:59.5938105Z remote: Counting objects:  12% (99/817)
+2023-11-16T22:20:59.5938641Z remote: Counting objects:  13% (107/817)
+2023-11-16T22:20:59.5939127Z remote: Counting objects:  14% (115/817)
+2023-11-16T22:20:59.5939806Z remote: Counting objects:  15% (123/817)
+2023-11-16T22:20:59.5940604Z remote: Counting objects:  16% (131/817)
+2023-11-16T22:20:59.5941282Z remote: Counting objects:  17% (139/817)
+2023-11-16T22:20:59.5941765Z remote: Counting objects:  18% (148/817)
+2023-11-16T22:20:59.5942348Z remote: Counting objects:  19% (156/817)
+2023-11-16T22:20:59.5942784Z remote: Counting objects:  20% (164/817)
+2023-11-16T22:20:59.5943251Z remote: Counting objects:  21% (172/817)
+2023-11-16T22:20:59.5943796Z remote: Counting objects:  22% (180/817)
+2023-11-16T22:20:59.5944293Z remote: Counting objects:  23% (188/817)
+2023-11-16T22:20:59.5944787Z remote: Counting objects:  24% (197/817)
+2023-11-16T22:20:59.5945324Z remote: Counting objects:  25% (205/817)
+2023-11-16T22:20:59.5945762Z remote: Counting objects:  26% (213/817)
+2023-11-16T22:20:59.5946248Z remote: Counting objects:  27% (221/817)
+2023-11-16T22:20:59.5947029Z remote: Counting objects:  28% (229/817)
+2023-11-16T22:20:59.5947554Z remote: Counting objects:  29% (237/817)
+2023-11-16T22:20:59.5948364Z remote: Counting objects:  30% (246/817)
+2023-11-16T22:20:59.5948957Z remote: Counting objects:  31% (254/817)
+2023-11-16T22:20:59.5949400Z remote: Counting objects:  32% (262/817)
+2023-11-16T22:20:59.5949888Z remote: Counting objects:  33% (270/817)
+2023-11-16T22:20:59.5950418Z remote: Counting objects:  34% (278/817)
+2023-11-16T22:20:59.5950869Z remote: Counting objects:  35% (286/817)
+2023-11-16T22:20:59.5951346Z remote: Counting objects:  36% (295/817)
+2023-11-16T22:20:59.5951892Z remote: Counting objects:  37% (303/817)
+2023-11-16T22:20:59.5952321Z remote: Counting objects:  38% (311/817)
+2023-11-16T22:20:59.5952803Z remote: Counting objects:  39% (319/817)
+2023-11-16T22:20:59.5953371Z remote: Counting objects:  40% (327/817)
+2023-11-16T22:20:59.5953854Z remote: Counting objects:  41% (335/817)
+2023-11-16T22:20:59.5954285Z remote: Counting objects:  42% (344/817)
+2023-11-16T22:20:59.5954817Z remote: Counting objects:  43% (352/817)
+2023-11-16T22:20:59.5955355Z remote: Counting objects:  44% (360/817)
+2023-11-16T22:20:59.5955999Z remote: Counting objects:  45% (368/817)
+2023-11-16T22:20:59.5956872Z remote: Counting objects:  46% (376/817)
+2023-11-16T22:20:59.5957441Z remote: Counting objects:  47% (384/817)
+2023-11-16T22:20:59.5957871Z remote: Counting objects:  48% (393/817)
+2023-11-16T22:20:59.5958408Z remote: Counting objects:  49% (401/817)
+2023-11-16T22:20:59.5958893Z remote: Counting objects:  50% (409/817)
+2023-11-16T22:20:59.5959531Z remote: Counting objects:  51% (417/817)
+2023-11-16T22:20:59.5960109Z remote: Counting objects:  52% (425/817)
+2023-11-16T22:20:59.5960765Z remote: Counting objects:  53% (434/817)
+2023-11-16T22:20:59.5961425Z remote: Counting objects:  54% (442/817)
+2023-11-16T22:20:59.5962320Z remote: Counting objects:  55% (450/817)
+2023-11-16T22:20:59.5962928Z remote: Counting objects:  56% (458/817)
+2023-11-16T22:20:59.5963360Z remote: Counting objects:  57% (466/817)
+2023-11-16T22:20:59.5963958Z remote: Counting objects:  58% (474/817)
+2023-11-16T22:20:59.5964426Z remote: Counting objects:  59% (483/817)
+2023-11-16T22:20:59.5964877Z remote: Counting objects:  60% (491/817)
+2023-11-16T22:20:59.5965710Z remote: Counting objects:  61% (499/817)
+2023-11-16T22:20:59.5966317Z remote: Counting objects:  62% (507/817)
+2023-11-16T22:20:59.5967187Z remote: Counting objects:  63% (515/817)
+2023-11-16T22:20:59.5968014Z remote: Counting objects:  64% (523/817)
+2023-11-16T22:20:59.5968495Z remote: Counting objects:  65% (532/817)
+2023-11-16T22:20:59.5969066Z remote: Counting objects:  66% (540/817)
+2023-11-16T22:20:59.5969511Z remote: Counting objects:  67% (548/817)
+2023-11-16T22:20:59.5969995Z remote: Counting objects:  68% (556/817)
+2023-11-16T22:20:59.5970539Z remote: Counting objects:  69% (564/817)
+2023-11-16T22:20:59.5971010Z remote: Counting objects:  70% (572/817)
+2023-11-16T22:20:59.5971470Z remote: Counting objects:  71% (581/817)
+2023-11-16T22:20:59.5972012Z remote: Counting objects:  72% (589/817)
+2023-11-16T22:20:59.5972481Z remote: Counting objects:  73% (597/817)
+2023-11-16T22:20:59.5972934Z remote: Counting objects:  74% (605/817)
+2023-11-16T22:20:59.5973461Z remote: Counting objects:  75% (613/817)
+2023-11-16T22:20:59.5973925Z remote: Counting objects:  76% (621/817)
+2023-11-16T22:20:59.5974383Z remote: Counting objects:  77% (630/817)
+2023-11-16T22:20:59.5974916Z remote: Counting objects:  78% (638/817)
+2023-11-16T22:20:59.5975403Z remote: Counting objects:  79% (646/817)
+2023-11-16T22:20:59.5975844Z remote: Counting objects:  80% (654/817)
+2023-11-16T22:20:59.5976517Z remote: Counting objects:  81% (662/817)
+2023-11-16T22:20:59.5977177Z remote: Counting objects:  82% (670/817)
+2023-11-16T22:20:59.5977920Z remote: Counting objects:  83% (679/817)
+2023-11-16T22:20:59.5978503Z remote: Counting objects:  84% (687/817)
+2023-11-16T22:20:59.5979018Z remote: Counting objects:  85% (695/817)
+2023-11-16T22:20:59.5979464Z remote: Counting objects:  86% (703/817)
+2023-11-16T22:20:59.5980005Z remote: Counting objects:  87% (711/817)
+2023-11-16T22:20:59.5980501Z remote: Counting objects:  88% (719/817)
+2023-11-16T22:20:59.5980940Z remote: Counting objects:  89% (728/817)
+2023-11-16T22:20:59.5981485Z remote: Counting objects:  90% (736/817)
+2023-11-16T22:20:59.5981974Z remote: Counting objects:  91% (744/817)
+2023-11-16T22:20:59.5982445Z remote: Counting objects:  92% (752/817)
+2023-11-16T22:20:59.5982973Z remote: Counting objects:  93% (760/817)
+2023-11-16T22:20:59.5983460Z remote: Counting objects:  94% (768/817)
+2023-11-16T22:20:59.5983924Z remote: Counting objects:  95% (777/817)
+2023-11-16T22:20:59.5984435Z remote: Counting objects:  96% (785/817)
+2023-11-16T22:20:59.5984902Z remote: Counting objects:  97% (793/817)
+2023-11-16T22:20:59.5985366Z remote: Counting objects:  98% (801/817)
+2023-11-16T22:20:59.5985875Z remote: Counting objects:  99% (809/817)
+2023-11-16T22:20:59.5986339Z remote: Counting objects: 100% (817/817)
+2023-11-16T22:20:59.5986840Z remote: Counting objects: 100% (817/817), done.
+2023-11-16T22:20:59.5987409Z remote: Compressing objects:   0% (1/634)
+2023-11-16T22:20:59.5988080Z remote: Compressing objects:   1% (7/634)
+2023-11-16T22:20:59.5988652Z remote: Compressing objects:   2% (13/634)
+2023-11-16T22:20:59.5989201Z remote: Compressing objects:   3% (20/634)
+2023-11-16T22:20:59.5989706Z remote: Compressing objects:   4% (26/634)
+2023-11-16T22:20:59.5990222Z remote: Compressing objects:   5% (32/634)
+2023-11-16T22:20:59.5990781Z remote: Compressing objects:   6% (39/634)
+2023-11-16T22:20:59.5991245Z remote: Compressing objects:   7% (45/634)
+2023-11-16T22:20:59.5991756Z remote: Compressing objects:   8% (51/634)
+2023-11-16T22:20:59.5992301Z remote: Compressing objects:   9% (58/634)
+2023-11-16T22:20:59.5992759Z remote: Compressing objects:  10% (64/634)
+2023-11-16T22:20:59.5993279Z remote: Compressing objects:  11% (70/634)
+2023-11-16T22:20:59.5993831Z remote: Compressing objects:  12% (77/634)
+2023-11-16T22:20:59.5994433Z remote: Compressing objects:  13% (83/634)
+2023-11-16T22:20:59.5994947Z remote: Compressing objects:  14% (89/634)
+2023-11-16T22:20:59.5995501Z remote: Compressing objects:  15% (96/634)
+2023-11-16T22:20:59.5995986Z remote: Compressing objects:  16% (102/634)
+2023-11-16T22:20:59.5996502Z remote: Compressing objects:  17% (108/634)
+2023-11-16T22:20:59.5997071Z remote: Compressing objects:  18% (115/634)
+2023-11-16T22:20:59.5997559Z remote: Compressing objects:  19% (121/634)
+2023-11-16T22:20:59.5998061Z remote: Compressing objects:  20% (127/634)
+2023-11-16T22:20:59.6005967Z remote: Compressing objects:  21% (134/634)
+2023-11-16T22:20:59.6037904Z remote: Compressing objects:  22% (140/634)
+2023-11-16T22:20:59.6056584Z remote: Compressing objects:  23% (146/634)
+2023-11-16T22:20:59.6080383Z remote: Compressing objects:  24% (153/634)
+2023-11-16T22:20:59.6098688Z remote: Compressing objects:  25% (159/634)
+2023-11-16T22:20:59.6112269Z remote: Compressing objects:  26% (165/634)
+2023-11-16T22:20:59.6181610Z remote: Compressing objects:  27% (172/634)
+2023-11-16T22:20:59.6182394Z remote: Compressing objects:  28% (178/634)
+2023-11-16T22:20:59.6222634Z remote: Compressing objects:  29% (184/634)
+2023-11-16T22:20:59.6239617Z remote: Compressing objects:  30% (191/634)
+2023-11-16T22:20:59.6288070Z remote: Compressing objects:  31% (197/634)
+2023-11-16T22:20:59.6289181Z remote: Compressing objects:  32% (203/634)
+2023-11-16T22:20:59.6290121Z remote: Compressing objects:  33% (210/634)
+2023-11-16T22:20:59.6290991Z remote: Compressing objects:  34% (216/634)
+2023-11-16T22:20:59.6292005Z remote: Compressing objects:  35% (222/634)
+2023-11-16T22:20:59.6292644Z remote: Compressing objects:  36% (229/634)
+2023-11-16T22:20:59.6301007Z remote: Compressing objects:  37% (235/634)
+2023-11-16T22:20:59.6306011Z remote: Compressing objects:  38% (241/634)
+2023-11-16T22:20:59.6306802Z remote: Compressing objects:  39% (248/634)
+2023-11-16T22:20:59.6312435Z remote: Compressing objects:  40% (254/634)
+2023-11-16T22:20:59.6324481Z remote: Compressing objects:  41% (260/634)
+2023-11-16T22:20:59.6335239Z remote: Compressing objects:  42% (267/634)
+2023-11-16T22:20:59.6344155Z remote: Compressing objects:  43% (273/634)
+2023-11-16T22:20:59.6347455Z remote: Compressing objects:  44% (279/634)
+2023-11-16T22:20:59.6351622Z remote: Compressing objects:  45% (286/634)
+2023-11-16T22:20:59.6353222Z remote: Compressing objects:  46% (292/634)
+2023-11-16T22:20:59.6354198Z remote: Compressing objects:  47% (298/634)
+2023-11-16T22:20:59.6354934Z remote: Compressing objects:  48% (305/634)
+2023-11-16T22:20:59.6355753Z remote: Compressing objects:  49% (311/634)
+2023-11-16T22:20:59.6356786Z remote: Compressing objects:  50% (317/634)
+2023-11-16T22:20:59.6357443Z remote: Compressing objects:  51% (324/634)
+2023-11-16T22:20:59.6358478Z remote: Compressing objects:  52% (330/634)
+2023-11-16T22:20:59.6359206Z remote: Compressing objects:  53% (337/634)
+2023-11-16T22:20:59.6359782Z remote: Compressing objects:  54% (343/634)
+2023-11-16T22:20:59.6360608Z remote: Compressing objects:  55% (349/634)
+2023-11-16T22:20:59.6361332Z remote: Compressing objects:  56% (356/634)
+2023-11-16T22:20:59.6361812Z remote: Compressing objects:  57% (362/634)
+2023-11-16T22:20:59.6362372Z remote: Compressing objects:  58% (368/634)
+2023-11-16T22:20:59.6363208Z remote: Compressing objects:  59% (375/634)
+2023-11-16T22:20:59.6365492Z remote: Compressing objects:  60% (381/634)
+2023-11-16T22:20:59.6371187Z remote: Compressing objects:  61% (387/634)
+2023-11-16T22:20:59.6374785Z remote: Compressing objects:  62% (394/634)
+2023-11-16T22:20:59.6381951Z remote: Compressing objects:  63% (400/634)
+2023-11-16T22:20:59.6396695Z remote: Compressing objects:  64% (406/634)
+2023-11-16T22:20:59.6400496Z remote: Compressing objects:  65% (413/634)
+2023-11-16T22:20:59.6404957Z remote: Compressing objects:  66% (419/634)
+2023-11-16T22:20:59.6414051Z remote: Compressing objects:  67% (425/634)
+2023-11-16T22:20:59.6415483Z remote: Compressing objects:  68% (432/634)
+2023-11-16T22:20:59.6423623Z remote: Compressing objects:  69% (438/634)
+2023-11-16T22:20:59.6430650Z remote: Compressing objects:  70% (444/634)
+2023-11-16T22:20:59.6431433Z remote: Compressing objects:  71% (451/634)
+2023-11-16T22:20:59.6432227Z remote: Compressing objects:  72% (457/634)
+2023-11-16T22:20:59.6432944Z remote: Compressing objects:  73% (463/634)
+2023-11-16T22:20:59.6433793Z remote: Compressing objects:  74% (470/634)
+2023-11-16T22:20:59.6434338Z remote: Compressing objects:  75% (476/634)
+2023-11-16T22:20:59.6434932Z remote: Compressing objects:  76% (482/634)
+2023-11-16T22:20:59.6435438Z remote: Compressing objects:  77% (489/634)
+2023-11-16T22:20:59.6435904Z remote: Compressing objects:  78% (495/634)
+2023-11-16T22:20:59.6436485Z remote: Compressing objects:  79% (501/634)
+2023-11-16T22:20:59.6436966Z remote: Compressing objects:  80% (508/634)
+2023-11-16T22:20:59.6437427Z remote: Compressing objects:  81% (514/634)
+2023-11-16T22:20:59.6437971Z remote: Compressing objects:  82% (520/634)
+2023-11-16T22:20:59.6438453Z remote: Compressing objects:  83% (527/634)
+2023-11-16T22:20:59.6438917Z remote: Compressing objects:  84% (533/634)
+2023-11-16T22:20:59.6439459Z remote: Compressing objects:  85% (539/634)
+2023-11-16T22:20:59.6439942Z remote: Compressing objects:  86% (546/634)
+2023-11-16T22:20:59.6440402Z remote: Compressing objects:  87% (552/634)
+2023-11-16T22:20:59.6440944Z remote: Compressing objects:  88% (558/634)
+2023-11-16T22:20:59.6441534Z remote: Compressing objects:  89% (565/634)
+2023-11-16T22:20:59.6441984Z remote: Compressing objects:  90% (571/634)
+2023-11-16T22:20:59.6442558Z remote: Compressing objects:  91% (577/634)
+2023-11-16T22:20:59.6443064Z remote: Compressing objects:  92% (584/634)
+2023-11-16T22:20:59.6443569Z remote: Compressing objects:  93% (590/634)
+2023-11-16T22:20:59.6444131Z remote: Compressing objects:  94% (596/634)
+2023-11-16T22:20:59.6444641Z remote: Compressing objects:  95% (603/634)
+2023-11-16T22:20:59.6445134Z remote: Compressing objects:  96% (609/634)
+2023-11-16T22:20:59.6446064Z remote: Compressing objects:  97% (615/634)
+2023-11-16T22:20:59.6446954Z remote: Compressing objects:  98% (622/634)
+2023-11-16T22:20:59.6447454Z remote: Compressing objects:  99% (628/634)
+2023-11-16T22:20:59.6448008Z remote: Compressing objects: 100% (634/634)
+2023-11-16T22:20:59.6448562Z remote: Compressing objects: 100% (634/634), done.
+2023-11-16T22:20:59.6470485Z Receiving objects:   0% (1/817)
+2023-11-16T22:20:59.6471351Z Receiving objects:   1% (9/817)
+2023-11-16T22:20:59.6474221Z Receiving objects:   2% (17/817)
+2023-11-16T22:20:59.6477284Z Receiving objects:   3% (25/817)
+2023-11-16T22:20:59.6497000Z Receiving objects:   4% (33/817)
+2023-11-16T22:20:59.6500024Z Receiving objects:   5% (41/817)
+2023-11-16T22:20:59.6501480Z Receiving objects:   6% (50/817)
+2023-11-16T22:20:59.6503177Z Receiving objects:   7% (58/817)
+2023-11-16T22:20:59.6511765Z Receiving objects:   8% (66/817)
+2023-11-16T22:20:59.6514069Z Receiving objects:   9% (74/817)
+2023-11-16T22:20:59.6516107Z Receiving objects:  10% (82/817)
+2023-11-16T22:20:59.6517532Z Receiving objects:  11% (90/817)
+2023-11-16T22:20:59.6551410Z Receiving objects:  12% (99/817)
+2023-11-16T22:20:59.6554442Z Receiving objects:  13% (107/817)
+2023-11-16T22:20:59.6566352Z Receiving objects:  14% (115/817)
+2023-11-16T22:20:59.6569154Z Receiving objects:  15% (123/817)
+2023-11-16T22:20:59.6570783Z Receiving objects:  16% (131/817)
+2023-11-16T22:20:59.6572076Z Receiving objects:  17% (139/817)
+2023-11-16T22:20:59.6603297Z Receiving objects:  18% (148/817)
+2023-11-16T22:20:59.6608361Z Receiving objects:  19% (156/817)
+2023-11-16T22:20:59.6625855Z Receiving objects:  20% (164/817)
+2023-11-16T22:20:59.6628748Z Receiving objects:  21% (172/817)
+2023-11-16T22:20:59.6639988Z Receiving objects:  22% (180/817)
+2023-11-16T22:20:59.6657627Z Receiving objects:  23% (188/817)
+2023-11-16T22:20:59.6679575Z Receiving objects:  24% (197/817)
+2023-11-16T22:20:59.6684312Z Receiving objects:  25% (205/817)
+2023-11-16T22:20:59.6718233Z Receiving objects:  26% (213/817)
+2023-11-16T22:20:59.6720602Z Receiving objects:  27% (221/817)
+2023-11-16T22:20:59.6736936Z Receiving objects:  28% (229/817)
+2023-11-16T22:20:59.6745807Z Receiving objects:  29% (237/817)
+2023-11-16T22:20:59.6748175Z Receiving objects:  30% (246/817)
+2023-11-16T22:20:59.6775093Z Receiving objects:  31% (254/817)
+2023-11-16T22:20:59.6779147Z Receiving objects:  32% (262/817)
+2023-11-16T22:20:59.6781283Z Receiving objects:  33% (270/817)
+2023-11-16T22:20:59.6785622Z Receiving objects:  34% (278/817)
+2023-11-16T22:20:59.6786532Z Receiving objects:  35% (286/817)
+2023-11-16T22:20:59.6787279Z Receiving objects:  36% (295/817)
+2023-11-16T22:20:59.6787923Z Receiving objects:  37% (303/817)
+2023-11-16T22:20:59.6788639Z Receiving objects:  38% (311/817)
+2023-11-16T22:20:59.6789394Z Receiving objects:  39% (319/817)
+2023-11-16T22:20:59.6789993Z Receiving objects:  40% (327/817)
+2023-11-16T22:20:59.6829517Z Receiving objects:  41% (335/817)
+2023-11-16T22:20:59.6833510Z Receiving objects:  42% (344/817)
+2023-11-16T22:20:59.6839565Z Receiving objects:  43% (352/817)
+2023-11-16T22:20:59.6852063Z Receiving objects:  44% (360/817)
+2023-11-16T22:20:59.6852843Z Receiving objects:  45% (368/817)
+2023-11-16T22:20:59.6853432Z Receiving objects:  46% (376/817)
+2023-11-16T22:20:59.6854079Z Receiving objects:  47% (384/817)
+2023-11-16T22:20:59.6857969Z Receiving objects:  48% (393/817)
+2023-11-16T22:20:59.6858650Z Receiving objects:  49% (401/817)
+2023-11-16T22:20:59.6859220Z Receiving objects:  50% (409/817)
+2023-11-16T22:20:59.6881150Z Receiving objects:  51% (417/817)
+2023-11-16T22:20:59.6881946Z Receiving objects:  52% (425/817)
+2023-11-16T22:20:59.6882672Z Receiving objects:  53% (434/817)
+2023-11-16T22:20:59.6883632Z Receiving objects:  54% (442/817)
+2023-11-16T22:20:59.6884396Z Receiving objects:  55% (450/817)
+2023-11-16T22:20:59.6885168Z Receiving objects:  56% (458/817)
+2023-11-16T22:20:59.6886481Z Receiving objects:  57% (466/817)
+2023-11-16T22:20:59.6887199Z Receiving objects:  58% (474/817)
+2023-11-16T22:20:59.6890608Z Receiving objects:  59% (483/817)
+2023-11-16T22:20:59.6891373Z Receiving objects:  60% (491/817)
+2023-11-16T22:20:59.6892009Z Receiving objects:  61% (499/817)
+2023-11-16T22:20:59.6892538Z Receiving objects:  62% (507/817)
+2023-11-16T22:20:59.6894434Z Receiving objects:  63% (515/817)
+2023-11-16T22:20:59.6895068Z Receiving objects:  64% (523/817)
+2023-11-16T22:20:59.6898285Z Receiving objects:  65% (532/817)
+2023-11-16T22:20:59.6899268Z Receiving objects:  66% (540/817)
+2023-11-16T22:20:59.6899813Z Receiving objects:  67% (548/817)
+2023-11-16T22:20:59.6900184Z Receiving objects:  68% (556/817)
+2023-11-16T22:20:59.6905622Z Receiving objects:  69% (564/817)
+2023-11-16T22:20:59.6906283Z Receiving objects:  70% (572/817)
+2023-11-16T22:20:59.6907021Z Receiving objects:  71% (581/817)
+2023-11-16T22:20:59.6907797Z Receiving objects:  72% (589/817)
+2023-11-16T22:20:59.6908443Z Receiving objects:  73% (597/817)
+2023-11-16T22:20:59.6909288Z Receiving objects:  74% (605/817)
+2023-11-16T22:20:59.6909879Z Receiving objects:  75% (613/817)
+2023-11-16T22:20:59.6911121Z Receiving objects:  76% (621/817)
+2023-11-16T22:20:59.6911873Z Receiving objects:  77% (630/817)
+2023-11-16T22:20:59.6912729Z Receiving objects:  78% (638/817)
+2023-11-16T22:20:59.6913357Z Receiving objects:  79% (646/817)
+2023-11-16T22:20:59.6914092Z Receiving objects:  80% (654/817)
+2023-11-16T22:20:59.6914859Z Receiving objects:  81% (662/817)
+2023-11-16T22:20:59.6935891Z Receiving objects:  82% (670/817)
+2023-11-16T22:20:59.6936697Z Receiving objects:  83% (679/817)
+2023-11-16T22:20:59.6937317Z Receiving objects:  84% (687/817)
+2023-11-16T22:20:59.6937910Z Receiving objects:  85% (695/817)
+2023-11-16T22:20:59.6938708Z Receiving objects:  86% (703/817)
+2023-11-16T22:20:59.6939360Z Receiving objects:  87% (711/817)
+2023-11-16T22:20:59.6939946Z Receiving objects:  88% (719/817)
+2023-11-16T22:20:59.6940672Z Receiving objects:  89% (728/817)
+2023-11-16T22:20:59.6941277Z Receiving objects:  90% (736/817)
+2023-11-16T22:20:59.6941929Z Receiving objects:  91% (744/817)
+2023-11-16T22:20:59.6942539Z Receiving objects:  92% (752/817)
+2023-11-16T22:20:59.6942940Z Receiving objects:  93% (760/817)
+2023-11-16T22:20:59.6943349Z Receiving objects:  94% (768/817)
+2023-11-16T22:20:59.6947095Z Receiving objects:  95% (777/817)
+2023-11-16T22:20:59.6959491Z Receiving objects:  96% (785/817)
+2023-11-16T22:20:59.6960747Z remote: Total 817 (delta 137), reused 480 (delta 65), pack-reused 0
+2023-11-16T22:20:59.6962444Z Receiving objects:  97% (793/817)
+2023-11-16T22:20:59.6963118Z Receiving objects:  98% (801/817)
+2023-11-16T22:20:59.6964095Z Receiving objects:  99% (809/817)
+2023-11-16T22:20:59.6964831Z Receiving objects: 100% (817/817)
+2023-11-16T22:20:59.6966028Z Receiving objects: 100% (817/817), 371.54 KiB | 7.43 MiB/s, done.
+2023-11-16T22:20:59.6970047Z Resolving deltas:   0% (0/137)
+2023-11-16T22:20:59.6970958Z Resolving deltas:   1% (2/137)
+2023-11-16T22:20:59.6971573Z Resolving deltas:   2% (3/137)
+2023-11-16T22:20:59.6972182Z Resolving deltas:   3% (5/137)
+2023-11-16T22:20:59.6972938Z Resolving deltas:   5% (7/137)
+2023-11-16T22:20:59.6973510Z Resolving deltas:   6% (9/137)
+2023-11-16T22:20:59.6974145Z Resolving deltas:   7% (10/137)
+2023-11-16T22:20:59.6974890Z Resolving deltas:   8% (11/137)
+2023-11-16T22:20:59.6975463Z Resolving deltas:   9% (13/137)
+2023-11-16T22:20:59.6976139Z Resolving deltas:  10% (14/137)
+2023-11-16T22:20:59.6977125Z Resolving deltas:  11% (16/137)
+2023-11-16T22:20:59.6977808Z Resolving deltas:  12% (17/137)
+2023-11-16T22:20:59.6979647Z Resolving deltas:  13% (18/137)
+2023-11-16T22:20:59.6980676Z Resolving deltas:  14% (20/137)
+2023-11-16T22:20:59.6981415Z Resolving deltas:  15% (21/137)
+2023-11-16T22:20:59.6982263Z Resolving deltas:  16% (22/137)
+2023-11-16T22:20:59.6982946Z Resolving deltas:  17% (24/137)
+2023-11-16T22:20:59.6983703Z Resolving deltas:  18% (25/137)
+2023-11-16T22:20:59.6984543Z Resolving deltas:  19% (27/137)
+2023-11-16T22:20:59.6985218Z Resolving deltas:  20% (28/137)
+2023-11-16T22:20:59.6985956Z Resolving deltas:  21% (29/137)
+2023-11-16T22:20:59.6986776Z Resolving deltas:  22% (31/137)
+2023-11-16T22:20:59.6987434Z Resolving deltas:  23% (32/137)
+2023-11-16T22:20:59.6988129Z Resolving deltas:  24% (33/137)
+2023-11-16T22:20:59.6988869Z Resolving deltas:  25% (35/137)
+2023-11-16T22:20:59.6989532Z Resolving deltas:  26% (36/137)
+2023-11-16T22:20:59.6990171Z Resolving deltas:  27% (37/137)
+2023-11-16T22:20:59.6991041Z Resolving deltas:  28% (39/137)
+2023-11-16T22:20:59.6991425Z Resolving deltas:  29% (40/137)
+2023-11-16T22:20:59.6991802Z Resolving deltas:  30% (42/137)
+2023-11-16T22:20:59.6992275Z Resolving deltas:  31% (43/137)
+2023-11-16T22:20:59.6992667Z Resolving deltas:  32% (44/137)
+2023-11-16T22:20:59.6993012Z Resolving deltas:  33% (46/137)
+2023-11-16T22:20:59.6993491Z Resolving deltas:  34% (47/137)
+2023-11-16T22:20:59.6993874Z Resolving deltas:  35% (48/137)
+2023-11-16T22:20:59.6994413Z Resolving deltas:  36% (50/137)
+2023-11-16T22:20:59.6994971Z Resolving deltas:  37% (51/137)
+2023-11-16T22:20:59.6995352Z Resolving deltas:  38% (53/137)
+2023-11-16T22:20:59.6995697Z Resolving deltas:  39% (54/137)
+2023-11-16T22:20:59.6996153Z Resolving deltas:  40% (55/137)
+2023-11-16T22:20:59.6996526Z Resolving deltas:  41% (57/137)
+2023-11-16T22:20:59.6996865Z Resolving deltas:  42% (58/137)
+2023-11-16T22:20:59.6997319Z Resolving deltas:  43% (59/137)
+2023-11-16T22:20:59.6997691Z Resolving deltas:  44% (61/137)
+2023-11-16T22:20:59.6999222Z Resolving deltas:  45% (62/137)
+2023-11-16T22:20:59.6999801Z Resolving deltas:  46% (64/137)
+2023-11-16T22:20:59.7000384Z Resolving deltas:  47% (65/137)
+2023-11-16T22:20:59.7000918Z Resolving deltas:  48% (66/137)
+2023-11-16T22:20:59.7001493Z Resolving deltas:  49% (68/137)
+2023-11-16T22:20:59.7002127Z Resolving deltas:  50% (69/137)
+2023-11-16T22:20:59.7002499Z Resolving deltas:  51% (70/137)
+2023-11-16T22:20:59.7003245Z Resolving deltas:  52% (72/137)
+2023-11-16T22:20:59.7003760Z Resolving deltas:  53% (73/137)
+2023-11-16T22:20:59.7004109Z Resolving deltas:  54% (74/137)
+2023-11-16T22:20:59.7004570Z Resolving deltas:  55% (76/137)
+2023-11-16T22:20:59.7004964Z Resolving deltas:  56% (77/137)
+2023-11-16T22:20:59.7005657Z Resolving deltas:  57% (79/137)
+2023-11-16T22:20:59.7006159Z Resolving deltas:  58% (80/137)
+2023-11-16T22:20:59.7006733Z Resolving deltas:  59% (81/137)
+2023-11-16T22:20:59.7007080Z Resolving deltas:  60% (83/137)
+2023-11-16T22:20:59.7007543Z Resolving deltas:  61% (84/137)
+2023-11-16T22:20:59.7007941Z Resolving deltas:  62% (85/137)
+2023-11-16T22:20:59.7008282Z Resolving deltas:  63% (87/137)
+2023-11-16T22:20:59.7008724Z Resolving deltas:  64% (88/137)
+2023-11-16T22:20:59.7009112Z Resolving deltas:  65% (90/137)
+2023-11-16T22:20:59.7009448Z Resolving deltas:  66% (91/137)
+2023-11-16T22:20:59.7009875Z Resolving deltas:  67% (92/137)
+2023-11-16T22:20:59.7010262Z Resolving deltas:  68% (94/137)
+2023-11-16T22:20:59.7010597Z Resolving deltas:  69% (95/137)
+2023-11-16T22:20:59.7011041Z Resolving deltas:  70% (96/137)
+2023-11-16T22:20:59.7011421Z Resolving deltas:  71% (98/137)
+2023-11-16T22:20:59.7011759Z Resolving deltas:  72% (99/137)
+2023-11-16T22:20:59.7012215Z Resolving deltas:  73% (101/137)
+2023-11-16T22:20:59.7012612Z Resolving deltas:  74% (102/137)
+2023-11-16T22:20:59.7012964Z Resolving deltas:  75% (103/137)
+2023-11-16T22:20:59.7013874Z Resolving deltas:  76% (105/137)
+2023-11-16T22:20:59.7014352Z Resolving deltas:  77% (106/137)
+2023-11-16T22:20:59.7014741Z Resolving deltas:  78% (107/137)
+2023-11-16T22:20:59.7015184Z Resolving deltas:  79% (109/137)
+2023-11-16T22:20:59.7015692Z Resolving deltas:  80% (110/137)
+2023-11-16T22:20:59.7016231Z Resolving deltas:  81% (111/137)
+2023-11-16T22:20:59.7016663Z Resolving deltas:  82% (113/137)
+2023-11-16T22:20:59.7017058Z Resolving deltas:  83% (114/137)
+2023-11-16T22:20:59.7017448Z Resolving deltas:  84% (116/137)
+2023-11-16T22:20:59.7017862Z Resolving deltas:  85% (117/137)
+2023-11-16T22:20:59.7018237Z Resolving deltas:  86% (118/137)
+2023-11-16T22:20:59.7018627Z Resolving deltas:  87% (120/137)
+2023-11-16T22:20:59.7019032Z Resolving deltas:  88% (121/137)
+2023-11-16T22:20:59.7019403Z Resolving deltas:  89% (122/137)
+2023-11-16T22:20:59.7019819Z Resolving deltas:  90% (124/137)
+2023-11-16T22:20:59.7020225Z Resolving deltas:  91% (125/137)
+2023-11-16T22:20:59.7020594Z Resolving deltas:  92% (127/137)
+2023-11-16T22:20:59.7020978Z Resolving deltas:  93% (128/137)
+2023-11-16T22:20:59.7021395Z Resolving deltas:  94% (129/137)
+2023-11-16T22:20:59.7021972Z Resolving deltas:  95% (131/137)
+2023-11-16T22:20:59.7022358Z Resolving deltas:  96% (132/137)
+2023-11-16T22:20:59.7022770Z Resolving deltas:  97% (133/137)
+2023-11-16T22:20:59.7023155Z Resolving deltas:  98% (135/137)
+2023-11-16T22:20:59.7023524Z Resolving deltas:  99% (136/137)
+2023-11-16T22:20:59.7023928Z Resolving deltas: 100% (137/137)
+2023-11-16T22:20:59.7024329Z Resolving deltas: 100% (137/137), done.
+2023-11-16T22:20:59.7062670Z From https://github.com/FuelLabs/fuels-rs
+2023-11-16T22:20:59.7063981Z  * [new ref]         f9ef43819e87ef7ebdcdda492d30ea5a19c1ea5a -> pull/1200/merge
+2023-11-16T22:20:59.7087456Z ##[endgroup]
+2023-11-16T22:20:59.7088416Z ##[group]Determining the checkout info
+2023-11-16T22:20:59.7089994Z ##[endgroup]
+2023-11-16T22:20:59.7090884Z ##[group]Checking out the ref
+2023-11-16T22:20:59.7095299Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/1200/merge
+2023-11-16T22:20:59.7463300Z Note: switching to 'refs/remotes/pull/1200/merge'.
+2023-11-16T22:20:59.7464235Z
+2023-11-16T22:20:59.7464671Z You are in 'detached HEAD' state. You can look around, make experimental
+2023-11-16T22:20:59.7465926Z changes and commit them, and you can discard any commits you make in this
+2023-11-16T22:20:59.7467230Z state without impacting any branches by switching back to a branch.
+2023-11-16T22:20:59.7467922Z
+2023-11-16T22:20:59.7468428Z If you want to create a new branch to retain commits you create, you may
+2023-11-16T22:20:59.7470018Z do so (now or later) by using -c with the switch command. Example:
+2023-11-16T22:20:59.7470779Z
+2023-11-16T22:20:59.7471127Z   git switch -c <new-branch-name>
+2023-11-16T22:20:59.7471580Z
+2023-11-16T22:20:59.7471859Z Or undo this operation with:
+2023-11-16T22:20:59.7472287Z
+2023-11-16T22:20:59.7472628Z   git switch -
+2023-11-16T22:20:59.7472966Z
+2023-11-16T22:20:59.7473481Z Turn off this advice by setting config variable advice.detachedHead to false
+2023-11-16T22:20:59.7474247Z
+2023-11-16T22:20:59.7475110Z HEAD is now at f9ef438 Merge ea7a7febcb2d0c390c118e58fa2e7fca4e89a52c into d8704e1042577500e563e5450752607aa53e5bce
+2023-11-16T22:20:59.7477732Z ##[endgroup]
+2023-11-16T22:20:59.7516721Z [command]/usr/bin/git log -1 --format='%H'
+2023-11-16T22:20:59.7548800Z 'f9ef43819e87ef7ebdcdda492d30ea5a19c1ea5a'
+2023-11-16T22:20:59.7859906Z ##[group]Run actions/checkout@v3
+2023-11-16T22:20:59.7860470Z with:
+2023-11-16T22:20:59.7860812Z   repository: FuelLabs/github-actions
+2023-11-16T22:20:59.7861202Z   path: workflow
+2023-11-16T22:20:59.7861783Z   token: ***
+2023-11-16T22:20:59.7862111Z   ssh-strict: true
+2023-11-16T22:20:59.7862429Z   persist-credentials: true
+2023-11-16T22:20:59.7862895Z   clean: true
+2023-11-16T22:20:59.7863253Z   sparse-checkout-cone-mode: true
+2023-11-16T22:20:59.7863644Z   fetch-depth: 1
+2023-11-16T22:20:59.7864035Z   fetch-tags: false
+2023-11-16T22:20:59.7864365Z   lfs: false
+2023-11-16T22:20:59.7864658Z   submodules: false
+2023-11-16T22:20:59.7865071Z   set-safe-directory: true
+2023-11-16T22:20:59.7865447Z ##[endgroup]
+2023-11-16T22:20:59.8694841Z Syncing repository: FuelLabs/github-actions
+2023-11-16T22:20:59.8703461Z ##[group]Getting Git version info
+2023-11-16T22:20:59.8704836Z Working directory is '/home/runner/work/fuels-rs/fuels-rs/workflow'
+2023-11-16T22:20:59.8735792Z [command]/usr/bin/git version
+2023-11-16T22:20:59.8777844Z git version 2.42.0
+2023-11-16T22:20:59.8799572Z ##[endgroup]
+2023-11-16T22:20:59.8812288Z Temporarily overriding HOME='/home/runner/work/_temp/f26acdad-95b0-4b53-b3da-05548c72cc03' before making global git config changes
+2023-11-16T22:20:59.8813675Z Adding repository directory to the temporary git global config as a safe directory
+2023-11-16T22:20:59.8817336Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/fuels-rs/fuels-rs/workflow
+2023-11-16T22:20:59.8857414Z ##[group]Initializing the repository
+2023-11-16T22:20:59.8861285Z [command]/usr/bin/git init /home/runner/work/fuels-rs/fuels-rs/workflow
+2023-11-16T22:20:59.8901742Z hint: Using 'master' as the name for the initial branch. This default branch name
+2023-11-16T22:20:59.8903565Z hint: is subject to change. To configure the initial branch name to use in all
+2023-11-16T22:20:59.8904901Z hint: of your new repositories, which will suppress this warning, call:
+2023-11-16T22:20:59.8905990Z hint:
+2023-11-16T22:20:59.8906851Z hint: 	git config --global init.defaultBranch <name>
+2023-11-16T22:20:59.8907665Z hint:
+2023-11-16T22:20:59.8908811Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2023-11-16T22:20:59.8910348Z hint: 'development'. The just-created branch can be renamed via this command:
+2023-11-16T22:20:59.8911376Z hint:
+2023-11-16T22:20:59.8912068Z hint: 	git branch -m <name>
+2023-11-16T22:20:59.8913371Z Initialized empty Git repository in /home/runner/work/fuels-rs/fuels-rs/workflow/.git/
+2023-11-16T22:20:59.8924744Z [command]/usr/bin/git remote add origin https://github.com/FuelLabs/github-actions
+2023-11-16T22:20:59.8966291Z ##[endgroup]
+2023-11-16T22:20:59.8967546Z ##[group]Disabling automatic garbage collection
+2023-11-16T22:20:59.8970442Z [command]/usr/bin/git config --local gc.auto 0
+2023-11-16T22:20:59.9006787Z ##[endgroup]
+2023-11-16T22:20:59.9007892Z ##[group]Setting up auth
+2023-11-16T22:20:59.9013779Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2023-11-16T22:20:59.9051087Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2023-11-16T22:20:59.9288350Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2023-11-16T22:20:59.9328922Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2023-11-16T22:20:59.9571997Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2023-11-16T22:20:59.9613993Z ##[endgroup]
+2023-11-16T22:20:59.9614716Z ##[group]Determining the default branch
+2023-11-16T22:20:59.9617631Z Retrieving the default branch name
+2023-11-16T22:21:00.1766032Z Default branch 'master'
+2023-11-16T22:21:00.1767527Z ##[endgroup]
+2023-11-16T22:21:00.1768185Z ##[group]Fetching the repository
+2023-11-16T22:21:00.1775926Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --progress --no-recurse-submodules --depth=1 origin +refs/heads/master:refs/remotes/origin/master
+2023-11-16T22:21:00.4766985Z remote: Enumerating objects: 83, done.
+2023-11-16T22:21:00.4768179Z remote: Counting objects:   1% (1/83)
+2023-11-16T22:21:00.4770646Z remote: Counting objects:   2% (2/83)
+2023-11-16T22:21:00.4772248Z remote: Counting objects:   3% (3/83)
+2023-11-16T22:21:00.4773354Z remote: Counting objects:   4% (4/83)
+2023-11-16T22:21:00.4774064Z remote: Counting objects:   6% (5/83)
+2023-11-16T22:21:00.4774661Z remote: Counting objects:   7% (6/83)
+2023-11-16T22:21:00.4775122Z remote: Counting objects:   8% (7/83)
+2023-11-16T22:21:00.4775601Z remote: Counting objects:   9% (8/83)
+2023-11-16T22:21:00.4776183Z remote: Counting objects:  10% (9/83)
+2023-11-16T22:21:00.4776670Z remote: Counting objects:  12% (10/83)
+2023-11-16T22:21:00.4777157Z remote: Counting objects:  13% (11/83)
+2023-11-16T22:21:00.4777726Z remote: Counting objects:  14% (12/83)
+2023-11-16T22:21:00.4778204Z remote: Counting objects:  15% (13/83)
+2023-11-16T22:21:00.4778666Z remote: Counting objects:  16% (14/83)
+2023-11-16T22:21:00.4779233Z remote: Counting objects:  18% (15/83)
+2023-11-16T22:21:00.4779704Z remote: Counting objects:  19% (16/83)
+2023-11-16T22:21:00.4780193Z remote: Counting objects:  20% (17/83)
+2023-11-16T22:21:00.4780684Z remote: Counting objects:  21% (18/83)
+2023-11-16T22:21:00.4781157Z remote: Counting objects:  22% (19/83)
+2023-11-16T22:21:00.4781651Z remote: Counting objects:  24% (20/83)
+2023-11-16T22:21:00.4782141Z remote: Counting objects:  25% (21/83)
+2023-11-16T22:21:00.4782621Z remote: Counting objects:  26% (22/83)
+2023-11-16T22:21:00.4783106Z remote: Counting objects:  27% (23/83)
+2023-11-16T22:21:00.4783601Z remote: Counting objects:  28% (24/83)
+2023-11-16T22:21:00.4784079Z remote: Counting objects:  30% (25/83)
+2023-11-16T22:21:00.4784529Z remote: Counting objects:  31% (26/83)
+2023-11-16T22:21:00.4785008Z remote: Counting objects:  32% (27/83)
+2023-11-16T22:21:00.4785476Z remote: Counting objects:  33% (28/83)
+2023-11-16T22:21:00.4785927Z remote: Counting objects:  34% (29/83)
+2023-11-16T22:21:00.4786404Z remote: Counting objects:  36% (30/83)
+2023-11-16T22:21:00.4786875Z remote: Counting objects:  37% (31/83)
+2023-11-16T22:21:00.4787325Z remote: Counting objects:  38% (32/83)
+2023-11-16T22:21:00.4788057Z remote: Counting objects:  39% (33/83)
+2023-11-16T22:21:00.4788528Z remote: Counting objects:  40% (34/83)
+2023-11-16T22:21:00.4789002Z remote: Counting objects:  42% (35/83)
+2023-11-16T22:21:00.4789518Z remote: Counting objects:  43% (36/83)
+2023-11-16T22:21:00.4789986Z remote: Counting objects:  44% (37/83)
+2023-11-16T22:21:00.4790446Z remote: Counting objects:  45% (38/83)
+2023-11-16T22:21:00.4790987Z remote: Counting objects:  46% (39/83)
+2023-11-16T22:21:00.4791409Z remote: Counting objects:  48% (40/83)
+2023-11-16T22:21:00.4791862Z remote: Counting objects:  49% (41/83)
+2023-11-16T22:21:00.4792409Z remote: Counting objects:  50% (42/83)
+2023-11-16T22:21:00.4792829Z remote: Counting objects:  51% (43/83)
+2023-11-16T22:21:00.4793296Z remote: Counting objects:  53% (44/83)
+2023-11-16T22:21:00.4793849Z remote: Counting objects:  54% (45/83)
+2023-11-16T22:21:00.4794269Z remote: Counting objects:  55% (46/83)
+2023-11-16T22:21:00.4794740Z remote: Counting objects:  56% (47/83)
+2023-11-16T22:21:00.4795256Z remote: Counting objects:  57% (48/83)
+2023-11-16T22:21:00.4795693Z remote: Counting objects:  59% (49/83)
+2023-11-16T22:21:00.4796338Z remote: Counting objects:  60% (50/83)
+2023-11-16T22:21:00.4796885Z remote: Counting objects:  61% (51/83)
+2023-11-16T22:21:00.4797311Z remote: Counting objects:  62% (52/83)
+2023-11-16T22:21:00.4797791Z remote: Counting objects:  63% (53/83)
+2023-11-16T22:21:00.4798322Z remote: Counting objects:  65% (54/83)
+2023-11-16T22:21:00.4798745Z remote: Counting objects:  66% (55/83)
+2023-11-16T22:21:00.4799239Z remote: Counting objects:  67% (56/83)
+2023-11-16T22:21:00.4799759Z remote: Counting objects:  68% (57/83)
+2023-11-16T22:21:00.4800192Z remote: Counting objects:  69% (58/83)
+2023-11-16T22:21:00.4800644Z remote: Counting objects:  71% (59/83)
+2023-11-16T22:21:00.4801168Z remote: Counting objects:  72% (60/83)
+2023-11-16T22:21:00.4801636Z remote: Counting objects:  73% (61/83)
+2023-11-16T22:21:00.4802052Z remote: Counting objects:  74% (62/83)
+2023-11-16T22:21:00.4802572Z remote: Counting objects:  75% (63/83)
+2023-11-16T22:21:00.4803038Z remote: Counting objects:  77% (64/83)
+2023-11-16T22:21:00.4803452Z remote: Counting objects:  78% (65/83)
+2023-11-16T22:21:00.4803970Z remote: Counting objects:  79% (66/83)
+2023-11-16T22:21:00.4804434Z remote: Counting objects:  80% (67/83)
+2023-11-16T22:21:00.4804862Z remote: Counting objects:  81% (68/83)
+2023-11-16T22:21:00.4805696Z remote: Counting objects:  83% (69/83)
+2023-11-16T22:21:00.4806175Z remote: Counting objects:  84% (70/83)
+2023-11-16T22:21:00.4806606Z remote: Counting objects:  85% (71/83)
+2023-11-16T22:21:00.4807171Z remote: Counting objects:  86% (72/83)
+2023-11-16T22:21:00.4807625Z remote: Counting objects:  87% (73/83)
+2023-11-16T22:21:00.4808053Z remote: Counting objects:  89% (74/83)
+2023-11-16T22:21:00.4808587Z remote: Counting objects:  90% (75/83)
+2023-11-16T22:21:00.4809039Z remote: Counting objects:  91% (76/83)
+2023-11-16T22:21:00.4809458Z remote: Counting objects:  92% (77/83)
+2023-11-16T22:21:00.4809999Z remote: Counting objects:  93% (78/83)
+2023-11-16T22:21:00.4810454Z remote: Counting objects:  95% (79/83)
+2023-11-16T22:21:00.4810884Z remote: Counting objects:  96% (80/83)
+2023-11-16T22:21:00.4811422Z remote: Counting objects:  97% (81/83)
+2023-11-16T22:21:00.4811870Z remote: Counting objects:  98% (82/83)
+2023-11-16T22:21:00.4812287Z remote: Counting objects: 100% (83/83)
+2023-11-16T22:21:00.4812848Z remote: Counting objects: 100% (83/83), done.
+2023-11-16T22:21:00.4816449Z remote: Compressing objects:   1% (1/72)
+2023-11-16T22:21:00.4817568Z remote: Compressing objects:   2% (2/72)
+2023-11-16T22:21:00.4820081Z remote: Compressing objects:   4% (3/72)
+2023-11-16T22:21:00.4821004Z remote: Compressing objects:   5% (4/72)
+2023-11-16T22:21:00.4822207Z remote: Compressing objects:   6% (5/72)
+2023-11-16T22:21:00.4822815Z remote: Compressing objects:   8% (6/72)
+2023-11-16T22:21:00.4823635Z remote: Compressing objects:   9% (7/72)
+2023-11-16T22:21:00.4824115Z remote: Compressing objects:  11% (8/72)
+2023-11-16T22:21:00.4824563Z remote: Compressing objects:  12% (9/72)
+2023-11-16T22:21:00.4825131Z remote: Compressing objects:  13% (10/72)
+2023-11-16T22:21:00.4825631Z remote: Compressing objects:  15% (11/72)
+2023-11-16T22:21:00.4826178Z remote: Compressing objects:  16% (12/72)
+2023-11-16T22:21:00.4826694Z remote: Compressing objects:  18% (13/72)
+2023-11-16T22:21:00.4827181Z remote: Compressing objects:  19% (14/72)
+2023-11-16T22:21:00.4827676Z remote: Compressing objects:  20% (15/72)
+2023-11-16T22:21:00.4828190Z remote: Compressing objects:  22% (16/72)
+2023-11-16T22:21:00.4828692Z remote: Compressing objects:  23% (17/72)
+2023-11-16T22:21:00.4829223Z remote: Compressing objects:  25% (18/72)
+2023-11-16T22:21:00.4829916Z remote: Compressing objects:  26% (19/72)
+2023-11-16T22:21:00.4830434Z remote: Compressing objects:  27% (20/72)
+2023-11-16T22:21:00.4830964Z remote: Compressing objects:  29% (21/72)
+2023-11-16T22:21:00.4831476Z remote: Compressing objects:  30% (22/72)
+2023-11-16T22:21:00.4831971Z remote: Compressing objects:  31% (23/72)
+2023-11-16T22:21:00.4832440Z remote: Compressing objects:  33% (24/72)
+2023-11-16T22:21:00.4832951Z remote: Compressing objects:  34% (25/72)
+2023-11-16T22:21:00.4833446Z remote: Compressing objects:  36% (26/72)
+2023-11-16T22:21:00.4833917Z remote: Compressing objects:  37% (27/72)
+2023-11-16T22:21:00.4834413Z remote: Compressing objects:  38% (28/72)
+2023-11-16T22:21:00.4939339Z remote: Compressing objects:  40% (29/72)
+2023-11-16T22:21:00.4941903Z remote: Compressing objects:  41% (30/72)
+2023-11-16T22:21:00.4942913Z remote: Compressing objects:  43% (31/72)
+2023-11-16T22:21:00.4943768Z remote: Compressing objects:  44% (32/72)
+2023-11-16T22:21:00.4947331Z remote: Compressing objects:  45% (33/72)
+2023-11-16T22:21:00.4950605Z remote: Compressing objects:  47% (34/72)
+2023-11-16T22:21:00.4951266Z remote: Compressing objects:  48% (35/72)
+2023-11-16T22:21:00.4951824Z remote: Compressing objects:  50% (36/72)
+2023-11-16T22:21:00.4952425Z remote: Compressing objects:  51% (37/72)
+2023-11-16T22:21:00.4952944Z remote: Compressing objects:  52% (38/72)
+2023-11-16T22:21:00.4958943Z remote: Compressing objects:  54% (39/72)
+2023-11-16T22:21:00.4959628Z remote: Compressing objects:  55% (40/72)
+2023-11-16T22:21:00.4969487Z remote: Compressing objects:  56% (41/72)
+2023-11-16T22:21:00.4970155Z remote: Compressing objects:  58% (42/72)
+2023-11-16T22:21:00.4970684Z remote: Compressing objects:  59% (43/72)
+2023-11-16T22:21:00.4971175Z remote: Compressing objects:  61% (44/72)
+2023-11-16T22:21:00.4971706Z remote: Compressing objects:  62% (45/72)
+2023-11-16T22:21:00.4972329Z remote: Compressing objects:  63% (46/72)
+2023-11-16T22:21:00.4972954Z remote: Compressing objects:  65% (47/72)
+2023-11-16T22:21:00.4973730Z remote: Compressing objects:  66% (48/72)
+2023-11-16T22:21:00.4974526Z remote: Compressing objects:  68% (49/72)
+2023-11-16T22:21:00.4975347Z remote: Compressing objects:  69% (50/72)
+2023-11-16T22:21:00.4976212Z remote: Compressing objects:  70% (51/72)
+2023-11-16T22:21:00.4976659Z remote: Compressing objects:  72% (52/72)
+2023-11-16T22:21:00.4977154Z remote: Compressing objects:  73% (53/72)
+2023-11-16T22:21:00.4977809Z remote: Compressing objects:  75% (54/72)
+2023-11-16T22:21:00.4978784Z remote: Compressing objects:  76% (55/72)
+2023-11-16T22:21:00.4979305Z remote: Compressing objects:  77% (56/72)
+2023-11-16T22:21:00.4979874Z remote: Compressing objects:  79% (57/72)
+2023-11-16T22:21:00.4980514Z remote: Compressing objects:  80% (58/72)
+2023-11-16T22:21:00.4981007Z remote: Compressing objects:  81% (59/72)
+2023-11-16T22:21:00.4981690Z remote: Compressing objects:  83% (60/72)
+2023-11-16T22:21:00.4982342Z remote: Compressing objects:  84% (61/72)
+2023-11-16T22:21:00.4982834Z remote: Compressing objects:  86% (62/72)
+2023-11-16T22:21:00.4983395Z remote: Compressing objects:  87% (63/72)
+2023-11-16T22:21:00.4983848Z remote: Compressing objects:  88% (64/72)
+2023-11-16T22:21:00.4984315Z remote: Compressing objects:  90% (65/72)
+2023-11-16T22:21:00.4984860Z remote: Compressing objects:  91% (66/72)
+2023-11-16T22:21:00.4985354Z remote: Compressing objects:  93% (67/72)
+2023-11-16T22:21:00.4985812Z remote: Compressing objects:  94% (68/72)
+2023-11-16T22:21:00.4986376Z remote: Compressing objects:  95% (69/72)
+2023-11-16T22:21:00.4986849Z remote: Compressing objects:  97% (70/72)
+2023-11-16T22:21:00.4987470Z remote: Compressing objects:  98% (71/72)
+2023-11-16T22:21:00.4988150Z remote: Compressing objects: 100% (72/72)
+2023-11-16T22:21:00.4988661Z remote: Compressing objects: 100% (72/72), done.
+2023-11-16T22:21:00.5329962Z remote: Total 83 (delta 7), reused 49 (delta 4), pack-reused 0
+2023-11-16T22:21:00.5466211Z From https://github.com/FuelLabs/github-actions
+2023-11-16T22:21:00.5467032Z  * [new branch]      master     -> origin/master
+2023-11-16T22:21:00.5490554Z ##[endgroup]
+2023-11-16T22:21:00.5491735Z ##[group]Determining the checkout info
+2023-11-16T22:21:00.5493519Z ##[endgroup]
+2023-11-16T22:21:00.5494659Z ##[group]Checking out the ref
+2023-11-16T22:21:00.5500088Z [command]/usr/bin/git checkout --progress --force -B master refs/remotes/origin/master
+2023-11-16T22:21:00.5645861Z Reset branch 'master'
+2023-11-16T22:21:00.5646592Z branch 'master' set up to track 'origin/master'.
+2023-11-16T22:21:00.5652177Z ##[endgroup]
+2023-11-16T22:21:00.5698133Z [command]/usr/bin/git log -1 --format='%H'
+2023-11-16T22:21:00.5731052Z 'e7af1957c3205158caad18ec5a5d0c919d3cb4b2'
+2023-11-16T22:21:00.5927364Z ##[group]Run cargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"
+2023-11-16T22:21:00.5928572Z [36;1mcargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"[0m
+2023-11-16T22:21:00.5986557Z shell: /usr/bin/bash -e {0}
+2023-11-16T22:21:00.5986987Z ##[endgroup]
+2023-11-16T22:21:00.8959513Z     Updating crates.io index
+2023-11-16T22:21:02.6160924Z  Downloading crates ...
+2023-11-16T22:21:02.7501138Z   Downloaded adler v1.0.2
+2023-11-16T22:21:02.7777053Z   Downloaded argh_derive v0.1.12
+2023-11-16T22:21:02.7794275Z   Downloaded color-eyre v0.6.2
+2023-11-16T22:21:02.7903907Z   Downloaded lazy_static v1.4.0
+2023-11-16T22:21:02.7916391Z   Downloaded serde_derive v1.0.192
+2023-11-16T22:21:02.7953207Z   Downloaded rustc-demangle v0.1.23
+2023-11-16T22:21:02.7995047Z   Downloaded argh v0.1.12
+2023-11-16T22:21:02.8045032Z   Downloaded sharded-slab v0.1.7
+2023-11-16T22:21:02.8090873Z   Downloaded libc v0.2.150
+2023-11-16T22:21:02.8429256Z   Downloaded object v0.32.1
+2023-11-16T22:21:02.8548221Z   Downloaded tracing-subscriber v0.3.18
+2023-11-16T22:21:02.8643508Z   Downloaded tracing v0.1.40
+2023-11-16T22:21:02.8688251Z   Downloaded regex v1.10.2
+2023-11-16T22:21:02.8844768Z   Downloaded quote v1.0.33
+2023-11-16T22:21:02.8872767Z   Downloaded gimli v0.28.0
+2023-11-16T22:21:02.8963645Z   Downloaded syn v2.0.39
+2023-11-16T22:21:02.9081804Z   Downloaded regex-automata v0.4.3
+2023-11-16T22:21:02.9282021Z   Downloaded thiserror v1.0.50
+2023-11-16T22:21:02.9333135Z   Downloaded camino v1.1.6
+2023-11-16T22:21:02.9351416Z   Downloaded addr2line v0.21.0
+2023-11-16T22:21:02.9375626Z   Downloaded same-file v1.0.6
+2023-11-16T22:21:02.9388974Z   Downloaded proc-macro2 v1.0.69
+2023-11-16T22:21:02.9416035Z   Downloaded cargo_metadata v0.18.1
+2023-11-16T22:21:02.9434635Z   Downloaded tracing-error v0.2.0
+2023-11-16T22:21:02.9445888Z   Downloaded eyre v0.6.8
+2023-11-16T22:21:02.9481417Z   Downloaded walkdir v2.4.0
+2023-11-16T22:21:02.9501144Z   Downloaded owo-colors v3.5.0
+2023-11-16T22:21:02.9528782Z   Downloaded unicode-ident v1.0.12
+2023-11-16T22:21:02.9558416Z   Downloaded thread_local v1.1.7
+2023-11-16T22:21:02.9572510Z   Downloaded cfg-if v1.0.0
+2023-11-16T22:21:02.9583751Z   Downloaded tracing-core v0.1.32
+2023-11-16T22:21:02.9613277Z   Downloaded indenter v0.3.3
+2023-11-16T22:21:02.9624692Z   Downloaded cc v1.0.83
+2023-11-16T22:21:02.9656369Z   Downloaded backtrace v0.3.69
+2023-11-16T22:21:02.9708970Z   Downloaded argh_shared v0.1.12
+2023-11-16T22:21:02.9715826Z   Downloaded once_cell v1.18.0
+2023-11-16T22:21:02.9744030Z   Downloaded thiserror-impl v1.0.50
+2023-11-16T22:21:02.9757157Z   Downloaded pin-project-lite v0.2.13
+2023-11-16T22:21:02.9813374Z   Downloaded memchr v2.6.4
+2023-11-16T22:21:02.9876270Z   Downloaded semver v1.0.20
+2023-11-16T22:21:02.9901515Z   Downloaded itoa v1.0.9
+2023-11-16T22:21:02.9914879Z   Downloaded serde_json v1.0.108
+2023-11-16T22:21:02.9999109Z   Downloaded miniz_oxide v0.7.1
+2023-11-16T22:21:03.0023747Z   Downloaded cargo-platform v0.1.4
+2023-11-16T22:21:03.0035653Z   Downloaded serde v1.0.192
+2023-11-16T22:21:03.0072140Z   Downloaded aho-corasick v1.1.2
+2023-11-16T22:21:03.0138002Z   Downloaded color-spantrace v0.2.0
+2023-11-16T22:21:03.0167032Z   Downloaded ryu v1.0.15
+2023-11-16T22:21:03.0200250Z   Downloaded regex-syntax v0.8.2
+2023-11-16T22:21:03.0557334Z    Compiling proc-macro2 v1.0.69
+2023-11-16T22:21:03.0558757Z    Compiling unicode-ident v1.0.12
+2023-11-16T22:21:03.0560985Z    Compiling serde v1.0.192
+2023-11-16T22:21:03.0561640Z    Compiling once_cell v1.18.0
+2023-11-16T22:21:03.2344796Z    Compiling libc v0.2.150
+2023-11-16T22:21:03.3168572Z    Compiling memchr v2.6.4
+2023-11-16T22:21:03.5775343Z    Compiling cfg-if v1.0.0
+2023-11-16T22:21:03.6103100Z    Compiling tracing-core v0.1.32
+2023-11-16T22:21:04.1946165Z    Compiling quote v1.0.33
+2023-11-16T22:21:04.3158490Z    Compiling lazy_static v1.4.0
+2023-11-16T22:21:04.3587410Z    Compiling syn v2.0.39
+2023-11-16T22:21:04.3589412Z    Compiling sharded-slab v0.1.7
+2023-11-16T22:21:04.4521105Z    Compiling cc v1.0.83
+2023-11-16T22:21:04.4708035Z    Compiling thread_local v1.1.7
+2023-11-16T22:21:04.7289067Z    Compiling pin-project-lite v0.2.13
+2023-11-16T22:21:04.7718695Z    Compiling tracing v0.1.40
+2023-11-16T22:21:04.9629685Z    Compiling tracing-subscriber v0.3.18
+2023-11-16T22:21:05.0356281Z    Compiling camino v1.1.6
+2023-11-16T22:21:05.3411538Z    Compiling semver v1.0.20
+2023-11-16T22:21:05.5969834Z    Compiling thiserror v1.0.50
+2023-11-16T22:21:05.6690399Z    Compiling backtrace v0.3.69
+2023-11-16T22:21:05.8634504Z    Compiling gimli v0.28.0
+2023-11-16T22:21:05.9503412Z    Compiling serde_json v1.0.108
+2023-11-16T22:21:06.1656973Z    Compiling adler v1.0.2
+2023-11-16T22:21:06.2516593Z    Compiling eyre v0.6.8
+2023-11-16T22:21:06.7403210Z    Compiling miniz_oxide v0.7.1
+2023-11-16T22:21:06.9743955Z    Compiling serde_derive v1.0.192
+2023-11-16T22:21:07.1281553Z    Compiling thiserror-impl v1.0.50
+2023-11-16T22:21:07.2368938Z    Compiling tracing-error v0.2.0
+2023-11-16T22:21:07.4640219Z    Compiling object v0.32.1
+2023-11-16T22:21:08.3467146Z    Compiling addr2line v0.21.0
+2023-11-16T22:21:08.6466080Z    Compiling aho-corasick v1.1.2
+2023-11-16T22:21:08.6509496Z    Compiling ryu v1.0.15
+2023-11-16T22:21:08.7813697Z    Compiling owo-colors v3.5.0
+2023-11-16T22:21:09.5852881Z    Compiling rustc-demangle v0.1.23
+2023-11-16T22:21:10.1139951Z    Compiling regex-syntax v0.8.2
+2023-11-16T22:21:10.7245019Z    Compiling itoa v1.0.9
+2023-11-16T22:21:10.8340193Z    Compiling indenter v0.3.3
+2023-11-16T22:21:12.6059011Z    Compiling regex-automata v0.4.3
+2023-11-16T22:21:13.4050308Z    Compiling color-spantrace v0.2.0
+2023-11-16T22:21:13.6610399Z    Compiling same-file v1.0.6
+2023-11-16T22:21:13.7444733Z    Compiling walkdir v2.4.0
+2023-11-16T22:21:13.9962829Z    Compiling argh_shared v0.1.12
+2023-11-16T22:21:14.1984319Z    Compiling argh_derive v0.1.12
+2023-11-16T22:21:14.5261425Z    Compiling cargo-platform v0.1.4
+2023-11-16T22:21:14.8000610Z    Compiling regex v1.10.2
+2023-11-16T22:21:15.3154361Z    Compiling cargo_metadata v0.18.1
+2023-11-16T22:21:15.8592012Z    Compiling argh v0.1.12
+2023-11-16T22:21:15.9595260Z    Compiling color-eyre v0.6.2
+2023-11-16T22:21:16.6702167Z    Compiling versions-replacer v0.50.1 (/home/runner/work/fuels-rs/fuels-rs/scripts/versions-replacer)
+2023-11-16T22:21:18.3888531Z     Finished dev [unoptimized + debuginfo] target(s) in 17.69s
+2023-11-16T22:21:18.4357478Z      Running `target/debug/versions-replacer ./docs --manifest-path ./Cargo.toml --filename-regex '\.md$'`
+2023-11-16T22:21:21.2387498Z replaced 6 variables across 5 files
+2023-11-16T22:21:21.2473620Z ##[group]Run gaurav-nelson/github-action-markdown-link-check@1.0.12
+2023-11-16T22:21:21.2474211Z with:
+2023-11-16T22:21:21.2474705Z   config-file: workflow/docs-hub/mlc.mdbook.json
+2023-11-16T22:21:21.2475132Z   use-quiet-mode: no
+2023-11-16T22:21:21.2475493Z   use-verbose-mode: no
+2023-11-16T22:21:21.2475919Z   folder-path: .
+2023-11-16T22:21:21.2476218Z   max-depth: -1
+2023-11-16T22:21:21.2476581Z   check-modified-files-only: no
+2023-11-16T22:21:21.2476996Z   base-branch: master
+2023-11-16T22:21:21.2477343Z   file-extension: .md
+2023-11-16T22:21:21.2477692Z ##[endgroup]
+2023-11-16T22:21:21.2711562Z ##[command]/usr/bin/docker run --name ee04d88e6f23f4446fdb6699778c48534e3_7d0231 --label 888ee0 --workdir /github/workspace --rm -e "INPUT_CONFIG-FILE" -e "INPUT_USE-QUIET-MODE" -e "INPUT_USE-VERBOSE-MODE" -e "INPUT_FOLDER-PATH" -e "INPUT_MAX-DEPTH" -e "INPUT_CHECK-MODIFIED-FILES-ONLY" -e "INPUT_BASE-BRANCH" -e "INPUT_FILE-EXTENSION" -e "INPUT_FILE-PATH" -e "HOME" -e "GITHUB_JOB" -e "GITHUB_REF" -e "GITHUB_SHA" -e "GITHUB_REPOSITORY" -e "GITHUB_REPOSITORY_OWNER" -e "GITHUB_REPOSITORY_OWNER_ID" -e "GITHUB_RUN_ID" -e "GITHUB_RUN_NUMBER" -e "GITHUB_RETENTION_DAYS" -e "GITHUB_RUN_ATTEMPT" -e "GITHUB_REPOSITORY_ID" -e "GITHUB_ACTOR_ID" -e "GITHUB_ACTOR" -e "GITHUB_TRIGGERING_ACTOR" -e "GITHUB_WORKFLOW" -e "GITHUB_HEAD_REF" -e "GITHUB_BASE_REF" -e "GITHUB_EVENT_NAME" -e "GITHUB_SERVER_URL" -e "GITHUB_API_URL" -e "GITHUB_GRAPHQL_URL" -e "GITHUB_REF_NAME" -e "GITHUB_REF_PROTECTED" -e "GITHUB_REF_TYPE" -e "GITHUB_WORKFLOW_REF" -e "GITHUB_WORKFLOW_SHA" -e "GITHUB_WORKSPACE" -e "GITHUB_ACTION" -e "GITHUB_EVENT_PATH" -e "GITHUB_ACTION_REPOSITORY" -e "GITHUB_ACTION_REF" -e "GITHUB_PATH" -e "GITHUB_ENV" -e "GITHUB_STEP_SUMMARY" -e "GITHUB_STATE" -e "GITHUB_OUTPUT" -e "RUNNER_OS" -e "RUNNER_ARCH" -e "RUNNER_NAME" -e "RUNNER_ENVIRONMENT" -e "RUNNER_TOOL_CACHE" -e "RUNNER_TEMP" -e "RUNNER_WORKSPACE" -e "ACTIONS_RUNTIME_URL" -e "ACTIONS_RUNTIME_TOKEN" -e "ACTIONS_CACHE_URL" -e "ACTIONS_RESULTS_URL" -e GITHUB_ACTIONS=true -e CI=true -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" -v "/home/runner/work/_temp/_runner_file_commands":"/github/file_commands" -v "/home/runner/work/fuels-rs/fuels-rs":"/github/workspace" 888ee0:4d88e6f23f4446fdb6699778c48534e3  "no" "no" "workflow/docs-hub/mlc.mdbook.json" "." "-1" "no" "master" ".md" ""
+2023-11-16T22:21:25.0641165Z npm WARN deprecated har-validator@5.1.5: this library is no longer supported
+2023-11-16T22:21:25.0899373Z npm WARN deprecated uuid@3.4.0: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+2023-11-16T22:21:25.1089529Z npm WARN deprecated request@2.88.2: request has been deprecated, see https://github.com/request/request/issues/3142
+2023-11-16T22:21:25.3008859Z
+2023-11-16T22:21:25.3009442Z added 65 packages in 2s
+2023-11-16T22:21:25.3010389Z
+2023-11-16T22:21:25.3010585Z 4 packages are looking for funding
+2023-11-16T22:21:25.3011011Z   run `npm fund` for details
+2023-11-16T22:21:25.3152674Z [0;34mUsing markdown-link-check configuration file: [0;33mworkflow/docs-hub/mlc.mdbook.json[0m
+2023-11-16T22:21:25.3154127Z [0;34mUSE_QUIET_MODE: no[0m
+2023-11-16T22:21:25.3154761Z [0;34mUSE_VERBOSE_MODE: no[0m
+2023-11-16T22:21:25.3155259Z [0;34mFOLDER_PATH: .[0m
+2023-11-16T22:21:25.3155756Z [0;34mMAX_DEPTH: -1[0m
+2023-11-16T22:21:25.3156148Z [0;34mCHECK_MODIFIED_FILES: no[0m
+2023-11-16T22:21:25.3156612Z [0;34mFILE_EXTENSION: .md[0m
+2023-11-16T22:21:25.3157087Z [0;34mFILE_PATH: [0m
+2023-11-16T22:21:25.3161925Z + find . -name '*.md' -not -path './node_modules/*' -exec markdown-link-check '{}' --config workflow/docs-hub/mlc.mdbook.json ';'
+2023-11-16T22:21:57.0113275Z + set +x
+2023-11-16T22:21:57.0124484Z [0;33m=========================> MARKDOWN LINK CHECK <=========================[0m
+2023-11-16T22:21:57.0134014Z (node:38) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0136398Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0138108Z
+2023-11-16T22:21:57.0138855Z FILE: ./scripts/check-docs/tests/test_data/test_include_data.md
+2023-11-16T22:21:57.0140196Z No hyperlinks found!
+2023-11-16T22:21:57.0140575Z
+2023-11-16T22:21:57.0140964Z 0 links checked.
+2023-11-16T22:21:57.0142318Z (node:53) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0145209Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0146092Z
+2023-11-16T22:21:57.0146577Z FILE: ./scripts/check-docs/tests/test_data/docs/src/test.md
+2023-11-16T22:21:57.0147418Z No hyperlinks found!
+2023-11-16T22:21:57.0147743Z
+2023-11-16T22:21:57.0148135Z 0 links checked.
+2023-11-16T22:21:57.0149256Z (node:68) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0150943Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0151706Z
+2023-11-16T22:21:57.0152315Z FILE: ./scripts/check-docs/tests/test_data/docs/src/SUMMARY.md
+2023-11-16T22:21:57.0153733Z [✓] ./test.md
+2023-11-16T22:21:57.0154050Z
+2023-11-16T22:21:57.0154251Z 1 links checked.
+2023-11-16T22:21:57.0155572Z (node:83) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0157275Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0157991Z
+2023-11-16T22:21:57.0158544Z FILE: ./scripts/check-docs/tests/test_data/docs/src/test-not-there.md
+2023-11-16T22:21:57.0159580Z No hyperlinks found!
+2023-11-16T22:21:57.0159909Z
+2023-11-16T22:21:57.0160153Z 0 links checked.
+2023-11-16T22:21:57.0161269Z (node:98) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0163106Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0163870Z
+2023-11-16T22:21:57.0164125Z FILE: ./.github/PULL_REQUEST_TEMPLATE.md
+2023-11-16T22:21:57.0165733Z [✓] https://github.com/FuelLabs/rfcs/blob/master/text/code-standards/external-contributors.md
+2023-11-16T22:21:57.0166745Z
+2023-11-16T22:21:57.0167090Z 1 links checked.
+2023-11-16T22:21:57.0168357Z (node:113) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0170085Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0170804Z
+2023-11-16T22:21:57.0171086Z FILE: ./README.md
+2023-11-16T22:21:57.0171854Z [✓] https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml
+2023-11-16T22:21:57.0172656Z [✓] https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg
+2023-11-16T22:21:57.0174073Z [/] https://crates.io/crates/fuels
+2023-11-16T22:21:57.0175000Z [✓] https://img.shields.io/crates/v/fuels?label=latest
+2023-11-16T22:21:57.0176002Z [✓] https://docs.rs/fuels
+2023-11-16T22:21:57.0176832Z [✓] https://docs.rs/fuels/badge.svg
+2023-11-16T22:21:57.0177615Z [✓] https://discord.gg/xfpK4Pe
+2023-11-16T22:21:57.0179094Z [✓] https://img.shields.io/badge/chat%20on-discord-orange?&logo=discord&logoColor=ffffff&color=7389D8&labelColor=6A7EC2
+2023-11-16T22:21:57.0180578Z [✓] https://github.com/FuelLabs/sway
+2023-11-16T22:21:57.0181407Z [✓] https://fuellabs.github.io/fuels-rs/latest/
+2023-11-16T22:21:57.0182455Z [✓] https://docs.fuel.network/guides/installation/#installing-rust
+2023-11-16T22:21:57.0184052Z [✓] https://docs.fuel.network/guides/installation/#installing-the-fuel-toolchain-using-fuelup
+2023-11-16T22:21:57.0185277Z [✓] https://github.com/ethers-io/ethers.js
+2023-11-16T22:21:57.0185799Z
+2023-11-16T22:21:57.0185988Z 13 links checked.
+2023-11-16T22:21:57.0187513Z (node:128) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0189139Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0189883Z
+2023-11-16T22:21:57.0190103Z FILE: ./docs/src/codec/encoding.md
+2023-11-16T22:21:57.0191118Z [✓] ./index.md#prerequisites-for-decodingencoding
+2023-11-16T22:21:57.0192306Z [✓] https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html
+2023-11-16T22:21:57.0193629Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html
+2023-11-16T22:21:57.0194619Z
+2023-11-16T22:21:57.0194820Z 3 links checked.
+2023-11-16T22:21:57.0195968Z (node:143) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0197669Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0198576Z
+2023-11-16T22:21:57.0198830Z FILE: ./docs/src/codec/decoding.md
+2023-11-16T22:21:57.0199818Z [✓] ./index.md#prerequisites-for-decodingencoding
+2023-11-16T22:21:57.0201023Z [✓] https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html
+2023-11-16T22:21:57.0202413Z [✓] https://docs.rs/fuels/latest/fuels/types/enum.Token.html
+2023-11-16T22:21:57.0203311Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html
+2023-11-16T22:21:57.0204132Z [✓] ../abigen/index.md
+2023-11-16T22:21:57.0205411Z [✓] https://docs.rs/fuels/latest/fuels/macros/derive.TryFrom.html
+2023-11-16T22:21:57.0206746Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Parameterize.html
+2023-11-16T22:21:57.0208057Z [✓] https://docs.rs/fuels/latest/fuels/core/codec/fn.try_from_bytes.html
+2023-11-16T22:21:57.0208864Z
+2023-11-16T22:21:57.0209071Z 8 links checked.
+2023-11-16T22:21:57.0210248Z (node:158) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0211983Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0212825Z
+2023-11-16T22:21:57.0213045Z FILE: ./docs/src/codec/index.md
+2023-11-16T22:21:57.0214056Z [✓] https://specs.fuel.network/master/abi/argument-encoding.html
+2023-11-16T22:21:57.0215352Z [✓] https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html
+2023-11-16T22:21:57.0216838Z [✓] https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html
+2023-11-16T22:21:57.0218123Z [✓] https://docs.rs/fuels/latest/fuels/types/enum.Token.html
+2023-11-16T22:21:57.0219400Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html
+2023-11-16T22:21:57.0220992Z [✓] https://docs.rs/fuels/latest/fuels/types/param_types/enum.ParamType.html
+2023-11-16T22:21:57.0222403Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Parameterize.html
+2023-11-16T22:21:57.0223399Z [✓] ../abigen/index.md
+2023-11-16T22:21:57.0224594Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html#implementors
+2023-11-16T22:21:57.0226176Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html#foreign-impls
+2023-11-16T22:21:57.0228169Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Parameterize.html#implementors
+2023-11-16T22:21:57.0230058Z [✓] https://docs.rs/fuels/latest/fuels/core/traits/trait.Parameterize.html#foreign-impls
+2023-11-16T22:21:57.0230947Z
+2023-11-16T22:21:57.0231140Z 12 links checked.
+2023-11-16T22:21:57.0232312Z (node:173) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0234191Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0234916Z
+2023-11-16T22:21:57.0235313Z FILE: ./docs/src/abigen/the-json-abi-file.md
+2023-11-16T22:21:57.0236458Z [✓] https://docs.fuel.network/guides/quickstart/building-a-smart-contract/#abi
+2023-11-16T22:21:57.0237417Z
+2023-11-16T22:21:57.0237609Z 1 links checked.
+2023-11-16T22:21:57.0238994Z (node:188) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0240712Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0241613Z
+2023-11-16T22:21:57.0241968Z FILE: ./docs/src/abigen/the-abigen-macro.md
+2023-11-16T22:21:57.0242702Z No hyperlinks found!
+2023-11-16T22:21:57.0243058Z
+2023-11-16T22:21:57.0243265Z 0 links checked.
+2023-11-16T22:21:57.0244577Z (node:203) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0246501Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0247202Z
+2023-11-16T22:21:57.0247569Z FILE: ./docs/src/abigen/index.md
+2023-11-16T22:21:57.0248371Z [✓] https://github.com/FuelLabs/sway/tree/master/forc
+2023-11-16T22:21:57.0248960Z
+2023-11-16T22:21:57.0249178Z 1 links checked.
+2023-11-16T22:21:57.0250402Z (node:218) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0251941Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0252664Z
+2023-11-16T22:21:57.0252947Z FILE: ./docs/src/getting-started.md
+2023-11-16T22:21:57.0253855Z [✓] https://docs.fuel.network/guides/installation
+2023-11-16T22:21:57.0254706Z [✓] https://github.com/cargo-generate/cargo-generate
+2023-11-16T22:21:57.0255550Z [✓] https://docs.fuel.network/docs/sway/
+2023-11-16T22:21:57.0256059Z
+2023-11-16T22:21:57.0256352Z 3 links checked.
+2023-11-16T22:21:57.0257635Z (node:233) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0259843Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0260543Z
+2023-11-16T22:21:57.0261081Z FILE: ./docs/src/wallets/encrypting-and-storing.md
+2023-11-16T22:21:57.0262399Z [✓] https://cryptobook.nakov.com/symmetric-key-ciphers/ethereum-wallet-encryption
+2023-11-16T22:21:57.0263232Z
+2023-11-16T22:21:57.0263430Z 1 links checked.
+2023-11-16T22:21:57.0264654Z (node:248) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0266421Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0267162Z
+2023-11-16T22:21:57.0267586Z FILE: ./docs/src/wallets/mnemonic-wallet.md
+2023-11-16T22:21:57.0268976Z [✓] https://www.ledger.com/academy/crypto/what-are-hierarchical-deterministic-hd-wallets
+2023-11-16T22:21:57.0270507Z [✓] https://thebitcoinmanual.com/articles/btc-derivation-path/
+2023-11-16T22:21:57.0271005Z
+2023-11-16T22:21:57.0271187Z 2 links checked.
+2023-11-16T22:21:57.0272386Z (node:263) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0273711Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0274324Z
+2023-11-16T22:21:57.0274522Z FILE: ./docs/src/wallets/access.md
+2023-11-16T22:21:57.0275456Z [✓] ./signing.md
+2023-11-16T22:21:57.0275806Z
+2023-11-16T22:21:57.0275999Z 1 links checked.
+2023-11-16T22:21:57.0277153Z (node:278) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0278702Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0279146Z
+2023-11-16T22:21:57.0279343Z FILE: ./docs/src/wallets/signing.md
+2023-11-16T22:21:57.0279796Z No hyperlinks found!
+2023-11-16T22:21:57.0280012Z
+2023-11-16T22:21:57.0280315Z 0 links checked.
+2023-11-16T22:21:57.0281047Z (node:293) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0282147Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0282625Z
+2023-11-16T22:21:57.0282967Z FILE: ./docs/src/wallets/test-wallets.md
+2023-11-16T22:21:57.0283558Z No hyperlinks found!
+2023-11-16T22:21:57.0284034Z
+2023-11-16T22:21:57.0284211Z 0 links checked.
+2023-11-16T22:21:57.0286893Z (node:308) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0288376Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0289217Z
+2023-11-16T22:21:57.0289375Z FILE: ./docs/src/wallets/index.md
+2023-11-16T22:21:57.0290088Z No hyperlinks found!
+2023-11-16T22:21:57.0290306Z
+2023-11-16T22:21:57.0290512Z 0 links checked.
+2023-11-16T22:21:57.0291251Z (node:323) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0292588Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0293075Z
+2023-11-16T22:21:57.0293415Z FILE: ./docs/src/wallets/checking-balances-and-coins.md
+2023-11-16T22:21:57.0293951Z No hyperlinks found!
+2023-11-16T22:21:57.0294276Z
+2023-11-16T22:21:57.0294405Z 0 links checked.
+2023-11-16T22:21:57.0295207Z (node:338) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0296327Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0296870Z
+2023-11-16T22:21:57.0297155Z FILE: ./docs/src/wallets/private-keys.md
+2023-11-16T22:21:57.0297627Z No hyperlinks found!
+2023-11-16T22:21:57.0297833Z
+2023-11-16T22:21:57.0298049Z 0 links checked.
+2023-11-16T22:21:57.0298859Z (node:353) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0299947Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0300427Z
+2023-11-16T22:21:57.0300614Z FILE: ./docs/src/connecting/retrying.md
+2023-11-16T22:21:57.0301481Z [✓] https://docs.rs/fuels/0.47.0/fuels/accounts/provider/struct.Provider.html
+2023-11-16T22:21:57.0302042Z
+2023-11-16T22:21:57.0302177Z 1 links checked.
+2023-11-16T22:21:57.0302953Z (node:368) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0304140Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0304669Z
+2023-11-16T22:21:57.0304820Z FILE: ./docs/src/connecting/rocksdb.md
+2023-11-16T22:21:57.0305321Z No hyperlinks found!
+2023-11-16T22:21:57.0305624Z
+2023-11-16T22:21:57.0305779Z 0 links checked.
+2023-11-16T22:21:57.0306517Z (node:383) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0307738Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0308290Z
+2023-11-16T22:21:57.0308576Z FILE: ./docs/src/connecting/querying.md
+2023-11-16T22:21:57.0309711Z [✓] https://docs.rs/fuels/latest/fuels/accounts/provider/struct.Provider.html
+2023-11-16T22:21:57.0310590Z [✓] #set-up
+2023-11-16T22:21:57.0311206Z [✓] #get-all-coins-from-an-address
+2023-11-16T22:21:57.0312161Z [✓] #get-spendable-resources-owned-by-an-address
+2023-11-16T22:21:57.0312794Z [✓] #get-balances-from-an-address
+2023-11-16T22:21:57.0313295Z
+2023-11-16T22:21:57.0313460Z 5 links checked.
+2023-11-16T22:21:57.0314267Z (node:398) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0315475Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0316122Z
+2023-11-16T22:21:57.0316347Z FILE: ./docs/src/connecting/short-lived.md
+2023-11-16T22:21:57.0316895Z No hyperlinks found!
+2023-11-16T22:21:57.0317095Z
+2023-11-16T22:21:57.0317262Z 0 links checked.
+2023-11-16T22:21:57.0318142Z (node:413) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0319262Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0319719Z
+2023-11-16T22:21:57.0320089Z FILE: ./docs/src/connecting/index.md
+2023-11-16T22:21:57.0320759Z No hyperlinks found!
+2023-11-16T22:21:57.0321038Z
+2023-11-16T22:21:57.0321202Z 0 links checked.
+2023-11-16T22:21:57.0321858Z (node:428) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0322933Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0323423Z
+2023-11-16T22:21:57.0323626Z FILE: ./docs/src/connecting/external-node.md
+2023-11-16T22:21:57.0324316Z [✓] https://fuelbook.fuel.network/master/networks/networks.html
+2023-11-16T22:21:57.0324909Z [✓] https://faucet-beta-4.fuel.network
+2023-11-16T22:21:57.0325789Z [/] https://fuellabs.github.io/block-explorer-v2
+2023-11-16T22:21:57.0326306Z
+2023-11-16T22:21:57.0326631Z 3 links checked.
+2023-11-16T22:21:57.0327728Z (node:443) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0329118Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0329832Z
+2023-11-16T22:21:57.0330228Z FILE: ./docs/src/testing/chains.md
+2023-11-16T22:21:57.0330843Z No hyperlinks found!
+2023-11-16T22:21:57.0331194Z
+2023-11-16T22:21:57.0331377Z 0 links checked.
+2023-11-16T22:21:57.0332614Z (node:458) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0334278Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0334821Z
+2023-11-16T22:21:57.0335308Z FILE: ./docs/src/testing/the-setup-program-test-macro.md
+2023-11-16T22:21:57.0336370Z No hyperlinks found!
+2023-11-16T22:21:57.0336730Z
+2023-11-16T22:21:57.0336954Z 0 links checked.
+2023-11-16T22:21:57.0337742Z (node:473) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0339065Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0339608Z
+2023-11-16T22:21:57.0339787Z FILE: ./docs/src/testing/index.md
+2023-11-16T22:21:57.0340200Z [✓] ./basics.md
+2023-11-16T22:21:57.0340788Z [✓] ./the-setup-program-test-macro.md
+2023-11-16T22:21:57.0341344Z [✓] ./chains.md
+2023-11-16T22:21:57.0341602Z
+2023-11-16T22:21:57.0341812Z 3 links checked.
+2023-11-16T22:21:57.0343084Z (node:488) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0344823Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0345543Z
+2023-11-16T22:21:57.0345794Z FILE: ./docs/src/testing/basics.md
+2023-11-16T22:21:57.0346505Z No hyperlinks found!
+2023-11-16T22:21:57.0346846Z
+2023-11-16T22:21:57.0347018Z 0 links checked.
+2023-11-16T22:21:57.0348074Z (node:503) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0349750Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0350708Z
+2023-11-16T22:21:57.0350986Z FILE: ./docs/src/running-scripts.md
+2023-11-16T22:21:57.0351719Z [✓] ./abigen/the-abigen-macro.md
+2023-11-16T22:21:57.0352452Z [✖] ./calling-contracts/tx-params.md
+2023-11-16T22:21:57.0353195Z [✓] ./calling-contracts/other-contracts.md
+2023-11-16T22:21:57.0353637Z
+2023-11-16T22:21:57.0353871Z 3 links checked.
+2023-11-16T22:21:57.0354132Z
+2023-11-16T22:21:57.0354411Z ERROR: 1 dead links found!
+2023-11-16T22:21:57.0355135Z [✖] ./calling-contracts/tx-params.md → Status: 400
+2023-11-16T22:21:57.0356484Z (node:518) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0358125Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0358649Z
+2023-11-16T22:21:57.0359063Z FILE: ./docs/src/predicates/send-spend-predicate.md
+2023-11-16T22:21:57.0359994Z [✓] ../accounts.md
+2023-11-16T22:21:57.0360601Z
+2023-11-16T22:21:57.0361022Z 1 links checked.
+2023-11-16T22:21:57.0362174Z (node:533) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0363968Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0364576Z
+2023-11-16T22:21:57.0364882Z FILE: ./docs/src/predicates/index.md
+2023-11-16T22:21:57.0365638Z [✓] ../accounts.md
+2023-11-16T22:21:57.0365879Z
+2023-11-16T22:21:57.0366000Z 1 links checked.
+2023-11-16T22:21:57.0366796Z (node:548) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0368034Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0368500Z
+2023-11-16T22:21:57.0368632Z FILE: ./docs/src/accounts.md
+2023-11-16T22:21:57.0369488Z [✓] ./wallets/index.md
+2023-11-16T22:21:57.0370235Z [✓] ./predicates/index.md
+2023-11-16T22:21:57.0370644Z
+2023-11-16T22:21:57.0370892Z 2 links checked.
+2023-11-16T22:21:57.0371851Z (node:563) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0372977Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0373503Z
+2023-11-16T22:21:57.0373683Z FILE: ./docs/src/contributing/CONTRIBUTING.md
+2023-11-16T22:21:57.0374434Z [✓] https://forum.fuel.network/
+2023-11-16T22:21:57.0375134Z [✓] https://github.com/FuelLabs/fuels-rs/labels/help%20wanted
+2023-11-16T22:21:57.0375907Z [✓] https://github.com/FuelLabs/fuels-rs/labels/good%20first%20issue
+2023-11-16T22:21:57.0376775Z [✓] https://github.com/FuelLabs/fuels-rs/issues/new
+2023-11-16T22:21:57.0377149Z
+2023-11-16T22:21:57.0377348Z 4 links checked.
+2023-11-16T22:21:57.0378176Z (node:578) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0379320Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0379867Z
+2023-11-16T22:21:57.0380104Z FILE: ./docs/src/contributing/tests-structure.md
+2023-11-16T22:21:57.0380668Z No hyperlinks found!
+2023-11-16T22:21:57.0380950Z
+2023-11-16T22:21:57.0381076Z 0 links checked.
+2023-11-16T22:21:57.0381848Z (node:593) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0382990Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0383502Z
+2023-11-16T22:21:57.0383833Z FILE: ./docs/src/deploying/configurable-constants.md
+2023-11-16T22:21:57.0384329Z No hyperlinks found!
+2023-11-16T22:21:57.0384664Z
+2023-11-16T22:21:57.0384786Z 0 links checked.
+2023-11-16T22:21:57.0385643Z (node:608) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0386695Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0387490Z
+2023-11-16T22:21:57.0387778Z FILE: ./docs/src/deploying/the-fuelvm-binary-file.md
+2023-11-16T22:21:57.0388432Z No hyperlinks found!
+2023-11-16T22:21:57.0388689Z
+2023-11-16T22:21:57.0388846Z 0 links checked.
+2023-11-16T22:21:57.0389603Z (node:623) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0390744Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0391257Z
+2023-11-16T22:21:57.0391462Z FILE: ./docs/src/deploying/storage-slots.md
+2023-11-16T22:21:57.0391983Z No hyperlinks found!
+2023-11-16T22:21:57.0392295Z
+2023-11-16T22:21:57.0392413Z 0 links checked.
+2023-11-16T22:21:57.0393194Z (node:638) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0394221Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0394830Z
+2023-11-16T22:21:57.0395253Z FILE: ./docs/src/deploying/index.md
+2023-11-16T22:21:57.0395849Z [✓] https://docs.fuel.network/guides/quickstart/
+2023-11-16T22:21:57.0396788Z [✓] ../abigen/the-abigen-macro.md
+2023-11-16T22:21:57.0397315Z [✓] ./the-fuelvm-binary-file.md
+2023-11-16T22:21:57.0397847Z [✓] ../abigen/the-json-abi-file.md
+2023-11-16T22:21:57.0398081Z
+2023-11-16T22:21:57.0398302Z 4 links checked.
+2023-11-16T22:21:57.0399088Z (node:653) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0400241Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0400654Z
+2023-11-16T22:21:57.0401125Z FILE: ./docs/src/deploying/interacting-with-contracts.md
+2023-11-16T22:21:57.0401691Z [✓] ../types/bech32.md
+2023-11-16T22:21:57.0401983Z
+2023-11-16T22:21:57.0402102Z 1 links checked.
+2023-11-16T22:21:57.0403037Z (node:668) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0404120Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0404604Z
+2023-11-16T22:21:57.0404825Z FILE: ./docs/src/debugging/function-selector.md
+2023-11-16T22:21:57.0405755Z No hyperlinks found!
+2023-11-16T22:21:57.0405989Z
+2023-11-16T22:21:57.0406110Z 0 links checked.
+2023-11-16T22:21:57.0406908Z (node:683) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0408107Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0408562Z
+2023-11-16T22:21:57.0408737Z FILE: ./docs/src/debugging/index.md
+2023-11-16T22:21:57.0409278Z [✓] ./function-selector.md
+2023-11-16T22:21:57.0409613Z
+2023-11-16T22:21:57.0409816Z 1 links checked.
+2023-11-16T22:21:57.0410591Z (node:698) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0411632Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0412290Z
+2023-11-16T22:21:57.0412611Z FILE: ./docs/src/types/asset-id.md
+2023-11-16T22:21:57.0413315Z [✓] https://docs.rs/fuel-types/0.42.0/fuel_types/struct.AssetId.html
+2023-11-16T22:21:57.0413729Z
+2023-11-16T22:21:57.0413848Z 1 links checked.
+2023-11-16T22:21:57.0414607Z (node:713) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0415673Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0416077Z
+2023-11-16T22:21:57.0416253Z FILE: ./docs/src/types/conversion.md
+2023-11-16T22:21:57.0416711Z No hyperlinks found!
+2023-11-16T22:21:57.0416938Z
+2023-11-16T22:21:57.0417070Z 0 links checked.
+2023-11-16T22:21:57.0417737Z (node:728) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0418718Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0419510Z
+2023-11-16T22:21:57.0419709Z FILE: ./docs/src/types/contract-id.md
+2023-11-16T22:21:57.0420362Z [✓] https://docs.rs/fuel-types/0.42.0/fuel_types/struct.ContractId.html
+2023-11-16T22:21:57.0420845Z
+2023-11-16T22:21:57.0420964Z 1 links checked.
+2023-11-16T22:21:57.0421651Z (node:743) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0422592Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0423062Z
+2023-11-16T22:21:57.0423246Z FILE: ./docs/src/types/bech32.md
+2023-11-16T22:21:57.0423597Z No hyperlinks found!
+2023-11-16T22:21:57.0423820Z
+2023-11-16T22:21:57.0423937Z 0 links checked.
+2023-11-16T22:21:57.0424675Z (node:758) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0425585Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0426263Z
+2023-11-16T22:21:57.0426450Z FILE: ./docs/src/types/evm_address.md
+2023-11-16T22:21:57.0426989Z No hyperlinks found!
+2023-11-16T22:21:57.0427189Z
+2023-11-16T22:21:57.0427305Z 0 links checked.
+2023-11-16T22:21:57.0428035Z (node:773) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0429059Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0429463Z
+2023-11-16T22:21:57.0429627Z FILE: ./docs/src/types/B512.md
+2023-11-16T22:21:57.0429988Z No hyperlinks found!
+2023-11-16T22:21:57.0430273Z
+2023-11-16T22:21:57.0430390Z 0 links checked.
+2023-11-16T22:21:57.0431048Z (node:788) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0431962Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0432462Z
+2023-11-16T22:21:57.0432606Z FILE: ./docs/src/types/string.md
+2023-11-16T22:21:57.0433016Z No hyperlinks found!
+2023-11-16T22:21:57.0433204Z
+2023-11-16T22:21:57.0433320Z 0 links checked.
+2023-11-16T22:21:57.0434041Z (node:803) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0435027Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0435427Z
+2023-11-16T22:21:57.0435666Z FILE: ./docs/src/types/bits256.md
+2023-11-16T22:21:57.0436024Z No hyperlinks found!
+2023-11-16T22:21:57.0436261Z
+2023-11-16T22:21:57.0436378Z 0 links checked.
+2023-11-16T22:21:57.0437092Z (node:818) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0437989Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0438440Z
+2023-11-16T22:21:57.0438582Z FILE: ./docs/src/types/custom_types.md
+2023-11-16T22:21:57.0439384Z [✓] https://doc.rust-lang.org/std/marker/struct.PhantomData.html#unused-type-parameters
+2023-11-16T22:21:57.0440015Z
+2023-11-16T22:21:57.0440139Z 1 links checked.
+2023-11-16T22:21:57.0440845Z (node:833) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0441898Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0442304Z
+2023-11-16T22:21:57.0442493Z FILE: ./docs/src/types/index.md
+2023-11-16T22:21:57.0442889Z No hyperlinks found!
+2023-11-16T22:21:57.0443117Z
+2023-11-16T22:21:57.0443301Z 0 links checked.
+2023-11-16T22:21:57.0443990Z (node:848) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0444908Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0445574Z
+2023-11-16T22:21:57.0445806Z FILE: ./docs/src/types/address.md
+2023-11-16T22:21:57.0446454Z [✓] https://docs.rs/fuel-types/0.42.0/fuel_types/struct.Address.html
+2023-11-16T22:21:57.0447190Z
+2023-11-16T22:21:57.0447309Z 1 links checked.
+2023-11-16T22:21:57.0448072Z (node:863) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0449021Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0449423Z
+2023-11-16T22:21:57.0449592Z FILE: ./docs/src/types/bytes32.md
+2023-11-16T22:21:57.0450214Z [✓] https://docs.rs/fuel-types/0.42.0/fuel_types/struct.Bytes32.html
+2023-11-16T22:21:57.0450634Z
+2023-11-16T22:21:57.0450791Z 1 links checked.
+2023-11-16T22:21:57.0451447Z (node:878) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0452428Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0452867Z
+2023-11-16T22:21:57.0453003Z FILE: ./docs/src/types/vectors.md
+2023-11-16T22:21:57.0453390Z No hyperlinks found!
+2023-11-16T22:21:57.0453748Z
+2023-11-16T22:21:57.0453938Z 0 links checked.
+2023-11-16T22:21:57.0454609Z (node:893) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0455562Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0455960Z
+2023-11-16T22:21:57.0456182Z FILE: ./docs/src/index.md
+2023-11-16T22:21:57.0456566Z [✓] https://github.com/FuelLabs/sway
+2023-11-16T22:21:57.0456877Z
+2023-11-16T22:21:57.0456992Z 1 links checked.
+2023-11-16T22:21:57.0457723Z (node:908) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0458664Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0459107Z
+2023-11-16T22:21:57.0459234Z FILE: ./docs/src/SUMMARY.md
+2023-11-16T22:21:57.0459680Z [✓] ./index.md
+2023-11-16T22:21:57.0460004Z [✓] ./getting-started.md
+2023-11-16T22:21:57.0460418Z [✓] ./connecting/index.md
+2023-11-16T22:21:57.0460894Z [✓] ./connecting/external-node.md
+2023-11-16T22:21:57.0461313Z [✓] ./connecting/short-lived.md
+2023-11-16T22:21:57.0461731Z [✓] ./connecting/rocksdb.md
+2023-11-16T22:21:57.0462207Z [✓] ./connecting/querying.md
+2023-11-16T22:21:57.0462595Z [✓] ./connecting/retrying.md
+2023-11-16T22:21:57.0462974Z [✓] ./accounts.md
+2023-11-16T22:21:57.0463435Z [✓] ./wallets/index.md
+2023-11-16T22:21:57.0463807Z [✓] ./wallets/private-keys.md
+2023-11-16T22:21:57.0464223Z [✓] ./wallets/mnemonic-wallet.md
+2023-11-16T22:21:57.0464700Z [✓] ./wallets/access.md
+2023-11-16T22:21:57.0465096Z [✓] ./wallets/encrypting-and-storing.md
+2023-11-16T22:21:57.0465597Z [✓] ./wallets/checking-balances-and-coins.md
+2023-11-16T22:21:57.0466299Z [✓] ./wallets/test-wallets.md
+2023-11-16T22:21:57.0466683Z [✓] ./wallets/signing.md
+2023-11-16T22:21:57.0467060Z [✓] ./abigen/index.md
+2023-11-16T22:21:57.0467534Z [✓] abigen/the-json-abi-file.md
+2023-11-16T22:21:57.0468115Z [✓] abigen/the-abigen-macro.md
+2023-11-16T22:21:57.0468685Z [✓] ./deploying/index.md
+2023-11-16T22:21:57.0469252Z [✓] ./deploying/configurable-constants.md
+2023-11-16T22:21:57.0469697Z [✓] ./deploying/storage-slots.md
+2023-11-16T22:21:57.0470290Z [✓] ./deploying/interacting-with-contracts.md
+2023-11-16T22:21:57.0470887Z [✓] ./deploying/the-fuelvm-binary-file.md
+2023-11-16T22:21:57.0471446Z [✓] ./calling-contracts/index.md
+2023-11-16T22:21:57.0472033Z [✓] ./calling-contracts/calls-with-different-wallets.md
+2023-11-16T22:21:57.0472986Z [✓] ./calling-contracts/tx-policies.md
+2023-11-16T22:21:57.0473713Z [✓] ./calling-contracts/call-params.md
+2023-11-16T22:21:57.0474363Z [✓] ./calling-contracts/custom-asset-transfer.md
+2023-11-16T22:21:57.0475442Z [✓] ./calling-contracts/call-response.md
+2023-11-16T22:21:57.0476226Z [✓] ./calling-contracts/logs.md
+2023-11-16T22:21:57.0477050Z [✓] ./calling-contracts/variable-outputs.md
+2023-11-16T22:21:57.0478488Z [✓] ./calling-contracts/read-only.md
+2023-11-16T22:21:57.0479295Z [✓] ./calling-contracts/other-contracts.md
+2023-11-16T22:21:57.0480547Z [✓] ./calling-contracts/multicalls.md
+2023-11-16T22:21:57.0481519Z [✓] ./calling-contracts/tx-dependency-estimation.md
+2023-11-16T22:21:57.0482378Z [✓] ./calling-contracts/cost-estimation.md
+2023-11-16T22:21:57.0483223Z [✓] ./calling-contracts/low-level-calls.md
+2023-11-16T22:21:57.0484132Z [✓] ./running-scripts.md
+2023-11-16T22:21:57.0484786Z [✓] ./predicates/index.md
+2023-11-16T22:21:57.0485779Z [✓] ./predicates/send-spend-predicate.md
+2023-11-16T22:21:57.0486689Z [✓] ./types/index.md
+2023-11-16T22:21:57.0487089Z [✓] ./types/bytes32.md
+2023-11-16T22:21:57.0487479Z [✓] ./types/address.md
+2023-11-16T22:21:57.0487996Z [✓] ./types/contract-id.md
+2023-11-16T22:21:57.0488388Z [✓] ./types/asset-id.md
+2023-11-16T22:21:57.0488778Z [✓] ./types/conversion.md
+2023-11-16T22:21:57.0489235Z [✓] ./types/bech32.md
+2023-11-16T22:21:57.0489596Z [✓] ./types/custom_types.md
+2023-11-16T22:21:57.0489984Z [✓] ./types/string.md
+2023-11-16T22:21:57.0490418Z [✓] ./types/bits256.md
+2023-11-16T22:21:57.0490967Z [✓] ./types/B512.md
+2023-11-16T22:21:57.0491362Z [✓] ./types/evm_address.md
+2023-11-16T22:21:57.0491843Z [✓] ./types/vectors.md
+2023-11-16T22:21:57.0492181Z [✓] ./codec/index.md
+2023-11-16T22:21:57.0492593Z [✓] ./codec/encoding.md
+2023-11-16T22:21:57.0493050Z [✓] ./codec/decoding.md
+2023-11-16T22:21:57.0493379Z [✓] ./reference.md
+2023-11-16T22:21:57.0493731Z [✓] ./testing/index.md
+2023-11-16T22:21:57.0494174Z [✓] ./testing/basics.md
+2023-11-16T22:21:57.0494570Z [✓] testing/the-setup-program-test-macro.md
+2023-11-16T22:21:57.0495047Z [✓] ./testing/chains.md
+2023-11-16T22:21:57.0495544Z [✓] ./cookbook/index.md
+2023-11-16T22:21:57.0495896Z [✓] ./cookbook/custom-chain.md
+2023-11-16T22:21:57.0496353Z [✓] ./cookbook/deposit-and-withdraw.md
+2023-11-16T22:21:57.0496888Z [✓] ./cookbook/transfer-all-assets.md
+2023-11-16T22:21:57.0497293Z [✓] ./debugging/index.md
+2023-11-16T22:21:57.0497763Z [✓] ./debugging/function-selector.md
+2023-11-16T22:21:57.0498283Z [✓] ./glossary.md
+2023-11-16T22:21:57.0498689Z [✓] ./contributing/CONTRIBUTING.md
+2023-11-16T22:21:57.0499172Z [✓] ./contributing/tests-structure.md
+2023-11-16T22:21:57.0499666Z [✓] ./cli/index.md
+2023-11-16T22:21:57.0499995Z [✓] ./cli/fuels-abi-cli.md
+2023-11-16T22:21:57.0500255Z
+2023-11-16T22:21:57.0500375Z 74 links checked.
+2023-11-16T22:21:57.0501130Z (node:923) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0502066Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0502527Z
+2023-11-16T22:21:57.0502706Z FILE: ./docs/src/cli/fuels-abi-cli.md
+2023-11-16T22:21:57.0503304Z [✓] https://specs.fuel.network/master/abi/index.html
+2023-11-16T22:21:57.0503632Z
+2023-11-16T22:21:57.0503768Z 1 links checked.
+2023-11-16T22:21:57.0504512Z (node:938) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0505555Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0505977Z
+2023-11-16T22:21:57.0506159Z FILE: ./docs/src/cli/index.md
+2023-11-16T22:21:57.0506529Z [✓] ./fuels-abi-cli.md
+2023-11-16T22:21:57.0506825Z
+2023-11-16T22:21:57.0506943Z 1 links checked.
+2023-11-16T22:21:57.0507635Z (node:953) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0508550Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0509060Z
+2023-11-16T22:21:57.0509351Z FILE: ./docs/src/calling-contracts/tx-dependency-estimation.md
+2023-11-16T22:21:57.0509907Z [✓] ./logs.md
+2023-11-16T22:21:57.0510073Z
+2023-11-16T22:21:57.0510191Z 1 links checked.
+2023-11-16T22:21:57.0510993Z (node:968) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0511992Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0512399Z
+2023-11-16T22:21:57.0512922Z FILE: ./docs/src/calling-contracts/calls-with-different-wallets.md
+2023-11-16T22:21:57.0513530Z No hyperlinks found!
+2023-11-16T22:21:57.0513756Z
+2023-11-16T22:21:57.0513872Z 0 links checked.
+2023-11-16T22:21:57.0514555Z (node:983) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0515534Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0515975Z
+2023-11-16T22:21:57.0516211Z FILE: ./docs/src/calling-contracts/other-contracts.md
+2023-11-16T22:21:57.0516700Z No hyperlinks found!
+2023-11-16T22:21:57.0516958Z
+2023-11-16T22:21:57.0517075Z 0 links checked.
+2023-11-16T22:21:57.0517837Z (node:998) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0518840Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0519318Z
+2023-11-16T22:21:57.0519779Z FILE: ./docs/src/calling-contracts/cost-estimation.md
+2023-11-16T22:21:57.0520238Z No hyperlinks found!
+2023-11-16T22:21:57.0520480Z
+2023-11-16T22:21:57.0520596Z 0 links checked.
+2023-11-16T22:21:57.0521344Z (node:1013) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0522282Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0522719Z
+2023-11-16T22:21:57.0522932Z FILE: ./docs/src/calling-contracts/read-only.md
+2023-11-16T22:21:57.0523444Z No hyperlinks found!
+2023-11-16T22:21:57.0523634Z
+2023-11-16T22:21:57.0523767Z 0 links checked.
+2023-11-16T22:21:57.0524443Z (node:1028) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0526817Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0527275Z
+2023-11-16T22:21:57.0527583Z FILE: ./docs/src/calling-contracts/low-level-calls.md
+2023-11-16T22:21:57.0528054Z No hyperlinks found!
+2023-11-16T22:21:57.0528421Z
+2023-11-16T22:21:57.0528543Z 0 links checked.
+2023-11-16T22:21:57.0529251Z (node:1043) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0530184Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0530701Z
+2023-11-16T22:21:57.0530992Z FILE: ./docs/src/calling-contracts/custom-asset-transfer.md
+2023-11-16T22:21:57.0531494Z No hyperlinks found!
+2023-11-16T22:21:57.0531685Z
+2023-11-16T22:21:57.0531802Z 0 links checked.
+2023-11-16T22:21:57.0532578Z (node:1058) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0533530Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0533933Z
+2023-11-16T22:21:57.0534261Z FILE: ./docs/src/calling-contracts/call-response.md
+2023-11-16T22:21:57.0534906Z [✓] https://specs.fuel.network/master/protocol/abi/receipts.html
+2023-11-16T22:21:57.0535313Z
+2023-11-16T22:21:57.0535431Z 1 links checked.
+2023-11-16T22:21:57.0536211Z (node:1073) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0537163Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0537604Z
+2023-11-16T22:21:57.0537829Z FILE: ./docs/src/calling-contracts/tx-policies.md
+2023-11-16T22:21:57.0538378Z No hyperlinks found!
+2023-11-16T22:21:57.0538572Z
+2023-11-16T22:21:57.0538704Z 0 links checked.
+2023-11-16T22:21:57.0539380Z (node:1088) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0540392Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0540797Z
+2023-11-16T22:21:57.0541027Z FILE: ./docs/src/calling-contracts/index.md
+2023-11-16T22:21:57.0541439Z No hyperlinks found!
+2023-11-16T22:21:57.0541863Z
+2023-11-16T22:21:57.0542052Z 0 links checked.
+2023-11-16T22:21:57.0542736Z (node:1103) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0543655Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0544164Z
+2023-11-16T22:21:57.0544423Z FILE: ./docs/src/calling-contracts/logs.md
+2023-11-16T22:21:57.0544856Z No hyperlinks found!
+2023-11-16T22:21:57.0545047Z
+2023-11-16T22:21:57.0545180Z 0 links checked.
+2023-11-16T22:21:57.0545914Z (node:1118) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0546858Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0547257Z
+2023-11-16T22:21:57.0547519Z FILE: ./docs/src/calling-contracts/multicalls.md
+2023-11-16T22:21:57.0548002Z No hyperlinks found!
+2023-11-16T22:21:57.0548225Z
+2023-11-16T22:21:57.0548505Z 0 links checked.
+2023-11-16T22:21:57.0549180Z (node:1133) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0550157Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0550591Z
+2023-11-16T22:21:57.0550832Z FILE: ./docs/src/calling-contracts/call-params.md
+2023-11-16T22:21:57.0551629Z [✓] https://docs.rs/fuels/latest/fuels/programs/contract/struct.CallParameters.html
+2023-11-16T22:21:57.0552106Z
+2023-11-16T22:21:57.0552329Z 1 links checked.
+2023-11-16T22:21:57.0552979Z (node:1148) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0553915Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0554321Z
+2023-11-16T22:21:57.0554663Z FILE: ./docs/src/calling-contracts/variable-outputs.md
+2023-11-16T22:21:57.0555359Z [✓] https://specs.fuel.network/master/tx-format/output.html#outputvariable
+2023-11-16T22:21:57.0555816Z
+2023-11-16T22:21:57.0555933Z 1 links checked.
+2023-11-16T22:21:57.0556681Z (node:1163) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0557587Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0558021Z
+2023-11-16T22:21:57.0558150Z FILE: ./docs/src/glossary.md
+2023-11-16T22:21:57.0558603Z No hyperlinks found!
+2023-11-16T22:21:57.0558793Z
+2023-11-16T22:21:57.0558967Z 0 links checked.
+2023-11-16T22:21:57.0559599Z (node:1178) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0560611Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0561013Z
+2023-11-16T22:21:57.0561177Z FILE: ./docs/src/reference.md
+2023-11-16T22:21:57.0561582Z [✓] https://docs.rs/fuels/latest/fuels/
+2023-11-16T22:21:57.0561996Z
+2023-11-16T22:21:57.0562113Z 1 links checked.
+2023-11-16T22:21:57.0562768Z (node:1193) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0563669Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0564182Z
+2023-11-16T22:21:57.0564412Z FILE: ./docs/src/cookbook/deposit-and-withdraw.md
+2023-11-16T22:21:57.0564867Z No hyperlinks found!
+2023-11-16T22:21:57.0565063Z
+2023-11-16T22:21:57.0565406Z 0 links checked.
+2023-11-16T22:21:57.0566192Z (node:1208) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0567203Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0567600Z
+2023-11-16T22:21:57.0567867Z FILE: ./docs/src/cookbook/transfer-all-assets.md
+2023-11-16T22:21:57.0568353Z No hyperlinks found!
+2023-11-16T22:21:57.0568578Z
+2023-11-16T22:21:57.0568708Z 0 links checked.
+2023-11-16T22:21:57.0569573Z (node:1223) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0570565Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0571004Z
+2023-11-16T22:21:57.0571209Z FILE: ./docs/src/cookbook/custom-chain.md
+2023-11-16T22:21:57.0571627Z No hyperlinks found!
+2023-11-16T22:21:57.0571880Z
+2023-11-16T22:21:57.0572029Z 0 links checked.
+2023-11-16T22:21:57.0572673Z (node:1238) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0573611Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0574077Z
+2023-11-16T22:21:57.0574281Z FILE: ./docs/src/cookbook/index.md
+2023-11-16T22:21:57.0574660Z No hyperlinks found!
+2023-11-16T22:21:57.0574881Z
+2023-11-16T22:21:57.0574995Z 0 links checked.
+2023-11-16T22:21:57.0575874Z (node:1253) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0576798Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0577232Z
+2023-11-16T22:21:57.0577360Z FILE: ./workflow/LICENSE.md
+2023-11-16T22:21:57.0577883Z [✓] http://www.apache.org/licenses/
+2023-11-16T22:21:57.0578141Z
+2023-11-16T22:21:57.0578289Z 1 links checked.
+2023-11-16T22:21:57.0578920Z (node:1268) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0579940Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0580340Z
+2023-11-16T22:21:57.0580517Z FILE: ./workflow/changeset/README.md
+2023-11-16T22:21:57.0580906Z [✓] ../LICENSE.md
+2023-11-16T22:21:57.0581231Z
+2023-11-16T22:21:57.0581345Z 1 links checked.
+2023-11-16T22:21:57.0582012Z (node:1283) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0582919Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0583442Z
+2023-11-16T22:21:57.0583569Z FILE: ./workflow/README.md
+2023-11-16T22:21:57.0583950Z [✓] ./gh-projects/
+2023-11-16T22:21:57.0584286Z [✓] ./setups/node/
+2023-11-16T22:21:57.0584699Z [✓] ./setups/docker/
+2023-11-16T22:21:57.0585049Z [✓] ./setups/npm/
+2023-11-16T22:21:57.0585369Z [✓] ./changeset/
+2023-11-16T22:21:57.0585777Z [✓] ./LICENSE.md
+2023-11-16T22:21:57.0585948Z
+2023-11-16T22:21:57.0586098Z 6 links checked.
+2023-11-16T22:21:57.0586747Z (node:1298) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0587779Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0588214Z
+2023-11-16T22:21:57.0588363Z FILE: ./workflow/setups/docker/README.md
+2023-11-16T22:21:57.0588881Z [✓] https://ghcr.io
+2023-11-16T22:21:57.0589217Z [✓] ../../LICENSE.md
+2023-11-16T22:21:57.0589439Z
+2023-11-16T22:21:57.0589573Z 2 links checked.
+2023-11-16T22:21:57.0590300Z (node:1313) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0591206Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0591644Z
+2023-11-16T22:21:57.0591803Z FILE: ./workflow/setups/node/README.md
+2023-11-16T22:21:57.0592288Z [✓] ../../LICENSE.md
+2023-11-16T22:21:57.0592473Z
+2023-11-16T22:21:57.0592589Z 1 links checked.
+2023-11-16T22:21:57.0593275Z (node:1328) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0594299Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0594696Z
+2023-11-16T22:21:57.0594871Z FILE: ./workflow/setups/npm/README.md
+2023-11-16T22:21:57.0595271Z [✓] ../../LICENSE.md
+2023-11-16T22:21:57.0595485Z
+2023-11-16T22:21:57.0595721Z 1 links checked.
+2023-11-16T22:21:57.0596542Z (node:1343) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0597445Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0597879Z
+2023-11-16T22:21:57.0598202Z FILE: ./workflow/gh-projects/assign-to-project/README.md
+2023-11-16T22:21:57.0599276Z [✓] https://docs.github.com/en/issues/planning-and-tracking-with-projects/automating-your-project/automating-projects-using-actions
+2023-11-16T22:21:57.0600161Z [✓] ../../LICENSE.md
+2023-11-16T22:21:57.0600347Z
+2023-11-16T22:21:57.0600530Z 2 links checked.
+2023-11-16T22:21:57.0601217Z (node:1358) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0602191Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0602588Z
+2023-11-16T22:21:57.0603054Z FILE: ./workflow/gh-projects/README.md
+2023-11-16T22:21:57.0603526Z [✓] ./assign-to-project
+2023-11-16T22:21:57.0603893Z [✓] ../LICENSE.md
+2023-11-16T22:21:57.0604086Z
+2023-11-16T22:21:57.0604271Z 2 links checked.
+2023-11-16T22:21:57.0604943Z (node:1373) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2023-11-16T22:21:57.0606200Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2023-11-16T22:21:57.0606627Z
+2023-11-16T22:21:57.0606913Z FILE: ./workflow/docs-hub/README.md
+2023-11-16T22:21:57.0607421Z [✓] #mdbooks
+2023-11-16T22:21:57.0607766Z [✓] #next
+2023-11-16T22:21:57.0608312Z [✓] #vitepress
+2023-11-16T22:21:57.0608648Z [✓] mlc.mdbook.json
+2023-11-16T22:21:57.0609060Z [✓] .markdownlintignore
+2023-11-16T22:21:57.0609476Z [✓] .markdownlint.yaml
+2023-11-16T22:21:57.0609840Z [✓] ../LICENSE.md
+2023-11-16T22:21:57.0610070Z
+2023-11-16T22:21:57.0610187Z 7 links checked.
+2023-11-16T22:21:57.0610358Z
+2023-11-16T22:21:57.0610763Z [0;33m=========================================================================[0m
+2023-11-16T22:21:57.2275176Z Post job cleanup.
+2023-11-16T22:21:57.3106056Z [command]/usr/bin/git version
+2023-11-16T22:21:57.3149998Z git version 2.42.0
+2023-11-16T22:21:57.3188709Z Temporarily overriding HOME='/home/runner/work/_temp/7f690df5-9206-4f17-88cf-6aad2e357ea2' before making global git config changes
+2023-11-16T22:21:57.3190661Z Adding repository directory to the temporary git global config as a safe directory
+2023-11-16T22:21:57.3194648Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/fuels-rs/fuels-rs/workflow
+2023-11-16T22:21:57.3234958Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2023-11-16T22:21:57.3272822Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2023-11-16T22:21:57.3518694Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2023-11-16T22:21:57.3547088Z http.https://github.com/.extraheader
+2023-11-16T22:21:57.3558926Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2023-11-16T22:21:57.3600625Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2023-11-16T22:21:57.4164409Z Post job cleanup.
+2023-11-16T22:21:57.5005616Z [command]/usr/bin/git version
+2023-11-16T22:21:57.5051843Z git version 2.42.0
+2023-11-16T22:21:57.5092038Z Temporarily overriding HOME='/home/runner/work/_temp/48584aae-674e-43c4-a11d-690289f380c9' before making global git config changes
+2023-11-16T22:21:57.5093836Z Adding repository directory to the temporary git global config as a safe directory
+2023-11-16T22:21:57.5098875Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/fuels-rs/fuels-rs
+2023-11-16T22:21:57.5145054Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2023-11-16T22:21:57.5183204Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2023-11-16T22:21:57.5464004Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2023-11-16T22:21:57.5497269Z http.https://github.com/.extraheader
+2023-11-16T22:21:57.5512782Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2023-11-16T22:21:57.5557039Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2023-11-16T22:21:57.6041796Z Cleaning up orphan processes
+
