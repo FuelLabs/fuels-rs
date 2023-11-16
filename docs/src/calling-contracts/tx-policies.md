@@ -19,6 +19,12 @@ allowed for the transaction
 
 When the **Script Gas Limit** is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit. Similarly, if no **Gas Price** is defined, the Rust SDK defaults to the network's minimum gas price.
 
+**Witness Limit** makes use of the following default values for script and create transactions:
+
+```rust,ignore
+{{#include ../../../examples/contracts/src/lib.rs:witness_default}}
+```
+
 You can configure these parameters by creating an instance of `TxPolicy` and passing it to a chain method called `with_tx_policies`:
 <!-- tx_policies:example:end-->
 
