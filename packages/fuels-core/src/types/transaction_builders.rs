@@ -546,8 +546,11 @@ impl ScriptTransactionBuilder {
     fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.gas_limit = tx_policies.script_gas_limit();
         self.gas_price = tx_policies.gas_price();
+        self.witness_limit = tx_policies.witness_limit();
+        self.max_fee = tx_policies.max_fee();
+        self.maturity = tx_policies.maturity();
 
-        self.with_maturity(tx_policies.maturity())
+        self
     }
 }
 
@@ -672,8 +675,11 @@ impl CreateTransactionBuilder {
 
     fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.gas_price = tx_policies.gas_price();
+        self.witness_limit = tx_policies.witness_limit();
+        self.max_fee = tx_policies.max_fee();
+        self.maturity = tx_policies.maturity();
 
-        self.with_maturity(tx_policies.maturity())
+        self
     }
 }
 
