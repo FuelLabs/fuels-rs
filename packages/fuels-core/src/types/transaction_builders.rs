@@ -2,6 +2,7 @@
 
 use std::{cmp::max, collections::HashMap, iter::repeat_with};
 
+use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
@@ -34,8 +35,6 @@ use crate::{
         Address, AssetId, ContractId,
     },
 };
-
-use async_trait::async_trait;
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
