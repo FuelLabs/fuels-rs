@@ -62,7 +62,7 @@ jobs:
         working-directory: packages/fuels
 
       - name: Build Sway test projects
-        run: forc build --terse
+        run: forc build --terse --error-on-warnings
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
