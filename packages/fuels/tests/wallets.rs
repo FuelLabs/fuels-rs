@@ -1,9 +1,11 @@
 use std::iter::repeat;
 
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
-use fuels::{prelude::*, types::transaction_builders::ScriptTransactionBuilder};
+use fuels::{
+    prelude::*,
+    types::transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+};
 use fuels_accounts::wallet::WalletUnlocked;
-use fuels_core::types::transaction_builders::TransactionBuilder;
 use fuels_test_helpers::setup_test_provider;
 
 #[tokio::test]
@@ -137,17 +139,19 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         .pop()
         .unwrap();
 
-    let network_info = wallet.try_provider()?.network_info().await?;
+    let provider = wallet.try_provider()?;
+    let network_info = provider.network_info().await?;
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![],
         vec![],
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
 
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    let tx = tb.build()?;
+
+    let tx = tb.build(provider).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -182,16 +186,17 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
-    let network_info = wallet.try_provider()?.network_info().await?;
+    let provider = wallet.try_provider()?;
+    let network_info = provider.network_info().await?;
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
-    let tx = tb.build()?;
+    let tx = tb.build(provider).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -240,7 +245,7 @@ async fn test_transfer() -> Result<()> {
             wallet_2.address(),
             1,
             Default::default(),
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await
         .unwrap();
@@ -257,17 +262,21 @@ async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
-    // Configure transaction parameters.
+    // Configure transaction policies.
     let gas_price = 1;
-    let gas_limit = 500_000;
+    let script_gas_limit = 500_000;
+    let expected_script_gas_limit = 0;
     let maturity = 0u32;
 
-    let tx_params = TxParameters::new(Some(gas_price), Some(gas_limit), maturity);
+    let tx_policies = TxPolicies::default()
+        .with_gas_price(gas_price)
+        .with_maturity(maturity)
+        .with_script_gas_limit(script_gas_limit);
 
     // Transfer 1 from wallet 1 to wallet 2.
     const SEND_AMOUNT: u64 = 1;
     let (tx_id, _receipts) = wallet_1
-        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_params)
+        .transfer(wallet_2.address(), SEND_AMOUNT, BASE_ASSET_ID, tx_policies)
         .await?;
 
     // Assert that the transaction was properly configured.
@@ -281,7 +290,8 @@ async fn send_transfer_transactions() -> Result<()> {
         TransactionType::Script(tx) => tx,
         _ => panic!("Received unexpected tx type!"),
     };
-    assert_eq!(script.gas_limit(), gas_limit);
+    // Transfer scripts have `script_gas_limit` set to `0`
+    assert_eq!(script.gas_limit(), expected_script_gas_limit);
     assert_eq!(script.gas_price(), gas_price);
     assert_eq!(script.maturity(), maturity);
 
@@ -312,7 +322,7 @@ async fn transfer_coins_with_change() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             BASE_ASSET_ID,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -374,7 +384,7 @@ async fn transfer_more_than_owned() -> Result<()> {
             wallet_2.address(),
             AMOUNT * 2,
             Default::default(),
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await;
 
@@ -407,7 +417,7 @@ async fn transfer_coins_of_non_base_asset() -> Result<()> {
             wallet_2.address(),
             SEND_AMOUNT,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -455,7 +465,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info,
     );
 
@@ -463,9 +473,8 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         wallet.sign_transaction(&mut tb);
     }
 
-    provider
-        .send_transaction_and_await_commit(tb.build()?)
-        .await?;
+    let tx = tb.build(provider).await?;
+    provider.send_transaction_and_await_commit(tx).await?;
 
     assert_eq!(
         receiver.get_asset_balance(&BASE_ASSET_ID).await?,

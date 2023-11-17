@@ -1,6 +1,7 @@
 use std::{array::TryFromSliceError, str::Utf8Error};
 
-use fuel_tx::{CheckError, Receipt};
+use fuel_tx::{Receipt, ValidityError};
+use fuel_vm::checked_transaction::CheckError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -26,7 +27,7 @@ pub enum Error {
     #[error("Provider error: {0}")]
     ProviderError(String),
     #[error("Validation error: {0}")]
-    ValidationError(#[from] CheckError),
+    ValidationError(String),
     #[error("Tried to forward assets to a contract method that is not payable.")]
     AssetsForwardedToNonPayableMethod,
     #[error("Revert transaction error: {reason},\n receipts: {receipts:?}")]
@@ -64,5 +65,12 @@ macro_rules! impl_error_from {
     };
 }
 
+impl From<CheckError> for Error {
+    fn from(err: CheckError) -> Error {
+        Error::ValidationError(format!("{:?}", err))
+    }
+}
+
 impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
+impl_error_from!(ValidationError, ValidityError);

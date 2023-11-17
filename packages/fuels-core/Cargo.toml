@@ -10,6 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
+async-trait = { workspace = true, default-features = false }
 bech32 = { workspace = true }
 chrono = { workspace = true }
 fuel-abi-types = { workspace = true }

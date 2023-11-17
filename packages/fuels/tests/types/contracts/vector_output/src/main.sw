@@ -61,13 +61,10 @@ impl VectorsOutputContract for Contract {
 
     fn enum_in_vec() -> Vec<Pasta> {
         let mut vec: Vec<Pasta> = Vec::new();
-        vec
-            .push(
-                Pasta::Tortelini(Bimbam {
-                    bim: 1111,
-                    bam: 2222_u32,
-                }),
-            );
+        vec.push(Pasta::Tortelini(Bimbam {
+            bim: 1111,
+            bam: 2222_u32,
+        }));
         vec.push(Pasta::Rigatoni(1987));
         vec.push(Pasta::Spaghetti(true));
         vec

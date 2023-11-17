@@ -77,16 +77,13 @@ async fn main_function_tuple_types() -> Result<()> {
             wallet = "wallet"
         )
     );
-    let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/types/scripts/script_tuples/out/debug/script_tuples.bin";
-    let instance = MyScript::new(wallet, bin_path);
-
     let bim = Bim { bim: 90 };
     let bam = Bam {
         bam: "itest".try_into()?,
     };
     let boum = Boum { boum: true };
-    let result = instance
+
+    let result = script_instance
         .main(
             (bim, bam, boum),
             Bam {
@@ -95,6 +92,7 @@ async fn main_function_tuple_types() -> Result<()> {
         )
         .call()
         .await?;
+
     let expected = (
         (
             Boum { boum: true },

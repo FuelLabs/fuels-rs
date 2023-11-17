@@ -37,4 +37,4 @@ For transferring assets to the base layer chain, you can use `wallet.withdraw_to
 {{#include ../../examples/wallets/src/lib.rs:wallet_withdraw_to_base}}
 ```
 
-The above example creates an `Address` from a string and converts it to a `Bech32Address`. Next, it calls `wallet.withdraw_to_base_layer` by providing the address, the amount to be transferred, and the transaction parameters. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with `provider.get_message_proof,` and the amount and the recipient are verified.
+The above example creates an `Address` from a string and converts it to a `Bech32Address`. Next, it calls `wallet.withdraw_to_base_layer` by providing the address, the amount to be transferred, and the transaction policies. Lastly, to verify that the transfer succeeded, the relevant message proof is retrieved with `provider.get_message_proof,` and the amount and the recipient are verified.

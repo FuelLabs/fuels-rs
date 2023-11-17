@@ -7,7 +7,7 @@ use fuel_core_client::client::{
     FuelClient,
 };
 use fuel_tx::{Receipt, Transaction, TxId, UtxoId};
-use fuel_types::{Address, AssetId, BlockHeight, ContractId, MessageId, Nonce};
+use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::{error, types::errors::Result};
 
 use crate::provider::{retry_util, RetryConfig};
@@ -109,7 +109,7 @@ impl RetryableClient {
     pub async fn coins_to_spend(
         &self,
         owner: &Address,
-        spend_query: Vec<(AssetId, u64, Option<u64>)>,
+        spend_query: Vec<(AssetId, u64, Option<u32>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
     ) -> io::Result<Vec<Vec<types::CoinType>>> {
         self.client
@@ -168,7 +168,7 @@ impl RetryableClient {
 
     pub async fn produce_blocks(
         &self,
-        blocks_to_produce: u64,
+        blocks_to_produce: u32,
         start_timestamp: Option<u64>,
     ) -> io::Result<BlockHeight> {
         self.our_retry(|| {
@@ -202,17 +202,13 @@ impl RetryableClient {
     pub async fn message_proof(
         &self,
         transaction_id: &TxId,
-        message_id: &MessageId,
+        nonce: &Nonce,
         commit_block_id: Option<&BlockId>,
         commit_block_height: Option<BlockHeight>,
     ) -> io::Result<Option<types::MessageProof>> {
         self.our_retry(|| {
-            self.client.message_proof(
-                transaction_id,
-                message_id,
-                commit_block_id,
-                commit_block_height,
-            )
+            self.client
+                .message_proof(transaction_id, nonce, commit_block_id, commit_block_height)
         })
         .await
     }

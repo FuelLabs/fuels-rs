@@ -28,7 +28,7 @@
   - [The FuelVM Binary file](./deploying/the-fuelvm-binary-file.md)
 - [Calling contracts](./calling-contracts/index.md)
   - [Connecting wallets](./calling-contracts/calls-with-different-wallets.md)
-  - [Transaction parameters](./calling-contracts/tx-params.md)
+  - [Transaction policies](./calling-contracts/tx-policies.md)
   - [Call parameters](./calling-contracts/call-params.md)
   - [Custom asset transfer](./calling-contracts/custom-asset-transfer.md)
   - [Call response](./calling-contracts/call-response.md)

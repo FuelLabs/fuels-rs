@@ -25,7 +25,7 @@ async fn test_storage_initialization() -> Result<()> {
         "tests/contracts/storage/out/debug/storage.bin",
         LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id, wallet.clone());
@@ -54,7 +54,7 @@ async fn test_init_storage_automatically() -> Result<()> {
         "tests/contracts/storage/out/debug/storage.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let key1 =
