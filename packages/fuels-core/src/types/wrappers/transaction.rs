@@ -2,8 +2,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use fuel_tx::{
     field::{
-        GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, ScriptGasLimit,
-        Witnesses,
+        GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
+        ScriptData, ScriptGasLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -26,24 +26,24 @@ use crate::{
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct MintTransaction {
-    tx: Mint,
+    tx: Box<Mint>,
 }
 
 impl From<MintTransaction> for FuelTransaction {
     fn from(mint: MintTransaction) -> Self {
-        mint.tx.into()
+        (*mint.tx).into()
     }
 }
 
 impl From<MintTransaction> for Mint {
     fn from(tx: MintTransaction) -> Self {
-        tx.tx
+        *tx.tx
     }
 }
 
 impl From<Mint> for MintTransaction {
     fn from(tx: Mint) -> Self {
-        MintTransaction { tx }
+        Self { tx: Box::new(tx) }
     }
 }
 
@@ -57,9 +57,19 @@ impl MintTransaction {
             .tx
             .check_without_signatures(block_height.into(), consensus_parameters)?)
     }
-
+    #[must_use]
     pub fn id(&self, chain_id: ChainId) -> Bytes32 {
         self.tx.id(&chain_id)
+    }
+
+    #[must_use]
+    pub fn mint_asset_id(&self) -> &AssetId {
+        self.tx.mint_asset_id()
+    }
+
+    #[must_use]
+    pub fn mint_amount(&self) -> u64 {
+        *self.tx.mint_amount()
     }
 }
 
