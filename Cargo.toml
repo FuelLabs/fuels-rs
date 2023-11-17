@@ -35,7 +35,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.72.1"
+rust-version = "1.73.0"
 version = "0.50.1"
 
 [workspace.dependencies]
@@ -68,23 +68,25 @@ tokio = { version = "1.33.0", default-features = false }
 tracing = "0.1.37"
 trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
-which = { version = "4.4.2", default-features = false }
+which = { version = "5.0.0", default-features = false }
 zeroize = "1.6.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.20.6", default-features = false }
-fuel-core-chain-config = { version = "0.20.6", default-features = false }
-fuel-core-client = { version = "0.20.6", default-features = false }
-fuel-core-types = { version = "0.20.6", default-features = false }
+fuel-core = { version = "0.21.0-rc.1", default-features = false }
+fuel-core-chain-config = { version = "0.21.0-rc.1", default-features = false }
+fuel-core-client = { version = "0.21.0-rc.1", default-features = false }
+fuel-core-poa = { version = "0.21.0-rc.1", default-features = false }
+fuel-core-services = { version = "0.21.0-rc.1", default-features = false }
+fuel-core-types = { version = "0.21.0-rc.1", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = "0.35.4"
-fuel-crypto = "0.35.4"
-fuel-merkle = "0.35.4"
-fuel-storage = "0.35.4"
-fuel-tx = "0.35.4"
-fuel-types = { version = "0.35.4", default-features = false }
-fuel-vm = "0.35.4"
+fuel-asm = { version = "0.42.0"}
+fuel-crypto = { version = "0.42.0"}
+fuel-merkle = { version = "0.42.0"}
+fuel-storage = { version = "0.42.0"}
+fuel-tx = { version = "0.42.0"}
+fuel-types = { version = "0.42.0"}
+fuel-vm = { version = "0.42.0"}
 
 # Workspace projects
 fuels = { version = "0.50.1", path = "./packages/fuels" }

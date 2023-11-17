@@ -7,6 +7,7 @@ use std::{
 
 use fuel_tx::{ContractId, Receipt};
 
+use super::ABIDecoder;
 use crate::{
     codec::DecoderConfig,
     traits::{Parameterize, Tokenizable},
@@ -15,8 +16,6 @@ use crate::{
         param_types::ParamType,
     },
 };
-
-use super::ABIDecoder;
 
 #[derive(Clone)]
 pub struct LogFormatter {

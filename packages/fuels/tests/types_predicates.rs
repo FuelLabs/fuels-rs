@@ -27,7 +27,7 @@ async fn assert_predicate_spendable(
             receiver.address(),
             predicate_balance,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 

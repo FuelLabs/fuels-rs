@@ -77,7 +77,7 @@ async fn call_with_structs() -> Result<()> {
         "tests/types/contracts/complex_types_contract/out/debug/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();

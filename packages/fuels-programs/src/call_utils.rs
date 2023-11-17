@@ -13,8 +13,8 @@ use fuels_core::{
         errors::{Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
-        transaction::{ScriptTransaction, TxParameters},
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction::{ScriptTransaction, TxPolicies},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
     },
 };
 use itertools::{chain, Itertools};
@@ -101,13 +101,14 @@ pub trait TxDependencyExtension: Sized {
 /// transaction inputs/outputs consisting of assets and contracts.
 pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
-    tx_parameters: TxParameters,
+    tx_policies: TxPolicies,
     account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let consensus_parameters = account.try_provider()?.consensus_parameters();
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters();
 
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
-    let data_offset = call_script_data_offset(&consensus_parameters, calls_instructions_len);
+    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset);
@@ -128,9 +129,9 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let network_info = account.try_provider()?.network_info().await?;
+    let network_info = provider.network_info().await?;
     let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_parameters, network_info)
+        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info)
             .with_script(script)
             .with_script_data(script_data.clone());
 
@@ -141,7 +142,8 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     account.add_witnessses(&mut tb);
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
-    tb.build()
+
+    tb.build(provider).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return

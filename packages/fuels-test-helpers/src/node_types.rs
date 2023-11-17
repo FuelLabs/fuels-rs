@@ -11,6 +11,8 @@ use fuels_core::constants::WORD_SIZE;
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 
+const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
+
 #[derive(Clone, Debug)]
 pub enum Trigger {
     Instant,
@@ -59,37 +61,21 @@ pub struct Config {
     pub max_database_cache_size: Option<usize>,
     pub database_type: DbType,
     pub utxo_validation: bool,
-    pub manual_blocks_enabled: bool,
+    pub debug: bool,
     pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
     pub chain_conf: ChainConfig,
 }
 
-impl Config {
-    pub fn local_node() -> Self {
-        Self {
-            addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: Some(10 * 1024 * 1024),
-            database_type: DbType::InMemory,
-            utxo_validation: false,
-            manual_blocks_enabled: false,
-            block_production: Trigger::Instant,
-            vm_backtrace: false,
-            silent: true,
-            chain_conf: ChainConfig::local_testnet(),
-        }
-    }
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
-            max_database_cache_size: Some(10 * 1024 * 1024),
+            max_database_cache_size: Some(MAX_DATABASE_CACHE_SIZE),
             database_type: DbType::InMemory,
-            utxo_validation: false,
-            manual_blocks_enabled: false,
+            utxo_validation: true,
+            debug: true,
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
@@ -103,14 +89,16 @@ impl From<Config> for fuel_core::service::Config {
     fn from(value: Config) -> Self {
         Self {
             addr: value.addr,
-            max_database_cache_size: value.max_database_cache_size.unwrap_or(10 * 1024 * 1024),
+            max_database_cache_size: value
+                .max_database_cache_size
+                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
             database_path: match &value.database_type {
                 DbType::InMemory => Default::default(),
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: value.database_type.into(),
             utxo_validation: value.utxo_validation,
-            manual_blocks_enabled: value.manual_blocks_enabled,
+            debug: value.debug,
             block_production: value.block_production.into(),
             chain_conf: value.chain_conf,
             ..fuel_core::service::Config::local_node()
