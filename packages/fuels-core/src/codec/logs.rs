@@ -7,9 +7,8 @@ use std::{
 
 use fuel_tx::{ContractId, Receipt};
 
-use super::ABIDecoder;
 use crate::{
-    codec::DecoderConfig,
+    codec::{ABIDecoder, DecoderConfig},
     traits::{Parameterize, Tokenizable},
     types::{
         errors::{error, Error, Result},

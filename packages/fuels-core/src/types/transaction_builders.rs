@@ -15,7 +15,6 @@ use fuel_tx::{
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use super::{chain_info::ChainInfo, node_info::NodeInfo};
 use crate::{
     constants::{
         BASE_ASSET_ID, DEFAULT_CREATE_WITNESS_LIMIT, DEFAULT_SCRIPT_WITNESS_LIMIT, WORD_SIZE,
@@ -23,11 +22,13 @@ use crate::{
     offsets,
     types::{
         bech32::Bech32Address,
+        chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
         errors::{error, Result},
         input::Input,
         message::Message,
+        node_info::NodeInfo,
         transaction::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
         },

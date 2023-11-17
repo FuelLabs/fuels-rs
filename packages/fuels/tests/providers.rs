@@ -935,6 +935,45 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 }
 
 #[tokio::test]
+async fn can_fetch_mint_transactions() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let provider = wallet.try_provider()?;
+
+    let transactions = provider
+        .get_transactions(PaginationRequest {
+            cursor: None,
+            results: 100,
+            direction: PageDirection::Forward,
+        })
+        .await?
+        .results;
+
+    // TODO: remove once (fuels-rs#1093)[https://github.com/FuelLabs/fuels-rs/issues/1093] is in
+    // until then the type is explicitly mentioned to check that we're reexporting it through fuels
+    let _: ::fuels::types::transaction::MintTransaction = transactions
+        .into_iter()
+        .find_map(|tx| match tx.transaction {
+            TransactionType::Mint(tx) => Some(tx),
+            _ => None,
+        })
+        .expect("Should have had at least one mint transaction");
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_build_with_provider() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     let provider = wallet.try_provider()?;

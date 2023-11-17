@@ -2,8 +2,8 @@ use std::{collections::HashMap, fmt::Debug};
 
 use fuel_tx::{
     field::{
-        GasPrice, Inputs, Maturity, Outputs, Script as ScriptField, ScriptData, ScriptGasLimit,
-        Witnesses,
+        GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
+        ScriptData, ScriptGasLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -12,7 +12,7 @@ use fuel_tx::{
         },
     },
     Buildable, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
+    Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
     TransactionFee, UniqueIdentifier, Witness,
 };
 use fuel_types::{AssetId, ChainId};
@@ -24,8 +24,56 @@ use crate::{
     types::{bech32::Bech32Address, errors::error, Result},
 };
 
-#[derive(Default, Debug, Copy, Clone)]
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct MintTransaction {
+    tx: Box<Mint>,
+}
 
+impl From<MintTransaction> for FuelTransaction {
+    fn from(mint: MintTransaction) -> Self {
+        (*mint.tx).into()
+    }
+}
+
+impl From<MintTransaction> for Mint {
+    fn from(tx: MintTransaction) -> Self {
+        *tx.tx
+    }
+}
+
+impl From<Mint> for MintTransaction {
+    fn from(tx: Mint) -> Self {
+        Self { tx: Box::new(tx) }
+    }
+}
+
+impl MintTransaction {
+    pub fn check_without_signatures(
+        &self,
+        block_height: u32,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()> {
+        Ok(self
+            .tx
+            .check_without_signatures(block_height.into(), consensus_parameters)?)
+    }
+    #[must_use]
+    pub fn id(&self, chain_id: ChainId) -> Bytes32 {
+        self.tx.id(&chain_id)
+    }
+
+    #[must_use]
+    pub fn mint_asset_id(&self) -> &AssetId {
+        self.tx.mint_asset_id()
+    }
+
+    #[must_use]
+    pub fn mint_amount(&self) -> u64 {
+        *self.tx.mint_amount()
+    }
+}
+
+#[derive(Default, Debug, Copy, Clone)]
 //ANCHOR: tx_policies_struct
 pub struct TxPolicies {
     gas_price: Option<u64>,
@@ -101,12 +149,13 @@ impl TxPolicies {
 
 use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
 
-use super::coin_type_id::CoinTypeId;
+use crate::types::coin_type_id::CoinTypeId;
 
 #[derive(Debug, Clone)]
 pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
+    Mint(MintTransaction),
 }
 
 pub trait EstimablePredicates {
@@ -171,149 +220,7 @@ impl From<TransactionType> for FuelTransaction {
         match value {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
-        }
-    }
-}
-
-impl EstimablePredicates for TransactionType {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.estimate_predicates(consensus_parameters),
-            TransactionType::Create(tx) => tx.estimate_predicates(consensus_parameters),
-        }
-    }
-}
-
-impl GasValidation for TransactionType {
-    fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.validate_gas(min_gas_price, gas_used),
-            TransactionType::Create(tx) => tx.validate_gas(min_gas_price, gas_used),
-        }
-    }
-}
-
-impl Transaction for TransactionType {
-    fn fee_checked_from_tx(
-        &self,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Option<TransactionFee> {
-        match self {
-            TransactionType::Script(tx) => tx.fee_checked_from_tx(consensus_parameters),
-            TransactionType::Create(tx) => tx.fee_checked_from_tx(consensus_parameters),
-        }
-    }
-
-    fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64 {
-        match self {
-            TransactionType::Script(tx) => tx.max_gas(consensus_parameters),
-            TransactionType::Create(tx) => tx.max_gas(consensus_parameters),
-        }
-    }
-
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => {
-                tx.check_without_signatures(block_height, consensus_parameters)
-            }
-            TransactionType::Create(tx) => {
-                tx.check_without_signatures(block_height, consensus_parameters)
-            }
-        }
-    }
-
-    fn id(&self, chain_id: ChainId) -> Bytes32 {
-        match self {
-            TransactionType::Script(tx) => tx.id(chain_id),
-            TransactionType::Create(tx) => tx.id(chain_id),
-        }
-    }
-
-    fn maturity(&self) -> u32 {
-        match self {
-            TransactionType::Script(tx) => tx.maturity(),
-            TransactionType::Create(tx) => tx.maturity(),
-        }
-    }
-
-    fn with_maturity(self, maturity: u32) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_maturity(maturity)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_maturity(maturity)),
-        }
-    }
-
-    fn gas_price(&self) -> u64 {
-        match self {
-            TransactionType::Script(tx) => tx.gas_price(),
-            TransactionType::Create(tx) => tx.gas_price(),
-        }
-    }
-
-    fn with_gas_price(self, gas_price: u64) -> Self {
-        match self {
-            TransactionType::Script(tx) => TransactionType::Script(tx.with_gas_price(gas_price)),
-            TransactionType::Create(tx) => TransactionType::Create(tx.with_gas_price(gas_price)),
-        }
-    }
-
-    fn metered_bytes_size(&self) -> usize {
-        match self {
-            TransactionType::Script(tx) => tx.metered_bytes_size(),
-            TransactionType::Create(tx) => tx.metered_bytes_size(),
-        }
-    }
-
-    fn inputs(&self) -> &Vec<Input> {
-        match self {
-            TransactionType::Script(tx) => tx.inputs(),
-            TransactionType::Create(tx) => tx.inputs(),
-        }
-    }
-
-    fn outputs(&self) -> &Vec<Output> {
-        match self {
-            TransactionType::Script(tx) => tx.outputs(),
-            TransactionType::Create(tx) => tx.outputs(),
-        }
-    }
-
-    fn witnesses(&self) -> &Vec<Witness> {
-        match self {
-            TransactionType::Script(tx) => tx.witnesses(),
-            TransactionType::Create(tx) => tx.witnesses(),
-        }
-    }
-
-    fn is_using_predicates(&self) -> bool {
-        match self {
-            TransactionType::Script(tx) => tx.is_using_predicates(),
-            TransactionType::Create(tx) => tx.is_using_predicates(),
-        }
-    }
-
-    fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
-        match self {
-            TransactionType::Script(tx) => tx.precompute(chain_id),
-            TransactionType::Create(tx) => tx.precompute(chain_id),
-        }
-    }
-
-    fn append_witness(&mut self, witness: Witness) -> usize {
-        match self {
-            TransactionType::Script(tx) => tx.append_witness(witness),
-            TransactionType::Create(tx) => tx.append_witness(witness),
-        }
-    }
-
-    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
-        match self {
-            TransactionType::Script(tx) => tx.used_coins(),
-            TransactionType::Create(tx) => tx.used_coins(),
+            TransactionType::Mint(tx) => tx.into(),
         }
     }
 }

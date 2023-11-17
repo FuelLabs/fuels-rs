@@ -47,7 +47,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         let transaction = match client_response.transaction {
             Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
             Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
-            Transaction::Mint(_) => unimplemented!(),
+            Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
         };
 
         Self {
