@@ -6,7 +6,7 @@ use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 pub use fuel_crypto;
 use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId, MessageId};
+use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -16,14 +16,16 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::TxParameters,
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction::TxPolicies,
+        transaction_builders::{
+            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+        },
         transaction_response::TransactionResponse,
     },
 };
 
 use crate::{
-    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_id},
+    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
     provider::{Provider, ResourceFilter},
 };
 
@@ -117,6 +119,27 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             .await
             .map_err(Into::into)
     }
+
+    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
+    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
+    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
+    async fn get_spendable_resources(
+        &self,
+        asset_id: AssetId,
+        amount: u64,
+    ) -> Result<Vec<CoinType>> {
+        let filter = ResourceFilter {
+            from: self.address().clone(),
+            asset_id,
+            amount,
+            ..Default::default()
+        };
+
+        self.try_provider()?
+            .get_spendable_resources(filter)
+            .await
+            .map_err(Into::into)
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -146,36 +169,16 @@ pub trait Account: ViewOnlyAccount {
         ]
     }
 
-    /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
-    /// that add up at least to amount `amount`. The returned coins (UTXOs) are actual coins that
-    /// can be spent. The number of UXTOs is optimized to prevent dust accumulation.
-    async fn get_spendable_resources(
-        &self,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Result<Vec<CoinType>> {
-        let filter = ResourceFilter {
-            from: self.address().clone(),
-            asset_id,
-            amount,
-            ..Default::default()
-        };
-
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
-    }
-
     /// Add base asset inputs to the transaction to cover the estimated fee.
     /// Requires contract inputs to be at the start of the transactions inputs vec
     /// so that their indexes are retained
-    async fn adjust_for_fee<Tb: TransactionBuilder>(
+    async fn adjust_for_fee<Tb: TransactionBuilder + Sync>(
         &self,
         tb: &mut Tb,
         used_base_amount: u64,
     ) -> Result<()> {
-        let missing_base_amount = calculate_missing_base_amount(tb, used_base_amount)?;
+        let missing_base_amount =
+            calculate_missing_base_amount(tb, used_base_amount, self.try_provider()?).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
@@ -199,7 +202,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_policies: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -207,17 +210,13 @@ pub trait Account: ViewOnlyAccount {
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
-        let mut tx_builder = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            tx_parameters,
-            network_info,
-        );
+        let mut tx_builder =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info);
 
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
 
-        let tx = tx_builder.build()?;
+        let tx = tx_builder.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -242,7 +241,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32ContractId,
         balance: u64,
         asset_id: AssetId,
-        tx_parameters: TxParameters,
+        tx_policies: TxPolicies,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
@@ -272,13 +271,13 @@ pub trait Account: ViewOnlyAccount {
             asset_id,
             inputs,
             outputs,
-            tx_parameters,
+            tx_policies,
             network_info,
         );
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
-        let tx = tb.build()?;
+        let tx = tb.build(provider).await?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
@@ -297,8 +296,8 @@ pub trait Account: ViewOnlyAccount {
         &self,
         to: &Bech32Address,
         amount: u64,
-        tx_parameters: TxParameters,
-    ) -> std::result::Result<(TxId, MessageId, Vec<Receipt>), Error> {
+        tx_policies: TxPolicies,
+    ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
         let network_info = provider.network_info().await?;
 
@@ -310,13 +309,13 @@ pub trait Account: ViewOnlyAccount {
             to.into(),
             amount,
             inputs,
-            tx_parameters,
+            tx_policies,
             network_info,
         );
 
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
-        let tx = tb.build()?;
+        let tx = tb.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
         let receipts = provider
@@ -324,10 +323,10 @@ pub trait Account: ViewOnlyAccount {
             .await?
             .take_receipts_checked(None)?;
 
-        let message_id = extract_message_id(&receipts)
+        let nonce = extract_message_nonce(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
 
-        Ok((tx_id, message_id, receipts))
+        Ok((tx_id, nonce, receipts))
     }
 }
 
@@ -336,8 +335,11 @@ mod tests {
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{Address, Output};
-    use fuels_core::types::{transaction::Transaction, transaction_builders::NetworkInfo};
+    use fuel_tx::{Address, Output, Transaction as FuelTransaction};
+    use fuels_core::types::{
+        transaction::Transaction,
+        transaction_builders::{DryRunner, NetworkInfo},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -378,6 +380,15 @@ mod tests {
         Ok(())
     }
 
+    struct MockDryRunner;
+
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    impl DryRunner for MockDryRunner {
+        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
+            Ok(0)
+        }
+    }
+
     #[tokio::test]
     async fn sign_tx_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
         // ANCHOR: sign_tx
@@ -388,9 +399,7 @@ mod tests {
 
         let network_info = NetworkInfo {
             consensus_parameters: Default::default(),
-            max_gas_per_tx: 0,
             min_gas_price: 0,
-            gas_costs: Default::default(),
         };
         // Set up a transaction
         let mut tb = {
@@ -420,7 +429,8 @@ mod tests {
 
         // Sign the transaction
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
-        let tx = tb.build()?; // Resolve signatures and add corresponding witness indexes
+                                          // ANCHOR_END: sign_tx
+        let tx = tb.build(MockDryRunner).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
@@ -434,7 +444,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("51198e39c541cd3197785fd8add8cdbec3dc5aba7f8fbb23eb09455dd1003a8b78d94f247df8e1577805ea7eebd6d58336393942fd98484609e9e7d6d7a55f28")?);
+        assert_eq!(signature, Signature::from_str("ffd15da2db6668e95e3056c5526aaa37f582e2e5e55927879bf896e813d7f57f14398297ada9205847d16a8e3bcc299a372c9a69c4cf91c4ce2c3804dc900e96")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
@@ -443,7 +453,6 @@ mod tests {
 
         // Verify signature
         signature.verify(&recovered_address, &message)?;
-        // ANCHOR_END: sign_tx
 
         Ok(())
     }

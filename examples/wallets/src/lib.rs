@@ -135,7 +135,7 @@ mod tests {
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
         let asset_id = Default::default();
         let (_tx_id, _receipts) = wallets[0]
-            .transfer(wallets[1].address(), 1, asset_id, TxParameters::default())
+            .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
@@ -178,7 +178,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(&wallet, TxParameters::default())
+        .deploy(&wallet, TxPolicies::default())
         .await?;
 
         // ANCHOR: wallet_contract_transfer
@@ -193,7 +193,7 @@ mod tests {
         let amount = 300;
         let asset_id = random_asset_id;
         let (_tx_id, _receipts) = wallet
-            .force_transfer_to_contract(&contract_id, amount, asset_id, TxParameters::default())
+            .force_transfer_to_contract(&contract_id, amount, asset_id, TxPolicies::default())
             .await?;
 
         // Check that the contract now has 1 coin
@@ -344,13 +344,9 @@ mod tests {
 
         use fuels::prelude::*;
 
-        let config = Config {
-            manual_blocks_enabled: true,
-            ..Config::local_node()
-        };
         let wallets = launch_custom_provider_and_get_wallets(
             WalletsConfig::new(Some(1), None, None),
-            Some(config),
+            None,
             None,
         )
         .await?;
@@ -363,7 +359,7 @@ mod tests {
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
-            .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
+            .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
             .await?;
 
         let _block_height = wallet.try_provider()?.produce_blocks(1, None).await?;

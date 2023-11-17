@@ -18,8 +18,8 @@ use fuels_core::{
         bech32::{Bech32Address, Bech32ContractId},
         errors::{error, Error, Result},
         param_types::ParamType,
-        transaction::{ScriptTransaction, Transaction, TxParameters},
-        transaction_builders::{CreateTransactionBuilder, TransactionBuilder},
+        transaction::{ScriptTransaction, Transaction, TxPolicies},
+        transaction_builders::CreateTransactionBuilder,
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -296,7 +296,7 @@ impl Contract {
     pub async fn deploy(
         self,
         account: &impl Account,
-        tx_parameters: TxParameters,
+        tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
         let network_info = account.try_provider()?.network_info().await?;
 
@@ -306,20 +306,15 @@ impl Contract {
             self.state_root,
             self.salt,
             self.storage_slots,
-            tx_parameters,
+            tx_policies,
             network_info,
         );
 
         account.add_witnessses(&mut tb);
-        account
-            .adjust_for_fee(&mut tb, 0)
-            .await
-            .map_err(|err| error!(ProviderError, "{err}"))?;
+        account.adjust_for_fee(&mut tb, 0).await?;
         let tx = tb.build()?;
 
-        let provider = account
-            .try_provider()
-            .map_err(|_| error!(ProviderError, "Failed to get_provider"))?;
+        let provider = account.try_provider()?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
         provider.tx_status(&tx_id).await?.check(None)?;
@@ -463,7 +458,7 @@ impl ContractCall {
 /// Helper that handles submitting a call to a client and formatting the response
 pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
-    pub tx_parameters: TxParameters,
+    pub tx_policies: TxPolicies,
     decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
@@ -538,15 +533,14 @@ where
         self.contract_call.is_payable
     }
 
-    /// Sets the transaction parameters for a given transaction.
+    /// Sets the transaction policies for a given transaction.
     /// Note that this is a builder method, i.e. use it as a chain:
-
     /// ```ignore
-    /// let params = TxParameters { gas_price: 100, gas_limit: 1000000 };
-    /// my_contract_instance.my_method(...).tx_params(params).call()
+    /// let tx_policies = TxPolicies::default().with_gas_price(100);
+    /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
     /// ```
-    pub fn tx_params(mut self, params: TxParameters) -> Self {
-        self.tx_parameters = params;
+    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.tx_policies = tx_policies;
         self
     }
 
@@ -575,7 +569,7 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         build_tx_from_contract_calls(
             std::slice::from_ref(&self.contract_call),
-            self.tx_parameters,
+            self.tx_policies,
             &self.account,
         )
         .await
@@ -714,7 +708,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 ) -> Result<ContractCallHandler<T, D>> {
     let encoded_selector = signature;
 
-    let tx_parameters = TxParameters::default();
+    let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
@@ -735,7 +729,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     Ok(ContractCallHandler {
         contract_call,
-        tx_parameters,
+        tx_policies,
         cached_tx_id: None,
         account,
         datatype: PhantomData,
@@ -775,7 +769,7 @@ fn should_compute_custom_input_offset(args: &[Token]) -> bool {
 pub struct MultiContractCallHandler<T: Account> {
     pub contract_calls: Vec<ContractCall>,
     pub log_decoder: LogDecoder,
-    pub tx_parameters: TxParameters,
+    pub tx_policies: TxPolicies,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
@@ -786,7 +780,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub fn new(account: T) -> Self {
         Self {
             contract_calls: vec![],
-            tx_parameters: TxParameters::default(),
+            tx_policies: TxPolicies::default(),
             cached_tx_id: None,
             account,
             log_decoder: LogDecoder::new(Default::default()),
@@ -811,10 +805,10 @@ impl<T: Account> MultiContractCallHandler<T> {
         self
     }
 
-    /// Sets the transaction parameters for a given transaction.
+    /// Sets the transaction policies for a given transaction.
     /// Note that this is a builder method
-    pub fn tx_params(mut self, params: TxParameters) -> Self {
-        self.tx_parameters = params;
+    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.tx_policies = tx_policies;
         self
     }
 
@@ -861,7 +855,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         self.validate_contract_calls()?;
 
-        build_tx_from_contract_calls(&self.contract_calls, self.tx_parameters, &self.account).await
+        build_tx_from_contract_calls(&self.contract_calls, self.tx_policies, &self.account).await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.

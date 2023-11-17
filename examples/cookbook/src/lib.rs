@@ -3,7 +3,7 @@ mod tests {
     use fuels::{
         prelude::Result,
         types::{
-            transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+            transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
             Bits256,
         },
     };
@@ -47,7 +47,7 @@ mod tests {
             "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
             LoadConfiguration::default(),
         )?
-        .deploy(wallet, TxParameters::default())
+        .deploy(wallet, TxPolicies::default())
         .await?;
 
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
@@ -91,16 +91,26 @@ mod tests {
     #[tokio::test]
     async fn custom_chain() -> Result<()> {
         // ANCHOR: custom_chain_import
-        use fuels::{prelude::*, tx::ConsensusParameters};
+        use fuels::{
+            prelude::*,
+            tx::{ConsensusParameters, FeeParameters, TxParameters},
+        };
         // ANCHOR_END: custom_chain_import
 
         // ANCHOR: custom_chain_consensus
-        let consensus_parameters_config = ConsensusParameters::DEFAULT
-            .with_max_gas_per_tx(1000)
-            .with_gas_price_factor(10)
+        let tx_params = TxParameters::default()
+            .with_max_gas_per_tx(1_000)
             .with_max_inputs(2);
+        let fee_params = FeeParameters::default().with_gas_price_factor(10);
+
+        let consensus_parameters = ConsensusParameters {
+            tx_params,
+            fee_params,
+            ..Default::default()
+        };
+
         let chain_config = ChainConfig {
-            transaction_parameters: consensus_parameters_config,
+            consensus_parameters,
             ..ChainConfig::default()
         };
         // ANCHOR_END: custom_chain_consensus
@@ -116,7 +126,7 @@ mod tests {
         // ANCHOR_END: custom_chain_coins
 
         // ANCHOR: custom_chain_provider
-        let node_config = Config::local_node();
+        let node_config = Config::default();
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
         // ANCHOR_END: custom_chain_provider
@@ -170,11 +180,11 @@ mod tests {
         let mut tb = ScriptTransactionBuilder::prepare_transfer(
             inputs,
             outputs,
-            TxParameters::default(),
+            TxPolicies::default(),
             network_info,
         );
         wallet_1.sign_transaction(&mut tb);
-        let tx = tb.build()?;
+        let tx = tb.build(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
 
@@ -198,7 +208,7 @@ mod tests {
         // ANCHOR: create_or_use_rocksdb
         let provider_config = Config {
             database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
-            ..Config::local_node()
+            ..Config::default()
         };
         // ANCHOR_END: create_or_use_rocksdb
 

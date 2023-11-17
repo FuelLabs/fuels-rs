@@ -8,13 +8,13 @@ With `MultiContractCallHandler`, you can execute multiple contract calls within 
 
 You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with `call()` or `simulate()`.
 
-Next, you provide the prepared calls to your `MultiContractCallHandler` and optionally configure transaction parameters:
+Next, you provide the prepared calls to your `MultiContractCallHandler` and optionally configure transaction policies:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:multi_call_build}}
 ```
 
-> **Note:** any transaction parameters configured on separate contract calls are disregarded in favor of the parameters provided to `MultiContractCallHandler`.
+> **Note:** any transaction policies configured on separate contract calls are disregarded in favor of the parameters provided to `MultiContractCallHandler`.
 
 Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
 

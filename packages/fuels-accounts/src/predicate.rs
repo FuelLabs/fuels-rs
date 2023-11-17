@@ -15,7 +15,6 @@ pub struct Predicate {
     address: Bech32Address,
     code: Vec<u8>,
     data: UnresolvedBytes,
-    chain_id: u64,
     #[cfg(feature = "std")]
     provider: Option<Provider>,
 }
@@ -33,20 +32,18 @@ impl Predicate {
         &self.data
     }
 
-    pub fn calculate_address(code: &[u8], chain_id: u64) -> Bech32Address {
-        fuel_tx::Input::predicate_owner(code, &chain_id.into()).into()
+    pub fn calculate_address(code: &[u8]) -> Bech32Address {
+        fuel_tx::Input::predicate_owner(code).into()
     }
 
-    /// Uses default `ChainId`
     pub fn load_from(file_path: &str) -> Result<Self> {
         let code = fs::read(file_path)?;
-        Ok(Self::from_code(code, 0))
+        Ok(Self::from_code(code))
     }
 
-    pub fn from_code(code: Vec<u8>, chain_id: u64) -> Self {
+    pub fn from_code(code: Vec<u8>) -> Self {
         Self {
-            address: Self::calculate_address(&code, chain_id),
-            chain_id,
+            address: Self::calculate_address(&code),
             code,
             data: Default::default(),
             #[cfg(feature = "std")]
@@ -60,7 +57,7 @@ impl Predicate {
     }
 
     pub fn with_code(self, code: Vec<u8>) -> Self {
-        let address = Self::calculate_address(&code, self.chain_id);
+        let address = Self::calculate_address(&code);
         Self {
             code,
             address,
@@ -71,7 +68,7 @@ impl Predicate {
     pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
         let configurables: Configurables = configurables.into();
         configurables.update_constants_in(&mut self.code);
-        let address = Self::calculate_address(&self.code, self.chain_id);
+        let address = Self::calculate_address(&self.code);
         self.address = address;
         self
     }
@@ -84,16 +81,11 @@ impl Predicate {
     }
 
     pub fn set_provider(&mut self, provider: Provider) {
-        self.address = Self::calculate_address(&self.code, provider.chain_id().into());
-        self.chain_id = provider.chain_id().into();
         self.provider = Some(provider);
     }
 
     pub fn with_provider(self, provider: Provider) -> Self {
-        let address = Self::calculate_address(&self.code, provider.chain_id().into());
         Self {
-            address,
-            chain_id: provider.chain_id().into(),
             provider: Some(provider),
             ..self
         }

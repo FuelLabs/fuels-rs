@@ -101,3 +101,6 @@ members = [
   'tests/types/scripts/script_u256',
   'tests/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "feat/transaction-policies" }

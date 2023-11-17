@@ -8,7 +8,7 @@ use fuel_types::{bytes::padded_len_usize, ContractId};
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.
 pub fn base_offset_script(consensus_parameters: &ConsensusParameters) -> usize {
-    consensus_parameters.tx_offset() + fuel_tx::Script::script_offset_static()
+    consensus_parameters.tx_params().tx_offset() + fuel_tx::Script::script_offset_static()
 }
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
@@ -17,7 +17,9 @@ pub fn base_offset_create(consensus_parameters: &ConsensusParameters) -> usize {
     // The easiest way to get the offset of `fuel_tx::Create` is to get the offset of the last field
     // of `Create` -- i.e. `salt` and skip it by adding its length.
     // This should be updated if `fuel_tx::Create` ever adds more fields after `salt`.
-    consensus_parameters.tx_offset() + fuel_tx::Create::salt_offset_static() + Bytes32::LEN
+    consensus_parameters.tx_params().tx_offset()
+        + fuel_tx::Create::salt_offset_static()
+        + Bytes32::LEN
 }
 
 /// Calculates the length of the script based on the number of contract calls it

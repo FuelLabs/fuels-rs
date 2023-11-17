@@ -1,10 +1,11 @@
-use std::collections::{HashMap, HashSet};
-use std::hash::{Hash, Hasher};
-use tokio::time::{Duration, Instant};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::{Hash, Hasher},
+};
 
 use fuel_types::AssetId;
-use fuels_core::types::bech32::Bech32Address;
-use fuels_core::types::coin_type_id::CoinTypeId;
+use fuels_core::types::{bech32::Bech32Address, coin_type_id::CoinTypeId};
+use tokio::time::{Duration, Instant};
 
 type CoinCacheKey = (Bech32Address, AssetId);
 

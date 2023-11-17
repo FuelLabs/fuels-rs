@@ -88,7 +88,9 @@ pub async fn launch_custom_provider_and_get_wallets(
 
 #[cfg(test)]
 mod tests {
-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, Account, ViewOnlyAccount};
+    use fuel_core_chain_config::ChainConfig;
+    use fuel_tx::{ConsensusParameters, TxParameters};
+    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
     use fuels_core::{
         constants::BASE_ASSET_ID,
         types::{coin_type::CoinType, errors::Result},
@@ -193,38 +195,50 @@ mod tests {
 
     #[tokio::test]
     async fn generated_wallets_with_custom_chain_config() -> Result<()> {
-        use fuel_core_chain_config::ChainConfig;
-        use fuel_tx::ConsensusParameters;
+        let consensus_parameters = ConsensusParameters {
+            tx_params: TxParameters::default().with_max_gas_per_tx(10_000_000_000),
+            ..Default::default()
+        };
 
+        let block_gas_limit = 10_000_000_000;
         let chain_config = ChainConfig {
-            transaction_parameters: ConsensusParameters::DEFAULT
-                .with_max_gas_per_tx(10_000_000_000),
-            block_gas_limit: 10_000_000_000,
+            consensus_parameters,
+            block_gas_limit,
             ..ChainConfig::default()
         };
 
+        let num_wallets = 4;
+        let num_coins = 3;
+        let coin_amount = 2_000_000_000;
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(Some(4), Some(3), Some(2_000_000_000)),
+            WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(coin_amount)),
             None,
             Some(chain_config),
         )
         .await?;
 
-        assert_eq!(wallets.len(), 4);
+        assert_eq!(wallets.len() as u64, num_wallets);
 
         for wallet in wallets.into_iter() {
             assert_eq!(
-                wallet.try_provider()?.consensus_parameters().max_gas_per_tx,
-                10_000_000_000
-            );
-            assert_eq!(wallet.get_coins(AssetId::default()).await?.len(), 3);
-            assert_eq!(
                 wallet
+                    .try_provider()?
+                    .consensus_parameters()
+                    .tx_params()
+                    .max_gas_per_tx,
+                block_gas_limit
+            );
+            assert_eq!(
+                wallet.get_coins(AssetId::default()).await?.len() as u64,
+                num_coins
+            );
+            assert_eq!(
+                *wallet
                     .get_balances()
                     .await?
                     .get("0000000000000000000000000000000000000000000000000000000000000000")
-                    .expect("Failed to get value"),
-                &6_000_000_000
+                    .expect("failed to get value"),
+                num_coins * coin_amount
             );
         }
 

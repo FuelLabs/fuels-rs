@@ -383,7 +383,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -699,7 +699,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
         "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -959,7 +959,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1011,7 +1011,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let lib_contract_instance = MyContract::new(contract_id.clone(), wallet.clone());
@@ -1167,7 +1167,6 @@ async fn test_script_asserts_log() -> Result<()> {
             wallet = "wallet"
         )
     );
-
     {
         let a = 32;
         let b = 64;
