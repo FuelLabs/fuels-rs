@@ -11,8 +11,7 @@ Transaction policies are defined as follows:
 Where:
 
 1. **Gas Price** - Maximum gas price for transaction.
-2. **Witness Limit** - The maximum amount of witness data
-allowed for the transaction.
+2. **Witness Limit** - The maximum amount of witness data allowed for the transaction.
 3. **Maturity** - Block until which the transaction cannot be included.
 4. **Max Fee** - The maximum fee payable by this transaction.
 5. **Script Gas Limit** - The maximum amount of gas the transaction may consume for executing its script code.
