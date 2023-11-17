@@ -79,6 +79,7 @@ members = [
   'tests/types/predicates/address',
   'tests/types/predicates/enums',
   'tests/types/predicates/predicate_bytes',
+  'tests/types/predicates/predicate_bytes_hash',
   'tests/types/predicates/predicate_generics',
   'tests/types/predicates/predicate_raw_slice',
   'tests/types/predicates/predicate_std_lib_string',

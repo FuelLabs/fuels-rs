@@ -5,6 +5,7 @@ use fuels::{
     prelude::*,
     types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, U256},
 };
+use fuels_core::types::Bits256;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,
@@ -274,6 +275,29 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
     );
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_generics").await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_bytes_hash/out/debug/predicate_bytes_hash-abi.json"
+
+    ));
+
+    let bytes = Bytes::from_hex_str(
+        "0x75a448b91bb82a255757e61ba3eb7afe282c09842485268d4d72a027ec0cffc80500000000",
+    )?;
+
+    let bits256 = Bits256::from_hex_str(
+        "0x173d69ea3d0aa050d01ff7cc60ccd4579b567c465cd115c6876c2da4a332fb99",
+    )?;
+
+    let data = MyPredicateEncoder::encode_data(bytes, bits256);
+
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_bytes_hash").await?;
 
     Ok(())
 }

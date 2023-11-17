@@ -1938,9 +1938,11 @@ async fn test_bytes_as_input() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
+        // ANCHOR: bytes_arg
         let bytes = Bytes(vec![40, 41, 42]);
 
         contract_methods.accept_bytes(bytes).call().await?;
+        // ANCHOR_END: bytes_arg
     }
     {
         let bytes = Bytes(vec![40, 41, 42]);
