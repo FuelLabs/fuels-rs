@@ -225,13 +225,16 @@ where
 
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
-        let tx_status = if simulate {
-            self.provider.checked_dry_run(tx).await?
+        let receipts = if simulate {
+            let (status, receipts) = self.provider.checked_dry_run(tx).await?;
+            status.check(&receipts, Some(&self.log_decoder))?;
+            receipts
         } else {
             let tx_id = self.provider.send_transaction_and_await_commit(tx).await?;
-            self.provider.tx_status(&tx_id).await?
+            self.provider
+                .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+                .await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -254,9 +257,8 @@ where
 
         let receipts = self
             .provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
+            .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+            .await?;
 
         self.get_response(receipts)
     }

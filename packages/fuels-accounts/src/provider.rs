@@ -17,10 +17,10 @@ use fuel_tx::{
     TxId, UtxoId,
 };
 use fuel_types::{Address, Bytes32, ChainId, Nonce};
-use fuel_vm::state::ProgramState;
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
+    codec::LogDecoder,
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -282,41 +282,24 @@ impl Provider {
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
-        let fetch_receipts = || async {
-            let receipts = self.client.receipts(tx_id).await?;
-            receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
-        };
+        Ok(self.client.transaction_status(tx_id).await?.into())
+    }
 
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let status = match tx_status {
-            TransactionStatus::Success { .. } => {
-                let receipts = fetch_receipts().await?;
-                TxStatus::Success { receipts }
-            }
-            TransactionStatus::Failure {
-                reason,
-                program_state,
-                ..
-            } => {
-                let receipts = fetch_receipts().await?;
-                let revert_id = program_state
-                    .and_then(|state| match state {
-                        ProgramState::Revert(revert_id) => Some(revert_id),
-                        _ => None,
-                    })
-                    .expect("Transaction failed without a `revert_id`");
+    pub async fn receipts(&self, tx_id: &TxId) -> ProviderResult<Vec<Receipt>> {
+        let receipts = self.client.receipts(tx_id).await?;
+        receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
+    }
 
-                TxStatus::Revert {
-                    receipts,
-                    reason,
-                    revert_id,
-                }
-            }
-            TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
-        };
-
-        Ok(status)
+    pub async fn get_receipts_and_check_status(
+        &self,
+        tx_id: &TxId,
+        log_decoder: Option<&LogDecoder>,
+    ) -> Result<Vec<Receipt>> {
+        let status = self.tx_status(&tx_id).await?;
+        status.is_revert_or_success()?;
+        let receipts = self.receipts(&tx_id).await?;
+        status.check(&receipts, log_decoder)?;
+        Ok(receipts)
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
@@ -369,12 +352,12 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<TxStatus> {
+    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<(TxStatus, Vec<Receipt>)> {
         let receipts = self.dry_run(tx).await?;
-        Ok(Self::tx_status_from_receipts(receipts))
+        Ok((Self::tx_status_from_receipts(&receipts), receipts))
     }
 
-    fn tx_status_from_receipts(receipts: Vec<Receipt>) -> TxStatus {
+    fn tx_status_from_receipts(receipts: &[Receipt]) -> TxStatus {
         let revert_reason = receipts.iter().find_map(|receipt| match receipt {
             Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
                 Some(format!("{result:?}"))
@@ -384,11 +367,16 @@ impl Provider {
 
         match revert_reason {
             Some(reason) => TxStatus::Revert {
-                receipts,
+                block_id: Default::default(),
                 reason,
                 revert_id: 0,
+                time: Default::default(),
             },
-            None => TxStatus::Success { receipts },
+            None => TxStatus::Success {
+                block_id: Default::default(),
+                time: Default::default(),
+                program_state: None,
+            },
         }
     }
 

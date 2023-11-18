@@ -219,10 +219,7 @@ pub trait Account: ViewOnlyAccount {
         let tx = tx_builder.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let receipts = provider.get_receipts_and_check_status(&tx_id, None).await?;
 
         Ok((tx_id, receipts))
     }
@@ -281,10 +278,7 @@ pub trait Account: ViewOnlyAccount {
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let receipts = provider.get_receipts_and_check_status(&tx_id, None).await?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -318,10 +312,7 @@ pub trait Account: ViewOnlyAccount {
         let tx = tb.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let receipts = provider.get_receipts_and_check_status(&tx_id, None).await?;
 
         let nonce = extract_message_nonce(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");

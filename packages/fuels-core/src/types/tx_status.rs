@@ -1,44 +1,73 @@
+use chrono::{DateTime, Utc};
 use fuel_abi_types::error_codes::{
     FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
+use fuel_core_client::client::types::primitives::BlockId;
 #[cfg(feature = "std")]
 use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
 use fuel_tx::Receipt;
+use fuel_types::Bytes32;
 #[cfg(feature = "std")]
 use fuel_vm::state::ProgramState;
+use std::str::FromStr;
+use tai64::Tai64;
 
 use crate::{
     codec::LogDecoder,
+    error,
     types::errors::{Error, Result},
 };
 
 #[derive(Debug, Clone)]
 pub enum TxStatus {
     Success {
-        receipts: Vec<Receipt>,
+        block_id: Bytes32,
+        time: DateTime<Utc>,
+        program_state: Option<ProgramState>,
     },
-    Submitted,
+    Submitted {
+        submitted_at: DateTime<Utc>,
+    },
     SqueezedOut {
         reason: String,
     },
     Revert {
-        receipts: Vec<Receipt>,
+        block_id: Bytes32,
         reason: String,
         revert_id: u64,
+        time: DateTime<Utc>,
     },
 }
 
 impl TxStatus {
-    pub fn check(&self, log_decoder: Option<&LogDecoder>) -> Result<()> {
+    pub fn check(&self, receipts: &[Receipt], log_decoder: Option<&LogDecoder>) -> Result<()> {
         match self {
-            Self::SqueezedOut { reason } => Err(Error::SqueezedOutTransactionError(reason.clone())),
             Self::Revert {
-                receipts,
                 reason,
                 revert_id: id,
+                ..
             } => Self::map_revert_error(receipts, reason, *id, log_decoder),
-            _ => Ok(()),
+            Self::Success { .. } => Ok(()),
+            Self::Submitted { .. } => Err(error!(
+                InvalidData,
+                "Calling .check on a Submitted transaction"
+            )),
+            Self::SqueezedOut { .. } => Err(error!(
+                InvalidData,
+                "Calling .check on a SqueezedOUt transaction"
+            )),
+        }
+    }
+
+    pub fn is_revert_or_success(&self) -> Result<()> {
+        match self {
+            Self::Success { .. } => Ok(()),
+            Self::Revert { .. } => Ok(()),
+            Self::SqueezedOut { reason } => Err(Error::SqueezedOutTransactionError(reason.clone())),
+            Self::Submitted { .. } => Err(Error::ProviderError(format!(
+                "Transaction is only in submitted state"
+            ))),
         }
     }
 
@@ -74,29 +103,37 @@ impl TxStatus {
             receipts: receipts.to_vec(),
         })
     }
-
-    pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Vec<Receipt>> {
-        self.check(log_decoder)?;
-        Ok(self.take_receipts())
-    }
-
-    pub fn take_receipts(self) -> Vec<Receipt> {
-        match self {
-            TxStatus::Success { receipts } | TxStatus::Revert { receipts, .. } => receipts,
-            _ => vec![],
-        }
-    }
 }
 #[cfg(feature = "std")]
 impl From<ClientTransactionStatus> for TxStatus {
     fn from(client_status: ClientTransactionStatus) -> Self {
+        let convert_timestamp = |timestamp: Tai64| {
+            DateTime::from_timestamp(timestamp.to_unix(), 0)
+                .ok_or(error!(InvalidData, "Timestamp should be valid UTC"))
+                .expect("Timestamp should be valid UTC")
+        };
+        let convert_block_id = |block_id_string: String| {
+            BlockId::from_str(block_id_string.as_str()).expect("Block id should be valid")
+        };
         match client_status {
-            ClientTransactionStatus::Submitted { .. } => TxStatus::Submitted {},
-            ClientTransactionStatus::Success { .. } => TxStatus::Success { receipts: vec![] },
+            ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
+            ClientTransactionStatus::Submitted { submitted_at } => TxStatus::Submitted {
+                submitted_at: convert_timestamp(submitted_at),
+            },
+            ClientTransactionStatus::Success {
+                block_id,
+                time,
+                program_state,
+            } => TxStatus::Success {
+                block_id: convert_block_id(block_id),
+                time: convert_timestamp(time),
+                program_state,
+            },
             ClientTransactionStatus::Failure {
+                block_id,
+                time,
                 reason,
                 program_state,
-                ..
             } => {
                 let revert_id = program_state
                     .and_then(|state| match state {
@@ -105,12 +142,12 @@ impl From<ClientTransactionStatus> for TxStatus {
                     })
                     .expect("Transaction failed without a `revert_id`");
                 TxStatus::Revert {
-                    receipts: vec![],
+                    time: convert_timestamp(time),
                     reason,
                     revert_id,
+                    block_id: convert_block_id(block_id),
                 }
             }
-            ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
         }
     }
 }

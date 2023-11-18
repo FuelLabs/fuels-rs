@@ -760,7 +760,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let tx = tb.build(&provider).await?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-    provider.tx_status(&tx_id).await?.check(None)?;
+    provider.get_receipts_and_check_status(&tx_id, None).await?;
 
     let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
 

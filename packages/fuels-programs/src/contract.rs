@@ -317,7 +317,7 @@ impl Contract {
         let provider = account.try_provider()?;
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        provider.tx_status(&tx_id).await?.check(None)?;
+        provider.get_receipts_and_check_status(&tx_id, None).await?;
 
         Ok(self.contract_id.into())
     }
@@ -593,12 +593,9 @@ where
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
         let provider = self.account.try_provider()?;
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
         let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
+            .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+            .await?;
         self.get_response(receipts)
     }
 
@@ -616,14 +613,16 @@ where
         let chain_id = provider.chain_id();
         self.cached_tx_id = Some(tx.id(chain_id));
 
-        let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+        let receipts = if simulate {
+            let (status, receipts) = provider.checked_dry_run(tx).await?;
+            status.check(&receipts, Some(&self.log_decoder))?;
+            receipts
         } else {
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider.tx_status(&tx_id).await?
+            provider
+                .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+                .await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
         self.get_response(receipts)
     }
 
@@ -878,9 +877,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
 
         let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
+            .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+            .await?;
 
         self.get_response(receipts)
     }
@@ -904,13 +902,16 @@ impl<T: Account> MultiContractCallHandler<T> {
 
         self.cached_tx_id = Some(tx.id(chain_id));
 
-        let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+        let receipts = if simulate {
+            let (status, receipts) = provider.checked_dry_run(tx).await?;
+            status.check(&receipts, Some(&self.log_decoder))?;
+            receipts
         } else {
             let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider.tx_status(&tx_id).await?
+            provider
+                .get_receipts_and_check_status(&tx_id, Some(&self.log_decoder))
+                .await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
     }
@@ -920,7 +921,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(tx).await?.check(None)?;
+        let (status, receipts) = provider.checked_dry_run(tx).await?;
+        status.check(&receipts, None)?;
 
         Ok(())
     }

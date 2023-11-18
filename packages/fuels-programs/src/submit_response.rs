@@ -95,9 +95,8 @@ impl<T: Account, D: Tokenizable + Parameterize + Debug> SubmitResponse<T, D> {
     pub async fn response(self) -> Result<FuelCallResponse<D>> {
         let provider = self.call_handler.try_provider()?;
         let receipts = provider
-            .tx_status(&self.tx_id)
-            .await?
-            .take_receipts_checked(Some(self.call_handler.log_decoder()))?;
+            .get_receipts_and_check_status(&self.tx_id, Some(self.call_handler.log_decoder()))
+            .await?;
 
         self.call_handler.get_response(receipts)
     }
@@ -128,9 +127,8 @@ impl<T: Account> SubmitResponseMultiple<T> {
     pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
         let provider = self.call_handler.account.try_provider()?;
         let receipts = provider
-            .tx_status(&self.tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.call_handler.log_decoder))?;
+            .get_receipts_and_check_status(&self.tx_id, Some(&self.call_handler.log_decoder))
+            .await?;
 
         self.call_handler.get_response(receipts)
     }
