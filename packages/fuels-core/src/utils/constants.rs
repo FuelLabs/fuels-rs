@@ -16,5 +16,5 @@ pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
 // Supports 10 signatures
 pub const DEFAULT_SCRIPT_WITNESS_LIMIT: u64 = 720;
 
-pub const DEFAULT_CREATE_WITNESS_LIMIT: u64 = 20_000;
+pub const DEFAULT_CREATE_WITNESS_LIMIT: u64 = 100_000;
 //ANCHOR_END: witness_default
