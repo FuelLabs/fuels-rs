@@ -115,7 +115,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_basic_script_with_tx_parameters() -> Result<()> {
+async fn test_basic_script_with_tx_policies() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -133,16 +133,16 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
     let b = 2000u32;
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
-    // ANCHOR: script_with_tx_params
-    let parameters = TxParameters::default()
+    // ANCHOR: script_with_tx_policies
+    let tx_policies = TxPolicies::default()
         .with_gas_price(1)
-        .with_gas_limit(1_000_000);
+        .with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
-        .tx_params(parameters)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
-    // ANCHOR_END: script_with_tx_params
+    // ANCHOR_END: script_with_tx_policies
     assert_eq!(result.value, "hello");
 
     Ok(())
@@ -150,11 +150,18 @@ async fn test_basic_script_with_tx_parameters() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{test_helpers::ChainConfig, tx::ConsensusParameters, types::coin::Coin};
+    use fuels::{
+        test_helpers::ChainConfig,
+        tx::{ConsensusParameters, TxParameters},
+        types::coin::Coin,
+    };
 
-    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(128);
+    let consensus_parameters = ConsensusParameters {
+        tx_params: TxParameters::default().with_max_inputs(128),
+        ..Default::default()
+    };
     let chain_config = ChainConfig {
-        transaction_parameters: consensus_parameters_config,
+        consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
     };
 
@@ -168,7 +175,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     );
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    assert_eq!(provider.consensus_parameters(), consensus_parameters_config);
+    assert_eq!(*provider.consensus_parameters(), consensus_parameters);
     wallet.set_provider(provider.clone());
 
     setup_program_test!(
@@ -189,40 +196,6 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "heyoo");
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_script_signing() -> Result<()> {
-    let wallet_config = WalletsConfig::new(Some(1), None, None);
-    let provider_config = Config {
-        utxo_validation: true,
-        ..Config::local_node()
-    };
-
-    let wallets =
-        launch_custom_provider_and_get_wallets(wallet_config, Some(provider_config), None).await?;
-    let wallet = wallets.first().unwrap();
-
-    setup_program_test!(
-        Abigen(Script(
-            name = "BimBamScript",
-            project = "packages/fuels/tests/scripts/basic_script"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "BimBamScript",
-            wallet = "wallet"
-        )
-    );
-
-    let a = 1000u64;
-    let b = 2000u32;
-
-    let result = script_instance.main(a, b).call().await?;
-
-    assert_eq!(result.value, "hello");
-
     Ok(())
 }
 

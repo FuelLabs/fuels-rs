@@ -77,7 +77,7 @@ async fn call_with_structs() -> Result<()> {
         "tests/types/contracts/complex_types_contract/out/debug/complex_types_contract.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallet, TxParameters::default())
+    .deploy(&wallet, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id, wallet).methods();
@@ -1938,9 +1938,11 @@ async fn test_bytes_as_input() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
+        // ANCHOR: bytes_arg
         let bytes = Bytes(vec![40, 41, 42]);
 
         contract_methods.accept_bytes(bytes).call().await?;
+        // ANCHOR_END: bytes_arg
     }
     {
         let bytes = Bytes(vec![40, 41, 42]);

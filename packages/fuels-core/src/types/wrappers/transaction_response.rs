@@ -9,8 +9,10 @@ use fuel_core_client::client::types::{
 use fuel_tx::Transaction;
 use fuel_types::Bytes32;
 
-use crate::types::transaction::{CreateTransaction, ScriptTransaction, TransactionType};
-use crate::types::tx_status::TxStatus;
+use crate::types::{
+    transaction::{CreateTransaction, ScriptTransaction, TransactionType},
+    tx_status::TxStatus,
+};
 
 #[derive(Debug, Clone)]
 pub struct TransactionResponse {
@@ -45,7 +47,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         let transaction = match client_response.transaction {
             Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
             Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
-            Transaction::Mint(_) => unimplemented!(),
+            Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
         };
 
         Self {

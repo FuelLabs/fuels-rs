@@ -30,7 +30,8 @@ fn main(
         let mut exp_vec_in_vec = Vec::new();
         exp_vec_in_vec
             .push(vec_from([0u32, 1u32, 2u32]));
-        exp_vec_in_vec.push(vec_from([0u32, 1u32, 2u32]));
+        exp_vec_in_vec
+            .push(vec_from([0u32, 1u32, 2u32]));
 
         require(vec_in_vec == exp_vec_in_vec, "vec_in_vec err");
     }
@@ -112,10 +113,12 @@ fn main(
         let mut inner_vec_2 = Vec::new();
 
         let inner_inner_vec_3 = vec_from([6u32, 7u32, 8u32]);
-        inner_vec_2.push(inner_inner_vec_3);
+        inner_vec_2
+            .push(inner_inner_vec_3);
 
         let inner_inner_vec_4 = vec_from([9u32, 10u32, 11u32]);
-        inner_vec_2.push(inner_inner_vec_4);
+        inner_vec_2
+            .push(inner_inner_vec_4);
 
         exp_vec_in_a_vec_in_a_struct_in_a_vec
             .push(SomeStruct { a: inner_vec_2 });

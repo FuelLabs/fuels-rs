@@ -5,7 +5,7 @@ use fuels::{
     types::{
         coin::Coin,
         message::Message,
-        transaction_builders::{ScriptTransactionBuilder, TransactionBuilder},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
     },
 };
 use fuels_core::{
@@ -93,11 +93,7 @@ async fn setup_predicate_test(
         amount,
     ));
 
-    let config = Config {
-        manual_blocks_enabled: true,
-        ..Config::local_node()
-    };
-    let provider = setup_test_provider(coins, messages, Some(config), None).await?;
+    let provider = setup_test_provider(coins, messages, None, None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
@@ -134,7 +130,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
             predicate.address(),
             total_balance,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -169,7 +165,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
             receiver.address(),
             predicate_balance,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -219,17 +215,19 @@ async fn pay_with_predicate() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::new(Some(1), Some(1000000), 0);
+    let tx_policies = TxPolicies::default()
+        .with_gas_price(1)
+        .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -272,19 +270,19 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
-    let tx_params = TxParameters::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(1)
-        .with_gas_limit(1000000);
+        .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
 
     let response = contract_methods
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -321,13 +319,10 @@ async fn predicate_contract_transfer() -> Result<()> {
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
-    let contract_balances = predicate
-        .try_provider()?
-        .get_contract_balances(&contract_id)
-        .await?;
+    let contract_balances = provider.get_contract_balances(&contract_id).await?;
     assert!(contract_balances.is_empty());
 
     let amount = 300;
@@ -336,7 +331,7 @@ async fn predicate_contract_transfer() -> Result<()> {
             &contract_id,
             amount,
             AssetId::default(),
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -355,8 +350,6 @@ async fn predicate_contract_transfer() -> Result<()> {
 #[tokio::test]
 async fn predicate_transfer_to_base_layer() -> Result<()> {
     use std::str::FromStr;
-
-    use fuels::prelude::*;
 
     abigen!(Predicate(
         name = "MyPredicate",
@@ -385,8 +378,8 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
             .expect("Invalid address.");
     let base_layer_address = Bech32Address::from(base_layer_address);
 
-    let (tx_id, msg_id, _receipts) = predicate
-        .withdraw_to_base_layer(&base_layer_address, amount, TxParameters::default())
+    let (tx_id, msg_nonce, _receipts) = predicate
+        .withdraw_to_base_layer(&base_layer_address, amount, TxPolicies::default())
         .await?;
 
     // Create the next commit block to be able generate the proof
@@ -394,7 +387,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let proof = predicate
         .try_provider()?
-        .get_message_proof(&tx_id, &msg_id, None, Some(2))
+        .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
         .await?
         .expect("Failed to retrieve message proof.");
 
@@ -469,7 +462,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
         network_info,
     );
     wallet.sign_transaction(&mut tb);
-    let tx = tb.build()?;
+    let tx = tb.build(&provider).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -520,12 +513,12 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
     println!("Contract deployed @ {contract_id}");
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let my_tx_params = TxParameters::default().with_gas_price(1);
+    let tx_policies = TxPolicies::default().with_gas_price(1);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
@@ -535,7 +528,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     {
         let response = contract_methods
             .get_msg_amount()
-            .tx_params(my_tx_params)
+            .with_tx_policies(tx_policies)
             .call_params(call_params.clone())?
             .call()
             .await?;
@@ -597,7 +590,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
         "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
@@ -655,7 +648,7 @@ async fn predicate_configurables() -> Result<()> {
             receiver.address(),
             predicate_balance,
             asset_id,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -703,11 +696,11 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
-        TxParameters::default().with_gas_price(1),
+        TxPolicies::default().with_gas_price(1),
         network_info,
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
-    let tx = tb.build()?;
+    let tx = tb.build(&provider).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
@@ -758,13 +751,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default().with_gas_price(1),
+        TxPolicies::default().with_gas_price(1),
         network_info,
     );
 
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    let tx = tb.build()?;
+    let tx = tb.build(&provider).await?;
 
     let tx_id = provider.send_transaction_and_await_commit(tx).await?;
     provider.tx_status(&tx_id).await?.check(None)?;
@@ -809,10 +802,11 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info.clone(),
     )
-    .build()?;
+    .build(&provider)
+    .await?;
 
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
@@ -876,10 +870,11 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxParameters::default(),
+        TxPolicies::default(),
         network_info.clone(),
     )
-    .build()?;
+    .build(&provider)
+    .await?;
 
     let tx_id = tx.id(network_info.chain_id());
 

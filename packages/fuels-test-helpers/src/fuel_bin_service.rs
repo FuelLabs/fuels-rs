@@ -93,7 +93,7 @@ impl ExtendedConfig {
             [
                 (self.config.vm_backtrace, "--vm-backtrace"),
                 (self.config.utxo_validation, "--utxo-validation"),
-                (self.config.manual_blocks_enabled, "--manual_blocks_enabled"),
+                (self.config.debug, "--debug"),
             ]
             .into_iter()
             .filter(|(flag, _)| *flag)

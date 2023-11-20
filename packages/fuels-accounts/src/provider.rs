@@ -4,14 +4,22 @@ mod retry_util;
 mod retryable_client;
 mod supported_versions;
 
+#[cfg(feature = "coin-cache")]
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance, TransactionStatus},
 };
-use fuel_tx::{AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, TxId, UtxoId};
-use fuel_types::{Address, Bytes32, ChainId, MessageId, Nonce};
+use fuel_tx::{
+    AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
+    TxId, UtxoId,
+};
+use fuel_types::{Address, Bytes32, ChainId, Nonce};
 use fuel_vm::state::ProgramState;
+#[cfg(feature = "coin-cache")]
+use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
     constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
@@ -25,7 +33,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::Transaction,
-        transaction_builders::NetworkInfo,
+        transaction_builders::{DryRunner, NetworkInfo},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -34,17 +42,12 @@ pub use retry_util::{Backoff, RetryConfig};
 use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
 use tai64::Tai64;
 use thiserror::Error;
-
-use crate::provider::retryable_client::RetryableClient;
+#[cfg(feature = "coin-cache")]
+use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
-#[cfg(feature = "coin-cache")]
-use fuels_core::types::coin_type_id::CoinTypeId;
-#[cfg(feature = "coin-cache")]
-use std::sync::Arc;
-#[cfg(feature = "coin-cache")]
-use tokio::sync::Mutex;
+use crate::provider::retryable_client::RetryableClient;
 
 type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
@@ -87,7 +90,7 @@ impl ResourceQueries {
         Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self) -> Vec<(AssetId, u64, Option<u64>)> {
+    pub fn spend_query(&self) -> Vec<(AssetId, u64, Option<u32>)> {
         vec![(self.asset_id, self.amount, None)]
     }
 }
@@ -186,7 +189,7 @@ impl Provider {
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = RetryableClient::new(&url, Default::default())?;
-        let consensus_parameters = client.chain_info().await?.consensus_parameters.into();
+        let consensus_parameters = client.chain_info().await?.consensus_parameters;
 
         Ok(Self {
             client,
@@ -224,11 +227,11 @@ impl Provider {
         let chain_info = self.chain_info().await?;
         tx.check_without_signatures(
             chain_info.latest_block.header.height,
-            &self.consensus_parameters(),
+            self.consensus_parameters(),
         )?;
 
         if tx.is_using_predicates() {
-            tx.estimate_predicates(&self.consensus_parameters, &chain_info.gas_costs)?;
+            tx.estimate_predicates(&self.consensus_parameters)?;
         }
 
         self.validate_transaction(tx.clone()).await?;
@@ -246,21 +249,7 @@ impl Provider {
             .estimate_transaction_cost(tx.clone(), Some(tolerance))
             .await?;
 
-        if gas_used > tx.gas_limit() {
-            return Err(error!(
-                ProviderError,
-                "gas_limit({}) is lower than the estimated gas_used({})",
-                tx.gas_limit(),
-                gas_used
-            ));
-        } else if min_gas_price > tx.gas_price() {
-            return Err(error!(
-                ProviderError,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                tx.gas_price(),
-                min_gas_price
-            ));
-        }
+        tx.validate_gas(min_gas_price, gas_used)?;
 
         Ok(())
     }
@@ -321,8 +310,8 @@ impl Provider {
         Ok(self.client.chain_info().await?.into())
     }
 
-    pub fn consensus_parameters(&self) -> ConsensusParameters {
-        self.consensus_parameters
+    pub fn consensus_parameters(&self) -> &ConsensusParameters {
+        &self.consensus_parameters
     }
 
     pub async fn network_info(&self) -> ProviderResult<NetworkInfo> {
@@ -650,7 +639,7 @@ impl Provider {
 
     pub async fn produce_blocks(
         &self,
-        blocks_to_produce: u64,
+        blocks_to_produce: u32,
         start_time: Option<DateTime<Utc>>,
     ) -> io::Result<u32> {
         let start_time = start_time.map(|time| Tai64::from_unix(time.timestamp()).0);
@@ -690,18 +679,12 @@ impl Provider {
         let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
-        // Remove limits from an existing Transaction for accurate gas estimation
-        let dry_run_tx = self.generate_dry_run_tx(tx.clone());
         let gas_used = self
-            .get_gas_used_with_tolerance(dry_run_tx.clone(), tolerance)
+            .get_gas_used_with_tolerance(tx.clone(), tolerance)
             .await?;
 
-        // Update the tx with estimated gas_used and correct gas price to calculate the total_fee
-        let dry_run_tx = dry_run_tx
-            .with_gas_price(gas_price)
-            .with_gas_limit(gas_used);
-
-        let transaction_fee = dry_run_tx
+        let transaction_fee = tx
+            .clone()
             .fee_checked_from_tx(&self.consensus_parameters)
             .expect("Error calculating TransactionFee");
 
@@ -709,16 +692,9 @@ impl Provider {
             min_gas_price,
             gas_price,
             gas_used,
-            metered_bytes_size: dry_run_tx.metered_bytes_size() as u64,
+            metered_bytes_size: tx.metered_bytes_size() as u64,
             total_fee: transaction_fee.max_fee(),
         })
-    }
-
-    // Remove limits from an existing Transaction to get an accurate gas estimation
-    fn generate_dry_run_tx<T: Transaction>(&self, tx: T) -> T {
-        // Simulate the contract call with max gas to get the complete gas_used
-        let max_gas_per_tx = self.consensus_parameters.max_gas_per_tx;
-        tx.clone().with_gas_limit(max_gas_per_tx).with_gas_price(0)
     }
 
     // Increase estimated gas by the provided tolerance
@@ -762,7 +738,7 @@ impl Provider {
     pub async fn get_message_proof(
         &self,
         tx_id: &TxId,
-        message_id: &MessageId,
+        nonce: &Nonce,
         commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
     ) -> ProviderResult<Option<MessageProof>> {
@@ -770,7 +746,7 @@ impl Provider {
             .client
             .message_proof(
                 tx_id,
-                message_id,
+                nonce,
                 commit_block_id.map(Into::into),
                 commit_block_height.map(Into::into),
             )
@@ -782,5 +758,14 @@ impl Provider {
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.client.set_retry_config(retry_config);
         self
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
+impl DryRunner for Provider {
+    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
+        let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
+        let gas_used = self.get_gas_used(&receipts);
+        Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
     }
 }

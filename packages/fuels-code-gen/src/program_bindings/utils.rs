@@ -6,10 +6,9 @@ use itertools::Itertools;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
-use super::resolved_type::GenericType;
 use crate::{
     error::Result,
-    program_bindings::resolved_type::{ResolvedType, TypeResolver},
+    program_bindings::resolved_type::{GenericType, ResolvedType, TypeResolver},
     utils::{self, safe_ident, TypePath},
 };
 
