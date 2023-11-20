@@ -3,7 +3,7 @@
 Once you've deployed your contract, as seen in the previous sections, you'll likely want to:
 
 1. Call contract methods;
-2. Configure call and transaction parameters such as gas price, byte price, and gas limit;
+2. Configure call parameters and transaction policies;
 3. Forward coins and gas in your contract calls;
 4. Read and interpret returned values and logs.
 

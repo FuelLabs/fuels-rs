@@ -1,5 +1,5 @@
 use fuel_tx::{Output, Receipt};
-use fuel_types::MessageId;
+use fuel_types::Nonce;
 use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
@@ -10,16 +10,20 @@ use fuels_core::{
     },
 };
 
-pub fn extract_message_id(receipts: &[Receipt]) -> Option<MessageId> {
-    receipts.iter().find_map(|m| m.message_id())
+use crate::provider::Provider;
+
+pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
+    receipts.iter().find_map(|m| m.nonce()).copied()
 }
 
-pub fn calculate_missing_base_amount(
+pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
     used_base_amount: u64,
+    provider: &Provider,
 ) -> Result<u64> {
     let transaction_fee = tb
-        .fee_checked_from_tx()?
+        .fee_checked_from_tx(provider)
+        .await?
         .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
 
     let available_amount = available_base_amount(tb);

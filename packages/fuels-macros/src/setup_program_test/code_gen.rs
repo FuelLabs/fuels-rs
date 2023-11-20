@@ -108,7 +108,6 @@ fn contract_deploying_code(
     commands
         .iter()
         .map(|command| {
-
             let contract_instance_name = ident(&command.name);
             let contract_struct_name = ident(&command.contract.value());
             let wallet_name = ident(&command.wallet);
@@ -128,9 +127,19 @@ fn contract_deploying_code(
                 let #contract_instance_name = {
                     let load_config = LoadConfiguration::default().with_salt(salt);
 
-                    let loaded_contract = Contract::load_from(#bin_path, load_config).expect("Failed to load the contract");
+                    let loaded_contract = Contract::load_from(
+                        #bin_path,
+                        load_config
+                    )
+                    .expect("Failed to load the contract");
 
-                    let contract_id = loaded_contract.deploy(&#wallet_name, TxParameters::default()).await.expect("Failed to deploy the contract");
+                    let contract_id = loaded_contract.deploy(
+                        &#wallet_name,
+                        TxPolicies::default()
+                    )
+                    .await
+                    .expect("Failed to deploy the contract");
+
                     #contract_struct_name::new(contract_id, #wallet_name.clone())
                 };
             }

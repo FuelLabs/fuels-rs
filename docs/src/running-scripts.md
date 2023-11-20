@@ -12,12 +12,12 @@ Furthermore, if you need to separate submission from value retrieval for any rea
 {{#include ../../packages/fuels/tests/scripts.rs:submit_response_script}}
 ```
 
-## Running scripts with transaction parameters
+## Running scripts with transaction policies
 
-The method for passing transaction parameters is the same as [with contracts](./calling-contracts/tx-params.md). As a reminder, the workflow would look like this:
+The method for passing transaction policies is the same as [with contracts](./calling-contracts/tx-policies.md). As a reminder, the workflow would look like this:
 
 ```rust,ignore
-{{#include ../../packages/fuels/tests/scripts.rs:script_with_tx_params}}
+{{#include ../../packages/fuels/tests/scripts.rs:script_with_tx_policies}}
 ```
 
 ## Logs

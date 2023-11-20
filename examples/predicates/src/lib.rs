@@ -94,7 +94,7 @@ mod tests {
                 predicate.address(),
                 amount_to_predicate,
                 asset_id,
-                TxParameters::default(),
+                TxPolicies::default(),
             )
             .await?;
 
@@ -108,7 +108,7 @@ mod tests {
                 receiver.address(),
                 amount_to_predicate,
                 asset_id,
-                TxParameters::default(),
+                TxPolicies::default(),
             )
             .await?;
 
@@ -159,7 +159,7 @@ mod tests {
         // ANCHOR: predicate_data_lock_amount
         // First wallet transfers amount to predicate.
         first_wallet
-            .transfer(predicate.address(), 500, asset_id, TxParameters::default())
+            .transfer(predicate.address(), 500, asset_id, TxPolicies::default())
             .await?;
 
         // Check predicate balance.
@@ -176,7 +176,7 @@ mod tests {
                 second_wallet.address(),
                 amount_to_unlock,
                 asset_id,
-                TxParameters::default(),
+                TxPolicies::default(),
             )
             .await?;
 

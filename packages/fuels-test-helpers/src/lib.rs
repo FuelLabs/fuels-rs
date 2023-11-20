@@ -145,7 +145,7 @@ pub async fn setup_test_provider(
         ..StateConfig::default()
     });
 
-    let mut config = node_config.unwrap_or_else(Config::local_node);
+    let mut config = node_config.unwrap_or_default();
     config.chain_conf = chain_conf;
 
     let srv = FuelService::start(config).await?;
@@ -164,7 +164,7 @@ pub async fn setup_test_provider(
 mod tests {
     use std::net::{Ipv4Addr, SocketAddr};
 
-    use fuel_tx::ConsensusParameters;
+    use fuel_tx::{ConsensusParameters, ContractParameters, FeeParameters, TxParameters};
     use fuels_core::types::bech32::FUEL_BECH32_HRP;
 
     use super::*;
@@ -295,9 +295,7 @@ mod tests {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
         let config = Config {
             addr: socket,
-            utxo_validation: true,
-            manual_blocks_enabled: true,
-            ..Config::local_node()
+            ..Config::default()
         };
 
         let provider = setup_test_provider(vec![], vec![], Some(config.clone()), None).await?;
@@ -314,33 +312,47 @@ mod tests {
 
     #[tokio::test]
     async fn test_setup_test_client_consensus_parameters_config() -> Result<()> {
-        let configured_parameters = ConsensusParameters::DEFAULT
+        let tx_params = TxParameters::default()
             .with_max_gas_per_tx(2)
-            .with_gas_per_byte(2)
-            .with_max_inputs(58)
-            .with_max_storage_slots(83);
+            .with_max_inputs(58);
+        let fee_params = FeeParameters::default().with_gas_per_byte(2);
+        let contract_params = ContractParameters::default().with_max_storage_slots(83);
+
+        let consensus_parameters = ConsensusParameters {
+            tx_params,
+            fee_params,
+            contract_params,
+            ..Default::default()
+        };
 
         let chain_config = ChainConfig {
-            transaction_parameters: configured_parameters,
+            consensus_parameters: consensus_parameters.clone(),
             ..ChainConfig::default()
         };
         let provider = setup_test_provider(vec![], vec![], None, Some(chain_config)).await?;
 
         let retrieved_parameters = provider.consensus_parameters();
 
-        assert_eq!(retrieved_parameters, configured_parameters);
+        assert_eq!(*retrieved_parameters, consensus_parameters);
+
         Ok(())
     }
 
     #[tokio::test]
     async fn test_chain_config_and_consensus_parameters() -> Result<()> {
-        let consensus_parameters_config = ConsensusParameters::DEFAULT
-            .with_max_inputs(123)
-            .with_gas_per_byte(456);
+        let max_inputs = 123;
+        let gas_per_byte = 456;
 
+        let consensus_parameters = ConsensusParameters {
+            tx_params: TxParameters::default().with_max_inputs(max_inputs),
+            fee_params: FeeParameters::default().with_gas_per_byte(gas_per_byte),
+            ..Default::default()
+        };
+
+        let chain_name = "fuel-0".to_string();
         let chain_config = ChainConfig {
-            chain_name: "Solo_Munib".to_string(),
-            transaction_parameters: consensus_parameters_config,
+            chain_name: chain_name.clone(),
+            consensus_parameters,
             ..ChainConfig::local_testnet()
         };
 
@@ -348,9 +360,15 @@ mod tests {
 
         let chain_info = provider.chain_info().await?;
 
-        assert_eq!(chain_info.name, "Solo_Munib");
-        assert_eq!(chain_info.consensus_parameters.max_inputs, 123);
-        assert_eq!(chain_info.consensus_parameters.gas_per_byte, 456);
+        assert_eq!(chain_info.name, chain_name);
+        assert_eq!(
+            chain_info.consensus_parameters.tx_params().max_inputs,
+            max_inputs
+        );
+        assert_eq!(
+            chain_info.consensus_parameters.fee_params().gas_per_byte,
+            gas_per_byte
+        );
         Ok(())
     }
 }
