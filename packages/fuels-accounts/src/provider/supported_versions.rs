@@ -1,7 +1,7 @@
 use semver::Version;
 
 fn get_supported_fuel_core_version() -> Version {
-    "0.20.6".parse().unwrap()
+    "0.21.0-rc.1".parse().unwrap()
 }
 
 #[derive(Debug, PartialEq, Eq)]

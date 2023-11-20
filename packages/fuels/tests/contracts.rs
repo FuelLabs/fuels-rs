@@ -130,14 +130,15 @@ async fn test_reverting_transaction() -> Result<()> {
 
     let response = contract_instance
         .methods()
-        .make_transaction_fail(0)
+        .make_transaction_fail(true)
         .call()
         .await;
 
     assert!(matches!(
         response,
-        Err(Error::RevertTransactionError { .. })
+        Err(Error::RevertTransactionError { revert_id, .. }) if revert_id == 128
     ));
+
     Ok(())
 }
 
@@ -280,17 +281,17 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 564;
-    let expected_metered_bytes_size = 712;
-    let expected_total_fee = 342;
+    let expected_gas_used = 688;
+    let expected_metered_bytes_size = 800;
+    let expected_total_fee = 1160;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(
-            TxParameters::default()
+        .with_tx_policies(
+            TxPolicies::default()
                 .with_gas_price(gas_price)
-                .with_gas_limit(gas_limit),
+                .with_script_gas_limit(gas_limit),
         )
         .estimate_transaction_cost(Some(tolerance))
         .await?;
@@ -398,7 +399,7 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
         contract_instance
             .methods()
             .calling_this_will_produce_a_block()
-            .tx_params(TxParameters::default().with_maturity(maturity))
+            .with_tx_policies(TxPolicies::default().with_maturity(maturity))
     };
 
     call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
@@ -618,13 +619,13 @@ async fn test_connect_wallet() -> Result<()> {
     // ANCHOR_END: contract_setup_macro_manual_wallet
 
     // pay for call with wallet
-    let tx_params = TxParameters::default()
+    let tx_policies = TxPolicies::default()
         .with_gas_price(10)
-        .with_gas_limit(1_000_000);
+        .with_script_gas_limit(1_000_000);
     contract_instance
         .methods()
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -637,7 +638,7 @@ async fn test_connect_wallet() -> Result<()> {
         .with_account(wallet_2.clone())?
         .methods()
         .initialize_counter(42)
-        .tx_params(tx_params)
+        .with_tx_policies(tx_policies)
         .call()
         .await?;
 
@@ -658,7 +659,7 @@ async fn setup_output_variable_estimation_test(
         "tests/contracts/token_ops/out/debug/token_ops.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&wallets[0], TxParameters::default())
+    .deploy(&wallets[0], TxPolicies::default())
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
@@ -786,7 +787,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
             &contract_id,
             total_amount,
             AssetId::BASE,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await
         .unwrap();
@@ -838,12 +839,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     // Transfer an amount to the contract
     let amount = 8;
     wallet
-        .force_transfer_to_contract(
-            contract_id,
-            amount,
-            *random_asset_id,
-            TxParameters::default(),
-        )
+        .force_transfer_to_contract(contract_id, amount, *random_asset_id, TxPolicies::default())
         .await?;
 
     // Check that the contract now has 1 coin
@@ -981,7 +977,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     let contract_methods = contract_caller_instance.methods();
 
     let mut multi_call_handler =
-        MultiContractCallHandler::new(wallet.clone()).tx_params(Default::default());
+        MultiContractCallHandler::new(wallet.clone()).with_tx_policies(Default::default());
 
     (0..3).for_each(|_| {
         let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
@@ -1007,9 +1003,15 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{tx::ConsensusParameters, types::coin::Coin};
+    use fuels::{
+        tx::{ConsensusParameters, TxParameters},
+        types::coin::Coin,
+    };
 
-    let consensus_parameters_config = ConsensusParameters::DEFAULT.with_max_inputs(123);
+    let consensus_parameters = ConsensusParameters {
+        tx_params: TxParameters::default().with_max_inputs(123),
+        ..Default::default()
+    };
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -1020,13 +1022,13 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         DEFAULT_COIN_AMOUNT,
     );
     let chain_config = ChainConfig {
-        transaction_parameters: consensus_parameters_config,
+        consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
     };
 
     let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
     wallet.set_provider(provider.clone());
-    assert_eq!(consensus_parameters_config, provider.consensus_parameters());
+    assert_eq!(consensus_parameters, *provider.consensus_parameters());
 
     setup_program_test!(
         Abigen(Contract(
@@ -1197,7 +1199,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     ));
 
     let wallet = WalletUnlocked::new_random(None);
-    let predicate = Predicate::from_code(vec![], 0);
+    let predicate = Predicate::from_code(vec![]);
 
     let contract_methods_wallet =
         MyContract::new(Bech32ContractId::default(), wallet.clone()).methods();
@@ -1354,17 +1356,15 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-            let mut node_config = Config {
+            let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::local_node()
+                ..Config::default()
             };
-
-            node_config.manual_blocks_enabled = true;
 
             let chain_config = ChainConfig {
                 chain_name: temp_dir_name.clone(),
                 initial_state: None,
-                transaction_parameters: Default::default(),
+                consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
 
@@ -1392,7 +1392,7 @@ fn db_rocksdb() {
         .block_on(async {
             let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::local_node()
+                ..Config::default()
             };
 
             let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
@@ -1650,7 +1650,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
             predicate.address(),
             10_000,
             BASE_ASSET_ID,
-            TxParameters::default(),
+            TxPolicies::default(),
         )
         .await?;
 
@@ -1661,7 +1661,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         "tests/contracts/storage/out/debug/storage.bin",
         LoadConfiguration::default(),
     )?
-    .deploy(&predicate, TxParameters::default())
+    .deploy(&predicate, TxPolicies::default())
     .await?;
 
     Ok(())
