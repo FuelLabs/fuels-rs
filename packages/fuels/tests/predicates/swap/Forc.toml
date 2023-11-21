@@ -1,0 +1,7 @@
+[project]
+authors = ["hamdi"]
+entry = "main.sw"
+license = "Apache-2.0"
+name = "swap"
+
+[dependencies]
