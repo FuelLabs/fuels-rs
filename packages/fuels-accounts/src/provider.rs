@@ -8,9 +8,11 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "coin-cache")]
+use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
+    types::{balance::Balance, contract::ContractBalance},
 };
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
@@ -295,9 +297,9 @@ impl Provider {
         tx_id: &TxId,
         log_decoder: Option<&LogDecoder>,
     ) -> Result<Vec<Receipt>> {
-        let status = self.tx_status(&tx_id).await?;
+        let status = self.tx_status(tx_id).await?;
         status.is_revert_or_success()?;
-        let receipts = self.receipts(&tx_id).await?;
+        let receipts = self.receipts(tx_id).await?;
         status.check(&receipts, log_decoder)?;
         Ok(receipts)
     }
