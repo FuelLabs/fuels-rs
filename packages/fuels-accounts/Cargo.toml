@@ -17,7 +17,6 @@ eth-keystore =  { workspace = true, optional = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
-fuel-vm = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
 fuels-core = { workspace = true, default-features = false }
 hex = { workspace = true, default-features = false, features = ["std"] }
