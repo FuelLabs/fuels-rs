@@ -279,7 +279,7 @@ mod tests {
             .await?;
         let base_outputs =
             hot_wallet.get_asset_outputs_for_amount(&receiver, BASE_ASSET_ID, ask_amount);
-        // ANCHOR: custom_tx_io_base
+        // ANCHOR_END: custom_tx_io_base
 
         // ANCHOR: custom_tx_io_other
         let other_asset_inputs = predicate
@@ -287,7 +287,7 @@ mod tests {
             .await?;
         let other_asset_outputs =
             predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);
-        // ANCHOR: custom_tx_io_other
+        // ANCHOR_END: custom_tx_io_other
 
         // ANCHOR: custom_tx_io
         let inputs = base_inputs
@@ -313,10 +313,9 @@ mod tests {
 
         // ANCHOR: custom_tx_build
         hot_wallet.sign_transaction(&mut tb);
-        dbg!(hot_wallet.address());
         let tx = tb.build(&provider).await?;
         let tx_id = provider.send_transaction(tx).await?;
-        // ANCHOR: custom_tx_build
+        // ANCHOR_END: custom_tx_build
 
         // ANCHOR: custom_tx_verify
         let status = provider.tx_status(&tx_id).await?;
@@ -324,7 +323,7 @@ mod tests {
 
         let balance = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
-        // ANCHOR: custom_tx_verify
+        // ANCHOR_END: custom_tx_verify
 
         Ok(())
     }

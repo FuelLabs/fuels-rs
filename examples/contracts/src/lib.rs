@@ -925,8 +925,6 @@ mod tests {
 
         tx.append_witness(witness_data);
 
-        dbg!(&tx);
-
         let tx_id = provider.send_transaction(tx).await?;
         let tx_status = provider.tx_status(&tx_id).await?;
 
