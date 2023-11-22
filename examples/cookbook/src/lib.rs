@@ -313,6 +313,7 @@ mod tests {
 
         // ANCHOR: custom_tx_build
         hot_wallet.sign_transaction(&mut tb);
+
         let tx = tb.build(&provider).await?;
         let tx_id = provider.send_transaction(tx).await?;
         // ANCHOR_END: custom_tx_build
