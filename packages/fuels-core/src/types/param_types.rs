@@ -43,6 +43,7 @@ pub enum ParamType {
     String,
 }
 
+#[derive(Clone, Debug)]
 pub enum ReturnLocation {
     Return,
     ReturnData,

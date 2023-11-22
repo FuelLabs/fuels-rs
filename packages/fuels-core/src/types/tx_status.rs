@@ -3,6 +3,7 @@ use fuel_abi_types::error_codes::{
     FAILED_ASSERT_EQ_SIGNAL, FAILED_ASSERT_SIGNAL, FAILED_REQUIRE_SIGNAL,
     FAILED_SEND_MESSAGE_SIGNAL, FAILED_TRANSFER_TO_ADDRESS_SIGNAL,
 };
+#[cfg(feature = "std")]
 use fuel_core_client::client::types::primitives::BlockId;
 #[cfg(feature = "std")]
 use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
@@ -10,13 +11,18 @@ use fuel_tx::Receipt;
 use fuel_types::Bytes32;
 #[cfg(feature = "std")]
 use fuel_vm::state::ProgramState;
+#[cfg(feature = "std")]
 use std::str::FromStr;
+#[cfg(feature = "std")]
 use tai64::Tai64;
 
 use crate::{
     codec::LogDecoder,
     error,
-    types::errors::{Error, Result},
+    types::{
+        errors::{Error, Result},
+        param_types::ReturnLocation,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -24,7 +30,7 @@ pub enum TxStatus {
     Success {
         block_id: Bytes32,
         time: DateTime<Utc>,
-        program_state: Option<ProgramState>,
+        return_location: Option<ReturnLocation>,
     },
     Submitted {
         submitted_at: DateTime<Utc>,
@@ -124,11 +130,21 @@ impl From<ClientTransactionStatus> for TxStatus {
                 block_id,
                 time,
                 program_state,
-            } => TxStatus::Success {
-                block_id: convert_block_id(block_id),
-                time: convert_timestamp(time),
-                program_state,
-            },
+            } => {
+                let return_location = match program_state {
+                    Some(ProgramState::Return(_)) => Some(ReturnLocation::Return),
+                    Some(ProgramState::ReturnData(_)) => Some(ReturnLocation::ReturnData),
+                    None => None,
+                    _ => panic!(
+                        "A TransactionStatus::Success variant has to have either Return or ReturnData variants as ProgramState"
+                    ),
+                };
+                TxStatus::Success {
+                    block_id: convert_block_id(block_id),
+                    time: convert_timestamp(time),
+                    return_location,
+                }
+            }
             ClientTransactionStatus::Failure {
                 block_id,
                 time,

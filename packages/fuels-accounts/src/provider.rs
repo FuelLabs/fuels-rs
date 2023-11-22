@@ -377,7 +377,7 @@ impl Provider {
             None => TxStatus::Success {
                 block_id: Default::default(),
                 time: Default::default(),
-                program_state: None,
+                return_location: None,
             },
         }
     }
