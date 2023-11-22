@@ -266,7 +266,7 @@ async fn send_transfer_transactions() -> Result<()> {
     let gas_price = 1;
     let script_gas_limit = 500_000;
     let expected_script_gas_limit = 0;
-    let maturity = 0u32;
+    let maturity = 0;
 
     let tx_policies = TxPolicies::default()
         .with_gas_price(gas_price)
@@ -293,7 +293,7 @@ async fn send_transfer_transactions() -> Result<()> {
     // Transfer scripts have `script_gas_limit` set to `0`
     assert_eq!(script.gas_limit(), expected_script_gas_limit);
     assert_eq!(script.gas_price(), gas_price);
-    assert_eq!(script.maturity(), maturity);
+    assert_eq!(script.maturity(), maturity as u32);
 
     let wallet_1_spendable_resources = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;
     let wallet_2_spendable_resources = wallet_2.get_spendable_resources(BASE_ASSET_ID, 1).await?;

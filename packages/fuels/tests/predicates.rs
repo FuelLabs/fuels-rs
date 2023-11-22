@@ -802,7 +802,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxPolicies::default(),
+        TxPolicies::default().with_witness_limit(32),
         network_info.clone(),
     )
     .build(&provider)
@@ -811,8 +811,8 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
 
-    tx.append_witness(witness.into());
-    tx.append_witness(witness2.into());
+    tx.append_witness(witness.into())?;
+    tx.append_witness(witness2.into())?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -870,7 +870,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxPolicies::default(),
+        TxPolicies::default().with_witness_limit(32),
         network_info.clone(),
     )
     .build(&provider)
@@ -881,8 +881,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
 
-    tx.append_witness(witness.into());
-    tx.append_witness(witness2.into());
+    tx.append_witness(witness.into())?;
+    tx.append_witness(witness2.into())?;
     let tx_id_after_witnesses = tx.id(network_info.chain_id());
 
     let tx_id_from_provider = provider.send_transaction_and_await_commit(tx).await?;

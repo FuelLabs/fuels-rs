@@ -18,11 +18,7 @@ Where:
 
 When the **Script Gas Limit** is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit. Similarly, if no **Gas Price** is defined, the Rust SDK defaults to the network's minimum gas price.
 
-**Witness Limit** makes use of the following default values for script and create transactions:
-
-```rust,ignore
-{{#include ../../../packages/fuels-core/src/utils/constants.rs:witness_default}}
-```
+If the **Witness Limit** is not set, the SDK will set it to the size of all witnesses and signatures defined in the transaction builder.
 
 You can configure these parameters by creating an instance of `TxPolicies` and passing it to a chain method called `with_tx_policies`:
 <!-- tx_policies:example:end-->
