@@ -71,9 +71,7 @@ impl TxStatus {
             Self::Success { .. } => Ok(()),
             Self::Revert { .. } => Ok(()),
             Self::SqueezedOut { reason } => Err(Error::SqueezedOutTransactionError(reason.clone())),
-            Self::Submitted { .. } => Err(Error::ProviderError(
-                "Transaction is only in submitted state".to_string(),
-            )),
+            Self::Submitted { .. } => Err(Error::SubmittedTransactionError),
         }
     }
 

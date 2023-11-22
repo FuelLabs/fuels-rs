@@ -38,6 +38,8 @@ pub enum Error {
     },
     #[error("Transaction was squeezed out. Reason: `{0}`")]
     SqueezedOutTransactionError(String),
+    #[error("Transaction is still in Submitted state")]
+    SubmittedTransactionError,
     #[error("Transaction build error: {0}")]
     TransactionBuildError(String),
 }
