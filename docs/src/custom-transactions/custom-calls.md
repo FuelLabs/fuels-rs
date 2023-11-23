@@ -5,11 +5,11 @@ When preparing a contract call via `ContractCallHandler` or a script call via `S
 ## Custom contract calls
 
 ```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:custom_tx_receiver}}
+{{#include ../../../examples/contracts/src/lib.rs:contract_call_tb}}
 ```
 
 ## Custom script calls
 
 ```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:custom_tx_receiver}}
+{{#include ../../packages/fuels/tests/scripts.rs:script_call_tb}}
 ```
