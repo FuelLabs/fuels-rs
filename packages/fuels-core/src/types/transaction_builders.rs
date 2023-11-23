@@ -248,11 +248,11 @@ macro_rules! impl_tx_trait {
             }
 
             fn calculate_witnesses_size(&self) -> Option<u64> {
-                let witnesse_size = calculate_witnesses_size(&self.witnesses);
+                let witnesses_size = calculate_witnesses_size(&self.witnesses);
                 let signature_size =
                     SIGNATURE_WITNESS_SIZE * self.unresolved_signatures.secret_keys.len();
 
-                Some(padded_len_usize(witnesse_size + signature_size) as u64)
+                Some(padded_len_usize(witnesses_size + signature_size) as u64)
             }
         }
     };
