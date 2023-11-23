@@ -332,7 +332,7 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_input_to_pay_for_fee<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
+    fn no_spendable_input<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
         !inputs.into_iter().any(|i| {
             matches!(
                 i,
@@ -352,10 +352,10 @@ impl ScriptTransactionBuilder {
     ) -> Result<()> {
         let consensus_params = &network_info.consensus_parameters;
 
-        // The `dry_run` validation will check if there is an input present that can cover
-        // the tx fees. If we are estimating without inputs we have to add a temporary one
-        let no_input_for_fee = Self::no_input_to_pay_for_fee(tx.inputs());
-        if no_input_for_fee {
+        // The dry-run validation will check if there is any spendable input present in
+        // the transaction. If we are dry-running without inputs we have to add a temporary one.
+        let no_spendable_input = Self::no_spendable_input(tx.inputs());
+        if no_spendable_input {
             tx.inputs_mut().push(FuelInput::coin_signed(
                 Default::default(),
                 Default::default(),
@@ -381,11 +381,10 @@ impl ScriptTransactionBuilder {
             .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
             .await?;
 
-        // Remove dry-run input. We do not need to remove the witnesses
-        // as we are using temporary values that will be overwritten.
-        // However, we need to readjust the `witness_limit`.
-        if no_input_for_fee {
+        // Remove dry-run input and witness.
+        if no_spendable_input {
             tx.inputs_mut().pop();
+            tx.witnesses_mut().pop();
             tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
         }
 
