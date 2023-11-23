@@ -46,7 +46,7 @@
   - [Signatures example](./predicates/send-spend-predicate.md)
 - [Custom transactions](./custom-transactions/index.md)
   - [Transaction builders](./custom-transactions/transaction-builders.md)
-  - [Customizing contract and script calls](./custom-transactions/custom-calls.md)
+  - [Custom contract and script calls](./custom-transactions/custom-calls.md)
 - [Types](./types/index.md)
   - [Bytes32](./types/bytes32.md)
   - [Address](./types/address.md)
