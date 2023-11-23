@@ -344,12 +344,12 @@ impl ScriptTransactionBuilder {
         })
     }
 
-    async fn gas_used(
+    async fn set_script_gas_limit_to_gas_used(
         tx: &mut Script,
         provider: &impl DryRunner,
         network_info: &NetworkInfo,
         tolerance: f32,
-    ) -> Result<u64> {
+    ) -> Result<()> {
         let consensus_params = &network_info.consensus_parameters;
 
         // The `dry_run` validation will check if there is an input present that can cover
@@ -372,8 +372,9 @@ impl ScriptTransactionBuilder {
             tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
         }
 
-        // Add `1` because of rounding
+        // Get `max_gas` used by everything except the script execution. Add `1` because of rounding.
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+        // Increase `script_gas_limit` to the maximum allowed value.
         tx.set_script_gas_limit(network_info.max_gas_per_tx() - max_gas);
 
         let gas_used = provider
@@ -388,7 +389,9 @@ impl ScriptTransactionBuilder {
             tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
         }
 
-        Ok(gas_used)
+        tx.set_script_gas_limit(gas_used);
+
+        Ok(())
     }
 
     async fn resolve_fuel_tx_provider(
@@ -416,16 +419,17 @@ impl ScriptTransactionBuilder {
             dry_run_witnesses,
         );
 
-        let gas_limit = if has_no_code {
-            0
-        // Use the user defined value even if it makes the tx revert
+        if has_no_code {
+            tx.set_script_gas_limit(0);
+
+        // Use the user defined value even if it makes the transaction revert.
         } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
-            gas_limit
+            tx.set_script_gas_limit(gas_limit);
 
         // If the `script_gas_limit` was not set by the user,
-        // `dry_run` the tx to get the `gas_used`
+        // dry-run the tx to get the `gas_used`
         } else {
-            Self::gas_used(
+            Self::set_script_gas_limit_to_gas_used(
                 &mut tx,
                 provider,
                 &self.network_info,
@@ -433,7 +437,6 @@ impl ScriptTransactionBuilder {
             )
             .await?
         };
-        tx.set_script_gas_limit(gas_limit);
 
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&self.network_info.chain_id()),
