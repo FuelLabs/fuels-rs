@@ -421,7 +421,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     );
     let provider = wallet.try_provider()?;
 
-    // ANCHOR: contract_call_tb
+    // ANCHOR: script_call_tb
     let script_call_handler = script_instance.main(1, 2);
 
     let mut tb = script_call_handler.transaction_builder().await?;
@@ -436,7 +436,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     let response = script_call_handler.get_response_from(tx_status)?;
 
     assert_eq!(response.value, "hello");
-    // ANCHOR_END: contract_call_tb
+    // ANCHOR_END: script_call_tb
 
     Ok(())
 }
