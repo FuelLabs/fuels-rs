@@ -133,6 +133,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     let b = 2000u32;
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
+
     // ANCHOR: script_with_tx_policies
     let tx_policies = TxPolicies::default()
         .with_gas_price(1)
@@ -410,7 +411,7 @@ async fn test_script_transaction_builder() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "packages/fuels/tests/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -420,12 +421,8 @@ async fn test_script_transaction_builder() -> Result<()> {
     );
     let provider = wallet.try_provider()?;
 
-    let my_struct = MyStruct {
-        number: 42,
-        boolean: true,
-    };
-
-    let script_call_handler = script_instance.main(my_struct);
+    // ANCHOR: contract_call_tb
+    let script_call_handler = script_instance.main(1, 2);
 
     let mut tb = script_call_handler.transaction_builder().await?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
@@ -438,6 +435,8 @@ async fn test_script_transaction_builder() -> Result<()> {
 
     let response = script_call_handler.get_response_from(tx_status)?;
 
-    assert_eq!(response.value, 42);
+    assert_eq!(response.value, "hello");
+    // ANCHOR_END: contract_call_tb
+
     Ok(())
 }

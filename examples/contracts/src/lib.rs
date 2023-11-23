@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::{codec::DecoderConfig, traits::Tokenizable},
+        core::codec::DecoderConfig,
         prelude::{Config, LoadConfiguration, StorageConfiguration},
         types::{errors::Result, Bits256},
     };
@@ -873,14 +873,13 @@ mod tests {
 
     #[tokio::test]
     async fn contract_custom_call() -> Result<()> {
-        use fuels::{core::codec::ABIEncoder, prelude::*, tx::Witness, types::output::Output};
+        use fuels::prelude::*;
 
-        // ANCHOR: custom_call
         setup_program_test!(
             Wallets("wallet"),
             Abigen(Contract(
                 name = "TestContract",
-                project = "packages/fuels/tests/contracts/contract_witness_logs"
+                project = "packages/fuels/tests/contracts/contract_test"
             )),
             Deploy(
                 name = "contract_instance",
@@ -889,56 +888,26 @@ mod tests {
             ),
         );
         let provider = wallet.try_provider()?;
-        let receiver = WalletUnlocked::new_random(Some(provider.clone())); // Balance is zero
 
-        let witness_idx = 0;
-        let witness_idx2 = 2;
+        // ANCHOR: contract_call_tb
+        let counter = 42;
 
-        let call_handler = contract_instance
-            .methods()
-            .read_witness(witness_idx, witness_idx2);
+        let call_handler = contract_instance.methods().initialize_counter(counter);
 
-        let mut tb = call_handler
-            .transaction_builder()
-            .await?
-            // Set `script_gas_limit` manually as we are adding witnesses after building the tx
-            .with_tx_policies(TxPolicies::default().with_script_gas_limit(325));
+        let mut tb = call_handler.transaction_builder().await?;
 
         wallet.adjust_for_fee(&mut tb, 0).await?;
-
-        let amount = 10;
-        tb.outputs_mut().push(Output::coin(
-            receiver.address().into(),
-            amount,
-            BASE_ASSET_ID,
-        ));
-
-        let witness = 64u8;
-        let witness_data: Witness = ABIEncoder::encode(&[witness.into_token()])?
-            .resolve(0)
-            .into();
-        tb.witnesses_mut().push(witness_data.clone());
-
         wallet.sign_transaction(&mut tb);
 
-        let mut tx = tb.build(provider).await?;
-
-        tx.append_witness(witness_data);
+        let tx = tb.build(provider).await?;
 
         let tx_id = provider.send_transaction(tx).await?;
         let tx_status = provider.tx_status(&tx_id).await?;
 
         let response = call_handler.get_response_from(tx_status)?;
-        assert_eq!(response.value, witness);
 
-        let logs = response.decode_logs_with_type::<u64>()?;
-        let output_count = 3;
-        let witness_count = 3;
-        assert_eq!(logs, vec![output_count, witness_count]);
-
-        let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
-        assert_eq!(receiver_balance, amount);
-        // ANCHOR_END: custom_call
+        assert_eq!(counter, response.value);
+        // ANCHOR_END: contract_call_tb
 
         Ok(())
     }
