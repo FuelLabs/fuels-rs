@@ -889,9 +889,9 @@ mod tests {
         );
         let provider = wallet.try_provider()?;
 
-        // ANCHOR: contract_call_tb
         let counter = 42;
 
+        // ANCHOR: contract_call_tb
         let call_handler = contract_instance.methods().initialize_counter(counter);
 
         let mut tb = call_handler.transaction_builder().await?;

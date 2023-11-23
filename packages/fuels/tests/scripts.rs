@@ -425,6 +425,9 @@ async fn test_script_transaction_builder() -> Result<()> {
     let script_call_handler = script_instance.main(1, 2);
 
     let mut tb = script_call_handler.transaction_builder().await?;
+
+    // customize the builder...
+
     wallet.adjust_for_fee(&mut tb, 0).await?;
     wallet.sign_transaction(&mut tb);
 
