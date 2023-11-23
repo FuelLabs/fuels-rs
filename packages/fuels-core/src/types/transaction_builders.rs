@@ -380,9 +380,12 @@ impl ScriptTransactionBuilder {
             .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
             .await?;
 
-        // Remove dry_run input
+        // Remove dry-run input. We do not need to remove the witnesses
+        // as we are using temporary values that will be overwritten.
+        // However, we need to readjust the `witness_limit`.
         if no_input_for_fee {
             tx.inputs_mut().pop();
+            tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
         }
 
         Ok(gas_used)
