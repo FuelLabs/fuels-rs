@@ -25,7 +25,7 @@ use crate::{
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Result},
+        errors::{error, Error, Result},
         input::Input,
         message::Message,
         node_info::NodeInfo,
@@ -108,7 +108,7 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
-    
+
     async fn build_unchecked(self, _: impl DryRunner) -> Result<Self::TxType> {
         self.build_unchecked()
     }
@@ -242,10 +242,7 @@ macro_rules! impl_tx_trait {
                         self.unresolved_signatures
                             .addr_idx_offset_map
                             .get(owner)
-                            .ok_or(error!(
-                                InvalidData,
-                                "signature missing for coin with owner: {owner}"
-                            ))
+                            .ok_or(missing_signatures_error(owner))
                             .map(|_| ())
                     })
             }
@@ -286,6 +283,14 @@ macro_rules! impl_tx_trait {
             }
         }
     };
+}
+
+fn missing_signatures_error(owner: impl ToString) -> Error {
+    let owner = owner.to_string();
+    error!(
+        InvalidData,
+        "signature missing for coin with owner: {owner}"
+    )
 }
 
 #[derive(Debug, Clone)]
@@ -1013,16 +1018,17 @@ mod tests {
 
         // TODO either test both script and create or better consolidate build methods
         // make DryRunner trait wasm friendly?
-        let builder =
-            CreateTransactionBuilder::new(network_info).with_inputs(vec![input]);
-        
-        builder.clone().build_unchecked().expect("unchecked build shouldn't fail");
-        let err = builder.build().expect_err("should throw error due to signatures missing");
+        let builder = CreateTransactionBuilder::new(network_info).with_inputs(vec![input]);
 
-        let expected = error!(
-            InvalidData,
-            "signature missing for coin with owner: {owner}"
-        );
+        builder
+            .clone()
+            .build_unchecked()
+            .expect("unchecked build shouldn't fail");
+        let err = builder
+            .build()
+            .expect_err("should throw error due to signatures missing");
+
+        let expected = missing_signatures_error(owner);
         assert_eq!(expected.to_string(), err.to_string())
     }
 }
