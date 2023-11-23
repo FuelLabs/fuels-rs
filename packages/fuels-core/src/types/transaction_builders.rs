@@ -244,7 +244,7 @@ macro_rules! impl_tx_trait {
                             .get(owner)
                             .ok_or(error!(
                                 InvalidData,
-                                "signature missing for coin with owner: `{owner:?}`"
+                                "signature missing for coin with owner: {owner}"
                             ))
                             .map(|_| ())
                     })
@@ -630,7 +630,6 @@ impl CreateTransactionBuilder {
         };
 
         let num_witnesses = self.num_witnesses()?;
-        self.verify_signatures_present()?;
         let tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
 
         Ok(CreateTransaction {
@@ -918,6 +917,8 @@ fn generate_missing_witnesses(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use super::*;
     use crate::types::{bech32::Bech32Address, message::MessageStatus};
 
@@ -985,5 +986,43 @@ mod tests {
             da_height: 0,
             status: MessageStatus::Unspent,
         }
+    }
+
+    fn owner() -> &'static str {
+        "fuel1p8qt95dysmzrn2rmewntg6n6rg3l8ztueqafg5s6jmd9cgautrdslwdqdw"
+    }
+
+    fn given_input_signed() -> Input {
+        let coin = Coin {
+            owner: Bech32Address::from_str(owner()).unwrap(),
+            ..Default::default()
+        };
+
+        Input::resource_signed(CoinType::Coin(coin))
+    }
+
+    #[test]
+    fn missing_signatures_causes_error() {
+        let network_info = NetworkInfo {
+            min_gas_price: 0,
+            consensus_parameters: Default::default(),
+        };
+
+        let owner = owner();
+        let input = given_input_signed();
+
+        // TODO either test both script and create or better consolidate build methods
+        // make DryRunner trait wasm friendly?
+        let builder =
+            CreateTransactionBuilder::new(network_info).with_inputs(vec![input]);
+        
+        builder.clone().build_unchecked().expect("unchecked build shouldn't fail");
+        let err = builder.build().expect_err("should throw error due to signatures missing");
+
+        let expected = error!(
+            InvalidData,
+            "signature missing for coin with owner: {owner}"
+        );
+        assert_eq!(expected.to_string(), err.to_string())
     }
 }
