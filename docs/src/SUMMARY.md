@@ -40,7 +40,6 @@
   - [Transaction dependency estimation](./calling-contracts/tx-dependency-estimation.md)
   - [Estimating cost](./calling-contracts/cost-estimation.md)
   - [Low-level calls](./calling-contracts/low-level-calls.md)
-  - [Custom calls](./calling-contracts/custom_calls.md)
 - [Running scripts](./running-scripts.md)
 - [Predicates](./predicates/index.md)
   - [Signatures example](./predicates/send-spend-predicate.md)
