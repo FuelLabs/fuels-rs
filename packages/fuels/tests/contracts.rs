@@ -282,8 +282,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
     let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
     let expected_gas_used = 688;
-    let expected_metered_bytes_size = 800;
-    let expected_total_fee = 1160;
+    let expected_metered_bytes_size = 792;
+    let expected_total_fee = 898;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -402,9 +402,9 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .with_tx_policies(TxPolicies::default().with_maturity(maturity))
     };
 
-    call_w_maturity(1u32).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
 
-    call_w_maturity(3u32).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
     Ok(())
 }
 

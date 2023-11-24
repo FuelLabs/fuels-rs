@@ -1298,7 +1298,7 @@ async fn test_log_results() -> Result<()> {
     let succeeded = log.filter_succeeded();
     let failed = log.filter_failed();
     assert_eq!(succeeded, vec!["123".to_string()]);
-    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
+    assert_eq!(failed.first().unwrap().to_string(), expected_err);
 
     Ok(())
 }
@@ -1478,7 +1478,7 @@ async fn test_string_slice_log() -> Result<()> {
         "Invalid data: String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
 
     let failed = log.filter_failed();
-    assert_eq!(failed.get(0).unwrap().to_string(), expected_err);
+    assert_eq!(failed.first().unwrap().to_string(), expected_err);
 
     Ok(())
 }
