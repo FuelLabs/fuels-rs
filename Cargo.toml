@@ -49,7 +49,7 @@ eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
 futures = "0.3.28"
 hex = { version = "0.4.3", default-features = false }
-itertools = "0.11.0"
+itertools = "0.12.0"
 portpicker = "0.1.1"
 proc-macro2 = "1.0.66"
 quote = "1.0.33"
@@ -72,21 +72,21 @@ which = { version = "5.0.0", default-features = false }
 zeroize = "1.6.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.21.0-rc.1", default-features = false }
-fuel-core-chain-config = { version = "0.21.0-rc.1", default-features = false }
-fuel-core-client = { version = "0.21.0-rc.1", default-features = false }
-fuel-core-poa = { version = "0.21.0-rc.1", default-features = false }
-fuel-core-services = { version = "0.21.0-rc.1", default-features = false }
-fuel-core-types = { version = "0.21.0-rc.1", default-features = false }
+fuel-core = { version = "0.21.0", default-features = false }
+fuel-core-chain-config = { version = "0.21.0", default-features = false }
+fuel-core-client = { version = "0.21.0", default-features = false }
+fuel-core-poa = { version = "0.21.0", default-features = false }
+fuel-core-services = { version = "0.21.0", default-features = false }
+fuel-core-types = { version = "0.21.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.42.0"}
-fuel-crypto = { version = "0.42.0"}
-fuel-merkle = { version = "0.42.0"}
-fuel-storage = { version = "0.42.0"}
-fuel-tx = { version = "0.42.0"}
-fuel-types = { version = "0.42.0"}
-fuel-vm = { version = "0.42.0"}
+fuel-asm = { version = "0.43.0"}
+fuel-crypto = { version = "0.43.0"}
+fuel-merkle = { version = "0.43.0"}
+fuel-storage = { version = "0.43.0"}
+fuel-tx = { version = "0.43.0"}
+fuel-types = { version = "0.43.0"}
+fuel-vm = { version = "0.43.0"}
 
 # Workspace projects
 fuels = { version = "0.51.0", path = "./packages/fuels" }
