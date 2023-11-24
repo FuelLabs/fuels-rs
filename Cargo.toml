@@ -96,3 +96,9 @@ fuels-core = { version = "0.51.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.51.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.51.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.51.0", path = "./packages/fuels-test-helpers", default-features = false }
+
+[patch.crates-io]
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "master" }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "master" }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "master" }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "master" }
