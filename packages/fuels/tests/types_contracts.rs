@@ -2074,7 +2074,6 @@ async fn test_heap_type_in_enums() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let resp = contract_methods.returns_bytes_result(true).call().await?;
-    dbg!(&resp);
     let expected = Ok(Bytes(vec![1, 1, 1, 1]));
     assert_eq!(resp.value, expected);
 

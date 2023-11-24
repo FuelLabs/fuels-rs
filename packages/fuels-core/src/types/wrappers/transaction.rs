@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Debug};
 use fuel_tx::{
     field::{
         GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
-        ScriptData, ScriptGasLimit, Witnesses,
+        ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -15,13 +15,14 @@ use fuel_tx::{
     Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
     TransactionFee, UniqueIdentifier, Witness,
 };
-use fuel_types::{AssetId, ChainId};
+use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::EstimatePredicates;
 use itertools::Itertools;
 
 use crate::{
     constants::BASE_ASSET_ID,
     types::{bech32::Bech32Address, errors::error, Result},
+    utils::calculate_witnesses_size,
 };
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -78,7 +79,7 @@ impl MintTransaction {
 pub struct TxPolicies {
     gas_price: Option<u64>,
     witness_limit: Option<u64>,
-    maturity: u32,
+    maturity: Option<u64>,
     max_fee: Option<u64>,
     script_gas_limit: Option<u64>,
 }
@@ -88,7 +89,7 @@ impl TxPolicies {
     pub fn new(
         gas_price: Option<u64>,
         witness_limit: Option<u64>,
-        maturity: u32,
+        maturity: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
     ) -> Self {
@@ -119,12 +120,12 @@ impl TxPolicies {
         self.witness_limit
     }
 
-    pub fn with_maturity(mut self, maturity: u32) -> Self {
-        self.maturity = maturity;
+    pub fn with_maturity(mut self, maturity: u64) -> Self {
+        self.maturity = Some(maturity);
         self
     }
 
-    pub fn maturity(&self) -> u32 {
+    pub fn maturity(&self) -> Option<u64> {
         self.maturity
     }
 
@@ -210,7 +211,7 @@ pub trait Transaction:
     fn precompute(&mut self, chain_id: &ChainId) -> Result<()>;
 
     /// Append witness and return the corresponding witness index
-    fn append_witness(&mut self, witness: Witness) -> usize;
+    fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 }
@@ -362,11 +363,23 @@ macro_rules! impl_tx_wrapper {
                 Ok(self.tx.precompute(chain_id)?)
             }
 
-            fn append_witness(&mut self, witness: Witness) -> usize {
-                let idx = self.tx.witnesses().len();
-                self.tx.witnesses_mut().push(witness);
+            fn append_witness(&mut self, witness: Witness) -> Result<usize> {
+                let new_witnesses_size = padded_len_usize(calculate_witnesses_size(
+                    self.tx.witnesses().iter().chain(std::iter::once(&witness)),
+                )) as u64;
 
-                idx
+                if new_witnesses_size > self.tx.witness_limit() {
+                    Err(error!(
+                        ValidationError,
+                        "Witness limit exceeded. Consider setting the limit manually with \
+                        a transaction builder. The new limit should be: `{new_witnesses_size}`"
+                    ))
+                } else {
+                    let idx = self.tx.witnesses().len();
+                    self.tx.witnesses_mut().push(witness);
+
+                    Ok(idx)
+                }
             }
 
             fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
@@ -484,5 +497,38 @@ impl ScriptTransaction {
     pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
         self.tx.set_script_gas_limit(gas_limit);
         self
+    }
+}
+
+#[cfg(test)]
+mod test {
+
+    use fuel_tx::policies::Policies;
+
+    use super::*;
+
+    #[test]
+    fn append_witnesses_returns_error_when_limit_exceeded() {
+        let mut tx = ScriptTransaction {
+            tx: FuelTransaction::script(
+                0,
+                vec![],
+                vec![],
+                Policies::default(),
+                vec![],
+                vec![],
+                vec![],
+            ),
+            is_using_predicates: false,
+        };
+
+        let witness = vec![0, 1, 2].into();
+        let err = tx.append_witness(witness).expect_err("should error");
+
+        let expected_err_str = "Validation error: Witness limit exceeded. \
+                                Consider setting the limit manually with a transaction builder. \
+                                The new limit should be: `16`";
+
+        assert_eq!(&err.to_string(), expected_err_str);
     }
 }
