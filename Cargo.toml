@@ -40,6 +40,7 @@ version = "0.53.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
+arbitrary = { version = "1", features = ["derive"] }
 async-trait = { version = "0.1.73", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }

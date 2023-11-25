@@ -10,6 +10,7 @@ rust-version = { workspace = true }
 description = "Used for code generation in the Fuel Rust SDK"
 
 [dependencies]
+arbitrary = { workspace = true, optional = true, features = ["derive"] }
 Inflector = { workspace = true }
 fuel-abi-types = { workspace = true }
 itertools = { workspace = true }

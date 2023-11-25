@@ -8,7 +8,7 @@ use fuels::{
     prelude::*,
     types::Bits256,
 };
-use fuels_core::codec::DecoderConfig;
+use fuels_core::codec::{ABIDecoder, DecoderConfig};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {

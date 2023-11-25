@@ -10,6 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
 [dependencies]
+arbitrary = { workspace = true, optional = true, features = ["derive"] }
 async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }

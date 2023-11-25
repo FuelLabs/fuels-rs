@@ -10,6 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
+arbitrary = { version = "1", optional = true, features = ["derive"] }
 async-trait = { workspace = true, default-features = false }
 bech32 = { workspace = true }
 chrono = { workspace = true }
