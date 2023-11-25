@@ -6,26 +6,26 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-  "examples/codec",
-  "examples/contracts",
-  "examples/cookbook",
-  "examples/debugging",
-  "examples/macros",
-  "examples/predicates",
-  "examples/providers",
-  "examples/rust_bindings",
-  "examples/types",
-  "examples/wallets",
-  "packages/fuels",
-  "packages/fuels-accounts",
-  "packages/fuels-code-gen",
-  "packages/fuels-core",
-  "packages/fuels-macros",
-  "packages/fuels-programs",
-  "packages/fuels-test-helpers",
-  "packages/wasm-tests",
-  "scripts/check-docs",
-  "scripts/versions-replacer",
+    "examples/codec",
+    "examples/contracts",
+    "examples/cookbook",
+    "examples/debugging",
+    "examples/macros",
+    "examples/predicates",
+    "examples/providers",
+    "examples/rust_bindings",
+    "examples/types",
+    "examples/wallets",
+    "packages/fuels",
+    "packages/fuels-accounts",
+    "packages/fuels-code-gen",
+    "packages/fuels-core",
+    "packages/fuels-macros",
+    "packages/fuels-programs",
+    "packages/fuels-test-helpers",
+    "packages/wasm-tests",
+    "scripts/check-docs",
+    "scripts/versions-replacer",
 ]
 
 [workspace.package]
@@ -40,7 +40,8 @@ version = "0.53.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
-async-trait = { version = "0.1.74", default-features = false }
+arbitrary = { version = "1", features = ["derive"] }
+async-trait = { version = "0.1.73", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
