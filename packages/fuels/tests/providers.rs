@@ -290,7 +290,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
         })
     };
 
-    let err = deploy_w_maturity(1u32)?.await.expect_err(
+    let err = deploy_w_maturity(1)?.await.expect_err(
         "Should not deploy contract since block height (0) is less than the requested maturity (1)",
     );
 
@@ -300,7 +300,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     assert_eq!(s, "TransactionMaturity");
 
     provider.produce_blocks(1, None).await?;
-    deploy_w_maturity(1u32)?
+    deploy_w_maturity(1)?
         .await
         .expect("Should deploy contract since maturity (1) is <= than the block height (1)");
 

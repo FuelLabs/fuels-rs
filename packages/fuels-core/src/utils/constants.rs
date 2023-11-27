@@ -12,9 +12,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 
 pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
 
-//ANCHOR: witness_default
-// Supports 10 signatures
-pub const DEFAULT_SCRIPT_WITNESS_LIMIT: u64 = 720;
-
-pub const DEFAULT_CREATE_WITNESS_LIMIT: u64 = 20_000;
-//ANCHOR_END: witness_default
+// The size of a signature inside a transaction `Witness`
+pub const WITNESS_STATIC_SIZE: usize = 8;
+const SIGNATURE_SIZE: usize = 64;
+pub const SIGNATURE_WITNESS_SIZE: usize = WITNESS_STATIC_SIZE + SIGNATURE_SIZE;
