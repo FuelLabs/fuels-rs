@@ -309,7 +309,7 @@ where
     T: Account,
     D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
-    async fn simulate(&mut self) -> Result<()> {
+     async fn simulate(&mut self) -> Result<()> {
         self.simulate().await?;
 
         Ok(())

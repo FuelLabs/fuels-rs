@@ -943,6 +943,7 @@ mod test {
 
         use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
 
+        // movi, movi, lw, movi + call (for gas)
         const BASE_INSTRUCTION_COUNT: usize = 5;
 
         #[test]
@@ -959,19 +960,28 @@ mod test {
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
                 instructions_len,
+                // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
                 Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2)
             );
         }
 
         #[test]
         fn test_with_heap_type() {
-            let mut call = ContractCall::new_with_random_id();
-            call.output_param = ParamType::Vector(Box::new(ParamType::U8));
-            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-            assert_eq!(
-                instructions_len,
-                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
-            );
+            let output_params = vec![
+                ParamType::Vector(Box::new(ParamType::U8)),
+                ParamType::String,
+                ParamType::Bytes,
+            ];
+            for output_param in output_params {
+                let mut call = ContractCall::new_with_random_id();
+                call.output_param = output_param;
+                let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+                assert_eq!(
+                    instructions_len,
+                    // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
+                    Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
+                );
+            }
         }
 
         #[test]
@@ -982,37 +992,46 @@ mod test {
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
                 instructions_len,
+                // combines extra instructions from two above tests
                 Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2 + 4)
             );
         }
 
         #[test]
-        fn test_with_nested_heap_type() {
-            let mut call = ContractCall::new_with_random_id();
-            call.output_param =
-                ParamType::Vector(Box::new(ParamType::Vector(Box::new(ParamType::U8))));
-            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-            assert_eq!(
-                instructions_len,
-                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
-            );
+        fn test_with_enum_with_heap_and_non_heap_variant() {
+            let variant_sets = vec![
+                vec![ParamType::Vector(Box::new(ParamType::U8)), ParamType::U8],
+                vec![ParamType::String, ParamType::U8],
+                vec![ParamType::Bytes, ParamType::U8],
+            ];
+            for variant_set in variant_sets {
+                let mut call = ContractCall::new_with_random_id();
+                call.output_param = ParamType::Enum {
+                    variants: EnumVariants::new(variant_set).unwrap(),
+                    generics: Vec::new(),
+                };
+                let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
+                assert_eq!(
+                    instructions_len,
+                    // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
+                    // and 4 (lw, lw, muli, retd) added by extract_data_receipt
+                    Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 8)
+                );
+            }
         }
 
         #[test]
-        fn test_with_enum_with_heap_type_variants() {
+        fn test_with_enum_with_only_non_heap_variants() {
             let mut call = ContractCall::new_with_random_id();
             call.output_param = ParamType::Enum {
-                variants: EnumVariants::new(vec![
-                    ParamType::Vector(Box::new(ParamType::U8)),
-                    ParamType::Vector(Box::new(ParamType::B256)),
-                ])
-                .unwrap(),
+                variants: EnumVariants::new(vec![ParamType::Bool, ParamType::U8]).unwrap(),
                 generics: Vec::new(),
             };
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
                 instructions_len,
-                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 8)
+                // no extra instructions if there are no heap type variants
+                Instruction::SIZE * BASE_INSTRUCTION_COUNT
             );
         }
     }
