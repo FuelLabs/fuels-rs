@@ -81,6 +81,7 @@ pub mod prelude {
             },
         },
         test_helpers::*,
+        types::transaction_builders::*,
     };
     pub use super::{
         core::constants::*,
@@ -90,7 +91,6 @@ pub mod prelude {
             bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},
             transaction::*,
-            transaction_builders::*,
             Address, AssetId, Bytes, ContractId, RawSlice,
         },
     };
