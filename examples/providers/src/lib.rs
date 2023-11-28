@@ -5,7 +5,7 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
-    #[ignore] //TODO: Enable this test once beta supports the new `fuel-core` >= `0.51.0`
+    #[ignore] //TODO: Enable this test once beta supports the new `fuel-core` >= `0.21.0`
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
