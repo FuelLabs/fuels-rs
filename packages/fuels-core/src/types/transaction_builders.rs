@@ -23,7 +23,7 @@ use crate::{
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         input::Input,
         message::Message,
         node_info::NodeInfo,
@@ -82,9 +82,6 @@ struct UnresolvedSignatures {
 pub trait BuildableTransaction {
     type TxType: Transaction;
 
-    // Build without verifying the presence of signatures for signed coins
-    async fn build_unchecked(self, provider: impl DryRunner) -> Result<Self::TxType>;
-
     /// Build a `Transaction` from the `TransactionBuilder`. `DryRunner` is
     /// used to return the actual `gas_used` which is set as the `script_gas_limit`.
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
@@ -94,13 +91,8 @@ pub trait BuildableTransaction {
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
-    async fn build_unchecked(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build_unchecked(provider).await
-    }
-
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.verify_signatures_present()?;
-        self.build_unchecked(provider).await
+        self.build(provider).await
     }
 }
 
@@ -108,9 +100,6 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
 
-    async fn build_unchecked(self, _: impl DryRunner) -> Result<Self::TxType> {
-        self.build_unchecked()
-    }
     /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner`
     /// is not used in this case.
     async fn build(self, _: impl DryRunner) -> Result<Self::TxType> {
@@ -136,7 +125,6 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
-    fn verify_signatures_present(&self) -> Result<()>;
 }
 
 macro_rules! impl_tx_trait {
@@ -157,7 +145,7 @@ macro_rules! impl_tx_trait {
                 &self,
                 provider: impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
-                let mut tx = BuildableTransaction::build_unchecked(self.clone(), provider).await?;
+                let mut tx = BuildableTransaction::build(self.clone(), provider).await?;
 
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(self.consensus_parameters())?;
@@ -216,23 +204,6 @@ macro_rules! impl_tx_trait {
             fn consensus_parameters(&self) -> &ConsensusParameters {
                 &self.network_info.consensus_parameters
             }
-
-            fn verify_signatures_present(&self) -> Result<()> {
-                self.inputs
-                    .iter()
-                    .filter_map(|input| match input {
-                        Input::ResourceSigned { resource } => Some(resource),
-                        _ => None,
-                    })
-                    .try_for_each(|resource| {
-                        let owner = resource.owner();
-                        self.unresolved_signatures
-                            .addr_idx_offset_map
-                            .get(owner)
-                            .ok_or(missing_signatures_error(owner))
-                            .map(|_| ())
-                    })
-            }
         }
 
         impl $ty {
@@ -287,14 +258,6 @@ macro_rules! impl_tx_trait {
     };
 }
 
-fn missing_signatures_error(owner: impl ToString) -> Error {
-    let owner = owner.to_string();
-    error!(
-        InvalidData,
-        "signature missing for coin with owner: {owner}"
-    )
-}
-
 #[derive(Debug, Clone)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
@@ -340,7 +303,7 @@ impl ScriptTransactionBuilder {
         }
     }
 
-    async fn build_unchecked(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset()
@@ -450,7 +413,7 @@ impl ScriptTransactionBuilder {
                 base_offset + policies.size_dynamic(),
                 num_witnesses,
                 &self.unresolved_signatures,
-            ),
+            )?,
             self.outputs,
             dry_run_witnesses,
         );
@@ -622,11 +585,6 @@ impl CreateTransactionBuilder {
     }
 
     pub fn build(self) -> Result<CreateTransaction> {
-        self.verify_signatures_present()?;
-        self.build_unchecked()
-    }
-
-    fn build_unchecked(self) -> Result<CreateTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset()
@@ -659,7 +617,7 @@ impl CreateTransactionBuilder {
                 base_offset,
                 num_witnesses,
                 &self.unresolved_signatures,
-            ),
+            )?,
             self.outputs,
             self.witnesses,
         );
@@ -736,23 +694,16 @@ fn resolve_fuel_inputs(
     mut data_offset: usize,
     num_witnesses: u8,
     unresolved_signatures: &UnresolvedSignatures,
-) -> Vec<FuelInput> {
+) -> Result<Vec<FuelInput>> {
     inputs
         .into_iter()
         .map(|input| match input {
-            Input::ResourceSigned { resource } => {
-                // avoid erroring out if witness not present to permit dry runs
-                let witness_offset = unresolved_signatures
-                    .addr_idx_offset_map
-                    .get(resource.owner())
-                    .unwrap_or(&0);
-
-                resolve_signed_resource(
-                    resource,
-                    &mut data_offset,
-                    num_witnesses + *witness_offset as u8,
-                )
-            }
+            Input::ResourceSigned { resource } => resolve_signed_resource(
+                resource,
+                &mut data_offset,
+                num_witnesses,
+                unresolved_signatures,
+            ),
             Input::ResourcePredicate {
                 resource,
                 code,
@@ -766,7 +717,13 @@ fn resolve_fuel_inputs(
                 contract_id,
             } => {
                 data_offset += offsets::contract_input_offset();
-                FuelInput::contract(utxo_id, balance_root, state_root, tx_pointer, contract_id)
+                Ok(FuelInput::contract(
+                    utxo_id,
+                    balance_root,
+                    state_root,
+                    tx_pointer,
+                    contract_id,
+                ))
             }
         })
         .collect()
@@ -775,16 +732,39 @@ fn resolve_fuel_inputs(
 fn resolve_signed_resource(
     resource: CoinType,
     data_offset: &mut usize,
-    witness_index: u8,
-) -> FuelInput {
+    num_witnesses: u8,
+    unresolved_signatures: &UnresolvedSignatures,
+) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
             *data_offset += offsets::coin_signed_data_offset();
-            create_coin_input(coin, witness_index)
+            let owner = &coin.owner;
+
+            unresolved_signatures
+                .addr_idx_offset_map
+                .get(owner)
+                .ok_or(error!(
+                    InvalidData,
+                    "signature missing for coin with owner: `{owner:?}`"
+                ))
+                .map(|witness_idx_offset| {
+                    create_coin_input(coin, num_witnesses + *witness_idx_offset as u8)
+                })
         }
         CoinType::Message(message) => {
             *data_offset += offsets::message_signed_data_offset(message.data.len());
-            create_coin_message_input(message, witness_index)
+            let recipient = &message.recipient;
+
+            unresolved_signatures
+                .addr_idx_offset_map
+                .get(recipient)
+                .ok_or(error!(
+                    InvalidData,
+                    "signature missing for message with recipient: `{recipient:?}`"
+                ))
+                .map(|witness_idx_offset| {
+                    create_coin_message_input(message, num_witnesses + *witness_idx_offset as u8)
+                })
         }
     }
 }
@@ -794,7 +774,7 @@ fn resolve_predicate_resource(
     code: Vec<u8>,
     data: UnresolvedBytes,
     data_offset: &mut usize,
-) -> FuelInput {
+) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
             *data_offset += offsets::coin_predicate_data_offset(code.len());
@@ -803,7 +783,7 @@ fn resolve_predicate_resource(
             *data_offset += data.len();
 
             let asset_id = coin.asset_id;
-            create_coin_predicate(coin, asset_id, code, data)
+            Ok(create_coin_predicate(coin, asset_id, code, data))
         }
         CoinType::Message(message) => {
             *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len());
@@ -811,7 +791,7 @@ fn resolve_predicate_resource(
             let data = data.resolve(*data_offset as u64);
             *data_offset += data.len();
 
-            create_coin_message_predicate(message, code, data)
+            Ok(create_coin_message_predicate(message, code, data))
         }
     }
 }
@@ -915,8 +895,6 @@ fn generate_missing_witnesses(
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
-
     use super::*;
     use crate::types::{bech32::Bech32Address, message::MessageStatus};
 
@@ -984,44 +962,5 @@ mod tests {
             da_height: 0,
             status: MessageStatus::Unspent,
         }
-    }
-
-    fn owner() -> &'static str {
-        "fuel1p8qt95dysmzrn2rmewntg6n6rg3l8ztueqafg5s6jmd9cgautrdslwdqdw"
-    }
-
-    fn given_input_signed() -> Input {
-        let coin = Coin {
-            owner: Bech32Address::from_str(owner()).unwrap(),
-            ..Default::default()
-        };
-
-        Input::resource_signed(CoinType::Coin(coin))
-    }
-
-    #[test]
-    fn missing_signatures_causes_error() {
-        let network_info = NetworkInfo {
-            min_gas_price: 0,
-            consensus_parameters: Default::default(),
-        };
-
-        let owner = owner();
-        let input = given_input_signed();
-
-        // TODO either test both script and create or better consolidate build methods
-        // make DryRunner trait wasm friendly?
-        let builder = CreateTransactionBuilder::new(network_info).with_inputs(vec![input]);
-
-        builder
-            .clone()
-            .build_unchecked()
-            .expect("unchecked build shouldn't fail");
-        let err = builder
-            .build()
-            .expect_err("should throw error due to signatures missing");
-
-        let expected = missing_signatures_error(owner);
-        assert_eq!(expected.to_string(), err.to_string())
     }
 }
