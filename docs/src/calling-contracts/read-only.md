@@ -13,7 +13,7 @@ You can do this with the SDK. Instead of `.call()`ing the method, use `.simulate
 {{#include ../../../examples/contracts/src/lib.rs:simulate}}
 ```
 
-<!-- This section should explain what happens if you try a read-only call on a method that changes stae  -->
+<!-- This section should explain what happens if you try a read-only call on a method that changes state  -->
 <!-- simulate:example:start -->
 Note that if you use `.simulate()` on a method that _does_ change the state of the blockchain, it won't work properly; it will just `dry-run` it.
 
