@@ -1,10 +1,22 @@
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use fuels::{
+        accounts::{
+            predicate::Predicate, wallet::WalletUnlocked, Account, Signer, ViewOnlyAccount,
+        },
+        core::constants::BASE_ASSET_ID,
         prelude::Result,
+        test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
-            transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-            Bits256,
+            bech32::Bech32Address,
+            transaction::TxPolicies,
+            transaction_builders::{
+                BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+            },
+            tx_status::TxStatus,
+            AssetId,
         },
     };
 
@@ -13,6 +25,7 @@ mod tests {
         use fuels::{
             prelude::*,
             test_helpers::{AssetConfig, WalletsConfig},
+            types::Bits256,
         };
 
         // ANCHOR: liquidity_abigen
@@ -214,6 +227,106 @@ mod tests {
 
         launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
             .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn custom_transaction() -> Result<()> {
+        let mut hot_wallet = WalletUnlocked::new_random(None);
+        let mut cold_wallet = WalletUnlocked::new_random(None);
+
+        let code_path = "../../packages/fuels/tests/predicates/swap/out/debug/swap.bin";
+        let mut predicate = Predicate::load_from(code_path)?;
+
+        let num_coins = 5;
+        let amount = 1000;
+        let bridged_asset_id = AssetId::from([1u8; 32]);
+        let base_coins =
+            setup_single_asset_coins(hot_wallet.address(), BASE_ASSET_ID, num_coins, amount);
+        let other_coins =
+            setup_single_asset_coins(predicate.address(), bridged_asset_id, num_coins, amount);
+
+        let provider = setup_test_provider(
+            base_coins.into_iter().chain(other_coins).collect(),
+            vec![],
+            None,
+            None,
+        )
+        .await?;
+
+        hot_wallet.set_provider(provider.clone());
+        cold_wallet.set_provider(provider.clone());
+        predicate.set_provider(provider.clone());
+
+        // ANCHOR: custom_tx_receiver
+        let ask_amount = 100;
+        let locked_amount = 500;
+        let bridged_asset_id = AssetId::from([1u8; 32]);
+        let receiver = Bech32Address::from_str(
+            "fuel1p8qt95dysmzrn2rmewntg6n6rg3l8ztueqafg5s6jmd9cgautrdslwdqdw",
+        )?;
+        // ANCHOR_END: custom_tx_receiver
+
+        // ANCHOR: custom_tx
+        let network_info = provider.network_info().await?;
+        let tb = ScriptTransactionBuilder::new(network_info);
+        // ANCHOR_END: custom_tx
+
+        // ANCHOR: custom_tx_io_base
+        let base_inputs = hot_wallet
+            .get_asset_inputs_for_amount(BASE_ASSET_ID, ask_amount)
+            .await?;
+        let base_outputs =
+            hot_wallet.get_asset_outputs_for_amount(&receiver, BASE_ASSET_ID, ask_amount);
+        // ANCHOR_END: custom_tx_io_base
+
+        // ANCHOR: custom_tx_io_other
+        let other_asset_inputs = predicate
+            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount)
+            .await?;
+        let other_asset_outputs =
+            predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);
+        // ANCHOR_END: custom_tx_io_other
+
+        // ANCHOR: custom_tx_io
+        let inputs = base_inputs
+            .into_iter()
+            .chain(other_asset_inputs.into_iter())
+            .collect();
+        let outputs = base_outputs
+            .into_iter()
+            .chain(other_asset_outputs.into_iter())
+            .collect();
+
+        let mut tb = tb.with_inputs(inputs).with_outputs(outputs);
+        // ANCHOR_END: custom_tx_io
+
+        // ANCHOR: custom_tx_sign
+        hot_wallet.sign_transaction(&mut tb);
+        // ANCHOR_END: custom_tx_sign
+
+        // ANCHOR: custom_tx_adjust
+        hot_wallet.adjust_for_fee(&mut tb, 100).await?;
+        // ANCHOR_END: custom_tx_adjust
+
+        // ANCHOR: custom_tx_policies
+        let tx_policies = TxPolicies::default().with_gas_price(1);
+        let tb = tb.with_tx_policies(tx_policies);
+        // ANCHOR_END: custom_tx_policies
+
+        // ANCHOR: custom_tx_build
+        let tx = tb.build(&provider).await?;
+        let tx_id = provider.send_transaction(tx).await?;
+        // ANCHOR_END: custom_tx_build
+
+        // ANCHOR: custom_tx_verify
+        let status = provider.tx_status(&tx_id).await?;
+        assert!(matches!(status, TxStatus::Success { .. }));
+
+        let balance = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
+        assert_eq!(balance, locked_amount);
+        // ANCHOR_END: custom_tx_verify
 
         Ok(())
     }
