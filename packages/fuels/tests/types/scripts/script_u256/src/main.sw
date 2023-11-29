@@ -1,8 +1,5 @@
 script;
 
-use std::u256::U256;
-
-#[allow(deprecated)]
-fn main(arg: U256) -> U256 {
-    arg + U256::from((6, 7, 8, 9))
+fn main(arg: u256) -> u256 {
+    arg + 0x0000000000000006000000000000000700000000000000080000000000000009u256
 }

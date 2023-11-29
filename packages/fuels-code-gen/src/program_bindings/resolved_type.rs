@@ -112,6 +112,8 @@ impl TypeResolver {
     }
 
     pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
+        Self::is_deprecated(type_application.type_decl.type_field.as_str())?;
+
         let resolvers = [
             Self::try_as_primitive_type,
             Self::try_as_bits256,
@@ -142,6 +144,15 @@ impl TypeResolver {
             .iter()
             .map(|type_application| self.resolve(type_application))
             .collect()
+    }
+
+    fn is_deprecated(type_field: &str) -> Result<()> {
+        match type_field {
+            "struct std::u256::U256" | "struct U256" => {
+                Err(error!("{} is deprecated. Use `u256` instead.", type_field))
+            }
+            _ => Ok(()),
+        }
     }
 
     fn try_as_generic(
@@ -228,15 +239,19 @@ impl TypeResolver {
 
         let maybe_resolved = match type_field.as_str() {
             "()" => Some(ResolvedType::Unit),
-            "struct std::u128::U128" | "struct U128" => {
-                let u128_path = TypePath::new("::core::primitive::u128").expect("to be correct");
-                Some(ResolvedType::Primitive(u128_path))
-            }
-            "u8" | "u16" | "u32" | "u64" | "bool" => {
+            "bool" | "u8" | "u16" | "u32" | "u64" => {
                 let path = format!("::core::primitive::{type_field}");
                 let type_path = TypePath::new(path).expect("to be a valid path");
 
                 Some(ResolvedType::Primitive(type_path))
+            }
+            "struct std::u128::U128" | "struct U128" => {
+                let u128_path = TypePath::new("::core::primitive::u128").expect("is correct");
+                Some(ResolvedType::Primitive(u128_path))
+            }
+            "u256" => {
+                let u256_path = TypePath::new("::fuels::types::U256").expect("is correct");
+                Some(ResolvedType::Primitive(u256_path))
             }
             _ => None,
         };
