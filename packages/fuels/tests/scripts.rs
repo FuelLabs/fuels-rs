@@ -133,6 +133,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     let b = 2000u32;
     let result = script_instance.main(a, b).call().await?;
     assert_eq!(result.value, "hello");
+
     // ANCHOR: script_with_tx_policies
     let tx_policies = TxPolicies::default()
         .with_gas_price(1)
@@ -401,5 +402,44 @@ async fn test_script_submit_and_response() -> Result<()> {
     // ANCHOR_END: submit_response_script
 
     assert_eq!(value, 42);
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_script_transaction_builder() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/scripts/basic_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+    let provider = wallet.try_provider()?;
+
+    // ANCHOR: script_call_tb
+    let script_call_handler = script_instance.main(1, 2);
+
+    let mut tb = script_call_handler.transaction_builder().await?;
+
+    // customize the builder...
+
+    wallet.adjust_for_fee(&mut tb, 0).await?;
+    wallet.sign_transaction(&mut tb);
+
+    let tx = tb.build(provider).await?;
+
+    let tx_id = provider.send_transaction(tx).await?;
+    let tx_status = provider.tx_status(&tx_id).await?;
+
+    let response = script_call_handler.get_response_from(tx_status)?;
+
+    assert_eq!(response.value, "hello");
+    // ANCHOR_END: script_call_tb
+
     Ok(())
 }
