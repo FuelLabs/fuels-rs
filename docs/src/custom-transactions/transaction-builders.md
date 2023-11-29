@@ -10,7 +10,7 @@ Calling `build()` on a builder will result in the corresponding `CreateTransacti
 
 The builders take on the heavy lifting behind the scenes, offering two standout advantages: handling predicate data offsets and managing witness indexing.
 
-When your transaction involves predicates with dynamic data as inputs, like vectors, the dynamic data contains a pointer pointing to the beginning of the raw data. This pointer's validity hinges on the order of transaction inputs, and any shifting could render it invalid. However, the transaction builders conviniently postpone the resolution of these pointers until you finalize the build process.
+When your transaction involves predicates with dynamic data as inputs, like vectors, the dynamic data contains a pointer pointing to the beginning of the raw data. This pointer's validity hinges on the order of transaction inputs, and any shifting could render it invalid. However, the transaction builders conveniently postpone the resolution of these pointers until you finalize the build process.
 
 Similarly, adding signatures for signed coins requires the signed coin input to hold an index corresponding to the signature in the witnesses array. These indexes can also become invalid if the witness order changes. The Rust SDK again defers the resolution of these indexes until the transaction is finalized. It handles the assignment of correct index witnesses behind the scenes, sparing you the hassle of dealing with indexing intricacies during input definition.
 
@@ -34,7 +34,7 @@ Let's start by instantiating a builder. Since we don't plan to deploy a contract
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx}}
 ```
 
-Next, we need to define transaction inputs of the base asset that sum up to **ask_amount**. We also need transaction outputs that will assing those assets to the predicate address and thereby unlock it. The methods `get_asset_inputs_for_amount` and `get_asset_outputs_for_amount` can help with that. We need to specify the asset ID, the target amount and the target address:
+Next, we need to define transaction inputs of the base asset that sum up to **ask_amount**. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods `get_asset_inputs_for_amount` and `get_asset_outputs_for_amount` can help with that. We need to specify the asset ID, the target amount, and the target address:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_io_base}}
@@ -60,7 +60,7 @@ As we have used coins that require a signature, we sign the transaction builder 
 
 > **Note** The signature is not created until the transaction is finalized with `build(&provider)`
 
-We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The Account trait let's us use `adjust_for_fee()` for adjusting the transactions inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our tx to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
+We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The Account trait lets us use `adjust_for_fee()` for adjusting the transaction inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our tx to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_adjust}}
@@ -72,7 +72,7 @@ We can also define transaction policies. For example, we can limit the gas price
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_policies}}
 ```
 
-Our builder needs a signature from the hot wallet to unlock it's coins before we call `build()` and submit the resulting transaction through the provider:
+Our builder needs a signature from the hot wallet to unlock its coins before we call `build()` and submit the resulting transaction through the provider:
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_build}}
