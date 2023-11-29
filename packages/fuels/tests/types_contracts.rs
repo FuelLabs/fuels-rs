@@ -930,12 +930,12 @@ async fn strings_must_have_correct_length_custom_types() {
               "type": "enum MyEnum",
               "components": [
                 {
-                  "name": "foo",
+                  "name": "Foo",
                   "type": 1,
                   "typeArguments": null
                 },
                 {
-                  "name": "bar",
+                  "name": "Bar",
                   "type": 3,
                   "typeArguments": null
                 }
@@ -980,7 +980,7 @@ async fn strings_must_have_correct_length_custom_types() {
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
     let _ = contract_instance
         .methods()
-        .takes_enum(MyEnum::bar("fuell".try_into().unwrap()));
+        .takes_enum(MyEnum::Bar("fuell".try_into().unwrap()));
 }
 
 #[tokio::test]
@@ -1747,17 +1747,15 @@ async fn test_u256() -> Result<()> {
     let contract_methods = contract_instance.methods();
     {
         let arg = u256_from((1, 2, 3, 4));
-
         let actual = contract_methods.u256_sum_and_ret(arg).call().await?.value;
-
         let expected = arg + u256_from((3, 4, 5, 6));
 
         assert_eq!(expected, actual);
     }
     {
         let actual = contract_methods.u256_in_enum_output().call().await?.value;
-
         let expected = SomeEnum::B(u256_from((1, 2, 3, 4)));
+
         assert_eq!(expected, actual);
     }
     {

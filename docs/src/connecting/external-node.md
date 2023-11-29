@@ -18,7 +18,7 @@ In the code example, we connected a new provider to the Testnet node and created
 >
 > Once the assets have been transferred to the wallet, you can reuse it in other tests by providing the private key!
 >
-> In addition to the faucet, there is a block explorer for the Tesnet at
+> In addition to the faucet, there is a block explorer for the Testnet at
 >
 > [block-explorer](https://fuellabs.github.io/block-explorer-v2)
 

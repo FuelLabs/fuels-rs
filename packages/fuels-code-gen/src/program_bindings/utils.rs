@@ -149,7 +149,6 @@ pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> 
         ("std::option::Option", "::core::option::Option"),
         ("std::result::Result", "::core::result::Result"),
         ("std::string::String", "::std::string::String"),
-        ("std::u256::U256", "::fuels::types::U256"),
         ("std::vec::Vec", "::std::vec::Vec"),
         (
             "std::vm::evm::evm_address::EvmAddress",
