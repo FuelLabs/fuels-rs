@@ -147,7 +147,7 @@
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
-<!-- This section should explain what happens if you try a read-only call on a method that changes stae  -->
+<!-- This section should explain what happens if you try a read-only call on a method that changes state  -->
 <!-- simulate:example:start -->
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>

@@ -281,7 +281,7 @@ To build these tests, run the following command:</p>
 <p><strong>Note:</strong> New wallets on the Testnet will not have any assets! They can be obtained by providing the wallet address to the faucet at</p>
 <p><a href="https://faucet-beta-4.fuel.network">faucet-beta-4.fuel.network</a></p>
 <p>Once the assets have been transferred to the wallet, you can reuse it in other tests by providing the private key!</p>
-<p>In addition to the faucet, there is a block explorer for the Tesnet at</p>
+<p>In addition to the faucet, there is a block explorer for the Testnet at</p>
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
 </blockquote>
 <p>If you want to connect to another node just change the url or IP and port. For example, to connect to a local node that was created with <code>fuel-core</code> you can use:</p>
@@ -1916,13 +1916,13 @@ let is_error = response.is_err();
 <pre><code class="language-rust ignore">        // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods.mint_coins(100).simulate().await?;
 </code></pre>
-<!-- This section should explain what happens if you try a read-only call on a method that changes stae  -->
+<!-- This section should explain what happens if you try a read-only call on a method that changes state  -->
 <!-- simulate:example:start -->
 <p>Note that if you use <code>.simulate()</code> on a method that <em>does</em> change the state of the blockchain, it won't work properly; it will just <code>dry-run</code> it.</p>
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
 <!-- simulate:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
-<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outpus for you. You have two methods that you can use: <code>with_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
+<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outputs for you. You have two methods that you can use: <code>with_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <p><code>with_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
