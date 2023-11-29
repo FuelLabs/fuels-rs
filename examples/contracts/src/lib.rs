@@ -870,4 +870,47 @@ mod tests {
 
         Ok(())
     }
+
+    #[tokio::test]
+    async fn contract_custom_call() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "TestContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
+            Deploy(
+                name = "contract_instance",
+                contract = "TestContract",
+                wallet = "wallet"
+            ),
+        );
+        let provider = wallet.try_provider()?;
+
+        let counter = 42;
+
+        // ANCHOR: contract_call_tb
+        let call_handler = contract_instance.methods().initialize_counter(counter);
+
+        let mut tb = call_handler.transaction_builder().await?;
+
+        // customize the builder...
+
+        wallet.adjust_for_fee(&mut tb, 0).await?;
+        wallet.sign_transaction(&mut tb);
+
+        let tx = tb.build(provider).await?;
+
+        let tx_id = provider.send_transaction(tx).await?;
+        let tx_status = provider.tx_status(&tx_id).await?;
+
+        let response = call_handler.get_response_from(tx_status)?;
+
+        assert_eq!(counter, response.value);
+        // ANCHOR_END: contract_call_tb
+
+        Ok(())
+    }
 }
