@@ -34,6 +34,7 @@ members = [
   'tests/logs/script_needs_custom_decoder_logging',
   'tests/logs/script_with_contract_logs',
   'tests/predicates/basic_predicate',
+  'tests/predicates/swap',
   'tests/predicates/predicate_configurables',
   'tests/predicates/predicate_witnesses',
   'tests/predicates/signatures',

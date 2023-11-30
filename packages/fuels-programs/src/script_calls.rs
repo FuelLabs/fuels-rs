@@ -15,7 +15,10 @@ use fuels_core::{
         errors::Result,
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        transaction_builders::{
+            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+        },
+        tx_status::TxStatus,
         unresolved_bytes::UnresolvedBytes,
     },
 };
@@ -167,7 +170,7 @@ where
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }
 
-    async fn prepare_builder(&self) -> Result<ScriptTransactionBuilder> {
+    async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
         let contract_ids: HashSet<ContractId> = self
             .script_call
             .external_contracts
@@ -193,22 +196,25 @@ where
         )
         .collect();
 
-        let network_info = self.account.try_provider()?.network_info().await?;
-        let tb = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            self.tx_policies,
-            network_info,
-        )
-        .with_script(self.script_call.script_binary.clone())
-        .with_script_data(self.compute_script_data().await?);
+        Ok((inputs, outputs))
+    }
 
-        Ok(tb)
+    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
+        let network_info = self.account.try_provider()?.network_info().await?;
+        let (inputs, outputs) = self.prepare_inputs_outputs().await?;
+
+        Ok(ScriptTransactionBuilder::new(network_info)
+            .with_tx_policies(self.tx_policies)
+            .with_script(self.script_call.script_binary.clone())
+            .with_script_data(self.compute_script_data().await?)
+            .with_inputs(inputs)
+            .with_outputs(outputs))
     }
 
     /// Returns the transaction that executes the script call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        let mut tb = self.prepare_builder().await?;
+        let mut tb = self.transaction_builder().await?;
+
         self.account.add_witnessses(&mut tb);
         self.account.adjust_for_fee(&mut tb, 0).await?;
 
@@ -275,11 +281,7 @@ where
         &self,
         tolerance: Option<f64>,
     ) -> Result<TransactionCost> {
-        let mut tb = self.prepare_builder().await?;
-
-        self.account.add_witnessses(&mut tb);
-        self.account.adjust_for_fee(&mut tb, 0).await?;
-        let tx = tb.build(self.account.try_provider()?).await?;
+        let tx = self.build_tx().await?;
 
         let transaction_cost = self
             .provider
@@ -300,6 +302,13 @@ where
             self.log_decoder.clone(),
             self.cached_tx_id,
         ))
+    }
+
+    /// Create a [`FuelCallResponse`] from `TxStatus`
+    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<FuelCallResponse<D>> {
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
     }
 }
 

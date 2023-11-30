@@ -14,7 +14,9 @@ use fuels_core::{
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
-        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        transaction_builders::{
+            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+        },
     },
 };
 use itertools::{chain, Itertools};
@@ -96,30 +98,24 @@ pub trait TxDependencyExtension: Sized {
     }
 }
 
-/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
-/// initialized with the actual script instructions, script data needed to perform the call and
-/// transaction inputs/outputs consisting of assets and contracts.
-pub(crate) async fn build_tx_from_contract_calls(
+/// Creates a [`ScriptTransactionBuilder`] from contract calls.
+pub(crate) async fn transaction_builder_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
     account: &impl Account,
-) -> Result<ScriptTransaction> {
-    let provider = account.try_provider()?;
-    let consensus_parameters = provider.consensus_parameters();
-
+) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
+    let consensus_parameters = account.try_provider()?.consensus_parameters();
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset);
-
     let script = get_instructions(calls, call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
-    let mut asset_inputs = vec![];
-
     // Find the spendable resources required for those calls
+    let mut asset_inputs = vec![];
     for (asset_id, amount) in &required_asset_amounts {
         let resources = account
             .get_asset_inputs_for_amount(*asset_id, *amount)
@@ -129,11 +125,26 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let network_info = provider.network_info().await?;
-    let mut tb =
-        ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info)
-            .with_script(script)
-            .with_script_data(script_data.clone());
+    let network_info = account.try_provider()?.network_info().await?;
+    Ok(ScriptTransactionBuilder::new(network_info)
+        .with_tx_policies(tx_policies)
+        .with_script(script)
+        .with_script_data(script_data.clone())
+        .with_inputs(inputs)
+        .with_outputs(outputs))
+}
+
+/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
+/// initialized with the actual script instructions, script data needed to perform the call and
+/// transaction inputs/outputs consisting of assets and contracts.
+pub(crate) async fn build_tx_from_contract_calls(
+    calls: &[ContractCall],
+    tx_policies: TxPolicies,
+    account: &impl Account,
+) -> Result<ScriptTransaction> {
+    let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account).await?;
+
+    let required_asset_amounts = calculate_required_asset_amounts(calls);
 
     let used_base_amount = required_asset_amounts
         .iter()
@@ -143,7 +154,7 @@ pub(crate) async fn build_tx_from_contract_calls(
     account.add_witnessses(&mut tb);
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
 
-    tb.build(provider).await
+    tb.build(account.try_provider()?).await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return
