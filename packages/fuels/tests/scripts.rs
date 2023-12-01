@@ -434,9 +434,11 @@ async fn test_script_transaction_builder() -> Result<()> {
     let tx = tb.build(provider).await?;
 
     let tx_id = provider.send_transaction(tx).await?;
-    let tx_status = provider.tx_status(&tx_id).await?;
+    let receipts = provider
+        .get_receipts_and_check_status(&tx_id, Some(&script_call_handler.log_decoder))
+        .await?;
 
-    let response = script_call_handler.get_response_from(tx_status)?;
+    let response = script_call_handler.get_response(receipts)?;
 
     assert_eq!(response.value, "hello");
     // ANCHOR_END: script_call_tb

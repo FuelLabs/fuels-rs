@@ -20,7 +20,6 @@ use fuels_core::{
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
-        tx_status::TxStatus,
         unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
@@ -666,13 +665,6 @@ where
             self.log_decoder.clone(),
             self.cached_tx_id,
         ))
-    }
-
-    /// Create a [`FuelCallResponse`] from `TxStatus`
-    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<FuelCallResponse<D>> {
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
     }
 }
 
