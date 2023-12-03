@@ -29,3 +29,18 @@ name = "abi_decoder"
 path = "fuzz_targets/abi_decoder.rs"
 test = false
 doc = false
+[[bin]]
+name = "abi_encoder"
+path = "fuzz_targets/abi_encoder.rs"
+test = false
+doc = false
+[[bin]]
+name = "something"
+path = "fuzz_targets/something.rs"
+test = false
+doc = false
+[[bin]]
+name = "param_type"
+path = "fuzz_targets/param_type.rs"
+test = false
+doc = false

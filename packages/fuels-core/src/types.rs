@@ -25,6 +25,7 @@ pub type Selector = ByteArray;
 pub type EnumSelector = (u64, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct StaticStringToken {
     data: String,
     expected_len: Option<usize>,
@@ -72,6 +73,7 @@ impl TryFrom<StaticStringToken> for String {
 }
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum Token {
     // Used for unit type variants in Enum. An "empty" enum is not represented as Enum<empty box>,
     // because this way we can have both unit and non-unit type variants.
