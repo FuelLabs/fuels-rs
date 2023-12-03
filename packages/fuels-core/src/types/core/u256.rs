@@ -14,6 +14,7 @@ use crate::{
 
 construct_uint! {
     /// 256-bit unsigned integer.
+    #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
     pub struct U256(4);
 }
 

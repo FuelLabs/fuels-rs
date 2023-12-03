@@ -1,6 +1,7 @@
 use crate::constants::WORD_SIZE;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub enum Data {
     // Write the enclosed data immediately.
     Inline(Vec<u8>),
@@ -21,6 +22,7 @@ impl Data {
 // bytes are going to be loaded at. Once the address is given to `resolve`
 // normal bytes can be retrieved.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct UnresolvedBytes {
     data: Vec<Data>,
 }
