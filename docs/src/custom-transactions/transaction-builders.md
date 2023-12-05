@@ -14,7 +14,7 @@ When your transaction involves predicates with dynamic data as inputs, like vect
 
 Similarly, adding signatures for signed coins requires the signed coin input to hold an index corresponding to the signature in the witnesses array. These indexes can also become invalid if the witness order changes. The Rust SDK again defers the resolution of these indexes until the transaction is finalized. It handles the assignment of correct index witnesses behind the scenes, sparing you the hassle of dealing with indexing intricacies during input definition.
 
-Another added benefit of the builder pattern is that it guards against changes once the tx is finalized. The transactions resultign from a builder don't permit any changes to the struct that could cause the transaction ID to be modified. This eliminates the headache of calculating and storing a transaction ID for future use, only to accidentally modify the transaction later, resulting in a different transaction ID.
+Another added benefit of the builder pattern is that it guards against changes once the transaction is finalized. The transactions resulting from a builder don't permit any changes to the struct that could cause the transaction ID to be modified. This eliminates the headache of calculating and storing a transaction ID for future use, only to accidentally modify the transaction later, resulting in a different transaction ID.
 
 ## Creating a custom transaction
 
@@ -60,7 +60,7 @@ As we have used coins that require a signature, we sign the transaction builder 
 
 > **Note** The signature is not created until the transaction is finalized with `build(&provider)`
 
-We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The Account trait lets us use `adjust_for_fee()` for adjusting the transaction inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our tx to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
+We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The Account trait lets us use `adjust_for_fee()` for adjusting the transaction inputs if needed to cover the fee. The second argument to `adjust_for_fee()` is the total amount of the base asset that we expect our transaction to spend regardless of fees. In our case, this is the **ask_amount** we are transferring to the predicate.
 
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_adjust}}

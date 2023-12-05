@@ -66,7 +66,7 @@ Description: Deploys the `contract` (with salt) using `wallet`. Will create a co
 
 Cardinality: 0 or N.
 
-## LoadScript
+## `LoadScript`
 
 Example: `LoadScript(name = "script_instance", script = "MyScript", wallet = "wallet")`
 
