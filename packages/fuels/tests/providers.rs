@@ -811,19 +811,11 @@ async fn create_transfer(
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
 
-    let provider = wallet.try_provider()?;
-    let network_info = provider.network_info().await?;
-
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        TxPolicies::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(provider).await
+    tb.build(wallet.try_provider()?).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -877,21 +869,14 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, amount);
-    let provider = wallet.try_provider()?;
-    let network_info = provider.network_info().await?;
 
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        TxPolicies::default(),
-        network_info,
-    )
-    .with_script(vec![Opcode::RVRT.into()]);
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
+        .with_script(vec![Opcode::RVRT.into()]);
 
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(provider).await
+    tb.build(wallet.try_provider()?).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -985,13 +970,7 @@ async fn test_build_with_provider() -> Result<()> {
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), BASE_ASSET_ID, 100);
 
-    let network_info = provider.network_info().await?;
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        TxPolicies::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
     wallet.sign_transaction(&mut tb);
     let tx = tb.build(provider).await?;

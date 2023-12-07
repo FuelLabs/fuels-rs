@@ -302,8 +302,6 @@ impl Contract {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
-        let network_info = account.try_provider()?.network_info().await?;
-
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
             self.binary,
             self.contract_id,
@@ -311,12 +309,11 @@ impl Contract {
             self.salt,
             self.storage_slots,
             tx_policies,
-            network_info,
         );
 
         account.add_witnessses(&mut tb);
         account.adjust_for_fee(&mut tb, 0).await?;
-        let tx = tb.build()?;
+        let tx = tb.build(account.try_provider()?).await?;
 
         let provider = account.try_provider()?;
 
