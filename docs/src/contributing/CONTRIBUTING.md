@@ -11,7 +11,7 @@ If you run into any difficulties getting started, you can always ask questions o
 You may contribute to the project in many ways, some of which involve coding knowledge and some which do not. A few examples include:
 
 - Reporting bugs
-- Adding new features or bugfixes for which there is already an open issue
+- Adding new features or bug fixes for which there is already an open issue
 - Making feature requests
 
 Check out our [Help Wanted](https://github.com/FuelLabs/fuels-rs/labels/help%20wanted) or [Good First Issues](https://github.com/FuelLabs/fuels-rs/labels/good%20first%20issue) to find a suitable task.

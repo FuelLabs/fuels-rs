@@ -12,7 +12,7 @@ Let's consider the following predicate example:
 
 We will look at a complete example of using the SDK to send and receive funds from a predicate.
 
-First, we set up the wallets and a node instance. The call to the `abigen!` macro will generate all the types specified in the predicate plus two custom stucts:
+First, we set up the wallets and a node instance. The call to the `abigen!` macro will generate all the types specified in the predicate plus two custom structs:
 
 - an encoder with an `encode_data`  function that will conveniently encode all the arguments of the main function for us.
 - a configurables struct which holds methods for setting all the configurables mentioned in the predicate

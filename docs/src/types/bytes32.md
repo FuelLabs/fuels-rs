@@ -1,4 +1,4 @@
-# Bytes32
+# `Bytes32`
 
 In Sway and the FuelVM, `Bytes32` represents hashes. They hold a 256-bit (32-byte) value. `Bytes32` is a wrapper on a 32-sized slice of `u8`: `pub struct Bytes32([u8; 32]);`.
 
@@ -8,7 +8,7 @@ These are the main ways of creating a `Bytes32`:
 {{#include ../../../examples/types/src/lib.rs:bytes32}}
 ```
 
-`Bytes32` also implements _fmt's_ `Debug`, `Display`, `LowerHex` and `UpperHex` traits. For example, you can get the display and hex representations with:
+`Bytes32` also implements the `fmt` module's `Debug`, `Display`, `LowerHex` and `UpperHex` traits. For example, you can get the display and hex representations with:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:bytes32_format}}

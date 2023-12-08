@@ -1,4 +1,4 @@
-# Bytes
+# `Bytes`
 
 In Fuel, a type called `Bytes` represents a collection of tightly-packed bytes. The Rust SDK represents `Bytes` as `Bytes(Vec<u8>)`. Here's an example of using `Bytes` in a contract call:
 

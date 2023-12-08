@@ -1,10 +1,10 @@
 # Codec
 
-Encoding and decoding are done as per [the fuel spec](https://specs.fuel.network/master/abi/argument-encoding.html). To this end, `fuels` makes use of the [ABIEncoder](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html) and the [ABIDecoder](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html).
+Encoding and decoding are done as per [the fuel spec](https://specs.fuel.network/master/abi/argument-encoding.html). To this end, `fuels` makes use of the [`ABIEncoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html) and the [`ABIDecoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html).
 
 ## Prerequisites for decoding/encoding
 
-To encode a type, you must first convert it into a [`Token`](https://docs.rs/fuels/latest/fuels/types/enum.Token.html). This is commonly done by implementing the [Tokenizable](https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html) trait.
+To encode a type, you must first convert it into a [`Token`](https://docs.rs/fuels/latest/fuels/types/enum.Token.html). This is commonly done by implementing the [`Tokenizable`](https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html) trait.
 
 To decode, you also need to provide a [`ParamType`](https://docs.rs/fuels/latest/fuels/types/param_types/enum.ParamType.html) describing the schema of the type in question. This is commonly done by implementing the [Parameterize](https://docs.rs/fuels/latest/fuels/core/traits/trait.Parameterize.html) trait.
 

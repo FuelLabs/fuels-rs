@@ -38,7 +38,7 @@ $ cargo run -- encode params -v bool true -v u32 42 -v u32 100
 0000000000000001000000000000002a0000000000000064
 ```
 
-Note that for every param you want to encode, you must pass a `-v` flag followed by the type, and then the value: `-v <type_1> <value_1> -v <type_2> <value_2> -v <type_n> <value_n>`
+Note that for every parameter you want to encode, you must pass a `-v` flag followed by the type, and then the value: `-v <type_1> <value_1> -v <type_2> <value_2> -v <type_n> <value_n>`
 
 ### Encoding function call
 

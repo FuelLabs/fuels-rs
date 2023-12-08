@@ -6,7 +6,7 @@ Sometimes you want to call a contract method that doesn't change the state of th
 
 In this case, there's no need to generate an actual blockchain transaction; you only want to read a value quickly.
 
-You can do this with the SDK. Instead of `.call()`ing the method, use `.simulate()`:
+You can do this with the SDK. Instead of calling the method with `.call()`, use `.simulate()`:
 <!-- read_only:example:end -->
 
 ```rust,ignore
