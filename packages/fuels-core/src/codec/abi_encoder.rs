@@ -159,8 +159,10 @@ impl ABIEncoder {
         if !variants.only_units_inside() {
             let variant_param_type = variants.param_type_of_variant(*discriminant)?;
             let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;
+            println!("padding amount: problematic? {padding_amount}");
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
+            println!("reached here, issue is later");
 
             let token_data = Self::encode_token(token_within_enum)?;
             encoded_enum.extend(token_data);
@@ -248,7 +250,7 @@ mod tests {
     use super::*;
     use crate::{
         codec::first_four_bytes_of_sha256_hash,
-        types::{enum_variants::EnumVariants, param_types::ParamType},
+        types::{enum_variants::EnumVariants, param_types::ParamType, EnumSelector},
     };
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
@@ -1251,6 +1253,21 @@ mod tests {
         let expected_encoding = [255; 32];
         let result = ABIEncoder::encode(&[token])?.resolve(0);
         assert_eq!(result, expected_encoding);
+        Ok(())
+    }
+
+    #[test]
+    fn fuzzing_thingy() -> Result<()> {
+        let token = Token::Enum(Box::new((
+            1,
+            Token::String("".to_string()),
+            EnumVariants::new(vec![
+                ParamType::StringArray(18446742977385549567),
+                ParamType::U8,
+            ])?,
+        )));
+        let a = ABIEncoder::encode(&[token]);
+
         Ok(())
     }
 }
