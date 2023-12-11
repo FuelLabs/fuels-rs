@@ -22,7 +22,7 @@ In the code example, we connected a new provider to the Testnet node and created
 >
 > [block-explorer](https://fuellabs.github.io/block-explorer-v2)
 
-If you want to connect to another node just change the url or IP and port. For example, to connect to a local node that was created with `fuel-core` you can use:
+If you want to connect to another node just change the URL or IP and port. For example, to connect to a local node that was created with `fuel-core` you can use:
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:local_node_address}}

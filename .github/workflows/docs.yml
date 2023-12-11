@@ -14,3 +14,4 @@ jobs:
     with:
       docs-src-path: "docs/src"
       pre-command: 'cargo run --package versions-replacer -- ./docs --manifest-path ./Cargo.toml --filename-regex "\.md$"'
+      spellcheck-config-path: 'docs/.spellcheck.yml'

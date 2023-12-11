@@ -14,7 +14,7 @@ As mentioned in previous chapters, you can specify the external contract with `.
 {{#include ../../../examples/contracts/src/lib.rs:dependency_estimation_manual}}
 ```
 
-But this requires you to know the contract id of the external contract and the needed number of output variables. Alternatively, by chaining `.estimate_tx_dependencies()` instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:
+But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining `.estimate_tx_dependencies()` instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:dependency_estimation}}

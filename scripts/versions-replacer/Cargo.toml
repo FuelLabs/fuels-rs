@@ -1,18 +1,17 @@
 [package]
 name = "versions-replacer"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
 publish = false
-authors.workspace = true
-edition.workspace = true
-homepage.workspace = true
-readme.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-version.workspace = true
+repository = { workspace = true }
+rust-version = { workspace = true }
 
 [dependencies]
 argh = "0.1.12"
-cargo_metadata = "0.18.0"
+cargo_metadata = "0.18.1"
 color-eyre = "0.6.2"
 once_cell = "1.18.0"
 regex = { workspace = true }

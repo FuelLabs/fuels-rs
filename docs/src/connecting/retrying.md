@@ -6,7 +6,7 @@ The [`Provider`](https://docs.rs/fuels/0.47.0/fuels/accounts/provider/struct.Pro
 
 We can configure the number of retry attempts and the retry strategy as detailed below.
 
-## RetryConfig
+## `RetryConfig`
 
 The retry behavior can be altered by giving a custom `RetryConfig`. It allows for configuring the maximum number of attempts and the interval strategy used.
 
@@ -18,7 +18,7 @@ The retry behavior can be altered by giving a custom `RetryConfig`. It allows fo
 {{#include ../../../examples/providers/src/lib.rs:configure_retry}}
 ```
 
-## Interval strategy - Backoff
+## Interval strategy - `Backoff`
 
 `Backoff` defines different strategies for managing intervals between retry attempts.
 Each strategy allows you to customize the waiting time before a new attempt based on the number of attempts made.
