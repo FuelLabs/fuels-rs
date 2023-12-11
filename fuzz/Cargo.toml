@@ -35,12 +35,12 @@ path = "fuzz_targets/abi_encoder.rs"
 test = false
 doc = false
 [[bin]]
-name = "something"
-path = "fuzz_targets/something.rs"
+name = "vector_of_param_type"
+path = "fuzz_targets/vector_of_param_type.rs"
 test = false
 doc = false
 [[bin]]
-name = "param_type"
-path = "fuzz_targets/param_type.rs"
+name = "boxed_param_type"
+path = "fuzz_targets/boxed_param_type.rs"
 test = false
 doc = false
