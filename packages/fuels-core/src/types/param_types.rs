@@ -1814,6 +1814,25 @@ mod tests {
         assert_eq!(param_type, ParamType::String);
     }
 
+    #[test]
+    fn calculate_num_of_elements() -> Result<()> {
+        let failing_param_type = ParamType::Array(Box::new(ParamType::U16), usize::MAX);
+        assert!(ParamType::calculate_num_of_elements(&failing_param_type, 0)
+            .unwrap_err()
+            .to_string()
+            .contains("Cannot calculate the number of elements"));
+        let zero_sized_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 1000);
+        assert!(ParamType::calculate_num_of_elements(&zero_sized_type, 0)
+            .unwrap_err()
+            .to_string()
+            .contains("the type is zero-sized"));
+        assert!(ParamType::calculate_num_of_elements(&ParamType::U16, 9)
+            .unwrap_err()
+            .to_string()
+            .contains("1 extra bytes detected while decoding heap type"));
+        Ok(())
+    }
+
     fn given_type_with_path(path: &str) -> Type {
         Type {
             type_field: format!("struct {path}"),
