@@ -18,5 +18,5 @@ crate-type = ['cdylib']
 # that our examples don't inherit `fuels` with disabled features).
 # Cargo wouldn't respect any attempts here to disable them again.
 fuels = { path = "../fuels", default-features = false }
-getrandom = { version = "0.2.10", features = ["js"] }
-wasm-bindgen-test = "0.3.37"
+getrandom = { version = "0.2.11", features = ["js"] }
+wasm-bindgen-test = "0.3.39"

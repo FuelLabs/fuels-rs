@@ -50,7 +50,7 @@ let wallet_locked = wallet_unlocked.lock();
 ```
 
 Most wallet constructors that create or generate a new wallet are provided on
-the `WalletUnlocked` type. Consider `lock`ing the wallet after the new private
+the `WalletUnlocked` type. Consider locking the wallet with the `lock` method after the new private
 key has been handled in order to reduce the scope in which the wallet's private
 key is stored in memory.
 

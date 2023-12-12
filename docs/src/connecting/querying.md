@@ -25,13 +25,13 @@ This method returns all unspent coins (of a given asset ID) from a wallet.
 
 ## Get spendable resources owned by an address
 
-The following example shows how to fetch resources owned by an address. First, you create a  `ResourceFilter` which specifies the target address, asset id, and amount. You can also define utxo ids and message ids that should be excluded when retrieving the resources:
+The following example shows how to fetch resources owned by an address. First, you create a  `ResourceFilter` which specifies the target address, asset ID, and amount. You can also define UTXO IDs and message IDs that should be excluded when retrieving the resources:
 
 ```rust,ignore
 {{#include ../../../packages/fuels-accounts/src/provider.rs:resource_filter}}
 ```
 
-The example uses default values for the asset id and the exclusion lists. This resolves to the base asset id and empty vectors for the id lists respectively:
+The example uses default values for the asset ID and the exclusion lists. This resolves to the base asset ID and empty vectors for the ID lists respectively:
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_spendable_resources}}
@@ -39,7 +39,7 @@ The example uses default values for the asset id and the exclusion lists. This r
 
 ## Get balances from an address
 
-Get all the spendable balances of all assets for an address. This is different from getting the coins because we only return the numbers (the sum of UTXOs coins amount for each asset id) and not the UTXOs coins themselves.
+Get all the spendable balances of all assets for an address. This is different from getting the coins because we only return the numbers (the sum of UTXOs coins amount for each asset ID) and not the UTXOs coins themselves.
 
 ```rust,ignore
 {{#include ../../../examples/providers/src/lib.rs:get_balances}}

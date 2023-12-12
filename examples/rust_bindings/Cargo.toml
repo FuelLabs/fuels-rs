@@ -11,8 +11,8 @@ description = "Fuel Rust SDK examples for Rust-native bindings"
 
 [dev-dependencies]
 fuels = { workspace = true }
+fuels-code-gen = { workspace = true }
 fuels-macros = { workspace = true }
 proc-macro2 = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-fuels-code-gen = { workspace = true }

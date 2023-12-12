@@ -14,7 +14,7 @@ where:
 
 - `name` is the name that will be given to the generated bindings,
 
-- `abi` is either a path to the json abi file or its actual contents.
+- `abi` is either a path to the JSON ABI file or its actual contents.
 <!-- abigen:example:end -->
 
 ---
@@ -62,9 +62,9 @@ Each `ProgramType` gets its own `mod` based on the `name` given in the `abigen!`
 
 One extra `mod` called `shared_types` is generated if `abigen!` detects that the given programs share types. Instead of each `mod` regenerating the type for itself, the type is lifted out into the `shared_types` module, generated only once, and then shared between all program bindings that use it. Reexports are added to each mod so that even if a type is deemed shared, you can still access it as though each `mod` had generated the type for itself (i.e. `my_contract_mod::SharedType`).
 
-A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the stdlib) or because you've happened to define the exact same type.
+A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the `stdlib`) or because you've happened to define the exact same type.
 
-Finally, `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a `pub use` statement. If you find rustc can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing `abigen_bindings::whatever_contract_mod::TheType`.
+Finally, `pub use` statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a `pub use` statement. If you find `rustc` can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing `abigen_bindings::whatever_contract_mod::TheType`.
 
 > **Note:**
 > It is **highly** encouraged that you generate all your bindings in one `abigen!` call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling `abigen!` multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the `abigen!` calls into different modules to resolve the collision.

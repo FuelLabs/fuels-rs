@@ -35,41 +35,41 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.73.0"
+rust-version = "1.74.0"
 version = "0.53.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
-async-trait = { version = "0.1.73", default-features = false }
+async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
-elliptic-curve = { version = "0.13.6", default-features = false }
+elliptic-curve = { version = "0.13.8", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.3.0"
-futures = "0.3.28"
+futures = "0.3.29"
 hex = { version = "0.4.3", default-features = false }
 itertools = "0.12.0"
 portpicker = "0.1.1"
-proc-macro2 = "1.0.66"
+proc-macro2 = "1.0.70"
 quote = "1.0.33"
 rand = { version = "0.8.5", default-features = false, features = ["std_rng", "getrandom"] }
-regex = "1.10.0"
+regex = "1.10.2"
 semver = "1.0.20"
-serde = { version = "1.0.188", default-features = false }
-serde_json = "1.0.107"
-serde_with = { version = "3.3.0", default-features = false }
+serde = { version = "1.0.193", default-features = false }
+serde_json = "1.0.108"
+serde_with = { version = "3.4.0", default-features = false }
 sha2 = { version = "0.10.8", default-features = false }
-syn = "2.0.38"
+syn = "2.0.39"
 tai64 = { version = "4.0.0", default-features = false }
-tempfile = { version = "3.8.0", default-features = false }
-thiserror = { version = "1.0.49", default-features = false }
-tokio = { version = "1.33.0", default-features = false }
-tracing = "0.1.37"
+tempfile = { version = "3.8.1", default-features = false }
+thiserror = { version = "1.0.50", default-features = false }
+tokio = { version = "1.34.0", default-features = false }
+tracing = "0.1.40"
 trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
 which = { version = "5.0.0", default-features = false }
-zeroize = "1.6.0"
+zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.21.0", default-features = false }
@@ -80,13 +80,13 @@ fuel-core-services = { version = "0.21.0", default-features = false }
 fuel-core-types = { version = "0.21.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.43.0"}
-fuel-crypto = { version = "0.43.0"}
-fuel-merkle = { version = "0.43.0"}
-fuel-storage = { version = "0.43.0"}
-fuel-tx = { version = "0.43.0"}
-fuel-types = { version = "0.43.0"}
-fuel-vm = { version = "0.43.0"}
+fuel-asm = { version = "0.43.1" }
+fuel-crypto = { version = "0.43.1" }
+fuel-merkle = { version = "0.43.1" }
+fuel-storage = { version = "0.43.1" }
+fuel-tx = { version = "0.43.1" }
+fuel-types = { version = "0.43.1" }
+fuel-vm = { version = "0.43.1" }
 
 # Workspace projects
 fuels = { version = "0.53.0", path = "./packages/fuels" }

@@ -20,8 +20,7 @@ serde_json = { workspace = true }
 syn = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4"
-
+pretty_assertions = "1.4.0"
 
 [package.metadata.cargo-machete]
 ignored = ["Inflector"]

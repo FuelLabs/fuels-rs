@@ -1,4 +1,4 @@
-# String
+# `String`
 
 The Rust SDK represents Fuel's `String`s as `SizedAsciiString<LEN>`, where the generic parameter `LEN` is the length of a given string. This abstraction is necessary because all strings in Fuel and Sway are statically-sized, i.e., you must know the size of the string beforehand.
 

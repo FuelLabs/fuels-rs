@@ -1,6 +1,6 @@
-# RocksDb
+# RocksDB
 
-RocksDb enables the preservation of the blockchain's state locally, facilitating its future utilization.
+RocksDB enables the preservation of the blockchain's state locally, facilitating its future utilization.
 
 To create or use a local database, follow these instructions:
 
