@@ -107,39 +107,38 @@ impl ParamType {
     }
 
     pub fn validate_is_decodable(&self, max_depth: usize) -> Result<()> {
-        match self {
-            ParamType::Enum { variants, .. } => {
-                let all_param_types = variants.param_types();
-                let grandchildren_need_receipts = all_param_types
-                    .iter()
-                    .any(|child| child.children_need_extra_receipts());
-                if grandchildren_need_receipts {
-                    return Err(error!(
-                        InvalidType,
-                        "Enums currently support only one level deep heap types."
-                    ));
-                }
-
-                let num_of_children_needing_receipts = all_param_types
-                    .iter()
-                    .filter(|param_type| param_type.is_extra_receipt_needed(false))
-                    .count();
-                if num_of_children_needing_receipts > 1 {
-                    return Err(error!(
-                        InvalidType,
-                        "Enums currently support only one heap-type variant. Found: \
-                        {num_of_children_needing_receipts}"
-                    ))
-                };
-                self.compute_encoding_in_bytes().map(|_| ())
+        if let ParamType::Enum { variants, .. } = self {
+            let all_param_types = variants.param_types();
+            let grandchildren_need_receipts = all_param_types
+                .iter()
+                .any(|child| child.children_need_extra_receipts());
+            if grandchildren_need_receipts {
+                return Err(error!(
+                    InvalidType,
+                    "Enums currently support only one level deep heap types."
+                ));
             }
-            _ if self.children_need_extra_receipts() => Err(error!(
+
+            let num_of_children_needing_receipts = all_param_types
+                .iter()
+                .filter(|param_type| param_type.is_extra_receipt_needed(false))
+                .count();
+            if num_of_children_needing_receipts > 1 {
+                return Err(error!(
+                    InvalidType,
+                    "Enums currently support only one heap-type variant. Found: \
+                        {num_of_children_needing_receipts}"
+                ));
+            }
+        } else if self.children_need_extra_receipts() {
+            return Err(error!(
                 InvalidType,
                 "type {:?} is not decodable: nested heap types are currently not supported except in Enums.",
                 DebugWithDepth::new(self, max_depth)
-            )),
-            _ => self.compute_encoding_in_bytes().map(|_| ())
+            ));
         }
+        self.compute_encoding_in_bytes()?;
+        Ok(())
     }
 
     pub fn is_extra_receipt_needed(&self, top_level_type: bool) -> bool {
@@ -161,20 +160,21 @@ impl ParamType {
 
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
     pub fn heap_inner_element_size(&self, top_level_type: bool) -> Result<Option<usize>> {
-        match &self {
+        let heap_bytes_size = match &self {
             ParamType::Vector(inner_param_type) => {
-                Ok(Some(inner_param_type.compute_encoding_in_bytes()?))
+                Some(inner_param_type.compute_encoding_in_bytes()?)
             }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
-            ParamType::Bytes | ParamType::String => Ok(Some(std::mem::size_of::<u8>())),
+            ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
             ParamType::StringSlice if !top_level_type => {
-                Ok(Some(ParamType::U8.compute_encoding_in_bytes()?))
+                Some(ParamType::U8.compute_encoding_in_bytes()?)
             }
             ParamType::RawSlice if !top_level_type => {
-                Ok(Some(ParamType::U64.compute_encoding_in_bytes()?))
+                Some(ParamType::U64.compute_encoding_in_bytes()?)
             }
-            _ => Ok(None),
-        }
+            _ => None,
+        };
+        Ok(heap_bytes_size)
     }
 
     /// Calculates the number of bytes the VM expects this parameter to be encoded in.

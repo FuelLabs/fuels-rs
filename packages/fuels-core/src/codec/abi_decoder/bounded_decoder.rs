@@ -339,14 +339,10 @@ impl BoundedDecoder {
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
         let skip_extra_in_bytes = match variants.heap_type_variant() {
-            Some((heap_type_discriminant, heap_type)) => {
-                if heap_type_discriminant == discriminant {
-                    heap_type.compute_encoding_in_bytes()?
-                } else {
-                    0
-                }
+            Some((heap_type_discriminant, heap_type)) if heap_type_discriminant == discriminant => {
+                heap_type.compute_encoding_in_bytes()?
             }
-            None => 0,
+            _ => 0,
         };
 
         let bytes_to_skip = enum_width_in_bytes - selected_variant.compute_encoding_in_bytes()?
