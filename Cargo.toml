@@ -72,12 +72,12 @@ which = { version = "5.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.21.0", default-features = false }
-fuel-core-chain-config = { version = "0.21.0", default-features = false }
-fuel-core-client = { version = "0.21.0", default-features = false }
-fuel-core-poa = { version = "0.21.0", default-features = false }
-fuel-core-services = { version = "0.21.0", default-features = false }
-fuel-core-types = { version = "0.21.0", default-features = false }
+fuel-core = { version = "0.22.0", default-features = false }
+fuel-core-chain-config = { version = "0.22.0", default-features = false }
+fuel-core-client = { version = "0.22.0", default-features = false }
+fuel-core-poa = { version = "0.22.0", default-features = false }
+fuel-core-services = { version = "0.22.0", default-features = false }
+fuel-core-types = { version = "0.22.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.43.1" }
