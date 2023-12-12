@@ -8,9 +8,11 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "coin-cache")]
+use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
+    types::{balance::Balance, contract::ContractBalance},
 };
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
