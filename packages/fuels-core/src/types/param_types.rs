@@ -1885,7 +1885,7 @@ mod tests {
         assert!(ParamType::calculate_num_of_elements(&failing_param_type, 0)
             .unwrap_err()
             .to_string()
-            .contains("Cannot calculate the number of elements"));
+            .contains("Multiplication overflow"));
         let zero_sized_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 1000);
         assert!(ParamType::calculate_num_of_elements(&zero_sized_type, 0)
             .unwrap_err()
