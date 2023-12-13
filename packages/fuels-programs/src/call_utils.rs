@@ -956,6 +956,12 @@ mod test {
 
         // movi, movi, lw, movi + call (for gas)
         const BASE_INSTRUCTION_COUNT: usize = 5;
+        // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
+        const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
+        // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
+        const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
+        // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
+        const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
         #[test]
         fn test_simple() {
@@ -971,8 +977,7 @@ mod test {
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
                 instructions_len,
-                // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
-                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2)
+                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + GAS_OFFSET_INSTRUCTION_COUNT)
             );
         }
 
@@ -989,8 +994,8 @@ mod test {
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
                 assert_eq!(
                     instructions_len,
-                    // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
-                    Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 4)
+                    Instruction::SIZE
+                        * (BASE_INSTRUCTION_COUNT + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT)
                 );
             }
         }
@@ -1004,7 +1009,10 @@ mod test {
             assert_eq!(
                 instructions_len,
                 // combines extra instructions from two above tests
-                Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 2 + 4)
+                Instruction::SIZE
+                    * (BASE_INSTRUCTION_COUNT
+                        + GAS_OFFSET_INSTRUCTION_COUNT
+                        + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT)
             );
         }
 
@@ -1024,9 +1032,10 @@ mod test {
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
                 assert_eq!(
                     instructions_len,
-                    // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
-                    // and 4 (lw, lw, muli, retd) added by extract_data_receipt
-                    Instruction::SIZE * (BASE_INSTRUCTION_COUNT + 8)
+                    Instruction::SIZE
+                        * (BASE_INSTRUCTION_COUNT
+                            + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT
+                            + EXTRACT_HEAP_DATA_INSTRUCTION_COUNT)
                 );
             }
         }
