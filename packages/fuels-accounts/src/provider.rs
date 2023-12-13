@@ -8,16 +8,17 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "coin-cache")]
+use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
+    types::{balance::Balance, contract::ContractBalance},
 };
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
     TxId, UtxoId,
 };
 use fuel_types::{Address, Bytes32, ChainId, Nonce};
-use fuel_vm::state::ProgramState;
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
@@ -269,41 +270,11 @@ impl Provider {
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
-        let fetch_receipts = || async {
-            let receipts = self.client.receipts(tx_id).await?;
-            receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
-        };
-
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let status = match tx_status {
-            TransactionStatus::Success { .. } => {
-                let receipts = fetch_receipts().await?;
-                TxStatus::Success { receipts }
-            }
-            TransactionStatus::Failure {
-                reason,
-                program_state,
-                ..
-            } => {
-                let receipts = fetch_receipts().await?;
-                let revert_id = program_state
-                    .and_then(|state| match state {
-                        ProgramState::Revert(revert_id) => Some(revert_id),
-                        _ => None,
-                    })
-                    .expect("Transaction failed without a `revert_id`");
-
-                TxStatus::Revert {
-                    receipts,
-                    reason,
-                    revert_id,
-                }
-            }
-            TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
-        };
-
-        Ok(status)
+        self.client
+            .transaction_status(tx_id)
+            .await
+            .map(Into::into)
+            .map_err(Into::into)
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
