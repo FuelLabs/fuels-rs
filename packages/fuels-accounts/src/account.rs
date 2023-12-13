@@ -331,9 +331,7 @@ mod tests {
 
     use fuel_crypto::{Message, SecretKey};
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
-    use fuels_core::types::{
-        transaction::Transaction, transaction_builders::TransactionBuilderProvider,
-    };
+    use fuels_core::types::{transaction::Transaction, transaction_builders::DryRunner};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -379,7 +377,7 @@ mod tests {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-    impl TransactionBuilderProvider for MockDryRunner {
+    impl DryRunner for MockDryRunner {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
             Ok(0)
         }

@@ -35,14 +35,14 @@ use crate::{
 };
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait TransactionBuilderProvider: Send + Sync {
+pub trait DryRunner: Send + Sync {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
     async fn min_gas_price(&self) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-impl<T: TransactionBuilderProvider> TransactionBuilderProvider for &T {
+impl<T: DryRunner> DryRunner for &T {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         (*self).dry_run_and_get_used_gas(tx, tolerance).await
     }
@@ -67,14 +67,14 @@ struct UnresolvedSignatures {
 pub trait BuildableTransaction {
     type TxType: Transaction;
 
-    async fn build(self, provider: &impl TransactionBuilderProvider) -> Result<Self::TxType>;
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
-    async fn build(self, provider: &impl TransactionBuilderProvider) -> Result<Self::TxType> {
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -83,7 +83,7 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
 
-    async fn build(self, provider: &impl TransactionBuilderProvider) -> Result<Self::TxType> {
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -95,7 +95,7 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
     async fn fee_checked_from_tx(
         &self,
-        provider: &impl TransactionBuilderProvider,
+        provider: &impl DryRunner,
     ) -> Result<Option<TransactionFee>>;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
@@ -125,7 +125,7 @@ macro_rules! impl_tx_trait {
 
             async fn fee_checked_from_tx(
                 &self,
-                provider: &impl TransactionBuilderProvider,
+                provider: &impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
                 let mut tx = BuildableTransaction::build(self.clone(), provider).await?;
                 let consensus_parameters = provider.consensus_parameters();
@@ -264,7 +264,7 @@ impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
-    async fn build(self, provider: &impl TransactionBuilderProvider) -> Result<ScriptTransaction> {
+    async fn build(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset(provider.consensus_parameters())
@@ -307,7 +307,7 @@ impl ScriptTransactionBuilder {
 
     async fn set_script_gas_limit_to_gas_used(
         tx: &mut Script,
-        provider: &impl TransactionBuilderProvider,
+        provider: &impl DryRunner,
         tolerance: f32,
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
@@ -357,7 +357,7 @@ impl ScriptTransactionBuilder {
         self,
         base_offset: usize,
         num_witnesses: u8,
-        provider: &impl TransactionBuilderProvider,
+        provider: &impl DryRunner,
     ) -> Result<Script> {
         let policies = self.generate_fuel_policies(provider.min_gas_price().await?);
 
@@ -521,10 +521,7 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    pub async fn build(
-        self,
-        provider: &impl TransactionBuilderProvider,
-    ) -> Result<CreateTransaction> {
+    pub async fn build(self, provider: &impl DryRunner) -> Result<CreateTransaction> {
         let consensus_parameters = provider.consensus_parameters();
 
         let is_using_predicates = self.is_using_predicates();
