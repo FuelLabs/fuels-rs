@@ -18,7 +18,6 @@ fuel-core-client = { workspace = true, optional = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }
-fuel-vm = { workspace = true }
 fuels-core = { workspace = true, default-features = false }
 hex = { workspace = true, default-features = false, features = ["std"] }
 rand = { workspace = true, default-features = false }
