@@ -180,11 +180,7 @@ pub trait Transaction:
 
     fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64;
 
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<()>;
+    fn check(&self, block_height: u32, consensus_parameters: &ConsensusParameters) -> Result<()>;
 
     fn id(&self, chain_id: ChainId) -> Bytes32;
 
@@ -307,14 +303,12 @@ macro_rules! impl_tx_wrapper {
                 )
             }
 
-            fn check_without_signatures(
+            fn check(
                 &self,
                 block_height: u32,
                 consensus_parameters: &ConsensusParameters,
             ) -> Result<()> {
-                Ok(self
-                    .tx
-                    .check_without_signatures(block_height.into(), consensus_parameters)?)
+                Ok(self.tx.check(block_height.into(), consensus_parameters)?)
             }
 
             fn id(&self, chain_id: ChainId) -> Bytes32 {

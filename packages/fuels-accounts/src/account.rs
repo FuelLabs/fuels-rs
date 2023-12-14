@@ -16,7 +16,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::TxPolicies,
+        transaction::{Transaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
         },
@@ -42,8 +42,12 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
         message: S,
     ) -> std::result::Result<Signature, Self::Error>;
 
-    /// Signs the transaction
-    fn sign_transaction(&self, message: &mut impl TransactionBuilder);
+    fn sign_transaction(&self, tb: &mut impl TransactionBuilder);
+
+    fn sign_built_transaction(
+        &self,
+        tx: &mut impl Transaction,
+    ) -> std::result::Result<Signature, Self::Error>;
 }
 
 #[derive(Debug)]
@@ -372,6 +376,7 @@ mod tests {
         Ok(())
     }
 
+    #[derive(Default)]
     struct MockDryRunner {
         c_param: ConsensusParameters,
     }
@@ -426,11 +431,7 @@ mod tests {
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
                                           // ANCHOR_END: sign_tx
 
-        let tx = tb
-            .build(&MockDryRunner {
-                c_param: ConsensusParameters::default(),
-            })
-            .await?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;

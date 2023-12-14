@@ -8,6 +8,7 @@ use fuels_core::types::{
     bech32::{Bech32Address, FUEL_BECH32_HRP},
     errors::{Error, Result},
     input::Input,
+    transaction::Transaction,
     transaction_builders::TransactionBuilder,
     AssetId,
 };
@@ -263,18 +264,31 @@ impl Account for WalletUnlocked {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    type Error = WalletError;
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> WalletResult<Signature> {
+    type Error = Error;
+    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(&self, message: S) -> Result<Signature> {
         let message = Message::new(message);
         let sig = Signature::sign(&self.private_key, &message);
+
         Ok(sig)
     }
 
     fn sign_transaction(&self, tb: &mut impl TransactionBuilder) {
         tb.add_unresolved_signature(self.address().clone(), self.private_key);
+    }
+
+    fn sign_built_transaction(&self, tx: &mut impl Transaction) -> Result<Signature> {
+        let consensus_parameters = self
+            .try_provider()
+            .map_err(|_| WalletError::NoProviderError)?
+            .consensus_parameters();
+        let id = tx.id(consensus_parameters.chain_id);
+
+        let message = Message::from_bytes(*id);
+        let sig = Signature::sign(&self.private_key, &message);
+
+        tx.append_witness(sig.as_ref().into())?;
+
+        Ok(sig)
     }
 }
 

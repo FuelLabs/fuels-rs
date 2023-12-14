@@ -296,13 +296,13 @@ mod tests {
         let mut tb = tb.with_inputs(inputs).with_outputs(outputs);
         // ANCHOR_END: custom_tx_io
 
-        // ANCHOR: custom_tx_sign
-        hot_wallet.sign_transaction(&mut tb);
-        // ANCHOR_END: custom_tx_sign
-
         // ANCHOR: custom_tx_adjust
         hot_wallet.adjust_for_fee(&mut tb, 100).await?;
         // ANCHOR_END: custom_tx_adjust
+
+        // ANCHOR: custom_tx_sign
+        hot_wallet.sign_transaction(&mut tb);
+        // ANCHOR_END: custom_tx_sign
 
         // ANCHOR: custom_tx_policies
         let tx_policies = TxPolicies::default().with_gas_price(1);

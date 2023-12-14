@@ -33,6 +33,7 @@ zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
 fuels-macros = { workspace = true }
+tokio = { workspace = true, features = ["test-util"] }
 
 [features]
 default = ["std"]
