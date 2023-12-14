@@ -125,8 +125,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 
     let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
 
-    let network_info = account.try_provider()?.network_info().await?;
-    Ok(ScriptTransactionBuilder::new(network_info)
+    Ok(ScriptTransactionBuilder::default()
         .with_tx_policies(tx_policies)
         .with_script(script)
         .with_script_data(script_data.clone())
