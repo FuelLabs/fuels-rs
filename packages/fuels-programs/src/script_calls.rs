@@ -200,10 +200,9 @@ where
     }
 
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        let network_info = self.account.try_provider()?.network_info().await?;
         let (inputs, outputs) = self.prepare_inputs_outputs().await?;
 
-        Ok(ScriptTransactionBuilder::new(network_info)
+        Ok(ScriptTransactionBuilder::default()
             .with_tx_policies(self.tx_policies)
             .with_script(self.script_call.script_binary.clone())
             .with_script_data(self.compute_script_data().await?)

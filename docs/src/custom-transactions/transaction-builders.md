@@ -2,7 +2,7 @@
 
 The Rust SDK simplifies the creation of **Create** and **Script** transactions through two handy builder structs `CreateTransactionBuilder`, `ScriptTransactionBuilder`, and the `TransactionBuilder` trait.
 
-Calling `build()` on a builder will result in the corresponding `CreateTransaction` or `ScriptTransaction` that can be submitted to the network.
+Calling `build(&provider)` on a builder will result in the corresponding `CreateTransaction` or `ScriptTransaction` that can be submitted to the network.
 
 ## Role of the transaction builders
 

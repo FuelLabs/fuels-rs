@@ -87,15 +87,17 @@ impl TxStatus {
         }
     }
 }
+
 #[cfg(feature = "std")]
 impl From<ClientTransactionStatus> for TxStatus {
     fn from(client_status: ClientTransactionStatus) -> Self {
         match client_status {
             ClientTransactionStatus::Submitted { .. } => TxStatus::Submitted {},
-            ClientTransactionStatus::Success { .. } => TxStatus::Success { receipts: vec![] },
+            ClientTransactionStatus::Success { receipts, .. } => TxStatus::Success { receipts },
             ClientTransactionStatus::Failure {
                 reason,
                 program_state,
+                receipts,
                 ..
             } => {
                 let revert_id = program_state
@@ -105,7 +107,7 @@ impl From<ClientTransactionStatus> for TxStatus {
                     })
                     .expect("Transaction failed without a `revert_id`");
                 TxStatus::Revert {
-                    receipts: vec![],
+                    receipts,
                     reason,
                     revert_id,
                 }
