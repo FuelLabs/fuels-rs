@@ -2,6 +2,7 @@
 name = "fuels-rs-fuzz"
 version = "0.0.0"
 publish = false
+edition = "2021"
 
 [package.metadata]
 cargo-fuzz = true
@@ -17,12 +18,8 @@ fuels-programs = { path = "../packages/fuels-programs", features = ["arbitrary"]
 fuels-test-helpers = { path = "../packages/fuels-test-helpers", features = ["arbitrary"] }
 
 
-# Prevent this from interfering with workspaces
-[workspace]
-members = ["."]
-
 [profile.release]
-debug = 1
+debug = true
 
 [[bin]]
 name = "abi_decoder"

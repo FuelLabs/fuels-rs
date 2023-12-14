@@ -27,6 +27,7 @@ members = [
   "scripts/check-docs",
   "scripts/versions-replacer",
 ]
+exclude = ["fuzz"]
 
 [workspace.package]
 authors = ["Fuel Labs <contact@fuel.sh>"]
