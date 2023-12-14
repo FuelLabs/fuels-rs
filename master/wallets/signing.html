@@ -178,10 +178,6 @@
         )?;
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        let network_info = NetworkInfo {
-            consensus_parameters: Default::default(),
-            min_gas_price: 0,
-        };
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
@@ -204,7 +200,6 @@
                 vec![input_coin],
                 vec![output_coin],
                 Default::default(),
-                network_info,
             )
         };
 

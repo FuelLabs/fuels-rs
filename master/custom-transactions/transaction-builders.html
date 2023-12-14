@@ -139,7 +139,7 @@
                     <main>
                         <h1 id="transaction-builders"><a class="header" href="#transaction-builders">Transaction Builders</a></h1>
 <p>The Rust SDK simplifies the creation of <strong>Create</strong> and <strong>Script</strong> transactions through two handy builder structs <code>CreateTransactionBuilder</code>, <code>ScriptTransactionBuilder</code>, and the <code>TransactionBuilder</code> trait.</p>
-<p>Calling <code>build()</code> on a builder will result in the corresponding <code>CreateTransaction</code> or <code>ScriptTransaction</code> that can be submitted to the network.</p>
+<p>Calling <code>build(&amp;provider)</code> on a builder will result in the corresponding <code>CreateTransaction</code> or <code>ScriptTransaction</code> that can be submitted to the network.</p>
 <h2 id="role-of-the-transaction-builders"><a class="header" href="#role-of-the-transaction-builders">Role of the transaction builders</a></h2>
 <blockquote>
 <p><strong>Note</strong> This section contains additional information about the inner workings of the builders. If you are just interested in how to use them, you can skip to the next section.</p>
@@ -160,8 +160,7 @@
 </code></pre>
 <p>Our goal is to create a transaction that will use our hot wallet to transfer the <strong>ask_amount</strong> to the <strong>receiver</strong> and then send the unlocked predicate assets to a second wallet that acts as our cold storage.</p>
 <p>Let's start by instantiating a builder. Since we don't plan to deploy a contract, the <code>ScriptTransactionBuilder</code> is the appropriate choice:</p>
-<pre><code class="language-rust ignore">        let network_info = provider.network_info().await?;
-        let tb = ScriptTransactionBuilder::new(network_info);
+<pre><code class="language-rust ignore">        let tb = ScriptTransactionBuilder::default();
 </code></pre>
 <p>Next, we need to define transaction inputs of the base asset that sum up to <strong>ask_amount</strong>. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods <code>get_asset_inputs_for_amount</code> and <code>get_asset_outputs_for_amount</code> can help with that. We need to specify the asset ID, the target amount, and the target address:</p>
 <pre><code class="language-rust ignore">        let base_inputs = hot_wallet
