@@ -215,7 +215,8 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnessses(&mut tx_builder);
 
         let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
-        self.adjust_for_fee(&mut tx_builder, used_base_amount).await?;
+        self.adjust_for_fee(&mut tx_builder, used_base_amount)
+            .await?;
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
