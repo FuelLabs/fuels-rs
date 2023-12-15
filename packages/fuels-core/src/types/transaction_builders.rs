@@ -20,13 +20,11 @@ use crate::{
     offsets,
     types::{
         bech32::Bech32Address,
-        chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
         errors::{error, Result},
         input::Input,
         message::Message,
-        node_info::NodeInfo,
         transaction::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
         },
@@ -39,6 +37,8 @@ use crate::{
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+    async fn min_gas_price(&self) -> Result<u64>;
+    fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -46,28 +46,13 @@ impl<T: DryRunner> DryRunner for &T {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         (*self).dry_run_and_get_used_gas(tx, tolerance).await
     }
-}
 
-#[derive(Debug, Clone)]
-pub struct NetworkInfo {
-    pub consensus_parameters: ConsensusParameters,
-    pub min_gas_price: u64,
-}
-
-impl NetworkInfo {
-    pub fn new(node_info: NodeInfo, chain_info: ChainInfo) -> Self {
-        Self {
-            consensus_parameters: chain_info.consensus_parameters,
-            min_gas_price: node_info.min_gas_price,
-        }
+    async fn min_gas_price(&self) -> Result<u64> {
+        (*self).min_gas_price().await
     }
 
-    pub fn max_gas_per_tx(&self) -> u64 {
-        self.consensus_parameters.tx_params().max_gas_per_tx
-    }
-
-    pub fn chain_id(&self) -> ChainId {
-        self.consensus_parameters.chain_id
+    fn consensus_parameters(&self) -> &ConsensusParameters {
+        (*self).consensus_parameters()
     }
 }
 
@@ -82,16 +67,14 @@ struct UnresolvedSignatures {
 pub trait BuildableTransaction {
     type TxType: Transaction;
 
-    /// Build a `Transaction` from the `TransactionBuilder`. `DryRunner` is
-    /// used to return the actual `gas_used` which is set as the `script_gas_limit`.
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 }
@@ -100,10 +83,8 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
 
-    /// `CreateTransaction`s do not have `gas_limit` so the `DryRunner`
-    /// is not used in this case.
-    async fn build(self, _: impl DryRunner) -> Result<Self::TxType> {
-        self.build()
+    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
     }
 }
 
@@ -112,8 +93,10 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     type TxType: Transaction;
 
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
-    async fn fee_checked_from_tx(&self, provider: impl DryRunner)
-        -> Result<Option<TransactionFee>>;
+    async fn fee_checked_from_tx(
+        &self,
+        provider: &impl DryRunner,
+    ) -> Result<Option<TransactionFee>>;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -124,7 +107,6 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-    fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 macro_rules! impl_tx_trait {
@@ -143,17 +125,18 @@ macro_rules! impl_tx_trait {
 
             async fn fee_checked_from_tx(
                 &self,
-                provider: impl DryRunner,
+                provider: &impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
                 let mut tx = BuildableTransaction::build(self.clone(), provider).await?;
+                let consensus_parameters = provider.consensus_parameters();
 
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(self.consensus_parameters())?;
+                    tx.estimate_predicates(consensus_parameters)?;
                 }
 
                 Ok(TransactionFee::checked_from_tx(
-                    &self.consensus_parameters().gas_costs,
-                    &self.consensus_parameters().fee_params,
+                    &consensus_parameters.gas_costs,
+                    &consensus_parameters.fee_params,
                     &tx.tx,
                 ))
             }
@@ -200,14 +183,10 @@ macro_rules! impl_tx_trait {
             fn witnesses_mut(&mut self) -> &mut Vec<Witness> {
                 &mut self.witnesses
             }
-
-            fn consensus_parameters(&self) -> &ConsensusParameters {
-                &self.network_info.consensus_parameters
-            }
         }
 
         impl $ty {
-            fn generate_fuel_policies(&self) -> Policies {
+            fn generate_fuel_policies(&self, network_min_gas_price: u64) -> Policies {
                 let mut policies = Policies::default();
                 policies.set(PolicyType::MaxFee, self.tx_policies.max_fee());
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
@@ -220,9 +199,7 @@ macro_rules! impl_tx_trait {
 
                 policies.set(
                     PolicyType::GasPrice,
-                    self.tx_policies
-                        .gas_price()
-                        .or(Some(self.network_info.min_gas_price)),
+                    self.tx_policies.gas_price().or(Some(network_min_gas_price)),
                 );
 
                 policies
@@ -258,7 +235,7 @@ macro_rules! impl_tx_trait {
     };
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -267,11 +244,10 @@ pub struct ScriptTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
-    pub(crate) network_info: NetworkInfo,
     unresolved_signatures: UnresolvedSignatures,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
@@ -281,7 +257,6 @@ pub struct CreateTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub salt: Salt,
-    pub(crate) network_info: NetworkInfo,
     unresolved_signatures: UnresolvedSignatures,
 }
 
@@ -289,24 +264,10 @@ impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
-    pub fn new(network_info: NetworkInfo) -> ScriptTransactionBuilder {
-        ScriptTransactionBuilder {
-            script: vec![],
-            script_data: vec![],
-            inputs: vec![],
-            outputs: vec![],
-            witnesses: vec![],
-            tx_policies: TxPolicies::default(),
-            network_info,
-            gas_estimation_tolerance: 0.05,
-            unresolved_signatures: Default::default(),
-        }
-    }
-
-    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
-            self.base_offset()
+            self.base_offset(provider.consensus_parameters())
         } else {
             0
         };
@@ -347,10 +308,9 @@ impl ScriptTransactionBuilder {
     async fn set_script_gas_limit_to_gas_used(
         tx: &mut Script,
         provider: &impl DryRunner,
-        network_info: &NetworkInfo,
         tolerance: f32,
     ) -> Result<()> {
-        let consensus_params = &network_info.consensus_parameters;
+        let consensus_params = provider.consensus_parameters();
 
         // The dry-run validation will check if there is any spendable input present in
         // the transaction. If we are dry-running without inputs we have to add a temporary one.
@@ -375,7 +335,7 @@ impl ScriptTransactionBuilder {
         // Get `max_gas` used by everything except the script execution. Add `1` because of rounding.
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
         // Increase `script_gas_limit` to the maximum allowed value.
-        tx.set_script_gas_limit(network_info.max_gas_per_tx() - max_gas);
+        tx.set_script_gas_limit(consensus_params.tx_params().max_gas_per_tx - max_gas);
 
         let gas_used = provider
             .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
@@ -399,7 +359,7 @@ impl ScriptTransactionBuilder {
         num_witnesses: u8,
         provider: &impl DryRunner,
     ) -> Result<Script> {
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies(provider.min_gas_price().await?);
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -428,17 +388,12 @@ impl ScriptTransactionBuilder {
         // If the `script_gas_limit` was not set by the user,
         // dry-run the tx to get the `gas_used`
         } else {
-            Self::set_script_gas_limit_to_gas_used(
-                &mut tx,
-                provider,
-                &self.network_info,
-                self.gas_estimation_tolerance,
-            )
-            .await?
+            Self::set_script_gas_limit_to_gas_used(&mut tx, provider, self.gas_estimation_tolerance)
+                .await?
         };
 
         let missing_witnesses = generate_missing_witnesses(
-            tx.id(&self.network_info.chain_id()),
+            tx.id(&provider.consensus_parameters().chain_id),
             &self.unresolved_signatures,
         );
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
@@ -446,8 +401,8 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    fn base_offset(&self) -> usize {
-        offsets::base_offset_script(self.consensus_parameters())
+    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
+        offsets::base_offset_script(consensus_parameters)
             + padded_len_usize(self.script_data.len())
             + padded_len_usize(self.script.len())
     }
@@ -471,9 +426,8 @@ impl ScriptTransactionBuilder {
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         tx_policies: TxPolicies,
-        network_info: NetworkInfo,
     ) -> Self {
-        ScriptTransactionBuilder::new(network_info)
+        ScriptTransactionBuilder::default()
             .with_inputs(inputs)
             .with_outputs(outputs)
             .with_tx_policies(tx_policies)
@@ -487,7 +441,6 @@ impl ScriptTransactionBuilder {
         inputs: Vec<Input>,
         outputs: Vec<Output>,
         tx_policies: TxPolicies,
-        network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [
             to.to_vec(),
@@ -515,7 +468,7 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        ScriptTransactionBuilder::new(network_info)
+        ScriptTransactionBuilder::default()
             .with_script(script)
             .with_script_data(script_data)
             .with_inputs(inputs)
@@ -529,7 +482,6 @@ impl ScriptTransactionBuilder {
         amount: u64,
         inputs: Vec<Input>,
         tx_policies: TxPolicies,
-        network_info: NetworkInfo,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
@@ -553,7 +505,7 @@ impl ScriptTransactionBuilder {
 
         let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
 
-        ScriptTransactionBuilder::new(network_info)
+        ScriptTransactionBuilder::default()
             .with_tx_policies(tx_policies)
             .with_script(script)
             .with_script_data(script_data)
@@ -569,31 +521,23 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    fn new(network_info: NetworkInfo) -> CreateTransactionBuilder {
-        CreateTransactionBuilder {
-            bytecode_length: 0,
-            bytecode_witness_index: 0,
-            storage_slots: vec![],
-            salt: Default::default(),
-            inputs: vec![],
-            outputs: vec![],
-            witnesses: vec![],
-            tx_policies: TxPolicies::default(),
-            network_info,
-            unresolved_signatures: Default::default(),
-        }
-    }
+    pub async fn build(self, provider: &impl DryRunner) -> Result<CreateTransaction> {
+        let consensus_parameters = provider.consensus_parameters();
 
-    pub fn build(self) -> Result<CreateTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
-            self.base_offset()
+            self.base_offset(consensus_parameters)
         } else {
             0
         };
 
         let num_witnesses = self.num_witnesses()?;
-        let tx = self.resolve_fuel_tx(base_offset, num_witnesses)?;
+        let tx = self.resolve_fuel_tx(
+            base_offset,
+            num_witnesses,
+            &consensus_parameters.chain_id,
+            provider.min_gas_price().await?,
+        )?;
 
         Ok(CreateTransaction {
             tx,
@@ -601,8 +545,14 @@ impl CreateTransactionBuilder {
         })
     }
 
-    fn resolve_fuel_tx(self, mut base_offset: usize, num_witnesses: u8) -> Result<Create> {
-        let policies = self.generate_fuel_policies();
+    fn resolve_fuel_tx(
+        self,
+        mut base_offset: usize,
+        num_witnesses: u8,
+        chain_id: &ChainId,
+        network_min_gas_price: u64,
+    ) -> Result<Create> {
+        let policies = self.generate_fuel_policies(network_min_gas_price);
 
         let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
         base_offset += storage_slots_offset + policies.size_dynamic();
@@ -622,17 +572,15 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
-        let missing_witnesses = generate_missing_witnesses(
-            tx.id(&self.network_info.chain_id()),
-            &self.unresolved_signatures,
-        );
+        let missing_witnesses =
+            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures);
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
     }
 
-    fn base_offset(&self) -> usize {
-        offsets::base_offset_create(self.consensus_parameters())
+    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
+        offsets::base_offset_create(consensus_parameters)
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {
@@ -665,13 +613,12 @@ impl CreateTransactionBuilder {
         salt: Salt,
         storage_slots: Vec<StorageSlot>,
         tx_policies: TxPolicies,
-        network_info: NetworkInfo,
     ) -> Self {
         let bytecode_witness_index = 0;
         let outputs = vec![Output::contract_created(contract_id, state_root)];
         let witnesses = vec![binary.into()];
 
-        CreateTransactionBuilder::new(network_info)
+        CreateTransactionBuilder::default()
             .with_tx_policies(tx_policies)
             .with_bytecode_witness_index(bytecode_witness_index)
             .with_salt(salt)
@@ -903,12 +850,8 @@ mod tests {
         let unsorted_storage_slots = [2, 1].map(given_a_storage_slot).to_vec();
         let sorted_storage_slots = [1, 2].map(given_a_storage_slot).to_vec();
 
-        let network_info = NetworkInfo {
-            min_gas_price: 0,
-            consensus_parameters: Default::default(),
-        };
         let builder =
-            CreateTransactionBuilder::new(network_info).with_storage_slots(unsorted_storage_slots);
+            CreateTransactionBuilder::default().with_storage_slots(unsorted_storage_slots);
 
         assert_eq!(builder.storage_slots, sorted_storage_slots);
     }

@@ -189,13 +189,8 @@ mod tests {
         // ANCHOR_END: transfer_multiple_inout
 
         // ANCHOR: transfer_multiple_transaction
-        let network_info = provider.network_info().await?;
-        let mut tb = ScriptTransactionBuilder::prepare_transfer(
-            inputs,
-            outputs,
-            TxPolicies::default(),
-            network_info,
-        );
+        let mut tb =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
         wallet_1.sign_transaction(&mut tb);
         let tx = tb.build(&provider).await?;
 
@@ -269,8 +264,7 @@ mod tests {
         // ANCHOR_END: custom_tx_receiver
 
         // ANCHOR: custom_tx
-        let network_info = provider.network_info().await?;
-        let tb = ScriptTransactionBuilder::new(network_info);
+        let tb = ScriptTransactionBuilder::default();
         // ANCHOR_END: custom_tx
 
         // ANCHOR: custom_tx_io_base

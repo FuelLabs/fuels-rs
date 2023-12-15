@@ -205,13 +205,12 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
-        let network_info = provider.network_info().await?;
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx_builder =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies, network_info);
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
 
         self.add_witnessses(&mut tx_builder);
         self.adjust_for_fee(&mut tx_builder, amount).await?;
@@ -244,7 +243,6 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> std::result::Result<(String, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
-        let network_info = provider.network_info().await?;
 
         let zeroes = Bytes32::zeroed();
         let plain_contract_id: ContractId = to.into();
@@ -272,7 +270,6 @@ pub trait Account: ViewOnlyAccount {
             inputs,
             outputs,
             tx_policies,
-            network_info,
         );
 
         self.add_witnessses(&mut tb);
@@ -299,7 +296,6 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
         let provider = self.try_provider()?;
-        let network_info = provider.network_info().await?;
 
         let inputs = self
             .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
@@ -310,7 +306,6 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_policies,
-            network_info,
         );
 
         self.add_witnessses(&mut tb);
@@ -335,11 +330,8 @@ mod tests {
     use std::str::FromStr;
 
     use fuel_crypto::{Message, SecretKey};
-    use fuel_tx::{Address, Output, Transaction as FuelTransaction};
-    use fuels_core::types::{
-        transaction::Transaction,
-        transaction_builders::{DryRunner, NetworkInfo},
-    };
+    use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
+    use fuels_core::types::{transaction::Transaction, transaction_builders::DryRunner};
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -380,11 +372,19 @@ mod tests {
         Ok(())
     }
 
-    struct MockDryRunner;
+    struct MockDryRunner {
+        c_param: ConsensusParameters,
+    }
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
+            Ok(0)
+        }
+        fn consensus_parameters(&self) -> &ConsensusParameters {
+            &self.c_param
+        }
+        async fn min_gas_price(&self) -> Result<u64> {
             Ok(0)
         }
     }
@@ -397,10 +397,6 @@ mod tests {
         )?;
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        let network_info = NetworkInfo {
-            consensus_parameters: Default::default(),
-            min_gas_price: 0,
-        };
         // Set up a transaction
         let mut tb = {
             let input_coin = Input::ResourceSigned {
@@ -423,14 +419,18 @@ mod tests {
                 vec![input_coin],
                 vec![output_coin],
                 Default::default(),
-                network_info,
             )
         };
 
         // Sign the transaction
         wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
                                           // ANCHOR_END: sign_tx
-        let tx = tb.build(MockDryRunner).await?; // Resolve signatures and add corresponding witness indexes
+
+        let tx = tb
+            .build(&MockDryRunner {
+                c_param: ConsensusParameters::default(),
+            })
+            .await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
