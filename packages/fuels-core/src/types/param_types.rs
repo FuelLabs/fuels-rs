@@ -179,6 +179,12 @@ impl ParamType {
 
     /// Calculates the number of bytes the VM expects this parameter to be encoded in.
     pub fn compute_encoding_in_bytes(&self) -> Result<usize> {
+        let overflow_error = || {
+            error!(
+                InvalidType,
+                "Reached overflow while computing encoding size for {:?}", self
+            )
+        };
         match &self {
             ParamType::Unit | ParamType::U8 | ParamType::Bool => Ok(1),
             ParamType::U16 | ParamType::U32 | ParamType::U64 => Ok(8),
@@ -188,39 +194,21 @@ impl ParamType {
             ParamType::Array(param, count) => param
                 .compute_encoding_in_bytes()?
                 .checked_mul(*count)
-                .ok_or_else(|| {
-                    error!(
-                        InvalidType,
-                        "Multiplication overflow while computing Array encoding size"
-                    )
-                }),
-            ParamType::StringArray(len) => checked_round_up_to_word_alignment(*len).map_err(|_| {
-                error!(
-                    InvalidType,
-                    "Reached overflow while computing encoding size for StringArray"
-                )
-            }),
+                .ok_or_else(overflow_error),
+            ParamType::StringArray(len) => {
+                checked_round_up_to_word_alignment(*len).map_err(|_| overflow_error())
+            }
             ParamType::Tuple(fields) | ParamType::Struct { fields, .. } => {
                 fields.iter().try_fold(0, |a: usize, param_type| {
                     let size = checked_round_up_to_word_alignment(
                         param_type.compute_encoding_in_bytes()?,
                     )?;
-                    a.checked_add(size).ok_or_else(|| {
-                        error!(
-                            InvalidType,
-                            "Multiplication overflow while computing Tuple or Struct encoding size"
-                        )
-                    })
+                    a.checked_add(size).ok_or_else(overflow_error)
                 })
             }
-            ParamType::Enum { variants, .. } => {
-                variants.compute_enum_width_in_bytes().map_err(|_| {
-                    error!(
-                        InvalidType,
-                        "Reached overflow while computing encoding size for Enum"
-                    )
-                })
-            }
+            ParamType::Enum { variants, .. } => variants
+                .compute_enum_width_in_bytes()
+                .map_err(|_| overflow_error()),
         }
     }
 
@@ -1846,9 +1834,11 @@ mod tests {
     fn test_compute_encoding_in_bytes_overflows() -> Result<()> {
         let overflows = |p: ParamType| {
             let error = p.compute_encoding_in_bytes().unwrap_err();
-            assert!(
-                matches!(error, Error::InvalidType(_)) && error.to_string().contains("overflow")
+            let overflow_error = error!(
+                InvalidType,
+                "Reached overflow while computing encoding size for {:?}", p
             );
+            assert_eq!(error.to_string(), overflow_error.to_string());
         };
         let tuple_with_fields_too_wide = ParamType::Tuple(vec![
             ParamType::StringArray(12514849900987264429),
@@ -1885,7 +1875,7 @@ mod tests {
         assert!(ParamType::calculate_num_of_elements(&failing_param_type, 0)
             .unwrap_err()
             .to_string()
-            .contains("Multiplication overflow"));
+            .contains("Reached overflow"));
         let zero_sized_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 1000);
         assert!(ParamType::calculate_num_of_elements(&zero_sized_type, 0)
             .unwrap_err()
