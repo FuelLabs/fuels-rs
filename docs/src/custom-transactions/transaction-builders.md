@@ -59,6 +59,7 @@ We need to do one more thing before we stop thinking about transaction inputs. E
 ```rust,ignore
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_adjust}}
 ```
+
 As we have used coins that require a signature, we sign the transaction builder with:
 
 ```rust,ignore
