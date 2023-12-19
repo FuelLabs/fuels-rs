@@ -20,6 +20,7 @@ pub const FUEL_BECH32_HRP: &str = "fuel";
 macro_rules! bech32type {
     ($i:ident) => {
         #[derive(Debug, Clone, PartialEq, Eq, Hash)]
+        #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
         pub struct $i {
             pub hrp: String,
             pub hash: Bytes32,

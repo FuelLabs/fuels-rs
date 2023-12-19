@@ -38,6 +38,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct CallParameters {
     amount: u64,
     asset_id: AssetId,
@@ -398,6 +399,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 
 #[derive(Debug)]
 /// Contains all data relevant to a single contract call
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
     pub encoded_args: UnresolvedBytes,

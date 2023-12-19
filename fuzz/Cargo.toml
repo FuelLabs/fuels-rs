@@ -10,12 +10,13 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 fuels = { path = "../packages/fuels", features = ["arbitrary"] }
-fuels-accounts = { path = "../packages/fuels-accounts", features = ["arbitrary"] }
-fuels-code-gen = { path = "../packages/fuels-code-gen", features = ["arbitrary"] }
-fuels-core = { path = "../packages/fuels-core", features = ["arbitrary"] }
-fuels-macros = { path = "../packages/fuels-macros", features = ["arbitrary"] }
-fuels-programs = { path = "../packages/fuels-programs", features = ["arbitrary"] }
-fuels-test-helpers = { path = "../packages/fuels-test-helpers", features = ["arbitrary"] }
+#fuels-accounts = { path = "../packages/fuels-accounts", features = ["arbitrary"] }
+#fuels-code-gen = { path = "../packages/fuels-code-gen", features = ["arbitrary"] }
+#fuels-core = { path = "../packages/fuels-core", features = ["arbitrary"] }
+#fuels-macros = { path = "../packages/fuels-macros", features = ["arbitrary"] }
+#fuels-programs = { path = "../packages/fuels-programs", features = ["arbitrary"] }
+#fuels-test-helpers = { path = "../packages/fuels-test-helpers", features = ["arbitrary"] }
+#fuel-types = { path = "../../fuel-vm/fuel-types", features = ["arbitrary"] }
 
 
 [profile.release]
