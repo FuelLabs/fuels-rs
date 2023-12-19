@@ -909,9 +909,9 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     tokio::time::pause();
 
     // tx inputs should be cached and then invalidated due to the tx failing
-    let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-    let status = provider.tx_status(&tx_id).await?;
-    assert!(matches!(status, TxStatus::Revert { .. }));
+    let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+    assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
     let coins = wallet.get_spendable_resources(BASE_ASSET_ID, 1).await?;
     assert_eq!(coins.len(), 1);

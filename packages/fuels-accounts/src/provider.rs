@@ -8,8 +8,6 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "coin-cache")]
-use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance},
@@ -200,23 +198,23 @@ impl Provider {
     pub async fn send_transaction_and_await_commit<T: Transaction>(
         &self,
         mut tx: T,
-    ) -> Result<TxId> {
+    ) -> Result<TxStatus> {
         self.prepare_transaction_for_sending(&mut tx).await?;
-        let tx_id = tx.id(self.chain_id());
-        let _tx_status = self
+        let tx_status = self
             .client
             .submit_and_await_commit(&tx.clone().into())
-            .await?;
+            .await?
+            .into();
+
         #[cfg(feature = "coin-cache")]
-        {
-            if matches!(
-                _tx_status,
-                TransactionStatus::SqueezedOut { .. } | TransactionStatus::Failure { .. }
-            ) {
-                self.cache.lock().await.remove_items(tx.used_coins())
-            }
+        if matches!(
+            tx_status,
+            TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
+        ) {
+            self.cache.lock().await.remove_items(tx.used_coins())
         }
-        Ok(tx_id)
+
+        Ok(tx_status)
     }
 
     async fn prepare_transaction_for_sending<T: Transaction>(&self, tx: &mut T) -> Result<()> {
