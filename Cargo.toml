@@ -6,26 +6,26 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-    "examples/codec",
-    "examples/contracts",
-    "examples/cookbook",
-    "examples/debugging",
-    "examples/macros",
-    "examples/predicates",
-    "examples/providers",
-    "examples/rust_bindings",
-    "examples/types",
-    "examples/wallets",
-    "packages/fuels",
-    "packages/fuels-accounts",
-    "packages/fuels-code-gen",
-    "packages/fuels-core",
-    "packages/fuels-macros",
-    "packages/fuels-programs",
-    "packages/fuels-test-helpers",
-    "packages/wasm-tests",
-    "scripts/check-docs",
-    "scripts/versions-replacer",
+  "examples/codec",
+  "examples/contracts",
+  "examples/cookbook",
+  "examples/debugging",
+  "examples/macros",
+  "examples/predicates",
+  "examples/providers",
+  "examples/rust_bindings",
+  "examples/types",
+  "examples/wallets",
+  "packages/fuels",
+  "packages/fuels-accounts",
+  "packages/fuels-code-gen",
+  "packages/fuels-core",
+  "packages/fuels-macros",
+  "packages/fuels-programs",
+  "packages/fuels-test-helpers",
+  "packages/wasm-tests",
+  "scripts/check-docs",
+  "scripts/versions-replacer",
 ]
 exclude = ["fuzz"]
 
@@ -55,7 +55,10 @@ itertools = "0.12.0"
 portpicker = "0.1.1"
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
-rand = { version = "0.8.5", default-features = false, features = ["std_rng", "getrandom"] }
+rand = { version = "0.8.5", default-features = false, features = [
+  "std_rng",
+  "getrandom",
+] }
 regex = "1.10.2"
 semver = "1.0.20"
 serde = { version = "1.0.193", default-features = false }
@@ -82,21 +85,13 @@ fuel-core-services = { version = "0.21.0", default-features = false }
 fuel-core-types = { version = "0.21.0", default-features = false }
 
 ## Dependencies from the `fuel-vm` repository:
-#fuel-asm = { version = "0.43.1" }
-#fuel-crypto = { version = "0.43.1" }
-#fuel-merkle = { version = "0.43.1" }
-#fuel-storage = { version = "0.43.1" }
-#fuel-tx = { version = "0.43.1" }
-#fuel-types = { version = "0.43.1" }
-#fuel-vm = { version = "0.43.1" }
-
-fuel-asm = { path = "../fuel-vm/fuel-asm" }
-fuel-crypto = { path = "../fuel-vm/fuel-crypto" }
-fuel-merkle = { path = "../fuel-vm/fuel-merkle" }
-fuel-storage = { path = "../fuel-vm/fuel-storage" }
-fuel-tx = { path = "../fuel-vm/fuel-tx" }
-fuel-types = { path = "../fuel-vm/fuel-types", features = ["arbitrary"] }
-fuel-vm = { path = "../fuel-vm/fuel-vm" }
+fuel-asm = { version = "0.43.1" }
+fuel-crypto = { version = "0.43.1" }
+fuel-merkle = { version = "0.43.1" }
+fuel-storage = { version = "0.43.1" }
+fuel-tx = { version = "0.43.1" }
+fuel-types = { version = "0.43.1" }
+fuel-vm = { version = "0.43.1" }
 
 # Workspace projects
 fuels = { version = "0.53.0", path = "./packages/fuels" }
@@ -108,17 +103,5 @@ fuels-programs = { version = "0.53.0", path = "./packages/fuels-programs", defau
 fuels-test-helpers = { version = "0.53.0", path = "./packages/fuels-test-helpers", default-features = false }
 
 [patch.crates-io]
-fuel-asm = { path = "../fuel-vm/fuel-asm" }
-fuel-crypto = { path = "../fuel-vm/fuel-crypto" }
-fuel-merkle = { path = "../fuel-vm/fuel-merkle" }
-fuel-storage = { path = "../fuel-vm/fuel-storage" }
 fuel-tx = { path = "../fuel-vm/fuel-tx" }
 fuel-types = { path = "../fuel-vm/fuel-types" }
-fuel-vm = { path = "../fuel-vm/fuel-vm" }
-#fuel-core = { path = "../fuel-core/crates/fuel-core" }
-fuel-core-chain-config = { path = "../fuel-core/crates/chain-config" }
-fuel-core-client = { path = "../fuel-core/crates/client" }
-fuel-core-poa = { path = "../fuel-core/crates/services/consensus_module/poa" }
-fuel-core-services = { path = "../fuel-core/crates/services" }
-fuel-core-types = { path = "../fuel-core/crates/types" }
-fuel-core-storage = { path = "../fuel-core/crates/storage" }

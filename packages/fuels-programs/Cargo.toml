@@ -30,3 +30,4 @@ tempfile = "3.8.1"
 [features]
 default = ["std"]
 std = ["fuels-core/std", "fuels-accounts/std"]
+arbitrary = ["dep:arbitrary", "fuel-types/arbitrary", "fuel-tx/arbitrary"]

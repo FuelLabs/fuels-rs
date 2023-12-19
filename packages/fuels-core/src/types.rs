@@ -1,8 +1,8 @@
 use std::fmt;
 
-pub use fuel_tx::{Address, AssetId, ContractId, TxPointer, UtxoId};
+pub use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::bytes::padded_len;
-pub use fuel_types::{ChainId, MessageId, Nonce};
+pub use fuel_types::{Address, AssetId, Bytes32, ChainId, ContractId, MessageId, Nonce, Salt};
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{

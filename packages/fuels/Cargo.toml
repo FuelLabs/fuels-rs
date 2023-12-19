@@ -18,6 +18,7 @@ arbitrary = { workspace = true, optional = true, features = ["derive"] }
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-tx = { workspace = true }
+fuel-types = { workspace = true }
 fuels-accounts = { workspace = true, default-features = false }
 fuels-core = { workspace = true }
 fuels-macros = { workspace = true }
@@ -56,3 +57,9 @@ std = [
 test-type-paths = []
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
 rocksdb = ["fuel-core?/rocksdb"]
+arbitrary = [
+  "dep:arbitrary",
+  "fuels-core/arbitrary",
+  "fuels-accounts/arbitrary",
+  "fuels-programs?/arbitrary",
+]

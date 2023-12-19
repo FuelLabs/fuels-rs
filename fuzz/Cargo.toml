@@ -8,8 +8,9 @@ edition = "2021"
 cargo-fuzz = true
 
 [dependencies]
+#arbitrary = "1.3.2"
 libfuzzer-sys = "0.4"
-fuels = { path = "../packages/fuels", features = ["arbitrary"] }
+fuels = { path = "../packages/fuels", features = ["default", "arbitrary"] }
 #fuels-accounts = { path = "../packages/fuels-accounts", features = ["arbitrary"] }
 #fuels-code-gen = { path = "../packages/fuels-code-gen", features = ["arbitrary"] }
 #fuels-core = { path = "../packages/fuels-core", features = ["arbitrary"] }
@@ -42,3 +43,19 @@ name = "boxed_param_type"
 path = "fuzz_targets/boxed_param_type.rs"
 test = false
 doc = false
+
+[patch.crates-io]
+# fuel-asm = { path = "../../fuel-vm/fuel-asm" }
+# fuel-crypto = { path = "../../fuel-vm/fuel-crypto" }
+# fuel-merkle = { path = "../../fuel-vm/fuel-merkle" }
+# fuel-storage = { path = "../../fuel-vm/fuel-storage" }
+fuel-tx = { path = "../../fuel-vm/fuel-tx" }
+fuel-types = { path = "../../fuel-vm/fuel-types" }
+fuel-vm = { path = "../../fuel-vm/fuel-vm" }
+# #fuel-core = { path = "../../fuel-core/crates/fuel-core" }
+# fuel-core-chain-config = { path = "../../fuel-core/crates/chain-config" }
+# fuel-core-client = { path = "../../fuel-core/crates/client" }
+# fuel-core-poa = { path = "../../fuel-core/crates/services/consensus_module/poa" }
+# fuel-core-services = { path = "../../fuel-core/crates/services" }
+# fuel-core-types = { path = "../../fuel-core/crates/types" }
+# fuel-core-storage = { path = "../../fuel-core/crates/storage" }

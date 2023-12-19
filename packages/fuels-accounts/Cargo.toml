@@ -14,7 +14,7 @@ arbitrary = { workspace = true, optional = true, features = ["derive"] }
 async-trait = { workspace = true, default-features = false }
 chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }
-eth-keystore =  { workspace = true, optional = true }
+eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
@@ -37,4 +37,10 @@ tokio = { workspace = true, features = ["test-util"] }
 [features]
 default = ["std"]
 coin-cache = ["tokio?/time"]
-std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:eth-keystore"]
+std = [
+  "fuels-core/std",
+  "dep:tokio",
+  "fuel-core-client/default",
+  "dep:eth-keystore",
+]
+arbitrary = ["dep:arbitrary"]

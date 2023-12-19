@@ -10,7 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
-arbitrary = { version = "1", optional = true, features = ["derive"] }
+arbitrary = { workspace = true, optional = true, features = ["derive"] }
 async-trait = { workspace = true, default-features = false }
 bech32 = { workspace = true }
 chrono = { workspace = true }
@@ -38,3 +38,4 @@ fuels-macros = { workspace = true }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client"]
+arbitrary = ["dep:arbitrary"]
