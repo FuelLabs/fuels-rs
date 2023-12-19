@@ -979,7 +979,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn create_tb_builder_witness_indexes_set_correctly() -> Result<()> {
+    async fn create_tx_builder_witness_indexes_set_correctly() -> Result<()> {
         // given
         let num_witnesses = 2;
         let num_inputs = 3;
@@ -988,12 +988,12 @@ mod tests {
             .with_witnesses(given_witnesses(num_witnesses))
             .with_inputs(given_inputs(num_inputs));
 
-        //when
+        // when
         let tx = tb
             .build_without_signatures(&MockDryRunner::default())
             .await?;
 
-        //then
+        // then
         let indexes: Vec<usize> = tx
             .inputs()
             .iter()
@@ -1023,12 +1023,12 @@ mod tests {
             .with_witnesses(given_witnesses(num_witnesses))
             .with_inputs(given_inputs(num_inputs));
 
-        //when
+        // when
         let tx = tb
             .build_without_signatures(&MockDryRunner::default())
             .await?;
 
-        //then
+        // then
         let indexes: Vec<usize> = tx
             .inputs()
             .iter()
