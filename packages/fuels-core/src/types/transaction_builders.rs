@@ -1014,7 +1014,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn scritp_tb_builder_witness_indexes_set_correctly() -> Result<()> {
+    async fn script_tx_builder_witness_indexes_set_correctly() -> Result<()> {
         // given
         let num_witnesses = 6;
         let num_inputs = 4;

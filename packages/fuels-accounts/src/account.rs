@@ -42,8 +42,12 @@ pub trait Signer: std::fmt::Debug + Send + Sync {
         message: S,
     ) -> std::result::Result<Signature, Self::Error>;
 
+    /// Add an unresolved signature to the transaction builder. The signature will
+    /// be resolved when the transaction is built.
     fn sign_transaction(&self, tb: &mut impl TransactionBuilder);
 
+    /// Sign a built transaction and append the signature to the transaction witnesses.
+    /// The order of signing must match the order of signed inputs.
     fn sign_built_transaction(
         &self,
         tx: &mut impl Transaction,
