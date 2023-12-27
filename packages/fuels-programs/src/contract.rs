@@ -311,12 +311,16 @@ impl Contract {
             tx_policies,
         );
 
+        dbg!("nani");
         account.adjust_for_fee(&mut tb, 0).await?;
         account.add_witnessses(&mut tb);
 
+        dbg!("manani");
         let provider = account.try_provider()?;
 
         let tx = tb.build(provider).await?;
+        dbg!(&tx);
+        dbg!("lamanani");
 
         let tx_id = provider.send_transaction_and_await_commit(tx).await?;
         provider.tx_status(&tx_id).await?.check(None)?;

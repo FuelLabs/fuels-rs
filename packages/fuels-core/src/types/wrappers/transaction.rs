@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
+use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
         GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
@@ -21,6 +22,7 @@ use itertools::Itertools;
 
 use crate::{
     constants::BASE_ASSET_ID,
+    traits::Signer,
     types::{bech32::Bech32Address, errors::error, Result},
     utils::calculate_witnesses_size,
 };
@@ -209,6 +211,12 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
+    fn sign_with(
+        &mut self,
+        signer: &impl Signer,
+        chain_id: impl Into<ChainId>,
+    ) -> Result<Signature>;
+
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 }
 
@@ -374,6 +382,20 @@ macro_rules! impl_tx_wrapper {
 
                     Ok(idx)
                 }
+            }
+
+            fn sign_with(
+                &mut self,
+                signer: &impl Signer,
+                chain_id: impl Into<ChainId>,
+            ) -> Result<Signature> {
+                let id = self.id(chain_id.into());
+                let message = Message::from_bytes(*id);
+                let sig = signer.sign(message)?;
+
+                self.append_witness(sig.as_ref().into())?;
+
+                Ok(sig)
             }
 
             fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {

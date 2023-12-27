@@ -429,7 +429,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     // customize the builder...
 
     wallet.adjust_for_fee(&mut tb, 0).await?;
-    wallet.sign_transaction(&mut tb);
+    tb.add_unresolved_signature(wallet.clone());
 
     let tx = tb.build(provider).await?;
 

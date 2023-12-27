@@ -174,12 +174,15 @@ mod tests {
             .pop()
             .unwrap();
 
+        dbg!("0halil");
         let contract_id = Contract::load_from(
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
         .await?;
+
+        dbg!("halil");
 
         // ANCHOR: wallet_contract_transfer
         // Check the current balance of the contract with id 'contract_id'

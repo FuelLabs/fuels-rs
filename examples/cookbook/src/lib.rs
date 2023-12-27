@@ -3,9 +3,7 @@ mod tests {
     use std::str::FromStr;
 
     use fuels::{
-        accounts::{
-            predicate::Predicate, wallet::WalletUnlocked, Account, Signer, ViewOnlyAccount,
-        },
+        accounts::{predicate::Predicate, wallet::WalletUnlocked, Account, ViewOnlyAccount},
         core::constants::BASE_ASSET_ID,
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
@@ -191,7 +189,8 @@ mod tests {
         // ANCHOR: transfer_multiple_transaction
         let mut tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-        wallet_1.sign_transaction(&mut tb);
+        tb.add_unresolved_signature(wallet_1.clone());
+
         let tx = tb.build(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
@@ -301,7 +300,7 @@ mod tests {
         // ANCHOR_END: custom_tx_adjust
 
         // ANCHOR: custom_tx_sign
-        hot_wallet.sign_transaction(&mut tb);
+        tb.add_unresolved_signature(hot_wallet.clone());
         // ANCHOR_END: custom_tx_sign
 
         // ANCHOR: custom_tx_policies

@@ -70,9 +70,12 @@ pub mod prelude {
         accounts::{
             provider::*,
             wallet::{generate_mnemonic_phrase, WalletUnlocked},
-            Account, Signer, ViewOnlyAccount,
+            Account, ViewOnlyAccount,
         },
-        core::codec::{LogDecoder, LogId, LogResult},
+        core::{
+            codec::{LogDecoder, LogId, LogResult},
+            traits::Signer,
+        },
         programs::{
             call_utils::TxDependencyExtension,
             contract::{

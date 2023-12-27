@@ -4,7 +4,6 @@ use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
-use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::{
@@ -16,7 +15,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::{Transaction, TxPolicies},
+        transaction::TxPolicies,
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
         },
@@ -28,31 +27,6 @@ use crate::{
     accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
     provider::{Provider, ResourceFilter},
 };
-
-/// Trait for signing transactions and messages
-///
-/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: std::error::Error + Send + Sync;
-
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> std::result::Result<Signature, Self::Error>;
-
-    /// Add an unresolved signature to the transaction builder. The signature will
-    /// be resolved when the transaction is built.
-    fn sign_transaction(&self, tb: &mut impl TransactionBuilder);
-
-    /// Sign a built transaction and append the signature to the transaction witnesses.
-    /// The order of signing must match the order of signed inputs.
-    fn sign_built_transaction(
-        &self,
-        tx: &mut impl Transaction,
-    ) -> std::result::Result<Signature, Self::Error>;
-}
 
 #[derive(Debug)]
 pub struct AccountError(String);
@@ -340,9 +314,12 @@ pub trait Account: ViewOnlyAccount {
 mod tests {
     use std::str::FromStr;
 
-    use fuel_crypto::{Message, SecretKey};
+    use fuel_crypto::{Message, SecretKey, Signature};
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
-    use fuels_core::types::{transaction::Transaction, transaction_builders::DryRunner};
+    use fuels_core::{
+        traits::Signer,
+        types::{transaction::Transaction, transaction_builders::DryRunner},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -363,15 +340,13 @@ mod tests {
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        let message = "my message";
-
-        let signature = wallet.sign_message(message).await?;
+        let message = Message::new("my message".as_bytes());
+        let signature = wallet.sign(message)?;
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
 
         // Recover address that signed the message
-        let message = Message::new(message);
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
@@ -434,9 +409,9 @@ mod tests {
             )
         };
 
-        // Sign the transaction
-        wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
-                                          // ANCHOR_END: sign_tx
+        // Add `Signer` to the transaction builder
+        tb.add_unresolved_signature(wallet.clone());
+        // ANCHOR_END: sign_tx
 
         let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
 
@@ -446,7 +421,7 @@ mod tests {
 
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
-        let signature = Signature::sign(&wallet.private_key, &message);
+        let signature = wallet.sign(message)?;
 
         // Check if the signatures are the same
         assert_eq!(signature, tx_signature);

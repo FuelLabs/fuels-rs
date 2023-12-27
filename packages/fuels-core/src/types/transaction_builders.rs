@@ -4,7 +4,7 @@ use std::{collections::HashMap, iter::repeat_with};
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
+use fuel_crypto::Message as CryptoMessage;
 use fuel_tx::{
     field::{Inputs, WitnessLimit, Witnesses},
     policies::{Policies, PolicyType},
@@ -14,11 +14,11 @@ use fuel_tx::{
 };
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
 use itertools::Itertools;
-use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     constants::{BASE_ASSET_ID, SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
     offsets,
+    traits::Signer,
     types::{
         bech32::Bech32Address,
         coin::Coin,
@@ -60,11 +60,6 @@ impl<T: DryRunner> DryRunner for &T {
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
     owner_to_idx_offset: HashMap<Bech32Address, u64>,
-}
-
-#[derive(Debug, Clone, Default, Zeroize, ZeroizeOnDrop)]
-struct UnresolvedSignatures {
-    secret_keys: Vec<SecretKey>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -112,7 +107,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 pub trait TransactionBuilder: BuildableTransaction + Send {
     type TxType: Transaction;
 
-    fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
+    fn add_unresolved_signature(&mut self, signer: impl Signer);
     async fn fee_checked_from_tx(
         &self,
         provider: &impl DryRunner,
@@ -135,12 +130,12 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
-            fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
-                let index_offset = self.unresolved_signatures.secret_keys.len() as u64;
-                self.unresolved_signatures.secret_keys.push(secret_key);
+            fn add_unresolved_signature(&mut self, signer: impl Signer) {
+                let index_offset = self.unresolved_signatures.len() as u64;
                 self.unresolved_witness_indexes
                     .owner_to_idx_offset
-                    .insert(owner, index_offset);
+                    .insert(signer.address(), index_offset);
+                self.unresolved_signatures.push(Box::new(signer));
             }
 
             async fn fee_checked_from_tx(
@@ -255,7 +250,7 @@ macro_rules! impl_tx_trait {
             fn num_witnesses(&self) -> Result<u8> {
                 let num_witnesses = self.witnesses().len();
 
-                if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
+                if num_witnesses + self.unresolved_signatures.len() > 256 {
                     return Err(error!(
                         InvalidData,
                         "tx can not have more than 256 witnesses"
@@ -286,7 +281,7 @@ pub struct ScriptTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signatures: UnresolvedSignatures,
+    unresolved_signatures: Vec<Box<dyn Signer>>,
 }
 
 #[derive(Debug, Default)]
@@ -300,7 +295,7 @@ pub struct CreateTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub salt: Salt,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signatures: UnresolvedSignatures,
+    unresolved_signatures: Vec<Box<dyn Signer>>,
 }
 
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
@@ -435,7 +430,7 @@ impl ScriptTransactionBuilder {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id),
             &self.unresolved_signatures,
-        );
+        )?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
@@ -579,11 +574,13 @@ impl CreateTransactionBuilder {
             0
         };
 
-        let tx = self.resolve_fuel_tx(
-            base_offset,
-            &consensus_parameters.chain_id,
-            provider.min_gas_price().await?,
-        )?;
+        let tx = self
+            .resolve_fuel_tx(
+                base_offset,
+                &consensus_parameters.chain_id,
+                provider.min_gas_price().await?,
+            )
+            .await?;
 
         Ok(CreateTransaction {
             tx,
@@ -591,7 +588,7 @@ impl CreateTransactionBuilder {
         })
     }
 
-    fn resolve_fuel_tx(
+    async fn resolve_fuel_tx(
         self,
         mut base_offset: usize,
         chain_id: &ChainId,
@@ -619,7 +616,7 @@ impl CreateTransactionBuilder {
         );
 
         let missing_witnesses =
-            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures);
+            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures)?;
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
@@ -881,16 +878,14 @@ pub fn create_coin_message_predicate(
 
 fn generate_missing_witnesses(
     id: Bytes32,
-    unresolved_signatures: &UnresolvedSignatures,
-) -> Vec<Witness> {
+    unresolved_signatures: &[Box<dyn Signer>],
+) -> Result<Vec<Witness>> {
     unresolved_signatures
-        .secret_keys
         .iter()
-        .map(|secret_key| {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = Signature::sign(secret_key, &message);
-
-            Witness::from(signature.as_ref())
+        .map(|signer| {
+            signer
+                .sign(CryptoMessage::from_bytes(*id))
+                .map(|signature| signature.as_ref().into())
         })
         .collect()
 }

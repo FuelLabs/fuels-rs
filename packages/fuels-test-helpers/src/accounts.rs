@@ -1,6 +1,6 @@
 use std::mem::size_of;
 
-use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
+use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked};
 use fuels_core::types::errors::Result;
 
 use crate::{
