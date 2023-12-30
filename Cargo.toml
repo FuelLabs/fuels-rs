@@ -6,26 +6,26 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-  "examples/codec",
-  "examples/contracts",
-  "examples/cookbook",
-  "examples/debugging",
-  "examples/macros",
-  "examples/predicates",
-  "examples/providers",
-  "examples/rust_bindings",
-  "examples/types",
-  "examples/wallets",
-  "packages/fuels",
-  "packages/fuels-accounts",
-  "packages/fuels-code-gen",
-  "packages/fuels-core",
-  "packages/fuels-macros",
-  "packages/fuels-programs",
-  "packages/fuels-test-helpers",
-  "packages/wasm-tests",
-  "scripts/check-docs",
-  "scripts/versions-replacer",
+    "examples/codec",
+    "examples/contracts",
+    "examples/cookbook",
+    "examples/debugging",
+    "examples/macros",
+    "examples/predicates",
+    "examples/providers",
+    "examples/rust_bindings",
+    "examples/types",
+    "examples/wallets",
+    "packages/fuels",
+    "packages/fuels-accounts",
+    "packages/fuels-code-gen",
+    "packages/fuels-core",
+    "packages/fuels-macros",
+    "packages/fuels-programs",
+    "packages/fuels-test-helpers",
+    "packages/wasm-tests",
+    "scripts/check-docs",
+    "scripts/versions-replacer",
 ]
 exclude = ["fuzz"]
 
@@ -37,7 +37,7 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.74.0"
-version = "0.53.0"
+version = "0.54.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
@@ -56,8 +56,8 @@ portpicker = "0.1.1"
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
 rand = { version = "0.8.5", default-features = false, features = [
-  "std_rng",
-  "getrandom",
+    "std_rng",
+    "getrandom",
 ] }
 regex = "1.10.2"
 semver = "1.0.20"
@@ -77,12 +77,12 @@ which = { version = "5.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.21.0", default-features = false }
-fuel-core-chain-config = { version = "0.21.0", default-features = false }
-fuel-core-client = { version = "0.21.0", default-features = false }
-fuel-core-poa = { version = "0.21.0", default-features = false }
-fuel-core-services = { version = "0.21.0", default-features = false }
-fuel-core-types = { version = "0.21.0", default-features = false }
+fuel-core = { version = "0.22.0", default-features = false }
+fuel-core-chain-config = { version = "0.22.0", default-features = false }
+fuel-core-client = { version = "0.22.0", default-features = false }
+fuel-core-poa = { version = "0.22.0", default-features = false }
+fuel-core-services = { version = "0.22.0", default-features = false }
+fuel-core-types = { version = "0.22.0", default-features = false }
 
 ## Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.43.1" }
@@ -94,13 +94,13 @@ fuel-types = { version = "0.43.1" }
 fuel-vm = { version = "0.43.1" }
 
 # Workspace projects
-fuels = { version = "0.53.0", path = "./packages/fuels" }
-fuels-accounts = { version = "0.53.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.53.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.53.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.53.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.53.0", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.53.0", path = "./packages/fuels-test-helpers", default-features = false }
+fuels = { version = "0.54.0", path = "./packages/fuels" }
+fuels-accounts = { version = "0.54.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.54.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.54.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.54.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.54.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.54.0", path = "./packages/fuels-test-helpers", default-features = false }
 
 [patch.crates-io]
 fuel-tx = { path = "../fuel-vm/fuel-tx" }

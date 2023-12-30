@@ -67,15 +67,6 @@ impl RetryableClient {
         self.our_retry(|| self.client.submit(tx)).await
     }
 
-    pub async fn receipts(&self, id: &TxId) -> io::Result<Option<Vec<Receipt>>> {
-        retry_util::retry(
-            || self.client.receipts(id),
-            &self.retry_config,
-            |result| !matches!(result, Ok(Some(_))),
-        )
-        .await
-    }
-
     pub async fn transaction_status(&self, id: &TxId) -> io::Result<TransactionStatus> {
         self.our_retry(|| self.client.transaction_status(id)).await
     }

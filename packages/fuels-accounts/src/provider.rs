@@ -8,16 +8,17 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+#[cfg(feature = "coin-cache")]
+use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance, TransactionStatus},
+    types::{balance::Balance, contract::ContractBalance},
 };
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
     TxId, UtxoId,
 };
 use fuel_types::{Address, Bytes32, ChainId, Nonce};
-use fuel_vm::state::ProgramState;
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
@@ -33,7 +34,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::Transaction,
-        transaction_builders::{DryRunner, NetworkInfo},
+        transaction_builders::DryRunner,
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -166,17 +167,6 @@ pub struct Provider {
 }
 
 impl Provider {
-    pub fn new(url: impl AsRef<str>, consensus_parameters: ConsensusParameters) -> Result<Self> {
-        let client = RetryableClient::new(&url, Default::default())?;
-
-        Ok(Self {
-            client,
-            consensus_parameters,
-            #[cfg(feature = "coin-cache")]
-            cache: Default::default(),
-        })
-    }
-
     pub async fn from(addr: impl Into<SocketAddr>) -> Result<Self> {
         let addr = addr.into();
         Self::connect(format!("http://{addr}")).await
@@ -190,6 +180,9 @@ impl Provider {
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
         let client = RetryableClient::new(&url, Default::default())?;
         let consensus_parameters = client.chain_info().await?.consensus_parameters;
+        let node_info = client.node_info().await?.into();
+
+        Self::ensure_client_version_is_supported(&node_info)?;
 
         Ok(Self {
             client,
@@ -269,41 +262,11 @@ impl Provider {
     }
 
     pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
-        let fetch_receipts = || async {
-            let receipts = self.client.receipts(tx_id).await?;
-            receipts.ok_or_else(|| ProviderError::ReceiptsNotPropagatedYet)
-        };
-
-        let tx_status = self.client.transaction_status(tx_id).await?;
-        let status = match tx_status {
-            TransactionStatus::Success { .. } => {
-                let receipts = fetch_receipts().await?;
-                TxStatus::Success { receipts }
-            }
-            TransactionStatus::Failure {
-                reason,
-                program_state,
-                ..
-            } => {
-                let receipts = fetch_receipts().await?;
-                let revert_id = program_state
-                    .and_then(|state| match state {
-                        ProgramState::Revert(revert_id) => Some(revert_id),
-                        _ => None,
-                    })
-                    .expect("Transaction failed without a `revert_id`");
-
-                TxStatus::Revert {
-                    receipts,
-                    reason,
-                    revert_id,
-                }
-            }
-            TransactionStatus::Submitted { .. } => TxStatus::Submitted,
-            TransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
-        };
-
-        Ok(status)
+        self.client
+            .transaction_status(tx_id)
+            .await
+            .map(Into::into)
+            .map_err(Into::into)
     }
 
     pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
@@ -312,15 +275,6 @@ impl Provider {
 
     pub fn consensus_parameters(&self) -> &ConsensusParameters {
         &self.consensus_parameters
-    }
-
-    pub async fn network_info(&self) -> ProviderResult<NetworkInfo> {
-        let node_info = self.node_info().await?;
-        let chain_info = self.chain_info().await?;
-
-        Self::ensure_client_version_is_supported(&node_info)?;
-
-        Ok(NetworkInfo::new(node_info, chain_info))
     }
 
     fn ensure_client_version_is_supported(node_info: &NodeInfo) -> ProviderResult<()> {
@@ -767,5 +721,16 @@ impl DryRunner for Provider {
         let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
         let gas_used = self.get_gas_used(&receipts);
         Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
+    }
+
+    async fn min_gas_price(&self) -> Result<u64> {
+        self.node_info()
+            .await
+            .map(|ni| ni.min_gas_price)
+            .map_err(Into::into)
+    }
+
+    fn consensus_parameters(&self) -> &ConsensusParameters {
+        self.consensus_parameters()
     }
 }

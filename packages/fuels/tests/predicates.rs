@@ -454,13 +454,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
-    let network_info = provider.network_info().await?;
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        Default::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
     wallet.sign_transaction(&mut tb);
     let tx = tb.build(&provider).await?;
 
@@ -692,12 +686,10 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
     predicate.set_provider(provider.clone());
 
-    let network_info = provider.network_info().await?;
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
         TxPolicies::default().with_gas_price(1),
-        network_info,
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
     let tx = tb.build(&provider).await?;
@@ -747,12 +739,10 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
     ];
 
-    let network_info = provider.network_info().await?;
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxPolicies::default().with_gas_price(1),
-        network_info,
     );
 
     wallet.sign_transaction(&mut tb);
@@ -798,12 +788,10 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
 
-    let network_info = provider.network_info().await?;
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxPolicies::default().with_witness_limit(32),
-        network_info.clone(),
     )
     .build(&provider)
     .await?;
@@ -866,24 +854,22 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
 
-    let network_info = provider.network_info().await?;
     let mut tx = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
         TxPolicies::default().with_witness_limit(32),
-        network_info.clone(),
     )
     .build(&provider)
     .await?;
 
-    let tx_id = tx.id(network_info.chain_id());
+    let tx_id = tx.id(provider.chain_id());
 
     let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
     let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
-    let tx_id_after_witnesses = tx.id(network_info.chain_id());
+    let tx_id_after_witnesses = tx.id(provider.chain_id());
 
     let tx_id_from_provider = provider.send_transaction_and_await_commit(tx).await?;
 

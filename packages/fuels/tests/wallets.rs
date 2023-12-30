@@ -139,19 +139,12 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         .pop()
         .unwrap();
 
-    let provider = wallet.try_provider()?;
-    let network_info = provider.network_info().await?;
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        vec![],
-        vec![],
-        TxPolicies::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxPolicies::default());
 
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
-    let tx = tb.build(provider).await?;
+    let tx = tb.build(wallet.try_provider()?).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = vec![Input::coin_signed(
@@ -186,17 +179,12 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
-    let provider = wallet.try_provider()?;
-    let network_info = provider.network_info().await?;
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        TxPolicies::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+
     wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
-    let tx = tb.build(provider).await?;
+
+    let tx = tb.build(wallet.try_provider()?).await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
     let mut expected_inputs = repeat(Input::coin_signed(
@@ -461,13 +449,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         amount_to_receive,
     );
 
-    let network_info = provider.network_info().await?;
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(
-        inputs,
-        outputs,
-        TxPolicies::default(),
-        network_info,
-    );
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
     for wallet in wallets.iter() {
         wallet.sign_transaction(&mut tb);
