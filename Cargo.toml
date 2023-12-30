@@ -105,3 +105,4 @@ fuels-test-helpers = { version = "0.53.0", path = "./packages/fuels-test-helpers
 [patch.crates-io]
 fuel-tx = { path = "../fuel-vm/fuel-tx" }
 fuel-types = { path = "../fuel-vm/fuel-types" }
+fuel-asm = { path = "../../fuel-vm/fuel-asm" }
