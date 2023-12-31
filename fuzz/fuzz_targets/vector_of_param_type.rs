@@ -1,8 +1,6 @@
 #![no_main]
 
 mod utils;
-use fuels::core::codec::ABIEncoder;
-use fuels::test_helpers::{Config, WalletsConfig};
 use fuels::types::enum_variants::EnumVariants;
 use fuels::types::param_types::ParamType;
 use libfuzzer_sys::fuzz_target;
