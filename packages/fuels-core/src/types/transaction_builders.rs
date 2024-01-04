@@ -109,7 +109,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
+pub trait TransactionBuilder: BuildableTransaction + Send {
     type TxType: Transaction;
 
     fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
@@ -147,8 +147,11 @@ macro_rules! impl_tx_trait {
                 &self,
                 provider: &impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
-                let mut tx =
-                    BuildableTransaction::build_without_signatures(self.clone(), provider).await?;
+                let mut tx = BuildableTransaction::build_without_signatures(
+                    self.clone_without_signers(),
+                    provider,
+                )
+                .await?;
                 let consensus_parameters = provider.consensus_parameters();
 
                 if tx.is_using_predicates() {
@@ -162,8 +165,10 @@ macro_rules! impl_tx_trait {
                 ))
             }
 
-            fn with_tx_policies(self, tx_policies: TxPolicies) -> Self {
-                self.with_tx_policies(tx_policies)
+            fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+                self.tx_policies = tx_policies;
+
+                self
             }
 
             fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -271,7 +276,7 @@ macro_rules! impl_tx_trait {
     };
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -284,7 +289,7 @@ pub struct ScriptTransactionBuilder {
     unresolved_signatures: UnresolvedSignatures,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Default)]
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
@@ -548,10 +553,18 @@ impl ScriptTransactionBuilder {
             .with_outputs(outputs)
     }
 
-    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-
-        self
+    fn clone_without_signers(&self) -> Self {
+        Self {
+            script: self.script.clone(),
+            script_data: self.script_data.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            witnesses: self.witnesses.clone(),
+            tx_policies: self.tx_policies,
+            gas_estimation_tolerance: self.gas_estimation_tolerance,
+            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
+            unresolved_signatures: Default::default(),
+        }
     }
 }
 
@@ -660,10 +673,19 @@ impl CreateTransactionBuilder {
             .with_witnesses(witnesses)
     }
 
-    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-
-        self
+    fn clone_without_signers(&self) -> Self {
+        Self {
+            bytecode_length: self.bytecode_length,
+            bytecode_witness_index: self.bytecode_witness_index,
+            storage_slots: self.storage_slots.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            witnesses: self.witnesses.clone(),
+            tx_policies: self.tx_policies,
+            salt: self.salt,
+            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
+            unresolved_signatures: Default::default(),
+        }
     }
 }
 
