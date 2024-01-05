@@ -15,7 +15,6 @@ use crate::{
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_provider_and_get_wallet;
-/// use fuels_accounts::Signer;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
 ///   let wallet = launch_provider_and_get_wallet().await?;
@@ -36,7 +35,6 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_custom_provider_and_get_wallets;
-/// use fuels_accounts::Signer;
 /// use fuels_test_helpers::WalletsConfig;
 ///
 /// async fn multiple_wallets() -> Result<(), Box<dyn std::error::Error>> {
