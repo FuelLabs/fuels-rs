@@ -1760,7 +1760,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
     // ANCHOR: tb_build_without_signatures
     let mut tx = tb.build_without_signatures(provider).await?;
-    tx.sign_with(&wallet, provider.chain_id())?;
+    tx.sign_with(&wallet, provider.chain_id()).await?;
 
     // ANCHOR_END: tb_build_without_signatures
 

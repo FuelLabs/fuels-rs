@@ -341,7 +341,7 @@ mod tests {
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
         let message = Message::new("my message".as_bytes());
-        let signature = wallet.sign(message)?;
+        let signature = wallet.sign(message).await?;
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
@@ -421,7 +421,7 @@ mod tests {
 
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
-        let signature = wallet.sign(message)?;
+        let signature = wallet.sign(message).await?;
 
         // Check if the signatures are the same
         assert_eq!(signature, tx_signature);

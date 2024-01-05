@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::{collections::HashMap, fmt::Debug};
 
 use fuel_crypto::{Message, Signature};
@@ -172,8 +173,14 @@ pub trait GasValidation {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+pub trait SignableTransaction {
+    async fn sign_with(&mut self, signer: &impl Signer, chain_id: ChainId) -> Result<Signature>;
+}
+
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug
+    Into<FuelTransaction> + EstimablePredicates + GasValidation + SignableTransaction + Clone + Debug
 {
     fn fee_checked_from_tx(
         &self,
@@ -210,12 +217,6 @@ pub trait Transaction:
 
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
-
-    fn sign_with(
-        &mut self,
-        signer: &impl Signer,
-        chain_id: impl Into<ChainId>,
-    ) -> Result<Signature>;
 
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 }
@@ -384,20 +385,6 @@ macro_rules! impl_tx_wrapper {
                 }
             }
 
-            fn sign_with(
-                &mut self,
-                signer: &impl Signer,
-                chain_id: impl Into<ChainId>,
-            ) -> Result<Signature> {
-                let id = self.id(chain_id.into());
-                let message = Message::from_bytes(*id);
-                let sig = signer.sign(message)?;
-
-                self.append_witness(sig.as_ref().into())?;
-
-                Ok(sig)
-            }
-
             fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
@@ -416,6 +403,24 @@ macro_rules! impl_tx_wrapper {
                         }
                     })
                     .into_group_map()
+            }
+        }
+
+        #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+        impl SignableTransaction for $wrapper {
+            async fn sign_with(
+                &mut self,
+                signer: &impl Signer,
+                chain_id: ChainId,
+            ) -> Result<Signature> {
+                let tx_id = self.id(chain_id);
+                let message = Message::from_bytes(*tx_id);
+                let signature = signer.sign(message).await?;
+
+                self.append_witness(signature.as_ref().into())?;
+
+                Ok(signature)
             }
         }
     };

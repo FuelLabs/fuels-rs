@@ -55,9 +55,9 @@ mod tests {
         // ANCHOR_END: predicate_coins
 
         let data_to_sign = Message::new([0; 32]);
-        let signature1: B512 = wallet.sign(data_to_sign)?.as_ref().try_into()?;
-        let signature2: B512 = wallet2.sign(data_to_sign)?.as_ref().try_into()?;
-        let signature3: B512 = wallet3.sign(data_to_sign)?.as_ref().try_into()?;
+        let signature1: B512 = wallet.sign(data_to_sign).await?.as_ref().try_into()?;
+        let signature2: B512 = wallet2.sign(data_to_sign).await?.as_ref().try_into()?;
+        let signature3: B512 = wallet3.sign(data_to_sign).await?.as_ref().try_into()?;
 
         let signatures = [signature1, signature2, signature3];
 

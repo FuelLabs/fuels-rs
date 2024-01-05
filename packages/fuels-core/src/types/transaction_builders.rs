@@ -206,7 +206,7 @@ macro_rules! impl_tx_trait {
             }
         }
 
-        impl $ty {
+        impl<'a> $ty {
             fn set_witness_indexes(&mut self) {
                 self.unresolved_witness_indexes.owner_to_idx_offset = self
                     .inputs()
@@ -430,7 +430,8 @@ impl ScriptTransactionBuilder {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id),
             &self.unresolved_signatures,
-        )?;
+        )
+        .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
@@ -616,7 +617,7 @@ impl CreateTransactionBuilder {
         );
 
         let missing_witnesses =
-            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures)?;
+            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures).await?;
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
@@ -876,18 +877,19 @@ pub fn create_coin_message_predicate(
     }
 }
 
-fn generate_missing_witnesses(
+async fn generate_missing_witnesses(
     id: Bytes32,
     unresolved_signatures: &[Box<dyn Signer>],
 ) -> Result<Vec<Witness>> {
-    unresolved_signatures
-        .iter()
-        .map(|signer| {
-            signer
-                .sign(CryptoMessage::from_bytes(*id))
-                .map(|signature| signature.as_ref().into())
-        })
-        .collect()
+    let mut witnesses = Vec::with_capacity(unresolved_signatures.len());
+    for signer in unresolved_signatures {
+        let message = CryptoMessage::from_bytes(*id);
+        let signature = signer.sign(message).await?;
+
+        witnesses.push(signature.as_ref().into());
+    }
+
+    Ok(witnesses)
 }
 
 #[cfg(test)]

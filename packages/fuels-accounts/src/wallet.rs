@@ -1,3 +1,4 @@
+use async_trait::async_trait;
 use std::{fmt, ops, path::Path};
 
 use elliptic_curve::rand_core;
@@ -266,8 +267,10 @@ impl Account for WalletUnlocked {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
-    fn sign(&self, message: Message) -> Result<Signature> {
+    async fn sign(&self, message: Message) -> Result<Signature> {
         let sig = Signature::sign(&self.private_key, &message);
 
         Ok(sig)
@@ -315,14 +318,14 @@ mod tests {
 
         // sign a message using the above key.
         let message = Message::new("Hello there!".as_bytes());
-        let signature = wallet.sign(message)?;
+        let signature = wallet.sign(message).await?;
 
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet = WalletUnlocked::load_keystore(path.clone(), "password", None)?;
 
         // Sign the same message as before and assert that the signature is the same.
-        let signature2 = recovered_wallet.sign(message)?;
+        let signature2 = recovered_wallet.sign(message).await?;
         assert_eq!(signature, signature2);
 
         // Remove tempdir.
