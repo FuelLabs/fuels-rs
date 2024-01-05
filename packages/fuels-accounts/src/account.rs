@@ -410,7 +410,7 @@ mod tests {
         };
 
         // Add `Signer` to the transaction builder
-        tb.add_unresolved_signature(wallet.clone());
+        tb.add_signer(wallet.clone());
         // ANCHOR_END: sign_tx
 
         let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes

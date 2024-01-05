@@ -1,6 +1,6 @@
-use async_trait::async_trait;
 use std::{collections::HashMap, fmt::Debug};
 
+use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{

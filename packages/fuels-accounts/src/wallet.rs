@@ -1,6 +1,6 @@
-use async_trait::async_trait;
 use std::{fmt, ops, path::Path};
 
+use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
@@ -263,7 +263,7 @@ impl Account for WalletUnlocked {
     }
 
     fn add_witnessses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
-        tb.add_unresolved_signature(self.clone());
+        tb.add_signer(self.clone());
     }
 }
 

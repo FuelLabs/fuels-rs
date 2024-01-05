@@ -81,7 +81,7 @@ impl BuildableTransaction for ScriptTransactionBuilder {
 
     async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.set_witness_indexes();
-        self.unresolved_signatures = Default::default();
+        self.unresolved_signers = Default::default();
 
         self.build(provider).await
     }
@@ -97,7 +97,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 
     async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.set_witness_indexes();
-        self.unresolved_signatures = Default::default();
+        self.unresolved_signers = Default::default();
 
         self.build(provider).await
     }
@@ -107,7 +107,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 pub trait TransactionBuilder: BuildableTransaction + Send {
     type TxType: Transaction;
 
-    fn add_unresolved_signature(&mut self, signer: impl Signer);
+    fn add_signer(&mut self, signer: impl Signer) -> &mut Self;
     async fn fee_checked_from_tx(
         &self,
         provider: &impl DryRunner,
@@ -130,12 +130,14 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
-            fn add_unresolved_signature(&mut self, signer: impl Signer) {
-                let index_offset = self.unresolved_signatures.len() as u64;
+            fn add_signer(&mut self, signer: impl Signer) -> &mut Self {
+                let index_offset = self.unresolved_signers.len() as u64;
                 self.unresolved_witness_indexes
                     .owner_to_idx_offset
                     .insert(signer.address(), index_offset);
-                self.unresolved_signatures.push(Box::new(signer));
+                self.unresolved_signers.push(Box::new(signer));
+
+                self
             }
 
             async fn fee_checked_from_tx(
@@ -250,7 +252,7 @@ macro_rules! impl_tx_trait {
             fn num_witnesses(&self) -> Result<u8> {
                 let num_witnesses = self.witnesses().len();
 
-                if num_witnesses + self.unresolved_signatures.len() > 256 {
+                if num_witnesses + self.unresolved_signers.len() > 256 {
                     return Err(error!(
                         InvalidData,
                         "tx can not have more than 256 witnesses"
@@ -281,7 +283,7 @@ pub struct ScriptTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signatures: Vec<Box<dyn Signer>>,
+    unresolved_signers: Vec<Box<dyn Signer>>,
 }
 
 #[derive(Debug, Default)]
@@ -295,7 +297,7 @@ pub struct CreateTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub salt: Salt,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signatures: Vec<Box<dyn Signer>>,
+    unresolved_signers: Vec<Box<dyn Signer>>,
 }
 
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
@@ -429,7 +431,7 @@ impl ScriptTransactionBuilder {
 
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id),
-            &self.unresolved_signatures,
+            &self.unresolved_signers,
         )
         .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
@@ -559,7 +561,7 @@ impl ScriptTransactionBuilder {
             tx_policies: self.tx_policies,
             gas_estimation_tolerance: self.gas_estimation_tolerance,
             unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signatures: Default::default(),
+            unresolved_signers: Default::default(),
         }
     }
 }
@@ -617,7 +619,7 @@ impl CreateTransactionBuilder {
         );
 
         let missing_witnesses =
-            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures).await?;
+            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signers).await?;
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
@@ -682,7 +684,7 @@ impl CreateTransactionBuilder {
             tx_policies: self.tx_policies,
             salt: self.salt,
             unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
-            unresolved_signatures: Default::default(),
+            unresolved_signers: Default::default(),
         }
     }
 }

@@ -812,7 +812,7 @@ async fn create_transfer(
     let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    tb.add_unresolved_signature(wallet.clone());
+    tb.add_signer(wallet.clone());
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
@@ -873,7 +873,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(vec![Opcode::RVRT.into()]);
-    tb.add_unresolved_signature(wallet.clone());
+    tb.add_signer(wallet.clone());
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
@@ -972,7 +972,7 @@ async fn test_build_with_provider() -> Result<()> {
     let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), BASE_ASSET_ID, 100);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    tb.add_unresolved_signature(wallet.clone());
+    tb.add_signer(wallet.clone());
 
     let tx = tb.build(provider).await?;
 

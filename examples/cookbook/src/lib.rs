@@ -189,7 +189,7 @@ mod tests {
         // ANCHOR: transfer_multiple_transaction
         let mut tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-        tb.add_unresolved_signature(wallet_1.clone());
+        tb.add_signer(wallet_1.clone());
 
         let tx = tb.build(&provider).await?;
 
@@ -300,7 +300,7 @@ mod tests {
         // ANCHOR_END: custom_tx_adjust
 
         // ANCHOR: custom_tx_sign
-        tb.add_unresolved_signature(hot_wallet.clone());
+        tb.add_signer(hot_wallet.clone());
         // ANCHOR_END: custom_tx_sign
 
         // ANCHOR: custom_tx_policies
