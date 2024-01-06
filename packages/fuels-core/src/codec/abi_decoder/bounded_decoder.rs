@@ -2,7 +2,7 @@ use std::{convert::TryInto, str};
 
 use crate::{
     checked_round_up_to_word_alignment,
-    codec::DecoderConfig,
+    codec::{utils::CounterWithLimit, DecoderConfig},
     constants::WORD_SIZE,
     traits::Tokenizable,
     types::{
@@ -381,40 +381,6 @@ impl BoundedDecoder {
 struct Decoded {
     token: Token,
     bytes_read: usize,
-}
-
-struct CounterWithLimit {
-    count: usize,
-    max: usize,
-    name: String,
-}
-
-impl CounterWithLimit {
-    fn new(max: usize, name: impl Into<String>) -> Self {
-        Self {
-            count: 0,
-            max,
-            name: name.into(),
-        }
-    }
-
-    fn increase(&mut self) -> Result<()> {
-        self.count += 1;
-        if self.count > self.max {
-            Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn decrease(&mut self) {
-        if self.count > 0 {
-            self.count -= 1;
-        }
-    }
 }
 
 fn peek_u128(bytes: &[u8]) -> Result<u128> {
