@@ -1,21 +1,22 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use fuel_core_types::{
-    fuel_crypto::rand::{self, Rng},
-    tai64::Tai64,
-};
 use fuels::{
-    accounts::{fuel_crypto::SecretKey, Account},
+    accounts::Account,
     client::{PageDirection, PaginationRequest},
+    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
-    types::{block::Block, coin_type::CoinType, message::Message},
+    types::{
+        block::Block,
+        coin_type::CoinType,
+        message::Message,
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        Bits256,
+    },
 };
-use fuels_core::types::{
-    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-    Bits256,
-};
+use rand::Rng;
+use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {

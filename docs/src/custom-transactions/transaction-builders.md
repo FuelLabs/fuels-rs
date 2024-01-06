@@ -60,10 +60,10 @@ We need to do one more thing before we stop thinking about transaction inputs. E
 {{#include ../../../examples/cookbook/src/lib.rs:custom_tx_adjust}}
 ```
 
-As we have used coins that require a signature, we sign the transaction builder with:
+As we have used coins that require a signature, we have to add the signer to the transaction builder with:
 
 ```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:custom_tx_sign}}
+{{#include ../../../examples/cookbook/src/lib.rs:custom_tx_add_signer}}
 ```
 
 We can also define transaction policies. For example, we can limit the gas price by doing the following:
@@ -92,4 +92,4 @@ If you need to build the transaction without signatures, which is useful when es
 {{#include ../../../packages/fuels/tests/contracts.rs:tb_build_without_signatures}}
 ```
 
-> **Note** In contrast to signing a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs.
+> **Note** In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs.

@@ -1329,8 +1329,9 @@ fn db_rocksdb() {
     use std::{fs, str::FromStr};
 
     use fuels::{
-        accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
+        accounts::wallet::WalletUnlocked,
         client::{PageDirection, PaginationRequest},
+        crypto::SecretKey,
         prelude::{setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
@@ -1760,8 +1761,9 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
     // ANCHOR: tb_build_without_signatures
     let mut tx = tb.build_without_signatures(provider).await?;
+    // ANCHOR: tx_sign_with
     tx.sign_with(&wallet, provider.chain_id()).await?;
-
+    // ANCHOR_END: tx_sign_with
     // ANCHOR_END: tb_build_without_signatures
 
     let tx_id = provider.send_transaction(tx).await?;

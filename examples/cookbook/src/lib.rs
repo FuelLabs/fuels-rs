@@ -299,9 +299,9 @@ mod tests {
         hot_wallet.adjust_for_fee(&mut tb, 100).await?;
         // ANCHOR_END: custom_tx_adjust
 
-        // ANCHOR: custom_tx_sign
+        // ANCHOR: custom_tx_add_signer
         tb.add_signer(hot_wallet.clone());
-        // ANCHOR_END: custom_tx_sign
+        // ANCHOR_END: custom_tx_add_signer
 
         // ANCHOR: custom_tx_policies
         let tx_policies = TxPolicies::default().with_gas_price(1);

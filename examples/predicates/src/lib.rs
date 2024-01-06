@@ -1,16 +1,14 @@
 #[cfg(test)]
 mod tests {
-    use fuel_crypto::Message;
     use fuels::{
         accounts::{predicate::Predicate, Account},
+        crypto::{Message, SecretKey},
         prelude::*,
         types::B512,
     };
 
     #[tokio::test]
     async fn predicate_example() -> Result<()> {
-        use fuels::accounts::fuel_crypto::SecretKey;
-
         // ANCHOR: predicate_wallets
         let secret_key1: SecretKey =
             "0x862512a2363db2b3a375c0d4bbbd27172180d89f23f2e259bac850ab02619301"

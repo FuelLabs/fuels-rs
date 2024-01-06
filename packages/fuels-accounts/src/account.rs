@@ -2,8 +2,6 @@ use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-#[doc(no_inline)]
-pub use fuel_crypto;
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::{
@@ -378,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn sign_tx_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        // ANCHOR: sign_tx
+        // ANCHOR: sign_tb
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
@@ -411,7 +409,7 @@ mod tests {
 
         // Add `Signer` to the transaction builder
         tb.add_signer(wallet.clone());
-        // ANCHOR_END: sign_tx
+        // ANCHOR_END: sign_tb
 
         let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
 
