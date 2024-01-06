@@ -25,4 +25,3 @@ If you have a built transaction and you want to add an signature to it, you can 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/contracts.rs:tx_sign_with}}
 ```
-
