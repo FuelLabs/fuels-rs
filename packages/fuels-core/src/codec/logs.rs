@@ -35,8 +35,7 @@ impl LogFormatter {
         bytes: &[u8],
     ) -> Result<String> {
         Self::can_decode_log_with_type::<T>()?;
-        let token =
-            ABIDecoder::new(decoder_config).decode_receipt_return(&T::param_type(), bytes)?;
+        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
         Ok(format!("{:?}", T::from_token(token)?))
     }
 
@@ -189,8 +188,8 @@ impl LogDecoder {
             .extract_log_id_and_data()
             .filter_map(|(log_id, bytes)| {
                 target_ids.contains(&log_id).then(|| {
-                    let token = ABIDecoder::new(self.decoder_config)
-                        .decode_receipt_return(&T::param_type(), &bytes)?;
+                    let token =
+                        ABIDecoder::new(self.decoder_config).decode(&T::param_type(), &bytes)?;
                     T::from_token(token)
                 })
             })
