@@ -262,7 +262,7 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    fn add_witnessses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
+    fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
         tb.add_signer(self.clone());
     }
 }

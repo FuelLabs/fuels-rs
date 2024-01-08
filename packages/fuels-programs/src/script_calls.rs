@@ -215,7 +215,7 @@ where
         let mut tb = self.transaction_builder().await?;
 
         self.account.adjust_for_fee(&mut tb, 0).await?;
-        self.account.add_witnessses(&mut tb);
+        self.account.add_witnesses(&mut tb);
 
         tb.build(self.account.try_provider()?).await
     }

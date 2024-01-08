@@ -312,7 +312,7 @@ impl Contract {
         );
 
         account.adjust_for_fee(&mut tb, 0).await?;
-        account.add_witnessses(&mut tb);
+        account.add_witnesses(&mut tb);
 
         let provider = account.try_provider()?;
 

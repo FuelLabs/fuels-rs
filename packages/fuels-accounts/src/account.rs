@@ -172,7 +172,7 @@ pub trait Account: ViewOnlyAccount {
     }
 
     // Add signatures to the builder if the underlying account is a wallet
-    fn add_witnessses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
+    fn add_witnesses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
 
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
@@ -192,7 +192,7 @@ pub trait Account: ViewOnlyAccount {
         let mut tx_builder =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
 
-        self.add_witnessses(&mut tx_builder);
+        self.add_witnesses(&mut tx_builder);
 
         let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
@@ -254,7 +254,7 @@ pub trait Account: ViewOnlyAccount {
             tx_policies,
         );
 
-        self.add_witnessses(&mut tb);
+        self.add_witnesses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
         let tx = tb.build(provider).await?;
 
@@ -288,7 +288,7 @@ pub trait Account: ViewOnlyAccount {
             tx_policies,
         );
 
-        self.add_witnessses(&mut tb);
+        self.add_witnesses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
         let tx = tb.build(provider).await?;
 

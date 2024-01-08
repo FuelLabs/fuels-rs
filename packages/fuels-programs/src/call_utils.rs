@@ -151,7 +151,7 @@ pub(crate) async fn build_tx_from_contract_calls(
         .unwrap_or_default();
 
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
-    account.add_witnessses(&mut tb);
+    account.add_witnesses(&mut tb);
 
     tb.build(account.try_provider()?).await
 }
