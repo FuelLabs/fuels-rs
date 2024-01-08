@@ -317,8 +317,10 @@ impl Contract {
 
         let provider = account.try_provider()?;
 
-        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-        provider.tx_status(&tx_id).await?.check(None)?;
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
 
         Ok(self.contract_id.into())
     }
@@ -629,8 +631,7 @@ where
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider.tx_status(&tx_id).await?
+            provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
@@ -935,8 +936,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-            provider.tx_status(&tx_id).await?
+            provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
