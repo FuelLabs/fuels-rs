@@ -16,7 +16,7 @@ use fuels_core::{
         errors::{Error, Result},
         input::Input,
         message::Message,
-        transaction::TxPolicies,
+        transaction::{Transaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
         },
@@ -219,12 +219,11 @@ pub trait Account: ViewOnlyAccount {
             .await?;
 
         let tx = tx_builder.build(provider).await?;
-        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+        let tx_id = tx.id(provider.chain_id());
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(None)?;
 
         Ok((tx_id, receipts))
     }
@@ -279,12 +278,10 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tb, balance).await?;
         let tx = tb.build(provider).await?;
 
-        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
+        let tx_id = tx.id(provider.chain_id());
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let receipts = tx_status.take_receipts_checked(None)?;
 
         Ok((tx_id.to_string(), receipts))
     }
@@ -314,12 +311,11 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnessses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
         let tx = tb.build(provider).await?;
-        let tx_id = provider.send_transaction_and_await_commit(tx).await?;
 
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(None)?;
+        let tx_id = tx.id(provider.chain_id());
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(None)?;
 
         let nonce = extract_message_nonce(&receipts)
             .expect("MessageId could not be retrieved from tx receipts.");
