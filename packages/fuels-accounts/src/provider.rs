@@ -8,8 +8,6 @@ mod supported_versions;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
-#[cfg(feature = "coin-cache")]
-use fuel_core_client::client::types::TransactionStatus;
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance},
@@ -197,24 +195,29 @@ impl Provider {
     }
 
     /// Sends a transaction to the underlying Provider's client.
-    pub async fn send_transaction_and_await_commit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let tx_id = self.send_transaction(tx.clone()).await?;
-        let _status = self.client.await_transaction_commit(&tx_id).await?;
+    pub async fn send_transaction_and_await_commit<T: Transaction>(
+        &self,
+        mut tx: T,
+    ) -> Result<TxStatus> {
+        self.prepare_transaction_for_sending(&mut tx).await?;
+        let tx_status = self
+            .client
+            .submit_and_await_commit(&tx.clone().into())
+            .await?
+            .into();
 
         #[cfg(feature = "coin-cache")]
-        {
-            if matches!(
-                _status,
-                TransactionStatus::SqueezedOut { .. } | TransactionStatus::Failure { .. }
-            ) {
-                self.cache.lock().await.remove_items(tx.used_coins())
-            }
+        if matches!(
+            tx_status,
+            TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
+        ) {
+            self.cache.lock().await.remove_items(tx.used_coins())
         }
 
-        Ok(tx_id)
+        Ok(tx_status)
     }
 
-    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+    async fn prepare_transaction_for_sending<T: Transaction>(&self, tx: &mut T) -> Result<()> {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
@@ -228,8 +231,16 @@ impl Provider {
         }
 
         self.validate_transaction(tx.clone()).await?;
+        Ok(())
+    }
 
+    pub async fn send_transaction<T: Transaction>(&self, mut tx: T) -> Result<TxId> {
+        self.prepare_transaction_for_sending(&mut tx).await?;
         self.submit(tx).await
+    }
+
+    pub async fn await_transaction_commit<T: Transaction>(&self, id: TxId) -> Result<TxStatus> {
+        Ok(self.client.await_transaction_commit(&id).await?.into())
     }
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {

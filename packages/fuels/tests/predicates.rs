@@ -751,8 +751,10 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 
     let tx = tb.build(&provider).await?;
 
-    let tx_id = provider.send_transaction_and_await_commit(tx).await?;
-    provider.tx_status(&tx_id).await?.check(None)?;
+    provider
+        .send_transaction_and_await_commit(tx)
+        .await?
+        .check(None)?;
 
     let wallet_balance = wallet.get_asset_balance(&non_base_asset_id).await?;
 
@@ -873,7 +875,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     tx.append_witness(witness2.into())?;
     let tx_id_after_witnesses = tx.id(provider.chain_id());
 
-    let tx_id_from_provider = provider.send_transaction_and_await_commit(tx).await?;
+    let tx_id_from_provider = provider.send_transaction(tx).await?;
 
     assert_eq!(tx_id, tx_id_after_witnesses);
     assert_eq!(tx_id, tx_id_from_provider);
