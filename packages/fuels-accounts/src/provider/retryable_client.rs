@@ -63,6 +63,11 @@ impl RetryableClient {
             .await
     }
 
+    pub async fn submit_and_await_commit(&self, tx: &Transaction) -> io::Result<TransactionStatus> {
+        self.our_retry(|| self.client.submit_and_await_commit(tx))
+            .await
+    }
+
     pub async fn submit(&self, tx: &Transaction) -> io::Result<types::primitives::TransactionId> {
         self.our_retry(|| self.client.submit(tx)).await
     }
