@@ -276,8 +276,8 @@ impl Signer for WalletUnlocked {
         Ok(sig)
     }
 
-    fn address(&self) -> Bech32Address {
-        self.address.clone()
+    fn address(&self) -> &Bech32Address {
+        &self.address
     }
 }
 

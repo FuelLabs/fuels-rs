@@ -131,11 +131,18 @@ macro_rules! impl_tx_trait {
             type TxType = $tx_ty;
 
             fn add_signer(&mut self, signer: impl Signer) -> &mut Self {
-                let index_offset = self.unresolved_signers.len() as u64;
-                self.unresolved_witness_indexes
+                let address = signer.address();
+                if !self
+                    .unresolved_witness_indexes
                     .owner_to_idx_offset
-                    .insert(signer.address(), index_offset);
-                self.unresolved_signers.push(Box::new(signer));
+                    .contains_key(address)
+                {
+                    let index_offset = self.unresolved_signers.len() as u64;
+                    self.unresolved_witness_indexes
+                        .owner_to_idx_offset
+                        .insert(address.clone(), index_offset);
+                    self.unresolved_signers.push(Box::new(signer));
+                }
 
                 self
             }
@@ -208,7 +215,7 @@ macro_rules! impl_tx_trait {
             }
         }
 
-        impl<'a> $ty {
+        impl $ty {
             fn set_witness_indexes(&mut self) {
                 self.unresolved_witness_indexes.owner_to_idx_offset = self
                     .inputs()
@@ -896,6 +903,7 @@ async fn generate_missing_witnesses(
 
 #[cfg(test)]
 mod tests {
+    use fuel_crypto::Signature;
     use fuel_tx::{input::coin::CoinSigned, UtxoId};
 
     use super::*;
@@ -986,6 +994,7 @@ mod tests {
         c_param: ConsensusParameters,
     }
 
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
@@ -1065,6 +1074,40 @@ mod tests {
             (num_witnesses..(num_witnesses + num_inputs as usize)).collect();
 
         assert_eq!(indexes, expected_indexes);
+
+        Ok(())
+    }
+
+    #[derive(Clone, Debug, Default)]
+    struct MockSigner {
+        address: Bech32Address,
+    }
+
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    impl Signer for MockSigner {
+        async fn sign(&self, _message: CryptoMessage) -> Result<Signature> {
+            Ok(Default::default())
+        }
+        fn address(&self) -> &Bech32Address {
+            &self.address
+        }
+    }
+
+    #[tokio::test]
+    async fn add_signer_called_multiple_times() -> Result<()> {
+        // given
+        let mut tb = ScriptTransactionBuilder::default();
+        let signer = MockSigner::default();
+
+        // when
+        tb.add_signer(signer.clone());
+        tb.add_signer(signer.clone());
+        tb.add_signer(signer.clone());
+
+        // then
+        assert_eq!(tb.unresolved_witness_indexes.owner_to_idx_offset.len(), 1);
+        assert_eq!(tb.unresolved_signers.len(), 1);
 
         Ok(())
     }

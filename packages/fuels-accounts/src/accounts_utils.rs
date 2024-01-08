@@ -16,7 +16,7 @@ pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
     receipts.iter().find_map(|m| m.nonce()).copied()
 }
 
-pub async fn calculate_missing_base_amount<'a>(
+pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
     used_base_amount: u64,
     provider: &Provider,
