@@ -70,7 +70,7 @@ pub trait BuildableTransaction {
 
     /// Building without signatures will set the witness indexes of signed coins in the
     /// order as they appear in the inputs. Multiple coins with the same owner will have
-    /// the same witness index. Make sure you sign the  built transaction in the expected order.
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
     async fn build_without_signatures(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 

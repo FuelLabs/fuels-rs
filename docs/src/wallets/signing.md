@@ -20,7 +20,7 @@ Below is a full example of how to create a transaction builder and add signers t
 
 ## Signing a built transaction
 
-If you have a built transaction and you want to add an signature to it, you can use the `sign_with` method.
+If you have a built transaction and want to add a signature, you can use the `sign_with` method.
 
 ```rust,ignore
 {{#include ../../../packages/fuels/tests/contracts.rs:tx_sign_with}}
