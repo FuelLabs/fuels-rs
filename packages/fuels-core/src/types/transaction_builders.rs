@@ -156,7 +156,8 @@ macro_rules! impl_tx_trait {
             ) -> Result<Option<TransactionFee>> {
                 let mut fee_estimation_tb = self.clone_without_signers();
 
-                // Add a temporary witness for every `Signer` to include them in the fee estimation
+                // Add a temporary witness for every `Signer` to include them in the fee
+                // estimation.
                 let witness: Witness = Signature::default().as_ref().into();
                 fee_estimation_tb
                     .witnesses_mut()
