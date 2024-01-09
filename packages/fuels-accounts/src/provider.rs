@@ -726,7 +726,6 @@ impl Provider {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl DryRunner for Provider {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;

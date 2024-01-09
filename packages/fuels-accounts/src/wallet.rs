@@ -1,6 +1,5 @@
 use std::{fmt, ops, path::Path};
 
-use async_trait::async_trait;
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
@@ -236,7 +235,6 @@ impl ViewOnlyAccount for WalletUnlocked {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for WalletUnlocked {
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
@@ -260,8 +258,6 @@ impl Account for WalletUnlocked {
     }
 }
 
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl Signer for WalletUnlocked {
     type Error = WalletError;
     async fn sign_message<S: Send + Sync + AsRef<[u8]>>(

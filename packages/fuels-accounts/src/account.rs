@@ -1,6 +1,7 @@
+#![allow(async_fn_in_trait)]
+
 use std::{collections::HashMap, fmt::Display};
 
-use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 #[doc(no_inline)]
 pub use fuel_crypto;
@@ -32,8 +33,6 @@ use crate::{
 /// Trait for signing transactions and messages
 ///
 /// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Signer: std::fmt::Debug + Send + Sync {
     type Error: std::error::Error + Send + Sync;
 
@@ -71,7 +70,6 @@ impl From<AccountError> for Error {
 
 pub type AccountResult<T> = std::result::Result<T, AccountError>;
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     fn address(&self) -> &Bech32Address;
 
@@ -142,7 +140,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Account: ViewOnlyAccount {
     /// Returns a vector consisting of `Input::Coin`s and `Input::Message`s for the given
     /// asset ID and amount. The `witness_index` is the position of the witness (signature)
@@ -375,7 +372,6 @@ mod tests {
         c_param: ConsensusParameters,
     }
 
-    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
             Ok(0)

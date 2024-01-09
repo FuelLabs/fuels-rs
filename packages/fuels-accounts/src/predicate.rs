@@ -104,7 +104,6 @@ impl ViewOnlyAccount for Predicate {
 }
 
 #[cfg(feature = "std")]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl Account for Predicate {
     async fn get_asset_inputs_for_amount(
         &self,

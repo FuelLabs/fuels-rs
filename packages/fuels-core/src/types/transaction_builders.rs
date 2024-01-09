@@ -1,8 +1,8 @@
 #![cfg(feature = "std")]
+#![allow(async_fn_in_trait)]
 
 use std::{collections::HashMap, iter::repeat_with};
 
-use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
 use fuel_tx::{
@@ -34,14 +34,12 @@ use crate::{
     utils::calculate_witnesses_size,
 };
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
     async fn min_gas_price(&self) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: DryRunner> DryRunner for &T {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         (*self).dry_run_and_get_used_gas(tx, tolerance).await
@@ -63,14 +61,12 @@ struct UnresolvedSignatures {
     secret_keys: Vec<SecretKey>,
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction {
     type TxType: Transaction;
 
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
@@ -79,7 +75,6 @@ impl BuildableTransaction for ScriptTransactionBuilder {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
 
@@ -88,7 +83,6 @@ impl BuildableTransaction for CreateTransactionBuilder {
     }
 }
 
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
     type TxType: Transaction;
 
@@ -111,7 +105,6 @@ pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
 
 macro_rules! impl_tx_trait {
     ($ty: ty, $tx_ty: ident) => {
-        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
