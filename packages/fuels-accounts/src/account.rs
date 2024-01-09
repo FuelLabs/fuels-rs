@@ -256,6 +256,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tb);
         self.adjust_for_fee(&mut tb, balance).await?;
+
         let tx = tb.build(provider).await?;
 
         let tx_id = tx.id(provider.chain_id());
@@ -290,6 +291,7 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tb);
         self.adjust_for_fee(&mut tb, amount).await?;
+
         let tx = tb.build(provider).await?;
 
         let tx_id = tx.id(provider.chain_id());

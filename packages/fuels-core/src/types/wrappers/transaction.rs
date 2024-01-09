@@ -189,6 +189,9 @@ pub trait Transaction:
 
     fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64;
 
+    /// Performs all stateless transaction validity checks. This includes the validity
+    /// of fields according to rules in the specification and validity of signatures.
+    /// <https://github.com/FuelLabs/fuel-specs/blob/master/src/tx-format/transaction.md>
     fn check(&self, block_height: u32, consensus_parameters: &ConsensusParameters) -> Result<()>;
 
     fn id(&self, chain_id: ChainId) -> Bytes32;

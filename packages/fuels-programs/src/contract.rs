@@ -311,8 +311,8 @@ impl Contract {
             tx_policies,
         );
 
-        account.adjust_for_fee(&mut tb, 0).await?;
         account.add_witnesses(&mut tb);
+        account.adjust_for_fee(&mut tb, 0).await?;
 
         let provider = account.try_provider()?;
 
