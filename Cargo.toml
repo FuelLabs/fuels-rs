@@ -40,7 +40,6 @@ version = "0.54.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
-async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
