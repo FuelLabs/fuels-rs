@@ -36,7 +36,7 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
-#[async_trait::async_trait]
+#[allow(async_fn_in_trait)]
 pub trait TxDependencyExtension: Sized {
     async fn simulate(&mut self) -> Result<()>;
 

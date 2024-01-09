@@ -675,7 +675,6 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
 where
     T: Account,
@@ -994,7 +993,6 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 }
 
-#[async_trait::async_trait]
 impl<T> TxDependencyExtension for MultiContractCallHandler<T>
 where
     T: Account,

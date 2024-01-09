@@ -10,7 +10,6 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
-async-trait = { workspace = true, default-features = false }
 bytes = { workspace = true, features = ["serde"] }
 fuel-abi-types = { workspace = true }
 fuel-asm = { workspace = true }

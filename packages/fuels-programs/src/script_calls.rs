@@ -310,7 +310,6 @@ where
     }
 }
 
-#[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
 where
     T: Account,
