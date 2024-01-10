@@ -573,7 +573,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn testnet_hello_world() -> Result<()> {
     // Note that this test might become flaky.
     // This test depends on:
@@ -588,7 +587,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =

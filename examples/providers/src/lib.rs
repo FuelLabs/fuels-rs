@@ -5,7 +5,6 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
-    #[ignore] //TODO: Enable this test once beta supports the new `fuel-core` >= `0.21.0`
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
@@ -15,7 +14,7 @@ mod tests {
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core
         // yet
-        let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
+        let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
 
         // Setup a private key
         let secret =
