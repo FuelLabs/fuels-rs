@@ -1,9 +1,9 @@
 use std::{convert::TryInto, str};
 
 use crate::{
+    checked_round_up_to_word_alignment,
     codec::DecoderConfig,
     constants::WORD_SIZE,
-    round_up_to_word_alignment,
     traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
@@ -151,7 +151,7 @@ impl BoundedDecoder {
 
         for param_type in param_types.iter() {
             // padding has to be taken into account
-            bytes_read = round_up_to_word_alignment(bytes_read);
+            bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
             tokens.push(res.token);
@@ -170,7 +170,7 @@ impl BoundedDecoder {
 
         for param_type in param_types.iter() {
             // padding has to be taken into account
-            bytes_read = round_up_to_word_alignment(bytes_read);
+            bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
             tokens.push(res.token);
@@ -249,7 +249,7 @@ impl BoundedDecoder {
         let decoded = str::from_utf8(encoded_str)?;
         let result = Decoded {
             token: Token::StringArray(StaticStringToken::new(decoded.into(), Some(length))),
-            bytes_read: round_up_to_word_alignment(length),
+            bytes_read: checked_round_up_to_word_alignment(length)?,
         };
         Ok(result)
     }
@@ -333,24 +333,19 @@ impl BoundedDecoder {
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
     fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
-        let enum_width_in_bytes = variants
-            .compute_enum_width_in_bytes()
-            .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
+        let enum_width_in_bytes = variants.compute_enum_width_in_bytes()?;
 
         let discriminant = peek_u64(bytes)?;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
-        let skip_extra_in_bytes = variants
-            .heap_type_variant()
-            .and_then(|(heap_discriminant, heap_type)| {
-                (heap_discriminant == discriminant).then_some(heap_type.compute_encoding_in_bytes())
-            })
-            .unwrap_or_default()
-            .unwrap_or_default();
-        let bytes_to_skip = enum_width_in_bytes
-            - selected_variant
-                .compute_encoding_in_bytes()
-                .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?
+        let skip_extra_in_bytes = match variants.heap_type_variant() {
+            Some((heap_type_discriminant, heap_type)) if heap_type_discriminant == discriminant => {
+                heap_type.compute_encoding_in_bytes()?
+            }
+            _ => 0,
+        };
+
+        let bytes_to_skip = enum_width_in_bytes - selected_variant.compute_encoding_in_bytes()?
             + skip_extra_in_bytes;
 
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;

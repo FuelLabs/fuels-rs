@@ -554,7 +554,7 @@ mod tests {
             },
             &[],
         );
-        assert!(matches!(result, Err(Error::InvalidData(_))));
+        assert!(matches!(result, Err(Error::InvalidType(_))));
     }
 
     #[test]

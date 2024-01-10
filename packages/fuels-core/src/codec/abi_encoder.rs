@@ -1,8 +1,8 @@
 use fuel_types::bytes::padded_len_usize;
 
 use crate::{
+    checked_round_up_to_word_alignment,
     constants::WORD_SIZE,
-    round_up_to_word_alignment,
     types::{
         errors::Result,
         pad_u16, pad_u32,
@@ -50,8 +50,11 @@ impl ABIEncoder {
             data.append(&mut new_data);
 
             if word_aligned {
-                let padding =
-                    vec![0u8; round_up_to_word_alignment(offset_in_bytes) - offset_in_bytes];
+                let padding = vec![
+                    0u8;
+                    checked_round_up_to_word_alignment(offset_in_bytes)?
+                        - offset_in_bytes
+                ];
                 if !padding.is_empty() {
                     offset_in_bytes += padding.len();
                     data.push(Data::Inline(padding));
