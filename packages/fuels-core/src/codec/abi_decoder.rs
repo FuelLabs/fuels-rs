@@ -60,11 +60,6 @@ impl ABIDecoder {
         BoundedDecoder::new(self.config).decode(param_type, bytes)
     }
 
-    /// Decode data from one of the receipt returns.
-    pub fn decode_receipt_return(&self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        BoundedDecoder::new(self.config).decode(param_type, bytes)
-    }
-
     /// Same as `decode` but decodes multiple `ParamType`s in one go.
     /// # Examples
     /// ```
