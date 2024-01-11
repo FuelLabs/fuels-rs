@@ -1,6 +1,10 @@
 #![cfg(feature = "std")]
 
-use std::{collections::HashMap, iter::repeat};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+    iter::repeat,
+};
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
@@ -110,7 +114,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 pub trait TransactionBuilder: BuildableTransaction + Send {
     type TxType: Transaction;
 
-    fn add_signer(&mut self, signer: impl Signer) -> &mut Self;
+    fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
     async fn fee_checked_from_tx(
         &self,
         provider: &impl DryRunner,
@@ -133,21 +137,26 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
-            fn add_signer(&mut self, signer: impl Signer) -> &mut Self {
+            fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
                 let address = signer.address();
-                if !self
+                if self
                     .unresolved_witness_indexes
                     .owner_to_idx_offset
                     .contains_key(address)
                 {
-                    let index_offset = self.unresolved_signers.len() as u64;
-                    self.unresolved_witness_indexes
-                        .owner_to_idx_offset
-                        .insert(address.clone(), index_offset);
-                    self.unresolved_signers.push(Box::new(signer));
+                    return Err(error!(
+                        InvalidData,
+                        "Already added `Signer` with address: `{address}`"
+                    ));
                 }
 
-                self
+                let index_offset = self.unresolved_signers.len() as u64;
+                self.unresolved_witness_indexes
+                    .owner_to_idx_offset
+                    .insert(address.clone(), index_offset);
+                self.unresolved_signers.push(Box::new(signer));
+
+                Ok(self)
             }
 
             async fn fee_checked_from_tx(
@@ -291,6 +300,14 @@ macro_rules! impl_tx_trait {
     };
 }
 
+impl Debug for dyn Signer + Send + Sync {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Signer")
+            .field("address", &self.address())
+            .finish()
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
@@ -301,10 +318,10 @@ pub struct ScriptTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer>>,
+    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
@@ -315,7 +332,7 @@ pub struct CreateTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub salt: Salt,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
-    unresolved_signers: Vec<Box<dyn Signer>>,
+    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
@@ -901,7 +918,7 @@ pub fn create_coin_message_predicate(
 
 async fn generate_missing_witnesses(
     id: Bytes32,
-    unresolved_signatures: &[Box<dyn Signer>],
+    unresolved_signatures: &[Box<dyn Signer + Send + Sync>],
 ) -> Result<Vec<Witness>> {
     let mut witnesses = Vec::with_capacity(unresolved_signatures.len());
     for signer in unresolved_signatures {
@@ -1110,20 +1127,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn add_signer_called_multiple_times() -> Result<()> {
-        // given
+    #[should_panic(expected = "Already added `Signer` with address:")]
+    async fn add_signer_called_multiple_times() {
         let mut tb = ScriptTransactionBuilder::default();
         let signer = MockSigner::default();
 
-        // when
-        tb.add_signer(signer.clone());
-        tb.add_signer(signer.clone());
-        tb.add_signer(signer.clone());
-
-        // then
-        assert_eq!(tb.unresolved_witness_indexes.owner_to_idx_offset.len(), 1);
-        assert_eq!(tb.unresolved_signers.len(), 1);
-
-        Ok(())
+        tb.add_signer(signer.clone()).unwrap();
+        tb.add_signer(signer.clone()).unwrap();
     }
 }

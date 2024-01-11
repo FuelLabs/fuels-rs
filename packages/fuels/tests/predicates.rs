@@ -455,7 +455,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let outputs = vec![Output::change(predicate.address().into(), 0, asset_id)];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
-    tb.add_signer(wallet.clone());
+    tb.add_signer(wallet.clone())?;
 
     let tx = tb.build(&provider).await?;
 
@@ -746,7 +746,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         TxPolicies::default().with_gas_price(1),
     );
 
-    tb.add_signer(wallet.clone());
+    tb.add_signer(wallet.clone())?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(&provider).await?;

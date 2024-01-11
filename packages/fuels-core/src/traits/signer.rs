@@ -8,7 +8,7 @@ use crate::types::{bech32::Bech32Address, errors::Result};
 /// Implement this trait to support different signing modes, e.g. hardware wallet, hosted etc.
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync + 'static {
+pub trait Signer: 'static {
     async fn sign(&self, message: Message) -> Result<Signature>;
     fn address(&self) -> &Bech32Address;
 }

@@ -219,7 +219,11 @@ pub trait Transaction:
 
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 
-    async fn sign_with(&mut self, signer: &impl Signer, chain_id: ChainId) -> Result<Signature>;
+    async fn sign_with(
+        &mut self,
+        signer: &(impl Signer + Send + Sync),
+        chain_id: ChainId,
+    ) -> Result<Signature>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -410,7 +414,7 @@ macro_rules! impl_tx_wrapper {
 
             async fn sign_with(
                 &mut self,
-                signer: &impl Signer,
+                signer: &(impl Signer + Send + Sync),
                 chain_id: ChainId,
             ) -> Result<Signature> {
                 let tx_id = self.id(chain_id);
