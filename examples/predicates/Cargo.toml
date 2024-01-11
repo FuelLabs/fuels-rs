@@ -13,4 +13,3 @@ description = "Fuel Rust SDK predicate examples."
 fuels = { workspace = true }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
-fuel-crypto = { workspace = true }
