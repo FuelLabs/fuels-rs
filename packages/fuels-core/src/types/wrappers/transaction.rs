@@ -175,12 +175,8 @@ pub trait GasValidation {
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait SignableTransaction {
-    async fn sign_with(&mut self, signer: &impl Signer, chain_id: ChainId) -> Result<Signature>;
-}
-
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + SignableTransaction + Clone + Debug
+    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug
 {
     fn fee_checked_from_tx(
         &self,
@@ -222,6 +218,8 @@ pub trait Transaction:
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+
+    async fn sign_with(&mut self, signer: &impl Signer, chain_id: ChainId) -> Result<Signature>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -296,6 +294,8 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
         impl Transaction for $wrapper {
             fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64 {
                 self.tx.max_gas(
@@ -407,11 +407,7 @@ macro_rules! impl_tx_wrapper {
                     })
                     .into_group_map()
             }
-        }
 
-        #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-        impl SignableTransaction for $wrapper {
             async fn sign_with(
                 &mut self,
                 signer: &impl Signer,
