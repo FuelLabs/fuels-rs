@@ -33,7 +33,6 @@ pub struct EncoderConfig {
     pub max_memory_size: usize,
 }
 
-// ANCHOR: default_encoder_config
 impl Default for EncoderConfig {
     fn default() -> Self {
         Self {
@@ -43,7 +42,6 @@ impl Default for EncoderConfig {
         }
     }
 }
-// ANCHOR_END: default_encoder_config
 
 #[derive(Default)]
 pub struct ABIEncoder {
