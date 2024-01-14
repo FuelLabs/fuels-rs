@@ -9,8 +9,8 @@ mod bounded_encoder;
 use std::default::Default;
 
 use crate::{
-    codec::abi_encoder::bounded_encoder::BoundedEncoder,
     checked_round_up_to_word_alignment,
+    codec::abi_encoder::bounded_encoder::BoundedEncoder,
     constants::WORD_SIZE,
     types::{
         errors::Result,
@@ -1145,7 +1145,7 @@ mod tests {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = format!("Depth limit (2) reached while encoding. Try increasing it.");
+        let msg = "Depth limit (2) reached while encoding. Try increasing it.".to_string();
 
         [nested_struct, nested_enum, nested_tuple, nested_array]
             .iter()
