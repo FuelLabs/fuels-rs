@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::path::Path;
 
 use fuels::{

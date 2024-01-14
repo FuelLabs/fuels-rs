@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    default::Default,
     fmt::Debug,
     fs,
     marker::PhantomData,
@@ -463,6 +464,7 @@ pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_policies: TxPolicies,
     decoder_config: DecoderConfig,
+    encoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
@@ -550,6 +552,11 @@ where
     pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
         self.decoder_config = decoder_config;
         self.log_decoder.set_decoder_config(decoder_config);
+        self
+    }
+
+    pub fn with_encoder_config(mut self, encoder_config: DecoderConfig) -> Self {
+        self.encoder_config = encoder_config;
         self
     }
 
@@ -731,7 +738,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::encode(args)?;
+    let unresolved_bytes = ABIEncoder::default().encode(args)?;
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
@@ -753,6 +760,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: Default::default(),
+        encoder_config: Default::default(),
     })
 }
 

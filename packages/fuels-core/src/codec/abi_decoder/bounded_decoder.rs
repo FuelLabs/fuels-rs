@@ -27,8 +27,8 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
+        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth", true);
+        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token", true);
         Self {
             depth_tracker,
             token_tracker,

@@ -660,7 +660,8 @@ async fn compile_bindings_nested_struct_input() -> Result<()> {
     let call_handler = contract_instance
         .methods()
         .takes_nested_struct(input.clone());
-    let encoded_args = ABIEncoder::encode(slice::from_ref(&input.into_token()))
+    let encoded_args = ABIEncoder::default()
+        .encode(slice::from_ref(&input.into_token()))
         .unwrap()
         .resolve(0);
 

@@ -1,6 +1,7 @@
 use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
+use std::default::Default;
 
 use crate::{
     error::Result,
@@ -92,7 +93,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let encoded_args = ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode script arguments");
+            let encoded_args = ::fuels::core::codec::ABIEncoder::default().encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(

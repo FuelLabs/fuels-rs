@@ -97,7 +97,7 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
 
 fn generate_encoder_code(ttype: &ResolvedType) -> TokenStream {
     quote! {
-        ::fuels::core::codec::ABIEncoder::encode(&[
+        ::fuels::core::codec::ABIEncoder::default().encode(&[
                 <#ttype as ::fuels::core::traits::Tokenizable>::into_token(value)
             ])
             .expect("Cannot encode configurable data")

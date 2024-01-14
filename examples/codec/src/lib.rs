@@ -17,7 +17,7 @@ mod tests {
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::encode(&[instance.into_token()])?;
+        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&[instance.into_token()])?;
         let load_memory_address: u64 = 0x100;
         let _: Vec<u8> = encoded.resolve(load_memory_address);
         //ANCHOR_END: encoding_example

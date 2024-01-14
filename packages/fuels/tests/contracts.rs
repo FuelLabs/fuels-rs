@@ -1,3 +1,4 @@
+use std::default::Default;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::vec;
@@ -1457,7 +1458,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     let methods = contract_instance.methods();
     {
         // Single call: Will not work if max_tokens not big enough
-        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig {max_tokens: 100, ..Default::default()}).call().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default.",
         );
     }

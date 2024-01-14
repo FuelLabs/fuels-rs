@@ -13,6 +13,7 @@ use fuels_core::{
     traits::Tokenizable,
     types::{coin_type::CoinType, input::Input},
 };
+use std::default::Default;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -798,8 +799,12 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
-    let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
+    let witness = ABIEncoder::default()
+        .encode(&[64u8.into_token()])?
+        .resolve(0);
+    let witness2 = ABIEncoder::default()
+        .encode(&[4096u64.into_token()])?
+        .resolve(0);
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
@@ -866,8 +871,12 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
-    let witness = ABIEncoder::encode(&[64u8.into_token()])?.resolve(0);
-    let witness2 = ABIEncoder::encode(&[4096u64.into_token()])?.resolve(0);
+    let witness = ABIEncoder::default()
+        .encode(&[64u8.into_token()])?
+        .resolve(0);
+    let witness2 = ABIEncoder::default()
+        .encode(&[4096u64.into_token()])?
+        .resolve(0);
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;

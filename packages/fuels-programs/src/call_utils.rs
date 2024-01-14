@@ -643,7 +643,7 @@ mod test {
         // Call 2 has multiple inputs, compute_custom_input_offset will be true
 
         let args = [Token::U8(1), Token::U16(2), Token::U8(3)]
-            .map(|token| ABIEncoder::encode(&[token]).unwrap())
+            .map(|token| ABIEncoder::default().encode(&[token]).unwrap())
             .to_vec();
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)

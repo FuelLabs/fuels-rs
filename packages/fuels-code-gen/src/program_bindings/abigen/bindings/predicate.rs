@@ -51,7 +51,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
 
     let body = quote! {
-        ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data")
+        ::fuels::core::codec::ABIEncoder::default().encode(&#arg_tokens).expect("Cannot encode predicate data")
     };
 
     generator
