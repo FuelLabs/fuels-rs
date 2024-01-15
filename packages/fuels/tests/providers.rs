@@ -596,14 +596,14 @@ async fn testnet_hello_world() -> Result<()> {
 
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+    let address = wallet.address();
+    println!("Address {:?} \n{:?}", address, wallet.get_balances().await?);
 
     let mut rng = rand::thread_rng();
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default();
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
