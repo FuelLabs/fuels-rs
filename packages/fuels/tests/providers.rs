@@ -596,8 +596,6 @@ async fn testnet_hello_world() -> Result<()> {
 
     // Create the wallet.
     let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
-    let address = wallet.address();
-    println!("Address {:?} \n{:?}", address, wallet.get_balances().await?);
 
     let mut rng = rand::thread_rng();
     let salt: [u8; 32] = rng.gen();
