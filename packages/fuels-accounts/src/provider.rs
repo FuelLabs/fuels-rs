@@ -221,7 +221,7 @@ impl Provider {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
-        tx.check_without_signatures(
+        tx.check(
             chain_info.latest_block.header.height,
             self.consensus_parameters(),
         )?;

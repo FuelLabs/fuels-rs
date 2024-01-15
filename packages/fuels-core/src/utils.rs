@@ -1,10 +1,10 @@
 pub mod constants;
 pub mod offsets;
 
-use crate::error;
-use crate::types::errors::Result;
 use constants::{WITNESS_STATIC_SIZE, WORD_SIZE};
 use fuel_tx::Witness;
+
+use crate::{error, types::errors::Result};
 
 pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
     let lhs = bytes_len.checked_add(WORD_SIZE - 1).ok_or_else(|| {

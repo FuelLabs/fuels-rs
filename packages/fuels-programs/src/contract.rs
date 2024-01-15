@@ -311,11 +311,12 @@ impl Contract {
             tx_policies,
         );
 
-        account.add_witnessses(&mut tb);
+        account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
-        let tx = tb.build(account.try_provider()?).await?;
 
         let provider = account.try_provider()?;
+
+        let tx = tb.build(provider).await?;
 
         provider
             .send_transaction_and_await_commit(tx)
