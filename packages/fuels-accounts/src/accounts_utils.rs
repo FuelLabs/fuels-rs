@@ -75,3 +75,29 @@ pub fn adjust_inputs_outputs(
             .push(Output::change(address.into(), 0, BASE_ASSET_ID));
     }
 }
+
+pub async fn split_dependable_output(
+    tb: &mut impl TransactionBuilder,
+    used_base_amount: u64,
+    address: &Bech32Address,
+    provider: &Provider,
+) -> Result<()> {
+    let transaction_fee = tb
+        .fee_checked_from_tx(provider)
+        .await?
+        .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
+
+    let available_amount = available_base_amount(tb);
+    let remaining_amount = available_amount - used_base_amount - transaction_fee.max_fee();
+
+    let outputs_len = tb.outputs().len();
+    tb.outputs_mut().insert(
+        outputs_len - 1,
+        Output::Coin {
+            to: address.into(),
+            amount: remaining_amount,
+            asset_id: BASE_ASSET_ID,
+        },
+    );
+    Ok(())
+}
