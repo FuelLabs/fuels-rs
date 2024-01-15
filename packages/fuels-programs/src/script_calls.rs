@@ -214,7 +214,7 @@ where
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         let mut tb = self.transaction_builder().await?;
 
-        self.account.add_witnessses(&mut tb);
+        self.account.add_witnesses(&mut tb)?;
         self.account.adjust_for_fee(&mut tb, 0).await?;
 
         tb.build(self.account.try_provider()?).await

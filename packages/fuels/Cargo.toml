@@ -16,6 +16,7 @@ ignored = ["fuel-core"]
 [dependencies]
 fuel-core = { workspace = true, default-features = false, optional = true }
 fuel-core-client = { workspace = true, optional = true }
+fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuels-accounts = { workspace = true, default-features = false }
 fuels-core = { workspace = true }
@@ -34,6 +35,7 @@ rand = { workspace = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["time", "test-util"] }
+tai64 = { workspace = true }
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]

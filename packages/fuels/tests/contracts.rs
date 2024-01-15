@@ -1329,8 +1329,9 @@ fn db_rocksdb() {
     use std::{fs, str::FromStr};
 
     use fuels::{
-        accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked},
+        accounts::wallet::WalletUnlocked,
         client::{PageDirection, PaginationRequest},
+        crypto::SecretKey,
         prelude::{setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
@@ -1727,6 +1728,50 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 
         assert_eq!(value, x);
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_custom_call_build_without_signatures() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+    let provider = wallet.try_provider()?;
+
+    let counter = 42;
+    let call_handler = contract_instance.methods().initialize_counter(counter);
+
+    let mut tb = call_handler.transaction_builder().await?;
+
+    let amount = 10;
+    let new_base_inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+        .await?;
+    tb.inputs_mut().extend(new_base_inputs);
+
+    // ANCHOR: tb_build_without_signatures
+    let mut tx = tb.build_without_signatures(provider).await?;
+    // ANCHOR: tx_sign_with
+    tx.sign_with(&wallet, provider.chain_id()).await?;
+    // ANCHOR_END: tx_sign_with
+    // ANCHOR_END: tb_build_without_signatures
+
+    let tx_id = provider.send_transaction(tx).await?;
+    let tx_status = provider.tx_status(&tx_id).await?;
+
+    let response = call_handler.get_response_from(tx_status)?;
+
+    assert_eq!(counter, response.value);
 
     Ok(())
 }

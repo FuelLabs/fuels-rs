@@ -1,10 +1,14 @@
 #![cfg(feature = "std")]
 
-use std::{collections::HashMap, iter::repeat_with};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Formatter},
+    iter::repeat,
+};
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_crypto::{Message as CryptoMessage, SecretKey, Signature};
+use fuel_crypto::{Message as CryptoMessage, Signature};
 use fuel_tx::{
     field::{Inputs, WitnessLimit, Witnesses},
     policies::{Policies, PolicyType},
@@ -13,11 +17,12 @@ use fuel_tx::{
     Witness,
 };
 use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
-use zeroize::{Zeroize, ZeroizeOnDrop};
+use itertools::Itertools;
 
 use crate::{
     constants::{BASE_ASSET_ID, SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
     offsets,
+    traits::Signer,
     types::{
         bech32::Bech32Address,
         coin::Coin,
@@ -56,11 +61,9 @@ impl<T: DryRunner> DryRunner for &T {
     }
 }
 
-#[derive(Debug, Clone, Default, Zeroize, ZeroizeOnDrop)]
-struct UnresolvedSignatures {
-    #[zeroize(skip)]
-    addr_idx_offset_map: HashMap<Bech32Address, u64>,
-    secret_keys: Vec<SecretKey>,
+#[derive(Debug, Clone, Default)]
+struct UnresolvedWitnessIndexes {
+    owner_to_idx_offset: HashMap<Bech32Address, u64>,
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -68,6 +71,11 @@ pub trait BuildableTransaction {
     type TxType: Transaction;
 
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
+
+    /// Building without signatures will set the witness indexes of signed coins in the
+    /// order as they appear in the inputs. Multiple coins with the same owner will have
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
+    async fn build_without_signatures(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -75,6 +83,13 @@ impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
+    }
+
+    async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
+        self.set_witness_indexes();
+        self.unresolved_signers = Default::default();
+
         self.build(provider).await
     }
 }
@@ -86,13 +101,20 @@ impl BuildableTransaction for CreateTransactionBuilder {
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
+
+    async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
+        self.set_witness_indexes();
+        self.unresolved_signers = Default::default();
+
+        self.build(provider).await
+    }
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait TransactionBuilder: BuildableTransaction + Send + Clone {
+pub trait TransactionBuilder: BuildableTransaction + Send {
     type TxType: Transaction;
 
-    fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey);
+    fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
     async fn fee_checked_from_tx(
         &self,
         provider: &impl DryRunner,
@@ -115,19 +137,45 @@ macro_rules! impl_tx_trait {
         impl TransactionBuilder for $ty {
             type TxType = $tx_ty;
 
-            fn add_unresolved_signature(&mut self, owner: Bech32Address, secret_key: SecretKey) {
-                let index_offset = self.unresolved_signatures.secret_keys.len() as u64;
-                self.unresolved_signatures.secret_keys.push(secret_key);
-                self.unresolved_signatures
-                    .addr_idx_offset_map
-                    .insert(owner, index_offset);
+            fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self> {
+                let address = signer.address();
+                if self
+                    .unresolved_witness_indexes
+                    .owner_to_idx_offset
+                    .contains_key(address)
+                {
+                    return Err(error!(
+                        InvalidData,
+                        "Already added `Signer` with address: `{address}`"
+                    ));
+                }
+
+                let index_offset = self.unresolved_signers.len() as u64;
+                self.unresolved_witness_indexes
+                    .owner_to_idx_offset
+                    .insert(address.clone(), index_offset);
+                self.unresolved_signers.push(Box::new(signer));
+
+                Ok(self)
             }
 
             async fn fee_checked_from_tx(
                 &self,
                 provider: &impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
-                let mut tx = BuildableTransaction::build(self.clone(), provider).await?;
+                let mut fee_estimation_tb = self.clone_without_signers();
+
+                // Add a temporary witness for every `Signer` to include them in the fee
+                // estimation.
+                let witness: Witness = Signature::default().as_ref().into();
+                fee_estimation_tb
+                    .witnesses_mut()
+                    .extend(repeat(witness).take(self.unresolved_signers.len()));
+
+                let mut tx =
+                    BuildableTransaction::build_without_signatures(fee_estimation_tb, provider)
+                        .await?;
+
                 let consensus_parameters = provider.consensus_parameters();
 
                 if tx.is_using_predicates() {
@@ -141,8 +189,10 @@ macro_rules! impl_tx_trait {
                 ))
             }
 
-            fn with_tx_policies(self, tx_policies: TxPolicies) -> Self {
-                self.with_tx_policies(tx_policies)
+            fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+                self.tx_policies = tx_policies;
+
+                self
             }
 
             fn with_inputs(mut self, inputs: Vec<Input>) -> Self {
@@ -186,6 +236,21 @@ macro_rules! impl_tx_trait {
         }
 
         impl $ty {
+            fn set_witness_indexes(&mut self) {
+                self.unresolved_witness_indexes.owner_to_idx_offset = self
+                    .inputs()
+                    .iter()
+                    .filter_map(|input| match input {
+                        Input::ResourceSigned { resource } => Some(resource.owner()),
+                        _ => None,
+                    })
+                    .unique()
+                    .cloned()
+                    .enumerate()
+                    .map(|(idx, owner)| (owner, idx as u64))
+                    .collect();
+            }
+
             fn generate_fuel_policies(&self, network_min_gas_price: u64) -> Policies {
                 let mut policies = Policies::default();
                 policies.set(PolicyType::MaxFee, self.tx_policies.max_fee());
@@ -214,7 +279,7 @@ macro_rules! impl_tx_trait {
             fn num_witnesses(&self) -> Result<u8> {
                 let num_witnesses = self.witnesses().len();
 
-                if num_witnesses + self.unresolved_signatures.secret_keys.len() > 256 {
+                if num_witnesses + self.unresolved_signers.len() > 256 {
                     return Err(error!(
                         InvalidData,
                         "tx can not have more than 256 witnesses"
@@ -226,8 +291,8 @@ macro_rules! impl_tx_trait {
 
             fn calculate_witnesses_size(&self) -> Option<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
-                let signature_size =
-                    SIGNATURE_WITNESS_SIZE * self.unresolved_signatures.secret_keys.len();
+                let signature_size = SIGNATURE_WITNESS_SIZE
+                    * self.unresolved_witness_indexes.owner_to_idx_offset.len();
 
                 Some(padded_len_usize(witnesses_size + signature_size) as u64)
             }
@@ -235,7 +300,15 @@ macro_rules! impl_tx_trait {
     };
 }
 
-#[derive(Debug, Clone, Default)]
+impl Debug for dyn Signer + Send + Sync {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Signer")
+            .field("address", &self.address())
+            .finish()
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
     pub script_data: Vec<u8>,
@@ -244,10 +317,11 @@ pub struct ScriptTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
-    unresolved_signatures: UnresolvedSignatures,
+    unresolved_witness_indexes: UnresolvedWitnessIndexes,
+    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct CreateTransactionBuilder {
     pub bytecode_length: u64,
     pub bytecode_witness_index: u8,
@@ -257,7 +331,8 @@ pub struct CreateTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub salt: Salt,
-    unresolved_signatures: UnresolvedSignatures,
+    unresolved_witness_indexes: UnresolvedWitnessIndexes,
+    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
@@ -272,10 +347,7 @@ impl ScriptTransactionBuilder {
             0
         };
 
-        let num_witnesses = self.num_witnesses()?;
-        let tx = self
-            .resolve_fuel_tx_provider(base_offset, num_witnesses, &provider)
-            .await?;
+        let tx = self.resolve_fuel_tx(base_offset, &provider).await?;
 
         Ok(ScriptTransaction {
             tx,
@@ -285,10 +357,12 @@ impl ScriptTransactionBuilder {
 
     // When dry running a tx with `utxo_validation` off, the node will not validate signatures.
     // However, the node will check if the right number of witnesses is present.
-    // This function will create empty witnesses such that the total length matches the expected one.
+    // This function will create witnesses from a default `Signature` such that the total length matches the expected one.
+    // Using a `Signature` ensures that the calculated fee includes the fee generated by the witnesses.
     fn create_dry_run_witnesses(&self, num_witnesses: u8) -> Vec<Witness> {
-        let unresolved_witnesses_len = self.unresolved_signatures.addr_idx_offset_map.len();
-        repeat_with(Default::default)
+        let unresolved_witnesses_len = self.unresolved_witness_indexes.owner_to_idx_offset.len();
+        let witness: Witness = Signature::default().as_ref().into();
+        repeat(witness)
             .take(num_witnesses as usize + unresolved_witnesses_len)
             .collect()
     }
@@ -353,12 +427,12 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    async fn resolve_fuel_tx_provider(
+    async fn resolve_fuel_tx(
         self,
         base_offset: usize,
-        num_witnesses: u8,
         provider: &impl DryRunner,
     ) -> Result<Script> {
+        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies(provider.min_gas_price().await?);
 
         let has_no_code = self.script.is_empty();
@@ -372,7 +446,7 @@ impl ScriptTransactionBuilder {
                 self.inputs,
                 base_offset + policies.size_dynamic(),
                 num_witnesses,
-                &self.unresolved_signatures,
+                &self.unresolved_witness_indexes,
             )?,
             self.outputs,
             dry_run_witnesses,
@@ -394,8 +468,9 @@ impl ScriptTransactionBuilder {
 
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id),
-            &self.unresolved_signatures,
-        );
+            &self.unresolved_signers,
+        )
+        .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
@@ -513,10 +588,18 @@ impl ScriptTransactionBuilder {
             .with_outputs(outputs)
     }
 
-    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-
-        self
+    fn clone_without_signers(&self) -> Self {
+        Self {
+            script: self.script.clone(),
+            script_data: self.script_data.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            witnesses: self.witnesses.clone(),
+            tx_policies: self.tx_policies,
+            gas_estimation_tolerance: self.gas_estimation_tolerance,
+            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
+            unresolved_signers: Default::default(),
+        }
     }
 }
 
@@ -531,13 +614,13 @@ impl CreateTransactionBuilder {
             0
         };
 
-        let num_witnesses = self.num_witnesses()?;
-        let tx = self.resolve_fuel_tx(
-            base_offset,
-            num_witnesses,
-            &consensus_parameters.chain_id,
-            provider.min_gas_price().await?,
-        )?;
+        let tx = self
+            .resolve_fuel_tx(
+                base_offset,
+                &consensus_parameters.chain_id,
+                provider.min_gas_price().await?,
+            )
+            .await?;
 
         Ok(CreateTransaction {
             tx,
@@ -545,13 +628,13 @@ impl CreateTransactionBuilder {
         })
     }
 
-    fn resolve_fuel_tx(
+    async fn resolve_fuel_tx(
         self,
         mut base_offset: usize,
-        num_witnesses: u8,
         chain_id: &ChainId,
         network_min_gas_price: u64,
     ) -> Result<Create> {
+        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies(network_min_gas_price);
 
         let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
@@ -566,14 +649,14 @@ impl CreateTransactionBuilder {
                 self.inputs,
                 base_offset,
                 num_witnesses,
-                &self.unresolved_signatures,
+                &self.unresolved_witness_indexes,
             )?,
             self.outputs,
             self.witnesses,
         );
 
         let missing_witnesses =
-            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signatures);
+            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signers).await?;
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
@@ -627,10 +710,19 @@ impl CreateTransactionBuilder {
             .with_witnesses(witnesses)
     }
 
-    fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-
-        self
+    fn clone_without_signers(&self) -> Self {
+        Self {
+            bytecode_length: self.bytecode_length,
+            bytecode_witness_index: self.bytecode_witness_index,
+            storage_slots: self.storage_slots.clone(),
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            witnesses: self.witnesses.clone(),
+            tx_policies: self.tx_policies,
+            salt: self.salt,
+            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
+            unresolved_signers: Default::default(),
+        }
     }
 }
 
@@ -640,7 +732,7 @@ fn resolve_fuel_inputs(
     inputs: Vec<Input>,
     mut data_offset: usize,
     num_witnesses: u8,
-    unresolved_signatures: &UnresolvedSignatures,
+    unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<Vec<FuelInput>> {
     inputs
         .into_iter()
@@ -649,7 +741,7 @@ fn resolve_fuel_inputs(
                 resource,
                 &mut data_offset,
                 num_witnesses,
-                unresolved_signatures,
+                unresolved_witness_indexes,
             ),
             Input::ResourcePredicate {
                 resource,
@@ -680,15 +772,15 @@ fn resolve_signed_resource(
     resource: CoinType,
     data_offset: &mut usize,
     num_witnesses: u8,
-    unresolved_signatures: &UnresolvedSignatures,
+    unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
             *data_offset += offsets::coin_signed_data_offset();
             let owner = &coin.owner;
 
-            unresolved_signatures
-                .addr_idx_offset_map
+            unresolved_witness_indexes
+                .owner_to_idx_offset
                 .get(owner)
                 .ok_or(error!(
                     InvalidData,
@@ -702,8 +794,8 @@ fn resolve_signed_resource(
             *data_offset += offsets::message_signed_data_offset(message.data.len());
             let recipient = &message.recipient;
 
-            unresolved_signatures
-                .addr_idx_offset_map
+            unresolved_witness_indexes
+                .owner_to_idx_offset
                 .get(recipient)
                 .ok_or(error!(
                     InvalidData,
@@ -824,24 +916,28 @@ pub fn create_coin_message_predicate(
     }
 }
 
-fn generate_missing_witnesses(
+async fn generate_missing_witnesses(
     id: Bytes32,
-    unresolved_signatures: &UnresolvedSignatures,
-) -> Vec<Witness> {
-    unresolved_signatures
-        .secret_keys
-        .iter()
-        .map(|secret_key| {
-            let message = CryptoMessage::from_bytes(*id);
-            let signature = Signature::sign(secret_key, &message);
+    unresolved_signatures: &[Box<dyn Signer + Send + Sync>],
+) -> Result<Vec<Witness>> {
+    let mut witnesses = Vec::with_capacity(unresolved_signatures.len());
+    for signer in unresolved_signatures {
+        let message = CryptoMessage::from_bytes(*id);
+        let signature = signer.sign(message).await?;
 
-            Witness::from(signature.as_ref())
-        })
-        .collect()
+        witnesses.push(signature.as_ref().into());
+    }
+
+    Ok(witnesses)
 }
 
 #[cfg(test)]
 mod tests {
+    use std::iter::repeat_with;
+
+    use fuel_crypto::Signature;
+    use fuel_tx::{input::coin::CoinSigned, UtxoId};
+
     use super::*;
     use crate::types::{bech32::Bech32Address, message::MessageStatus};
 
@@ -905,5 +1001,138 @@ mod tests {
             da_height: 0,
             status: MessageStatus::Unspent,
         }
+    }
+
+    fn given_inputs(num_inputs: u8) -> Vec<Input> {
+        (0..num_inputs)
+            .map(|i| {
+                let bytes = [i; 32];
+                let coin = CoinType::Coin(Coin {
+                    utxo_id: UtxoId::new(bytes.into(), 0),
+                    owner: Bech32Address::new("fuel", bytes),
+                    ..Default::default()
+                });
+                Input::resource_signed(coin)
+            })
+            .collect()
+    }
+
+    fn given_witnesses(num_witnesses: usize) -> Vec<Witness> {
+        repeat_with(Witness::default).take(num_witnesses).collect()
+    }
+
+    #[derive(Default)]
+    struct MockDryRunner {
+        c_param: ConsensusParameters,
+    }
+
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    impl DryRunner for MockDryRunner {
+        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
+            Ok(0)
+        }
+        fn consensus_parameters(&self) -> &ConsensusParameters {
+            &self.c_param
+        }
+        async fn min_gas_price(&self) -> Result<u64> {
+            Ok(0)
+        }
+    }
+
+    #[tokio::test]
+    async fn create_tx_builder_witness_indexes_set_correctly() -> Result<()> {
+        // given
+        let num_witnesses = 2;
+        let num_inputs = 3;
+
+        let tb = CreateTransactionBuilder::default()
+            .with_witnesses(given_witnesses(num_witnesses))
+            .with_inputs(given_inputs(num_inputs));
+
+        // when
+        let tx = tb
+            .build_without_signatures(&MockDryRunner::default())
+            .await?;
+
+        // then
+        let indexes: Vec<usize> = tx
+            .inputs()
+            .iter()
+            .filter_map(|input| match input {
+                FuelInput::CoinSigned(CoinSigned { witness_index, .. }) => {
+                    Some(*witness_index as usize)
+                }
+                _ => None,
+            })
+            .collect();
+
+        let expected_indexes: Vec<_> =
+            (num_witnesses..(num_witnesses + num_inputs as usize)).collect();
+
+        assert_eq!(indexes, expected_indexes);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn script_tx_builder_witness_indexes_set_correctly() -> Result<()> {
+        // given
+        let num_witnesses = 6;
+        let num_inputs = 4;
+
+        let tb = ScriptTransactionBuilder::default()
+            .with_witnesses(given_witnesses(num_witnesses))
+            .with_inputs(given_inputs(num_inputs));
+
+        // when
+        let tx = tb
+            .build_without_signatures(&MockDryRunner::default())
+            .await?;
+
+        // then
+        let indexes: Vec<usize> = tx
+            .inputs()
+            .iter()
+            .filter_map(|input| match input {
+                FuelInput::CoinSigned(CoinSigned { witness_index, .. }) => {
+                    Some(*witness_index as usize)
+                }
+                _ => None,
+            })
+            .collect();
+
+        let expected_indexes: Vec<_> =
+            (num_witnesses..(num_witnesses + num_inputs as usize)).collect();
+
+        assert_eq!(indexes, expected_indexes);
+
+        Ok(())
+    }
+
+    #[derive(Clone, Debug, Default)]
+    struct MockSigner {
+        address: Bech32Address,
+    }
+
+    #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+    #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+    impl Signer for MockSigner {
+        async fn sign(&self, _message: CryptoMessage) -> Result<Signature> {
+            Ok(Default::default())
+        }
+        fn address(&self) -> &Bech32Address {
+            &self.address
+        }
+    }
+
+    #[tokio::test]
+    #[should_panic(expected = "Already added `Signer` with address:")]
+    async fn add_signer_called_multiple_times() {
+        let mut tb = ScriptTransactionBuilder::default();
+        let signer = MockSigner::default();
+
+        tb.add_signer(signer.clone()).unwrap();
+        tb.add_signer(signer.clone()).unwrap();
     }
 }

@@ -1,5 +1,7 @@
 use std::{collections::HashMap, fmt::Debug};
 
+use async_trait::async_trait;
+use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
         GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
@@ -21,6 +23,7 @@ use itertools::Itertools;
 
 use crate::{
     constants::BASE_ASSET_ID,
+    traits::Signer,
     types::{bech32::Bech32Address, errors::error, Result},
     utils::calculate_witnesses_size,
 };
@@ -170,6 +173,8 @@ pub trait GasValidation {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
     Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug
 {
@@ -180,11 +185,10 @@ pub trait Transaction:
 
     fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64;
 
-    fn check_without_signatures(
-        &self,
-        block_height: u32,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<()>;
+    /// Performs all stateless transaction validity checks. This includes the validity
+    /// of fields according to rules in the specification and validity of signatures.
+    /// <https://github.com/FuelLabs/fuel-specs/blob/master/src/tx-format/transaction.md>
+    fn check(&self, block_height: u32, consensus_parameters: &ConsensusParameters) -> Result<()>;
 
     fn id(&self, chain_id: ChainId) -> Bytes32;
 
@@ -214,6 +218,12 @@ pub trait Transaction:
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
     fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+
+    async fn sign_with(
+        &mut self,
+        signer: &(impl Signer + Send + Sync),
+        chain_id: ChainId,
+    ) -> Result<Signature>;
 }
 
 impl From<TransactionType> for FuelTransaction {
@@ -288,6 +298,8 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+        #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
         impl Transaction for $wrapper {
             fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64 {
                 self.tx.max_gas(
@@ -307,14 +319,12 @@ macro_rules! impl_tx_wrapper {
                 )
             }
 
-            fn check_without_signatures(
+            fn check(
                 &self,
                 block_height: u32,
                 consensus_parameters: &ConsensusParameters,
             ) -> Result<()> {
-                Ok(self
-                    .tx
-                    .check_without_signatures(block_height.into(), consensus_parameters)?)
+                Ok(self.tx.check(block_height.into(), consensus_parameters)?)
             }
 
             fn id(&self, chain_id: ChainId) -> Bytes32 {
@@ -400,6 +410,20 @@ macro_rules! impl_tx_wrapper {
                         }
                     })
                     .into_group_map()
+            }
+
+            async fn sign_with(
+                &mut self,
+                signer: &(impl Signer + Send + Sync),
+                chain_id: ChainId,
+            ) -> Result<Signature> {
+                let tx_id = self.id(chain_id);
+                let message = Message::from_bytes(*tx_id);
+                let signature = signer.sign(message).await?;
+
+                self.append_witness(signature.as_ref().into())?;
+
+                Ok(signature)
             }
         }
     };
