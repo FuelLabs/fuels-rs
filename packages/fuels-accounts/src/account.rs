@@ -2,9 +2,6 @@ use std::{collections::HashMap, fmt::Display};
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
-#[doc(no_inline)]
-pub use fuel_crypto;
-use fuel_crypto::Signature;
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
 use fuels_core::{
@@ -28,23 +25,6 @@ use crate::{
     accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
     provider::{Provider, ResourceFilter},
 };
-
-/// Trait for signing transactions and messages
-///
-/// Implement this trait to support different signing modes, e.g. Ledger, hosted etc.
-#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
-#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait Signer: std::fmt::Debug + Send + Sync {
-    type Error: std::error::Error + Send + Sync;
-
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> std::result::Result<Signature, Self::Error>;
-
-    /// Signs the transaction
-    fn sign_transaction(&self, message: &mut impl TransactionBuilder);
-}
 
 #[derive(Debug)]
 pub struct AccountError(String);
@@ -192,7 +172,9 @@ pub trait Account: ViewOnlyAccount {
     }
 
     // Add signatures to the builder if the underlying account is a wallet
-    fn add_witnessses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) {}
+    fn add_witnesses<Tb: TransactionBuilder>(&self, _tb: &mut Tb) -> Result<()> {
+        Ok(())
+    }
 
     /// Transfer funds from this account to another `Address`.
     /// Fails if amount for asset ID is larger than address's spendable coins.
@@ -212,7 +194,7 @@ pub trait Account: ViewOnlyAccount {
         let mut tx_builder =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
 
-        self.add_witnessses(&mut tx_builder);
+        self.add_witnesses(&mut tx_builder)?;
 
         let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
@@ -274,8 +256,9 @@ pub trait Account: ViewOnlyAccount {
             tx_policies,
         );
 
-        self.add_witnessses(&mut tb);
+        self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, balance).await?;
+
         let tx = tb.build(provider).await?;
 
         let tx_id = tx.id(provider.chain_id());
@@ -308,8 +291,9 @@ pub trait Account: ViewOnlyAccount {
             tx_policies,
         );
 
-        self.add_witnessses(&mut tb);
+        self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, amount).await?;
+
         let tx = tb.build(provider).await?;
 
         let tx_id = tx.id(provider.chain_id());
@@ -328,9 +312,12 @@ pub trait Account: ViewOnlyAccount {
 mod tests {
     use std::str::FromStr;
 
-    use fuel_crypto::{Message, SecretKey};
+    use fuel_crypto::{Message, SecretKey, Signature};
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
-    use fuels_core::types::{transaction::Transaction, transaction_builders::DryRunner};
+    use fuels_core::{
+        traits::Signer,
+        types::{transaction::Transaction, transaction_builders::DryRunner},
+    };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
     use super::*;
@@ -351,15 +338,13 @@ mod tests {
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        let message = "my message";
-
-        let signature = wallet.sign_message(message).await?;
+        let message = Message::new("my message".as_bytes());
+        let signature = wallet.sign(message).await?;
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str("0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d")?);
 
         // Recover address that signed the message
-        let message = Message::new(message);
         let recovered_address = signature.recover(&message)?;
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
@@ -371,6 +356,7 @@ mod tests {
         Ok(())
     }
 
+    #[derive(Default)]
     struct MockDryRunner {
         c_param: ConsensusParameters,
     }
@@ -390,7 +376,7 @@ mod tests {
 
     #[tokio::test]
     async fn sign_tx_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        // ANCHOR: sign_tx
+        // ANCHOR: sign_tb
         let secret = SecretKey::from_str(
             "5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1",
         )?;
@@ -421,15 +407,11 @@ mod tests {
             )
         };
 
-        // Sign the transaction
-        wallet.sign_transaction(&mut tb); // Add the private key to the transaction builder
-                                          // ANCHOR_END: sign_tx
+        // Add `Signer` to the transaction builder
+        tb.add_signer(wallet.clone())?;
+        // ANCHOR_END: sign_tb
 
-        let tx = tb
-            .build(&MockDryRunner {
-                c_param: ConsensusParameters::default(),
-            })
-            .await?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;
@@ -437,7 +419,7 @@ mod tests {
 
         // Sign the transaction manually
         let message = Message::from_bytes(*tx.id(0.into()));
-        let signature = Signature::sign(&wallet.private_key, &message);
+        let signature = wallet.sign(message).await?;
 
         // Check if the signatures are the same
         assert_eq!(signature, tx_signature);

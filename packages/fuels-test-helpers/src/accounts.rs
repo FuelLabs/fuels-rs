@@ -1,6 +1,7 @@
 use std::mem::size_of;
 
-use fuels_accounts::{fuel_crypto::SecretKey, wallet::WalletUnlocked, ViewOnlyAccount};
+use fuel_crypto::SecretKey;
+use fuels_accounts::wallet::WalletUnlocked;
 use fuels_core::types::errors::Result;
 
 use crate::{
@@ -15,7 +16,6 @@ use crate::{
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_provider_and_get_wallet;
-/// use fuels_accounts::Signer;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
 ///   let wallet = launch_provider_and_get_wallet().await?;
@@ -36,7 +36,6 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// # Examples
 /// ```
 /// use fuels_test_helpers::launch_custom_provider_and_get_wallets;
-/// use fuels_accounts::Signer;
 /// use fuels_test_helpers::WalletsConfig;
 ///
 /// async fn multiple_wallets() -> Result<(), Box<dyn std::error::Error>> {
@@ -90,7 +89,8 @@ pub async fn launch_custom_provider_and_get_wallets(
 mod tests {
     use fuel_core_chain_config::ChainConfig;
     use fuel_tx::{ConsensusParameters, TxParameters};
-    use fuels_accounts::{fuel_crypto::fuel_types::AssetId, ViewOnlyAccount};
+    use fuel_types::AssetId;
+    use fuels_accounts::ViewOnlyAccount;
     use fuels_core::{
         constants::BASE_ASSET_ID,
         types::{coin_type::CoinType, errors::Result},
