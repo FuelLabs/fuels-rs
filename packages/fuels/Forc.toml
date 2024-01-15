@@ -31,7 +31,6 @@ members = [
   'tests/logs/contract_logs_abi',
   'tests/logs/contract_with_contract_logs',
   'tests/logs/script_logs',
-  'tests/logs/script_needs_custom_decoder_logging',
   'tests/logs/script_with_contract_logs',
   'tests/predicates/basic_predicate',
   'tests/predicates/swap',
@@ -103,3 +102,6 @@ members = [
   'tests/types/scripts/script_u256',
   'tests/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "hal3e/trait-auto-impl" }

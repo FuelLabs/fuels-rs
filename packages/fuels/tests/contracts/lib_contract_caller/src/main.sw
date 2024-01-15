@@ -1,7 +1,7 @@
 contract;
 
 use lib_contract::LibContract;
-use std::token::mint_to_address;
+use std::asset::mint_to_address;
 use std::constants::ZERO_B256;
 
 abi ContractCaller {

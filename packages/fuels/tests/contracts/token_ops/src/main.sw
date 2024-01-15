@@ -1,6 +1,6 @@
 contract;
 
-use std::{bytes::Bytes, context::balance_of, context::msg_amount, message::send_message, token::*};
+use std::{bytes::Bytes, context::balance_of, context::msg_amount, message::send_message, asset::*};
 use std::constants::ZERO_B256;
 
 abi TestFuelCoin {

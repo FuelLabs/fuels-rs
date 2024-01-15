@@ -1399,7 +1399,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
+            project = "packages/fuels/tests/scripts/script_needs_custom_decoder"
         )),
         LoadScript(
             name = "script_instance",
