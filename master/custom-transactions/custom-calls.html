@@ -147,7 +147,7 @@
         // customize the builder...
 
         wallet.adjust_for_fee(&amp;mut tb, 0).await?;
-        wallet.sign_transaction(&amp;mut tb);
+        tb.add_signer(wallet.clone())?;
 
         let tx = tb.build(provider).await?;
 
@@ -166,7 +166,7 @@
     // customize the builder...
 
     wallet.adjust_for_fee(&amp;mut tb, 0).await?;
-    wallet.sign_transaction(&amp;mut tb);
+    tb.add_signer(wallet.clone())?;
 
     let tx = tb.build(provider).await?;
 

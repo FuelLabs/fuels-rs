@@ -138,7 +138,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="signing"><a class="header" href="#signing">Signing</a></h1>
-<p>Once you've instantiated your wallet in an unlocked state using one of the previously discussed methods, you can sign a message with <code>wallet.sign_message</code>. Below is a full example of how to sign and recover a message.</p>
+<p>Once you've instantiated your wallet in an unlocked state using one of the previously discussed methods, you can sign a message with <code>wallet.sign</code>. Below is a full example of how to sign and recover a message.</p>
 <pre><code class="language-rust ignore">        let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&amp;mut secret_seed);
@@ -151,15 +151,13 @@
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
 
-        let message = &quot;my message&quot;;
-
-        let signature = wallet.sign_message(message).await?;
+        let message = Message::new(&quot;my message&quot;.as_bytes());
+        let signature = wallet.sign(message).await?;
 
         // Check if signature is what we expect it to be
         assert_eq!(signature, Signature::from_str(&quot;0x8eeb238db1adea4152644f1cd827b552dfa9ab3f4939718bb45ca476d167c6512a656f4d4c7356bfb9561b14448c230c6e7e4bd781df5ee9e5999faa6495163d&quot;)?);
 
         // Recover address that signed the message
-        let message = Message::new(message);
         let recovered_address = signature.recover(&amp;message)?;
 
         assert_eq!(wallet.address().hash(), recovered_address.hash());
@@ -167,11 +165,11 @@
         // Verify signature
         signature.verify(&amp;recovered_address, &amp;message)?;
 </code></pre>
-<h2 id="signing-a-transaction"><a class="header" href="#signing-a-transaction">Signing a transaction</a></h2>
-<p>Every signed resource in the inputs needs to have a witness index that points to a valid witness. Changing the witness index inside an input will change the transaction ID. This means that we need to set all witness indexes before finally signing the transaction. Previously, the user had to make sure that the witness indexes and the order of the witnesses are correct. To automate this process, the SDK will keep track of the signatures in the transaction builder and resolve the final transaction automatically. This is done by storing the secret keys of all signers until the final transaction is built.</p>
-<p>To sign a <em>transaction builder</em> use the <code>wallet.sign_transaction</code>. Below is a full example of how to create a transaction and sign it.</p>
+<h2 id="adding-signers-to-a-transaction-builder"><a class="header" href="#adding-signers-to-a-transaction-builder">Adding <code>Signers</code> to a transaction builder</a></h2>
+<p>Every signed resource in the inputs needs to have a witness index that points to a valid witness. Changing the witness index inside an input will change the transaction ID. This means that we need to set all witness indexes before finally signing the transaction. Previously, the user had to make sure that the witness indexes and the order of the witnesses are correct. To automate this process, the SDK will keep track of the signers in the transaction builder and resolve the final transaction automatically. This is done by storing signers until the final transaction is built.</p>
+<p>Below is a full example of how to create a transaction builder and add signers to it.</p>
 <blockquote>
-<p>Note: When you sign a transaction builder the secret key is stored inside it and will not be resolved until you call <code>build()</code>!</p>
+<p>Note: When you add a <code>Signer</code> to a transaction builder, the signer is stored inside it and the transaction will not be resolved until you call <code>build()</code>!</p>
 </blockquote>
 <pre><code class="language-rust ignore">        let secret = SecretKey::from_str(
             &quot;5f70feeff1f229e4a95e1056e8b4d80d0b24b565674860cc213bdb07127ce1b1&quot;,
@@ -203,8 +201,12 @@
             )
         };
 
-        // Sign the transaction
-        wallet.sign_transaction(&amp;mut tb); // Add the private key to the transaction builder
+        // Add `Signer` to the transaction builder
+        tb.add_signer(wallet.clone())?;
+</code></pre>
+<h2 id="signing-a-built-transaction"><a class="header" href="#signing-a-built-transaction">Signing a built transaction</a></h2>
+<p>If you have a built transaction and want to add a signature, you can use the <code>sign_with</code> method.</p>
+<pre><code class="language-rust ignore">    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
 </code></pre>
 
                     </main>

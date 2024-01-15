@@ -188,15 +188,18 @@
 
         let mut tb = tb.with_inputs(inputs).with_outputs(outputs);
 </code></pre>
-<p>As we have used coins that require a signature, we sign the transaction builder with:</p>
-<pre><code class="language-rust ignore">        hot_wallet.sign_transaction(&amp;mut tb);
+<p>As we have used coins that require a signature, we have to add the signer to the transaction builder with:</p>
+<pre><code class="language-rust ignore">        tb.add_signer(hot_wallet.clone())?;
 </code></pre>
 <blockquote>
 <p><strong>Note</strong> The signature is not created until the transaction is finalized with <code>build(&amp;provider)</code></p>
 </blockquote>
-<p>We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The Account trait lets us use <code>adjust_for_fee()</code> for adjusting the transaction inputs if needed to cover the fee. The second argument to <code>adjust_for_fee()</code> is the total amount of the base asset that we expect our transaction to spend regardless of fees. In our case, this is the <strong>ask_amount</strong> we are transferring to the predicate.</p>
+<p>We need to do one more thing before we stop thinking about transaction inputs. Executing the transaction also incurs a fee that is paid with the base asset. Our base asset inputs need to be large enough so that the total amount covers the transaction fee and any other operations we are doing. The <code>Account</code> trait lets us use <code>adjust_for_fee()</code> for adjusting the transaction inputs if needed to cover the fee. The second argument to <code>adjust_for_fee()</code> is the total amount of the base asset that we expect our transaction to spend regardless of fees. In our case, this is the <strong>ask_amount</strong> we are transferring to the predicate.</p>
 <pre><code class="language-rust ignore">        hot_wallet.adjust_for_fee(&amp;mut tb, 100).await?;
 </code></pre>
+<blockquote>
+<p><strong>Note</strong> It is recommended to add signers before calling <code>adjust_for_fee()</code> as the estimation will include the size of the witnesses.</p>
+</blockquote>
 <p>We can also define transaction policies. For example, we can limit the gas price by doing the following:</p>
 <pre><code class="language-rust ignore">        let tx_policies = TxPolicies::default().with_gas_price(1);
         let tb = tb.with_tx_policies(tx_policies);
@@ -212,6 +215,14 @@
         let balance = cold_wallet.get_asset_balance(&amp;bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
 </code></pre>
+<h2 id="building-a-transaction-without-signatures"><a class="header" href="#building-a-transaction-without-signatures">Building a transaction without signatures</a></h2>
+<p>If you need to build the transaction without signatures, which is useful when estimating transaction costs or simulations, you can use the <code>build_without_signatures(&amp;provider)</code> method and later sign the built transaction.</p>
+<pre><code class="language-rust ignore">    let mut tx = tb.build_without_signatures(provider).await?;
+    tx.sign_with(&amp;wallet, provider.chain_id()).await?;
+</code></pre>
+<blockquote>
+<p><strong>Note</strong> In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs. Multiple signed inputs with the same owner will have the same witness index.</p>
+</blockquote>
 
                     </main>
 

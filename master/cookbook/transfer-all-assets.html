@@ -179,7 +179,8 @@
 <p>All that is left is to build the transaction via <code>ScriptTransactionBuilder</code>, have <code>wallet_1</code> sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:</p>
 <pre><code class="language-rust ignore">        let mut tb =
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-        wallet_1.sign_transaction(&amp;mut tb);
+        tb.add_signer(wallet_1.clone())?;
+
         let tx = tb.build(&amp;provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
