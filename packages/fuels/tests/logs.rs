@@ -218,7 +218,9 @@ async fn test_decode_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    assert_eq!(logs.filter_succeeded(), expected_logs);
+    dbg!(&logs);
+    use pretty_assertions::assert_eq;
+    assert_eq!(expected_logs, logs.filter_succeeded());
 
     Ok(())
 }
@@ -1399,7 +1401,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/scripts/script_needs_custom_decoder"
+            project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
         )),
         LoadScript(
             name = "script_instance",
@@ -1452,6 +1454,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // String slices can not be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
+#[cfg(experimental)]
 async fn test_string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1479,6 +1482,37 @@ async fn test_string_slice_log() -> Result<()> {
 
     let failed = log.filter_failed();
     assert_eq!(failed.first().unwrap().to_string(), expected_err);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg(not(experimental))]
+async fn test_string_slice_log() -> Result<()> {
+    use fuels_core::types::AsciiString;
+
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/logs/contract_logs"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let response = contract_instance
+        .methods()
+        .produce_string_slice_log()
+        .call()
+        .await?;
+
+    let logs = response.decode_logs_with_type::<AsciiString>()?;
+
+    assert_eq!(logs.first().unwrap().to_string(), "string_slice");
 
     Ok(())
 }

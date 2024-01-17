@@ -63,6 +63,23 @@ impl EnumVariants {
             .ok_or_else(|| error!(InvalidType, "Enum variants are too wide"))
     }
 
+    /// Calculates how many bytes are needed to encode an enum.
+    #[cfg(not(experimental))]
+    pub fn experimental_compute_enum_width_in_bytes(&self) -> Result<usize> {
+        if self.only_units_inside() {
+            return Ok(ENUM_DISCRIMINANT_BYTE_WIDTH);
+        }
+
+        let width = self.param_types().iter().try_fold(0, |a, p| -> Result<_> {
+            let size = p.experimental_compute_encoding_in_bytes()?;
+            Ok(a.max(size))
+        })?;
+
+        checked_round_up_to_word_alignment(width)?
+            .checked_add(ENUM_DISCRIMINANT_BYTE_WIDTH)
+            .ok_or_else(|| error!(InvalidType, "Enum variants are too wide"))
+    }
+
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
     pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {

@@ -212,6 +212,46 @@ impl ParamType {
         }
     }
 
+    /// Calculates the number of bytes the VM expects this parameter to be encoded in.
+    #[cfg(not(experimental))]
+    pub fn experimental_compute_encoding_in_bytes(&self) -> Result<usize> {
+        let overflow_error = || {
+            error!(
+                InvalidType,
+                "Reached overflow while computing encoding size for {:?}", self
+            )
+        };
+        match &self {
+            ParamType::Unit => Ok(0),
+            ParamType::U8 | ParamType::Bool => Ok(1),
+            ParamType::U16 => Ok(2),
+            ParamType::U32 => Ok(4),
+            ParamType::U64 => Ok(8),
+            // TODO: @hal3e fix StringSlice, RawSlice, Vec
+            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Ok(16),
+            ParamType::U256 | ParamType::B256 => Ok(32),
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Ok(24),
+            ParamType::Array(param, count) => param
+                .compute_encoding_in_bytes()?
+                .checked_mul(*count)
+                .ok_or_else(overflow_error),
+            ParamType::StringArray(len) => {
+                checked_round_up_to_word_alignment(*len).map_err(|_| overflow_error())
+            }
+            ParamType::Tuple(fields) | ParamType::Struct { fields, .. } => {
+                fields.iter().try_fold(0, |a: usize, param_type| {
+                    let size = checked_round_up_to_word_alignment(
+                        param_type.compute_encoding_in_bytes()?,
+                    )?;
+                    a.checked_add(size).ok_or_else(overflow_error)
+                })
+            }
+            ParamType::Enum { variants, .. } => variants
+                .compute_enum_width_in_bytes()
+                .map_err(|_| overflow_error()),
+        }
+    }
+
     /// For when you need to convert a ABI JSON's TypeApplication into a ParamType.
     ///
     /// # Arguments

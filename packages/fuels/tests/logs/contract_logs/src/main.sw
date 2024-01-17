@@ -52,7 +52,7 @@ impl ContractLogs for Contract {
     fn produce_logs_variables() {
         let f: u64 = 64;
         let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
-        let e: str = "Fuel";
+        let e: str[4] = __to_str_array("Fuel");
         let l: [u8; 3] = [1u8, 2u8, 3u8];
 
         log(f);
