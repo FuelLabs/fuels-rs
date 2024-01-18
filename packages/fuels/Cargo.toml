@@ -36,7 +36,6 @@ sha2 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["time", "test-util"] }
 tai64 = { workspace = true }
-pretty_assertions = "1.4.0"
 
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]

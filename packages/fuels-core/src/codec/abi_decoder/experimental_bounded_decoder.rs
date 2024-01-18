@@ -35,10 +35,7 @@ impl ExperimentalBoundedDecoder {
     }
 
     pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        match param_type {
-            ParamType::Unit => Ok(Token::Unit),
-            _ => self.decode_param(param_type, bytes).map(|x| x.token),
-        }
+        self.decode_param(param_type, bytes).map(|x| x.token)
     }
 
     pub(crate) fn decode_multiple(
@@ -66,37 +63,37 @@ impl ExperimentalBoundedDecoder {
     fn decode_param(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
         self.token_tracker.increase()?;
         match param_type {
-            ParamType::Unit => unreachable!(), // `Unit` already handled in `decode`
-            ParamType::U8 => Self::decode_u8(bytes), // ok
-            ParamType::U16 => Self::decode_u16(bytes), // ok
-            ParamType::U32 => Self::decode_u32(bytes), // ok
-            ParamType::U64 => Self::decode_u64(bytes), // ok
-            ParamType::U128 => Self::decode_u128(bytes), // ok
-            ParamType::U256 => Self::decode_u256(bytes), // ok
-            ParamType::Bool => Self::decode_bool(bytes), // ok
-            ParamType::B256 => Self::decode_b256(bytes), // ok
-            ParamType::RawSlice => self.decode_raw_slice(bytes), // nok
-            ParamType::StringSlice => Self::decode_string_slice(bytes), // nok
-            ParamType::StringArray(len) => Self::decode_string_array(bytes, *len), // ok
+            ParamType::Unit => Self::decode_unit(),
+            ParamType::U8 => Self::decode_u8(bytes),
+            ParamType::U16 => Self::decode_u16(bytes),
+            ParamType::U32 => Self::decode_u32(bytes),
+            ParamType::U64 => Self::decode_u64(bytes),
+            ParamType::U128 => Self::decode_u128(bytes),
+            ParamType::U256 => Self::decode_u256(bytes),
+            ParamType::Bool => Self::decode_bool(bytes),
+            ParamType::B256 => Self::decode_b256(bytes),
+            ParamType::RawSlice => self.decode_raw_slice(bytes), // FIX:
+            ParamType::StringSlice => Self::decode_string_slice(bytes), // FIX:
+            ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_array(t, bytes, *length))
-            } // ok
+            }
             ParamType::Struct { fields, .. } => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_struct(fields, bytes))
-            } // ok
+            }
             ParamType::Enum { variants, .. } => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, variants))
-            } // ok
+            }
             ParamType::Tuple(types) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_tuple(types, bytes))
-            } // nok
+            } // FIX:
             ParamType::Vector(param_type) => {
                 // although nested vectors cannot be decoded yet, depth tracking still occurs for future
                 // proofing
                 self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
-            } // nok
-            ParamType::Bytes => Self::decode_bytes(bytes), // check
-            ParamType::String => Self::decode_std_string(bytes), // check
+            }
+            ParamType::Bytes => Self::decode_bytes(bytes), // TODO:
+            ParamType::String => Self::decode_std_string(bytes), // TODO:
         }
     }
 
@@ -115,13 +112,14 @@ impl ExperimentalBoundedDecoder {
     }
 
     fn decode_vector(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Decoded> {
-        let num_of_elements = ParamType::calculate_num_of_elements(param_type, bytes.len())?;
+        let num_of_elements = peek_u64(bytes)? as usize;
+        let bytes = skip(bytes, WORD_SIZE)?;
         let (tokens, bytes_read) =
             self.decode_params(std::iter::repeat(param_type).take(num_of_elements), bytes)?;
 
         Ok(Decoded {
             token: Token::Vector(tokens),
-            bytes_read,
+            bytes_read: WORD_SIZE + bytes_read,
         })
     }
 
@@ -278,14 +276,14 @@ impl ExperimentalBoundedDecoder {
     fn decode_u32(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
             token: Token::U32(peek_u32(bytes)?),
-            bytes_read: WORD_SIZE,
+            bytes_read: 4,
         })
     }
 
     fn decode_u16(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
             token: Token::U16(peek_u16(bytes)?),
-            bytes_read: WORD_SIZE,
+            bytes_read: 2,
         })
     }
 
@@ -293,6 +291,13 @@ impl ExperimentalBoundedDecoder {
         Ok(Decoded {
             token: Token::U8(peek_u8(bytes)?),
             bytes_read: 1,
+        })
+    }
+
+    fn decode_unit() -> Result<Decoded> {
+        Ok(Decoded {
+            token: Token::Unit,
+            bytes_read: 0,
         })
     }
 
@@ -307,7 +312,7 @@ impl ExperimentalBoundedDecoder {
         let discriminant = peek_u64(bytes)?;
         let selected_variant = variants.param_type_of_variant(discriminant)?;
 
-        let enum_content_bytes = skip(bytes, 8)?;
+        let enum_content_bytes = skip(bytes, WORD_SIZE)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
 
         let selector = Box::new((discriminant, result.token, variants.clone()));

@@ -218,8 +218,6 @@ async fn test_decode_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    dbg!(&logs);
-    use pretty_assertions::assert_eq;
     assert_eq!(expected_logs, logs.filter_succeeded());
 
     Ok(())
@@ -1455,7 +1453,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
 #[cfg(experimental)]
-async fn test_string_slice_log() -> Result<()> {
+async fn string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1488,7 +1486,7 @@ async fn test_string_slice_log() -> Result<()> {
 
 #[tokio::test]
 #[cfg(not(experimental))]
-async fn test_string_slice_log() -> Result<()> {
+async fn string_slice_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
     setup_program_test!(
@@ -1513,6 +1511,37 @@ async fn test_string_slice_log() -> Result<()> {
     let logs = response.decode_logs_with_type::<AsciiString>()?;
 
     assert_eq!(logs.first().unwrap().to_string(), "string_slice");
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg(not(experimental))]
+async fn contract_vec_log() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/logs/contract_logs"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let v = [1u16, 2, 3].to_vec();
+    let some_enum = EnumWithGeneric::VariantOne(v);
+    let other_enum = EnumWithGeneric::VariantTwo;
+    let v1 = vec![some_enum.clone(), other_enum, some_enum];
+    let expected_vec = vec![vec![v1.clone(), v1]];
+
+    let response = contract_instance.methods().produce_vec_log().call().await?;
+
+    let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+
+    assert_eq!(vec![expected_vec], logs);
 
     Ok(())
 }
