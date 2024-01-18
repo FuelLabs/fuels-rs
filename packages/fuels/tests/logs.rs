@@ -99,6 +99,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 
     let log_test_struct = response.decode_logs_with_type::<TestStruct>()?;
     let log_test_enum = response.decode_logs_with_type::<TestEnum>()?;
+    let log_tuple = response.decode_logs_with_type::<(TestStruct, TestEnum)>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -111,8 +112,9 @@ async fn test_parse_logs_custom_types() -> Result<()> {
     };
     let expected_enum = TestEnum::VariantTwo;
 
-    assert_eq!(log_test_struct, vec![expected_struct]);
-    assert_eq!(log_test_enum, vec![expected_enum]);
+    assert_eq!(log_test_struct, vec![expected_struct.clone()]);
+    assert_eq!(log_test_enum, vec![expected_enum.clone()]);
+    assert_eq!(log_tuple, vec![(expected_struct, expected_enum)]);
 
     Ok(())
 }
@@ -638,6 +640,7 @@ async fn test_script_decode_logs() -> Result<()> {
         field_3: 64,
     };
     let expected_enum = TestEnum::VariantTwo;
+    let expected_tuple = (expected_struct.clone(), expected_enum.clone());
     let expected_generic_struct = StructWithGeneric {
         field_1: expected_struct.clone(),
         field_2: 64,
@@ -663,6 +666,7 @@ async fn test_script_decode_logs() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
         format!("{expected_struct:?}"),
         format!("{expected_enum:?}"),
+        format!("{expected_tuple:?}"),
         format!("{expected_generic_struct:?}"),
         format!("{expected_generic_enum:?}"),
         format!("{expected_nested_struct:?}"),
@@ -1517,7 +1521,7 @@ async fn string_slice_log() -> Result<()> {
 
 #[tokio::test]
 #[cfg(not(experimental))]
-async fn contract_vec_log() -> Result<()> {
+async fn contract_heap_types_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1530,18 +1534,33 @@ async fn contract_vec_log() -> Result<()> {
             wallet = "wallet"
         )
     );
+    let contract_methods = contract_instance.methods();
+    {
+        let v = [1u16, 2, 3].to_vec();
+        let some_enum = EnumWithGeneric::VariantOne(v);
+        let other_enum = EnumWithGeneric::VariantTwo;
+        let v1 = vec![some_enum.clone(), other_enum, some_enum];
+        let expected_vec = vec![vec![v1.clone(), v1]];
 
-    let v = [1u16, 2, 3].to_vec();
-    let some_enum = EnumWithGeneric::VariantOne(v);
-    let other_enum = EnumWithGeneric::VariantTwo;
-    let v1 = vec![some_enum.clone(), other_enum, some_enum];
-    let expected_vec = vec![vec![v1.clone(), v1]];
+        let response = contract_methods.produce_vec_log().call().await?;
+        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
 
-    let response = contract_instance.methods().produce_vec_log().call().await?;
+        assert_eq!(vec![expected_vec], logs);
+    }
+    {
+        let response = contract_methods.produce_string_log().call().await?;
+        let logs = response.decode_logs_with_type::<String>()?;
 
-    let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+        assert_eq!(vec!["fuel".to_string()], logs);
+    }
+    {
+        let response = contract_methods.produce_bytes_log().call().await?;
+        let logs = response.decode_logs_with_type::<Bytes>()?;
 
-    assert_eq!(vec![expected_vec], logs);
+        assert_eq!(vec![Bytes("fuel".as_bytes().to_vec())], logs);
+    }
 
     Ok(())
 }
+
+//TODO: @hal3e add heat types logs for script

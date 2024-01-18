@@ -36,7 +36,7 @@ impl BoundedDecoder {
         }
     }
 
-    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         param_type.validate_is_decodable(self.config.max_depth)?;
         match param_type {
             // Unit, U8 and Bool are returned as u64 from receipt "Return"

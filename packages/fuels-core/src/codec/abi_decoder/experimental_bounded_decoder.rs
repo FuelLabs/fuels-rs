@@ -34,7 +34,7 @@ impl ExperimentalBoundedDecoder {
         }
     }
 
-    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         self.decode_param(param_type, bytes).map(|x| x.token)
     }
 
@@ -72,8 +72,8 @@ impl ExperimentalBoundedDecoder {
             ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
-            ParamType::RawSlice => self.decode_raw_slice(bytes), // FIX:
-            ParamType::StringSlice => Self::decode_string_slice(bytes), // FIX:
+            ParamType::RawSlice => self.decode_raw_slice(bytes), // FIX:@halre sway first
+            ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_array(t, bytes, *length))
@@ -86,28 +86,32 @@ impl ExperimentalBoundedDecoder {
             }
             ParamType::Tuple(types) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_tuple(types, bytes))
-            } // FIX:
+            }
             ParamType::Vector(param_type) => {
                 // although nested vectors cannot be decoded yet, depth tracking still occurs for future
                 // proofing
                 self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
             }
-            ParamType::Bytes => Self::decode_bytes(bytes), // TODO:
-            ParamType::String => Self::decode_std_string(bytes), // TODO:
+            ParamType::Bytes => Self::decode_bytes(bytes),
+            ParamType::String => Self::decode_std_string(bytes),
         }
     }
 
     fn decode_bytes(bytes: &[u8]) -> Result<Decoded> {
+        let num_of_elements = peek_u64(bytes)? as usize;
+        let bytes = peek(skip(bytes, WORD_SIZE)?, num_of_elements)?;
         Ok(Decoded {
             token: Token::Bytes(bytes.to_vec()),
-            bytes_read: bytes.len(),
+            bytes_read: WORD_SIZE + bytes.len(),
         })
     }
 
     fn decode_std_string(bytes: &[u8]) -> Result<Decoded> {
+        let num_of_elements = peek_u64(bytes)? as usize;
+        let bytes = peek(skip(bytes, WORD_SIZE)?, num_of_elements)?;
         Ok(Decoded {
             token: Token::String(str::from_utf8(bytes)?.to_string()),
-            bytes_read: bytes.len(),
+            bytes_read: WORD_SIZE + bytes.len(),
         })
     }
 
@@ -129,8 +133,6 @@ impl ExperimentalBoundedDecoder {
         let mut bytes_read = 0;
 
         for param_type in param_types.iter() {
-            // padding has to be taken into account
-            bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
             bytes_read += res.bytes_read;
             tokens.push(res.token);

@@ -1,7 +1,18 @@
 contract;
 
 use std::logging::log;
+use std::string::String;
 use contract_logs::ContractLogs;
+
+impl AbiEncode for (TestStruct, TestEnum)
+{
+    #[allow(dead_code)]
+    fn abi_encode(self, ref mut buffer: Buffer) {
+        let (test_struct, test_enum) = self;
+        test_struct.abi_encode(buffer);
+        test_enum.abi_encode(buffer);
+    }
+}
 
 #[allow(dead_code)]
 struct TestStruct {
@@ -74,6 +85,7 @@ impl ContractLogs for Contract {
 
         log(test_struct);
         log(test_enum);
+        log((test_struct, test_enum));
     }
 
     fn produce_logs_generic_types() {
@@ -164,5 +176,13 @@ impl ContractLogs for Contract {
         v3.push(v2);
 
         log(v3);
+    }
+
+    fn produce_heap_types_logs() {
+        log(String::from_ascii_str("fuel"));
+    }
+
+    fn produce_bytes_log() {
+        log(String::from_ascii_str("fuel").as_bytes());
     }
 }
