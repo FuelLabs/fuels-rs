@@ -4,7 +4,6 @@ use crate::{
     checked_round_up_to_word_alignment,
     codec::DecoderConfig,
     constants::WORD_SIZE,
-    traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
         errors::{error, Result},
@@ -72,7 +71,7 @@ impl ExperimentalBoundedDecoder {
             ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
-            ParamType::RawSlice => self.decode_raw_slice(bytes), // FIX:@halre sway first
+            ParamType::RawSlice => self.decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
@@ -195,21 +194,11 @@ impl ExperimentalBoundedDecoder {
     }
 
     fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<Decoded> {
-        let raw_slice_element = ParamType::U64;
-        let num_of_elements =
-            ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
-        let param_type = ParamType::U64;
-        let (tokens, bytes_read) =
-            self.decode_params(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
-        let elements = tokens
-            .into_iter()
-            .map(u64::from_token)
-            .collect::<Result<Vec<u64>>>()
-            .map_err(|e| error!(InvalidData, "{e}"))?;
-
+        let num_of_elements = peek_u64(bytes)? as usize;
+        let bytes = peek(skip(bytes, WORD_SIZE)?, num_of_elements)?;
         Ok(Decoded {
-            token: Token::RawSlice(elements),
-            bytes_read,
+            token: Token::RawSlice(bytes.to_vec()),
+            bytes_read: WORD_SIZE + bytes.len(),
         })
     }
 
@@ -320,7 +309,7 @@ impl ExperimentalBoundedDecoder {
         let selector = Box::new((discriminant, result.token, variants.clone()));
         Ok(Decoded {
             token: Token::Enum(selector),
-            bytes_read: 8 + result.bytes_read,
+            bytes_read: WORD_SIZE + result.bytes_read,
         })
     }
 

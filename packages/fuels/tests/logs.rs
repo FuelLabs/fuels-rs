@@ -1559,6 +1559,12 @@ async fn contract_heap_types_log() -> Result<()> {
 
         assert_eq!(vec![Bytes("fuel".as_bytes().to_vec())], logs);
     }
+    {
+        let response = contract_methods.produce_raw_slice_log().call().await?;
+        let logs = response.decode_logs_with_type::<RawSlice>()?;
+
+        assert_eq!(vec![RawSlice("fuel".as_bytes().to_vec())], logs);
+    }
 
     Ok(())
 }

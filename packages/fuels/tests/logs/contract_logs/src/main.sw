@@ -178,11 +178,15 @@ impl ContractLogs for Contract {
         log(v3);
     }
 
-    fn produce_heap_types_logs() {
+    fn produce_string_log() {
         log(String::from_ascii_str("fuel"));
     }
 
     fn produce_bytes_log() {
         log(String::from_ascii_str("fuel").as_bytes());
+    }
+
+    fn produce_raw_slice_log() {
+        log(String::from_ascii_str("fuel").as_raw_slice());
     }
 }

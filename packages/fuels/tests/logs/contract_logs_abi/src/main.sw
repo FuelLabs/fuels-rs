@@ -12,5 +12,6 @@ abi ContractLogs {
     fn produce_string_slice_log();
     fn produce_vec_log();
     fn produce_string_log();
-    fn produce_bytes_logs();
+    fn produce_bytes_log();
+    fn produce_raw_slice_log();
 }

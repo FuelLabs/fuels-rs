@@ -4,7 +4,6 @@ use crate::{
     checked_round_up_to_word_alignment,
     codec::DecoderConfig,
     constants::WORD_SIZE,
-    traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
         errors::{error, Result},
@@ -216,21 +215,9 @@ impl BoundedDecoder {
     }
 
     fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<Decoded> {
-        let raw_slice_element = ParamType::U64;
-        let num_of_elements =
-            ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
-        let param_type = ParamType::U64;
-        let (tokens, bytes_read) =
-            self.decode_params(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
-        let elements = tokens
-            .into_iter()
-            .map(u64::from_token)
-            .collect::<Result<Vec<u64>>>()
-            .map_err(|e| error!(InvalidData, "{e}"))?;
-
         Ok(Decoded {
-            token: Token::RawSlice(elements),
-            bytes_read,
+            token: Token::RawSlice(bytes.to_vec()),
+            bytes_read: bytes.len(),
         })
     }
 

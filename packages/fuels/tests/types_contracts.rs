@@ -1973,9 +1973,9 @@ async fn test_contract_raw_slice() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     {
-        for length in 0..=10 {
+        for length in 0u8..=10 {
             let response = contract_methods.return_raw_slice(length).call().await?;
-            assert_eq!(response.value, (0..length).collect::<Vec<_>>());
+            assert_eq!(response.value, (0u8..length).collect::<Vec<u8>>());
         }
     }
     {
