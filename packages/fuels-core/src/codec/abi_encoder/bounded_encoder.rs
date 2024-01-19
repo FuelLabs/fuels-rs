@@ -11,6 +11,7 @@ use crate::{
     },
 };
 use fuel_types::bytes::padded_len_usize;
+use crate::codec::utils::CodecDirection;
 
 pub(crate) struct BoundedEncoder {
     depth_tracker: CounterWithLimit,
@@ -20,8 +21,8 @@ pub(crate) struct BoundedEncoder {
 
 impl BoundedEncoder {
     pub(crate) fn new(config: EncoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth", false);
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token", false);
+        let depth_tracker CounterWithLimit::new(config.max_depth, "Depth", CodecDirection::Encoding);
+        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token", CodecDirection::Encoding);
         Self {
             depth_tracker,
             token_tracker,

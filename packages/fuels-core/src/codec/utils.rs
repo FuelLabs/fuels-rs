@@ -1,18 +1,25 @@
 use crate::types::errors::{error, Result};
+use strum_macros::Display;
 
 pub(crate) struct CounterWithLimit {
     count: usize,
     max: usize,
     name: String,
-    decoding: bool,
+    direction: CodecDirection,
+}
+
+#[derive(Display)]
+pub(crate) enum CodecDirection {
+    Encoding,
+    Decoding,
 }
 
 impl CounterWithLimit {
-    pub(crate) fn new(max: usize, name: impl Into<String>, decoding: bool) -> Self {
+    pub(crate) fn new(max: usize, name: impl Into<String>, direction: CodecDirection) -> Self {
         Self {
             count: 0,
             max,
-            decoding,
+            direction,
             name: name.into(),
         }
     }
@@ -20,17 +27,12 @@ impl CounterWithLimit {
     pub(crate) fn increase(&mut self) -> Result<()> {
         self.count += 1;
         if self.count > self.max {
-            let direction = if self.decoding {
-                "decoding"
-            } else {
-                "encoding"
-            };
             Err(error!(
                 InvalidType,
                 "{} limit ({}) reached while {}. Try increasing it.",
                 self.name,
                 self.max,
-                direction
+                self.direction.to_string()
             ))
         } else {
             Ok(())

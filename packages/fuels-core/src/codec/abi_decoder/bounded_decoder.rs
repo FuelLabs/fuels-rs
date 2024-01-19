@@ -2,7 +2,10 @@ use std::{convert::TryInto, str};
 
 use crate::{
     checked_round_up_to_word_alignment,
-    codec::{utils::CounterWithLimit, DecoderConfig},
+    codec::{
+        utils::{CodecDirection, CounterWithLimit},
+        DecoderConfig,
+    },
     constants::WORD_SIZE,
     traits::Tokenizable,
     types::{
@@ -27,8 +30,10 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth", true);
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token", true);
+        let depth_tracker =
+            CounterWithLimit::new(config.max_depth, "Depth", CodecDirection::Decoding);
+        let token_tracker =
+            CounterWithLimit::new(config.max_tokens, "Token", CodecDirection::Decoding);
         Self {
             depth_tracker,
             token_tracker,

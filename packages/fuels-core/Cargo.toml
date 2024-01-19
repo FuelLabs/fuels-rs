@@ -27,8 +27,10 @@ itertools = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, default-features = true }
 sha2 = { workspace = true }
+strum_macros = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
+
 
 [dev-dependencies]
 fuels-macros = { workspace = true }
