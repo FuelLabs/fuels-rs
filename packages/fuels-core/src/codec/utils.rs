@@ -10,7 +10,9 @@ pub(crate) struct CounterWithLimit {
 
 #[derive(Display)]
 pub(crate) enum CodecDirection {
+    #[strum(serialize = "encoding")]
     Encoding,
+    #[strum(serialize = "decoding")]
     Decoding,
 }
 
