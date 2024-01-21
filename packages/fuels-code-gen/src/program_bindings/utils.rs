@@ -141,7 +141,7 @@ pub(crate) fn tokenize_generics(generics: &[Ident]) -> (TokenStream, TokenStream
 pub(crate) fn sdk_provided_custom_types_lookup() -> HashMap<TypePath, TypePath> {
     [
         ("std::address::Address", "::fuels::types::Address"),
-        ("std::contract_id::AssetId", "::fuels::types::AssetId"),
+        ("std::asset_id::AssetId", "::fuels::types::AssetId"),
         ("std::b512::B512", "::fuels::types::B512"),
         ("std::bytes::Bytes", "::fuels::types::Bytes"),
         ("std::contract_id::ContractId", "::fuels::types::ContractId"),
