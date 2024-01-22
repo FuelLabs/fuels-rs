@@ -585,7 +585,7 @@ async fn testnet_hello_world() -> Result<()> {
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
-    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+    let [wallet]: [WalletUnlocked; 1] = connect_to_testnet_node_and_get_wallets(1)
         .await?
         .try_into()
         .expect("Vec can be converted to an array");
