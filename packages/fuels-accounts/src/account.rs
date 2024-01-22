@@ -22,7 +22,10 @@ use fuels_core::{
 };
 
 use crate::{
-    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
+    accounts_utils::{
+        adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce,
+        split_dependable_output,
+    },
     provider::{Provider, ResourceFilter},
 };
 
@@ -210,6 +213,57 @@ pub trait Account: ViewOnlyAccount {
         Ok((tx_id, receipts))
     }
 
+    /// Transfer funds from this account to another `Address`.
+    /// Supports dependent transactions.
+    /// See [Account::transfer] for more information.
+    async fn dependent_transfer(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        asset_id: AssetId,
+        tx_policies: TxPolicies,
+    ) -> Result<(TxId, Vec<Receipt>)> {
+        let provider = self.try_provider()?;
+
+        let amount_to_request = if let Some(previous_coin_output) = provider
+            .cache_mut()
+            .await
+            .pop_dependent(&(self.address().clone(), asset_id))
+        {
+            amount - previous_coin_output.amount
+        } else {
+            amount
+        };
+
+        let inputs = self
+            .get_asset_inputs_for_amount(asset_id, amount_to_request)
+            .await?;
+        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+
+        let mut tx_builder =
+            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+
+        self.add_witnesses(&mut tx_builder)?;
+
+        // TODO: cache outputs
+        // let dependable_output_index =
+        //     split_dependable_output(&mut tx_builder, amount, self.address(), provider).await?;
+        // provider.cache_mut().await.push_dependent(todo!());
+
+        let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
+        self.adjust_for_fee(&mut tx_builder, used_base_amount)
+            .await?;
+
+        let tx = tx_builder.build(provider).await?;
+        let tx_id = tx.id(provider.chain_id());
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(None)?;
+
+        Ok((tx_id, receipts))
+    }
+
     /// Unconditionally transfers `balance` of type `asset_id` to
     /// the contract at `to`.
     /// Fails if balance for `asset_id` is larger than this account's spendable balance.
@@ -305,6 +359,12 @@ pub trait Account: ViewOnlyAccount {
             .expect("MessageId could not be retrieved from tx receipts.");
 
         Ok((tx_id, nonce, receipts))
+    }
+
+    async fn clear_dependent(&self) -> Result<()> {
+        let provider = self.try_provider()?;
+        provider.cache_mut().await.clear_dependent();
+        Ok(())
     }
 }
 
