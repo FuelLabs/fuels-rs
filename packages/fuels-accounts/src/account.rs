@@ -213,6 +213,7 @@ pub trait Account: ViewOnlyAccount {
         Ok((tx_id, receipts))
     }
 
+    #[cfg(feature = "coin-cache")]
     /// Transfer funds from this account to another `Address`.
     /// Supports dependent transactions.
     /// See [Account::transfer] for more information.
@@ -361,6 +362,7 @@ pub trait Account: ViewOnlyAccount {
         Ok((tx_id, nonce, receipts))
     }
 
+    #[cfg(feature = "coin-cache")]
     async fn clear_dependent(&self) -> Result<()> {
         let provider = self.try_provider()?;
         provider.cache_mut().await.clear_dependent();
