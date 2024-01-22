@@ -1,7 +1,5 @@
 use fuels::{prelude::*, types::Bits256};
 use fuels_core::codec::DecoderConfig;
-use std::thread::sleep;
-use std::time::Duration;
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
@@ -87,11 +85,8 @@ async fn main_function_arguments() -> Result<()> {
 
 #[tokio::test]
 async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
-    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
-        .await?
-        .try_into()
-        .expect("Vec can be converted to an array");
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "packages/fuels/tests/scripts/basic_script"
@@ -121,11 +116,8 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn test_basic_script_with_tx_policies() -> Result<()> {
-    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
-        .await?
-        .try_into()
-        .expect("Vec can be converted to an array");
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
             project = "packages/fuels/tests/scripts/basic_script"
@@ -386,11 +378,8 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
 
 #[tokio::test]
 async fn test_script_submit_and_response() -> Result<()> {
-    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
-        .await?
-        .try_into()
-        .expect("Vec can be converted to an array");
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
             project = "packages/fuels/tests/scripts/script_struct"
@@ -409,10 +398,6 @@ async fn test_script_submit_and_response() -> Result<()> {
 
     // ANCHOR: submit_response_script
     let submitted_tx = script_instance.main(my_struct).submit().await?;
-    if cfg!(feature = "test-against-live-node") {
-        // add delay when testing against live node to make sure the receipts propagate
-        sleep(Duration::from_secs(10));
-    }
     let value = submitted_tx.response().await?.value;
     // ANCHOR_END: submit_response_script
 

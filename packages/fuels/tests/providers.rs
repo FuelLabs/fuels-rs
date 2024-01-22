@@ -587,7 +587,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
+    let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =

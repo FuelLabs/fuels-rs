@@ -22,9 +22,6 @@ env:
   FORC_VERSION: 0.49.1
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
-  TEST_WALLET_SECRET_KEY_1: ${{ secrets.TEST_WALLET_SECRET_KEY_1 }}
-  TEST_WALLET_SECRET_KEY_2: ${{ secrets.TEST_WALLET_SECRET_KEY_2 }}
-  TEST_WALLET_SECRET_KEY_3: ${{ secrets.TEST_WALLET_SECRET_KEY_3 }}
 
 jobs:
   setup-test-projects:
@@ -174,12 +171,6 @@ jobs:
           - cargo_command: nextest
             args: run --all-targets --workspace
             download_sway_artifacts: sway-examples
-            install_fuel_core: true
-          - command: nextest # test some functions against live nodes
-            # the live node features requires using one thread only to avoid transaction collision
-            args: run --features "test-against-live-node" -j 1 --workspace
-            download_sway_artifacts: sway-examples
-            # not all tests use the live nodes so fuel-core binary remains necessary
             install_fuel_core: true
           - cargo_command: test
             args: --doc --workspace
