@@ -115,9 +115,7 @@ impl MyContract for Contract {
     }
 
     fn would_raise_a_memory_overflow() -> Result<Bytes, b256> {
-        Result::Err(
-            0x1111111111111111111111111111111111111111111111111111111111111111,
-        )
+        Result::Err(0x1111111111111111111111111111111111111111111111111111111111111111)
     }
 
     fn returns_a_heap_type_too_deep() -> Result<Bimbam, u64> {

@@ -4,8 +4,7 @@ use std::logging::log;
 use std::string::String;
 use contract_logs::ContractLogs;
 
-impl AbiEncode for (TestStruct, TestEnum)
-{
+impl AbiEncode for (TestStruct, TestEnum) {
     #[allow(dead_code)]
     fn abi_encode(self, ref mut buffer: Buffer) {
         let (test_struct, test_enum) = self;
@@ -144,7 +143,7 @@ impl ContractLogs for Contract {
         // produce a custom log with log id 128
         // this log id will not be present in abi JSON
         asm(r1: 0, r2: 128, r3: 0, r4: 0) {
-            log  r1 r2 r3 r4;
+            log r1 r2 r3 r4;
         }
 
         log(123);
