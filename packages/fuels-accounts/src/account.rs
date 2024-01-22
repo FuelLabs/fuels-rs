@@ -226,19 +226,23 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
-        let amount_to_request = if let Some(previous_coin_output) = provider
+        let previous_coin_output = provider
             .cache_mut()
             .await
-            .pop_dependent(&(self.address().clone(), asset_id))
-        {
-            amount - previous_coin_output.amount
+            .pop_dependent(&(self.address().clone(), asset_id));
+
+        let inputs = if let Some(previous_coin_output) = previous_coin_output {
+            let mut extra_inputs = self
+                .get_asset_inputs_for_amount(asset_id, amount - previous_coin_output.amount)
+                .await?;
+            extra_inputs.push(Input::ResourceSigned {
+                resource: CoinType::Coin(previous_coin_output),
+            });
+            extra_inputs
         } else {
-            amount
+            self.get_asset_inputs_for_amount(asset_id, amount).await?
         };
 
-        let inputs = self
-            .get_asset_inputs_for_amount(asset_id, amount_to_request)
-            .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx_builder =
