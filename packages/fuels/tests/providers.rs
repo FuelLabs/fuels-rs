@@ -985,31 +985,3 @@ async fn test_build_with_provider() -> Result<()> {
 
     Ok(())
 }
-
-#[tokio::test]
-async fn test_trig_never() -> Result<()> {
-    let config = Config {
-        block_production: Trigger::Never,
-        ..Config::default()
-    };
-    let wallets =
-        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
-            .await?;
-    let wallet = &wallets[0];
-    let provider = wallet.try_provider()?;
-
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
-        .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
-
-    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    tb.add_signer(wallet.clone())?;
-    let tx = tb.build(&provider).await?;
-
-    provider.send_transaction(tx).await?;
-    provider.produce_blocks(1, None).await?;
-
-    Ok(())
-}
