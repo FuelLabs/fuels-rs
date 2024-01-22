@@ -1,8 +1,9 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     hash::{Hash, Hasher},
 };
 
+use fuel_tx::UtxoId;
 use fuel_types::AssetId;
 use fuels_core::types::{bech32::Bech32Address, coin_type_id::CoinTypeId};
 use tokio::time::{Duration, Instant};
@@ -13,6 +14,7 @@ type CoinCacheKey = (Bech32Address, AssetId);
 pub(crate) struct CoinsCache {
     ttl: Duration,
     items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
+    dependent: HashMap<CoinCacheKey, VecDeque<UtxoId>>,
 }
 
 impl Default for CoinsCache {
@@ -26,6 +28,7 @@ impl CoinsCache {
         Self {
             ttl,
             items: HashMap::default(),
+            dependent: HashMap::default(),
         }
     }
 
@@ -41,6 +44,13 @@ impl CoinsCache {
         }
     }
 
+    pub fn push_dependent(&mut self, key: &CoinCacheKey, utxo_id: UtxoId) {
+        self.dependent
+            .entry(key.clone())
+            .or_default()
+            .push_back(utxo_id);
+    }
+
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
         self.remove_expired_entries(key);
 
@@ -51,6 +61,10 @@ impl CoinsCache {
             .into_iter()
             .map(|item| item.id)
             .collect()
+    }
+
+    pub fn pop_dependent(&mut self, key: &CoinCacheKey) -> Option<UtxoId> {
+        self.dependent.get_mut(key).and_then(VecDeque::pop_front)
     }
 
     pub fn remove_items(
@@ -75,6 +89,10 @@ impl CoinsCache {
         if let Some(entry) = self.items.get_mut(key) {
             entry.retain(|item| item.is_valid(self.ttl));
         }
+    }
+
+    fn clear_dependent(&mut self) {
+        self.dependent.clear()
     }
 }
 
