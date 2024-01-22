@@ -11,9 +11,7 @@ use std::{
 };
 
 fn main() -> bool {
-    let receiver = Address::from(
-        0x09c0b2d1a486c439a87bcba6b46a7a1a23f3897cc83a94521a96da5c23bc58db,
-    );
+    let receiver = Address::from(0x09c0b2d1a486c439a87bcba6b46a7a1a23f3897cc83a94521a96da5c23bc58db);
     let ask_amount = 100;
 
     let output_index = 0;
