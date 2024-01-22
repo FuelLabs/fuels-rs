@@ -81,7 +81,7 @@ pub async fn split_dependable_output(
     used_base_amount: u64,
     address: &Bech32Address,
     provider: &Provider,
-) -> Result<()> {
+) -> Result<usize> {
     let transaction_fee = tb
         .fee_checked_from_tx(provider)
         .await?
@@ -91,13 +91,14 @@ pub async fn split_dependable_output(
     let remaining_amount = available_amount - used_base_amount - transaction_fee.max_fee();
 
     let outputs_len = tb.outputs().len();
+    let index = outputs_len - 1;
     tb.outputs_mut().insert(
-        outputs_len - 1,
+        index,
         Output::Coin {
             to: address.into(),
             amount: remaining_amount,
             asset_id: BASE_ASSET_ID,
         },
     );
-    Ok(())
+    Ok(index)
 }
