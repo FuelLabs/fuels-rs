@@ -177,7 +177,7 @@ jobs:
             install_fuel_core: true
           - command: nextest # test some functions against live nodes
             # the live node features requires using one thread only to avoid transaction collision
-            args: run --features "test-against-live-node" -j 1 --workspace
+            args: run --all-targets --features "test-against-live-node" -j 1 --workspace
             download_sway_artifacts: sway-examples
             # not all tests use the live nodes so fuel-core binary remains necessary
             install_fuel_core: true
