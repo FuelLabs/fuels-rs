@@ -1,10 +1,9 @@
-use std::{iter, ops::Add, str::FromStr, vec};
+use std::{iter, ops::Add, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
-    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
     types::{
@@ -586,18 +585,10 @@ async fn testnet_hello_world() -> Result<()> {
         abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
     ));
 
-    // Create a provider pointing to the testnet.
-    let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
-
-    // Setup the private key.
-    let private_key_string =
-        std::env::var(format!("TEST_WALLET_SECRET_KEY_1")).expect("Should find private key in ENV");
-    let private_key = SecretKey::from_str(private_key_string.as_str())
-        .expect("Should be able to transform into private key");
-
-    // Create the wallet.
-    let wallet = WalletUnlocked::new_from_private_key(private_key, Some(provider));
-
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     let mut rng = rand::thread_rng();
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
