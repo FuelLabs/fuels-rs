@@ -140,8 +140,8 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         .unwrap();
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(vec![], vec![], TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
 
-    wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb.build(wallet.try_provider()?).await?;
@@ -180,8 +180,8 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), BASE_ASSET_ID, base_amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
 
-    wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
 
     let tx = tb.build(wallet.try_provider()?).await?;
@@ -452,7 +452,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
 
     for wallet in wallets.iter() {
-        wallet.sign_transaction(&mut tb);
+        tb.add_signer(wallet.clone())?;
     }
 
     let tx = tb.build(provider).await?;

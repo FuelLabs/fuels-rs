@@ -3,12 +3,15 @@ use std::{fmt, ops, path::Path};
 use elliptic_curve::rand_core;
 use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
-use fuels_core::types::{
-    bech32::{Bech32Address, FUEL_BECH32_HRP},
-    errors::{Error, Result},
-    input::Input,
-    transaction_builders::TransactionBuilder,
-    AssetId,
+use fuels_core::{
+    traits::Signer,
+    types::{
+        bech32::{Bech32Address, FUEL_BECH32_HRP},
+        errors::{Error, Result},
+        input::Input,
+        transaction_builders::TransactionBuilder,
+        AssetId,
+    },
 };
 use rand::{CryptoRng, Rng};
 use thiserror::Error;
@@ -16,7 +19,7 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     provider::{Provider, ProviderError},
-    Account, AccountError, AccountResult, Signer, ViewOnlyAccount,
+    Account, AccountError, AccountResult, ViewOnlyAccount,
 };
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
@@ -223,6 +226,10 @@ impl WalletUnlocked {
             .expect("Decrypted key should have a correct size");
         Ok(Self::new_from_private_key(secret_key, provider))
     }
+
+    pub fn address(&self) -> &Bech32Address {
+        &self.address
+    }
 }
 
 impl ViewOnlyAccount for WalletUnlocked {
@@ -253,24 +260,22 @@ impl Account for WalletUnlocked {
             .collect::<Vec<Input>>())
     }
 
-    fn add_witnessses<Tb: TransactionBuilder>(&self, tb: &mut Tb) {
-        self.sign_transaction(tb);
+    fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
+        tb.add_signer(self.clone())?;
+
+        Ok(())
     }
 }
 
 impl Signer for WalletUnlocked {
-    type Error = WalletError;
-    async fn sign_message<S: Send + Sync + AsRef<[u8]>>(
-        &self,
-        message: S,
-    ) -> WalletResult<Signature> {
-        let message = Message::new(message);
+    async fn sign(&self, message: Message) -> Result<Signature> {
         let sig = Signature::sign(&self.private_key, &message);
+
         Ok(sig)
     }
 
-    fn sign_transaction(&self, tb: &mut impl TransactionBuilder) {
-        tb.add_unresolved_signature(self.address().clone(), self.private_key);
+    fn address(&self) -> &Bech32Address {
+        &self.address
     }
 }
 
@@ -310,15 +315,15 @@ mod tests {
         let (wallet, uuid) = WalletUnlocked::new_from_keystore(&dir, &mut rng, "password", None)?;
 
         // sign a message using the above key.
-        let message = "Hello there!";
-        let signature = wallet.sign_message(message).await?;
+        let message = Message::new("Hello there!".as_bytes());
+        let signature = wallet.sign(message).await?;
 
         // Read from the encrypted JSON keystore and decrypt it.
         let path = Path::new(dir.path()).join(uuid);
         let recovered_wallet = WalletUnlocked::load_keystore(path.clone(), "password", None)?;
 
         // Sign the same message as before and assert that the signature is the same.
-        let signature2 = recovered_wallet.sign_message(message).await?;
+        let signature2 = recovered_wallet.sign(message).await?;
         assert_eq!(signature, signature2);
 
         // Remove tempdir.

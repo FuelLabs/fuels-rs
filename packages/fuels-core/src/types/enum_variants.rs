@@ -4,7 +4,7 @@ use crate::{
         errors::{error, Result},
         param_types::ParamType,
     },
-    utils::round_up_to_word_alignment,
+    utils::checked_round_up_to_word_alignment,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
@@ -48,32 +48,27 @@ impl EnumVariants {
     }
 
     /// Calculates how many bytes are needed to encode an enum.
-    pub fn compute_enum_width_in_bytes(&self) -> Option<usize> {
+    pub fn compute_enum_width_in_bytes(&self) -> Result<usize> {
         if self.only_units_inside() {
-            return Some(ENUM_DISCRIMINANT_BYTE_WIDTH);
+            return Ok(ENUM_DISCRIMINANT_BYTE_WIDTH);
         }
 
-        let width = self.param_types().iter().try_fold(0, |a, p| {
+        let width = self.param_types().iter().try_fold(0, |a, p| -> Result<_> {
             let size = p.compute_encoding_in_bytes()?;
-            Some(a.max(size))
+            Ok(a.max(size))
         })?;
 
-        Some(round_up_to_word_alignment(width) + ENUM_DISCRIMINANT_BYTE_WIDTH)
+        checked_round_up_to_word_alignment(width)?
+            .checked_add(ENUM_DISCRIMINANT_BYTE_WIDTH)
+            .ok_or_else(|| error!(InvalidType, "Enum variants are too wide"))
     }
 
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
     pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
-        let enum_width = self
-            .compute_enum_width_in_bytes()
-            .ok_or(error!(InvalidData, "Error calculating enum width in bytes"))?;
+        let enum_width = self.compute_enum_width_in_bytes()?;
         let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
-        let variant_width = variant_param_type
-            .compute_encoding_in_bytes()
-            .ok_or(error!(
-                InvalidData,
-                "Error calculating padding amount in bytes"
-            ))?;
+        let variant_width = variant_param_type.compute_encoding_in_bytes()?;
         Ok(biggest_variant_width - variant_width)
     }
 }

@@ -1,21 +1,22 @@
 use std::{iter, ops::Add, str::FromStr, vec};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
-use fuel_core_types::{
-    fuel_crypto::rand::{self, Rng},
-    tai64::Tai64,
-};
 use fuels::{
-    accounts::{fuel_crypto::SecretKey, Account},
+    accounts::Account,
     client::{PageDirection, PaginationRequest},
+    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
-    types::{block::Block, coin_type::CoinType, message::Message},
+    types::{
+        block::Block,
+        coin_type::CoinType,
+        message::Message,
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        Bits256,
+    },
 };
-use fuels_core::types::{
-    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-    Bits256,
-};
+use rand::Rng;
+use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -812,7 +813,8 @@ async fn create_transfer(
     let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
-    wallet.sign_transaction(&mut tb);
+    tb.add_signer(wallet.clone())?;
+
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
     tb.build(wallet.try_provider()?).await
@@ -872,8 +874,8 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(vec![Opcode::RVRT.into()]);
+    tb.add_signer(wallet.clone())?;
 
-    wallet.sign_transaction(&mut tb);
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
     tb.build(wallet.try_provider()?).await
@@ -971,8 +973,8 @@ async fn test_build_with_provider() -> Result<()> {
     let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), BASE_ASSET_ID, 100);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
 
-    wallet.sign_transaction(&mut tb);
     let tx = tb.build(provider).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;

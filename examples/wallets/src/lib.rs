@@ -23,7 +23,7 @@ mod tests {
         // ANCHOR: create_wallet_from_secret_key
         use std::str::FromStr;
 
-        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
+        use fuels::{crypto::SecretKey, prelude::*};
 
         // Use the test helper to setup a test provider.
         let provider = setup_test_provider(vec![], vec![], None, None).await?;

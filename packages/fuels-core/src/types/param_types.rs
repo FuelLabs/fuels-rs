@@ -7,7 +7,7 @@ use fuel_abi_types::{
 use itertools::chain;
 
 use crate::{
-    round_up_to_word_alignment,
+    checked_round_up_to_word_alignment,
     types::{
         enum_variants::EnumVariants,
         errors::{error, Error, Result},
@@ -67,10 +67,7 @@ impl ParamType {
         param_type: &ParamType,
         available_bytes: usize,
     ) -> Result<usize> {
-        let memory_size = param_type.compute_encoding_in_bytes().ok_or(error!(
-            InvalidType,
-            "Cannot calculate the number of elements."
-        ))?;
+        let memory_size = param_type.compute_encoding_in_bytes()?;
         if memory_size == 0 {
             return Err(error!(
                 InvalidType,
@@ -110,40 +107,38 @@ impl ParamType {
     }
 
     pub fn validate_is_decodable(&self, max_depth: usize) -> Result<()> {
-        match self {
-            ParamType::Enum { variants, .. } => {
-                let all_param_types = variants.param_types();
-                let grandchildren_need_receipts = all_param_types
-                    .iter()
-                    .any(|child| child.children_need_extra_receipts());
-                if grandchildren_need_receipts {
-                    return Err(error!(
-                        InvalidType,
-                        "Enums currently support only one level deep heap types."
-                    ));
-                }
-
-                let num_of_children_needing_receipts = all_param_types
-                    .iter()
-                    .filter(|param_type| param_type.is_extra_receipt_needed(false))
-                    .count();
-                if num_of_children_needing_receipts > 1 {
-                    Err(error!(
-                        InvalidType,
-                        "Enums currently support only one heap-type variant. Found: \
-                        {num_of_children_needing_receipts}"
-                    ))
-                } else {
-                    Ok(())
-                }
+        if let ParamType::Enum { variants, .. } = self {
+            let all_param_types = variants.param_types();
+            let grandchildren_need_receipts = all_param_types
+                .iter()
+                .any(|child| child.children_need_extra_receipts());
+            if grandchildren_need_receipts {
+                return Err(error!(
+                    InvalidType,
+                    "Enums currently support only one level deep heap types."
+                ));
             }
-            _ if self.children_need_extra_receipts() => Err(error!(
+
+            let num_of_children_needing_receipts = all_param_types
+                .iter()
+                .filter(|param_type| param_type.is_extra_receipt_needed(false))
+                .count();
+            if num_of_children_needing_receipts > 1 {
+                return Err(error!(
+                    InvalidType,
+                    "Enums currently support only one heap-type variant. Found: \
+                        {num_of_children_needing_receipts}"
+                ));
+            }
+        } else if self.children_need_extra_receipts() {
+            return Err(error!(
                 InvalidType,
                 "type {:?} is not decodable: nested heap types are currently not supported except in Enums.",
                 DebugWithDepth::new(self, max_depth)
-            )),
-            _ => Ok(()),
+            ));
         }
+        self.compute_encoding_in_bytes()?;
+        Ok(())
     }
 
     pub fn is_extra_receipt_needed(&self, top_level_type: bool) -> bool {
@@ -164,36 +159,56 @@ impl ParamType {
     }
 
     /// Compute the inner memory size of a containing heap type (`Bytes` or `Vec`s).
-    pub fn heap_inner_element_size(&self, top_level_type: bool) -> Option<usize> {
-        match &self {
-            ParamType::Vector(inner_param_type) => inner_param_type.compute_encoding_in_bytes(),
+    pub fn heap_inner_element_size(&self, top_level_type: bool) -> Result<Option<usize>> {
+        let heap_bytes_size = match &self {
+            ParamType::Vector(inner_param_type) => {
+                Some(inner_param_type.compute_encoding_in_bytes()?)
+            }
             // `Bytes` type is byte-packed in the VM, so it's the size of an u8
             ParamType::Bytes | ParamType::String => Some(std::mem::size_of::<u8>()),
-            ParamType::StringSlice if !top_level_type => ParamType::U8.compute_encoding_in_bytes(),
-            ParamType::RawSlice if !top_level_type => ParamType::U64.compute_encoding_in_bytes(),
+            ParamType::StringSlice if !top_level_type => {
+                Some(ParamType::U8.compute_encoding_in_bytes()?)
+            }
+            ParamType::RawSlice if !top_level_type => {
+                Some(ParamType::U64.compute_encoding_in_bytes()?)
+            }
             _ => None,
-        }
+        };
+        Ok(heap_bytes_size)
     }
 
     /// Calculates the number of bytes the VM expects this parameter to be encoded in.
-    pub fn compute_encoding_in_bytes(&self) -> Option<usize> {
+    pub fn compute_encoding_in_bytes(&self) -> Result<usize> {
+        let overflow_error = || {
+            error!(
+                InvalidType,
+                "Reached overflow while computing encoding size for {:?}", self
+            )
+        };
         match &self {
-            ParamType::Unit | ParamType::U8 | ParamType::Bool => Some(1),
-            ParamType::U16 | ParamType::U32 | ParamType::U64 => Some(8),
-            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Some(16),
-            ParamType::U256 | ParamType::B256 => Some(32),
-            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Some(24),
-            ParamType::Array(param, count) => {
-                param.compute_encoding_in_bytes()?.checked_mul(*count)
+            ParamType::Unit | ParamType::U8 | ParamType::Bool => Ok(1),
+            ParamType::U16 | ParamType::U32 | ParamType::U64 => Ok(8),
+            ParamType::U128 | ParamType::RawSlice | ParamType::StringSlice => Ok(16),
+            ParamType::U256 | ParamType::B256 => Ok(32),
+            ParamType::Vector(_) | ParamType::Bytes | ParamType::String => Ok(24),
+            ParamType::Array(param, count) => param
+                .compute_encoding_in_bytes()?
+                .checked_mul(*count)
+                .ok_or_else(overflow_error),
+            ParamType::StringArray(len) => {
+                checked_round_up_to_word_alignment(*len).map_err(|_| overflow_error())
             }
-            ParamType::StringArray(len) => Some(round_up_to_word_alignment(*len)),
             ParamType::Tuple(fields) | ParamType::Struct { fields, .. } => {
-                fields.iter().try_fold(0, |a, param_type| {
-                    let size = round_up_to_word_alignment(param_type.compute_encoding_in_bytes()?);
-                    Some(a + size)
+                fields.iter().try_fold(0, |a: usize, param_type| {
+                    let size = checked_round_up_to_word_alignment(
+                        param_type.compute_encoding_in_bytes()?,
+                    )?;
+                    a.checked_add(size).ok_or_else(overflow_error)
                 })
             }
-            ParamType::Enum { variants, .. } => variants.compute_enum_width_in_bytes(),
+            ParamType::Enum { variants, .. } => variants
+                .compute_enum_width_in_bytes()
+                .map_err(|_| overflow_error()),
         }
     }
 
@@ -648,7 +663,7 @@ mod tests {
     }
 
     #[test]
-    fn structs_are_all_elements_combined_with_padding() {
+    fn structs_are_all_elements_combined_with_padding() -> Result<()> {
         let inner_struct = ParamType::Struct {
             fields: vec![ParamType::U32, ParamType::U32],
             generics: vec![],
@@ -662,9 +677,10 @@ mod tests {
         let width = a_struct.compute_encoding_in_bytes().unwrap();
 
         const INNER_STRUCT_WIDTH: usize = WIDTH_OF_U32 * 2;
-        const EXPECTED_WIDTH: usize =
-            WIDTH_OF_B256 + round_up_to_word_alignment(WIDTH_OF_BOOL) + INNER_STRUCT_WIDTH;
-        assert_eq!(EXPECTED_WIDTH, width);
+        let expected_width: usize =
+            WIDTH_OF_B256 + checked_round_up_to_word_alignment(WIDTH_OF_BOOL)? + INNER_STRUCT_WIDTH;
+        assert_eq!(expected_width, width);
+        Ok(())
     }
 
     #[test]
@@ -1815,12 +1831,51 @@ mod tests {
     }
 
     #[test]
+    fn test_compute_encoding_in_bytes_overflows() -> Result<()> {
+        let overflows = |p: ParamType| {
+            let error = p.compute_encoding_in_bytes().unwrap_err();
+            let overflow_error = error!(
+                InvalidType,
+                "Reached overflow while computing encoding size for {:?}", p
+            );
+            assert_eq!(error.to_string(), overflow_error.to_string());
+        };
+        let tuple_with_fields_too_wide = ParamType::Tuple(vec![
+            ParamType::StringArray(12514849900987264429),
+            ParamType::StringArray(7017071859781709229),
+        ]);
+        overflows(tuple_with_fields_too_wide);
+
+        let struct_with_fields_too_wide = ParamType::Struct {
+            fields: vec![
+                ParamType::StringArray(12514849900987264429),
+                ParamType::StringArray(7017071859781709229),
+            ],
+            generics: vec![],
+        };
+        overflows(struct_with_fields_too_wide);
+
+        let enum_with_variants_too_wide = ParamType::Enum {
+            variants: EnumVariants::new(vec![ParamType::StringArray(usize::MAX - 8)]).unwrap(),
+            generics: vec![],
+        };
+        overflows(enum_with_variants_too_wide);
+
+        let array_too_big = ParamType::Array(Box::new(ParamType::U64), usize::MAX);
+        overflows(array_too_big);
+
+        let string_array_too_big = ParamType::StringArray(usize::MAX);
+        overflows(string_array_too_big);
+        Ok(())
+    }
+
+    #[test]
     fn calculate_num_of_elements() -> Result<()> {
         let failing_param_type = ParamType::Array(Box::new(ParamType::U16), usize::MAX);
         assert!(ParamType::calculate_num_of_elements(&failing_param_type, 0)
             .unwrap_err()
             .to_string()
-            .contains("Cannot calculate the number of elements"));
+            .contains("Reached overflow"));
         let zero_sized_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 1000);
         assert!(ParamType::calculate_num_of_elements(&zero_sized_type, 0)
             .unwrap_err()

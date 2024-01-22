@@ -71,6 +71,11 @@ impl From<CheckError> for Error {
     }
 }
 
+impl From<ValidityError> for Error {
+    fn from(err: ValidityError) -> Error {
+        Error::ValidationError(format!("{:?}", err))
+    }
+}
+
 impl_error_from!(InvalidData, bech32::Error);
 impl_error_from!(InvalidData, TryFromSliceError);
-impl_error_from!(ValidationError, ValidityError);

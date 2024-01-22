@@ -10,7 +10,7 @@ mod tests {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
 
-        use fuels::{accounts::fuel_crypto::SecretKey, prelude::*};
+        use fuels::{crypto::SecretKey, prelude::*};
 
         // Create a provider pointing to the testnet.
         // This example will not work as the testnet does not support the new version of fuel-core

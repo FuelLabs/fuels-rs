@@ -150,7 +150,7 @@ pub(crate) async fn build_tx_from_contract_calls(
         .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
         .unwrap_or_default();
 
-    account.add_witnessses(&mut tb);
+    account.add_witnesses(&mut tb)?;
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
 
     tb.build(account.try_provider()?).await
@@ -379,21 +379,8 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
                 return Ok(vec![]);
             };
 
-            let param_type_width =
-                param_type
-                    .compute_encoding_in_bytes()
-                    .ok_or(fuels_core::error!(
-                        InvalidData,
-                        "Error calculating enum width in bytes"
-                    ))?;
-            let heap_type_width =
-                heap_type
-                    .compute_encoding_in_bytes()
-                    .ok_or(fuels_core::error!(
-                        InvalidData,
-                        "Error calculating enum width in bytes"
-                    ))?;
-
+            let param_type_width = param_type.compute_encoding_in_bytes()?;
+            let heap_type_width = heap_type.compute_encoding_in_bytes()?;
             let ptr_offset = ((param_type_width - heap_type_width) / 8) as u16;
 
             Ok([
@@ -425,7 +412,7 @@ fn extract_data_receipt(
     top_level_type: bool,
     param_type: &ParamType,
 ) -> Result<Vec<fuel_asm::Instruction>> {
-    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type) else {
+    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type)? else {
         return Ok(vec![]);
     };
 

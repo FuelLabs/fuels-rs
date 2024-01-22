@@ -899,7 +899,7 @@ mod tests {
         // customize the builder...
 
         wallet.adjust_for_fee(&mut tb, 0).await?;
-        wallet.sign_transaction(&mut tb);
+        tb.add_signer(wallet.clone())?;
 
         let tx = tb.build(provider).await?;
 
