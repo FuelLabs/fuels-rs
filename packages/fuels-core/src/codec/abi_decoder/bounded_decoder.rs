@@ -93,7 +93,7 @@ impl BoundedDecoder {
             ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
-            ParamType::RawSlice => self.decode_raw_slice(bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
@@ -214,7 +214,7 @@ impl BoundedDecoder {
         })
     }
 
-    fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<Decoded> {
+    fn decode_raw_slice(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
             token: Token::RawSlice(bytes.to_vec()),
             bytes_read: bytes.len(),

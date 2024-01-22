@@ -35,12 +35,14 @@ impl LogFormatter {
         bytes: &[u8],
     ) -> Result<String> {
         #[cfg(experimental)]
-        Self::can_decode_log_with_type::<T>()?;
-        #[cfg(experimental)]
-        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
+        let toxken = {
+            Self::can_decode_log_with_type::<T>()?;
+            ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?
+        };
 
         #[cfg(not(experimental))]
         let token = ABIDecoder::new(decoder_config).experimental_decode(&T::param_type(), bytes)?;
+
         Ok(format!("{:?}", T::from_token(token)?))
     }
 
@@ -200,6 +202,7 @@ impl LogDecoder {
                     #[cfg(experimental)]
                     let token =
                         ABIDecoder::new(self.decoder_config).decode(&T::param_type(), &bytes)?;
+
                     T::from_token(token)
                 })
             })
