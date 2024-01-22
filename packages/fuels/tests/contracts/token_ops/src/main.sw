@@ -1,7 +1,13 @@
 contract;
 
-use std::{asset::*, bytes::Bytes, context::balance_of, context::msg_amount, message::send_message};
-use std::constants::ZERO_B256;
+use std::{
+    asset::*,
+    bytes::Bytes,
+    constants::ZERO_B256,
+    context::balance_of,
+    context::msg_amount,
+    message::send_message,
+};
 
 abi TestFuelCoin {
     fn mint_coins(mint_amount: u64);

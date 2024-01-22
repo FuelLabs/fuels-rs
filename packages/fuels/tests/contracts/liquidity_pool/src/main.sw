@@ -9,9 +9,9 @@ use std::{
         contract_id,
         msg_asset_id,
     },
+    constants::ZERO_B256,
     context::msg_amount,
 };
-use std::constants::ZERO_B256;
 
 abi LiquidityPool {
     #[payable]
