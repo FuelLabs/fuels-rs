@@ -1,8 +1,7 @@
 contract;
 
 use lib_contract::LibContract;
-use std::token::mint_to_address;
-use std::constants::ZERO_B256;
+use std::{asset::mint_to_address, constants::ZERO_B256};
 
 abi ContractCaller {
     fn increment_from_contract(contract_id: ContractId, value: u64) -> u64;

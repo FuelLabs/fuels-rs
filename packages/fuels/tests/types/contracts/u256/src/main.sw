@@ -18,9 +18,7 @@ impl MyContract for Contract {
     }
 
     fn u256_in_enum_output() -> SomeEnum<u256> {
-        SomeEnum::B(
-            0x0000000000000001000000000000000200000000000000030000000000000004u256,
-        )
+        SomeEnum::B(0x0000000000000001000000000000000200000000000000030000000000000004u256)
     }
 
     fn u256_in_enum_input(some_enum: SomeEnum<u256>) {
