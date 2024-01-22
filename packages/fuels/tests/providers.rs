@@ -590,12 +590,13 @@ async fn testnet_hello_world() -> Result<()> {
     let provider = Provider::connect(TESTNET_NODE_URL).await.unwrap();
 
     // Setup the private key.
-    let secret =
-        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
-            .unwrap();
+    let private_key_string =
+        std::env::var(format!("TEST_WALLET_SECRET_KEY_1")).expect("Should find private key in ENV");
+    let private_key = SecretKey::from_str(private_key_string.as_str())
+        .expect("Should be able to transform into private key");
 
     // Create the wallet.
-    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
+    let wallet = WalletUnlocked::new_from_private_key(private_key, Some(provider));
 
     let mut rng = rand::thread_rng();
     let salt: [u8; 32] = rng.gen();
