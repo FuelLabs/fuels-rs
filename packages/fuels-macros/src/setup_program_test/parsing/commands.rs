@@ -35,7 +35,7 @@ command_parser!(
     Wallets -> InitializeWalletCommand,
     Abigen -> AbigenCommand,
     Deploy -> DeployContractCommand,
-    LoadScript -> LoadScriptCommand
+    LoadScript -> LoadScriptCommand,
 );
 
 impl Parse for TestProgramCommands {
