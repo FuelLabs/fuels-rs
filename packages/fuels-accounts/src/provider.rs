@@ -43,6 +43,7 @@ use tai64::Tai64;
 use thiserror::Error;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
+use tokio::sync::MutexGuard;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
@@ -439,7 +440,9 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
         let mut cache = self.cache.lock().await;
-        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id));
+        let key = (filter.from.clone(), filter.asset_id);
+        let used_coins = cache.get_active(&key);
+        let dependents = cache.iter_dependent(&key);
 
         let excluded_utxos = used_coins
             .iter()
@@ -448,6 +451,7 @@ impl Provider {
                 _ => None,
             })
             .cloned()
+            .chain(dependents.map(|coin| coin.utxo_id))
             .collect::<Vec<_>>();
 
         let excluded_message_nonces = used_coins
@@ -723,6 +727,10 @@ impl Provider {
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.client.set_retry_config(retry_config);
         self
+    }
+
+    pub(crate) async fn cache_mut(&self) -> MutexGuard<'_, CoinsCache> {
+        self.cache.lock().await
     }
 }
 
