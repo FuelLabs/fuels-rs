@@ -3,9 +3,8 @@ use std::{
     hash::{Hash, Hasher},
 };
 
-use fuel_tx::UtxoId;
 use fuel_types::AssetId;
-use fuels_core::types::{bech32::Bech32Address, coin_type_id::CoinTypeId};
+use fuels_core::types::{bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId};
 use tokio::time::{Duration, Instant};
 
 type CoinCacheKey = (Bech32Address, AssetId);
@@ -14,7 +13,7 @@ type CoinCacheKey = (Bech32Address, AssetId);
 pub(crate) struct CoinsCache {
     ttl: Duration,
     items: HashMap<CoinCacheKey, HashSet<CoinCacheItem>>,
-    dependent: HashMap<CoinCacheKey, VecDeque<UtxoId>>,
+    dependent: HashMap<CoinCacheKey, VecDeque<Coin>>,
 }
 
 impl Default for CoinsCache {
@@ -44,11 +43,11 @@ impl CoinsCache {
         }
     }
 
-    pub fn push_dependent(&mut self, key: &CoinCacheKey, utxo_id: UtxoId) {
+    pub fn push_dependent(&mut self, key: &CoinCacheKey, coin: Coin) {
         self.dependent
             .entry(key.clone())
             .or_default()
-            .push_back(utxo_id);
+            .push_back(coin);
     }
 
     pub fn get_active(&mut self, key: &CoinCacheKey) -> HashSet<CoinTypeId> {
@@ -63,7 +62,15 @@ impl CoinsCache {
             .collect()
     }
 
-    pub fn pop_dependent(&mut self, key: &CoinCacheKey) -> Option<UtxoId> {
+    pub fn iter_dependent(&mut self, key: &CoinCacheKey) -> impl Iterator<Item = &Coin> {
+        self.dependent
+            .get(key)
+            .map(VecDeque::iter)
+            .into_iter()
+            .flatten()
+    }
+
+    pub fn pop_dependent(&mut self, key: &CoinCacheKey) -> Option<Coin> {
         self.dependent.get_mut(key).and_then(VecDeque::pop_front)
     }
 
@@ -91,7 +98,7 @@ impl CoinsCache {
         }
     }
 
-    fn clear_dependent(&mut self) {
+    pub fn clear_dependent(&mut self) {
         self.dependent.clear()
     }
 }
