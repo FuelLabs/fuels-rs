@@ -1,17 +1,17 @@
 contract;
 
 use std::{
+    asset::{
+        mint_to_address,
+        transfer_to_address,
+    },
     call_frames::{
         contract_id,
         msg_asset_id,
     },
+    constants::ZERO_B256,
     context::msg_amount,
-    token::{
-        mint_to_address,
-        transfer_to_address,
-    },
 };
-use std::constants::ZERO_B256;
 
 abi LiquidityPool {
     #[payable]
@@ -20,9 +20,7 @@ abi LiquidityPool {
     fn withdraw(recipient: Address);
 }
 
-const BASE_TOKEN: AssetId = AssetId::from(
-    0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c,
-);
+const BASE_TOKEN: AssetId = AssetId::from(0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c);
 
 impl LiquidityPool for Contract {
     #[payable]

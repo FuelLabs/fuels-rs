@@ -42,9 +42,7 @@ impl MyContract for Contract {
             name: __to_str_array("Jane"),
         });
         assert(input.0 == expected.0);
-        assert(
-            sha256(from_str_array(input.1.name)) == sha256(from_str_array(expected.1.name)),
-        );
+        assert(sha256(from_str_array(input.1.name)) == sha256(from_str_array(expected.1.name)));
 
         expected
     }
