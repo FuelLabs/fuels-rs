@@ -1,9 +1,6 @@
 #[allow(unused_imports)]
 use serial_test::serial;
-use std::future::Future;
-use std::thread::sleep;
-use std::time::Duration;
-use std::vec;
+use std::{future::Future, thread::sleep, time::Duration, vec};
 
 use fuels::{
     accounts::{predicate::Predicate, Account},

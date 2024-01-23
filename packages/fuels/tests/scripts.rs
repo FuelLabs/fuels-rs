@@ -1,8 +1,8 @@
 use fuels::{prelude::*, types::Bits256};
 use fuels_core::codec::DecoderConfig;
+#[allow(unused_imports)] // the use of the serial feature is not detected by rustfmt
 use serial_test::serial;
-use std::thread::sleep;
-use std::time::Duration;
+use std::{thread::sleep, time::Duration};
 
 #[tokio::test]
 async fn test_transaction_script_workflow() -> Result<()> {
