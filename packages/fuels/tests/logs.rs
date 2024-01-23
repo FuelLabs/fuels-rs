@@ -5,7 +5,7 @@ use fuels::{
     tx::Receipt,
     types::{Bits256, SizedAsciiString},
 };
-use fuels_core::{codec::DecoderConfig, types::AsciiString};
+use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
@@ -1454,7 +1454,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // String slices can not be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
-#[cfg(experimental)]
+#[cfg(not(experimental))]
 async fn string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1487,8 +1487,10 @@ async fn string_slice_log() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 async fn contract_experimental_log() -> Result<()> {
+    use fuels_core::types::AsciiString;
+
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1544,8 +1546,10 @@ async fn contract_experimental_log() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 async fn script_experimental_log() -> Result<()> {
+    use fuels_core::types::AsciiString;
+
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
