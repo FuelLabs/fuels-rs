@@ -1712,7 +1712,6 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 }
 
 #[tokio::test]
-#[ignore]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -1753,6 +1752,10 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 
         assert_eq!(response.value, x);
     }
+    if cfg!(feature = "test-against-live-node") {
+        // avoid getting HTTP 429 errors
+        sleep(Duration::from_secs(5));
+    }
     {
         contract_instance_2
             .methods()
@@ -1761,6 +1764,9 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             .call_params(CallParameters::default().with_gas_forwarded(3000))?
             .call()
             .await?;
+    }
+    if cfg!(feature = "test-against-live-node") {
+        sleep(Duration::from_secs(5));
     }
     {
         let call_handler_1 = contract_instance.methods().get_single(x);
