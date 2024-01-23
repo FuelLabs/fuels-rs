@@ -1,5 +1,6 @@
 use fuels::{prelude::*, types::Bits256};
 use fuels_core::codec::DecoderConfig;
+use serial_test::serial;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -86,6 +87,7 @@ async fn main_function_arguments() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -120,6 +122,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_basic_script_with_tx_policies() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -385,6 +388,7 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_script_submit_and_response() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
