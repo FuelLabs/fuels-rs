@@ -285,7 +285,7 @@ jobs:
       # TODO: To be removed once experimental encoding is the default.
       - name: Test experimental logs
         if: ${{ matrix.command == 'test_experimental_logs' }}
-        run: RUSTFLAGS='--cfg experimental' cargo nextest run --all-targets --workspace
+        run: RUSTFLAGS='--cfg experimental' cargo nextest run --test logs
 
   publish:
     needs:
