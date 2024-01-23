@@ -1510,18 +1510,6 @@ async fn contract_experimental_log() -> Result<()> {
         assert_eq!("fuel".to_string(), logs.first().unwrap().to_string());
     }
     {
-        let v = [1u16, 2, 3].to_vec();
-        let some_enum = EnumWithGeneric::VariantOne(v);
-        let other_enum = EnumWithGeneric::VariantTwo;
-        let v1 = vec![some_enum.clone(), other_enum, some_enum];
-        let expected_vec = vec![vec![v1.clone(), v1]];
-
-        let response = contract_methods.produce_vec_log().call().await?;
-        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
-
-        assert_eq!(vec![expected_vec], logs);
-    }
-    {
         let response = contract_methods.produce_string_log().call().await?;
         let logs = response.decode_logs_with_type::<String>()?;
 
@@ -1538,6 +1526,18 @@ async fn contract_experimental_log() -> Result<()> {
         let logs = response.decode_logs_with_type::<RawSlice>()?;
 
         assert_eq!(vec![RawSlice("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let v = [1u16, 2, 3].to_vec();
+        let some_enum = EnumWithGeneric::VariantOne(v);
+        let other_enum = EnumWithGeneric::VariantTwo;
+        let v1 = vec![some_enum.clone(), other_enum, some_enum];
+        let expected_vec = vec![vec![v1.clone(), v1]];
+
+        let response = contract_methods.produce_vec_log().call().await?;
+        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+
+        assert_eq!(vec![expected_vec], logs);
     }
 
     Ok(())
