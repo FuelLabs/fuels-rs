@@ -1,5 +1,3 @@
-#[allow(unused_imports)]
-use serial_test::serial;
 use std::{future::Future, thread::sleep, time::Duration, vec};
 
 use fuels::{
@@ -41,7 +39,6 @@ async fn test_multiple_args() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
@@ -150,7 +147,6 @@ async fn test_reverting_transaction() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_multiple_read_calls() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -185,7 +181,6 @@ async fn test_multiple_read_calls() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_multi_call_beginner() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -226,7 +221,6 @@ async fn test_multi_call_beginner() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_multi_call_pro() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -285,7 +279,6 @@ async fn test_multi_call_pro() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_contract_call_fee_estimation() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -346,7 +339,6 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -383,7 +375,6 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -1545,7 +1536,6 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_contract_submit_and_response() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
@@ -1722,7 +1712,6 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 }
 
 #[tokio::test]
-#[cfg_attr(feature = "test-against-live-node", serial)]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?

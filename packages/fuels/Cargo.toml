@@ -32,7 +32,6 @@ fuels-code-gen = { workspace = true }
 fuels-test-helpers = { workspace = true }
 hex = { workspace = true, default-features = false }
 rand = { workspace = true }
-serial_test = { workspace = true }
 sha2 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["time", "test-util"] }

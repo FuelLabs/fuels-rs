@@ -176,11 +176,9 @@ jobs:
             download_sway_artifacts: sway-examples
             install_fuel_core: true
             # test some functions against live nodes
-          - cargo_command: test
-            # we use `test` instead of `nextest` so that the `serial_test` crate can enable running
-            # non-live node tests in parallel, while the live node ones run sequentially,
-            # thus preventing transaction collision which could happen otherwise.
-            args: --all-targets --features "test-against-live-node" --workspace
+          - cargo_command: nextest
+            # the live node features requires using one thread only to avoid transaction collision
+            args: run --all-targets --features "test-against-live-node" -j 1 --workspace
             download_sway_artifacts: sway-examples
             # not all tests use the live nodes so fuel-core binary remains necessary
             install_fuel_core: true
