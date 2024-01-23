@@ -281,7 +281,7 @@ jobs:
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
 
-      # TODO: To be removed once experimental encoding is the default
+      # TODO: To be removed once experimental encoding is the default.
       - name: Test experimental logs
         if: ${{ matrix.command == 'test_experimental_logs' }}
         uses: taiki-e/install-action@nextest
