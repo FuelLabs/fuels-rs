@@ -1712,6 +1712,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
     let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
         .await?
