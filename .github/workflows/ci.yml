@@ -242,8 +242,9 @@ jobs:
           name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
 
+      # TODO: `test_experimental_logs` to be removed once experimental encoding is the default.
       - name: Install nextest
-        if: ${{ matrix.cargo_command == 'nextest' }}
+        if: ${{ matrix.cargo_command == 'nextest' || matrix.command = 'test_experimental_logs' }}
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-machete
@@ -284,7 +285,6 @@ jobs:
       # TODO: To be removed once experimental encoding is the default.
       - name: Test experimental logs
         if: ${{ matrix.command == 'test_experimental_logs' }}
-        uses: taiki-e/install-action@nextest
         run: RUSTFLAGS='--cfg experimental' cargo nextest run --all-targets --workspace
 
   publish:
