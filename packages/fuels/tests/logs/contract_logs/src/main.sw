@@ -1,7 +1,6 @@
 contract;
 
-use std::logging::log;
-use std::string::String;
+use std::{logging::log, string::String};
 use contract_logs::ContractLogs;
 
 impl AbiEncode for (TestStruct, TestEnum) {
@@ -150,7 +149,19 @@ impl ContractLogs for Contract {
     }
 
     fn produce_string_slice_log() {
-        log("string_slice");
+        log("fuel");
+    }
+
+    fn produce_string_log() {
+        log(String::from_ascii_str("fuel"));
+    }
+
+    fn produce_bytes_log() {
+        log(String::from_ascii_str("fuel").as_bytes());
+    }
+
+    fn produce_raw_slice_log() {
+        log(String::from_ascii_str("fuel").as_raw_slice());
     }
 
     fn produce_vec_log() {
@@ -175,17 +186,5 @@ impl ContractLogs for Contract {
         v3.push(v2);
 
         log(v3);
-    }
-
-    fn produce_string_log() {
-        log(String::from_ascii_str("fuel"));
-    }
-
-    fn produce_bytes_log() {
-        log(String::from_ascii_str("fuel").as_bytes());
-    }
-
-    fn produce_raw_slice_log() {
-        log(String::from_ascii_str("fuel").as_raw_slice());
     }
 }

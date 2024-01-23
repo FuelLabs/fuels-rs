@@ -5,7 +5,7 @@ use fuels::{
     tx::Receipt,
     types::{Bits256, SizedAsciiString},
 };
-use fuels_core::codec::DecoderConfig;
+use fuels_core::{codec::DecoderConfig, types::AsciiString};
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
@@ -1421,8 +1421,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
                 ..Default::default()
             })
             .call()
-            .await
-            .unwrap();
+            .await?;
 
         response
             .decode_logs_with_type::<[u8; 1000]>()
@@ -1440,10 +1439,9 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
                 ..Default::default()
             })
             .call()
-            .await
-            .unwrap();
+            .await?;
 
-        let logs = response.decode_logs_with_type::<[u8; 1000]>().unwrap();
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
         assert_eq!(logs, vec![[0u8; 1000]]);
 
         let logs = response.decode_logs();
@@ -1490,38 +1488,7 @@ async fn string_slice_log() -> Result<()> {
 
 #[tokio::test]
 #[cfg(not(experimental))]
-async fn string_slice_log() -> Result<()> {
-    use fuels_core::types::AsciiString;
-
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "packages/fuels/tests/logs/contract_logs"
-        ),),
-        Deploy(
-            contract = "MyContract",
-            name = "contract_instance",
-            wallet = "wallet"
-        )
-    );
-
-    let response = contract_instance
-        .methods()
-        .produce_string_slice_log()
-        .call()
-        .await?;
-
-    let logs = response.decode_logs_with_type::<AsciiString>()?;
-
-    assert_eq!(logs.first().unwrap().to_string(), "string_slice");
-
-    Ok(())
-}
-
-#[tokio::test]
-#[cfg(not(experimental))]
-async fn contract_heap_types_log() -> Result<()> {
+async fn contract_experimental_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1535,6 +1502,13 @@ async fn contract_heap_types_log() -> Result<()> {
         )
     );
     let contract_methods = contract_instance.methods();
+
+    {
+        let response = contract_methods.produce_string_slice_log().call().await?;
+        let logs = response.decode_logs_with_type::<AsciiString>()?;
+
+        assert_eq!("fuel".to_string(), logs.first().unwrap().to_string());
+    }
     {
         let v = [1u16, 2, 3].to_vec();
         let some_enum = EnumWithGeneric::VariantOne(v);
@@ -1569,4 +1543,54 @@ async fn contract_heap_types_log() -> Result<()> {
     Ok(())
 }
 
-//TODO: @hal3e add heat types logs for script
+#[tokio::test]
+#[cfg(not(experimental))]
+async fn script_experimental_log() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "LogScript",
+            project = "packages/fuels/tests/logs/script_experimental_logs"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+    let response = script_instance.main().call().await?;
+
+    {
+        let logs = response.decode_logs_with_type::<AsciiString>()?;
+
+        assert_eq!("fuel".to_string(), logs.first().unwrap().to_string());
+    }
+    {
+        let logs = response.decode_logs_with_type::<String>()?;
+
+        assert_eq!(vec!["fuel".to_string()], logs);
+    }
+    {
+        let logs = response.decode_logs_with_type::<Bytes>()?;
+
+        assert_eq!(vec![Bytes("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let logs = response.decode_logs_with_type::<RawSlice>()?;
+
+        assert_eq!(vec![RawSlice("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let v = [1u16, 2, 3].to_vec();
+        let some_enum = EnumWithGeneric::VariantOne(v);
+        let other_enum = EnumWithGeneric::VariantTwo;
+        let v1 = vec![some_enum.clone(), other_enum, some_enum];
+        let expected_vec = vec![vec![v1.clone(), v1]];
+
+        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+
+        assert_eq!(vec![expected_vec], logs);
+    }
+
+    Ok(())
+}
