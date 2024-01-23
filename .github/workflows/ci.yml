@@ -244,7 +244,7 @@ jobs:
 
       # TODO: `test_experimental_logs` to be removed once experimental encoding is the default.
       - name: Install nextest
-        if: ${{ matrix.cargo_command == 'nextest' || matrix.command = 'test_experimental_logs' }}
+        if: ${{ matrix.cargo_command == 'nextest' || matrix.command == 'test_experimental_logs' }}
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-machete
