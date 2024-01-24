@@ -69,24 +69,6 @@ impl ExtendedConfig {
                     block_time.as_millis()
                 ));
             }
-            Trigger::Hybrid {
-                min_block_time,
-                max_tx_idle_time,
-                max_block_time,
-            } => {
-                args.push(format!(
-                    "--poa-hybrid-min-time={}ms",
-                    min_block_time.as_millis()
-                ));
-                args.push(format!(
-                    "--poa-hybrid-idle-time={}ms",
-                    max_tx_idle_time.as_millis()
-                ));
-                args.push(format!(
-                    "--poa-hybrid-max-time={}ms",
-                    max_block_time.as_millis()
-                ));
-            }
         };
 
         args.extend(
