@@ -57,10 +57,9 @@ impl ExperimentalBoundedDecoder {
         decoder: impl FnOnce(&mut Self) -> Result<Decoded>,
     ) -> Result<Decoded> {
         self.depth_tracker.increase()?;
-
         let res = decoder(self);
-
         self.depth_tracker.decrease();
+
         res
     }
 
@@ -88,8 +87,6 @@ impl ExperimentalBoundedDecoder {
                 self.run_w_depth_tracking(|ctx| ctx.decode_array(param_type, bytes, *length))
             }
             ParamType::Vector(param_type) => {
-                // although nested vectors cannot be decoded yet, depth tracking still occurs for future
-                // proofing
                 self.run_w_depth_tracking(|ctx| ctx.decode_vector(param_type, bytes))
             }
 
