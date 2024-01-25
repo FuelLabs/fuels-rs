@@ -81,7 +81,7 @@ pub async fn split_dependable_output(
     used_base_amount: u64,
     address: &Bech32Address,
     provider: &Provider,
-) -> Result<usize> {
+) -> Result<u8> {
     let transaction_fee = tb
         .fee_checked_from_tx(provider)
         .await?
@@ -100,5 +100,5 @@ pub async fn split_dependable_output(
             asset_id: BASE_ASSET_ID,
         },
     );
-    Ok(index)
+    Ok(index as u8)
 }

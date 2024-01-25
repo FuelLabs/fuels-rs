@@ -8,7 +8,7 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        coin::Coin,
+        coin::{Coin, CoinStatus},
         coin_type::CoinType,
         errors::{Error, Result},
         input::Input,
@@ -226,10 +226,8 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
-        let previous_coin_output = provider
-            .cache_mut()
-            .await
-            .pop_dependent(&(self.address().clone(), asset_id));
+        let cache_key = (self.address().clone(), asset_id);
+        let previous_coin_output = provider.cache_mut().await.pop_dependent(&cache_key);
 
         let inputs = if let Some(previous_coin_output) = previous_coin_output {
             let mut extra_inputs = self
@@ -250,10 +248,8 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tx_builder)?;
 
-        // TODO: cache outputs
-        // let dependable_output_index =
-        //     split_dependable_output(&mut tx_builder, amount, self.address(), provider).await?;
-        // provider.cache_mut().await.push_dependent(todo!());
+        let dependable_output_index =
+            split_dependable_output(&mut tx_builder, amount, self.address(), provider).await?;
 
         let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
@@ -261,6 +257,17 @@ pub trait Account: ViewOnlyAccount {
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(provider.chain_id());
+
+        let coin = Coin {
+            utxo_id: UtxoId::new(tx_id, dependable_output_index),
+            block_created: 0,
+            amount,
+            asset_id,
+            owner: self.address().clone(),
+            maturity: tx.maturity(),
+            status: CoinStatus::Unspent,
+        };
+        provider.cache_mut().await.push_dependent(&cache_key, coin);
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
