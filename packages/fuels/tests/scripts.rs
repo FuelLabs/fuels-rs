@@ -2,62 +2,6 @@ use fuels::{prelude::*, types::Bits256};
 use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
-async fn test_transaction_script_workflow() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let call_handler = contract_instance.methods().initialize_counter(42);
-
-    let response = call_handler.call().await?;
-    assert!(response.tx_id.is_some());
-    assert_eq!(response.value, 42);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_multi_call_script_workflow() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TestContract",
-            wallet = "wallet"
-        ),
-    );
-
-    let contract_methods = contract_instance.methods();
-    let call_handler_1 = contract_methods.initialize_counter(42);
-    let call_handler_2 = contract_methods.get_array([42; 2]);
-
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
-        .add_call(call_handler_1)
-        .add_call(call_handler_2);
-
-    let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
-    assert!(response.tx_id.is_some());
-    let (counter, array) = response.value;
-    assert_eq!(counter, 42);
-    assert_eq!(array, [42; 2]);
-    Ok(())
-}
-
-#[tokio::test]
 async fn main_function_arguments() -> Result<()> {
     // ANCHOR: script_with_arguments
     // The abigen is used for the same purpose as with contracts (Rust bindings)

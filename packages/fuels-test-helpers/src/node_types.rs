@@ -17,14 +17,7 @@ const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
 pub enum Trigger {
     Instant,
     Never,
-    Interval {
-        block_time: Duration,
-    },
-    Hybrid {
-        min_block_time: Duration,
-        max_tx_idle_time: Duration,
-        max_block_time: Duration,
-    },
+    Interval { block_time: Duration },
 }
 
 #[cfg(feature = "fuel-core-lib")]
@@ -34,7 +27,6 @@ impl From<Trigger> for fuel_core_poa::Trigger {
             Trigger::Instant => fuel_core_poa::Trigger::Instant,
             Trigger::Never => fuel_core_poa::Trigger::Never,
             Trigger::Interval { block_time } => fuel_core_poa::Trigger::Interval { block_time },
-            _ => value.into(),
         }
     }
 }
