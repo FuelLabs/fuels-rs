@@ -30,7 +30,7 @@ impl AsRef<[u8]> for Identity {
 
 impl From<&Address> for Identity {
     fn from(address: &Address) -> Self {
-        Self::Address(address.clone())
+        Self::Address(*address)
     }
 }
 impl From<Address> for Identity {
@@ -41,7 +41,7 @@ impl From<Address> for Identity {
 
 impl From<&ContractId> for Identity {
     fn from(contract_id: &ContractId) -> Self {
-        Self::ContractId(contract_id.clone())
+        Self::ContractId(*contract_id)
     }
 }
 impl From<ContractId> for Identity {
