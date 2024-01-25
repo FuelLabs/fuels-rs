@@ -2,15 +2,6 @@ script;
 
 use std::logging::log;
 
-impl AbiEncode for (TestStruct, TestEnum) {
-    #[allow(dead_code)]
-    fn abi_encode(self, ref mut buffer: Buffer) {
-        let (test_struct, test_enum) = self;
-        test_struct.abi_encode(buffer);
-        test_enum.abi_encode(buffer);
-    }
-}
-
 #[allow(dead_code)]
 struct TestStruct {
     field_1: bool,
