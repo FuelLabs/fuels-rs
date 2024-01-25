@@ -90,6 +90,13 @@ pub async fn split_dependable_output(
     let available_amount = available_base_amount(tb);
     let remaining_amount = available_amount - used_base_amount - transaction_fee.max_fee();
 
+    if remaining_amount == 0 {
+        return Err(error!(
+            InvalidData,
+            "No unused amount left to split into a dependable output"
+        ));
+    }
+
     let outputs_len = tb.outputs().len();
     let index = outputs_len - 1;
     tb.outputs_mut().insert(
