@@ -211,69 +211,93 @@ pub trait Account: ViewOnlyAccount {
     }
 
     #[cfg(feature = "coin-cache")]
-    /// Transfer funds from this account to another `Address`.
-    /// Supports dependent transactions.
+    /// Transfer funds from this account to multiple other `Address`es.
     /// See [Account::transfer] for more information.
-    async fn dependent_transfer(
+    async fn dependent_transfers(
         &self,
-        to: &Bech32Address,
-        amount: u64,
+        initial_amount: u64,
+        transfers: &[(&Bech32Address, u64)],
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> Result<(TxId, Vec<Receipt>)> {
+    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
         use crate::accounts_utils::split_dependable_output;
-        use fuels_core::types::coin::CoinStatus;
+        use fuels_core::{error, types::coin::CoinStatus};
+
+        let total_amount = transfers.iter().map(|(_, amount)| *amount).sum::<u64>();
+        if total_amount > initial_amount {
+            return Err(error!(InvalidData, "The sum of dependent transfer amounts cannot be more than the initial input amount"));
+        }
 
         let provider = self.try_provider()?;
-
         let cache_key = (self.address().clone(), asset_id);
-        let previous_coin_output = provider.cache_mut().await.pop_dependent(&cache_key);
 
-        let inputs = if let Some(previous_coin_output) = previous_coin_output {
-            let mut extra_inputs = self
-                .get_asset_inputs_for_amount(asset_id, amount - previous_coin_output.amount)
+        let mut results = Vec::with_capacity(transfers.len());
+        for (i, (to, amount)) in transfers.iter().enumerate() {
+            let inputs = if i != 0 {
+                let previous_coin_output = provider
+                    .cache_mut()
+                    .await
+                    .pop_dependent(&cache_key)
+                    .ok_or(error!(InvalidData, "Expected a cached output"))?;
+                let previous_coin_amount = previous_coin_output.amount;
+                let previous_coin_input = Input::ResourceSigned {
+                    resource: CoinType::Coin(previous_coin_output),
+                };
+                if *amount > previous_coin_amount {
+                    let mut extra_inputs = self
+                        .get_asset_inputs_for_amount(asset_id, amount - previous_coin_amount)
+                        .await?;
+                    extra_inputs.push(previous_coin_input);
+                    extra_inputs
+                } else {
+                    vec![previous_coin_input]
+                }
+            } else {
+                self.get_asset_inputs_for_amount(asset_id, *amount).await?
+            };
+
+            let outputs = self.get_asset_outputs_for_amount(to, asset_id, *amount);
+
+            let mut tx_builder =
+                ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+
+            self.add_witnesses(&mut tx_builder)?;
+
+            let (dependable_output_index, dependable_output_amount) =
+                split_dependable_output(&mut tx_builder, *amount, self.address(), provider).await?;
+
+            let used_base_amount = if asset_id == AssetId::BASE {
+                *amount
+            } else {
+                0
+            };
+            self.adjust_for_fee(&mut tx_builder, used_base_amount)
                 .await?;
-            extra_inputs.push(Input::ResourceSigned {
-                resource: CoinType::Coin(previous_coin_output),
-            });
-            extra_inputs
-        } else {
-            self.get_asset_inputs_for_amount(asset_id, amount).await?
-        };
 
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+            let tx = tx_builder.build(provider).await?;
+            let tx_id = tx.id(provider.chain_id());
 
-        let mut tx_builder =
-            ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+            if i != transfers.len() - 1 {
+                let coin = Coin {
+                    utxo_id: UtxoId::new(tx_id, dependable_output_index),
+                    block_created: 0,
+                    amount: dependable_output_amount,
+                    asset_id,
+                    owner: self.address().clone(),
+                    maturity: tx.maturity(),
+                    status: CoinStatus::Unspent,
+                };
+                provider.cache_mut().await.push_dependent(&cache_key, coin);
+            }
 
-        self.add_witnesses(&mut tx_builder)?;
+            let tx_status = provider.send_transaction_and_await_commit(tx).await?;
 
-        let dependable_output_index =
-            split_dependable_output(&mut tx_builder, amount, self.address(), provider).await?;
+            let receipts = tx_status.take_receipts_checked(None)?;
 
-        let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
-        self.adjust_for_fee(&mut tx_builder, used_base_amount)
-            .await?;
+            results.push((tx_id, receipts));
+        }
 
-        let tx = tx_builder.build(provider).await?;
-        let tx_id = tx.id(provider.chain_id());
-
-        let coin = Coin {
-            utxo_id: UtxoId::new(tx_id, dependable_output_index),
-            block_created: 0,
-            amount,
-            asset_id,
-            owner: self.address().clone(),
-            maturity: tx.maturity(),
-            status: CoinStatus::Unspent,
-        };
-        provider.cache_mut().await.push_dependent(&cache_key, coin);
-
-        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
-
-        let receipts = tx_status.take_receipts_checked(None)?;
-
-        Ok((tx_id, receipts))
+        Ok(results)
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to

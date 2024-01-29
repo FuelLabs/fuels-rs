@@ -921,6 +921,49 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     Ok(())
 }
 
+#[cfg(feature = "coin-cache")]
+#[tokio::test]
+async fn test_dependent_transfers() -> Result<()> {
+    let initial_amount = 100;
+    let transfer_amount = 40;
+    let wallets = launch_custom_provider_and_get_wallets(
+        WalletsConfig::new(Some(3), Some(1), Some(initial_amount)),
+        None,
+        None,
+    )
+    .await?;
+    let sender = &wallets[0];
+    let receiver_1 = &wallets[1];
+    let receiver_2 = &wallets[2];
+
+    sender
+        .dependent_transfers(
+            initial_amount,
+            &[
+                (receiver_1.address(), transfer_amount),
+                (receiver_2.address(), transfer_amount),
+            ],
+            BASE_ASSET_ID,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    assert_eq!(
+        sender.get_asset_balance(&BASE_ASSET_ID).await?,
+        initial_amount - transfer_amount * 2,
+    );
+    assert_eq!(
+        receiver_1.get_asset_balance(&BASE_ASSET_ID).await?,
+        initial_amount + transfer_amount
+    );
+    assert_eq!(
+        receiver_2.get_asset_balance(&BASE_ASSET_ID).await?,
+        initial_amount + transfer_amount
+    );
+
+    Ok(())
+}
+
 #[tokio::test]
 async fn can_fetch_mint_transactions() -> Result<()> {
     setup_program_test!(
