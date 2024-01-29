@@ -729,6 +729,7 @@ impl Provider {
         self
     }
 
+    #[cfg(feature = "coin-cache")]
     pub(crate) async fn cache_mut(&self) -> MutexGuard<'_, CoinsCache> {
         self.cache.lock().await
     }

@@ -8,7 +8,7 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        coin::{Coin, CoinStatus},
+        coin::Coin,
         coin_type::CoinType,
         errors::{Error, Result},
         input::Input,
@@ -224,6 +224,8 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_policies: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
+        use fuels_core::types::coin::CoinStatus;
+
         let provider = self.try_provider()?;
 
         let cache_key = (self.address().clone(), asset_id);
