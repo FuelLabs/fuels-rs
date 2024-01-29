@@ -42,8 +42,7 @@ use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibi
 use tai64::Tai64;
 use thiserror::Error;
 #[cfg(feature = "coin-cache")]
-use tokio::sync::Mutex;
-use tokio::sync::MutexGuard;
+use tokio::sync::{Mutex, MutexGuard};
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;

@@ -76,6 +76,7 @@ pub fn adjust_inputs_outputs(
     }
 }
 
+#[cfg(feature = "coin-cache")]
 pub async fn split_dependable_output(
     tb: &mut impl TransactionBuilder,
     used_base_amount: u64,
