@@ -22,10 +22,7 @@ use fuels_core::{
 };
 
 use crate::{
-    accounts_utils::{
-        adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce,
-        split_dependable_output,
-    },
+    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
     provider::{Provider, ResourceFilter},
 };
 
@@ -224,6 +221,7 @@ pub trait Account: ViewOnlyAccount {
         asset_id: AssetId,
         tx_policies: TxPolicies,
     ) -> Result<(TxId, Vec<Receipt>)> {
+        use crate::accounts_utils::split_dependable_output;
         use fuels_core::types::coin::CoinStatus;
 
         let provider = self.try_provider()?;
