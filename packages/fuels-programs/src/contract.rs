@@ -603,21 +603,8 @@ where
         Ok(SubmitResponse::new(tx_id, self))
     }
 
-    pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    ///
     pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true).await
     }
@@ -626,12 +613,11 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let chain_id = provider.chain_id();
-        self.cached_tx_id = Some(tx.id(chain_id));
-
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
+            self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
             provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
@@ -903,18 +889,6 @@ impl<T: Account> MultiContractCallHandler<T> {
         Ok(SubmitResponseMultiple::new(tx_id, self))
     }
 
-    pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [call] method because the API is more user-friendly this way.
@@ -930,13 +904,12 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        let chain_id = provider.chain_id();
-
-        self.cached_tx_id = Some(tx.id(chain_id));
 
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
+            self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
             provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;

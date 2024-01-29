@@ -228,11 +228,11 @@ where
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
 
-        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
-
         let tx_status = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
+            self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
+
             self.provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
@@ -251,18 +251,6 @@ where
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::new(tx_id, self))
-    }
-
-    pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = self
-            .provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
     }
 
     /// Call a script on the node, in a simulated manner, meaning the state of the
