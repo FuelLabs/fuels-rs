@@ -1,7 +1,6 @@
 contract;
 
 impl AbiEncode for [u8; 1000] {
-    #[allow(dead_code)]
     fn abi_encode(self, ref mut buffer: Buffer) {
         let mut i = 0;
         while i < 1000 {

@@ -80,13 +80,32 @@ jobs:
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
-        run: forc build --terse --json-abi-with-callpaths
+        run: forc build --terse --error-on-warnings --json-abi-with-callpaths
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
         with:
           retention-days: 2
           name: sway-examples-w-type-paths
+          # cache only the sway build artifacts, skip all src files
+          path: |
+            packages/fuels/tests
+            !packages/fuels/tests/*.rs
+            !packages/fuels/tests/**/*.rs
+            !packages/fuels/tests/**/*.sw
+            !packages/fuels/tests/**/Forc.toml
+            !packages/fuels/tests/**/Forc.lock
+            !packages/fuels/tests/.gitignore
+
+      # TODO: To be removed once experimental encoding is the default
+      - name: Build Sway test projects w experimental logs
+        run: forc build --terse --error-on-warnings --json-abi-with-callpaths --experimental-new-encoding
+        working-directory: packages/fuels
+
+      - uses: actions/upload-artifact@v2
+        with:
+          retention-days: 2
+          name: sway-examples-w-experimental-logs
           # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
@@ -182,6 +201,11 @@ jobs:
             args:
           - command: check_doc_unresolved_links
             args:
+          # TODO: To be removed once experimental encoding is the default
+          - command: test_experimental_logs
+            args:
+            download_sway_artifacts: sway-examples-w-experimental-logs
+            install_fuel_core: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -218,8 +242,9 @@ jobs:
           name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
 
+      # TODO: `test_experimental_logs` to be removed once experimental encoding is the default.
       - name: Install nextest
-        if: ${{ matrix.cargo_command == 'nextest' }}
+        if: ${{ matrix.cargo_command == 'nextest' || matrix.command == 'test_experimental_logs' }}
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-machete
@@ -256,6 +281,11 @@ jobs:
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
+
+      # TODO: To be removed once experimental encoding is the default.
+      - name: Test experimental logs
+        if: ${{ matrix.command == 'test_experimental_logs' }}
+        run: RUSTFLAGS='--cfg experimental' cargo nextest run --test logs
 
   publish:
     needs:
