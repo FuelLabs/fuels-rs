@@ -1735,15 +1735,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         ),
     );
     if cfg!(feature = "test-against-live-node") {
-        // avoid getting HTTP 429 errors
-        sleep(Duration::from_secs(5));
-    }
-    setup_program_test!(Deploy(
-        name = "contract_instance_2",
-        contract = "VectorOutputContract",
-        wallet = "wallet"
-    ));
-    if cfg!(feature = "test-against-live-node") {
         // avoid getting HTTP 429 errors, two calls were made to deploy already
         sleep(Duration::from_secs(5));
     }
@@ -1760,6 +1751,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         assert_eq!(response.value, x);
     }
     if cfg!(feature = "test-against-live-node") {
+        // avoid getting HTTP 429 errors
         sleep(Duration::from_secs(5));
     }
     {
