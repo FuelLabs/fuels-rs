@@ -38,7 +38,7 @@ impl Default for EncoderConfig {
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_memory_size: 4_000_000_000,
+            max_memory_size: 1_000_000,
         }
     }
 }
