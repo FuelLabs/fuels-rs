@@ -42,4 +42,3 @@ You can also configure the encoder used to encode the return value of the contra
 ```
 
 The same method is available for script calls.
-
