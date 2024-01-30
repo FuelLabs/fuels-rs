@@ -99,6 +99,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
 
     let log_test_struct = response.decode_logs_with_type::<TestStruct>()?;
     let log_test_enum = response.decode_logs_with_type::<TestEnum>()?;
+    let log_tuple = response.decode_logs_with_type::<(TestStruct, TestEnum)>()?;
 
     let expected_bits256 = Bits256([
         239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89, 161, 16, 60,
@@ -111,8 +112,9 @@ async fn test_parse_logs_custom_types() -> Result<()> {
     };
     let expected_enum = TestEnum::VariantTwo;
 
-    assert_eq!(log_test_struct, vec![expected_struct]);
-    assert_eq!(log_test_enum, vec![expected_enum]);
+    assert_eq!(log_test_struct, vec![expected_struct.clone()]);
+    assert_eq!(log_test_enum, vec![expected_enum.clone()]);
+    assert_eq!(log_tuple, vec![(expected_struct, expected_enum)]);
 
     Ok(())
 }
@@ -218,7 +220,7 @@ async fn test_decode_logs() -> Result<()> {
         format!("{expected_generic_struct:?}"),
     ];
 
-    assert_eq!(logs.filter_succeeded(), expected_logs);
+    assert_eq!(expected_logs, logs.filter_succeeded());
 
     Ok(())
 }
@@ -638,6 +640,7 @@ async fn test_script_decode_logs() -> Result<()> {
         field_3: 64,
     };
     let expected_enum = TestEnum::VariantTwo;
+    let expected_tuple = (expected_struct.clone(), expected_enum.clone());
     let expected_generic_struct = StructWithGeneric {
         field_1: expected_struct.clone(),
         field_2: 64,
@@ -663,6 +666,7 @@ async fn test_script_decode_logs() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
         format!("{expected_struct:?}"),
         format!("{expected_enum:?}"),
+        format!("{expected_tuple:?}"),
         format!("{expected_generic_struct:?}"),
         format!("{expected_generic_enum:?}"),
         format!("{expected_nested_struct:?}"),
@@ -1417,8 +1421,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
                 ..Default::default()
             })
             .call()
-            .await
-            .unwrap();
+            .await?;
 
         response
             .decode_logs_with_type::<[u8; 1000]>()
@@ -1436,10 +1439,9 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
                 ..Default::default()
             })
             .call()
-            .await
-            .unwrap();
+            .await?;
 
-        let logs = response.decode_logs_with_type::<[u8; 1000]>().unwrap();
+        let logs = response.decode_logs_with_type::<[u8; 1000]>()?;
         assert_eq!(logs, vec![[0u8; 1000]]);
 
         let logs = response.decode_logs();
@@ -1452,7 +1454,8 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // String slices can not be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
-async fn test_string_slice_log() -> Result<()> {
+#[cfg(not(experimental))]
+async fn string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1479,6 +1482,119 @@ async fn test_string_slice_log() -> Result<()> {
 
     let failed = log.filter_failed();
     assert_eq!(failed.first().unwrap().to_string(), expected_err);
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg(experimental)]
+async fn contract_experimental_log() -> Result<()> {
+    use fuels_core::types::AsciiString;
+
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/logs/contract_logs"
+        ),),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        let response = contract_methods.produce_string_slice_log().call().await?;
+        let logs = response.decode_logs_with_type::<AsciiString>()?;
+
+        assert_eq!("fuel".to_string(), logs.first().unwrap().to_string());
+    }
+    {
+        let response = contract_methods.produce_string_log().call().await?;
+        let logs = response.decode_logs_with_type::<String>()?;
+
+        assert_eq!(vec!["fuel".to_string()], logs);
+    }
+    {
+        let response = contract_methods.produce_bytes_log().call().await?;
+        let logs = response.decode_logs_with_type::<Bytes>()?;
+
+        assert_eq!(vec![Bytes("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let response = contract_methods.produce_raw_slice_log().call().await?;
+        let logs = response.decode_logs_with_type::<RawSlice>()?;
+
+        assert_eq!(vec![RawSlice("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let v = [1u16, 2, 3].to_vec();
+        let some_enum = EnumWithGeneric::VariantOne(v);
+        let other_enum = EnumWithGeneric::VariantTwo;
+        let v1 = vec![some_enum.clone(), other_enum, some_enum];
+        let expected_vec = vec![vec![v1.clone(), v1]];
+
+        let response = contract_methods.produce_vec_log().call().await?;
+        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+
+        assert_eq!(vec![expected_vec], logs);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+#[cfg(experimental)]
+async fn script_experimental_log() -> Result<()> {
+    use fuels_core::types::AsciiString;
+
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "LogScript",
+            project = "packages/fuels/tests/logs/script_experimental_logs"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "LogScript",
+            wallet = "wallet"
+        )
+    );
+    let response = script_instance.main().call().await?;
+
+    {
+        let logs = response.decode_logs_with_type::<AsciiString>()?;
+
+        assert_eq!("fuel".to_string(), logs.first().unwrap().to_string());
+    }
+    {
+        let logs = response.decode_logs_with_type::<String>()?;
+
+        assert_eq!(vec!["fuel".to_string()], logs);
+    }
+    {
+        let logs = response.decode_logs_with_type::<Bytes>()?;
+
+        assert_eq!(vec![Bytes("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let logs = response.decode_logs_with_type::<RawSlice>()?;
+
+        assert_eq!(vec![RawSlice("fuel".as_bytes().to_vec())], logs);
+    }
+    {
+        let v = [1u16, 2, 3].to_vec();
+        let some_enum = EnumWithGeneric::VariantOne(v);
+        let other_enum = EnumWithGeneric::VariantTwo;
+        let v1 = vec![some_enum.clone(), other_enum, some_enum];
+        let expected_vec = vec![vec![v1.clone(), v1]];
+
+        let logs = response.decode_logs_with_type::<Vec<Vec<Vec<EnumWithGeneric<Vec<u16>>>>>>()?;
+
+        assert_eq!(vec![expected_vec], logs);
+    }
 
     Ok(())
 }

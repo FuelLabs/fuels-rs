@@ -44,6 +44,7 @@ fn main() {
     let u: b256 = 0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a;
     let e: str[4] = __to_str_array("Fuel");
     let l: [u8; 3] = [1u8, 2u8, 3u8];
+
     let test_struct = TestStruct {
         field_1: true,
         field_2: u,
@@ -75,6 +76,7 @@ fn main() {
     log(l);
     log(test_struct);
     log(test_enum);
+    log((test_struct, test_enum));
     log(test_generic_struct);
     log(test_generic_enum);
     log(test_struct_nested);
