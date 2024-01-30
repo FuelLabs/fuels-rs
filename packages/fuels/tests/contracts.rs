@@ -1730,6 +1730,11 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             contract = "TestContract",
             wallet = "wallet"
         ),
+        Deploy(
+            name = "contract_instance_2",
+            contract = "VectorOutputContract",
+            wallet = "wallet"
+        ),
     );
     let x = 128;
     let vec_input = vec![0, 1, 2];
