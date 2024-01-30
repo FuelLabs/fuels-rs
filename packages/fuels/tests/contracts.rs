@@ -1713,10 +1713,6 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 
 #[tokio::test]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
-    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
-        .await?
-        .try_into()
-        .expect("Vec can be converted to an array");
     setup_program_test!(
         Abigen(
             Contract(
@@ -1728,16 +1724,13 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
                 project = "packages/fuels/tests/types/contracts/vectors"
             )
         ),
+        Wallets("wallet"),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
             wallet = "wallet"
         ),
     );
-    if cfg!(feature = "test-against-live-node") {
-        // avoid getting HTTP 429 errors, two calls were made to deploy already
-        sleep(Duration::from_secs(5));
-    }
     let x = 128;
     let vec_input = vec![0, 1, 2];
     {
@@ -1750,10 +1743,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 
         assert_eq!(response.value, x);
     }
-    if cfg!(feature = "test-against-live-node") {
-        // avoid getting HTTP 429 errors
-        sleep(Duration::from_secs(5));
-    }
     {
         contract_instance_2
             .methods()
@@ -1762,9 +1751,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             .call_params(CallParameters::default().with_gas_forwarded(3000))?
             .call()
             .await?;
-    }
-    if cfg!(feature = "test-against-live-node") {
-        sleep(Duration::from_secs(5));
     }
     {
         let call_handler_1 = contract_instance.methods().get_single(x);
