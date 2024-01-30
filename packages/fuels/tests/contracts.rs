@@ -5,11 +5,10 @@ use std::vec;
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
-    core::codec::{calldata, fn_selector},
+    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     types::Bits256,
 };
-use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1640,7 +1639,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     );
 
     let provider = wallet.try_provider()?.clone();
-    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
     )?
@@ -1775,4 +1774,43 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     assert_eq!(counter, response.value);
 
     Ok(())
+}
+
+#[tokio::test]
+#[should_panic(
+    expected = "method not found (this should never happen): InvalidType(\"Token limit (1) reached while Encoding. Try increasing it.\")"
+)]
+async fn contract_encoder_config_is_applied() {
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Wallets("wallet")
+    );
+    let contract_id = Contract::load_from(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )
+    .expect("Contract can be loaded")
+    .deploy(&wallet, TxPolicies::default())
+    .await
+    .expect("Contract can be deployed");
+
+    let instance = TestContract::new(contract_id.clone(), wallet.clone());
+
+    let _encoding_ok = instance
+        .methods()
+        .get(0, 1)
+        .call()
+        .await
+        .expect("Should not fail as it uses the default encoder config");
+
+    let encoder_config = EncoderConfig {
+        max_tokens: 1,
+        ..Default::default()
+    };
+    let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
+    // uses 2 tokens when 1 is the limit
+    let _encoding_error = instance_with_encoder_config.methods().get(0, 1);
 }

@@ -41,7 +41,8 @@ pub(crate) fn script_bindings(
         pub struct #name<T: ::fuels::accounts::Account>{
             account: T,
             binary: ::std::vec::Vec<u8>,
-            log_decoder: ::fuels::core::codec::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
         impl<T: ::fuels::accounts::Account> #name<T>
@@ -52,12 +53,20 @@ pub(crate) fn script_bindings(
                 Self {
                     account,
                     binary,
-                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup)
+                    log_decoder: ::fuels::core::codec::LogDecoder::new(#log_formatters_lookup),
+                    encoder_config: ::fuels::core::codec::EncoderConfig::default(),
                 }
             }
 
             pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
-               ::core::result::Result::Ok(#name { account, binary: self.binary, log_decoder: self.log_decoder})
+               ::core::result::Result::Ok(
+                    #name {
+                        account,
+                        binary: self.binary,
+                        log_decoder: self.log_decoder,
+                        encoder_config: self.encoder_config,
+                    }
+                )
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
@@ -66,6 +75,16 @@ pub(crate) fn script_bindings(
                 let configurables: ::fuels::core::Configurables = configurables.into();
                 configurables.update_constants_in(&mut self.binary);
                 self
+            }
+            pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
+                -> Self
+            {
+                #name {
+                    account:   self.account,
+                    binary: self.binary,
+                    log_decoder: self.log_decoder,
+                    encoder_config,
+                }
             }
 
             pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
@@ -93,7 +112,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
-            let encoded_args = ::fuels::core::codec::ABIEncoder::default().encode(&#arg_tokens).expect("Cannot encode script arguments");
+            let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens).expect("Cannot encode script arguments");
             let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
                 .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(

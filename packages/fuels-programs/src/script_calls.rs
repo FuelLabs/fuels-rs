@@ -83,7 +83,6 @@ pub struct ScriptCallHandler<T: Account, D> {
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
-    encoder_config: DecoderConfig,
     pub account: T,
     pub provider: Provider,
     pub datatype: PhantomData<D>,
@@ -118,7 +117,6 @@ where
             datatype: PhantomData,
             log_decoder,
             decoder_config: DecoderConfig::default(),
-            encoder_config: DecoderConfig::default(),
         }
     }
 
@@ -137,11 +135,6 @@ where
     pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
         self.decoder_config = decoder_config;
         self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    pub fn with_encoder_config(mut self, encoder_config: DecoderConfig) -> Self {
-        self.encoder_config = encoder_config;
         self
     }
 

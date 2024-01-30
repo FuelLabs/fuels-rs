@@ -11,6 +11,7 @@ use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_core::codec::EncoderConfig;
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -465,7 +466,6 @@ pub struct ContractCallHandler<T: Account, D> {
     pub contract_call: ContractCall,
     pub tx_policies: TxPolicies,
     decoder_config: DecoderConfig,
-    encoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
     pub account: T,
@@ -553,11 +553,6 @@ where
     pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
         self.decoder_config = decoder_config;
         self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    pub fn with_encoder_config(mut self, encoder_config: DecoderConfig) -> Self {
-        self.encoder_config = encoder_config;
         self
     }
 
@@ -731,6 +726,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
+    encoder_config: Option<EncoderConfig>,
 ) -> Result<ContractCallHandler<T, D>> {
     let encoded_selector = signature;
 
@@ -739,7 +735,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::default().encode(args)?;
+    let unresolved_bytes = ABIEncoder::new(encoder_config.unwrap_or_default()).encode(args)?;
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
@@ -761,7 +757,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: Default::default(),
-        encoder_config: Default::default(),
     })
 }
 

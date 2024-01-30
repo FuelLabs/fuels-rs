@@ -40,7 +40,8 @@ pub(crate) fn contract_bindings(
         pub struct #name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
-            log_decoder: ::fuels::core::codec::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
         impl<T: ::fuels::accounts::Account> #name<T>
@@ -51,7 +52,8 @@ pub(crate) fn contract_bindings(
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
                 let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters);
-                Self { contract_id, account, log_decoder }
+                let encoder_config = ::fuels::core::codec::EncoderConfig::default();
+                Self { contract_id, account, log_decoder, encoder_config }
             }
 
             pub fn contract_id(&self) -> &::fuels::types::bech32::Bech32ContractId {
@@ -62,8 +64,25 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(&self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
-                ::core::result::Result::Ok(#name { contract_id: self.contract_id.clone(), account, log_decoder: self.log_decoder.clone()})
+            pub fn with_account<U: ::fuels::accounts::Account>(&self, account: U)
+            -> ::fuels::types::errors::Result<#name<U>> {
+                ::core::result::Result::Ok(
+                #name {
+                        contract_id: self.contract_id.clone(),
+                        account,
+                        log_decoder: self.log_decoder.clone(),
+                        encoder_config: self.encoder_config.clone()
+                })
+            }
+
+            pub fn with_encoder_config(&self, encoder_config: ::fuels::core::codec::EncoderConfig)
+            -> #name::<T> {
+                #name {
+                        contract_id: self.contract_id.clone(),
+                        account: self.account(),
+                        log_decoder: self.log_decoder.clone(),
+                        encoder_config,
+                }
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> {
@@ -77,7 +96,8 @@ pub(crate) fn contract_bindings(
                 #methods_name {
                     contract_id: self.contract_id.clone(),
                     account: self.account.clone(),
-                    log_decoder: self.log_decoder.clone()
+                    log_decoder: self.log_decoder.clone(),
+                    encoder_config: self.encoder_config.clone(),
                 }
             }
         }
@@ -86,7 +106,8 @@ pub(crate) fn contract_bindings(
         pub struct #methods_name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
-            log_decoder: ::fuels::core::codec::LogDecoder
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
         impl<T: ::fuels::accounts::Account> #methods_name<T> {
@@ -157,6 +178,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
                 &#arg_tokens,
                 self.log_decoder.clone(),
                 #is_payable,
+                ::std::option::Option::Some(self.encoder_config.clone()),
             )
             .expect("method not found (this should never happen)")
     };
@@ -355,6 +377,7 @@ mod tests {
                     ],
                     self.log_decoder.clone(),
                     false,
+                    ::std::option::Option::Some(self.encoder_config.clone()),
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -411,6 +434,7 @@ mod tests {
                     &[::fuels::core::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,
+                    ::std::option::Option::Some(self.encoder_config.clone()),
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -523,6 +547,7 @@ mod tests {
                     )],
                     self.log_decoder.clone(),
                     false,
+                    ::std::option::Option::Some(self.encoder_config.clone()),
                 )
                 .expect("method not found (this should never happen)")
             }

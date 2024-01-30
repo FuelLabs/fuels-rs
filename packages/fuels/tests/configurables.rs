@@ -1,4 +1,5 @@
 use fuels::{prelude::*, types::SizedAsciiString};
+use fuels_core::codec::EncoderConfig;
 
 #[tokio::test]
 async fn contract_uses_default_configurables() -> Result<()> {
@@ -92,7 +93,7 @@ async fn contract_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyContractConfigurables::new()
+    let configurables = MyContractConfigurables::default()
         .with_STR_4(new_str.clone())
         .with_STRUCT(new_struct.clone())
         .with_ENUM(new_enum.clone());
@@ -143,10 +144,13 @@ async fn script_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyScriptConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyScriptConfigurables::new(EncoderConfig {
+        max_tokens: 5,
+        ..Default::default()
+    })
+    .with_STR_4(new_str.clone())
+    .with_STRUCT(new_struct.clone())
+    .with_ENUM(new_enum.clone());
 
     let response = instance
         .with_configurables(configurables)
@@ -167,4 +171,28 @@ async fn script_configurables() -> Result<()> {
     assert_eq!(response.value, expected_value);
 
     Ok(())
+}
+
+#[tokio::test]
+#[should_panic(
+    expected = "Cannot encode configurable data: InvalidType(\"Token limit (1) reached while \
+    Encoding. Try increasing it.\")"
+)]
+async fn test_configurable_encoder_config_is_applied() {
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+
+    let new_struct = StructWithGeneric {
+        field_1: 16u8,
+        field_2: 32,
+    };
+
+    // No encoder config, it works
+    let _configurables = MyScriptConfigurables::default().with_STRUCT(new_struct.clone());
+
+    let encoder_config = EncoderConfig {
+        max_tokens: 1,
+        ..Default::default()
+    };
+    // Fails when an encoder config is set
+    let _configurables = MyScriptConfigurables::new(encoder_config).with_STRUCT(new_struct);
 }

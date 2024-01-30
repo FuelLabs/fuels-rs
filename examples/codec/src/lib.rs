@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{core::codec::DecoderConfig, types::errors::Result};
+    use fuels::{
+        core::codec::{DecoderConfig, EncoderConfig},
+        types::errors::Result,
+    };
 
     #[test]
     fn encoding_a_type() -> Result<()> {
@@ -95,6 +98,22 @@ mod tests {
             max_tokens: 100,
         });
         // ANCHOR_END: configuring_the_decoder
+
+        Ok(())
+    }
+
+    #[test]
+    fn configuring_the_encoder() -> Result<()> {
+        // ANCHOR: configuring_the_encoder
+
+        use fuels::core::codec::ABIEncoder;
+
+        ABIEncoder::new(EncoderConfig {
+            max_depth: 5,
+            max_tokens: 100,
+            max_memory_size: 10_000,
+        });
+        // ANCHOR_END: configuring_the_encoder
 
         Ok(())
     }

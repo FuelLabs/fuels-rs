@@ -105,6 +105,7 @@ macro_rules! fn_selector {
 
 pub use fn_selector;
 
+/// This uses the default `EncoderConfig` configuration.
 #[macro_export]
 macro_rules! calldata {
     ( $($arg: expr),* ) => {

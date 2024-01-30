@@ -65,7 +65,7 @@ mod tests {
             abi = "packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json"
         ));
 
-        let predicate_data = MyPredicateEncoder::encode_data(signatures);
+        let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
         let code_path = "../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
@@ -134,7 +134,7 @@ mod tests {
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: with_predicate_data
-        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
             "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
 

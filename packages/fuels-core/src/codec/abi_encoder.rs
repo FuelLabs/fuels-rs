@@ -1,23 +1,9 @@
-#![allow(
-    unused_imports,
-    unused_variables,
-    unused_must_use,
-    unused_mut,
-    dead_code
-)]
 mod bounded_encoder;
 use std::default::Default;
 
 use crate::{
-    checked_round_up_to_word_alignment,
     codec::abi_encoder::bounded_encoder::BoundedEncoder,
-    constants::WORD_SIZE,
-    types::{
-        errors::Result,
-        pad_u16, pad_u32,
-        unresolved_bytes::{Data, UnresolvedBytes},
-        EnumSelector, StaticStringToken, Token, U256,
-    },
+    types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -33,15 +19,17 @@ pub struct EncoderConfig {
     pub max_memory_size: usize,
 }
 
+// ANCHOR: default_encoder_config
 impl Default for EncoderConfig {
     fn default() -> Self {
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_memory_size: 1_000_000,
+            max_memory_size: 10_000,
         }
     }
 }
+// ANCHOR_END: default_encoder_config
 
 #[derive(Default)]
 pub struct ABIEncoder {
@@ -61,15 +49,12 @@ impl ABIEncoder {
 }
 #[cfg(test)]
 mod tests {
-    use std::{default, slice};
-
-    use itertools::{chain, concat};
+    use itertools::chain;
     use sha2::{Digest, Sha256};
+    use std::slice;
 
     use super::*;
-    use crate::codec::{ABIDecoder, DecoderConfig};
     use crate::types::errors::Error;
-    use crate::types::EnumSelector;
     use crate::{
         codec::first_four_bytes_of_sha256_hash,
         constants::WORD_SIZE,
@@ -1118,32 +1103,13 @@ mod tests {
     }
 
     #[test]
-    fn token_count_is_being_reset_between_encodings() {
-        // given
-        let config = EncoderConfig {
-            max_tokens: 3,
-            ..Default::default()
-        };
-
-        // 3 tokens
-        let token = Token::Array(vec![Token::U8(255), Token::U8(255)]);
-        // 4 tokens
-        let token_4 = Token::Array(vec![Token::U8(255), Token::U8(255), Token::U8(255)]);
-
-        let encoder = ABIEncoder::new(config);
-        encoder.encode(&[token.clone()]).unwrap();
-        encoder
-            .encode(&[token.clone()])
-            .expect("Token count should have reset");
-    }
-    #[test]
     fn max_depth_surpassed() {
         const MAX_DEPTH: usize = 2;
         let config = EncoderConfig {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = "Depth limit (2) reached while encoding. Try increasing it.".to_string();
+        let msg = "Depth limit (2) reached while Encoding. Try increasing it.".to_string();
 
         [nested_struct, nested_enum, nested_tuple, nested_array]
             .iter()

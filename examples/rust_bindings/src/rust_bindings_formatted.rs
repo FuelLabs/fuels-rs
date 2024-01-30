@@ -77,6 +77,7 @@ pub mod abigen_bindings {
                     &[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
+                    ::std::option::Option::None,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -89,6 +90,7 @@ pub mod abigen_bindings {
                     &[value.into_token()],
                     self.log_decoder.clone(),
                     false,
+                    ::std::option::Option::None,
                 )
                 .expect("method not found (this should never happen)")
             }
@@ -120,4 +122,3 @@ pub mod abigen_bindings {
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
-

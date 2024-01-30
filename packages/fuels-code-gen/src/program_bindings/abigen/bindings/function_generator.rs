@@ -47,11 +47,6 @@ impl FunctionGenerator {
         self
     }
 
-    pub fn make_fn_associated(&mut self) -> &mut Self {
-        self.is_method = false;
-        self
-    }
-
     pub fn set_body(&mut self, body: TokenStream) -> &mut Self {
         self.body = body;
         self
