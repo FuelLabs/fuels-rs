@@ -91,7 +91,7 @@ pub enum Token {
     Struct(Vec<Token>),
     Enum(Box<EnumSelector>),
     Tuple(Vec<Token>),
-    RawSlice(Vec<u64>),
+    RawSlice(Vec<u8>),
     Bytes(Vec<u8>),
     String(String),
 }

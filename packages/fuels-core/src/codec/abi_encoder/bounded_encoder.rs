@@ -2,7 +2,6 @@ use crate::codec::utils::CodecDirection;
 use crate::{
     checked_round_up_to_word_alignment,
     codec::{utils::CounterWithLimit, EncoderConfig},
-    constants::WORD_SIZE,
     error,
     types::{
         errors::Result,
@@ -100,7 +99,7 @@ impl BoundedEncoder {
             Token::U256(arg_u256) => vec![Self::encode_u256(*arg_u256)],
             Token::Bool(arg_bool) => vec![Self::encode_bool_as_byte(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
-            Token::RawSlice(data) => Self::encode_raw_slice(data)?,
+            Token::RawSlice(data) => Self::encode_raw_slice(data.to_vec())?,
             Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
             Token::StringArray(arg_string) => vec![Self::encode_string_array(arg_string)?],
             Token::Array(arg_array) => {
@@ -229,16 +228,17 @@ impl BoundedEncoder {
         ])
     }
 
-    fn encode_raw_slice(data: &[u64]) -> Result<Vec<Data>> {
-        let encoded_data = data
-            .iter()
-            .map(|&word| Self::encode_u64(word))
-            .collect::<Vec<_>>();
+    fn encode_raw_slice(mut data: Vec<u8>) -> Result<Vec<Data>> {
+        let len = data.len();
 
-        let num_bytes = data.len() * WORD_SIZE;
-        let len = Self::encode_u64(num_bytes as u64);
+        zeropad_to_word_alignment(&mut data);
 
-        Ok(vec![Data::Dynamic(encoded_data), len])
+        let encoded_data = vec![Data::Inline(data)];
+
+        Ok(vec![
+            Data::Dynamic(encoded_data),
+            Self::encode_u64(len as u64),
+        ])
     }
 
     fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {

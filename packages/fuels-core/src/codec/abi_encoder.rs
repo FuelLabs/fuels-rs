@@ -47,6 +47,7 @@ impl ABIEncoder {
         BoundedEncoder::new(self.config).encode(args)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use itertools::chain;
@@ -1033,16 +1034,12 @@ mod tests {
         let encoded_bytes = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        let ptr = vec![0, 0, 0, 0, 0, 0, 0, 56];
-        let len = vec![0, 0, 0, 0, 0, 0, 0, 24];
-        let data = [
-            [0, 0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 2],
-            [0, 0, 0, 0, 0, 0, 0, 3],
-        ]
-        .concat();
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
+        let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
+        let data = [1, 2, 3].to_vec();
+        let padding = [0, 0, 0, 0, 0].to_vec();
 
-        let expected_encoded_bytes = [ptr, len, data].concat();
+        let expected_encoded_bytes = [ptr, len, data, padding].concat();
 
         assert_eq!(expected_encoded_bytes, encoded_bytes);
 
