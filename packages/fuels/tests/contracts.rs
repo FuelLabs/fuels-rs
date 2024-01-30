@@ -1739,7 +1739,10 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
+    if cfg!(feature = "test-against-live-node") {
+        // avoid getting HTTP 429 errors, two calls were made to deploy already
+        sleep(Duration::from_secs(5));
+    }
     let x = 128;
     let vec_input = vec![0, 1, 2];
     {
@@ -1753,7 +1756,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         assert_eq!(response.value, x);
     }
     if cfg!(feature = "test-against-live-node") {
-        // avoid getting HTTP 429 errors
         sleep(Duration::from_secs(5));
     }
     {
