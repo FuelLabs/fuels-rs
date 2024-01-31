@@ -4,7 +4,6 @@ use crate::{
     checked_round_up_to_word_alignment,
     codec::DecoderConfig,
     constants::WORD_SIZE,
-    traits::Tokenizable,
     types::{
         enum_variants::EnumVariants,
         errors::{error, Result},
@@ -36,7 +35,7 @@ impl BoundedDecoder {
         }
     }
 
-    pub fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
+    pub(crate) fn decode(&mut self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
         param_type.validate_is_decodable(self.config.max_depth)?;
         match param_type {
             // Unit, U8 and Bool are returned as u64 from receipt "Return"
@@ -94,7 +93,7 @@ impl BoundedDecoder {
             ParamType::U256 => Self::decode_u256(bytes),
             ParamType::Bool => Self::decode_bool(bytes),
             ParamType::B256 => Self::decode_b256(bytes),
-            ParamType::RawSlice => self.decode_raw_slice(bytes),
+            ParamType::RawSlice => Self::decode_raw_slice(bytes),
             ParamType::StringSlice => Self::decode_string_slice(bytes),
             ParamType::StringArray(len) => Self::decode_string_array(bytes, *len),
             ParamType::Array(ref t, length) => {
@@ -215,22 +214,10 @@ impl BoundedDecoder {
         })
     }
 
-    fn decode_raw_slice(&mut self, bytes: &[u8]) -> Result<Decoded> {
-        let raw_slice_element = ParamType::U64;
-        let num_of_elements =
-            ParamType::calculate_num_of_elements(&raw_slice_element, bytes.len())?;
-        let param_type = ParamType::U64;
-        let (tokens, bytes_read) =
-            self.decode_params(std::iter::repeat(&param_type).take(num_of_elements), bytes)?;
-        let elements = tokens
-            .into_iter()
-            .map(u64::from_token)
-            .collect::<Result<Vec<u64>>>()
-            .map_err(|e| error!(InvalidData, "{e}"))?;
-
+    fn decode_raw_slice(bytes: &[u8]) -> Result<Decoded> {
         Ok(Decoded {
-            token: Token::RawSlice(elements),
-            bytes_read,
+            token: Token::RawSlice(bytes.to_vec()),
+            bytes_read: bytes.len(),
         })
     }
 
