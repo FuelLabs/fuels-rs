@@ -37,6 +37,7 @@ pub(crate) fn contract_bindings(
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
+        #[derive(Debug, Clone)]
         pub struct #name<T: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
             account: T,
@@ -64,25 +65,23 @@ pub(crate) fn contract_bindings(
                 self.account.clone()
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(&self, account: U)
+            pub fn with_account<U: ::fuels::accounts::Account>(self, account: U)
             -> ::fuels::types::errors::Result<#name<U>> {
                 ::core::result::Result::Ok(
                 #name {
-                        contract_id: self.contract_id.clone(),
+                        contract_id: self.contract_id,
                         account,
-                        log_decoder: self.log_decoder.clone(),
-                        encoder_config: self.encoder_config.clone()
+                        log_decoder: self.log_decoder,
+                        encoder_config: self.encoder_config
                 })
             }
 
-            pub fn with_encoder_config(&self, encoder_config: ::fuels::core::codec::EncoderConfig)
+            pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
             -> #name::<T> {
-                #name {
-                        contract_id: self.contract_id.clone(),
-                        account: self.account(),
-                        log_decoder: self.log_decoder.clone(),
-                        encoder_config,
-                }
+                self.encoder_config = encoder_config;
+
+                self
+            }
             }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> {

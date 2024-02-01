@@ -79,12 +79,9 @@ pub(crate) fn script_bindings(
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
                 -> Self
             {
-                #name {
-                    account:   self.account,
-                    binary: self.binary,
-                    log_decoder: self.log_decoder,
-                    encoder_config,
-                }
+                self.encoder_config = encoder_config;
+
+                self
             }
 
             pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {
