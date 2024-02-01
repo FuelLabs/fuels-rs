@@ -1,6 +1,4 @@
-#[allow(unused_imports)]
-use std::future::Future;
-use std::vec;
+use std::{future::Future, thread::sleep, time::Duration, vec};
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
@@ -43,8 +41,11 @@ async fn test_multiple_args() -> Result<()> {
 #[tokio::test]
 async fn test_contract_calling_contract() -> Result<()> {
     // Tests a contract call that calls another contract (FooCaller calls FooContract underneath)
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "LibContract",
@@ -75,6 +76,9 @@ async fn test_contract_calling_contract() -> Result<()> {
     let lib_contract_id2 = lib_contract_instance2.contract_id();
 
     // Call the contract directly. It increments the given value.
+    if cfg!(feature = "test-against-live-node") {
+        sleep(Duration::from_secs(10));
+    }
     let response = lib_contract_instance.methods().increment(42).call().await?;
 
     assert_eq!(43, response.value);
@@ -144,8 +148,11 @@ async fn test_reverting_transaction() -> Result<()> {
 
 #[tokio::test]
 async fn test_multiple_read_calls() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "MultiReadContract",
             project = "packages/fuels/tests/contracts/multiple_read_calls"
@@ -175,8 +182,11 @@ async fn test_multiple_read_calls() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_beginner() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -198,6 +208,10 @@ async fn test_multi_call_beginner() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
+    if cfg!(feature = "test-against-live-node") {
+        sleep(Duration::from_secs(10));
+    }
+
     let (val_1, val_2): (u64, u64) = multi_call_handler.call().await?.value;
 
     assert_eq!(val_1, 7);
@@ -208,8 +222,11 @@ async fn test_multi_call_beginner() -> Result<()> {
 
 #[tokio::test]
 async fn test_multi_call_pro() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -263,8 +280,11 @@ async fn test_multi_call_pro() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_call_fee_estimation() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -276,14 +296,22 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         ),
     );
 
-    let gas_price = 100_000_000;
+    let gas_price = if cfg!(feature = "test-against-live-node") {
+        1000
+    } else {
+        100_000_000
+    };
     let gas_limit = 800;
     let tolerance = 0.2;
 
-    let expected_min_gas_price = 0; // This is the default min_gas_price from the ConsensusParameters
-    let expected_gas_used = 675;
     let expected_metered_bytes_size = 792;
-    let expected_total_fee = 898;
+    let (expected_min_gas_price, expected_gas_used, expected_total_fee) =
+        if cfg!(feature = "test-against-live-node") {
+            (1, 960, 1_074_685)
+        } else {
+            // 0 is the default min_gas_price from the ConsensusParameters
+            (0, 675, 898)
+        };
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -312,8 +340,11 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
 #[tokio::test]
 async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -345,8 +376,11 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
 
 #[tokio::test]
 async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -1503,8 +1537,11 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_submit_and_response() -> Result<()> {
+    let [wallet]: [WalletUnlocked; 1] = maybe_live_wallet(1)
+        .await?
+        .try_into()
+        .expect("Vec can be converted to an array");
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
             project = "packages/fuels/tests/contracts/contract_test"
@@ -1519,6 +1556,9 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let submitted_tx = contract_methods.get(1, 2).submit().await?;
+    if cfg!(feature = "test-against-live-node") {
+        sleep(Duration::from_secs(10));
+    }
     let value = submitted_tx.response().await?.value;
 
     assert_eq!(value, 3);
@@ -1534,6 +1574,9 @@ async fn test_contract_submit_and_response() -> Result<()> {
         .add_call(call_handler_2);
 
     let handle = multi_call_handler.submit().await?;
+    if cfg!(feature = "test-against-live-node") {
+        sleep(Duration::from_secs(10));
+    }
     let (val_1, val_2): (u64, u64) = handle.response().await?.value;
 
     assert_eq!(val_1, 7);
@@ -1671,7 +1714,6 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
 #[tokio::test]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
     setup_program_test!(
-        Wallets("wallet"),
         Abigen(
             Contract(
                 name = "TestContract",
@@ -1682,6 +1724,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
                 project = "packages/fuels/tests/types/contracts/vectors"
             )
         ),
+        Wallets("wallet"),
         Deploy(
             name = "contract_instance",
             contract = "TestContract",
@@ -1693,7 +1736,6 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
     let x = 128;
     let vec_input = vec![0, 1, 2];
     {
@@ -1710,7 +1752,8 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         contract_instance_2
             .methods()
             .u32_vec(vec_input.clone())
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            // from tests, it seems that it uses ~2500gas
+            .call_params(CallParameters::default().with_gas_forwarded(3000))?
             .call()
             .await?;
     }
