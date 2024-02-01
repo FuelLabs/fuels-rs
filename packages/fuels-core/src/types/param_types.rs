@@ -16,19 +16,23 @@ use crate::{
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParamType {
+    Unit,
+    Bool,
     U8,
     U16,
     U32,
     U64,
     U128,
     U256,
-    Bool,
     B256,
-    Unit,
+    Bytes,
+    String,
+    RawSlice,
+    StringArray(usize),
+    StringSlice,
+    Tuple(Vec<ParamType>),
     Array(Box<ParamType>, usize),
     Vector(Box<ParamType>),
-    StringSlice,
-    StringArray(usize),
     Struct {
         fields: Vec<ParamType>,
         generics: Vec<ParamType>,
@@ -37,10 +41,6 @@ pub enum ParamType {
         variants: EnumVariants,
         generics: Vec<ParamType>,
     },
-    Tuple(Vec<ParamType>),
-    RawSlice,
-    Bytes,
-    String,
 }
 
 pub enum ReturnLocation {
