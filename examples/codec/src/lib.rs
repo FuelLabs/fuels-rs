@@ -105,7 +105,6 @@ mod tests {
     #[test]
     fn configuring_the_encoder() -> Result<()> {
         // ANCHOR: configuring_the_encoder
-
         use fuels::core::codec::ABIEncoder;
 
         ABIEncoder::new(EncoderConfig {
