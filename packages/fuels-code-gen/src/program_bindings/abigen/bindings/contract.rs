@@ -432,7 +432,7 @@ mod tests {
                     &[::fuels::core::traits::Tokenizable::into_token(bimbam)],
                     self.log_decoder.clone(),
                     false,
-                    ::std::option::Option::Some(self.encoder_config.clone()),
+                    self.encoder_config.clone(),
                 )
                 .expect("Could not encode")
             }
@@ -545,7 +545,7 @@ mod tests {
                     )],
                     self.log_decoder.clone(),
                     false,
-                    ::std::option::Option::Some(self.encoder_config.clone()),
+                    self.encoder_config.clone(),
                 )
                 .expect("Could not encode")
             }
