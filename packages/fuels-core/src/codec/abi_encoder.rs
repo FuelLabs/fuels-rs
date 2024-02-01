@@ -2,7 +2,6 @@ use fuel_types::bytes::padded_len_usize;
 
 use crate::{
     checked_round_up_to_word_alignment,
-    constants::WORD_SIZE,
     types::{
         errors::Result,
         pad_u16, pad_u32,
@@ -83,7 +82,7 @@ impl ABIEncoder {
             Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
             Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
             Token::Unit => vec![Self::encode_unit()],
-            Token::RawSlice(data) => Self::encode_raw_slice(data)?,
+            Token::RawSlice(data) => Self::encode_raw_slice(data.to_vec())?,
             Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
             // `String` in Sway has the same memory layout as the bytes type
             Token::String(string) => Self::encode_bytes(string.clone().into_bytes())?,
@@ -190,16 +189,17 @@ impl ABIEncoder {
         ])
     }
 
-    fn encode_raw_slice(data: &[u64]) -> Result<Vec<Data>> {
-        let encoded_data = data
-            .iter()
-            .map(|&word| Self::encode_u64(word))
-            .collect::<Vec<_>>();
+    fn encode_raw_slice(mut data: Vec<u8>) -> Result<Vec<Data>> {
+        let len = data.len();
 
-        let num_bytes = data.len() * WORD_SIZE;
-        let len = Self::encode_u64(num_bytes as u64);
+        zeropad_to_word_alignment(&mut data);
 
-        Ok(vec![Data::Dynamic(encoded_data), len])
+        let encoded_data = vec![Data::Inline(data)];
+
+        Ok(vec![
+            Data::Dynamic(encoded_data),
+            Self::encode_u64(len as u64),
+        ])
     }
 
     fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {
@@ -248,6 +248,7 @@ mod tests {
     use super::*;
     use crate::{
         codec::first_four_bytes_of_sha256_hash,
+        constants::WORD_SIZE,
         types::{enum_variants::EnumVariants, param_types::ParamType},
     };
 
@@ -1202,16 +1203,12 @@ mod tests {
         let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
 
         // assert
-        let ptr = vec![0, 0, 0, 0, 0, 0, 0, 56];
-        let len = vec![0, 0, 0, 0, 0, 0, 0, 24];
-        let data = [
-            [0, 0, 0, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 2],
-            [0, 0, 0, 0, 0, 0, 0, 3],
-        ]
-        .concat();
+        let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
+        let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
+        let data = [1, 2, 3].to_vec();
+        let padding = [0, 0, 0, 0, 0].to_vec();
 
-        let expected_encoded_bytes = [ptr, len, data].concat();
+        let expected_encoded_bytes = [ptr, len, data, padding].concat();
 
         assert_eq!(expected_encoded_bytes, encoded_bytes);
 

@@ -30,14 +30,15 @@ members = [
   'tests/logs/contract_logs',
   'tests/logs/contract_logs_abi',
   'tests/logs/contract_with_contract_logs',
+  'tests/logs/script_experimental_logs',
   'tests/logs/script_logs',
   'tests/logs/script_needs_custom_decoder_logging',
   'tests/logs/script_with_contract_logs',
   'tests/predicates/basic_predicate',
-  'tests/predicates/swap',
   'tests/predicates/predicate_configurables',
   'tests/predicates/predicate_witnesses',
   'tests/predicates/signatures',
+  'tests/predicates/swap',
   'tests/scripts/arguments',
   'tests/scripts/basic_script',
   'tests/scripts/require_from_contract',
@@ -103,3 +104,6 @@ members = [
   'tests/types/scripts/script_u256',
   'tests/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "hal3e/abiencoder-impls" }
