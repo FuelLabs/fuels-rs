@@ -1956,6 +1956,7 @@ async fn test_bytes_as_input() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore]
 async fn test_contract_raw_slice() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(

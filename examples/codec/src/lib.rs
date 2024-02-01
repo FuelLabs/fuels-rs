@@ -110,7 +110,7 @@ mod tests {
         ABIEncoder::new(EncoderConfig {
             max_depth: 5,
             max_tokens: 100,
-            max_memory_size: 10_000,
+            max_total_enum_width: 10_000,
         });
         // ANCHOR_END: configuring_the_encoder
 

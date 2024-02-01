@@ -726,7 +726,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
-    encoder_config: Option<EncoderConfig>,
+    encoder_config: EncoderConfig,
 ) -> Result<ContractCallHandler<T, D>> {
     let encoded_selector = signature;
 
@@ -735,7 +735,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::new(encoder_config.unwrap_or_default()).encode(args)?;
+    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args)?;
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,

@@ -82,7 +82,6 @@ pub(crate) fn contract_bindings(
 
                 self
             }
-            }
 
             pub async fn get_balances(&self) -> ::fuels::types::errors::Result<::std::collections::HashMap<::fuels::types::AssetId, u64>> {
                 ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)?
@@ -177,9 +176,9 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
                 &#arg_tokens,
                 self.log_decoder.clone(),
                 #is_payable,
-                ::std::option::Option::Some(self.encoder_config.clone()),
+                self.encoder_config.clone(),
             )
-            .expect("method not found (this should never happen)")
+            .expect("Could not encode")
     };
     generator.set_body(body);
 
@@ -376,9 +375,9 @@ mod tests {
                     ],
                     self.log_decoder.clone(),
                     false,
-                    ::std::option::Option::Some(self.encoder_config.clone()),
+                    self.encoder_config.clone(),
                 )
-                .expect("method not found (this should never happen)")
+                .expect("Could not encode")
             }
         };
 
@@ -435,7 +434,7 @@ mod tests {
                     false,
                     ::std::option::Option::Some(self.encoder_config.clone()),
                 )
-                .expect("method not found (this should never happen)")
+                .expect("Could not encode")
             }
         };
 
@@ -548,7 +547,7 @@ mod tests {
                     false,
                     ::std::option::Option::Some(self.encoder_config.clone()),
                 )
-                .expect("method not found (this should never happen)")
+                .expect("Could not encode")
             }
         };
 

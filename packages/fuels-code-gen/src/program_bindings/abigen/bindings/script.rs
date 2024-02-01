@@ -37,7 +37,7 @@ pub(crate) fn script_bindings(
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
-        #[derive(Debug)]
+        #[derive(Debug,Clone)]
         pub struct #name<T: ::fuels::accounts::Account>{
             account: T,
             binary: ::std::vec::Vec<u8>,

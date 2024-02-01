@@ -65,11 +65,9 @@ impl EnumVariants {
 
     /// Determines the padding needed for the provided enum variant (based on the width of the
     /// biggest variant) and returns it.
-    pub fn compute_padding_amount_in_bytes(
-        &self,
-        variant_param_type: &ParamType,
-        enum_width: usize,
-    ) -> Result<usize> {
+    pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
+        let enum_width = self.compute_enum_width_in_bytes()?;
+        // No need to use checked arithmetics since we called `compute_enum_width_in_bytes`
         let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
         let variant_width = variant_param_type.compute_encoding_in_bytes()?;
         Ok(biggest_variant_width - variant_width)

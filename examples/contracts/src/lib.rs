@@ -937,7 +937,7 @@ mod tests {
             .with_encoder_config(EncoderConfig {
                 max_depth: 10,
                 max_tokens: 2_000,
-                max_memory_size: 10_000,
+                max_total_enum_width: 10_000,
             })
             .methods()
             .initialize_counter(42)

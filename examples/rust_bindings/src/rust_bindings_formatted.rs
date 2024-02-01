@@ -79,7 +79,7 @@ pub mod abigen_bindings {
                     false,
                     ::std::option::Option::None,
                 )
-                .expect("method not found (this should never happen)")
+                .expect("Could not encode")
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
@@ -92,7 +92,7 @@ pub mod abigen_bindings {
                     false,
                     ::std::option::Option::None,
                 )
-                .expect("method not found (this should never happen)")
+                .expect("Could not encode")
             }
         }
         impl<T: Account> contract::SettableContract for MyContract<T> {

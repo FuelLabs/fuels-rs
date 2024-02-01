@@ -15,7 +15,7 @@ use fuel_types::bytes::padded_len_usize;
 pub(crate) struct BoundedEncoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
-    max_memory_size: usize,
+    max_total_enum_width: usize,
 }
 
 impl BoundedEncoder {
@@ -27,7 +27,7 @@ impl BoundedEncoder {
         Self {
             depth_tracker,
             token_tracker,
-            max_memory_size: config.max_memory_size,
+            max_total_enum_width: config.max_total_enum_width,
         }
     }
 
@@ -189,14 +189,13 @@ impl BoundedEncoder {
             let variant_param_type = variants.param_type_of_variant(*discriminant)?;
             let enum_width_in_bytes = variants.compute_enum_width_in_bytes()?;
 
-            if enum_width_in_bytes > self.max_memory_size {
+            if enum_width_in_bytes > self.max_total_enum_width {
                 return Err(error!(
                     InvalidData,
                     "Cannot encode Enum with variants {variants:?} : it is {enum_width_in_bytes} bytes wide. Try increasing encoder max memory."
                 ));
             }
-            let padding_amount = variants
-                .compute_padding_amount_in_bytes(variant_param_type, enum_width_in_bytes)?;
+            let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;
 
             encoded_enum.push(Data::Inline(vec![0; padding_amount]));
 

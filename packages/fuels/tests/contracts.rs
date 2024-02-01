@@ -1778,7 +1778,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
 #[tokio::test]
 #[should_panic(
-    expected = "method not found (this should never happen): InvalidType(\"Token limit (1) reached while Encoding. Try increasing it.\")"
+    expected = "Could not encode: InvalidType(\"Token limit (1) reached while Encoding. Try increasing it.\")"
 )]
 async fn contract_encoder_config_is_applied() {
     setup_program_test!(

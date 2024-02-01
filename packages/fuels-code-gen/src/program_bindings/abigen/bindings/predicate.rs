@@ -29,7 +29,7 @@ pub(crate) fn predicate_bindings(
     let code = quote! {
         #[derive(Default)]
         pub struct #encoder_struct_name{
-            encoder_config: ::fuels::core::codec::EncoderConfig,
+            encoder: ::fuels::core::codec::ABIEncoder,
         }
 
         impl #encoder_struct_name {
@@ -37,7 +37,7 @@ pub(crate) fn predicate_bindings(
 
             pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -> Self {
                 Self {
-                    encoder_config
+                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config)
                 }
             }
         }
@@ -60,7 +60,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
 
     let body = quote! {
-        ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens)
+        self.encoder.encode(&#arg_tokens)
     };
     let output_type = quote! {
         ::fuels::types::errors::Result<::fuels::types::unresolved_bytes::UnresolvedBytes>

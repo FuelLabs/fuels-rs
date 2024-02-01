@@ -51,7 +51,7 @@ fn generate_struct_decl(configurable_struct_name: &Ident) -> TokenStream {
         #[derive(Clone, Debug, Default)]
         pub struct #configurable_struct_name {
             offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>,
-            encoder_config: ::fuels::core::codec::EncoderConfig,
+            encoder: ::fuels::core::codec::ABIEncoder,
         }
     }
 }
@@ -66,7 +66,7 @@ fn generate_struct_impl(
         impl #configurable_struct_name {
             pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -> Self {
                 Self {
-                    encoder_config: encoder_config,
+                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config),
                     ..::std::default::Default::default()
                 }
             }
@@ -101,7 +101,7 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
 
 fn generate_encoder_code(ttype: &ResolvedType) -> TokenStream {
     quote! {
-        ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&[
+        self.encoder.encode(&[
                 <#ttype as ::fuels::core::traits::Tokenizable>::into_token(value)
             ])
             .expect("Cannot encode configurable data")
@@ -113,7 +113,7 @@ fn generate_from_impl(configurable_struct_name: &Ident) -> TokenStream {
     quote! {
         impl From<#configurable_struct_name> for ::fuels::core::Configurables {
             fn from(config: #configurable_struct_name) -> Self {
-                ::fuels::core::Configurables::new(config.offsets_with_data, config.encoder_config)
+                ::fuels::core::Configurables::new(config.offsets_with_data)
             }
         }
     }

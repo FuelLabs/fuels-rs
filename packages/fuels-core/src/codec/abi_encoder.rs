@@ -16,7 +16,7 @@ pub struct EncoderConfig {
     pub max_tokens: usize,
     /// The total memory size of the top-level token must fit in the available memory of the
     /// system.
-    pub max_memory_size: usize,
+    pub max_total_enum_width: usize,
 }
 
 // ANCHOR: default_encoder_config
@@ -25,13 +25,13 @@ impl Default for EncoderConfig {
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_memory_size: 10_000,
+            max_total_enum_width: 10_000,
         }
     }
 }
 // ANCHOR_END: default_encoder_config
 
-#[derive(Default)]
+#[derive(Default, Clone, Debug)]
 pub struct ABIEncoder {
     pub config: EncoderConfig,
 }
