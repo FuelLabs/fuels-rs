@@ -228,11 +228,11 @@ where
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
 
+        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
+
         let tx_status = if simulate {
             self.provider.checked_dry_run(tx).await?
         } else {
-            self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
-
             self.provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;

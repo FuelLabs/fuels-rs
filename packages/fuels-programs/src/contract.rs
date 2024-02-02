@@ -613,11 +613,11 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
             provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
@@ -905,11 +905,11 @@ impl<T: Account> MultiContractCallHandler<T> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
         } else {
-            self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
             provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
