@@ -12,6 +12,7 @@ use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance},
 };
+use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
     TxId, UtxoId,
@@ -344,16 +345,22 @@ impl Provider {
         }
     }
 
-    pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run(&tx.into()).await?;
+    pub async fn dry_run<T: Transaction>(&self, txs: &[T]) -> Result<Vec<TransactionExecutionStatus>> {
+        let txs = txs.iter().map(|tx| {
+            (*tx).clone().into()
+        }).collect::<Vec<_>>();
+        let tx_statuses = self.client.dry_run(&txs).await?;
 
-        Ok(receipts)
+        Ok(tx_statuses)
     }
 
-    pub async fn dry_run_no_validation<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run_opt(&tx.into(), Some(false)).await?;
+    pub async fn dry_run_no_validation<T: Transaction>(&self, txs: &[T]) -> Result<Vec<TransactionExecutionStatus>> {
+        let txs = txs.iter().map(|tx| {
+            (*tx).clone().into()
+        }).collect::<Vec<_>>();
+        let tx_statuses = self.client.dry_run_opt(&txs, Some(false)).await?;
 
-        Ok(receipts)
+        Ok(tx_statuses)
     }
 
     /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
