@@ -231,7 +231,11 @@ where
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let tx_status = if simulate {
-            self.provider.checked_dry_run(tx).await?
+            self.provider
+                .checked_dry_run(&[tx])
+                .await?
+                .pop()
+                .expect("Nonempty response")
         } else {
             self.provider.send_transaction_and_await_commit(tx).await?
         };

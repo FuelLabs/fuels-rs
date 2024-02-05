@@ -363,8 +363,12 @@ mod tests {
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
-        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
-            Ok(0)
+        async fn dry_run_and_get_used_gas(
+            &self,
+            _: &[FuelTransaction],
+            _: f32,
+        ) -> Result<Vec<u64>> {
+            Ok(vec![0])
         }
         fn consensus_parameters(&self) -> &ConsensusParameters {
             &self.c_param

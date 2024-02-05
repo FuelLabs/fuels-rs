@@ -12,10 +12,9 @@ use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
     types::{balance::Balance, contract::ContractBalance},
 };
-use fuel_core_types::services::executor::TransactionExecutionStatus;
+use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
 use fuel_tx::{
-    AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
-    TxId, UtxoId,
+    AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
 use fuel_types::{Address, Bytes32, ChainId, Nonce};
 #[cfg(feature = "coin-cache")]
@@ -322,42 +321,50 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<TxStatus> {
-        let receipts = self.dry_run(tx).await?;
-        Ok(Self::tx_status_from_receipts(receipts))
+    pub async fn checked_dry_run<T: Transaction>(&self, txs: &[T]) -> Result<Vec<TxStatus>> {
+        let tx_statuses = self.dry_run(txs).await?;
+        Ok(Self::tx_status_from_receipts(tx_statuses))
     }
 
-    fn tx_status_from_receipts(receipts: Vec<Receipt>) -> TxStatus {
-        let revert_reason = receipts.iter().find_map(|receipt| match receipt {
-            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
-                Some(format!("{result:?}"))
-            }
-            _ => None,
-        });
+    fn tx_status_from_receipts(tx_statuses: Vec<TransactionExecutionStatus>) -> Vec<TxStatus> {
+        let statuses = tx_statuses
+            .iter()
+            .map(|tx_status| match &tx_status.result {
+                TransactionExecutionResult::Success { .. } => TxStatus::Success {
+                    receipts: tx_status.receipts.clone(),
+                },
+                TransactionExecutionResult::Failed { reason, .. } => TxStatus::Revert {
+                    receipts: tx_status.receipts.clone(),
+                    reason: reason.to_string(),
+                    revert_id: 0,
+                },
+            })
+            .collect();
 
-        match revert_reason {
-            Some(reason) => TxStatus::Revert {
-                receipts,
-                reason,
-                revert_id: 0,
-            },
-            None => TxStatus::Success { receipts },
-        }
+        statuses
     }
 
-    pub async fn dry_run<T: Transaction>(&self, txs: &[T]) -> Result<Vec<TransactionExecutionStatus>> {
-        let txs = txs.iter().map(|tx| {
-            (*tx).clone().into()
-        }).collect::<Vec<_>>();
+    pub async fn dry_run<T: Transaction>(
+        &self,
+        txs: &[T],
+    ) -> Result<Vec<TransactionExecutionStatus>> {
+        let txs = txs
+            .iter()
+            .map(|tx| (*tx).clone().into())
+            .collect::<Vec<_>>();
         let tx_statuses = self.client.dry_run(&txs).await?;
 
         Ok(tx_statuses)
     }
 
-    pub async fn dry_run_no_validation<T: Transaction>(&self, txs: &[T]) -> Result<Vec<TransactionExecutionStatus>> {
-        let txs = txs.iter().map(|tx| {
-            (*tx).clone().into()
-        }).collect::<Vec<_>>();
+    pub async fn dry_run_no_validation<T: Transaction>(
+        &self,
+        txs: &[T],
+    ) -> Result<Vec<TransactionExecutionStatus>> {
+        let txs = txs
+            .iter()
+            .map(|tx| (*tx).clone().into())
+            .collect::<Vec<_>>();
         let tx_statuses = self.client.dry_run_opt(&txs, Some(false)).await?;
 
         Ok(tx_statuses)
@@ -675,7 +682,14 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+        let gas_used = self.get_gas_used(
+            &self
+                .dry_run_no_validation(&[tx])
+                .await?
+                .last()
+                .expect("Nonempty response")
+                .receipts,
+        );
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -735,10 +749,22 @@ impl Provider {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl DryRunner for Provider {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
-        let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
-        let gas_used = self.get_gas_used(&receipts);
-        Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
+    async fn dry_run_and_get_used_gas(
+        &self,
+        txs: &[FuelTransaction],
+        tolerance: f32,
+    ) -> Result<Vec<u64>> {
+        let tx_statuses = self.client.dry_run_opt(txs, Some(false)).await?;
+        let gases_used = tx_statuses
+            .iter()
+            .map(|tx_status| {
+                let gas_used = self.get_gas_used(&tx_status.receipts);
+                (gas_used as f64 * (1.0 + tolerance as f64)) as u64
+            })
+            .collect();
+        Ok(gases_used)
+        // let gas_used = self.get_gas_used(&receipts);
+        // Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
     }
 
     async fn min_gas_price(&self) -> Result<u64> {

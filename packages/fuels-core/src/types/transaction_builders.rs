@@ -41,15 +41,23 @@ use crate::{
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+    async fn dry_run_and_get_used_gas(
+        &self,
+        txs: &[FuelTransaction],
+        tolerance: f32,
+    ) -> Result<Vec<u64>>;
     async fn min_gas_price(&self) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: DryRunner> DryRunner for &T {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
-        (*self).dry_run_and_get_used_gas(tx, tolerance).await
+    async fn dry_run_and_get_used_gas(
+        &self,
+        txs: &[FuelTransaction],
+        tolerance: f32,
+    ) -> Result<Vec<u64>> {
+        (*self).dry_run_and_get_used_gas(txs, tolerance).await
     }
 
     async fn min_gas_price(&self) -> Result<u64> {
@@ -412,8 +420,11 @@ impl ScriptTransactionBuilder {
         tx.set_script_gas_limit(consensus_params.tx_params().max_gas_per_tx - max_gas);
 
         let gas_used = provider
-            .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
-            .await?;
+            .dry_run_and_get_used_gas(&[tx.clone().into()], tolerance)
+            .await?
+            .last()
+            .expect("Nonempty response")
+            .clone();
 
         // Remove dry-run input and witness.
         if no_spendable_input {
@@ -1029,8 +1040,12 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
-        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
-            Ok(0)
+        async fn dry_run_and_get_used_gas(
+            &self,
+            _: &[FuelTransaction],
+            _: f32,
+        ) -> Result<Vec<u64>> {
+            Ok(vec![0])
         }
         fn consensus_parameters(&self) -> &ConsensusParameters {
             &self.c_param

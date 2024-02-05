@@ -6,10 +6,10 @@ use fuel_core_client::client::{
     types::{primitives::BlockId, TransactionResponse, TransactionStatus},
     FuelClient,
 };
+use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::{error, types::errors::Result};
-use fuel_core_types::services::executor::TransactionExecutionStatus;
 
 use crate::provider::{retry_util, RetryConfig};
 
@@ -80,7 +80,10 @@ impl RetryableClient {
     pub async fn node_info(&self) -> io::Result<types::NodeInfo> {
         self.our_retry(|| self.client.node_info()).await
     }
-    pub async fn dry_run(&self, txs: &[Transaction]) -> io::Result<Vec<TransactionExecutionStatus>> {
+    pub async fn dry_run(
+        &self,
+        txs: &[Transaction],
+    ) -> io::Result<Vec<TransactionExecutionStatus>> {
         self.our_retry(|| self.client.dry_run(txs)).await
     }
 
