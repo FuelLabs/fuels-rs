@@ -253,18 +253,6 @@ where
         Ok(SubmitResponse::new(tx_id, self))
     }
 
-    pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = self
-            .provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
