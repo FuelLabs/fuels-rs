@@ -78,12 +78,12 @@ zeroize = "1.7.0"
 # fuel-core-poa = { version = "0.22.0", default-features = false }
 # fuel-core-services = { version = "0.22.0", default-features = false }
 # fuel-core-types = { version = "0.22.0", default-features = false }
-fuel-core = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
-fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", default-features = false }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d" , default-features = false }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d", default-features = false }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d", default-features = false }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d", default-features = false }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d", default-features = false }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", rev = "7e54cb8f107a7153596a2b451d4e5656a1805b1d", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.45.0" }
