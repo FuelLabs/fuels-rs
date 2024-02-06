@@ -6,6 +6,7 @@ use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
 };
+use fuels_core::types::errors::Error;
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
     offsets::base_offset_script,
@@ -39,7 +40,7 @@ use crate::{
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
@@ -95,7 +96,7 @@ where
 {
     pub fn new(
         script_binary: Vec<u8>,
-        encoded_args: UnresolvedBytes,
+        encoded_args: Result<UnresolvedBytes>,
         account: T,
         provider: Provider,
         log_decoder: LogDecoder,
@@ -166,8 +167,10 @@ where
         let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
-
-        Ok(self.script_call.encoded_args.resolve(script_offset as u64))
+        match self.script_call.encoded_args.as_ref() {
+            Ok(encoded_args) => Ok(encoded_args.resolve(script_offset as u64)),
+            Err(&ref e) => Err(Error::InvalidType(e.to_string())),
+        }
     }
 
     async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {

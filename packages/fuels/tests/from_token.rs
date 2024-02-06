@@ -91,7 +91,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
 
     let call_handler = contract_instance.methods().takes_struct(struct_from_tokens);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -206,7 +206,7 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
         .methods()
         .takes_nested_struct(nested_struct_from_tokens);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),

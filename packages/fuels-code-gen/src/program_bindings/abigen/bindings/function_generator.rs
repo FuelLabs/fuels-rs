@@ -52,11 +52,6 @@ impl FunctionGenerator {
         self
     }
 
-    pub fn make_fn_associated(&mut self) -> &mut Self {
-        self.is_method = true;
-        self
-    }
-
     pub fn set_doc(&mut self, text: String) -> &mut Self {
         self.doc = Some(text);
         self

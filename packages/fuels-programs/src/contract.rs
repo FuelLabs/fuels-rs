@@ -402,7 +402,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
@@ -721,7 +721,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args)?;
+    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,

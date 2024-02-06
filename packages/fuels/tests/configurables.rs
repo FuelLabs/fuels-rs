@@ -94,9 +94,9 @@ async fn contract_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::default()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+        .with_STR_4(new_str.clone())?
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/debug/configurables.bin",
@@ -148,9 +148,9 @@ async fn script_configurables() -> Result<()> {
         max_tokens: 5,
         ..Default::default()
     })
-    .with_STR_4(new_str.clone())
-    .with_STRUCT(new_struct.clone())
-    .with_ENUM(new_enum.clone());
+    .with_STR_4(new_str.clone())?
+    .with_STRUCT(new_struct.clone())?
+    .with_ENUM(new_enum.clone())?;
 
     let response = instance
         .with_configurables(configurables)
@@ -174,10 +174,6 @@ async fn script_configurables() -> Result<()> {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "Cannot encode configurable data: InvalidType(\"Token limit (1) reached while \
-    Encoding. Try increasing it.\")"
-)]
 async fn test_configurable_encoder_config_is_applied() {
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
@@ -186,13 +182,19 @@ async fn test_configurable_encoder_config_is_applied() {
         field_2: 32,
     };
 
-    // No encoder config, it works
-    let _configurables = MyScriptConfigurables::default().with_STRUCT(new_struct.clone());
+    let _configurables = MyScriptConfigurables::default()
+        .with_STRUCT(new_struct.clone())
+        .expect("No encoder config, it works");
 
     let encoder_config = EncoderConfig {
         max_tokens: 1,
         ..Default::default()
     };
     // Fails when an encoder config is set
-    let _configurables = MyScriptConfigurables::new(encoder_config).with_STRUCT(new_struct);
+    let configurables_error = MyScriptConfigurables::new(encoder_config)
+        .with_STRUCT(new_struct)
+        .unwrap_err();
+    assert!(configurables_error
+        .to_string()
+        .contains("Token limit (1) reached while Encoding. Try increasing it."),)
 }

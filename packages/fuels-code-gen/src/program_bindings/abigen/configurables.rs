@@ -86,9 +86,11 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
             let encoder_code = generate_encoder_code(ttype);
             quote! {
                 #[allow(non_snake_case)]
-                pub fn #name(mut self, value: #ttype) -> Self{
-                    self.offsets_with_data.push((#offset, #encoder_code));
-                    self
+                // Generate the `with_XXX` methods for setting the configurables
+                pub fn #name(mut self, value: #ttype) -> ::fuels::prelude::Result<Self> {
+                    let encoder = #encoder_code?.resolve(0);
+                    self.offsets_with_data.push((#offset, encoder));
+                    ::fuels::prelude::Result::Ok(self)
                 }
             }
         },
@@ -104,8 +106,6 @@ fn generate_encoder_code(ttype: &ResolvedType) -> TokenStream {
         self.encoder.encode(&[
                 <#ttype as ::fuels::core::traits::Tokenizable>::into_token(value)
             ])
-            .expect("Cannot encode configurable data")
-            .resolve(0)
     }
 }
 

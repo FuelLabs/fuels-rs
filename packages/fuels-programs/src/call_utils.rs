@@ -109,7 +109,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset);
+        build_script_data_from_contract_calls(calls, data_offset)?;
     let script = get_instructions(calls, call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
@@ -250,7 +250,7 @@ pub(crate) fn get_instructions(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
-) -> (Vec<u8>, Vec<CallOpcodeParamsOffset>) {
+) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
 
@@ -303,7 +303,12 @@ pub(crate) fn build_script_data_from_contract_calls(
             segment_offset
         };
 
-        let bytes = call.encoded_args.resolve(encoded_args_start_offset as Word);
+        let bytes = match call.encoded_args.as_ref() {
+            Ok(encoded_args) => encoded_args.resolve(encoded_args_start_offset as Word),
+            Err(&ref e) => {
+                return Err(FuelsError::InvalidType(e.to_string()));
+            }
+        };
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -311,7 +316,7 @@ pub(crate) fn build_script_data_from_contract_calls(
         segment_offset = data_offset + script_data.len();
     }
 
-    (script_data, param_offsets)
+    Ok((script_data, param_offsets))
 }
 
 /// Returns the VM instructions for calling a contract method
@@ -599,7 +604,7 @@ mod test {
         pub fn new_with_random_id() -> Self {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
-                encoded_args: Default::default(),
+                encoded_args: Ok(Default::default()),
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
@@ -650,7 +655,7 @@ mod test {
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
-                encoded_args: args[i].clone(),
+                encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: vec![],
@@ -662,7 +667,8 @@ mod test {
             .collect();
 
         // Act
-        let (script_data, param_offsets) = build_script_data_from_contract_calls(&calls, 0);
+        let (script_data, param_offsets) =
+            build_script_data_from_contract_calls(&calls, 0).unwrap();
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);

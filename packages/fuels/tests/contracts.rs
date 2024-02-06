@@ -1777,9 +1777,6 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "Could not encode: InvalidType(\"Token limit (1) reached while Encoding. Try increasing it.\")"
-)]
 async fn contract_encoder_config_is_applied() {
     setup_program_test!(
         Abigen(Contract(
@@ -1812,5 +1809,22 @@ async fn contract_encoder_config_is_applied() {
     };
     let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
     // uses 2 tokens when 1 is the limit
-    let _encoding_error = instance_with_encoder_config.methods().get(0, 1);
+    let encoding_error = instance_with_encoder_config
+        .methods()
+        .get(0, 1)
+        .call()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+    let encoding_error = instance_with_encoder_config
+        .methods()
+        .get(0, 1)
+        .simulate()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Token limit (1) reached while Encoding. Try increasing it."));
 }

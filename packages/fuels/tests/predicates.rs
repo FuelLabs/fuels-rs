@@ -620,8 +620,8 @@ async fn predicate_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::default()
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
     let predicate_data =
         MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;

@@ -387,10 +387,8 @@ async fn test_script_transaction_builder() -> Result<()> {
 
     Ok(())
 }
+
 #[tokio::test]
-#[should_panic(
-    expected = "Cannot encode script arguments: InvalidType(\"Token limit (1) reached while Encoding. Try increasing it.\")"
-)]
 async fn test_script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
@@ -413,5 +411,20 @@ async fn test_script_encoder_config_is_applied() {
     let script_instance_with_encoder_config =
         MyScript::new(wallet.clone(), bin_path).with_encoder_config(encoder_config);
     // uses 2 tokens when 1 is the limit
-    let _encoding_error = script_instance_with_encoder_config.main(1, 2);
+    let encoding_error = script_instance_with_encoder_config
+        .main(1, 2)
+        .call()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+    let encoding_error = script_instance_with_encoder_config
+        .main(1, 2)
+        .simulate()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Token limit (1) reached while Encoding. Try increasing it."));
 }
