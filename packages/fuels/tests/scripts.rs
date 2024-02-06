@@ -418,7 +418,7 @@ async fn test_script_encoder_config_is_applied() {
         .unwrap_err();
     assert!(encoding_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+        .contains("Cannot encode script call arguments: Token limit (1) reached while Encoding"));
     let encoding_error = script_instance_with_encoder_config
         .main(1, 2)
         .simulate()
@@ -426,5 +426,5 @@ async fn test_script_encoder_config_is_applied() {
         .unwrap_err();
     assert!(encoding_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+        .contains("Cannot encode script call arguments: Token limit (1) reached while Encoding"));
 }

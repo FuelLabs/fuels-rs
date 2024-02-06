@@ -305,9 +305,13 @@ pub(crate) fn build_script_data_from_contract_calls(
 
         let bytes = match call.encoded_args.as_ref() {
             Ok(encoded_args) => encoded_args.resolve(encoded_args_start_offset as Word),
-            Err(&ref e) => {
-                return Err(FuelsError::InvalidType(e.to_string()));
+            Err(&ref e) if e.to_string().contains("Encoding") => {
+                let error_string = e
+                    .to_string()
+                    .replace("Invalid type:", "Cannot encode contract call arguments:");
+                return Err(FuelsError::InvalidType(error_string));
             }
+            Err(&ref e) => return Err(FuelsError::InvalidType(e.to_string())),
         };
         script_data.extend(bytes);
 

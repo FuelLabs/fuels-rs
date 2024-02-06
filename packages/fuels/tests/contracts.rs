@@ -1817,7 +1817,7 @@ async fn contract_encoder_config_is_applied() {
         .unwrap_err();
     assert!(encoding_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+        .contains("Cannot encode contract call arguments: Token limit (1) reached while Encoding"));
     let encoding_error = instance_with_encoder_config
         .methods()
         .get(0, 1)
@@ -1826,5 +1826,5 @@ async fn contract_encoder_config_is_applied() {
         .unwrap_err();
     assert!(encoding_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding. Try increasing it."));
+        .contains("Cannot encode contract call arguments: Token limit (1) reached while Encoding"));
 }
