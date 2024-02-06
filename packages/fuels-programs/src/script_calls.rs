@@ -169,13 +169,13 @@ where
             + padded_len_usize(self.script_call.script_binary.len());
         match self.script_call.encoded_args.as_ref() {
             Ok(encoded_args) => Ok(encoded_args.resolve(script_offset as u64)),
-            Err(&ref e) if e.to_string().contains("Encoding") => {
+            Err(e) if e.to_string().contains("Encoding") => {
                 let error_string = e
                     .to_string()
                     .replace("Invalid type:", "Cannot encode script call arguments:");
                 Err(Error::InvalidType(error_string))
             }
-            Err(&ref e) => Err(Error::InvalidType(e.to_string())),
+            Err(e) => Err(Error::InvalidType(e.to_string())),
         }
     }
 
