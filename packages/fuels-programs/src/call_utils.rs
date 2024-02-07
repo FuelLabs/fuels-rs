@@ -7,6 +7,7 @@ use fuel_types::{Address, Word};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
+    error,
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -303,16 +304,17 @@ pub(crate) fn build_script_data_from_contract_calls(
             segment_offset
         };
 
-        let bytes = match call.encoded_args.as_ref() {
-            Ok(encoded_args) => encoded_args.resolve(encoded_args_start_offset as Word),
-            Err(e) if e.to_string().contains("Encoding") => {
-                let error_string = e
-                    .to_string()
-                    .replace("Invalid type:", "Cannot encode contract call arguments:");
-                return Err(FuelsError::InvalidType(error_string));
-            }
-            Err(e) => return Err(FuelsError::InvalidType(e.to_string())),
-        };
+        let bytes = call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(encoded_args_start_offset as Word))
+            .map_err(|e| {
+                error!(
+                    InvalidData,
+                    "Cannot encode contract call arguments: {}",
+                    e.to_string()
+                )
+            })?;
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
