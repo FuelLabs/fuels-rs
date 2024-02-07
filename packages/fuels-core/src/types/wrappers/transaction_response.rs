@@ -30,9 +30,8 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             ClientTransactionStatus::Success { block_id, .. }
             | ClientTransactionStatus::Failure { block_id, .. } => Some(block_id),
         };
-        let block_id = block_id.map(|id| {
-            Bytes32::from_str(id).expect("Client returned block id with invalid format.")
-        });
+        let block_id = block_id
+            .map(|id| Bytes32::from_str(id).expect("client returned block id with invalid format"));
 
         let time = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }

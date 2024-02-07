@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
@@ -10,7 +10,7 @@ use fuels_core::{
         bech32::{Bech32Address, Bech32ContractId},
         coin::Coin,
         coin_type::CoinType,
-        errors::{Error, Result},
+        errors::Result,
         input::Input,
         message::Message,
         transaction::{Transaction, TxPolicies},
@@ -26,36 +26,11 @@ use crate::{
     provider::{Provider, ResourceFilter},
 };
 
-#[derive(Debug)]
-pub struct AccountError(String);
-
-impl AccountError {
-    pub fn no_provider() -> Self {
-        Self("No provider was setup: make sure to set_provider in your account!".to_string())
-    }
-}
-
-impl Display for AccountError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for AccountError {}
-
-impl From<AccountError> for Error {
-    fn from(e: AccountError) -> Self {
-        Error::AccountError(e.0)
-    }
-}
-
-pub type AccountResult<T> = std::result::Result<T, AccountError>;
-
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     fn address(&self) -> &Bech32Address;
 
-    fn try_provider(&self) -> AccountResult<&Provider>;
+    fn try_provider(&self) -> Result<&Provider>;
 
     async fn get_transactions(
         &self,
@@ -82,7 +57,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         self.try_provider()?
             .get_asset_balance(self.address(), *asset_id)
             .await
-            .map_err(Into::into)
     }
 
     /// Gets all unspent messages owned by the account.
@@ -94,10 +68,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.try_provider()?
-            .get_balances(self.address())
-            .await
-            .map_err(Into::into)
+        self.try_provider()?.get_balances(self.address()).await
     }
 
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
@@ -115,10 +86,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
             ..Default::default()
         };
 
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
+        self.try_provider()?.get_spendable_resources(filter).await
     }
 }
 
@@ -225,7 +193,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+    ) -> Result<(String, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
@@ -277,7 +245,7 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_policies: TxPolicies,
-    ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
+    ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
         let inputs = self
@@ -324,16 +292,13 @@ mod tests {
     use crate::wallet::WalletUnlocked;
 
     #[tokio::test]
-    async fn sign_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    async fn sign_and_verify() -> Result<()> {
         // ANCHOR: sign_message
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
-        let secret = secret_seed
-            .as_slice()
-            .try_into()
-            .expect("The seed size is valid");
+        let secret = secret_seed.as_slice().try_into()?;
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);

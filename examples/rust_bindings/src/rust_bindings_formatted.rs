@@ -120,4 +120,3 @@ pub mod abigen_bindings {
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
-

@@ -1,7 +1,8 @@
-use crate::types::bech32::{Bech32Address, Bech32ContractId};
 use fuel_tx::{Address, ContractId};
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 use serde::{Deserialize, Serialize};
+
+use crate::types::bech32::{Bech32Address, Bech32ContractId};
 
 #[derive(
     Debug, Clone, PartialEq, Eq, Hash, Parameterize, Tokenizable, TryFrom, Serialize, Deserialize,
@@ -74,8 +75,9 @@ impl From<Bech32ContractId> for Identity {
 
 #[cfg(test)]
 mod test {
-    use super::*;
     use std::str::FromStr;
+
+    use super::*;
 
     #[test]
     fn test_bech32() {

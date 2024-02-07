@@ -70,20 +70,22 @@ impl ParamType {
         let memory_size = param_type.compute_encoding_in_bytes()?;
         if memory_size == 0 {
             return Err(error!(
-                InvalidType,
-                "Cannot calculate the number of elements because the type is zero-sized."
+                Codec,
+                "cannot calculate the number of elements because the type is zero-sized"
             ));
         }
+
         let remainder = available_bytes % memory_size;
         if remainder != 0 {
             return Err(error!(
-                InvalidData,
+                Codec,
                 "{remainder} extra bytes detected while decoding heap type"
             ));
         }
         let num_of_elements = available_bytes
             .checked_div(memory_size)
-            .ok_or_else(|| error!(InvalidData, "Type {param_type:?} has a memory_size of 0"))?;
+            .ok_or_else(|| error!(Codec, "type {param_type:?} has a memory_size of 0"))?;
+
         Ok(num_of_elements)
     }
 
@@ -114,8 +116,8 @@ impl ParamType {
                 .any(|child| child.children_need_extra_receipts());
             if grandchildren_need_receipts {
                 return Err(error!(
-                    InvalidType,
-                    "Enums currently support only one level deep heap types."
+                    Codec,
+                    "enums currently support only one level deep heap types"
                 ));
             }
 
@@ -125,15 +127,16 @@ impl ParamType {
                 .count();
             if num_of_children_needing_receipts > 1 {
                 return Err(error!(
-                    InvalidType,
-                    "Enums currently support only one heap-type variant. Found: \
+                    Codec,
+                    "enums currently support only one heap-type variant. Found: \
                         {num_of_children_needing_receipts}"
                 ));
             }
         } else if self.children_need_extra_receipts() {
             return Err(error!(
-                InvalidType,
-                "type {:?} is not decodable: nested heap types are currently not supported except in Enums.",
+                Codec,
+                "type `{:?}` is not decodable: nested heap types are currently not \
+                    supported except in enums",
                 DebugWithDepth::new(self, max_depth)
             ));
         }
@@ -181,8 +184,8 @@ impl ParamType {
     pub fn compute_encoding_in_bytes(&self) -> Result<usize> {
         let overflow_error = || {
             error!(
-                InvalidType,
-                "Reached overflow while computing encoding size for {:?}", self
+                Codec,
+                "reached overflow while computing encoding size for {:?}", self
             )
         };
         match &self {
@@ -256,7 +259,7 @@ impl Type {
     ) -> Result<Self> {
         let type_declaration = type_lookup.get(&type_application.type_id).ok_or_else(|| {
             error!(
-                InvalidData,
+                Codec,
                 "type id {} not found in type lookup", type_application.type_id
             )
         })?;
@@ -267,7 +270,7 @@ impl Type {
                 .find(|(id, _)| *id == type_application.type_id)
                 .ok_or_else(|| {
                     error!(
-                        InvalidData,
+                        Codec,
                         "type id {} not found in parent's generic parameters",
                         type_application.type_id
                     )
@@ -395,8 +398,8 @@ impl TryFrom<&Type> for ParamType {
 
         matched_param_type.map(Ok).unwrap_or_else(|| {
             Err(error!(
-                InvalidType,
-                "Type {} couldn't be converted into a ParamType", the_type.type_field
+                Codec,
+                "type {} couldn't be converted into a ParamType", the_type.type_field
             ))
         })
     }
@@ -430,8 +433,8 @@ fn try_vector(the_type: &Type) -> Result<Option<ParamType>> {
 
     if the_type.generic_params.len() != 1 {
         return Err(error!(
-            InvalidType,
-            "Vec must have exactly one generic argument for its type. Found: {:?}",
+            Codec,
+            "`Vec` must have exactly one generic argument for its type. Found: `{:?}`",
             the_type.generic_params
         ));
     }
@@ -520,8 +523,8 @@ fn try_array(the_type: &Type) -> Result<Option<ParamType>> {
                 Ok(Some(ParamType::Array(Box::new(array_type), len)))
             }
             _ => Err(error!(
-                InvalidType,
-                "An array must have elements of exactly one type. Array types: {:?}",
+                Codec,
+                "array must have elements of exactly one type. Array types: {:?}",
                 the_type.components
             )),
         };
@@ -1459,15 +1462,15 @@ mod tests {
         let max_depth = DecoderConfig::default().max_depth;
         let nested_heap_type_error_message = |p: ParamType| {
             format!(
-                "Invalid type: type {:?} is not decodable: nested heap types are currently not \
-        supported except in Enums.",
+                "codec: type `{:?}` is not decodable: nested heap types are currently not \
+        supported except in enums",
                 DebugWithDepth::new(&p, max_depth)
             )
         };
         let cannot_be_decoded = |p: ParamType| {
             assert_eq!(
                 p.validate_is_decodable(max_depth)
-                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .expect_err(&format!("should not be decodable: {:?}", p))
                     .to_string(),
                 nested_heap_type_error_message(p)
             )
@@ -1504,46 +1507,53 @@ mod tests {
         let variants_no_bytes_type = EnumVariants::new(param_types_no_bytes.clone())?;
         let variants_one_bytes_type = EnumVariants::new(param_types_containing_bytes.clone())?;
         let variants_two_bytes_type = EnumVariants::new(vec![ParamType::Bytes, ParamType::Bytes])?;
+
         can_be_decoded(ParamType::Enum {
             variants: variants_no_bytes_type.clone(),
             generics: param_types_no_bytes.clone(),
         });
+
         can_be_decoded(ParamType::Enum {
             variants: variants_one_bytes_type.clone(),
             generics: param_types_no_bytes.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_bytes_type.clone(),
                 generics: param_types_no_bytes.clone(),
             }
             .validate_is_decodable(max_depth)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
+
         can_be_decoded(ParamType::Enum {
             variants: variants_no_bytes_type,
             generics: param_types_containing_bytes.clone(),
         });
+
         can_be_decoded(ParamType::Enum {
             variants: variants_one_bytes_type,
             generics: param_types_containing_bytes.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_bytes_type.clone(),
                 generics: param_types_containing_bytes.clone(),
             }
             .validate_is_decodable(max_depth)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
+
         Ok(())
     }
 
@@ -1555,15 +1565,15 @@ mod tests {
         let param_types_nested_string = vec![ParamType::Unit, ParamType::Bool, base_string.clone()];
         let nested_heap_type_error_message = |p: ParamType| {
             format!(
-                "Invalid type: type {:?} is not decodable: nested heap types \
-        are currently not supported except in Enums.",
+                "codec: type `{:?}` is not decodable: nested heap types \
+        are currently not supported except in enums",
                 DebugWithDepth::new(&p, max_depth)
             )
         };
         let cannot_be_decoded = |p: ParamType| {
             assert_eq!(
                 p.validate_is_decodable(max_depth)
-                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .expect_err(&format!("should not be decodable: {:?}", p))
                     .to_string(),
                 nested_heap_type_error_message(p)
             )
@@ -1606,46 +1616,53 @@ mod tests {
         let variants_no_string_type = EnumVariants::new(param_types_no_string.clone())?;
         let variants_one_string_type = EnumVariants::new(param_types_containing_string.clone())?;
         let variants_two_string_type = EnumVariants::new(vec![ParamType::Bytes, ParamType::Bytes])?;
+
         can_be_decoded(ParamType::Enum {
             variants: variants_no_string_type.clone(),
             generics: param_types_no_string.clone(),
         });
+
         can_be_decoded(ParamType::Enum {
             variants: variants_one_string_type.clone(),
             generics: param_types_no_string.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_string_type.clone(),
                 generics: param_types_no_string.clone(),
             }
             .validate_is_decodable(1)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
+
         can_be_decoded(ParamType::Enum {
             variants: variants_no_string_type,
             generics: param_types_containing_string.clone(),
         });
+
         can_be_decoded(ParamType::Enum {
             variants: variants_one_string_type,
             generics: param_types_containing_string.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_string_type.clone(),
                 generics: param_types_containing_string.clone(),
             }
             .validate_is_decodable(1)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
+
         Ok(())
     }
 
@@ -1660,15 +1677,16 @@ mod tests {
         let param_types_no_vector = vec![ParamType::U64, ParamType::U32];
         let nested_heap_type_error_message = |p: ParamType| {
             format!(
-                "Invalid type: type {:?} is not decodable: nested heap types \
-        are currently not supported except in Enums.",
+                "codec: type `{:?}` is not decodable: nested heap types \
+        are currently not supported except in enums",
                 DebugWithDepth::new(&p, max_depth)
             )
         };
+
         let cannot_be_decoded = |p: ParamType| {
             assert_eq!(
                 p.validate_is_decodable(max_depth)
-                    .expect_err(&format!("Should not be decodable: {:?}", p))
+                    .expect_err(&format!("should not be decodable: {:?}", p))
                     .to_string(),
                 nested_heap_type_error_message(p)
             )
@@ -1717,23 +1735,26 @@ mod tests {
             ParamType::Vector(Box::new(ParamType::U8)),
             ParamType::Vector(Box::new(ParamType::U16)),
         ])?;
+
         can_be_decoded(ParamType::Enum {
             variants: variants_no_vector_type.clone(),
             generics: param_types_no_vector.clone(),
         });
+
         can_be_decoded(ParamType::Enum {
             variants: variants_one_vector_type.clone(),
             generics: param_types_no_vector.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_vector_type.clone(),
                 generics: param_types_no_vector.clone(),
             }
             .validate_is_decodable(max_depth)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
@@ -1745,15 +1766,15 @@ mod tests {
             variants: variants_one_vector_type,
             generics: param_types_containing_vector.clone(),
         });
-        let expected = "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-            .to_string();
+        let expected =
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(
             ParamType::Enum {
                 variants: variants_two_vector_type.clone(),
                 generics: param_types_containing_vector.clone(),
             }
             .validate_is_decodable(max_depth)
-            .expect_err("Should not be decodable")
+            .expect_err("should not be decodable")
             .to_string(),
             expected
         );
@@ -1835,8 +1856,8 @@ mod tests {
         let overflows = |p: ParamType| {
             let error = p.compute_encoding_in_bytes().unwrap_err();
             let overflow_error = error!(
-                InvalidType,
-                "Reached overflow while computing encoding size for {:?}", p
+                Codec,
+                "reached overflow while computing encoding size for {:?}", p
             );
             assert_eq!(error.to_string(), overflow_error.to_string());
         };
@@ -1875,16 +1896,19 @@ mod tests {
         assert!(ParamType::calculate_num_of_elements(&failing_param_type, 0)
             .unwrap_err()
             .to_string()
-            .contains("Reached overflow"));
+            .contains("reached overflow"));
+
         let zero_sized_type = ParamType::Array(Box::new(ParamType::StringArray(0)), 1000);
         assert!(ParamType::calculate_num_of_elements(&zero_sized_type, 0)
             .unwrap_err()
             .to_string()
             .contains("the type is zero-sized"));
+
         assert!(ParamType::calculate_num_of_elements(&ParamType::U16, 9)
             .unwrap_err()
             .to_string()
             .contains("1 extra bytes detected while decoding heap type"));
+
         Ok(())
     }
 

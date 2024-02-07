@@ -10,7 +10,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{transaction::Reason, Error, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -86,7 +86,7 @@ pub trait TxDependencyExtension: Sized {
             match self.simulate().await {
                 Ok(_) => return Ok(self),
 
-                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     self = self.append_missing_dependencies(receipts);
                 }
 

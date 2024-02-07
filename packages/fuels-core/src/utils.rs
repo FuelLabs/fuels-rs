@@ -9,20 +9,20 @@ use crate::{error, types::errors::Result};
 pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
     let lhs = bytes_len.checked_add(WORD_SIZE - 1).ok_or_else(|| {
         error!(
-            InvalidType,
-            "Addition overflow while rounding up {bytes_len} bytes to word alignment"
+            Codec,
+            "addition overflow while rounding up {bytes_len} bytes to word alignment"
         )
     })?;
     let rhs = lhs.checked_rem(WORD_SIZE).ok_or_else(|| {
         error!(
-            InvalidType,
-            "Remainder overflow while rounding up {bytes_len} bytes to word alignment"
+            Codec,
+            "remainder overflow while rounding up {bytes_len} bytes to word alignment"
         )
     })?;
     lhs.checked_sub(rhs).ok_or_else(|| {
         error!(
-            InvalidType,
-            "Substraction overflow while rounding up {bytes_len} bytes to word alignment"
+            Codec,
+            "substraction overflow while rounding up {bytes_len} bytes to word alignment"
         )
     })
 }

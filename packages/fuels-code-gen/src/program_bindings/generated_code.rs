@@ -343,6 +343,6 @@ mod tests {
     }
 
     fn given_type_path(path: &str) -> TypePath {
-        TypePath::new(path).expect("Hand crafted, should be valid.")
+        TypePath::new(path).expect("hand crafted, should be valid")
     }
 }

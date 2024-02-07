@@ -1,5 +1,4 @@
-use fuels::{prelude::*, types::Bits256};
-use fuels_core::codec::DecoderConfig;
+use fuels::{core::codec::DecoderConfig, prelude::*, types::Bits256};
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {

@@ -1,4 +1,4 @@
-use crate::types::errors::{error, Result};
+use crate::types::errors::Result;
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Bytes(pub Vec<u8>);
@@ -12,13 +12,7 @@ impl Bytes {
         } else {
             hex
         };
-
-        let bytes = hex::decode(hex).map_err(|e| {
-            error!(
-                InvalidData,
-                "Could not convert hex str '{hex}' to Bytes! {e}"
-            )
-        })?;
+        let bytes = hex::decode(hex)?;
 
         Ok(Bytes(bytes))
     }

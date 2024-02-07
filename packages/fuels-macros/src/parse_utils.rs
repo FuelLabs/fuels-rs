@@ -45,13 +45,13 @@ where
 
     let original_error = iter
         .next()
-        .map(|first_el| Error::new_spanned(first_el, "Original defined here:"));
+        .map(|first_el| Error::new_spanned(first_el, "original defined here:"));
 
-    let the_rest = iter.map(|duplicate| Error::new_spanned(duplicate, "Duplicate!"));
+    let the_rest = iter.map(|duplicate| Error::new_spanned(duplicate, "duplicate!"));
 
     chain!(original_error, the_rest)
         .combine_errors()
-        .expect("Has to be at least one error!")
+        .expect("has to be at least one error!")
 }
 
 fn group_up_duplicates<T, K, KeyFn>(name_values: &[T], key: KeyFn) -> Vec<Vec<&T>>
@@ -132,7 +132,7 @@ impl Members {
             .map(|field| {
                 let name = field
                     .ident
-                    .expect("FieldsNamed to only contain named fields.");
+                    .expect("`FieldsNamed` to only contain named fields");
                 if has_ignore_attr(&field.attrs) {
                     Member::Ignored { name }
                 } else {
@@ -162,7 +162,7 @@ impl Members {
                             if fields_unnamed.unnamed.len() != 1 {
                                 return Err(Error::new(
                                     fields_unnamed.paren_token.span.join(),
-                                    "Must have exactly one element",
+                                    "must have exactly one element",
                                 ));
                             }
                             fields_unnamed.unnamed.into_iter().next()
@@ -171,7 +171,7 @@ impl Members {
                         Fields::Named(named_fields) => {
                             return Err(Error::new_spanned(
                                 named_fields,
-                                "Struct-like enum variants are not supported.",
+                                "struct-like enum variants are not supported",
                             ))
                         }
                     }

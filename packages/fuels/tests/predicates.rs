@@ -1,17 +1,7 @@
-use fuel_tx::Output;
 use fuels::{
-    accounts::{predicate::Predicate, Account},
+    core::{codec::ABIEncoder, traits::Tokenizable},
     prelude::*,
-    types::{
-        coin::Coin,
-        message::Message,
-        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-    },
-};
-use fuels_core::{
-    codec::ABIEncoder,
-    traits::Tokenizable,
-    types::{coin_type::CoinType, input::Input},
+    types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
 
 async fn assert_address_balance(
@@ -374,8 +364,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let amount = 1000;
     let base_layer_address =
-        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
-            .expect("Invalid address.");
+        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")?;
     let base_layer_address = Bech32Address::from(base_layer_address);
 
     let (tx_id, msg_nonce, _receipts) = predicate
@@ -389,10 +378,11 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .try_provider()?
         .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
         .await?
-        .expect("Failed to retrieve message proof.");
+        .expect("failed to retrieve message proof");
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);
+
     Ok(())
 }
 

@@ -30,8 +30,8 @@ const DISCRIMINANT_BYTES_SIZE: usize = WORD_SIZE;
 
 impl ExperimentalBoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
+        let depth_tracker = CounterWithLimit::new(config.max_depth, "depth");
+        let token_tracker = CounterWithLimit::new(config.max_tokens, "token");
         Self {
             depth_tracker,
             token_tracker,
@@ -314,8 +314,8 @@ impl CounterWithLimit {
         self.count += 1;
         if self.count > self.max {
             return Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
+                Codec,
+                "{} limit `{}` reached while decoding. Try increasing it", self.name, self.max
             ));
         }
 
@@ -364,7 +364,7 @@ fn peek_length(bytes: &[u8]) -> Result<usize> {
 
     u64::from_be_bytes(*slice)
         .try_into()
-        .map_err(|_| error!(InvalidData, "could not convert `u64` to `usize`"))
+        .map_err(|_| error!(Other, "could not convert `u64` to `usize`"))
 }
 
 fn peek_discriminant(bytes: &[u8]) -> Result<u64> {
@@ -374,7 +374,7 @@ fn peek_discriminant(bytes: &[u8]) -> Result<u64> {
 
 fn peek(data: &[u8], len: usize) -> Result<&[u8]> {
     (len <= data.len()).then_some(&data[..len]).ok_or(error!(
-        InvalidData,
+        Codec,
         "tried to read `{len}` bytes but only had `{}` remaining!",
         data.len()
     ))
@@ -391,7 +391,7 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     (num_bytes <= slice.len())
         .then_some(&slice[num_bytes..])
         .ok_or(error!(
-            InvalidData,
+            Codec,
             "tried to consume `{num_bytes}` bytes but only had `{}` remaining!",
             slice.len()
         ))

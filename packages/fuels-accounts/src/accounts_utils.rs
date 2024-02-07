@@ -4,7 +4,7 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::Bech32Address,
-        errors::{error, Result},
+        errors::{error_transaction, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
     },
@@ -24,7 +24,10 @@ pub async fn calculate_missing_base_amount(
     let transaction_fee = tb
         .fee_checked_from_tx(provider)
         .await?
-        .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
+        .ok_or(error_transaction!(
+            Other,
+            "error calculating `TransactionFee`"
+        ))?;
 
     let available_amount = available_base_amount(tb);
 

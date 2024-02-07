@@ -35,9 +35,7 @@ mod tests {
 
         // ANCHOR: liquidity_wallet
         let base_asset_id: AssetId =
-            "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c"
-                .parse()
-                .unwrap();
+            "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c".parse()?;
 
         let asset_ids = [AssetId::default(), base_asset_id];
         let asset_configs = asset_ids
@@ -171,7 +169,7 @@ mod tests {
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let id = AssetId::from_str(&id_string).unwrap();
+            let id = AssetId::from_str(&id_string)?;
 
             // leave the base asset to cover transaction fees
             if id == BASE_ASSET_ID {

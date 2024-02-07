@@ -3,12 +3,16 @@ use std::{fmt::Debug, fs};
 #[cfg(feature = "std")]
 use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
-    types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
+    types::{
+        bech32::Bech32Address,
+        errors::{error, Result},
+        unresolved_bytes::UnresolvedBytes,
+    },
     Configurables,
 };
 
 #[cfg(feature = "std")]
-use crate::{provider::Provider, Account, AccountError, AccountResult, ViewOnlyAccount};
+use crate::{provider::Provider, Account, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -98,8 +102,11 @@ impl ViewOnlyAccount for Predicate {
         self.address()
     }
 
-    fn try_provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::no_provider())
+    fn try_provider(&self) -> Result<&Provider> {
+        self.provider.as_ref().ok_or(error!(
+            Other,
+            "no provider available. Make sure to use `set_provider`"
+        ))
     }
 }
 

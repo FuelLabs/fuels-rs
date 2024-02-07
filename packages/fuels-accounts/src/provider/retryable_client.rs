@@ -2,15 +2,32 @@ use std::{future::Future, io};
 
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
-    types,
-    types::{primitives::BlockId, TransactionResponse, TransactionStatus},
+    types::{
+        primitives::{BlockId, TransactionId},
+        Balance, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
+        NodeInfo, TransactionResponse, TransactionStatus,
+    },
     FuelClient,
 };
 use fuel_tx::{Receipt, Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
-use fuels_core::{error, types::errors::Result};
+use fuels_core::types::errors::{error, Error, Result};
 
 use crate::provider::{retry_util, RetryConfig};
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum RequestError {
+    #[error(transparent)]
+    IO(#[from] io::Error),
+}
+
+type RequestResult<T> = std::result::Result<T, RequestError>;
+
+impl From<RequestError> for Error {
+    fn from(e: RequestError) -> Self {
+        Error::Provider(e.to_string())
+    }
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct RetryableClient {
@@ -22,7 +39,8 @@ pub(crate) struct RetryableClient {
 impl RetryableClient {
     pub(crate) fn new(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
         let url = url.as_ref().to_string();
-        let client = FuelClient::new(&url).map_err(|err| error!(InfrastructureError, "{err}"))?;
+        let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
+
         Ok(Self {
             client,
             retry_config,
@@ -38,48 +56,52 @@ impl RetryableClient {
         self.retry_config = retry_config;
     }
 
-    async fn our_retry<T, Fut>(&self, action: impl Fn() -> Fut) -> io::Result<T>
+    async fn our_retry<T, Fut>(&self, action: impl Fn() -> Fut) -> RequestResult<T>
     where
         Fut: Future<Output = io::Result<T>>,
     {
-        retry_util::retry(action, &self.retry_config, |result| result.is_err()).await
+        Ok(retry_util::retry(action, &self.retry_config, |result| result.is_err()).await?)
     }
 
     // DELEGATION START
-    pub async fn health(&self) -> io::Result<bool> {
+    pub async fn health(&self) -> RequestResult<bool> {
         self.our_retry(|| self.client.health()).await
     }
 
-    pub async fn transaction(&self, id: &TxId) -> io::Result<Option<TransactionResponse>> {
+    pub async fn transaction(&self, id: &TxId) -> RequestResult<Option<TransactionResponse>> {
         self.our_retry(|| self.client.transaction(id)).await
     }
 
-    pub(crate) async fn chain_info(&self) -> io::Result<types::ChainInfo> {
+    pub(crate) async fn chain_info(&self) -> RequestResult<ChainInfo> {
         self.our_retry(|| self.client.chain_info()).await
     }
 
-    pub async fn await_transaction_commit(&self, id: &TxId) -> io::Result<TransactionStatus> {
+    pub async fn await_transaction_commit(&self, id: &TxId) -> RequestResult<TransactionStatus> {
         self.our_retry(|| self.client.await_transaction_commit(id))
             .await
     }
 
-    pub async fn submit_and_await_commit(&self, tx: &Transaction) -> io::Result<TransactionStatus> {
+    pub async fn submit_and_await_commit(
+        &self,
+        tx: &Transaction,
+    ) -> RequestResult<TransactionStatus> {
         self.our_retry(|| self.client.submit_and_await_commit(tx))
             .await
     }
 
-    pub async fn submit(&self, tx: &Transaction) -> io::Result<types::primitives::TransactionId> {
+    pub async fn submit(&self, tx: &Transaction) -> RequestResult<TransactionId> {
         self.our_retry(|| self.client.submit(tx)).await
     }
 
-    pub async fn transaction_status(&self, id: &TxId) -> io::Result<TransactionStatus> {
+    pub async fn transaction_status(&self, id: &TxId) -> RequestResult<TransactionStatus> {
         self.our_retry(|| self.client.transaction_status(id)).await
     }
 
-    pub async fn node_info(&self) -> io::Result<types::NodeInfo> {
+    pub async fn node_info(&self) -> RequestResult<NodeInfo> {
         self.our_retry(|| self.client.node_info()).await
     }
-    pub async fn dry_run(&self, tx: &Transaction) -> io::Result<Vec<Receipt>> {
+
+    pub async fn dry_run(&self, tx: &Transaction) -> RequestResult<Vec<Receipt>> {
         self.our_retry(|| self.client.dry_run(tx)).await
     }
 
@@ -87,7 +109,7 @@ impl RetryableClient {
         &self,
         tx: &Transaction,
         utxo_validation: Option<bool>,
-    ) -> io::Result<Vec<Receipt>> {
+    ) -> RequestResult<Vec<Receipt>> {
         self.our_retry(|| self.client.dry_run_opt(tx, utxo_validation))
             .await
     }
@@ -97,7 +119,7 @@ impl RetryableClient {
         owner: &Address,
         asset_id: Option<&AssetId>,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<types::Coin, String>> {
+    ) -> RequestResult<PaginatedResult<Coin, String>> {
         self.our_retry(move || self.client.coins(owner, asset_id, request.clone()))
             .await
     }
@@ -107,13 +129,15 @@ impl RetryableClient {
         owner: &Address,
         spend_query: Vec<(AssetId, u64, Option<u32>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
-    ) -> io::Result<Vec<Vec<types::CoinType>>> {
-        self.client
-            .coins_to_spend(owner, spend_query, excluded_ids)
-            .await
+    ) -> RequestResult<Vec<Vec<CoinType>>> {
+        self.our_retry(move || {
+            self.client
+                .coins_to_spend(owner, spend_query.clone(), excluded_ids.clone())
+        })
+        .await
     }
 
-    pub async fn balance(&self, owner: &Address, asset_id: Option<&AssetId>) -> io::Result<u64> {
+    pub async fn balance(&self, owner: &Address, asset_id: Option<&AssetId>) -> RequestResult<u64> {
         self.our_retry(|| self.client.balance(owner, asset_id))
             .await
     }
@@ -122,7 +146,7 @@ impl RetryableClient {
         &self,
         id: &ContractId,
         asset: Option<&AssetId>,
-    ) -> io::Result<u64> {
+    ) -> RequestResult<u64> {
         self.our_retry(|| self.client.contract_balance(id, asset))
             .await
     }
@@ -131,7 +155,7 @@ impl RetryableClient {
         &self,
         contract: &ContractId,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<types::ContractBalance, String>> {
+    ) -> RequestResult<PaginatedResult<ContractBalance, String>> {
         self.our_retry(|| self.client.contract_balances(contract, request.clone()))
             .await
     }
@@ -140,7 +164,7 @@ impl RetryableClient {
         &self,
         owner: &Address,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<types::Balance, String>> {
+    ) -> RequestResult<PaginatedResult<Balance, String>> {
         self.our_retry(|| self.client.balances(owner, request.clone()))
             .await
     }
@@ -148,7 +172,7 @@ impl RetryableClient {
     pub async fn transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<TransactionResponse, String>> {
+    ) -> RequestResult<PaginatedResult<TransactionResponse, String>> {
         self.our_retry(|| self.client.transactions(request.clone()))
             .await
     }
@@ -157,7 +181,7 @@ impl RetryableClient {
         &self,
         owner: &Address,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<TransactionResponse, String>> {
+    ) -> RequestResult<PaginatedResult<TransactionResponse, String>> {
         self.our_retry(|| self.client.transactions_by_owner(owner, request.clone()))
             .await
     }
@@ -166,7 +190,7 @@ impl RetryableClient {
         &self,
         blocks_to_produce: u32,
         start_timestamp: Option<u64>,
-    ) -> io::Result<BlockHeight> {
+    ) -> RequestResult<BlockHeight> {
         self.our_retry(|| {
             self.client
                 .produce_blocks(blocks_to_produce, start_timestamp)
@@ -174,14 +198,14 @@ impl RetryableClient {
         .await
     }
 
-    pub async fn block(&self, id: &BlockId) -> io::Result<Option<types::Block>> {
+    pub async fn block(&self, id: &BlockId) -> RequestResult<Option<Block>> {
         self.our_retry(|| self.client.block(id)).await
     }
 
     pub async fn blocks(
         &self,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<types::Block, String>> {
+    ) -> RequestResult<PaginatedResult<Block, String>> {
         self.our_retry(|| self.client.blocks(request.clone())).await
     }
 
@@ -189,7 +213,7 @@ impl RetryableClient {
         &self,
         owner: Option<&Address>,
         request: PaginationRequest<String>,
-    ) -> io::Result<PaginatedResult<types::Message, String>> {
+    ) -> RequestResult<PaginatedResult<Message, String>> {
         self.our_retry(|| self.client.messages(owner, request.clone()))
             .await
     }
@@ -201,7 +225,7 @@ impl RetryableClient {
         nonce: &Nonce,
         commit_block_id: Option<&BlockId>,
         commit_block_height: Option<BlockHeight>,
-    ) -> io::Result<Option<types::MessageProof>> {
+    ) -> RequestResult<Option<MessageProof>> {
         self.our_retry(|| {
             self.client
                 .message_proof(transaction_id, nonce, commit_block_id, commit_block_height)

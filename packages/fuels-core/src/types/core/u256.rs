@@ -31,8 +31,8 @@ impl Tokenizable for U256 {
         match token {
             Token::U256(data) => Ok(data),
             _ => Err(error!(
-                InvalidData,
-                "U256 cannot be constructed from token {token}"
+                Other,
+                "`U256` cannot be constructed from token `{token}`"
             )),
         }
     }

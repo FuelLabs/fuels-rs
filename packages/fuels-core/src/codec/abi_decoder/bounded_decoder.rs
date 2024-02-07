@@ -26,8 +26,8 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
+        let depth_tracker = CounterWithLimit::new(config.max_depth, "depth");
+        let token_tracker = CounterWithLimit::new(config.max_tokens, "token");
         Self {
             depth_tracker,
             token_tracker,
@@ -389,8 +389,8 @@ impl CounterWithLimit {
         self.count += 1;
         if self.count > self.max {
             Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
+                Codec,
+                "{} limit `{}` reached while decoding. Try increasing it", self.name, self.max
             ))
         } else {
             Ok(())
@@ -425,7 +425,7 @@ fn peek_u32(bytes: &[u8]) -> Result<u32> {
     let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
-        .expect("peek_u32: You must use a slice containing exactly 4B.");
+        .expect("peek_u32: You must use a slice containing exactly 4B");
     Ok(u32::from_be_bytes(bytes))
 }
 
@@ -435,7 +435,7 @@ fn peek_u16(bytes: &[u8]) -> Result<u16> {
     let slice = peek_fixed::<WORD_SIZE>(bytes)?;
     let bytes = slice[WORD_SIZE - BYTES..]
         .try_into()
-        .expect("peek_u16: You must use a slice containing exactly 2B.");
+        .expect("peek_u16: You must use a slice containing exactly 2B");
     Ok(u16::from_be_bytes(bytes))
 }
 
@@ -445,7 +445,7 @@ fn peek_u8(bytes: &[u8]) -> Result<u8> {
     let slice = peek_fixed::<1>(bytes)?;
     let bytes = slice[1 - BYTES..]
         .try_into()
-        .expect("peek_u8: You must use a slice containing exactly 1B.");
+        .expect("peek_u8: You must use a slice containing exactly 1B");
     Ok(u8::from_be_bytes(bytes))
 }
 
@@ -458,7 +458,7 @@ fn peek_fixed<const LEN: usize>(data: &[u8]) -> Result<&[u8; LEN]> {
 fn peek(data: &[u8], len: usize) -> Result<&[u8]> {
     if len > data.len() {
         Err(error!(
-            InvalidData,
+            Codec,
             "tried to read {len} bytes from response but only had {} remaining!",
             data.len()
         ))
@@ -470,7 +470,7 @@ fn peek(data: &[u8], len: usize) -> Result<&[u8]> {
 fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     if num_bytes > slice.len() {
         Err(error!(
-            InvalidData,
+            Codec,
             "tried to consume {num_bytes} bytes from response but only had {} remaining!",
             slice.len()
         ))
