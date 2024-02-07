@@ -171,23 +171,7 @@ where
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(script_offset as u64))
-            .map_err(|e| {
-                error!(
-                    InvalidData,
-                    "Cannot encode script call arguments: {}",
-                    e.to_string()
-                )
-            })
-        // match self.script_call.encoded_args.as_ref() {
-        //     Ok(encoded_args) => Ok(encoded_args.resolve(script_offset as u64)),
-        //     Err(e) if e.to_string().contains("Encoding") => {
-        //         let error_string = e
-        //             .to_string()
-        //             .replace("Invalid type:", "Cannot encode script call arguments:");
-        //         Err(Error::InvalidType(error_string))
-        //     }
-        //     Err(e) => Err(Error::InvalidType(e.to_string())),
-        // }
+            .map_err(|e| error!(InvalidData, "Cannot encode script call arguments: {e}"))
     }
 
     async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
