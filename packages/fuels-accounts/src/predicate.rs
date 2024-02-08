@@ -1,13 +1,9 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::types::{input::Input, AssetId};
+use fuels_core::types::{errors::error, input::Input, AssetId};
 use fuels_core::{
-    types::{
-        bech32::Bech32Address,
-        errors::{error, Result},
-        unresolved_bytes::UnresolvedBytes,
-    },
+    types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,
 };
 
