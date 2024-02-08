@@ -1171,7 +1171,7 @@ async fn test_payable_annotation() -> Result<()> {
     let err = contract_methods
         .non_payable()
         .call_params(CallParameters::default().with_amount(100))
-        .expect_err("should return call params error");
+        .expect_err("should return error");
 
     assert!(matches!(err, Error::Other(s) if s.contains("assets forwarded to non-payable method")));
     // ANCHOR_END: non_payable_params
