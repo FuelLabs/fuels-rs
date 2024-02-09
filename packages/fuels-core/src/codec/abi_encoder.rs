@@ -3,7 +3,7 @@ use fuel_types::bytes::padded_len_usize;
 use crate::{
     checked_round_up_to_word_alignment,
     types::{
-        errors::Result,
+        errors::{error, Result},
         pad_u16, pad_u32,
         unresolved_bytes::{Data, UnresolvedBytes},
         EnumSelector, StaticStringToken, Token, U256,
@@ -39,12 +39,14 @@ impl ABIEncoder {
     }
 
     fn encode_tokens(tokens: &[Token], word_aligned: bool) -> Result<Vec<Data>> {
-        let mut offset_in_bytes = 0;
+        let mut offset_in_bytes = 0usize;
         let mut data = vec![];
 
         for token in tokens.iter() {
             let mut new_data = Self::encode_token(token)?;
-            offset_in_bytes += new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>();
+            offset_in_bytes = offset_in_bytes
+                .checked_add(new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>())
+                .ok_or_else(|| error!(InvalidType, "Addition overflow while calculating offset"))?;
 
             data.append(&mut new_data);
 
@@ -52,10 +54,22 @@ impl ABIEncoder {
                 let padding = vec![
                     0u8;
                     checked_round_up_to_word_alignment(offset_in_bytes)?
-                        - offset_in_bytes
+                        .checked_sub(offset_in_bytes)
+                        .ok_or_else(|| {
+                            error!(
+                                InvalidType,
+                                "Subtraction overflow while calculating padding"
+                            )
+                        })?
                 ];
                 if !padding.is_empty() {
-                    offset_in_bytes += padding.len();
+                    offset_in_bytes =
+                        offset_in_bytes.checked_add(padding.len()).ok_or_else(|| {
+                            error!(
+                                InvalidType,
+                                "Addition overflow while calculating word-aligned offset"
+                            )
+                        })?;
                     data.push(Data::Inline(padding));
                 }
             }

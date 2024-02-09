@@ -67,9 +67,24 @@ impl EnumVariants {
     /// biggest variant) and returns it.
     pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
         let enum_width = self.compute_enum_width_in_bytes()?;
-        let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
+        let biggest_variant_width = enum_width
+            .checked_sub(ENUM_DISCRIMINANT_BYTE_WIDTH)
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Subtraction overflow while calculating biggest_variant_width"
+                )
+            })?;
         let variant_width = variant_param_type.compute_encoding_in_bytes()?;
-        Ok(biggest_variant_width - variant_width)
+        let padding_amount = biggest_variant_width
+            .checked_sub(variant_width)
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Subtraction overflow while calculating padding_amount"
+                )
+            })?;
+        Ok(padding_amount)
     }
 }
 

@@ -123,7 +123,7 @@ pub fn pad_u32(value: u32) -> ByteArray {
 }
 
 pub fn pad_string(s: &str) -> Vec<u8> {
-    let pad = padded_len(s.as_bytes()) - s.len();
+    let pad = padded_len(s.as_bytes()).saturating_sub(s.len());
 
     let mut padded = s.as_bytes().to_owned();
 

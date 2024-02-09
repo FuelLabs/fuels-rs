@@ -31,6 +31,6 @@ pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
 ) -> usize {
     witnesses
         .into_iter()
-        .map(|w| w.as_ref().len() + WITNESS_STATIC_SIZE)
+        .map(|w| w.as_ref().len().saturating_add(WITNESS_STATIC_SIZE))
         .sum()
 }
