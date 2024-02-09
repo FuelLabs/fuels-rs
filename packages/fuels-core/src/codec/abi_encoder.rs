@@ -1106,7 +1106,7 @@ mod tests {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = "Depth limit (2) reached while Encoding. Try increasing it.".to_string();
+        let msg = "Depth limit (2) reached while encoding. Try increasing it.".to_string();
 
         [nested_struct, nested_enum, nested_tuple, nested_array]
             .iter()

@@ -196,5 +196,5 @@ async fn test_configurable_encoder_config_is_applied() {
         .unwrap_err();
     assert!(configurables_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding. Try increasing it."),)
+        .contains("Token limit (1) reached while encoding. Try increasing it."),)
 }

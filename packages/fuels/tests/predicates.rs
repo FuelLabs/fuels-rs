@@ -912,6 +912,6 @@ async fn test_predicate_encoder_config_is_applied() -> Result<()> {
         .unwrap_err();
     assert!(encoding_error
         .to_string()
-        .contains("Token limit (1) reached while Encoding"));
+        .contains("Token limit (1) reached while encoding"));
     Ok(())
 }

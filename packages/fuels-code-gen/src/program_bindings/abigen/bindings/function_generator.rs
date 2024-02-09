@@ -18,7 +18,6 @@ pub(crate) struct FunctionGenerator {
     output_type: TokenStream,
     body: TokenStream,
     doc: Option<String>,
-    is_method: bool,
 }
 
 impl FunctionGenerator {
@@ -38,7 +37,6 @@ impl FunctionGenerator {
             output_type: output_type.to_token_stream(),
             body: Default::default(),
             doc: None,
-            is_method: true,
         })
     }
 
@@ -105,9 +103,7 @@ impl FunctionGenerator {
         let output_type = self.output_type();
         let body = &self.body;
 
-        let self_param = self.is_method.then_some(quote! {&self,});
-
-        let params = quote! { #self_param #(#arg_declarations),* };
+        let params = quote! { &self, #(#arg_declarations),* };
 
         quote! {
             #doc

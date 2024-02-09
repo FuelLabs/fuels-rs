@@ -192,7 +192,7 @@ impl BoundedEncoder {
             if enum_width_in_bytes > self.max_total_enum_width {
                 return Err(error!(
                     InvalidData,
-                    "Cannot encode Enum with variants {variants:?} : it is {enum_width_in_bytes} bytes wide. Try increasing encoder max memory."
+                    "Cannot encode Enum with variants {variants:?}: it is {enum_width_in_bytes} bytes wide. Try increasing encoder max memory."
                 ));
             }
             let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;

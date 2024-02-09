@@ -676,7 +676,7 @@ mod tests {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = format!("Depth limit ({MAX_DEPTH}) reached while Decoding. Try increasing it.");
+        let msg = format!("Depth limit ({MAX_DEPTH}) reached while decoding. Try increasing it.");
         // for each nested enum so that it may read the discriminant
         let data = [0; MAX_DEPTH * WORD_SIZE];
 
@@ -737,7 +737,7 @@ mod tests {
             assert_decoding_failed_w_data(
                 config,
                 &param_type,
-                "Token limit (3) reached while Decoding. Try increasing it.",
+                "Token limit (3) reached while decoding. Try increasing it.",
                 &data,
             );
         }
