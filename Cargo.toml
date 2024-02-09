@@ -95,7 +95,7 @@ fuel-types = { version = "0.45.0" }
 fuel-vm = { version = "0.45.0" }
 
 # Workspace projects
-fuels = { version = "0.55.0", path = "./packages/fuels" }
+fuels = { version = "0.55.0", path = "./packages/fuels", features = ["fuel-core-lib"] }
 fuels-accounts = { version = "0.55.0", path = "./packages/fuels-accounts", default-features = false }
 fuels-code-gen = { version = "0.55.0", path = "./packages/fuels-code-gen", default-features = false }
 fuels-core = { version = "0.55.0", path = "./packages/fuels-core", default-features = false }
