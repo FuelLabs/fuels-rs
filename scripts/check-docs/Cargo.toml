@@ -13,3 +13,6 @@ rust-version = { workspace = true }
 anyhow = "1.0.75"
 itertools = { workspace = true }
 regex = { workspace = true }
+
+[lints]
+workspace = true

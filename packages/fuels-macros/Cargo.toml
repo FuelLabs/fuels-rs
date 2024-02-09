@@ -23,3 +23,5 @@ syn = { workspace = true, features = ["extra-traits"] }
 [dev-dependencies]
 trybuild = { workspace = true }
 
+[lints]
+workspace = true

@@ -37,3 +37,6 @@ tokio = { workspace = true, features = ["test-util"] }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client"]
+
+[lints]
+workspace = true
