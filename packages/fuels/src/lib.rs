@@ -16,7 +16,7 @@ pub mod tx {
     pub use fuel_tx::{
         field, ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters, GasCosts,
         PredicateParameters, Receipt, ScriptExecutionResult, ScriptParameters, StorageSlot,
-        Transaction as FuelTransaction, TxId, TxParameters, Witness,
+        Transaction as FuelTransaction, TxId, TxParameters, TxPointer, UtxoId, Witness,
     };
 }
 
