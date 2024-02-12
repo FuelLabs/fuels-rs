@@ -713,7 +713,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     log_decoder: LogDecoder,
     is_payable: bool,
     encoder_config: EncoderConfig,
-) -> Result<ContractCallHandler<T, D>> {
+) -> ContractCallHandler<T, D> {
     let encoded_selector = signature;
 
     let tx_policies = TxPolicies::default();
@@ -735,7 +735,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         custom_assets: Default::default(),
     };
 
-    Ok(ContractCallHandler {
+    ContractCallHandler {
         contract_call,
         tx_policies,
         cached_tx_id: None,
@@ -743,7 +743,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: Default::default(),
-    })
+    }
 }
 
 // If the data passed into the contract method is an integer or a

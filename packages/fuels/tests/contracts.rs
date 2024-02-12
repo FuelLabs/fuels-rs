@@ -635,7 +635,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        .with_account(wallet_2.clone())?
+        .with_account(wallet_2.clone())
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)

@@ -58,15 +58,13 @@ pub(crate) fn script_bindings(
                 }
             }
 
-            pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> ::fuels::types::errors::Result<#name<U>> {
-               ::core::result::Result::Ok(
+            pub fn with_account<U: ::fuels::accounts::Account>(self, account: U) -> #name<U> {
                     #name {
                         account,
                         binary: self.binary,
                         log_decoder: self.log_decoder,
                         encoder_config: self.encoder_config,
                     }
-                )
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
@@ -76,6 +74,7 @@ pub(crate) fn script_bindings(
                 configurables.update_constants_in(&mut self.binary);
                 self
             }
+
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
                 -> Self
             {

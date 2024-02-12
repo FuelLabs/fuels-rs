@@ -41,12 +41,12 @@ pub mod abigen_bindings {
             pub fn account(&self) -> T {
                 self.account.clone()
             }
-            pub fn with_account<U: Account>(&self, account: U) -> Result<MyContract<U>> {
-                ::core::result::Result::Ok(MyContract {
+            pub fn with_account<U: Account>(&self, account: U) -> MyContract<U> {
+                MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
-                })
+                }
             }
             pub async fn get_balances(&self) -> Result<::std::collections::HashMap<AssetId, u64>> {
                 ViewOnlyAccount::try_provider(&self.account)?
@@ -79,7 +79,6 @@ pub mod abigen_bindings {
                     false,
                     ::std::option::Option::None,
                 )
-                .expect("Could not encode")
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
@@ -92,7 +91,6 @@ pub mod abigen_bindings {
                     false,
                     ::std::option::Option::None,
                 )
-                .expect("Could not encode")
             }
         }
         impl<T: Account> contract::SettableContract for MyContract<T> {

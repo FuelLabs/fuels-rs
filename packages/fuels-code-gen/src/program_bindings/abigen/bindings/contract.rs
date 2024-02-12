@@ -66,14 +66,13 @@ pub(crate) fn contract_bindings(
             }
 
             pub fn with_account<U: ::fuels::accounts::Account>(self, account: U)
-            -> ::fuels::types::errors::Result<#name<U>> {
-                ::core::result::Result::Ok(
+            -> #name<U> {
                 #name {
                         contract_id: self.contract_id,
                         account,
                         log_decoder: self.log_decoder,
                         encoder_config: self.encoder_config
-                })
+                }
             }
 
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
@@ -178,7 +177,6 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
                 #is_payable,
                 self.encoder_config.clone(),
             )
-            .expect("Could not encode")
     };
     generator.set_body(body);
 
@@ -377,7 +375,6 @@ mod tests {
                     false,
                     self.encoder_config.clone(),
                 )
-                .expect("Could not encode")
             }
         };
 
@@ -434,7 +431,6 @@ mod tests {
                     false,
                     self.encoder_config.clone(),
                 )
-                .expect("Could not encode")
             }
         };
 
@@ -547,7 +543,6 @@ mod tests {
                     false,
                     self.encoder_config.clone(),
                 )
-                .expect("Could not encode")
             }
         };
 
