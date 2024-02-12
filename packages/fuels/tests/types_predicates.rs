@@ -39,7 +39,7 @@ async fn assert_predicate_spendable(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance.saturating_add(predicate_balance),
     )
     .await;
 
@@ -101,7 +101,7 @@ async fn setup_predicate_test(
     let receiver_amount = 1;
     let receiver_balance = receiver_num_coins * receiver_amount;
 
-    let predicate_balance = (num_coins + num_messages) * amount;
+    let predicate_balance = (num_coins.saturating_add(num_messages)).saturating_mul(amount);
     let mut receiver = WalletUnlocked::new_random(None);
 
     let (mut coins, messages, asset_id) =

@@ -137,14 +137,14 @@ impl FuelService {
 async fn server_health_check(address: SocketAddr) -> FuelResult<()> {
     let client = FuelClient::from(address);
 
-    let mut attempts = 5;
+    let mut attempts: u8 = 5;
     let mut healthy = client.health().await.unwrap_or(false);
     let between_attempts = Duration::from_millis(300);
 
     while attempts > 0 && !healthy {
         healthy = client.health().await.unwrap_or(false);
         sleep(between_attempts).await;
-        attempts -= 1;
+        attempts = attempts.saturating_sub(1);
     }
 
     if !healthy {

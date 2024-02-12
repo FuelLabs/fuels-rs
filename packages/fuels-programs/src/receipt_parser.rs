@@ -88,7 +88,7 @@ impl ReceiptParser {
             {
                 let mut first_data = first_data.clone();
                 let mut second_data = second_data.clone();
-                self.receipts.drain(index..=index + 1);
+                self.receipts.drain(index..=index.saturating_add(1));
                 first_data.append(&mut second_data);
 
                 return Some(first_data);
@@ -144,7 +144,7 @@ impl ReceiptParser {
                 Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
             {
                 let data = heap_data.clone();
-                self.receipts.drain(index..=index + 1);
+                self.receipts.drain(index..=index.saturating_add(1));
                 return Some(data);
             }
         }

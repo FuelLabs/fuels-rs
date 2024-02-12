@@ -47,7 +47,7 @@ pub fn setup_multiple_assets_coins(
 ) -> (Vec<Coin>, Vec<AssetId>) {
     let mut rng = rand::thread_rng();
     // Create `num_asset-1` asset ids so there is `num_asset` in total with the base asset
-    let asset_ids = (0..(num_asset - 1))
+    let asset_ids = (0..(num_asset.saturating_sub(1)))
         .map(|_| {
             let mut random_asset_id = AssetId::zeroed();
             random_asset_id

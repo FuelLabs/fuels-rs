@@ -10,7 +10,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{error, Error as FuelsError, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -276,9 +276,16 @@ pub(crate) fn build_script_data_from_contract_calls(
 
         let call_param_offsets = CallOpcodeParamsOffset {
             amount_offset: segment_offset,
-            asset_id_offset: segment_offset + WORD_SIZE,
-            gas_forwarded_offset: gas_forwarded.map(|_| segment_offset + WORD_SIZE + AssetId::LEN),
-            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN + gas_forwarded_size,
+            asset_id_offset: segment_offset.saturating_add(WORD_SIZE),
+            gas_forwarded_offset: gas_forwarded.map(|_| {
+                segment_offset
+                    .saturating_add(WORD_SIZE)
+                    .saturating_add(AssetId::LEN)
+            }),
+            call_data_offset: segment_offset
+                .saturating_add(WORD_SIZE)
+                .saturating_add(AssetId::LEN)
+                .saturating_add(gas_forwarded_size),
         };
         param_offsets.push(call_param_offsets);
 
@@ -290,12 +297,12 @@ pub(crate) fn build_script_data_from_contract_calls(
             // Custom inputs are stored after the previously added parameters,
             // including custom_input_offset
             let custom_input_offset = segment_offset
-                + WORD_SIZE // amount size
-                + AssetId::LEN
-                + gas_forwarded_size
-                + ContractId::LEN
-                + WORD_SIZE // encoded_selector size
-                + WORD_SIZE; // custom_input_offset size
+                .saturating_add(WORD_SIZE) // amount size
+                .saturating_add(AssetId::LEN)
+                .saturating_add(gas_forwarded_size)
+                .saturating_add(ContractId::LEN)
+                .saturating_add(WORD_SIZE) // encoded_selector size
+                .saturating_add(WORD_SIZE); // custom_input_offset size
             script_data.extend((custom_input_offset as Word).to_be_bytes());
 
             custom_input_offset
@@ -308,7 +315,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 
         // the data segment that holds the parameters for the next call
         // begins at the original offset + the data we added so far
-        segment_offset = data_offset + script_data.len();
+        segment_offset = data_offset.saturating_add(script_data.len());
     }
 
     (script_data, param_offsets)
@@ -381,7 +388,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
 
             let param_type_width = param_type.compute_encoding_in_bytes()?;
             let heap_type_width = heap_type.compute_encoding_in_bytes()?;
-            let ptr_offset = ((param_type_width - heap_type_width) / 8) as u16;
+            let ptr_offset = (param_type_width.saturating_sub(heap_type_width) / 8) as u16;
 
             Ok([
                 vec![
@@ -426,7 +433,16 @@ fn extract_data_receipt(
 
     Ok(vec![
         op::lw(0x15, RegId::RET, ptr_offset),
-        op::lw(0x16, RegId::RET, ptr_offset + len_offset),
+        op::lw(
+            0x16,
+            RegId::RET,
+            ptr_offset.checked_add(len_offset).ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating offset over ptr_offset {ptr_offset:?}"
+                )
+            })?,
+        ),
         op::muli(0x16, 0x16, inner_type_byte_size as u16),
         op::retd(0x15, 0x16),
     ])
