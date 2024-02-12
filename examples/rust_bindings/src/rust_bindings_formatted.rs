@@ -77,7 +77,7 @@ pub mod abigen_bindings {
                     &[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
-                    ::std::option::Option::None,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
             }
             #[doc = "Calls the contract's `increment_counter` function"]
@@ -89,7 +89,7 @@ pub mod abigen_bindings {
                     &[value.into_token()],
                     self.log_decoder.clone(),
                     false,
-                    ::std::option::Option::None,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
             }
         }
