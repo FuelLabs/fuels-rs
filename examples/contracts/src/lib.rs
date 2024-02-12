@@ -104,17 +104,14 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 563);
+        assert_eq!(transaction_cost.gas_used, 841);
 
         Ok(())
     }
 
     #[tokio::test]
     async fn deploy_with_parameters() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        use fuels::{
-            prelude::*,
-            tx::{Bytes32, StorageSlot},
-        };
+        use fuels::{prelude::*, tx::StorageSlot, types::Bytes32};
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
         let wallet = launch_provider_and_get_wallet().await?;
@@ -649,7 +646,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 785);
+        assert_eq!(transaction_cost.gas_used, 1251);
 
         Ok(())
     }
