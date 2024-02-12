@@ -11,7 +11,7 @@ mod tests {
         // ANCHOR: bytes32
         use std::str::FromStr;
 
-        use fuels::tx::Bytes32;
+        use fuels::types::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
@@ -70,7 +70,7 @@ mod tests {
     #[tokio::test]
     async fn bech32() -> Result<()> {
         // ANCHOR: bech32
-        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
+        use fuels::types::{bech32::Bech32Address, Address, Bytes32};
 
         // New from HRP string and a hash
         let hrp = "fuel";
