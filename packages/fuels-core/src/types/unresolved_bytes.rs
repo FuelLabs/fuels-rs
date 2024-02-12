@@ -51,7 +51,7 @@ impl UnresolvedBytes {
         // anyone. Best place for it is immediately after all the inline/normal
         // data is encoded.
 
-        let start_of_dynamic_data = start_addr + Self::amount_of_inline_bytes(data);
+        let start_of_dynamic_data = start_addr.saturating_add(Self::amount_of_inline_bytes(data));
 
         let mut inline_data: Vec<u8> = vec![];
         let mut dynamic_data: Vec<u8> = vec![];
@@ -60,7 +60,7 @@ impl UnresolvedBytes {
                 Data::Inline(bytes) => inline_data.extend(bytes),
                 Data::Dynamic(chunk_of_dynamic_data) => {
                     let ptr_to_next_free_location: u64 =
-                        start_of_dynamic_data + dynamic_data.len() as u64;
+                        start_of_dynamic_data.saturating_add(dynamic_data.len() as u64);
 
                     // If this is a vector, its `ptr` will now be encoded, the
                     // `cap` and `len` parts should follow as two Data::Inline

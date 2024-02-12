@@ -28,9 +28,25 @@ pub async fn calculate_missing_base_amount(
 
     let available_amount = available_base_amount(tb);
 
-    let total_used = transaction_fee.max_fee() + used_base_amount;
+    let total_used = transaction_fee
+        .max_fee()
+        .checked_add(used_base_amount)
+        .ok_or_else(|| {
+            error!(
+                InvalidType,
+                "Addition overflow while calculating total_used for max_fee {:?} and used_base_amount {used_base_amount:?}",
+                transaction_fee.max_fee()
+            )
+        })?;
+
     let missing_amount = if total_used > available_amount {
-        total_used - available_amount
+        total_used.checked_sub(available_amount)
+        .ok_or_else(|| {
+            error!(
+                InvalidType,
+                "Subtraction overflow while calculating missing_amount for available_amount {available_amount:?}"
+            )
+        })?
     } else if !is_consuming_utxos(tb) {
         // A tx needs to have at least 1 spendable input
         // Enforce a minimum required amount on the base asset if no other inputs are present

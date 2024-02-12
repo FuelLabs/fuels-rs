@@ -279,7 +279,7 @@ macro_rules! impl_tx_trait {
             fn num_witnesses(&self) -> Result<u8> {
                 let num_witnesses = self.witnesses().len();
 
-                if num_witnesses + self.unresolved_signers.len() > 256 {
+                if num_witnesses.saturating_add(self.unresolved_signers.len()) > 256 {
                     return Err(error!(
                         InvalidData,
                         "tx can not have more than 256 witnesses"
@@ -292,9 +292,9 @@ macro_rules! impl_tx_trait {
             fn calculate_witnesses_size(&self) -> Option<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
                 let signature_size = SIGNATURE_WITNESS_SIZE
-                    * self.unresolved_witness_indexes.owner_to_idx_offset.len();
+                    .saturating_mul(self.unresolved_witness_indexes.owner_to_idx_offset.len());
 
-                Some(padded_len_usize(witnesses_size + signature_size) as u64)
+                Some(padded_len_usize(witnesses_size.saturating_add(signature_size)) as u64)
             }
         }
     };
@@ -363,7 +363,7 @@ impl ScriptTransactionBuilder {
         let unresolved_witnesses_len = self.unresolved_witness_indexes.owner_to_idx_offset.len();
         let witness: Witness = Signature::default().as_ref().into();
         repeat(witness)
-            .take(num_witnesses as usize + unresolved_witnesses_len)
+            .take((num_witnesses as usize).saturating_add(unresolved_witnesses_len))
             .collect()
     }
 
@@ -403,13 +403,34 @@ impl ScriptTransactionBuilder {
             // Add an empty `Witness` for the `coin_signed` we just added
             // and increase the witness limit
             tx.witnesses_mut().push(Default::default());
-            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
+            let witness_limit = tx
+                .witness_limit()
+                .checked_add(WITNESS_STATIC_SIZE as u64)
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating witness_limit"
+                    )
+                })?;
+            tx.set_witness_limit(witness_limit);
         }
 
         // Get `max_gas` used by everything except the script execution. Add `1` because of rounding.
-        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+        let max_gas = tx
+            .max_gas(consensus_params.gas_costs(), consensus_params.fee_params())
+            .saturating_add(1);
         // Increase `script_gas_limit` to the maximum allowed value.
-        tx.set_script_gas_limit(consensus_params.tx_params().max_gas_per_tx - max_gas);
+        let script_gas_limit = consensus_params
+            .tx_params()
+            .max_gas_per_tx
+            .checked_sub(max_gas)
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Subtraction overflow while calculating script_gas_limit"
+                )
+            })?;
+        tx.set_script_gas_limit(script_gas_limit);
 
         let gas_used = provider
             .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
@@ -419,7 +440,16 @@ impl ScriptTransactionBuilder {
         if no_spendable_input {
             tx.inputs_mut().pop();
             tx.witnesses_mut().pop();
-            tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
+            let witness_limit = tx
+                .witness_limit()
+                .checked_sub(WITNESS_STATIC_SIZE as u64)
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Subtraction overflow while calculating witness_limit"
+                    )
+                })?;
+            tx.set_witness_limit(witness_limit);
         }
 
         tx.set_script_gas_limit(gas_used);
@@ -437,6 +467,15 @@ impl ScriptTransactionBuilder {
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
+        let data_offset = base_offset
+            .checked_add(policies.size_dynamic())
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating data_offset"
+                )
+            })?;
+
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
             self.script,
@@ -444,7 +483,7 @@ impl ScriptTransactionBuilder {
             policies,
             resolve_fuel_inputs(
                 self.inputs,
-                base_offset + policies.size_dynamic(),
+                data_offset,
                 num_witnesses,
                 &self.unresolved_witness_indexes,
             )?,
@@ -478,8 +517,8 @@ impl ScriptTransactionBuilder {
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
         offsets::base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_data.len())
-            + padded_len_usize(self.script.len())
+            .saturating_add(padded_len_usize(self.script_data.len()))
+            .saturating_add(padded_len_usize(self.script.len()))
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
@@ -637,8 +676,31 @@ impl CreateTransactionBuilder {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies(network_min_gas_price);
 
-        let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
-        base_offset += storage_slots_offset + policies.size_dynamic();
+        let storage_slots_offset = self
+            .storage_slots
+            .len()
+            .checked_mul(StorageSlot::SLOT_SIZE)
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Multiplication overflow while calculating storage_slots_offset"
+                )
+            })?;
+        base_offset = base_offset
+            .checked_add(storage_slots_offset)
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating base_offset"
+                )
+            })?
+            .checked_add(policies.size_dynamic())
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating base_offset"
+                )
+            })?;
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
@@ -755,7 +817,7 @@ fn resolve_fuel_inputs(
                 tx_pointer,
                 contract_id,
             } => {
-                data_offset += offsets::contract_input_offset();
+                data_offset = data_offset.saturating_add(offsets::contract_input_offset());
                 Ok(FuelInput::contract(
                     utxo_id,
                     balance_root,
@@ -776,7 +838,14 @@ fn resolve_signed_resource(
 ) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
-            *data_offset += offsets::coin_signed_data_offset();
+            *data_offset = data_offset
+                .checked_add(offsets::coin_signed_data_offset())
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating data_offset for coin {coin:?}"
+                    )
+                })?;
             let owner = &coin.owner;
 
             unresolved_witness_indexes
@@ -787,11 +856,19 @@ fn resolve_signed_resource(
                     "signature missing for coin with owner: `{owner:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_input(coin, num_witnesses + *witness_idx_offset as u8)
+                    let witness_index = num_witnesses.saturating_add(*witness_idx_offset as u8);
+                    create_coin_input(coin, witness_index)
                 })
         }
         CoinType::Message(message) => {
-            *data_offset += offsets::message_signed_data_offset(message.data.len());
+            *data_offset = data_offset
+                .checked_add(offsets::message_signed_data_offset(message.data.len()))
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating data_offset for message {message:?}"
+                    )
+                })?;
             let recipient = &message.recipient;
 
             unresolved_witness_indexes
@@ -802,7 +879,8 @@ fn resolve_signed_resource(
                     "signature missing for message with recipient: `{recipient:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_message_input(message, num_witnesses + *witness_idx_offset as u8)
+                    let witness_index = num_witnesses.saturating_add(*witness_idx_offset as u8);
+                    create_coin_message_input(message, witness_index)
                 })
         }
     }
@@ -816,19 +894,46 @@ fn resolve_predicate_resource(
 ) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
-            *data_offset += offsets::coin_predicate_data_offset(code.len());
+            *data_offset = data_offset
+                .checked_add(offsets::coin_predicate_data_offset(code.len()))
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating data_offset for coin {coin:?}"
+                    )
+                })?;
 
             let data = data.resolve(*data_offset as u64);
-            *data_offset += data.len();
+            *data_offset = data_offset.checked_add(data.len()).ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating data_offset for coin {coin:?}"
+                )
+            })?;
 
             let asset_id = coin.asset_id;
             Ok(create_coin_predicate(coin, asset_id, code, data))
         }
         CoinType::Message(message) => {
-            *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len());
+            *data_offset = data_offset
+                .checked_add(offsets::message_predicate_data_offset(
+                    message.data.len(),
+                    code.len(),
+                ))
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating data_offset for message {message:?}"
+                    )
+                })?;
 
             let data = data.resolve(*data_offset as u64);
-            *data_offset += data.len();
+            *data_offset = data_offset.checked_add(data.len()).ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating data_offset for message {message:?}"
+                )
+            })?;
 
             Ok(create_coin_message_predicate(message, code, data))
         }

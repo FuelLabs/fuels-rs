@@ -105,7 +105,10 @@ impl CoinCacheItem {
     }
 
     pub fn is_valid(&self, ttl: Duration) -> bool {
-        self.created_at + ttl > Instant::now()
+        self.created_at
+            .checked_add(ttl)
+            .map(|instant| instant > Instant::now())
+            .unwrap_or(false)
     }
 }
 
