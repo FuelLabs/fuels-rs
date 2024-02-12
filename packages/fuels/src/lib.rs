@@ -14,9 +14,9 @@
 
 pub mod tx {
     pub use fuel_tx::{
-        field, AssetId, Bytes32, ConsensusParameters, ContractIdExt, ContractParameters,
-        FeeParameters, GasCosts, PredicateParameters, Receipt, Salt, ScriptExecutionResult,
-        ScriptParameters, StorageSlot, Transaction as FuelTransaction, TxId, TxParameters, Witness,
+        field, ConsensusParameters, ContractIdExt, ContractParameters, FeeParameters, GasCosts,
+        PredicateParameters, Receipt, ScriptExecutionResult, ScriptParameters, StorageSlot,
+        Transaction as FuelTransaction, TxId, TxParameters, TxPointer, UtxoId, Witness,
     };
 }
 
@@ -93,12 +93,11 @@ pub mod prelude {
     pub use super::{
         core::constants::*,
         macros::{abigen, setup_program_test},
-        tx::Salt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},
             transaction::*,
-            Address, AssetId, Bytes, ContractId, RawSlice,
+            Address, AssetId, Bytes, ContractId, RawSlice, Salt,
         },
     };
 }
