@@ -68,13 +68,12 @@ impl ParamType {
         available_bytes: usize,
     ) -> Result<usize> {
         let memory_size = param_type.compute_encoding_in_bytes()?;
-        if memory_size == 0 {
-            return Err(error!(
+        let remainder = available_bytes.checked_rem(memory_size).ok_or_else(|| {
+            error!(
                 InvalidType,
                 "Cannot calculate the number of elements because the type is zero-sized."
-            ));
-        }
-        let remainder = available_bytes % memory_size;
+            )
+        })?;
         if remainder != 0 {
             return Err(error!(
                 InvalidData,
@@ -563,7 +562,7 @@ impl<'a> DebugWithDepth<'a> {
     fn descend(&'a self, param_type: &'a ParamType) -> Self {
         Self {
             param_type,
-            depth_left: self.depth_left - 1,
+            depth_left: self.depth_left.saturating_sub(1),
         }
     }
 }

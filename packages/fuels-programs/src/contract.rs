@@ -453,7 +453,8 @@ impl ContractCall {
     }
 
     pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
-        *self.custom_assets.entry((asset_id, to)).or_default() += amount;
+        let entry = self.custom_assets.entry((asset_id, to)).or_default();
+        *entry = entry.saturating_add(amount);
     }
 }
 

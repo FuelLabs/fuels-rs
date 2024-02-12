@@ -152,7 +152,12 @@ impl BoundedDecoder {
             // padding has to be taken into account
             bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
-            bytes_read += res.bytes_read;
+            bytes_read = bytes_read
+                .checked_add(res.bytes_read)
+                .ok_or_else(|| error!(
+                    InvalidType,
+                    "Addition overflow while calculating bytes_read for tuple with param_types {param_types:?}"
+                ))?;
             tokens.push(res.token);
         }
 
@@ -171,7 +176,12 @@ impl BoundedDecoder {
             // padding has to be taken into account
             bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
-            bytes_read += res.bytes_read;
+            bytes_read = bytes_read
+                .checked_add(res.bytes_read)
+                .ok_or_else(|| error!(
+                    InvalidType,
+                    "Addition overflow while calculating bytes_read for struct with param_types {param_types:?}"
+                ))?;
             tokens.push(res.token);
         }
 
@@ -192,7 +202,12 @@ impl BoundedDecoder {
 
         for param_type in param_types {
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
-            bytes_read += res.bytes_read;
+            bytes_read = bytes_read
+                .checked_add(res.bytes_read)
+                .ok_or_else(|| error!(
+                    InvalidType,
+                    "Addition overflow while calculating bytes_read for param_types iterator, param_type {param_type:?}"
+                ))?;
             results.push(res.token);
         }
 
@@ -332,8 +347,18 @@ impl BoundedDecoder {
             _ => 0,
         };
 
-        let bytes_to_skip = enum_width_in_bytes - selected_variant.compute_encoding_in_bytes()?
-            + skip_extra_in_bytes;
+        let bytes_to_skip =
+            enum_width_in_bytes
+                .checked_sub(selected_variant.compute_encoding_in_bytes()?)
+                .ok_or_else(|| error!(
+                    InvalidType,
+                    "Subtraction overflow while calculating bytes_to_skip for enum variant {selected_variant:?}"
+                ))?
+                .checked_add(skip_extra_in_bytes)
+                .ok_or_else(|| error!(
+                    InvalidType,
+                    "Addition overflow while calculating bytes_to_skip for enum variant {selected_variant:?}"
+                ))?;
 
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;
         let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
@@ -386,7 +411,7 @@ impl CounterWithLimit {
     }
 
     fn increase(&mut self) -> Result<()> {
-        self.count += 1;
+        self.count = self.count.saturating_add(1);
         if self.count > self.max {
             Err(error!(
                 InvalidType,
@@ -399,7 +424,7 @@ impl CounterWithLimit {
 
     fn decrease(&mut self) {
         if self.count > 0 {
-            self.count -= 1;
+            self.count = self.count.saturating_sub(1);
         }
     }
 }

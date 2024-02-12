@@ -36,3 +36,6 @@ tokio = { workspace = true, features = ["test-util"] }
 default = ["std"]
 coin-cache = ["tokio?/time"]
 std = ["fuels-core/std", "dep:tokio", "fuel-core-client/default", "dep:eth-keystore"]
+
+[lints]
+workspace = true

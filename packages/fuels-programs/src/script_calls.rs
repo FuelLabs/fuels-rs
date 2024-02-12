@@ -12,7 +12,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
-        errors::Result,
+        errors::{error, Result},
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
@@ -165,7 +165,13 @@ where
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_call.script_binary.len());
+            .checked_add(padded_len_usize(self.script_call.script_binary.len()))
+            .ok_or_else(|| {
+                error!(
+                    InvalidType,
+                    "Addition overflow while calculating script_offset"
+                )
+            })?;
 
         Ok(self.script_call.encoded_args.resolve(script_offset as u64))
     }

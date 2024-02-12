@@ -799,7 +799,7 @@ mod tests {
         let fields = if depth == 1 {
             vec![]
         } else {
-            vec![nested_struct(depth - 1)]
+            vec![nested_struct(depth.saturating_sub(1))]
         };
 
         ParamType::Struct {
@@ -812,7 +812,7 @@ mod tests {
         let fields = if depth == 1 {
             vec![ParamType::U8]
         } else {
-            vec![nested_enum(depth - 1)]
+            vec![nested_enum(depth.saturating_sub(1))]
         };
 
         ParamType::Enum {
@@ -825,7 +825,7 @@ mod tests {
         let field = if depth == 1 {
             ParamType::U8
         } else {
-            nested_array(depth - 1)
+            nested_array(depth.saturating_sub(1))
         };
 
         ParamType::Array(Box::new(field), 1)
@@ -835,7 +835,7 @@ mod tests {
         let fields = if depth == 1 {
             vec![ParamType::U8]
         } else {
-            vec![nested_tuple(depth - 1)]
+            vec![nested_tuple(depth.saturating_sub(1))]
         };
 
         ParamType::Tuple(fields)

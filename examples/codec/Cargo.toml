@@ -12,3 +12,6 @@ description = "Fuel Rust SDK codec examples."
 [dev-dependencies]
 fuels = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+
+[lints]
+workspace = true

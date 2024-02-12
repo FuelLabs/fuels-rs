@@ -26,10 +26,10 @@ pub fn replace_versions_in_string<'a>(
     s: &'a str,
     versions: &HashMap<String, String>,
 ) -> (Cow<'a, str>, usize) {
-    let mut replacement_count = 0;
+    let mut replacement_count: usize = 0;
     let replaced_s = VERSIONS_REGEX.replace_all(s, |caps: &Captures| {
         if let Some(version) = versions.get(&caps[1]) {
-            replacement_count += 1;
+            replacement_count = replacement_count.saturating_add(1);
             version.clone()
         } else {
             // leave unchanged

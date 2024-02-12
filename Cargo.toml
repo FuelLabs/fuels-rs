@@ -96,3 +96,6 @@ fuels-core = { version = "0.55.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.55.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.55.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.55.0", path = "./packages/fuels-test-helpers", default-features = false }
+
+[workspace.lints.clippy]
+arithmetic_side_effects = "deny"

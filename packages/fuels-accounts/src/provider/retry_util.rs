@@ -42,8 +42,10 @@ impl Default for Backoff {
 impl Backoff {
     pub fn wait_duration(&self, attempt: u32) -> Duration {
         match self {
-            Backoff::Linear(base_duration) => *base_duration * (attempt + 1),
-            Backoff::Exponential(base_duration) => *base_duration * 2u32.pow(attempt),
+            Backoff::Linear(base_duration) => {
+                base_duration.saturating_mul(attempt.saturating_add(1))
+            }
+            Backoff::Exponential(base_duration) => base_duration.saturating_mul(2u32.pow(attempt)),
             Backoff::Fixed(interval) => *interval,
         }
     }
