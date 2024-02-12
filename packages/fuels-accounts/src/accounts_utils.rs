@@ -4,7 +4,7 @@ use fuels_core::{
     constants::BASE_ASSET_ID,
     types::{
         bech32::Bech32Address,
-        errors::{error_transaction, Result},
+        errors::{error, error_transaction, Error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
     },
@@ -77,4 +77,11 @@ pub fn adjust_inputs_outputs(
         tb.outputs_mut()
             .push(Output::change(address.into(), 0, BASE_ASSET_ID));
     }
+}
+
+pub(crate) fn try_provider_error() -> Error {
+    error!(
+        Other,
+        "no provider available. Make sure to use `set_provider`"
+    )
 }

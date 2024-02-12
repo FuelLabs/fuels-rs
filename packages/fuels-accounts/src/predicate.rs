@@ -8,7 +8,7 @@ use fuels_core::{
 };
 
 #[cfg(feature = "std")]
-use crate::try_provider_error;
+use crate::accounts_utils::try_provider_error;
 #[cfg(feature = "std")]
 use crate::{provider::Provider, Account, ViewOnlyAccount};
 
