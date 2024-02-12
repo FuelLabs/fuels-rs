@@ -35,7 +35,7 @@ The default values for the `EncoderConfig` are:
 
 ## Configuring the encoder for contract/script calls
 
-You can also configure the encoder used to encode the return value of the contract method:
+You can also configure the encoder used to encode the arguments of the contract method:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:contract_encoder_config}}
