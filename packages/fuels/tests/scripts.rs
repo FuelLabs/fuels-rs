@@ -7,10 +7,10 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
+        abi = "packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
+    let bin_path = "../fuels/tests/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };

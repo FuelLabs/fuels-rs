@@ -24,7 +24,7 @@ impl MyContract for Contract {
 The JSON ABI file looks like this:
 
 ```json
-$ cat out/debug/my-test-abi.json
+$ cat out/release/my-test-abi.json
 [
   {
     "type": "function",

@@ -9,8 +9,8 @@
 
 cargo fmt --all -- --check &&
 forc fmt --check --path packages/fuels &&
-forc build --terse --path packages/fuels &&
-forc build --terse --json-abi-with-callpaths --path packages/fuels &&
+forc build --release --terse --path packages/fuels &&
+forc build --release --terse --json-abi-with-callpaths --path packages/fuels &&
 cargo clippy --all-targets &&
 cargo clippy --all-targets --all-features &&
 cargo test --all-targets --all-features &&

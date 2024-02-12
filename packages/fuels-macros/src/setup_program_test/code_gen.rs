@@ -197,7 +197,7 @@ impl Project {
 
     fn compile_file_path(&self, suffix: &str, description: &str) -> String {
         self.path
-            .join(["out/debug/", self.project_name(), suffix].concat())
+            .join(["out/release/", self.project_name(), suffix].concat())
             .to_str()
             .unwrap_or_else(|| panic!("could not join path for {description}"))
             .to_string()
