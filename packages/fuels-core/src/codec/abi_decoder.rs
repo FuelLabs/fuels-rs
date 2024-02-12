@@ -2,13 +2,12 @@ mod bounded_decoder;
 #[cfg(experimental)]
 mod experimental_bounded_decoder;
 
+#[cfg(experimental)]
+use crate::codec::abi_decoder::experimental_bounded_decoder::ExperimentalBoundedDecoder;
 use crate::{
     codec::abi_decoder::bounded_decoder::BoundedDecoder,
     types::{errors::Result, param_types::ParamType, Token},
 };
-
-#[cfg(experimental)]
-use crate::codec::abi_decoder::experimental_bounded_decoder::ExperimentalBoundedDecoder;
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecoderConfig {
