@@ -27,7 +27,7 @@ use itertools::chain;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs, Sealed,
         TxDependencyExtension,
     },
     contract::SettableContract,
@@ -297,6 +297,8 @@ where
         self.get_response(receipts)
     }
 }
+
+impl<T: Account, D> Sealed for ScriptCallHandler<T, D> {}
 
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>
