@@ -3,12 +3,16 @@ mod tests {
     use std::str::FromStr;
 
     use fuels::{
-        accounts::{predicate::Predicate, wallet::WalletUnlocked, Account, ViewOnlyAccount},
+        accounts::{
+            predicate::Predicate, provider::Provider, wallet::WalletUnlocked, Account,
+            AccountResult, ViewOnlyAccount,
+        },
         core::constants::BASE_ASSET_ID,
         prelude::Result,
         test_helpers::{setup_single_asset_coins, setup_test_provider},
         types::{
             bech32::Bech32Address,
+            input::Input,
             transaction::TxPolicies,
             transaction_builders::{
                 BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
@@ -320,6 +324,94 @@ mod tests {
         let balance = cold_wallet.get_asset_balance(&bridged_asset_id).await?;
         assert_eq!(balance, locked_amount);
         // ANCHOR_END: custom_tx_verify
+
+        Ok(())
+    }
+
+    #[derive(Clone, Debug)]
+    pub struct JoinedAccount<A: Account> {
+        provider: Provider,
+        accounts: Vec<A>,
+    }
+
+    impl<A: Account> JoinedAccount<A> {
+        pub fn new(provider: Provider, accounts: Vec<A>) -> Self {
+            if accounts.is_empty() {
+                panic!("joining 0 accounts")
+            }
+
+            JoinedAccount { provider, accounts }
+        }
+    }
+
+    impl<A: Account> ViewOnlyAccount for JoinedAccount<A> {
+        fn address(&self) -> &Bech32Address {
+            self.accounts[0].address()
+        }
+
+        fn try_provider(&self) -> AccountResult<&Provider> {
+            Ok(&self.provider)
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl<A: Account> Account for JoinedAccount<A> {
+        async fn get_asset_inputs_for_amount(
+            &self,
+            asset_id: AssetId,
+            amount: u64,
+        ) -> Result<Vec<Input>> {
+            let amount_per_account = amount / self.accounts.len() as u64;
+
+            let mut inputs = vec![];
+            for account in &self.accounts {
+                inputs.extend(
+                    account
+                        .get_asset_inputs_for_amount(asset_id, amount_per_account)
+                        .await?,
+                );
+            }
+
+            Ok(inputs)
+        }
+
+        fn add_witnesses<Tb: TransactionBuilder>(&self, tb: &mut Tb) -> Result<()> {
+            for account in &self.accounts {
+                account.add_witnesses(tb)?
+            }
+
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn joined_account() -> Result<()> {
+        use fuels::{prelude::*, test_helpers::WalletsConfig};
+
+        abigen!(Contract(
+            name = "MyContract",
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
+
+        let wallet_config = WalletsConfig::new(Some(3), Some(5), Some(100));
+        let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
+        let deployment_wallet = &wallets[0];
+
+        let contract_id = Contract::load_from(
+            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            LoadConfiguration::default(),
+        )?
+        .deploy(deployment_wallet, TxPolicies::default())
+        .await?;
+
+        let provider = deployment_wallet.provider().unwrap();
+        let joined_account = JoinedAccount::new(provider.clone(), wallets[1..2].to_vec());
+
+        let contract_methods =
+            MyContract::new(contract_id.clone(), joined_account.clone()).methods();
+        let response = contract_methods.initialize_counter(42).call().await?;
+
+        assert_eq!(42, response.value);
 
         Ok(())
     }
