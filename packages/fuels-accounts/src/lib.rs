@@ -13,12 +13,14 @@ pub use account::*;
 #[cfg(feature = "coin-cache")]
 mod coin_cache;
 
-pub mod predicate;
-
+#[cfg(feature = "std")]
 use fuels_core::types::errors::{error, Error};
+#[cfg(feature = "std")]
 pub(crate) fn try_provider_error() -> Error {
     error!(
         Other,
         "no provider available. Make sure to use `set_provider`"
     )
 }
+
+pub mod predicate;
