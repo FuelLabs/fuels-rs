@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use fuels::{
     prelude::*,
-    tx::{Bytes32, StorageSlot},
-    types::Bits256,
+    tx::StorageSlot,
+    types::{Bits256, Bytes32},
 };
 
 #[tokio::test]
