@@ -110,10 +110,7 @@ mod tests {
 
     #[tokio::test]
     async fn deploy_with_parameters() -> std::result::Result<(), Box<dyn std::error::Error>> {
-        use fuels::{
-            prelude::*,
-            tx::{Bytes32, StorageSlot},
-        };
+        use fuels::{prelude::*, tx::StorageSlot, types::Bytes32};
         use rand::prelude::{Rng, SeedableRng, StdRng};
 
         let wallet = launch_provider_and_get_wallet().await?;
