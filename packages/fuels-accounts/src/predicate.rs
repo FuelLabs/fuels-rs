@@ -1,12 +1,13 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::types::{errors::error, input::Input, AssetId};
+use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
     types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
     Configurables,
 };
 
+use crate::accounts_utils::try_provider_error;
 #[cfg(feature = "std")]
 use crate::{provider::Provider, Account, ViewOnlyAccount};
 
@@ -99,10 +100,7 @@ impl ViewOnlyAccount for Predicate {
     }
 
     fn try_provider(&self) -> Result<&Provider> {
-        self.provider.as_ref().ok_or(error!(
-            Other,
-            "no provider available. Make sure to use `set_provider`"
-        ))
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 

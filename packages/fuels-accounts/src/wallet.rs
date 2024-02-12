@@ -16,7 +16,7 @@ use fuels_core::{
 use rand::{CryptoRng, Rng};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::{provider::Provider, Account, ViewOnlyAccount};
+use crate::{accounts_utils::try_provider_error, provider::Provider, Account, ViewOnlyAccount};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
@@ -83,10 +83,7 @@ impl ViewOnlyAccount for Wallet {
     }
 
     fn try_provider(&self) -> Result<&Provider> {
-        self.provider.as_ref().ok_or(error!(
-            Other,
-            "no provider available. Make sure to use `set_provider`"
-        ))
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 
@@ -198,10 +195,7 @@ impl ViewOnlyAccount for WalletUnlocked {
     }
 
     fn try_provider(&self) -> Result<&Provider> {
-        self.provider.as_ref().ok_or(error!(
-            Other,
-            "no provider available. Make sure to use `set_provider`"
-        ))
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 
