@@ -2615,7 +2615,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p>These are the main ways of creating a <code>Bytes32</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
-        use fuels::tx::Bytes32;
+        use fuels::types::Bytes32;
 
         // Zeroed Bytes32
         let b256 = Bytes32::zeroed();
@@ -2728,7 +2728,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bech32"><a class="header" href="#bech32"><code>Bech32</code></a></h1>
 <p><code>Bech32Address</code> and <code>Bech32ContractId</code> enable the use of addresses and contract IDs in the <code>bech32</code> format. They can easily be converted to their counterparts <code>Address</code> and <code>ContractId</code>.</p>
 <p>Here are the main ways of creating a <code>Bech32Address</code>, but note that the same applies to <code>Bech32ContractId</code>:</p>
-<pre><code class="language-rust ignore">        use fuels::{prelude::Bech32Address, tx::Bytes32, types::Address};
+<pre><code class="language-rust ignore">        use fuels::types::{bech32::Bech32Address, Address, Bytes32};
 
         // New from HRP string and a hash
         let hrp = &quot;fuel&quot;;
