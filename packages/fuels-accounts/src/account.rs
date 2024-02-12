@@ -221,7 +221,7 @@ pub trait Account: ViewOnlyAccount {
         tx_policies: TxPolicies,
     ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
         use crate::accounts_utils::split_dependable_output;
-        use fuels_core::{error, types::coin::CoinStatus};
+        use fuels_core::error;
 
         let total_amount = transfers.iter().map(|(_, amount)| *amount).sum::<u64>();
         if total_amount > initial_amount {
@@ -234,24 +234,8 @@ pub trait Account: ViewOnlyAccount {
         let mut results = Vec::with_capacity(transfers.len());
         for (i, (to, amount)) in transfers.iter().enumerate() {
             let inputs = if i != 0 {
-                let previous_coin_output = provider
-                    .cache_mut()
-                    .await
-                    .pop_dependent(&cache_key)
-                    .ok_or(error!(InvalidData, "Expected a cached output"))?;
-                let previous_coin_amount = previous_coin_output.amount;
-                let previous_coin_input = Input::ResourceSigned {
-                    resource: CoinType::Coin(previous_coin_output),
-                };
-                if *amount > previous_coin_amount {
-                    let mut extra_inputs = self
-                        .get_asset_inputs_for_amount(asset_id, amount - previous_coin_amount)
-                        .await?;
-                    extra_inputs.push(previous_coin_input);
-                    extra_inputs
-                } else {
-                    vec![previous_coin_input]
-                }
+                self.maybe_get_cached_dependable_input(&cache_key, *amount, asset_id)
+                    .await?
             } else {
                 self.get_asset_inputs_for_amount(asset_id, *amount).await?
             };
@@ -278,16 +262,15 @@ pub trait Account: ViewOnlyAccount {
             let tx_id = tx.id(provider.chain_id());
 
             if i != transfers.len() - 1 {
-                let coin = Coin {
-                    utxo_id: UtxoId::new(tx_id, dependable_output_index),
-                    block_created: 0,
-                    amount: dependable_output_amount,
+                self.cache_dependent_output(
+                    &cache_key,
+                    UtxoId::new(tx_id, dependable_output_index),
+                    dependable_output_amount,
                     asset_id,
-                    owner: self.address().clone(),
-                    maturity: tx.maturity(),
-                    status: CoinStatus::Unspent,
-                };
-                provider.cache_mut().await.push_dependent(&cache_key, coin);
+                    self.address().clone(),
+                    tx.maturity(),
+                )
+                .await?;
             }
 
             let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -298,6 +281,63 @@ pub trait Account: ViewOnlyAccount {
         }
 
         Ok(results)
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn maybe_get_cached_dependable_input(
+        &self,
+        cache_key: &(Bech32Address, AssetId),
+        amount: u64,
+        asset_id: AssetId,
+    ) -> Result<Vec<Input>> {
+        use fuels_core::error;
+        let previous_coin_output = self
+            .try_provider()?
+            .cache_mut()
+            .await
+            .pop_dependent(cache_key)
+            .ok_or(error!(InvalidData, "Expected a cached output"))?;
+        let previous_coin_amount = previous_coin_output.amount;
+        let previous_coin_input = Input::ResourceSigned {
+            resource: CoinType::Coin(previous_coin_output),
+        };
+        if amount > previous_coin_amount {
+            let mut extra_inputs = self
+                .get_asset_inputs_for_amount(asset_id, amount - previous_coin_amount)
+                .await?;
+            extra_inputs.push(previous_coin_input);
+            Ok(extra_inputs)
+        } else {
+            Ok(vec![previous_coin_input])
+        }
+    }
+
+    #[cfg(feature = "coin-cache")]
+    async fn cache_dependent_output(
+        &self,
+        cache_key: &(Bech32Address, AssetId),
+        utxo_id: UtxoId,
+        amount: u64,
+        asset_id: AssetId,
+        owner: Bech32Address,
+        maturity: u32,
+    ) -> Result<()> {
+        use fuels_core::types::coin::CoinStatus;
+
+        let coin = Coin {
+            utxo_id,
+            block_created: 0,
+            amount,
+            asset_id,
+            owner,
+            maturity,
+            status: CoinStatus::Unspent,
+        };
+        self.try_provider()?
+            .cache_mut()
+            .await
+            .push_dependent(cache_key, coin);
+        Ok(())
     }
 
     /// Unconditionally transfers `balance` of type `asset_id` to
