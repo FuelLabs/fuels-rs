@@ -16,7 +16,7 @@ use fuels_core::{
 use rand::{CryptoRng, Rng};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::{accounts_utils::try_provider_error, provider::Provider, Account, ViewOnlyAccount};
+use crate::{provider::Provider, try_provider_error, Account, ViewOnlyAccount};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
 
