@@ -7,14 +7,13 @@ use std::{
 
 use fuel_tx::{ContractId, Receipt};
 
+#[cfg(not(experimental))]
+use crate::types::param_types::ParamType;
 use crate::{
     codec::{ABIDecoder, DecoderConfig},
     traits::{Parameterize, Tokenizable},
     types::errors::{error, Error, Result},
 };
-
-#[cfg(not(experimental))]
-use crate::types::param_types::ParamType;
 
 #[derive(Clone)]
 pub struct LogFormatter {
