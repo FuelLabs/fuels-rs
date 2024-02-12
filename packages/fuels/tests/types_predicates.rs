@@ -56,7 +56,7 @@ fn project_binary(project_root: impl AsRef<Path>) -> String {
         .unwrap();
 
     project_root
-        .join(format!("out/debug/{project_name}.bin"))
+        .join(format!("out/release/{project_name}.bin"))
         .display()
         .to_string()
 }
@@ -130,7 +130,7 @@ async fn setup_predicate_test(
 async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
+        abi = "packages/fuels/tests/types/predicates/u64/out/release/u64-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(32768);
@@ -144,7 +144,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
 async fn spend_predicate_coins_messages_address() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/address/out/debug/address-abi.json"
+        abi = "packages/fuels/tests/types/predicates/address/out/release/address-abi.json"
     ));
 
     let addr: Address = "0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a"
@@ -162,7 +162,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
 async fn spend_predicate_coins_messages_enums() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/enums/out/debug/enums-abi.json"
+        abi = "packages/fuels/tests/types/predicates/enums/out/release/enums-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(TestEnum::A(32), AnotherTestEnum::B(32));
@@ -176,7 +176,7 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
 async fn spend_predicate_coins_messages_structs() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/structs/out/debug/structs-abi.json"
+        abi = "packages/fuels/tests/types/predicates/structs/out/release/structs-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(
@@ -196,7 +196,7 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
 async fn spend_predicate_coins_messages_tuple() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_tuples/out/debug/predicate_tuples-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_tuples/out/release/predicate_tuples-abi.json"
     ));
 
     let data =
@@ -212,7 +212,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
@@ -224,7 +224,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_vectors() -> Result<()> {
-    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/debug/predicate_vectors-abi.json"));
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_vectors/out/release/predicate_vectors-abi.json"));
 
     let u32_vec = vec![0, 4, 3];
     let vec_in_vec = vec![vec![0, 2, 2], vec![0, 1, 2]];
@@ -267,7 +267,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
 
 #[tokio::test]
 async fn spend_predicate_coins_messages_generics() -> Result<()> {
-    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
+    abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_generics/out/release/predicate_generics-abi.json"));
 
     let data = MyPredicateEncoder::encode_data(
         GenericStruct { value: 64u8 },
@@ -283,7 +283,7 @@ async fn spend_predicate_coins_messages_generics() -> Result<()> {
 async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_bytes_hash/out/debug/predicate_bytes_hash-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_bytes_hash/out/release/predicate_bytes_hash-abi.json"
 
     ));
 
@@ -306,7 +306,7 @@ async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
 async fn spend_predicate_coins_messages_bytes() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_bytes/out/debug/predicate_bytes-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_bytes/out/release/predicate_bytes-abi.json"
     ));
 
     let bytes = Bytes(vec![40, 41, 42]);
@@ -326,7 +326,7 @@ async fn spend_predicate_coins_messages_bytes() -> Result<()> {
 async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_raw_slice/out/debug/predicate_raw_slice-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_raw_slice/out/release/predicate_raw_slice-abi.json"
     ));
 
     let raw_slice = RawSlice(vec![40, 41, 42]);
@@ -354,7 +354,7 @@ fn u128_from(parts: (u64, u64)) -> u128 {
 async fn predicate_handles_u128() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_u128/out/debug/predicate_u128-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_u128/out/release/predicate_u128-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(u128_from((8, 2)));
@@ -380,7 +380,7 @@ fn u256_from(parts: (u64, u64, u64, u64)) -> U256 {
 async fn predicate_handles_u256() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_u256/out/debug/predicate_u256-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_u256/out/release/predicate_u256-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(u256_from((10, 11, 12, 13)));
@@ -393,7 +393,7 @@ async fn predicate_handles_u256() -> Result<()> {
 async fn predicate_handles_std_string() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_std_lib_string/out/debug/predicate_std_lib_string-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_std_lib_string/out/release/predicate_std_lib_string-abi.json"
     ));
 
     let data = MyPredicateEncoder::encode_data(10, 11, String::from("Hello World"));

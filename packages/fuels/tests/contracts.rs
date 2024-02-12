@@ -656,7 +656,7 @@ async fn setup_output_variable_estimation_test(
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/token_ops/out/debug/token_ops.bin",
+        "tests/contracts/token_ops/out/release/token_ops.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallets[0], TxPolicies::default())
@@ -677,7 +677,7 @@ async fn setup_output_variable_estimation_test(
 async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -735,7 +735,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -764,7 +764,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<()> {
 async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -1120,7 +1120,7 @@ async fn test_add_custom_assets() -> Result<()> {
 #[tokio::test]
 async fn contract_load_error_messages() {
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let binary_path = "tests/contracts/contract_test/out/release/no_file_on_path.bin";
         let expected_error = format!("Invalid data: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
@@ -1129,7 +1129,7 @@ async fn contract_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let binary_path = "tests/contracts/contract_test/out/release/contract_test-abi.json";
         let expected_error =
             format!("Invalid data: expected \"{binary_path}\" to have '.bin' extension");
 
@@ -1195,7 +1195,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = WalletUnlocked::new_random(None);
@@ -1641,7 +1641,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     let provider = wallet.try_provider()?.clone();
     let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
     let predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(data)
     .with_provider(provider);
@@ -1659,7 +1659,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     // the offsets were setup correctly since the predicate uses heap types in its arguments.
     // Storage slots were loaded automatically by default
     Contract::load_from(
-        "tests/contracts/storage/out/debug/storage.bin",
+        "tests/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
