@@ -8,6 +8,7 @@ use fuels_accounts::{
 };
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
+    error,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
@@ -39,7 +40,7 @@ use crate::{
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
@@ -95,7 +96,7 @@ where
 {
     pub fn new(
         script_binary: Vec<u8>,
-        encoded_args: UnresolvedBytes,
+        encoded_args: Result<UnresolvedBytes>,
         account: T,
         provider: Provider,
         log_decoder: LogDecoder,
@@ -166,8 +167,11 @@ where
         let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
-
-        Ok(self.script_call.encoded_args.resolve(script_offset as u64))
+        self.script_call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(script_offset as u64))
+            .map_err(|e| error!(InvalidData, "Cannot encode script call arguments: {e}"))
     }
 
     async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
