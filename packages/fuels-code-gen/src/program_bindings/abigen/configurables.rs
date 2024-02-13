@@ -88,8 +88,8 @@ fn generate_builder_methods(resolved_configurables: &[ResolvedConfigurable]) -> 
                 #[allow(non_snake_case)]
                 // Generate the `with_XXX` methods for setting the configurables
                 pub fn #name(mut self, value: #ttype) -> ::fuels::prelude::Result<Self> {
-                    let encoder = #encoder_code?.resolve(0);
-                    self.offsets_with_data.push((#offset, encoder));
+                    let encoded = #encoder_code?.resolve(0);
+                    self.offsets_with_data.push((#offset, encoded));
                     ::fuels::prelude::Result::Ok(self)
                 }
             }
