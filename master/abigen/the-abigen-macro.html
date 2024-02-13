@@ -359,12 +359,12 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
             pub fn account(&amp;self) -&gt; T {
                 self.account.clone()
             }
-            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; Result&lt;MyContract&lt;U&gt;&gt; {
-                ::core::result::Result::Ok(MyContract {
+            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; MyContract&lt;U&gt; {
+                MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
-                })
+                }
             }
             pub async fn get_balances(&amp;self) -&gt; Result&lt;::std::collections::HashMap&lt;AssetId, u64&gt;&gt; {
                 ViewOnlyAccount::try_provider(&amp;self.account)?
@@ -395,8 +395,8 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     &amp;[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect(&quot;method not found (this should never happen)&quot;)
             }
             #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
             pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
@@ -407,8 +407,8 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     &amp;[value.into_token()],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect(&quot;method not found (this should never happen)&quot;)
             }
         }
         impl&lt;T: Account&gt; contract::SettableContract for MyContract&lt;T&gt; {
@@ -438,7 +438,6 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
-
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever. The generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>

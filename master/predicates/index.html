@@ -174,7 +174,7 @@ fn main(a: u32, b: u64) -&gt; bool {
         abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
 </code></pre>
 <p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
-<pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+<pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
             &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
@@ -258,11 +258,12 @@ fn main(
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyPredicateConfigurables::new()
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyPredicateConfigurables::default()
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
-    let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
+    let predicate_data =
+        MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         &quot;tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin&quot;,

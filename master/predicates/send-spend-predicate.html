@@ -216,7 +216,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             abi = &quot;packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json&quot;
         ));
 
-        let predicate_data = MyPredicateEncoder::encode_data(signatures);
+        let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
         let code_path = &quot;../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?

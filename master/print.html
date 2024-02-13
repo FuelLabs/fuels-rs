@@ -1204,12 +1204,12 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
             pub fn account(&amp;self) -&gt; T {
                 self.account.clone()
             }
-            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; Result&lt;MyContract&lt;U&gt;&gt; {
-                ::core::result::Result::Ok(MyContract {
+            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; MyContract&lt;U&gt; {
+                MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
-                })
+                }
             }
             pub async fn get_balances(&amp;self) -&gt; Result&lt;::std::collections::HashMap&lt;AssetId, u64&gt;&gt; {
                 ViewOnlyAccount::try_provider(&amp;self.account)?
@@ -1240,8 +1240,8 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     &amp;[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect(&quot;method not found (this should never happen)&quot;)
             }
             #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
             pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
@@ -1252,8 +1252,8 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                     &amp;[value.into_token()],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect(&quot;method not found (this should never happen)&quot;)
             }
         }
         impl&lt;T: Account&gt; contract::SettableContract for MyContract&lt;T&gt; {
@@ -1283,7 +1283,6 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
-
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever. The generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
@@ -1465,10 +1464,10 @@ impl TestContract for Contract {
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyContractConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyContractConfigurables::default()
+        .with_STR_4(new_str.clone())?
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
         &quot;tests/contracts/configurables/out/debug/configurables.bin&quot;,
@@ -1625,7 +1624,7 @@ half-word   byte   op                raw           notes
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            .with_account(wallet_2)? // Connect wallet_2
+            .with_account(wallet_2) // Connect wallet_2
             .methods() // Get contract methods
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
@@ -2101,6 +2100,9 @@ let is_error = response.is_err();
             .call()
             .await?;
 </code></pre>
+<blockquote>
+<p>Note: the <code>calldata!</code> macro uses the default <code>EncoderConfig</code> configuration under the hood.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-scripts"><a class="header" href="#running-scripts">Running scripts</a></h1>
 <p>You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the <code>abigen!</code> macro seen <a href="./abigen/the-abigen-macro.html">previously</a>.</p>
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
@@ -2216,10 +2218,13 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyScriptConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyScriptConfigurables::new(EncoderConfig {
+        max_tokens: 5,
+        ..Default::default()
+    })
+    .with_STR_4(new_str.clone())?
+    .with_STRUCT(new_struct.clone())?
+    .with_ENUM(new_enum.clone())?;
 
     let response = instance
         .with_configurables(configurables)
@@ -2264,7 +2269,7 @@ fn main(a: u32, b: u64) -&gt; bool {
         abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
 </code></pre>
 <p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
-<pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+<pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
             &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
 
@@ -2348,11 +2353,12 @@ fn main(
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyPredicateConfigurables::new()
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyPredicateConfigurables::default()
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
-    let predicate_data = MyPredicateEncoder::encode_data(8u8, true, new_struct, new_enum);
+    let predicate_data =
+        MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         &quot;tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin&quot;,
@@ -2439,7 +2445,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             abi = &quot;packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json&quot;
         ));
 
-        let predicate_data = MyPredicateEncoder::encode_data(signatures);
+        let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
         let code_path = &quot;../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
@@ -3046,7 +3052,7 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::encode(&amp;[instance.into_token()])?;
+        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
         let load_memory_address: u64 = 0x100;
         let _: Vec&lt;u8&gt; = encoded.resolve(load_memory_address);
 </code></pre>
@@ -3064,6 +3070,41 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
 <p>Note:
 The above example will call <code>.resolve(0)</code>. Don't use it if you're encoding heap types.</p>
 </blockquote>
+<h2 id="configuring-the-encoder"><a class="header" href="#configuring-the-encoder">Configuring the encoder</a></h2>
+<p>The encoder can be configured to limit its resource expenditure:</p>
+<pre><code class="language-rust ignore">        use fuels::core::codec::ABIEncoder;
+
+        ABIEncoder::new(EncoderConfig {
+            max_depth: 5,
+            max_tokens: 100,
+            max_total_enum_width: 10_000,
+        });
+</code></pre>
+<p>The default values for the <code>EncoderConfig</code> are:</p>
+<pre><code class="language-rust ignore">impl Default for EncoderConfig {
+    fn default() -&gt; Self {
+        Self {
+            max_depth: 45,
+            max_tokens: 10_000,
+            max_total_enum_width: 10_000,
+        }
+    }
+}
+</code></pre>
+<h2 id="configuring-the-encoder-for-contractscript-calls"><a class="header" href="#configuring-the-encoder-for-contractscript-calls">Configuring the encoder for contract/script calls</a></h2>
+<p>You can also configure the encoder used to encode the arguments of the contract method:</p>
+<pre><code class="language-rust ignore">        let _ = contract_instance
+            .with_encoder_config(EncoderConfig {
+                max_depth: 10,
+                max_tokens: 2_000,
+                max_total_enum_width: 10_000,
+            })
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
+</code></pre>
+<p>The same method is available for script calls.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="decoding"><a class="header" href="#decoding">Decoding</a></h1>
 <p>Be sure to read the <a href="codec/./index.html#prerequisites-for-decodingencoding">prerequisites</a> to decoding.</p>
 <p>Decoding is done via the <a href="https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html"><code>ABIDecoder</code></a>:</p>
@@ -3133,7 +3174,7 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
             .initialize_counter(42)
             .with_decoder_config(DecoderConfig {
                 max_depth: 10,
-                max_tokens: 20_00,
+                max_tokens: 2_000,
             })
             .call()
             .await?;

@@ -252,10 +252,13 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyScriptConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyScriptConfigurables::new(EncoderConfig {
+        max_tokens: 5,
+        ..Default::default()
+    })
+    .with_STR_4(new_str.clone())?
+    .with_STRUCT(new_struct.clone())?
+    .with_ENUM(new_enum.clone())?;
 
     let response = instance
         .with_configurables(configurables)

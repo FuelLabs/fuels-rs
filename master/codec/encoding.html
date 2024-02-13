@@ -152,7 +152,7 @@
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::encode(&amp;[instance.into_token()])?;
+        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
         let load_memory_address: u64 = 0x100;
         let _: Vec&lt;u8&gt; = encoded.resolve(load_memory_address);
 </code></pre>
@@ -170,6 +170,41 @@
 <p>Note:
 The above example will call <code>.resolve(0)</code>. Don't use it if you're encoding heap types.</p>
 </blockquote>
+<h2 id="configuring-the-encoder"><a class="header" href="#configuring-the-encoder">Configuring the encoder</a></h2>
+<p>The encoder can be configured to limit its resource expenditure:</p>
+<pre><code class="language-rust ignore">        use fuels::core::codec::ABIEncoder;
+
+        ABIEncoder::new(EncoderConfig {
+            max_depth: 5,
+            max_tokens: 100,
+            max_total_enum_width: 10_000,
+        });
+</code></pre>
+<p>The default values for the <code>EncoderConfig</code> are:</p>
+<pre><code class="language-rust ignore">impl Default for EncoderConfig {
+    fn default() -&gt; Self {
+        Self {
+            max_depth: 45,
+            max_tokens: 10_000,
+            max_total_enum_width: 10_000,
+        }
+    }
+}
+</code></pre>
+<h2 id="configuring-the-encoder-for-contractscript-calls"><a class="header" href="#configuring-the-encoder-for-contractscript-calls">Configuring the encoder for contract/script calls</a></h2>
+<p>You can also configure the encoder used to encode the arguments of the contract method:</p>
+<pre><code class="language-rust ignore">        let _ = contract_instance
+            .with_encoder_config(EncoderConfig {
+                max_depth: 10,
+                max_tokens: 2_000,
+                max_total_enum_width: 10_000,
+            })
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
+</code></pre>
+<p>The same method is available for script calls.</p>
 
                     </main>
 
