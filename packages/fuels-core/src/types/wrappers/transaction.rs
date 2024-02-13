@@ -25,7 +25,7 @@ use crate::{
     constants::BASE_ASSET_ID,
     traits::Signer,
     types::{bech32::Bech32Address, errors::error, Result},
-    utils::calculate_witnesses_size,
+    utils::{calculate_witnesses_size, sealed},
 };
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -160,10 +160,6 @@ pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
     Mint(MintTransaction),
-}
-
-mod sealed {
-    pub trait Sealed {}
 }
 
 pub trait EstimablePredicates: sealed::Sealed {

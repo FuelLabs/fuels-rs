@@ -36,7 +36,7 @@ use crate::{
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
-    utils::calculate_witnesses_size,
+    utils::{calculate_witnesses_size, sealed},
 };
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -64,10 +64,6 @@ impl<T: DryRunner> DryRunner for &T {
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
     owner_to_idx_offset: HashMap<Bech32Address, u64>,
-}
-
-mod sealed {
-    pub trait Sealed {}
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]

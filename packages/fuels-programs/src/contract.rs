@@ -30,8 +30,8 @@ use fuels_core::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        build_tx_from_contract_calls, new_variable_outputs,
-        transaction_builder_from_contract_calls, Sealed, TxDependencyExtension,
+        build_tx_from_contract_calls, new_variable_outputs, sealed,
+        transaction_builder_from_contract_calls, TxDependencyExtension,
     },
     receipt_parser::ReceiptParser,
     submit_response::{SubmitResponse, SubmitResponseMultiple},
@@ -93,7 +93,6 @@ impl Default for CallParameters {
 
 // Trait implemented by contract instances so that
 // they can be passed to the `with_contracts` method
-#[allow(private_bounds)]
 pub trait SettableContract {
     fn id(&self) -> Bech32ContractId;
     fn log_decoder(&self) -> LogDecoder;
@@ -663,7 +662,7 @@ where
     }
 }
 
-impl<T: Account, D> Sealed for ContractCallHandler<T, D> {}
+impl<T: Account, D> sealed::Sealed for ContractCallHandler<T, D> {}
 
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
@@ -971,7 +970,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 }
 
-impl<T: Account> Sealed for MultiContractCallHandler<T> {}
+impl<T: Account> sealed::Sealed for MultiContractCallHandler<T> {}
 
 #[async_trait::async_trait]
 impl<T> TxDependencyExtension for MultiContractCallHandler<T>
