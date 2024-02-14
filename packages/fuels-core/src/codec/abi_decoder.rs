@@ -806,7 +806,7 @@ mod tests {
         let err = decoder.decode(param_type, data);
 
         let Err(Error::Codec(actual_msg)) = err else {
-            panic!("expected a `Codec` error! Got: `{err:?}`");
+            panic!("expected a `Codec` error. Got: `{err:?}`");
         };
 
         assert_eq!(actual_msg, msg);
