@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    default::Default,
     fmt::Debug,
     fs, io,
     marker::PhantomData,
@@ -11,7 +12,7 @@ use fuel_tx::{
 };
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::{ABIEncoder, DecoderConfig, LogDecoder},
+    codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -405,7 +406,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
@@ -715,7 +716,8 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
-) -> Result<ContractCallHandler<T, D>> {
+    encoder_config: EncoderConfig,
+) -> ContractCallHandler<T, D> {
     let encoded_selector = signature;
 
     let tx_policies = TxPolicies::default();
@@ -723,7 +725,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::encode(args)?;
+    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
@@ -737,7 +739,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         custom_assets: Default::default(),
     };
 
-    Ok(ContractCallHandler {
+    ContractCallHandler {
         contract_call,
         tx_policies,
         cached_tx_id: None,
@@ -745,7 +747,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: Default::default(),
-    })
+    }
 }
 
 // If the data passed into the contract method is an integer or a

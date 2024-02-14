@@ -792,7 +792,7 @@ mod tests {
         let result = decoder.decode(&param_type, &[]);
 
         // then
-        result.expect("Element count to be reset");
+        result.expect("element count to be reset");
     }
 
     fn assert_decoding_failed_w_data(
@@ -806,7 +806,7 @@ mod tests {
         let err = decoder.decode(param_type, data);
 
         let Err(Error::Codec(actual_msg)) = err else {
-            panic!("unexpected an Codec error! Got: {err:?}");
+            panic!("expected a `Codec` error! Got: `{err:?}`");
         };
 
         assert_eq!(actual_msg, msg);

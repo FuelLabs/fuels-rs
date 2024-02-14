@@ -15,7 +15,7 @@ pub struct EnumVariants {
 impl EnumVariants {
     pub fn new(param_types: Vec<ParamType>) -> Result<EnumVariants> {
         if param_types.is_empty() {
-            return Err(error!(Other, "enum variants can not be empty!"));
+            return Err(error!(Other, "enum variants cannot be empty!"));
         }
         Ok(EnumVariants { param_types })
     }
@@ -67,6 +67,7 @@ impl EnumVariants {
     /// biggest variant) and returns it.
     pub fn compute_padding_amount_in_bytes(&self, variant_param_type: &ParamType) -> Result<usize> {
         let enum_width = self.compute_enum_width_in_bytes()?;
+        // No need to use checked arithmetics since we called `compute_enum_width_in_bytes`
         let biggest_variant_width = enum_width - ENUM_DISCRIMINANT_BYTE_WIDTH;
         let variant_width = variant_param_type.compute_encoding_in_bytes()?;
         Ok(biggest_variant_width - variant_width)

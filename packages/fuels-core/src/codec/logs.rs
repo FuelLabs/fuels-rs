@@ -48,11 +48,11 @@ impl LogFormatter {
     #[cfg(not(experimental))]
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
         match T::param_type() {
-            // String slices can not be decoded from logs as they are encoded as ptr, len
+            // String slices cannot be decoded from logs as they are encoded as ptr, len
             // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
             ParamType::StringSlice => Err(error!(
                 Codec,
-                "string slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
+                "string slices cannot be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
             )),
             _ => Ok(()),
         }

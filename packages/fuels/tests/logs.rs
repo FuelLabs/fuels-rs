@@ -1448,7 +1448,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     Ok(())
 }
 
-// String slices can not be decoded from logs as they are encoded as ptr, len
+// String slices cannot be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
 #[cfg(not(experimental))]
@@ -1475,7 +1475,7 @@ async fn string_slice_log() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err =
-        "codec: string slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
+        "codec: string slices cannot be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
 
     let failed = log.filter_failed();
     assert_eq!(failed.first().unwrap().to_string(), expected_err);

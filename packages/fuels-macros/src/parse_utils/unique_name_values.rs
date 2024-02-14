@@ -187,7 +187,7 @@ mod tests {
 
         assert_eq!(
             err.to_string(),
-            "attribute 'other' not recognized! Expected one of: 'name', 'other_is_not_allowed'"
+            "attribute 'other' not recognized. Expected one of: 'name', 'other_is_not_allowed'"
         );
 
         Ok(())

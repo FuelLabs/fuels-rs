@@ -1,5 +1,5 @@
 use fuels::{
-    core::codec::{calldata, fn_selector, DecoderConfig},
+    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     types::{errors::transaction::Reason, Bits256},
 };
@@ -396,9 +396,16 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .with_tx_policies(TxPolicies::default().with_maturity(maturity))
     };
 
-    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1).call().await.expect(
+        "should have passed since we're calling with a maturity \
+        that is less or equal to the current block height",
+    );
 
-    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3).call().await.expect_err(
+        "should have failed since we're calling with a maturity \
+        that is greater than the current block height",
+    );
+
     Ok(())
 }
 
@@ -629,7 +636,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        .with_account(wallet_2.clone())?
+        .with_account(wallet_2.clone())
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)
@@ -1334,17 +1341,17 @@ fn db_rocksdb() {
     };
 
     let temp_dir = tempfile::tempdir()
-        .expect("Failed to make tempdir")
+        .expect("failed to make tempdir")
         .into_path();
     let temp_dir_name = temp_dir
         .file_name()
-        .expect("Failed to get file name")
+        .expect("failed to get file name")
         .to_string_lossy()
         .to_string();
     let temp_database_path = temp_dir.join("db");
 
     tokio::runtime::Runtime::new()
-        .expect("Tokio runtime failed")
+        .expect("tokio runtime failed")
         .block_on(async {
             let wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
@@ -1386,7 +1393,7 @@ fn db_rocksdb() {
     // The runtime needs to be terminated because the node can currently only be killed when the runtime itself shuts down.
 
     tokio::runtime::Runtime::new()
-        .expect("Tokio runtime failed")
+        .expect("tokio runtime failed")
         .block_on(async {
             let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
@@ -1428,7 +1435,7 @@ fn db_rocksdb() {
             fs::remove_dir_all(
                 temp_database_path
                     .parent()
-                    .expect("Db parent folder does not exist"),
+                    .expect("db parent folder does not exist"),
             )?;
 
             Ok::<(), Error>(())
@@ -1478,7 +1485,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         .add_call(methods.i_return_a_1k_el_array())
         .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
         .call::<([u8; 1000],)>().await.expect_err(
-            "Should have failed because there are more tokens than what is supported by default",
+            "should have failed because there are more tokens than what is supported by default",
         );
     }
     {
@@ -1597,7 +1604,7 @@ async fn test_heap_type_multicall() -> Result<()> {
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
+        let error = multi_call_handler.submit().await.expect_err("should error");
         assert!(error.to_string().contains(
             "`MultiContractCallHandler` can have only one call that returns a heap type"
         ));
@@ -1615,7 +1622,7 @@ async fn test_heap_type_multicall() -> Result<()> {
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
+        let error = multi_call_handler.submit().await.expect_err("should error");
         assert!(error
             .to_string()
             .contains("the contract call with the heap type return must be at the last position"));
@@ -1635,7 +1642,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     );
 
     let provider = wallet.try_provider()?.clone();
-    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
     )?
@@ -1768,6 +1775,66 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     let response = call_handler.get_response_from(tx_status)?;
 
     assert_eq!(counter, response.value);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn contract_encoder_config_is_applied() -> Result<()> {
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Wallets("wallet")
+    );
+    let contract_id = Contract::load_from(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(&wallet, TxPolicies::default())
+    .await?;
+
+    let instance = TestContract::new(contract_id.clone(), wallet.clone());
+
+    {
+        let _encoding_ok = instance
+            .methods()
+            .get(0, 1)
+            .call()
+            .await
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
+
+        // uses 2 tokens when 1 is the limit
+        let encoding_error = instance_with_encoder_config
+            .methods()
+            .get(0, 1)
+            .call()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode contract call arguments: codec: token limit `1` reached while encoding."
+        ));
+
+        let encoding_error = instance_with_encoder_config
+            .methods()
+            .get(0, 1)
+            .simulate()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode contract call arguments: codec: token limit `1` reached while encoding."
+        ));
+    }
 
     Ok(())
 }

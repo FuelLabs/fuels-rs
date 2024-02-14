@@ -282,7 +282,7 @@ macro_rules! impl_tx_trait {
                 if num_witnesses + self.unresolved_signers.len() > 256 {
                     return Err(error_transaction!(
                         Builder,
-                        "tx can not have more than 256 witnesses"
+                        "tx cannot have more than 256 witnesses"
                     ));
                 }
 

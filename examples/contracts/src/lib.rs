@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::codec::DecoderConfig,
+        core::codec::{DecoderConfig, EncoderConfig},
         prelude::{Config, LoadConfiguration, StorageConfiguration},
         types::{
             errors::{transaction::Reason, Result},
@@ -632,7 +632,7 @@ mod tests {
 
         // Perform contract call with wallet_2
         let response = contract_instance
-            .with_account(wallet_2)? // Connect wallet_2
+            .with_account(wallet_2) // Connect wallet_2
             .methods() // Get contract methods
             .get_msg_amount() // Our contract method
             .call() // Perform the contract call.
@@ -785,7 +785,7 @@ mod tests {
             .initialize_counter(42)
             .with_decoder_config(DecoderConfig {
                 max_depth: 10,
-                max_tokens: 20_00,
+                max_tokens: 2_000,
             })
             .call()
             .await?;
@@ -862,6 +862,39 @@ mod tests {
 
         assert_eq!(counter, response.value);
         // ANCHOR_END: contract_call_tb
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn configure_encoder_config() -> Result<()> {
+        use fuels::prelude::*;
+
+        setup_program_test!(
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "MyContract",
+                project = "packages/fuels/tests/contracts/contract_test"
+            )),
+            Deploy(
+                name = "contract_instance",
+                contract = "MyContract",
+                wallet = "wallet"
+            )
+        );
+
+        // ANCHOR: contract_encoder_config
+        let _ = contract_instance
+            .with_encoder_config(EncoderConfig {
+                max_depth: 10,
+                max_tokens: 2_000,
+                max_total_enum_width: 10_000,
+            })
+            .methods()
+            .initialize_counter(42)
+            .call()
+            .await?;
+        // ANCHOR_END: contract_encoder_config
 
         Ok(())
     }

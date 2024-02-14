@@ -27,10 +27,19 @@ pub(crate) fn predicate_bindings(
         generate_code_for_configurable_constants(&configuration_struct_name, &abi.configurables)?;
 
     let code = quote! {
-        pub struct #encoder_struct_name;
+        #[derive(Default)]
+        pub struct #encoder_struct_name{
+            encoder: ::fuels::core::codec::ABIEncoder,
+        }
 
         impl #encoder_struct_name {
            #encode_function
+
+            pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -> Self {
+                Self {
+                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config)
+                }
+            }
         }
 
         #constant_configuration_code
@@ -51,14 +60,16 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
 
     let body = quote! {
-        ::fuels::core::codec::ABIEncoder::encode(&#arg_tokens).expect("Cannot encode predicate data")
+        self.encoder.encode(&#arg_tokens)
+    };
+    let output_type = quote! {
+        ::fuels::types::errors::Result<::fuels::types::unresolved_bytes::UnresolvedBytes>
     };
 
     generator
         .set_doc("Run the predicate's encode function with the provided arguments".to_string())
         .set_name("encode_data".to_string())
-        .set_output_type(quote! { ::fuels::types::unresolved_bytes::UnresolvedBytes})
-        .make_fn_associated()
+        .set_output_type(output_type)
         .set_body(body);
 
     Ok(generator.generate())

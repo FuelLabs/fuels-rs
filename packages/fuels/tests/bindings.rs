@@ -34,7 +34,7 @@ async fn compile_bindings_from_contract_file() {
         .methods()
         .takes_int_returns_bool(42);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -93,7 +93,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
 
     let call_handler = contract_instance.methods().takes_ints_returns_bool(42_u32);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -166,7 +166,7 @@ async fn compile_bindings_array_input() -> Result<()> {
     let input = [1, 2, 3];
     let call_handler = contract_instance.methods().takes_array(input);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -243,7 +243,7 @@ async fn compile_bindings_bool_array_input() -> Result<()> {
     let input = [true, false, true];
     let call_handler = contract_instance.methods().takes_array(input);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -310,7 +310,7 @@ async fn compile_bindings_string_input() -> Result<()> {
     );
     // ANCHOR_END: contract_takes_string
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -381,7 +381,7 @@ async fn compile_bindings_b256_input() -> Result<()> {
     let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
     // ANCHOR_END: 256_arg
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -451,7 +451,7 @@ async fn compile_bindings_evm_address_input() -> Result<()> {
     let call_handler = contract_instance.methods().takes_evm_address(arg);
     // ANCHOR_END: evm_address_arg
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -556,7 +556,7 @@ async fn compile_bindings_struct_input() -> Result<()> {
 
     let call_handler = contract_instance.methods().takes_struct(input);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
@@ -660,7 +660,8 @@ async fn compile_bindings_nested_struct_input() -> Result<()> {
     let call_handler = contract_instance
         .methods()
         .takes_nested_struct(input.clone());
-    let encoded_args = ABIEncoder::encode(slice::from_ref(&input.into_token()))
+    let encoded_args = ABIEncoder::default()
+        .encode(slice::from_ref(&input.into_token()))
         .unwrap()
         .resolve(0);
 
@@ -749,7 +750,7 @@ async fn compile_bindings_enum_input() -> Result<()> {
 
     let call_handler = contract_instance.methods().takes_enum(variant);
 
-    let encoded_args = call_handler.contract_call.encoded_args.resolve(0);
+    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
     let encoded = format!(
         "{}{}",
         hex::encode(call_handler.contract_call.encoded_selector),
