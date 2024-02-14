@@ -49,7 +49,7 @@ impl UniqueNameValues {
             .map(|name| {
                 Error::new_spanned(
                     name.clone(),
-                    format!("attribute '{name}' not recognized! Expected one of: {expected_names}"),
+                    format!("attribute '{name}' not recognized. Expected one of: {expected_names}"),
                 )
             })
             .validate_no_errors()
