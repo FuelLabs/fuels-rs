@@ -1,14 +1,14 @@
+use std::default::Default;
 #[allow(unused_imports)]
 use std::future::Future;
 use std::vec;
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
-    core::codec::{calldata, fn_selector},
+    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
     types::Bits256,
 };
-use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -635,7 +635,7 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet_2
     contract_instance
-        .with_account(wallet_2.clone())?
+        .with_account(wallet_2.clone())
         .methods()
         .initialize_counter(42)
         .with_tx_policies(tx_policies)
@@ -1458,7 +1458,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     let methods = contract_instance.methods();
     {
         // Single call: Will not work if max_tokens not big enough
-        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig {max_tokens: 100, ..Default::default()}).call().await.expect_err(
             "Should have failed because there are more tokens than what is supported by default.",
         );
     }
@@ -1639,7 +1639,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     );
 
     let provider = wallet.try_provider()?.clone();
-    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
         "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
     )?
@@ -1774,4 +1774,57 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     assert_eq!(counter, response.value);
 
     Ok(())
+}
+
+#[tokio::test]
+async fn contract_encoder_config_is_applied() {
+    setup_program_test!(
+        Abigen(Contract(
+            name = "TestContract",
+            project = "packages/fuels/tests/contracts/contract_test"
+        )),
+        Wallets("wallet")
+    );
+    let contract_id = Contract::load_from(
+        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        LoadConfiguration::default(),
+    )
+    .expect("Contract can be loaded")
+    .deploy(&wallet, TxPolicies::default())
+    .await
+    .expect("Contract can be deployed");
+
+    let instance = TestContract::new(contract_id.clone(), wallet.clone());
+
+    let _encoding_ok = instance
+        .methods()
+        .get(0, 1)
+        .call()
+        .await
+        .expect("Should not fail as it uses the default encoder config");
+
+    let encoder_config = EncoderConfig {
+        max_tokens: 1,
+        ..Default::default()
+    };
+    let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
+    // uses 2 tokens when 1 is the limit
+    let encoding_error = instance_with_encoder_config
+        .methods()
+        .get(0, 1)
+        .call()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Cannot encode contract call arguments: Invalid type: Token limit (1) reached while encoding."));
+    let encoding_error = instance_with_encoder_config
+        .methods()
+        .get(0, 1)
+        .simulate()
+        .await
+        .unwrap_err();
+    assert!(encoding_error
+        .to_string()
+        .contains("Cannot encode contract call arguments: Invalid type: Token limit (1) reached while encoding."));
 }

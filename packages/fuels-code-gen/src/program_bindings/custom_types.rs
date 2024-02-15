@@ -776,7 +776,7 @@ mod tests {
                     panic,
                 };
 
-                use ::std::{string::ToString, format, vec};
+                use ::std::{string::ToString, format, vec, default::Default};
                 pub use super::super::shared_types::some_shared_lib::SharedStruct;
             }
         };

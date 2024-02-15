@@ -105,10 +105,11 @@ macro_rules! fn_selector {
 
 pub use fn_selector;
 
+/// This uses the default `EncoderConfig` configuration.
 #[macro_export]
 macro_rules! calldata {
     ( $($arg: expr),* ) => {
-        ::fuels::core::codec::ABIEncoder::encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*])
+        ::fuels::core::codec::ABIEncoder::default().encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*])
             .map(|ub| ub.resolve(0))
     }
 }

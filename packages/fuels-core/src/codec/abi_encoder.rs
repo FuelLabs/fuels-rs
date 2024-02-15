@@ -1,255 +1,65 @@
-use fuel_types::bytes::padded_len_usize;
+mod bounded_encoder;
+use std::default::Default;
 
 use crate::{
-    checked_round_up_to_word_alignment,
-    types::{
-        errors::Result,
-        pad_u16, pad_u32,
-        unresolved_bytes::{Data, UnresolvedBytes},
-        EnumSelector, StaticStringToken, Token, U256,
-    },
+    codec::abi_encoder::bounded_encoder::BoundedEncoder,
+    types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
 };
 
-/// Insert zero following the padding strategy
-#[derive(Clone, Copy)]
-pub enum InsertPadding {
-    /// Zeros are inserted on the left until it fills an integer quantity of words
-    Left,
-    /// Zeros are inserted on the right until it fills an integer quantity of words
-    Right,
+#[derive(Debug, Clone, Copy)]
+pub struct EncoderConfig {
+    /// Entering a struct, array, tuple, enum or vector increases the depth. Encoding will fail if
+    /// the current depth becomes greater than `max_depth` configured here.
+    pub max_depth: usize,
+    /// Every encoded argument will increase the token count. Encoding will fail if the current
+    /// token count becomes greater than `max_tokens` configured here.
+    pub max_tokens: usize,
+    /// The total memory size of the top-level token must fit in the available memory of the
+    /// system.
+    pub max_total_enum_width: usize,
 }
 
-pub struct ABIEncoder;
+// ANCHOR: default_encoder_config
+impl Default for EncoderConfig {
+    fn default() -> Self {
+        Self {
+            max_depth: 45,
+            max_tokens: 10_000,
+            max_total_enum_width: 10_000,
+        }
+    }
+}
+// ANCHOR_END: default_encoder_config
+
+#[derive(Default, Clone, Debug)]
+pub struct ABIEncoder {
+    pub config: EncoderConfig,
+}
 
 impl ABIEncoder {
+    pub fn new(config: EncoderConfig) -> Self {
+        Self { config }
+    }
+
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(args: &[Token]) -> Result<UnresolvedBytes> {
-        let data = if args.len() == 1 {
-            match args[0] {
-                Token::Bool(arg_bool) => vec![Self::encode_bool_as_u64(arg_bool)],
-                Token::U8(arg_u8) => vec![Self::encode_u8_as_u64(arg_u8)],
-                _ => Self::encode_tokens(args, true)?,
-            }
-        } else {
-            Self::encode_tokens(args, true)?
-        };
-
-        Ok(UnresolvedBytes::new(data))
+    pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
+        BoundedEncoder::new(self.config).encode(args)
     }
-
-    fn encode_tokens(tokens: &[Token], word_aligned: bool) -> Result<Vec<Data>> {
-        let mut offset_in_bytes = 0;
-        let mut data = vec![];
-
-        for token in tokens.iter() {
-            let mut new_data = Self::encode_token(token)?;
-            offset_in_bytes += new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>();
-
-            data.append(&mut new_data);
-
-            if word_aligned {
-                let padding = vec![
-                    0u8;
-                    checked_round_up_to_word_alignment(offset_in_bytes)?
-                        - offset_in_bytes
-                ];
-                if !padding.is_empty() {
-                    offset_in_bytes += padding.len();
-                    data.push(Data::Inline(padding));
-                }
-            }
-        }
-
-        Ok(data)
-    }
-
-    fn encode_token(arg: &Token) -> Result<Vec<Data>> {
-        let encoded_token = match arg {
-            Token::Bool(arg_bool) => vec![Self::encode_bool_as_byte(*arg_bool)],
-            Token::U8(arg_u8) => vec![Self::encode_u8_as_byte(*arg_u8)],
-            Token::U16(arg_u16) => vec![Self::encode_u16(*arg_u16)],
-            Token::U32(arg_u32) => vec![Self::encode_u32(*arg_u32)],
-            Token::U64(arg_u64) => vec![Self::encode_u64(*arg_u64)],
-            Token::U128(arg_u128) => vec![Self::encode_u128(*arg_u128)],
-            Token::U256(arg_u256) => vec![Self::encode_u256(*arg_u256)],
-            Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
-            Token::Array(arg_array) => Self::encode_array(arg_array)?,
-            Token::Vector(data) => Self::encode_vector(data)?,
-            Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
-            Token::StringArray(arg_string) => vec![Self::encode_string_array(arg_string)?],
-            Token::Struct(arg_struct) => Self::encode_struct(arg_struct)?,
-            Token::Enum(arg_enum) => Self::encode_enum(arg_enum)?,
-            Token::Tuple(arg_tuple) => Self::encode_tuple(arg_tuple)?,
-            Token::Unit => vec![Self::encode_unit()],
-            Token::RawSlice(data) => Self::encode_raw_slice(data.to_vec())?,
-            Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
-            // `String` in Sway has the same memory layout as the bytes type
-            Token::String(string) => Self::encode_bytes(string.clone().into_bytes())?,
-        };
-
-        Ok(encoded_token)
-    }
-
-    fn encode_unit() -> Data {
-        Data::Inline(vec![0u8])
-    }
-
-    fn encode_tuple(arg_tuple: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(arg_tuple, true)
-    }
-
-    fn encode_struct(subcomponents: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(subcomponents, true)
-    }
-
-    fn encode_array(arg_array: &[Token]) -> Result<Vec<Data>> {
-        Self::encode_tokens(arg_array, false)
-    }
-
-    fn encode_b256(arg_bits256: &[u8; 32]) -> Data {
-        Data::Inline(arg_bits256.to_vec())
-    }
-
-    fn encode_bool_as_byte(arg_bool: bool) -> Data {
-        Data::Inline(vec![u8::from(arg_bool)])
-    }
-
-    fn encode_bool_as_u64(arg_bool: bool) -> Data {
-        Data::Inline(vec![0, 0, 0, 0, 0, 0, 0, u8::from(arg_bool)])
-    }
-
-    fn encode_u128(arg_u128: u128) -> Data {
-        Data::Inline(arg_u128.to_be_bytes().to_vec())
-    }
-
-    fn encode_u256(arg_u256: U256) -> Data {
-        let mut bytes = [0u8; 32];
-        arg_u256.to_big_endian(&mut bytes);
-        Data::Inline(bytes.to_vec())
-    }
-
-    fn encode_u64(arg_u64: u64) -> Data {
-        Data::Inline(arg_u64.to_be_bytes().to_vec())
-    }
-
-    fn encode_u32(arg_u32: u32) -> Data {
-        Data::Inline(pad_u32(arg_u32).to_vec())
-    }
-
-    fn encode_u16(arg_u16: u16) -> Data {
-        Data::Inline(pad_u16(arg_u16).to_vec())
-    }
-
-    fn encode_u8_as_byte(arg_u8: u8) -> Data {
-        Data::Inline(vec![arg_u8])
-    }
-
-    fn encode_u8_as_u64(arg_u8: u8) -> Data {
-        Data::Inline(vec![0, 0, 0, 0, 0, 0, 0, arg_u8])
-    }
-
-    fn encode_enum(selector: &EnumSelector) -> Result<Vec<Data>> {
-        let (discriminant, token_within_enum, variants) = selector;
-
-        let mut encoded_enum = vec![Self::encode_discriminant(*discriminant)];
-
-        // Enums that contain only Units as variants have only their discriminant encoded.
-        if !variants.only_units_inside() {
-            let variant_param_type = variants.param_type_of_variant(*discriminant)?;
-            let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;
-
-            encoded_enum.push(Data::Inline(vec![0; padding_amount]));
-
-            let token_data = Self::encode_token(token_within_enum)?;
-            encoded_enum.extend(token_data);
-        }
-
-        Ok(encoded_enum)
-    }
-
-    fn encode_discriminant(discriminant: u64) -> Data {
-        Self::encode_u64(discriminant)
-    }
-
-    fn encode_vector(data: &[Token]) -> Result<Vec<Data>> {
-        let encoded_data = Self::encode_tokens(data, false)?;
-        let cap = data.len() as u64;
-        let len = data.len() as u64;
-
-        // A vector is expected to be encoded as 3 WORDs -- a ptr, a cap and a
-        // len. This means that we must place the encoded vector elements
-        // somewhere else. Hence the use of Data::Dynamic which will, when
-        // resolved, leave behind in its place only a pointer to the actual
-        // data.
-        Ok(vec![
-            Data::Dynamic(encoded_data),
-            Self::encode_u64(cap),
-            Self::encode_u64(len),
-        ])
-    }
-
-    fn encode_raw_slice(mut data: Vec<u8>) -> Result<Vec<Data>> {
-        let len = data.len();
-
-        zeropad_to_word_alignment(&mut data);
-
-        let encoded_data = vec![Data::Inline(data)];
-
-        Ok(vec![
-            Data::Dynamic(encoded_data),
-            Self::encode_u64(len as u64),
-        ])
-    }
-
-    fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<Data>> {
-        let encodable_str = arg_string.get_encodable_str()?;
-
-        let encoded_data = Data::Inline(encodable_str.as_bytes().to_vec());
-        let len = Self::encode_u64(encodable_str.len() as u64);
-
-        Ok(vec![Data::Dynamic(vec![encoded_data]), len])
-    }
-
-    fn encode_string_array(arg_string: &StaticStringToken) -> Result<Data> {
-        Ok(Data::Inline(crate::types::pad_string(
-            arg_string.get_encodable_str()?,
-        )))
-    }
-
-    fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
-        let len = data.len();
-
-        zeropad_to_word_alignment(&mut data);
-
-        let cap = data.len() as u64;
-        let encoded_data = vec![Data::Inline(data)];
-
-        Ok(vec![
-            Data::Dynamic(encoded_data),
-            Self::encode_u64(cap),
-            Self::encode_u64(len as u64),
-        ])
-    }
-}
-
-fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
-    let padded_length = padded_len_usize(data.len());
-    data.resize(padded_length, 0);
 }
 
 #[cfg(test)]
 mod tests {
-    use std::slice;
-
     use itertools::chain;
     use sha2::{Digest, Sha256};
+    use std::slice;
 
     use super::*;
+    use crate::types::errors::Error;
     use crate::{
         codec::first_four_bytes_of_sha256_hash,
         constants::WORD_SIZE,
-        types::{enum_variants::EnumVariants, param_types::ParamType},
+        types::{enum_variants::EnumVariants, param_types::ParamType, StaticStringToken, U256},
     };
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
@@ -294,7 +104,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -330,7 +140,7 @@ mod tests {
         let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -364,7 +174,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -398,7 +208,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -437,7 +247,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -481,7 +291,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -522,7 +332,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -561,7 +371,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -603,7 +413,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -652,7 +462,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -702,7 +512,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -719,7 +529,9 @@ mod tests {
         let enum_variants = EnumVariants::new(types)?;
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
-        let encoded = ABIEncoder::encode(slice::from_ref(&Token::Enum(enum_selector)))?.resolve(0);
+        let encoded = ABIEncoder::default()
+            .encode(slice::from_ref(&Token::Enum(enum_selector)))?
+            .resolve(0);
 
         let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
         let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
@@ -786,7 +598,9 @@ mod tests {
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
 
-        let encoded = ABIEncoder::encode(slice::from_ref(&top_level_enum_token))?.resolve(0);
+        let encoded = ABIEncoder::default()
+            .encode(slice::from_ref(&top_level_enum_token))?
+            .resolve(0);
 
         let correct_encoding: Vec<u8> = [
             0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // TopLevelEnum::v1 discriminant
@@ -847,7 +661,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
 
@@ -945,7 +759,7 @@ mod tests {
 
         let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
 
-        let encoded = ABIEncoder::encode(&args)?.resolve(0);
+        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
 
         assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
         assert_eq!(encoded_function_selector, expected_function_selector);
@@ -959,7 +773,9 @@ mod tests {
         let types = vec![ParamType::Unit, ParamType::Unit];
         let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
-        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
+        let actual = ABIEncoder::default()
+            .encode(&[Token::Enum(enum_selector)])?
+            .resolve(0);
 
         assert_eq!(actual, expected);
         Ok(())
@@ -969,8 +785,9 @@ mod tests {
     fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
 
-        let actual =
-            ABIEncoder::encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])])?.resolve(0);
+        let actual = ABIEncoder::default()
+            .encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])])?
+            .resolve(0);
 
         assert_eq!(actual, expected);
         Ok(())
@@ -985,7 +802,9 @@ mod tests {
         let types = vec![ParamType::B256, ParamType::Unit];
         let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
-        let actual = ABIEncoder::encode(&[Token::Enum(enum_selector)])?.resolve(0);
+        let actual = ABIEncoder::default()
+            .encode(&[Token::Enum(enum_selector)])?
+            .resolve(0);
 
         assert_eq!(actual, expected);
         Ok(())
@@ -998,7 +817,9 @@ mod tests {
         let token = Token::Vector(vec![Token::U64(5)]);
 
         // act
-        let result = ABIEncoder::encode(&[token])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[token])?
+            .resolve(offset as u64);
 
         // assert
         let ptr = [0, 0, 0, 0, 0, 0, 0, 3 * WORD_SIZE as u8 + offset];
@@ -1021,7 +842,9 @@ mod tests {
         let vec_2 = Token::Vector(vec![Token::U64(6)]);
 
         // act
-        let result = ABIEncoder::encode(&[vec_1, vec_2])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[vec_1, vec_2])?
+            .resolve(offset as u64);
 
         // assert
         let vec1_data_offset = 6 * WORD_SIZE as u8 + offset;
@@ -1056,7 +879,9 @@ mod tests {
         let token = Token::Enum(Box::new(selector));
 
         // act
-        let result = ABIEncoder::encode(&[token])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[token])?
+            .resolve(offset as u64);
 
         // assert
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
@@ -1097,7 +922,9 @@ mod tests {
         let vec_token = Token::Vector(vec![enum_token]);
 
         // act
-        let result = ABIEncoder::encode(&[vec_token])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[vec_token])?
+            .resolve(offset as u64);
 
         // assert
         const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
@@ -1122,7 +949,9 @@ mod tests {
         let token = Token::Struct(vec![Token::Vector(vec![Token::U64(5)]), Token::U8(9)]);
 
         // act
-        let result = ABIEncoder::encode(&[token])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[token])?
+            .resolve(offset as u64);
 
         // assert
         let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
@@ -1147,7 +976,9 @@ mod tests {
         let token = Token::Vector(vec![Token::Vector(vec![Token::U8(5), Token::U8(6)])]);
 
         // act
-        let result = ABIEncoder::encode(&[token])?.resolve(offset as u64);
+        let result = ABIEncoder::default()
+            .encode(&[token])?
+            .resolve(offset as u64);
 
         // assert
         let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
@@ -1178,7 +1009,7 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+        let encoded_bytes = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
         let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
@@ -1200,7 +1031,7 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_bytes = ABIEncoder::encode(&[token])?.resolve(offset);
+        let encoded_bytes = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
         let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
@@ -1223,7 +1054,7 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_std_string = ABIEncoder::encode(&[token])?.resolve(offset);
+        let encoded_std_string = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
         let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
@@ -1242,12 +1073,103 @@ mod tests {
     fn encoding_large_unsigned_integers() -> Result<()> {
         let token = Token::U128(u128::MAX);
         let expected_encoding = [255; 16];
-        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
         assert_eq!(result, expected_encoding);
         let token = Token::U256(U256::MAX);
         let expected_encoding = [255; 32];
-        let result = ABIEncoder::encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
         assert_eq!(result, expected_encoding);
         Ok(())
+    }
+
+    #[test]
+    fn capacity_overflow_is_caught() -> Result<()> {
+        let token = Token::Enum(Box::new((
+            1,
+            Token::String("".to_string()),
+            EnumVariants::new(vec![
+                ParamType::StringArray(18446742977385549567),
+                ParamType::U8,
+            ])?,
+        )));
+        let capacity_overflow_error = ABIEncoder::default().encode(&[token]).unwrap_err();
+        assert!(capacity_overflow_error
+            .to_string()
+            .contains("Try increasing encoder max memory"));
+        Ok(())
+    }
+
+    #[test]
+    fn max_depth_surpassed() {
+        const MAX_DEPTH: usize = 2;
+        let config = EncoderConfig {
+            max_depth: MAX_DEPTH,
+            ..Default::default()
+        };
+        let msg = "Depth limit (2) reached while encoding. Try increasing it.".to_string();
+
+        [nested_struct, nested_enum, nested_tuple, nested_array]
+            .iter()
+            .map(|fun| fun(MAX_DEPTH + 1))
+            .for_each(|token| {
+                assert_decoding_failed(config, token, &msg);
+            })
+    }
+
+    fn assert_decoding_failed(config: EncoderConfig, token: Token, msg: &str) {
+        let encoder = ABIEncoder::new(config);
+
+        let err = encoder.encode(&[token]);
+
+        let Err(Error::InvalidType(actual_msg)) = err else {
+            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        };
+        assert_eq!(actual_msg, msg);
+    }
+
+    fn nested_struct(depth: usize) -> Token {
+        let fields = if depth == 1 {
+            vec![Token::U8(255), Token::String("bloopblip".to_string())]
+        } else {
+            vec![nested_struct(depth - 1)]
+        };
+
+        Token::Struct(fields)
+    }
+
+    fn nested_enum(depth: usize) -> Token {
+        if depth == 0 {
+            return Token::U8(255);
+        }
+
+        let inner_enum = nested_enum(depth - 1);
+
+        // Create a basic EnumSelector for the current level (the `EnumVariants` is not
+        // actually accurate but it's not used for encoding)
+        let selector = (
+            0u64,
+            inner_enum,
+            EnumVariants::new(vec![ParamType::U64]).unwrap(),
+        );
+
+        Token::Enum(Box::new(selector))
+    }
+
+    fn nested_array(depth: usize) -> Token {
+        if depth == 1 {
+            Token::Array(vec![Token::U8(255)])
+        } else {
+            Token::Array(vec![nested_array(depth - 1)])
+        }
+    }
+
+    fn nested_tuple(depth: usize) -> Token {
+        let fields = if depth == 1 {
+            vec![Token::U8(255), Token::String("bloopblip".to_string())]
+        } else {
+            vec![nested_tuple(depth - 1)]
+        };
+
+        Token::Tuple(fields)
     }
 }
