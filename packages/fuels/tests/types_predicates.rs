@@ -1,3 +1,4 @@
+use std::default::Default;
 use std::path::Path;
 
 use fuels::{
@@ -133,7 +134,7 @@ async fn spend_predicate_coins_messages_single_u64() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(32768);
+    let data = MyPredicateEncoder::default().encode_data(32768)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/u64").await?;
 
@@ -151,7 +152,7 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         .parse()
         .unwrap();
 
-    let data = MyPredicateEncoder::encode_data(addr);
+    let data = MyPredicateEncoder::default().encode_data(addr)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/address").await?;
 
@@ -165,7 +166,8 @@ async fn spend_predicate_coins_messages_enums() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/enums/out/debug/enums-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(TestEnum::A(32), AnotherTestEnum::B(32));
+    let data =
+        MyPredicateEncoder::default().encode_data(TestEnum::A(32), AnotherTestEnum::B(32))?;
 
     assert_predicate_spendable(data, "tests/types/predicates/enums").await?;
 
@@ -179,13 +181,13 @@ async fn spend_predicate_coins_messages_structs() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/structs/out/debug/structs-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(
+    let data = MyPredicateEncoder::default().encode_data(
         TestStruct { value: 192 },
         AnotherTestStruct {
             value: 64,
             number: 128,
         },
-    );
+    )?;
 
     assert_predicate_spendable(data, "tests/types/predicates/structs").await?;
 
@@ -199,8 +201,8 @@ async fn spend_predicate_coins_messages_tuple() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_tuples/out/debug/predicate_tuples-abi.json"
     ));
 
-    let data =
-        MyPredicateEncoder::encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128);
+    let data = MyPredicateEncoder::default()
+        .encode_data((16, TestStruct { value: 32 }, TestEnum::Value(64)), 128)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_tuples").await?;
 
@@ -215,7 +217,7 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
             "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(18, 24, vec![2, 4, 42]);
+    let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_vector").await?;
 
@@ -246,7 +248,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
 
     let vec_in_array = [vec![0, 64, 2], vec![0, 1, 2]];
 
-    let data = MyPredicateEncoder::encode_data(
+    let data = MyPredicateEncoder::default().encode_data(
         u32_vec,
         vec_in_vec,
         struct_in_vec,
@@ -258,7 +260,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         tuple_in_vec,
         vec_in_tuple,
         vec_in_a_vec_in_a_struct_in_a_vec,
-    );
+    )?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_vectors").await?;
 
@@ -269,10 +271,10 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
 async fn spend_predicate_coins_messages_generics() -> Result<()> {
     abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/types/predicates/predicate_generics/out/debug/predicate_generics-abi.json"));
 
-    let data = MyPredicateEncoder::encode_data(
+    let data = MyPredicateEncoder::default().encode_data(
         GenericStruct { value: 64u8 },
         GenericEnum::Generic(GenericStruct { value: 64u16 }),
-    );
+    )?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_generics").await?;
 
@@ -295,7 +297,7 @@ async fn spend_predicate_coins_messages_bytes_hash() -> Result<()> {
         "0x173d69ea3d0aa050d01ff7cc60ccd4579b567c465cd115c6876c2da4a332fb99",
     )?;
 
-    let data = MyPredicateEncoder::encode_data(bytes, bits256);
+    let data = MyPredicateEncoder::default().encode_data(bytes, bits256)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_bytes_hash").await?;
 
@@ -315,7 +317,7 @@ async fn spend_predicate_coins_messages_bytes() -> Result<()> {
         inner_enum: SomeEnum::Second(bytes),
     };
 
-    let data = MyPredicateEncoder::encode_data(wrapper);
+    let data = MyPredicateEncoder::default().encode_data(wrapper)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_bytes").await?;
 
@@ -335,7 +337,7 @@ async fn spend_predicate_coins_messages_raw_slice() -> Result<()> {
         inner_enum: SomeEnum::Second(raw_slice),
     };
 
-    let data = MyPredicateEncoder::encode_data(wrapper);
+    let data = MyPredicateEncoder::default().encode_data(wrapper)?;
 
     assert_predicate_spendable(data, "tests/types/predicates/predicate_raw_slice").await?;
 
@@ -357,7 +359,7 @@ async fn predicate_handles_u128() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_u128/out/debug/predicate_u128-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(u128_from((8, 2)));
+    let data = MyPredicateEncoder::default().encode_data(u128_from((8, 2)))?;
     assert_predicate_spendable(data, "tests/types/predicates/predicate_u128").await?;
 
     Ok(())
@@ -383,7 +385,7 @@ async fn predicate_handles_u256() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_u256/out/debug/predicate_u256-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(u256_from((10, 11, 12, 13)));
+    let data = MyPredicateEncoder::default().encode_data(u256_from((10, 11, 12, 13)))?;
     assert_predicate_spendable(data, "tests/types/predicates/predicate_u256").await?;
 
     Ok(())
@@ -396,7 +398,7 @@ async fn predicate_handles_std_string() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/predicate_std_lib_string/out/debug/predicate_std_lib_string-abi.json"
     ));
 
-    let data = MyPredicateEncoder::encode_data(10, 11, String::from("Hello World"));
+    let data = MyPredicateEncoder::default().encode_data(10, 11, String::from("Hello World"))?;
     assert_predicate_spendable(data, "tests/types/predicates/predicate_std_lib_string").await?;
 
     Ok(())

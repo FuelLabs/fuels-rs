@@ -2,6 +2,7 @@ mod abi_decoder;
 mod abi_encoder;
 mod function_selector;
 mod logs;
+mod utils;
 
 pub use abi_decoder::*;
 pub use abi_encoder::*;

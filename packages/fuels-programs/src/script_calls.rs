@@ -8,6 +8,7 @@ use fuels_accounts::{
 };
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
+    error,
     offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
@@ -27,7 +28,7 @@ use itertools::chain;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        generate_contract_inputs, generate_contract_outputs, new_variable_outputs,
+        generate_contract_inputs, generate_contract_outputs, new_variable_outputs, sealed,
         TxDependencyExtension,
     },
     contract::SettableContract,
@@ -39,7 +40,7 @@ use crate::{
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
@@ -95,7 +96,7 @@ where
 {
     pub fn new(
         script_binary: Vec<u8>,
-        encoded_args: UnresolvedBytes,
+        encoded_args: Result<UnresolvedBytes>,
         account: T,
         provider: Provider,
         log_decoder: LogDecoder,
@@ -166,8 +167,11 @@ where
         let consensus_parameters = self.provider.consensus_parameters();
         let script_offset = base_offset_script(consensus_parameters)
             + padded_len_usize(self.script_call.script_binary.len());
-
-        Ok(self.script_call.encoded_args.resolve(script_offset as u64))
+        self.script_call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(script_offset as u64))
+            .map_err(|e| error!(InvalidData, "Cannot encode script call arguments: {e}"))
     }
 
     async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
@@ -253,18 +257,6 @@ where
         Ok(SubmitResponse::new(tx_id, self))
     }
 
-    pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = self
-            .provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call a script on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
@@ -309,6 +301,8 @@ where
         self.get_response(receipts)
     }
 }
+
+impl<T: Account, D> sealed::Sealed for ScriptCallHandler<T, D> {}
 
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ScriptCallHandler<T, D>

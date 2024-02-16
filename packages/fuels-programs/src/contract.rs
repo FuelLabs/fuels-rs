@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    default::Default,
     fmt::Debug,
     fs,
     marker::PhantomData,
@@ -10,6 +11,7 @@ use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_core::codec::EncoderConfig;
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -30,7 +32,7 @@ use fuels_core::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        build_tx_from_contract_calls, new_variable_outputs,
+        build_tx_from_contract_calls, new_variable_outputs, sealed,
         transaction_builder_from_contract_calls, TxDependencyExtension,
     },
     receipt_parser::ReceiptParser,
@@ -400,7 +402,7 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: UnresolvedBytes,
+    pub encoded_args: Result<UnresolvedBytes>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
     pub compute_custom_input_offset: bool,
@@ -603,21 +605,8 @@ where
         Ok(SubmitResponse::new(tx_id, self))
     }
 
-    pub async fn response(self) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    ///
     pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
         self.call_or_simulate(true).await
     }
@@ -626,8 +615,7 @@ where
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
-        let chain_id = provider.chain_id();
-        self.cached_tx_id = Some(tx.id(chain_id));
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
@@ -675,6 +663,8 @@ where
         self.get_response(receipts)
     }
 }
+
+impl<T: Account, D> sealed::Sealed for ContractCallHandler<T, D> {}
 
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
@@ -724,7 +714,8 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
-) -> Result<ContractCallHandler<T, D>> {
+    encoder_config: EncoderConfig,
+) -> ContractCallHandler<T, D> {
     let encoded_selector = signature;
 
     let tx_policies = TxPolicies::default();
@@ -732,7 +723,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
 
-    let unresolved_bytes = ABIEncoder::encode(args)?;
+    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
@@ -746,7 +737,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         custom_assets: Default::default(),
     };
 
-    Ok(ContractCallHandler {
+    ContractCallHandler {
         contract_call,
         tx_policies,
         cached_tx_id: None,
@@ -754,7 +745,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: Default::default(),
-    })
+    }
 }
 
 // If the data passed into the contract method is an integer or a
@@ -903,18 +894,6 @@ impl<T: Account> MultiContractCallHandler<T> {
         Ok(SubmitResponseMultiple::new(tx_id, self))
     }
 
-    pub async fn response<D: Tokenizable + Debug>(self) -> Result<FuelCallResponse<D>> {
-        let provider = self.account.try_provider()?;
-        let tx_id = self.cached_tx_id.expect("Cached tx_id is missing");
-
-        let receipts = provider
-            .tx_status(&tx_id)
-            .await?
-            .take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
     /// Call contract methods on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
     /// It is the same as the [call] method because the API is more user-friendly this way.
@@ -930,9 +909,8 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
-        let chain_id = provider.chain_id();
 
-        self.cached_tx_id = Some(tx.id(chain_id));
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
             provider.checked_dry_run(tx).await?
@@ -994,6 +972,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         Ok(response)
     }
 }
+
+impl<T: Account> sealed::Sealed for MultiContractCallHandler<T> {}
 
 #[async_trait::async_trait]
 impl<T> TxDependencyExtension for MultiContractCallHandler<T>

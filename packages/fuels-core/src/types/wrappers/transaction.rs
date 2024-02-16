@@ -25,7 +25,7 @@ use crate::{
     constants::BASE_ASSET_ID,
     traits::Signer,
     types::{bech32::Bech32Address, errors::error, Result},
-    utils::calculate_witnesses_size,
+    utils::{calculate_witnesses_size, sealed},
 };
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
@@ -162,21 +162,21 @@ pub enum TransactionType {
     Mint(MintTransaction),
 }
 
-pub trait EstimablePredicates {
+pub trait EstimablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()>;
 }
 
-pub trait GasValidation {
+pub trait GasValidation: sealed::Sealed {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug
+    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug + sealed::Sealed
 {
     fn fee_checked_from_tx(
         &self,
@@ -297,6 +297,8 @@ macro_rules! impl_tx_wrapper {
                 }
             }
         }
+
+        impl sealed::Sealed for $wrapper {}
 
         #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
         #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
