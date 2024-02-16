@@ -1125,7 +1125,7 @@ mod tests {
         let err = encoder.encode(&[token]);
 
         let Err(Error::Codec(actual_msg)) = err else {
-            panic!("expected a Codec error! Got: `{err:?}`");
+            panic!("expected a Codec error. Got: `{err:?}`");
         };
         assert_eq!(actual_msg, msg);
     }
