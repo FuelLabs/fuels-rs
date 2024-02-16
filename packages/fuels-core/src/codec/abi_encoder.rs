@@ -1096,9 +1096,11 @@ mod tests {
             ])?,
         )));
         let capacity_overflow_error = ABIEncoder::default().encode(&[token]).unwrap_err();
+
         assert!(capacity_overflow_error
             .to_string()
-            .contains("Try increasing encoder max memory"));
+            .contains("Try increasing maximum total enum width"));
+
         Ok(())
     }
 
