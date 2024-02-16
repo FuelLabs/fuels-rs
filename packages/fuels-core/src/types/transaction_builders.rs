@@ -36,7 +36,7 @@ use crate::{
         unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
-    utils::calculate_witnesses_size,
+    utils::{calculate_witnesses_size, sealed},
 };
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -67,7 +67,7 @@ struct UnresolvedWitnessIndexes {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait BuildableTransaction {
+pub trait BuildableTransaction: sealed::Sealed {
     type TxType: Transaction;
 
     async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
@@ -77,6 +77,8 @@ pub trait BuildableTransaction {
     /// the same witness index. Make sure you sign the built transaction in the expected order.
     async fn build_without_signatures(self, provider: &impl DryRunner) -> Result<Self::TxType>;
 }
+
+impl sealed::Sealed for ScriptTransactionBuilder {}
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
@@ -93,6 +95,8 @@ impl BuildableTransaction for ScriptTransactionBuilder {
         self.build(provider).await
     }
 }
+
+impl sealed::Sealed for CreateTransactionBuilder {}
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
@@ -111,7 +115,7 @@ impl BuildableTransaction for CreateTransactionBuilder {
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
-pub trait TransactionBuilder: BuildableTransaction + Send {
+pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
