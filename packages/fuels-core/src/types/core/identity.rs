@@ -1,4 +1,4 @@
-use fuel_tx::{Address, ContractId};
+use fuel_types::{Address, ContractId};
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 use serde::{Deserialize, Serialize};
 
