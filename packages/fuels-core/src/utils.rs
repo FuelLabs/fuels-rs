@@ -34,3 +34,7 @@ pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
         .map(|w| w.as_ref().len() + WITNESS_STATIC_SIZE)
         .sum()
 }
+
+pub(crate) mod sealed {
+    pub trait Sealed {}
+}

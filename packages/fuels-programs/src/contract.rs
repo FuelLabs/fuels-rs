@@ -32,7 +32,7 @@ use fuels_core::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        build_tx_from_contract_calls, new_variable_outputs,
+        build_tx_from_contract_calls, new_variable_outputs, sealed,
         transaction_builder_from_contract_calls, TxDependencyExtension,
     },
     receipt_parser::ReceiptParser,
@@ -664,6 +664,8 @@ where
     }
 }
 
+impl<T: Account, D> sealed::Sealed for ContractCallHandler<T, D> {}
+
 #[async_trait::async_trait]
 impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
 where
@@ -970,6 +972,8 @@ impl<T: Account> MultiContractCallHandler<T> {
         Ok(response)
     }
 }
+
+impl<T: Account> sealed::Sealed for MultiContractCallHandler<T> {}
 
 #[async_trait::async_trait]
 impl<T> TxDependencyExtension for MultiContractCallHandler<T>
