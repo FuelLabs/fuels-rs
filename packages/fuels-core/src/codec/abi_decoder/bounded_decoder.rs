@@ -2,7 +2,10 @@ use std::{convert::TryInto, str};
 
 use crate::{
     checked_round_up_to_word_alignment,
-    codec::DecoderConfig,
+    codec::{
+        utils::{CodecDirection, CounterWithLimit},
+        DecoderConfig,
+    },
     constants::WORD_SIZE,
     types::{
         enum_variants::EnumVariants,
@@ -26,8 +29,10 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 
 impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
+        let depth_tracker =
+            CounterWithLimit::new(config.max_depth, "Depth", CodecDirection::Decoding);
+        let token_tracker =
+            CounterWithLimit::new(config.max_tokens, "Token", CodecDirection::Decoding);
         Self {
             depth_tracker,
             token_tracker,
@@ -368,40 +373,6 @@ impl BoundedDecoder {
 struct Decoded {
     token: Token,
     bytes_read: usize,
-}
-
-struct CounterWithLimit {
-    count: usize,
-    max: usize,
-    name: String,
-}
-
-impl CounterWithLimit {
-    fn new(max: usize, name: impl Into<String>) -> Self {
-        Self {
-            count: 0,
-            max,
-            name: name.into(),
-        }
-    }
-
-    fn increase(&mut self) -> Result<()> {
-        self.count += 1;
-        if self.count > self.max {
-            Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
-            ))
-        } else {
-            Ok(())
-        }
-    }
-
-    fn decrease(&mut self) {
-        if self.count > 0 {
-            self.count -= 1;
-        }
-    }
 }
 
 fn peek_u128(bytes: &[u8]) -> Result<u128> {

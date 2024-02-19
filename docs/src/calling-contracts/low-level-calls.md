@@ -28,3 +28,5 @@ you would construct the function selector and the calldata as such, and provide 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:low_level_call}}
 ```
+
+> Note: the `calldata!` macro uses the default `EncoderConfig` configuration under the hood.
