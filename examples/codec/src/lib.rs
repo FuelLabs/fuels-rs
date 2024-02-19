@@ -1,6 +1,9 @@
 #[cfg(test)]
 mod tests {
-    use fuels::{core::codec::DecoderConfig, types::errors::Result};
+    use fuels::{
+        core::codec::{DecoderConfig, EncoderConfig},
+        types::errors::Result,
+    };
 
     #[test]
     fn encoding_a_type() -> Result<()> {
@@ -17,7 +20,7 @@ mod tests {
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::encode(&[instance.into_token()])?;
+        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&[instance.into_token()])?;
         let load_memory_address: u64 = 0x100;
         let _: Vec<u8> = encoded.resolve(load_memory_address);
         //ANCHOR_END: encoding_example
@@ -95,6 +98,21 @@ mod tests {
             max_tokens: 100,
         });
         // ANCHOR_END: configuring_the_decoder
+
+        Ok(())
+    }
+
+    #[test]
+    fn configuring_the_encoder() -> Result<()> {
+        // ANCHOR: configuring_the_encoder
+        use fuels::core::codec::ABIEncoder;
+
+        ABIEncoder::new(EncoderConfig {
+            max_depth: 5,
+            max_tokens: 100,
+            max_total_enum_width: 10_000,
+        });
+        // ANCHOR_END: configuring_the_encoder
 
         Ok(())
     }
