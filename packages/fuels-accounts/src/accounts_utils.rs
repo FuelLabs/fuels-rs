@@ -75,3 +75,38 @@ pub fn adjust_inputs_outputs(
             .push(Output::change(address.into(), 0, BASE_ASSET_ID));
     }
 }
+
+#[cfg(feature = "coin-cache")]
+pub async fn split_dependable_output(
+    tb: &mut impl TransactionBuilder,
+    used_base_amount: u64,
+    address: &Bech32Address,
+    provider: &Provider,
+) -> Result<(u8, u64)> {
+    let transaction_fee = tb
+        .fee_checked_from_tx(provider)
+        .await?
+        .ok_or(error!(InvalidData, "Error calculating TransactionFee"))?;
+
+    let available_amount = available_base_amount(tb);
+    let remaining_amount = available_amount - used_base_amount - transaction_fee.max_fee();
+
+    if remaining_amount == 0 {
+        return Err(error!(
+            InvalidData,
+            "No unused amount left to split into a dependable output"
+        ));
+    }
+
+    let outputs_len = tb.outputs().len();
+    let index = outputs_len - 1;
+    tb.outputs_mut().insert(
+        index,
+        Output::Coin {
+            to: address.into(),
+            amount: remaining_amount,
+            asset_id: BASE_ASSET_ID,
+        },
+    );
+    Ok((index as u8, remaining_amount))
+}
