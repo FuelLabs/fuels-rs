@@ -3,7 +3,7 @@ contract;
 #[allow(dead_code)]
 enum SomeEnum {
     SomeStr: str[4],
-    SomeArr: [u64; 7],
+    SomeArr: [u64; 2],
 }
 
 #[allow(dead_code)]
