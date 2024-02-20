@@ -143,17 +143,17 @@
 <pre><code class="language-rust ignore">        let ascii_data = &quot;abc&quot;.to_string();
 
         SizedAsciiString::&lt;3&gt;::new(ascii_data)
-            .expect(&quot;Should have succeeded since we gave ascii data of correct length!&quot;);
+            .expect(&quot;should have succeeded since we gave ascii data of correct length!&quot;);
 </code></pre>
 <p>To make working with <code>SizedAsciiString</code>s easier, you can use <code>try_into()</code> to convert from Rust's <code>String</code> to <code>SizedAsciiString</code>, and you can use <code>into()</code> to convert from <code>SizedAsciiString</code> to Rust's <code>String</code>. Here are a few examples:</p>
 <pre><code class="language-rust ignore">    #[test]
     fn can_be_constructed_from_str_ref() {
-        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.try_into().expect(&quot;Should have succeeded&quot;);
+        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.try_into().expect(&quot;should have succeeded&quot;);
     }
 
     #[test]
     fn can_be_constructed_from_string() {
-        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.to_string().try_into().expect(&quot;Should have succeeded&quot;);
+        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.to_string().try_into().expect(&quot;should have succeeded&quot;);
     }
 
     #[test]

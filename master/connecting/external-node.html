@@ -149,9 +149,9 @@
         let provider = Provider::connect(&quot;beta-4.fuel.network&quot;).await.unwrap();
 
         // Setup a private key
-        let secret =
-            SecretKey::from_str(&quot;a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568&quot;)
-                .unwrap();
+        let secret = SecretKey::from_str(
+            &quot;a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568&quot;,
+        )?;
 
         // Create the wallet
         let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
@@ -172,9 +172,7 @@
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
 </blockquote>
 <p>If you want to connect to another node just change the URL or IP and port. For example, to connect to a local node that was created with <code>fuel-core</code> you can use:</p>
-<pre><code class="language-rust ignore">        let _provider = Provider::connect(format!(&quot;127.0.0.1:{port}&quot;))
-            .await
-            .unwrap();
+<pre><code class="language-rust ignore">        let _provider = Provider::connect(format!(&quot;127.0.0.1:{port}&quot;)).await?;
 </code></pre>
 
                     </main>

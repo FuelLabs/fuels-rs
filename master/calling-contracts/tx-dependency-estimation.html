@@ -150,7 +150,7 @@
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>

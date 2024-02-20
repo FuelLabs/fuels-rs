@@ -139,30 +139,26 @@
                     <main>
                         <h1 id="interacting-with-contracts"><a class="header" href="#interacting-with-contracts">Interacting with contracts</a></h1>
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
-<pre><code class="language-rust ignore">            abigen!(Contract(
-                name = &quot;MyContract&quot;,
-                // Replace with your contract ABI.json path
-                abi =
-                    &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
-            ));
-            let wallet_original = launch_provider_and_get_wallet().await?;
+<pre><code class="language-rust ignore">        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            // Replace with your contract ABI.json path
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+        let wallet_original = launch_provider_and_get_wallet().await?;
 
-            let wallet = wallet_original.clone();
-            // Your bech32m encoded contract ID.
-            let contract_id: Bech32ContractId =
-                &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;
-                    .parse()
-                    .expect(&quot;Invalid ID&quot;);
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.parse()?;
 
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // You can now use the `connected_contract_instance` just as you did above!
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
 <p>The above example assumes that your contract ID string is encoded in the <code>bech32</code> format. You can recognize it by the human-readable-part &quot;fuel&quot; followed by the separator &quot;1&quot;. However, when using other Fuel tools, you might end up with a hex-encoded contract ID string. In that case, you can create your contract instance as follows:</p>
-<pre><code class="language-rust ignore">            let contract_id: ContractId =
-                &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
-                    .parse()
-                    .expect(&quot;Invalid ID&quot;);
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
+<pre><code class="language-rust ignore">        let contract_id: ContractId =
+            &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;.parse()?;
+
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
 <p>You can learn more about the Fuel SDK <code>bech32</code> types <a href="../types/bech32.html">here</a>.</p>
 

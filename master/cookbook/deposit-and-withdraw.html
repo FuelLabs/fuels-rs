@@ -197,9 +197,7 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>Next, we set up a wallet with custom-defined assets. We give our wallet some of the contracts <code>BASE_TOKEN</code> and the default asset (required for contract deployment):</p>
 <pre><code class="language-rust ignore">        let base_asset_id: AssetId =
-            &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;
-                .parse()
-                .unwrap();
+            &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;.parse()?;
 
         let asset_ids = [AssetId::default(), base_asset_id];
         let asset_configs = asset_ids

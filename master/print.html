@@ -262,9 +262,9 @@ To build these tests, run the following command:</p>
         let provider = Provider::connect(&quot;beta-4.fuel.network&quot;).await.unwrap();
 
         // Setup a private key
-        let secret =
-            SecretKey::from_str(&quot;a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568&quot;)
-                .unwrap();
+        let secret = SecretKey::from_str(
+            &quot;a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568&quot;,
+        )?;
 
         // Create the wallet
         let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
@@ -285,9 +285,7 @@ To build these tests, run the following command:</p>
 <p><a href="https://fuellabs.github.io/block-explorer-v2">block-explorer</a></p>
 </blockquote>
 <p>If you want to connect to another node just change the URL or IP and port. For example, to connect to a local node that was created with <code>fuel-core</code> you can use:</p>
-<pre><code class="language-rust ignore">        let _provider = Provider::connect(format!(&quot;127.0.0.1:{port}&quot;))
-            .await
-            .unwrap();
+<pre><code class="language-rust ignore">        let _provider = Provider::connect(format!(&quot;127.0.0.1:{port}&quot;)).await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="running-a-short-lived-fuel-node-with-the-sdk"><a class="header" href="#running-a-short-lived-fuel-node-with-the-sdk">Running a short-lived Fuel node with the SDK</a></h1>
 <p>You can use the SDK to spin up a local, ideally short-lived Fuel node. Then, you can instantiate a Fuel client, pointing to this node.</p>
@@ -513,9 +511,9 @@ pub enum Backoff {
         let wallet = wallets.first().unwrap();
 
         let amount = 1000;
-        let base_layer_address =
-            Address::from_str(&quot;0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe&quot;)
-                .expect(&quot;Invalid address.&quot;);
+        let base_layer_address = Address::from_str(
+            &quot;0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe&quot;,
+        )?;
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
@@ -529,7 +527,7 @@ pub enum Backoff {
             .try_provider()?
             .get_message_proof(&amp;tx_id, &amp;msg_id, None, Some(2))
             .await?
-            .expect(&quot;Failed to retrieve message proof.&quot;);
+            .expect(&quot;failed to retrieve message proof&quot;);
 
         // Verify the amount and recipient
         assert_eq!(proof.amount, amount);
@@ -868,10 +866,7 @@ coins and coin amount</p>
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&amp;mut secret_seed);
 
-        let secret = secret_seed
-            .as_slice()
-            .try_into()
-            .expect(&quot;The seed size is valid&quot;);
+        let secret = secret_seed.as_slice().try_into()?;
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -1499,30 +1494,26 @@ impl TestContract for Contract {
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="interacting-with-contracts"><a class="header" href="#interacting-with-contracts">Interacting with contracts</a></h1>
 <p>If you already have a deployed contract and want to call its methods using the SDK,  but without deploying it again, all you need is the contract ID of your deployed contract. You can skip the whole deployment setup and call <code>::new(contract_id, wallet)</code> directly. For example:</p>
-<pre><code class="language-rust ignore">            abigen!(Contract(
-                name = &quot;MyContract&quot;,
-                // Replace with your contract ABI.json path
-                abi =
-                    &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
-            ));
-            let wallet_original = launch_provider_and_get_wallet().await?;
+<pre><code class="language-rust ignore">        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            // Replace with your contract ABI.json path
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+        let wallet_original = launch_provider_and_get_wallet().await?;
 
-            let wallet = wallet_original.clone();
-            // Your bech32m encoded contract ID.
-            let contract_id: Bech32ContractId =
-                &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;
-                    .parse()
-                    .expect(&quot;Invalid ID&quot;);
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            &quot;fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy&quot;.parse()?;
 
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // You can now use the `connected_contract_instance` just as you did above!
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
 </code></pre>
 <p>The above example assumes that your contract ID string is encoded in the <code>bech32</code> format. You can recognize it by the human-readable-part &quot;fuel&quot; followed by the separator &quot;1&quot;. However, when using other Fuel tools, you might end up with a hex-encoded contract ID string. In that case, you can create your contract instance as follows:</p>
-<pre><code class="language-rust ignore">            let contract_id: ContractId =
-                &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;
-                    .parse()
-                    .expect(&quot;Invalid ID&quot;);
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
+<pre><code class="language-rust ignore">        let contract_id: ContractId =
+            &quot;0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3&quot;.parse()?;
+
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
 </code></pre>
 <p>You can learn more about the Fuel SDK <code>bech32</code> types <a href="deploying/../types/bech32.html">here</a>.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="the-fuelvm-binary-file"><a class="header" href="#the-fuelvm-binary-file">The FuelVM binary file</a></h1>
@@ -1720,13 +1711,13 @@ half-word   byte   op                raw           notes
 <!-- payable:example:start -->
 <p><code>call_params</code> returns a result to ensure you don't forward assets to a contract method that isn't payable.</p>
 <!-- payable:example:end -->
-<p>In the following example, we try to forward an amount of 100 of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than 0 leads to an <code>InvalidCallParameters</code> error:</p>
+<p>In the following example, we try to forward an amount of <code>100</code> of the base asset to <code>non_payable</code>. As its name suggests, <code>non_payable</code> isn't annotated with <code>#[payable]</code> in the contract code. Passing <code>CallParameters</code> with an amount other than <code>0</code> leads to an error:</p>
 <pre><code class="language-rust ignore">    let err = contract_methods
         .non_payable()
         .call_params(CallParameters::default().with_amount(100))
-        .expect_err(&quot;Should return call params error.&quot;);
+        .expect_err(&quot;should return error&quot;);
 
-    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
+    assert!(matches!(err, Error::Other(s) if s.contains(&quot;assets forwarded to non-payable method&quot;)));
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> forwarding gas to a contract call is always possible, regardless of the contract method being non-payable.</p>
@@ -1872,7 +1863,7 @@ let is_error = response.is_err();
 </code></pre>
 <p>Due to possible performance hits, it is not recommended to use <code>decode_logs()</code> outside of a debugging scenario.</p>
 <blockquote>
-<p><strong>Note:</strong> String slices can not be logged directly. Use the <code>__to_str_array()</code> function to convert it to a <code>str[N]</code> first.</p>
+<p><strong>Note:</strong> String slices cannot be logged directly. Use the <code>__to_str_array()</code> function to convert it to a <code>str[N]</code> first.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="output-variables"><a class="header" href="#output-variables">Output variables</a></h1>
 <!-- This section should explain variable outputs  -->
@@ -1980,7 +1971,7 @@ let is_error = response.is_err();
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
@@ -2400,19 +2391,13 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <p>Let's use the SDK to interact with the predicate. First, let's create three wallets with specific keys. Their hashed public keys are already hard-coded in the predicate. Then we create the receiver wallet, which we will use to spend the predicate funds.</p>
 <pre><code class="language-rust ignore">        let secret_key1: SecretKey =
-            &quot;0x862512a2363db2b3a375c0d4bbbd27172180d89f23f2e259bac850ab02619301&quot;
-                .parse()
-                .unwrap();
+            &quot;0x862512a2363db2b3a375c0d4bbbd27172180d89f23f2e259bac850ab02619301&quot;.parse()?;
 
         let secret_key2: SecretKey =
-            &quot;0x37fa81c84ccd547c30c176b118d5cb892bdb113e8e80141f266519422ef9eefd&quot;
-                .parse()
-                .unwrap();
+            &quot;0x37fa81c84ccd547c30c176b118d5cb892bdb113e8e80141f266519422ef9eefd&quot;.parse()?;
 
         let secret_key3: SecretKey =
-            &quot;0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb&quot;
-                .parse()
-                .unwrap();
+            &quot;0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb&quot;.parse()?;
 
         let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
         let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
@@ -2637,7 +2622,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 
         // From a hex string.
         let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let b256 = Bytes32::from_str(hex_str).expect(&quot;failed to create Bytes32 from string&quot;);
+        let b256 = Bytes32::from_str(hex_str)?;
         assert_eq!([0u8; 32], *b256);
 </code></pre>
 <p><code>Bytes32</code> also implements the <code>fmt</code> module's <code>Debug</code>, <code>Display</code>, <code>LowerHex</code> and <code>UpperHex</code> traits. For example, you can get the display and hex representations with:</p>
@@ -2669,7 +2654,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 
         // From a string.
         let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let address = Address::from_str(hex_str).expect(&quot;failed to create Address from string&quot;);
+        let address = Address::from_str(hex_str)?;
         assert_eq!([0u8; 32], *address);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contractid"><a class="header" href="#contractid"><code>ContractId</code></a></h1>
@@ -2693,8 +2678,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 
         // From a string.
         let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let contract_id =
-            ContractId::from_str(hex_str).expect(&quot;failed to create ContractId from string&quot;);
+        let contract_id = ContractId::from_str(hex_str)?;
         assert_eq!([0u8; 32], *contract_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assetid"><a class="header" href="#assetid"><code>AssetId</code></a></h1>
@@ -2718,7 +2702,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 
         // From a string.
         let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let asset_id = AssetId::from_str(hex_str).expect(&quot;failed to create AssetId from string&quot;);
+        let asset_id = AssetId::from_str(hex_str)?;
         assert_eq!([0u8; 32], *asset_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="converting-native-types"><a class="header" href="#converting-native-types">Converting native types</a></h1>
@@ -2747,8 +2731,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 
         // From a string.
         let address = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
-        let bech32_address =
-            Bech32Address::from_str(address).expect(&quot;failed to create Bech32 address from string&quot;);
+        let bech32_address = Bech32Address::from_str(address)?;
         assert_eq!([0u8; 32], *bech32_address.hash());
 
         // From Address
@@ -2872,17 +2855,17 @@ enum SomeEnum&lt;T, K&gt; {
 <pre><code class="language-rust ignore">        let ascii_data = &quot;abc&quot;.to_string();
 
         SizedAsciiString::&lt;3&gt;::new(ascii_data)
-            .expect(&quot;Should have succeeded since we gave ascii data of correct length!&quot;);
+            .expect(&quot;should have succeeded since we gave ascii data of correct length!&quot;);
 </code></pre>
 <p>To make working with <code>SizedAsciiString</code>s easier, you can use <code>try_into()</code> to convert from Rust's <code>String</code> to <code>SizedAsciiString</code>, and you can use <code>into()</code> to convert from <code>SizedAsciiString</code> to Rust's <code>String</code>. Here are a few examples:</p>
 <pre><code class="language-rust ignore">    #[test]
     fn can_be_constructed_from_str_ref() {
-        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.try_into().expect(&quot;Should have succeeded&quot;);
+        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.try_into().expect(&quot;should have succeeded&quot;);
     }
 
     #[test]
     fn can_be_constructed_from_string() {
-        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.to_string().try_into().expect(&quot;Should have succeeded&quot;);
+        let _: SizedAsciiString&lt;3&gt; = &quot;abc&quot;.to_string().try_into().expect(&quot;should have succeeded&quot;);
     }
 
     #[test]
@@ -3583,9 +3566,7 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>Next, we set up a wallet with custom-defined assets. We give our wallet some of the contracts <code>BASE_TOKEN</code> and the default asset (required for contract deployment):</p>
 <pre><code class="language-rust ignore">        let base_asset_id: AssetId =
-            &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;
-                .parse()
-                .unwrap();
+            &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;.parse()?;
 
         let asset_ids = [AssetId::default(), base_asset_id];
         let asset_configs = asset_ids
@@ -3666,7 +3647,7 @@ impl LiquidityPool for Contract {
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let id = AssetId::from_str(&amp;id_string).unwrap();
+            let id = AssetId::from_str(&amp;id_string)?;
 
             // leave the base asset to cover transaction fees
             if id == BASE_ASSET_ID {

@@ -158,8 +158,7 @@
 
         // From a string.
         let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
-        let contract_id =
-            ContractId::from_str(hex_str).expect(&quot;failed to create ContractId from string&quot;);
+        let contract_id = ContractId::from_str(hex_str)?;
         assert_eq!([0u8; 32], *contract_id);
 </code></pre>
 

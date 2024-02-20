@@ -162,7 +162,7 @@
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let id = AssetId::from_str(&amp;id_string).unwrap();
+            let id = AssetId::from_str(&amp;id_string)?;
 
             // leave the base asset to cover transaction fees
             if id == BASE_ASSET_ID {

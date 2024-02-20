@@ -143,10 +143,7 @@
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&amp;mut secret_seed);
 
-        let secret = secret_seed
-            .as_slice()
-            .try_into()
-            .expect(&quot;The seed size is valid&quot;);
+        let secret = secret_seed.as_slice().try_into()?;
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
