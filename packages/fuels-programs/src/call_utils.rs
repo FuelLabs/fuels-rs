@@ -312,7 +312,7 @@ pub(crate) fn build_script_data_from_contract_calls(
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(encoded_args_start_offset as Word))
-            .map_err(|e| error!(Other, "cannot encode contract call arguments: {e}"))?;
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call

@@ -171,7 +171,7 @@ where
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(script_offset as u64))
-            .map_err(|e| error!(Other, "cannot encode script call arguments: {e}"))
+            .map_err(|e| error!(Codec, "cannot encode script call arguments: {e}"))
     }
 
     async fn prepare_inputs_outputs(&self) -> Result<(Vec<Input>, Vec<Output>)> {
