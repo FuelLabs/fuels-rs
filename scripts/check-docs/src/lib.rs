@@ -176,7 +176,7 @@ pub fn extract_starts_and_ends(
                 let anchor_name = &capture[3];
 
                 Ok(Anchor {
-                    line_no: line_no.parse().unwrap(),
+                    line_no: line_no.parse()?,
                     name: anchor_name.to_string(),
                     file,
                 })

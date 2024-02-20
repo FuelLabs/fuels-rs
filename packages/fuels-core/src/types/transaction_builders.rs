@@ -27,7 +27,7 @@ use crate::{
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Result},
+        errors::{error_transaction, Result},
         input::Input,
         message::Message,
         transaction::{
@@ -148,9 +148,9 @@ macro_rules! impl_tx_trait {
                     .owner_to_idx_offset
                     .contains_key(address)
                 {
-                    return Err(error!(
-                        InvalidData,
-                        "Already added `Signer` with address: `{address}`"
+                    return Err(error_transaction!(
+                        Builder,
+                        "already added `Signer` with address: `{address}`"
                     ));
                 }
 
@@ -284,9 +284,9 @@ macro_rules! impl_tx_trait {
                 let num_witnesses = self.witnesses().len();
 
                 if num_witnesses + self.unresolved_signers.len() > 256 {
-                    return Err(error!(
-                        InvalidData,
-                        "tx can not have more than 256 witnesses"
+                    return Err(error_transaction!(
+                        Builder,
+                        "tx cannot have more than 256 witnesses"
                     ));
                 }
 
@@ -786,8 +786,8 @@ fn resolve_signed_resource(
             unresolved_witness_indexes
                 .owner_to_idx_offset
                 .get(owner)
-                .ok_or(error!(
-                    InvalidData,
+                .ok_or(error_transaction!(
+                    Builder,
                     "signature missing for coin with owner: `{owner:?}`"
                 ))
                 .map(|witness_idx_offset| {
@@ -801,8 +801,8 @@ fn resolve_signed_resource(
             unresolved_witness_indexes
                 .owner_to_idx_offset
                 .get(recipient)
-                .ok_or(error!(
-                    InvalidData,
+                .ok_or(error_transaction!(
+                    Builder,
                     "signature missing for message with recipient: `{recipient:?}`"
                 ))
                 .map(|witness_idx_offset| {
@@ -1131,7 +1131,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[should_panic(expected = "Already added `Signer` with address:")]
+    #[should_panic(expected = "already added `Signer` with address:")]
     async fn add_signer_called_multiple_times() {
         let mut tb = ScriptTransactionBuilder::default();
         let signer = MockSigner::default();

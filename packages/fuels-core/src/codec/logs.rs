@@ -48,11 +48,11 @@ impl LogFormatter {
     #[cfg(not(experimental))]
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
         match T::param_type() {
-            // String slices can not be decoded from logs as they are encoded as ptr, len
+            // String slices cannot be decoded from logs as they are encoded as ptr, len
             // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
             ParamType::StringSlice => Err(error!(
-                InvalidData,
-                "String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
+                Codec,
+                "string slices cannot be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`"
             )),
             _ => Ok(()),
         }
@@ -137,9 +137,9 @@ impl LogDecoder {
             .get(log_id)
             .ok_or_else(|| {
                 error!(
-                    InvalidData,
+                    Codec,
                     "missing log formatter for log_id: `{:?}`, data: `{:?}`. \
-                     Consider adding external contracts with `with_contracts()`",
+                     Consider adding external contracts using `with_contracts()`",
                     log_id,
                     data
                 )
@@ -153,7 +153,7 @@ impl LogDecoder {
             .rev()
             .extract_log_id_and_data()
             .next()
-            .ok_or_else(|| error!(InvalidData, "No receipts found for decoding last log."))
+            .ok_or_else(|| error!(Codec, "no receipts found for decoding last log"))
             .and_then(|(log_id, data)| self.format_log(&log_id, &data))
     }
 
@@ -169,7 +169,7 @@ impl LogDecoder {
         match res.as_deref() {
             Ok([rhs, lhs]) => Ok((lhs.to_string(), rhs.to_string())),
             Ok(some_slice) => Err(error!(
-                InvalidData,
+                Codec,
                 "expected to have two logs. Found {}",
                 some_slice.len()
             )),

@@ -1,7 +1,7 @@
 use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
-use crate::types::errors::{error, Result};
+use crate::types::errors::Result;
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -25,12 +25,8 @@ impl Bits256 {
         };
 
         let mut bytes = [0u8; 32];
-        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
-            error!(
-                InvalidData,
-                "Could not convert hex str '{hex}' to Bits256! {e}"
-            )
-        })?;
+        hex::decode_to_slice(hex, &mut bytes as &mut [u8])?;
+
         Ok(Bits256(bytes))
     }
 }

@@ -11,7 +11,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{transaction::Reason, Error, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -91,7 +91,7 @@ pub trait TxDependencyExtension: Sized + sealed::Sealed {
             match self.simulate().await {
                 Ok(_) => return Ok(self),
 
-                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     self = self.append_missing_dependencies(receipts);
                 }
 
@@ -312,7 +312,7 @@ pub(crate) fn build_script_data_from_contract_calls(
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(encoded_args_start_offset as Word))
-            .map_err(|e| error!(InvalidData, "Cannot encode contract call arguments: {e}"))?;
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -819,7 +819,7 @@ mod test {
                     expected_contract_ids.remove(&contract_id);
                 }
                 _ => {
-                    panic!("Expected only inputs of type Input::Contract");
+                    panic!("expected only inputs of type `Input::Contract`");
                 }
             }
         }

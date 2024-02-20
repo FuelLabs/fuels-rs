@@ -1,13 +1,7 @@
-use std::default::Default;
-#[allow(unused_imports)]
-use std::future::Future;
-use std::vec;
-
 use fuels::{
-    accounts::{predicate::Predicate, Account},
     core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    types::Bits256,
+    types::{errors::transaction::Reason, Bits256},
 };
 
 #[tokio::test]
@@ -136,7 +130,7 @@ async fn test_reverting_transaction() -> Result<()> {
 
     assert!(matches!(
         response,
-        Err(Error::RevertTransactionError { revert_id, .. }) if revert_id == 128
+        Err(Error::Transaction(Reason::Reverted { revert_id, .. })) if revert_id == 128
     ));
 
     Ok(())
@@ -402,9 +396,16 @@ async fn contract_method_call_respects_maturity() -> Result<()> {
             .with_tx_policies(TxPolicies::default().with_maturity(maturity))
     };
 
-    call_w_maturity(1).call().await.expect("Should have passed since we're calling with a maturity that is less or equal to the current block height");
+    call_w_maturity(1).call().await.expect(
+        "should have passed since we're calling with a maturity \
+        that is less or equal to the current block height",
+    );
 
-    call_w_maturity(3).call().await.expect_err("Should have failed since we're calling with a maturity that is greater than the current block height");
+    call_w_maturity(3).call().await.expect_err(
+        "should have failed since we're calling with a maturity \
+        that is greater than the current block height",
+    );
+
     Ok(())
 }
 
@@ -696,7 +697,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
     }
 
@@ -709,7 +710,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
     }
 
@@ -854,6 +855,8 @@ async fn test_contract_instance_get_balances() -> Result<()> {
 
 #[tokio::test]
 async fn contract_call_futures_implement_send() -> Result<()> {
+    use std::future::Future;
+
     fn tokio_spawn_imitation<T>(_: T)
     where
         T: Future + Send + 'static,
@@ -922,7 +925,10 @@ async fn test_contract_set_estimation() -> Result<()> {
             .call()
             .await;
 
-        assert!(matches!(res, Err(Error::RevertTransactionError { .. })));
+        assert!(matches!(
+            res,
+            Err(Error::Transaction(Reason::Reverted { .. }))
+        ));
     }
 
     let res = contract_caller_instance
@@ -1121,20 +1127,19 @@ async fn test_add_custom_assets() -> Result<()> {
 async fn contract_load_error_messages() {
     {
         let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
-        let expected_error = format!("Invalid data: file \"{binary_path}\" does not exist");
+        let expected_error = format!("io: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
-            .expect_err("Should have failed");
+            .expect_err("should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }
     {
         let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
-        let expected_error =
-            format!("Invalid data: expected \"{binary_path}\" to have '.bin' extension");
+        let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
-            .expect_err("Should have failed");
+            .expect_err("should have failed");
 
         assert_eq!(error.to_string(), expected_error);
     }
@@ -1173,9 +1178,9 @@ async fn test_payable_annotation() -> Result<()> {
     let err = contract_methods
         .non_payable()
         .call_params(CallParameters::default().with_amount(100))
-        .expect_err("Should return call params error.");
+        .expect_err("should return error");
 
-    assert!(matches!(err, Error::AssetsForwardedToNonPayableMethod));
+    assert!(matches!(err, Error::Other(s) if s.contains("assets forwarded to non-payable method")));
     // ANCHOR_END: non_payable_params
 
     let response = contract_methods
@@ -1332,27 +1337,26 @@ fn db_rocksdb() {
         accounts::wallet::WalletUnlocked,
         client::{PageDirection, PaginationRequest},
         crypto::SecretKey,
-        prelude::{setup_test_provider, DbType, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+        prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
     let temp_dir = tempfile::tempdir()
-        .expect("Failed to make tempdir")
+        .expect("failed to make tempdir")
         .into_path();
     let temp_dir_name = temp_dir
         .file_name()
-        .expect("Failed to get file name")
+        .expect("failed to get file name")
         .to_string_lossy()
         .to_string();
     let temp_database_path = temp_dir.join("db");
 
     tokio::runtime::Runtime::new()
-        .expect("Tokio runtime failed")
+        .expect("tokio runtime failed")
         .block_on(async {
             let wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
                     "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
-                )
-                .unwrap(),
+                )?,
                 None,
             );
 
@@ -1382,14 +1386,14 @@ fn db_rocksdb() {
 
             provider.produce_blocks(2, None).await?;
 
-            Ok::<(), Box<dyn std::error::Error>>(())
+            Ok::<(), Error>(())
         })
         .unwrap();
 
     // The runtime needs to be terminated because the node can currently only be killed when the runtime itself shuts down.
 
     tokio::runtime::Runtime::new()
-        .expect("Tokio runtime failed")
+        .expect("tokio runtime failed")
         .block_on(async {
             let node_config = Config {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
@@ -1401,8 +1405,7 @@ fn db_rocksdb() {
             let mut wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
                     "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
-                )
-                .unwrap(),
+                )?,
                 None,
             );
 
@@ -1432,10 +1435,10 @@ fn db_rocksdb() {
             fs::remove_dir_all(
                 temp_database_path
                     .parent()
-                    .expect("Db parent folder does not exist"),
+                    .expect("db parent folder does not exist"),
             )?;
 
-            Ok::<(), Box<dyn std::error::Error>>(())
+            Ok::<(), Error>(())
         })
         .unwrap();
 }
@@ -1458,8 +1461,8 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     let methods = contract_instance.methods();
     {
         // Single call: Will not work if max_tokens not big enough
-        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig {max_tokens: 100, ..Default::default()}).call().await.expect_err(
-            "Should have failed because there are more tokens than what is supported by default.",
+        methods.i_return_a_1k_el_array().with_decoder_config(DecoderConfig{max_tokens: 100, ..Default::default()}).call().await.expect_err(
+            "should have failed because there are more tokens than what is supported by default",
         );
     }
     {
@@ -1482,7 +1485,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
         .add_call(methods.i_return_a_1k_el_array())
         .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
         .call::<([u8; 1000],)>().await.expect_err(
-            "Should have failed because there are more tokens than what is supported by default",
+            "should have failed because there are more tokens than what is supported by default",
         );
     }
     {
@@ -1601,7 +1604,7 @@ async fn test_heap_type_multicall() -> Result<()> {
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
+        let error = multi_call_handler.submit().await.expect_err("should error");
         assert!(error.to_string().contains(
             "`MultiContractCallHandler` can have only one call that returns a heap type"
         ));
@@ -1619,10 +1622,10 @@ async fn test_heap_type_multicall() -> Result<()> {
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let error = multi_call_handler.submit().await.expect_err("Should error");
+        let error = multi_call_handler.submit().await.expect_err("should error");
         assert!(error
             .to_string()
-            .contains("The contract call with the heap type return must be at the last position"));
+            .contains("the contract call with the heap type return must be at the last position"));
     }
 
     Ok(())
@@ -1777,7 +1780,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_encoder_config_is_applied() {
+async fn contract_encoder_config_is_applied() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
@@ -1788,43 +1791,50 @@ async fn contract_encoder_config_is_applied() {
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
         LoadConfiguration::default(),
-    )
-    .expect("Contract can be loaded")
+    )?
     .deploy(&wallet, TxPolicies::default())
-    .await
-    .expect("Contract can be deployed");
+    .await?;
 
     let instance = TestContract::new(contract_id.clone(), wallet.clone());
 
-    let _encoding_ok = instance
-        .methods()
-        .get(0, 1)
-        .call()
-        .await
-        .expect("Should not fail as it uses the default encoder config");
+    {
+        let _encoding_ok = instance
+            .methods()
+            .get(0, 1)
+            .call()
+            .await
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
 
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
-    let instance_with_encoder_config = instance.with_encoder_config(encoder_config);
-    // uses 2 tokens when 1 is the limit
-    let encoding_error = instance_with_encoder_config
-        .methods()
-        .get(0, 1)
-        .call()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode contract call arguments: Invalid type: Token limit (1) reached while encoding."));
-    let encoding_error = instance_with_encoder_config
-        .methods()
-        .get(0, 1)
-        .simulate()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode contract call arguments: Invalid type: Token limit (1) reached while encoding."));
+        // uses 2 tokens when 1 is the limit
+        let encoding_error = instance_with_encoder_config
+            .methods()
+            .get(0, 1)
+            .call()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode contract call arguments: codec: token limit `1` reached while encoding."
+        ));
+
+        let encoding_error = instance_with_encoder_config
+            .methods()
+            .get(0, 1)
+            .simulate()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode contract call arguments: codec: token limit `1` reached while encoding."
+        ));
+    }
+
+    Ok(())
 }

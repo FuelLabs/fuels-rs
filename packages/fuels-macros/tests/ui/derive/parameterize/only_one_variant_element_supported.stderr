@@ -1,10 +1,10 @@
-error: Must have exactly one element
+error: must have exactly one element
  --> tests/ui/derive/parameterize/only_one_variant_element_supported.rs:6:6
   |
 6 |     B(),
   |      ^^
 
-error: Must have exactly one element
+error: must have exactly one element
   --> tests/ui/derive/parameterize/only_one_variant_element_supported.rs:11:6
    |
 11 |     A(u64, u32),

@@ -1,20 +1,13 @@
-use fuel_tx::Output;
-use fuels::{
-    accounts::{predicate::Predicate, Account},
-    prelude::*,
-    types::{
-        coin::Coin,
-        message::Message,
-        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-    },
-};
-use fuels_core::codec::EncoderConfig;
-use fuels_core::{
-    codec::ABIEncoder,
-    traits::Tokenizable,
-    types::{coin_type::CoinType, input::Input},
-};
 use std::default::Default;
+
+use fuels::{
+    core::{
+        codec::{ABIEncoder, EncoderConfig},
+        traits::Tokenizable,
+    },
+    prelude::*,
+    types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
+};
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -376,8 +369,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let amount = 1000;
     let base_layer_address =
-        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
-            .expect("Invalid address.");
+        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")?;
     let base_layer_address = Bech32Address::from(base_layer_address);
 
     let (tx_id, msg_nonce, _receipts) = predicate
@@ -391,10 +383,11 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .try_provider()?
         .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
         .await?
-        .expect("Failed to retrieve message proof.");
+        .expect("failed to retrieve message proof");
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);
+
     Ok(())
 }
 
@@ -895,23 +888,29 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_predicate_encoder_config_is_applied() -> Result<()> {
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
+async fn predicate_encoder_config_is_applied() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
     ));
-    let _encoding_ok = MyPredicateEncoder::default()
-        .encode_data(4097, 4097)
-        .expect("Should not fail as it uses the default encoder config");
-    let encoding_error = MyPredicateEncoder::new(encoder_config)
-        .encode_data(4097, 4097)
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Token limit (1) reached while encoding"));
+    {
+        let _encoding_ok = MyPredicateEncoder::default()
+            .encode_data(4097, 4097)
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let encoding_error = MyPredicateEncoder::new(encoder_config)
+            .encode_data(4097, 4097)
+            .expect_err("should fail");
+
+        assert!(encoding_error
+            .to_string()
+            .contains("token limit `1` reached while encoding"));
+    }
+
     Ok(())
 }

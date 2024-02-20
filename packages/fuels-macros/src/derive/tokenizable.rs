@@ -69,7 +69,15 @@ fn tokenizable_for_struct(
                         let mut tokens_iter = tokens.into_iter();
                         let mut next_token = move || { tokens_iter
                             .next()
-                            .ok_or_else(|| { #fuels_types_path::errors::Error::InstantiationError(#std_lib::format!("Ran out of tokens before '{}' has finished construction.", #struct_name_str)) })
+                            .ok_or_else(|| {
+                                #fuels_types_path::errors::Error::Codec(
+                                    #std_lib::format!(
+                                        "ran out of tokens before `{}` has finished construction",
+                                        #struct_name_str
+                                        )
+                                    )
+                                }
+                            )
                         };
                         ::core::result::Result::Ok(Self {
                             #(
@@ -79,7 +87,16 @@ fn tokenizable_for_struct(
 
                         })
                     },
-                    other => ::core::result::Result::Err(#fuels_types_path::errors::Error::InstantiationError(#std_lib::format!("Error while constructing '{}'. Expected token of type Token::Struct, got {:?}", #struct_name_str, other))),
+                    other => ::core::result::Result::Err(
+                        #fuels_types_path::errors::Error::Codec(
+                            #std_lib::format!(
+                                "error while constructing `{}`. Expected token of type `Token::Struct`, \
+                                got `{:?}`",
+                                #struct_name_str,
+                                other
+                            )
+                        )
+                    ),
                 }
             }
         }
@@ -110,7 +127,11 @@ fn tokenizable_for_enum(
 
                 let variants = match <Self as #fuels_core_path::traits::Parameterize>::param_type() {
                     #fuels_types_path::param_types::ParamType::Enum{variants, ..} => variants,
-                    other => ::std::panic!("Calling {}::param_type() must return a ParamType::Enum but instead it returned: {:?}", #name_stringified, other)
+                    other => ::std::panic!(
+                        "calling {}::param_type() must return a `ParamType::Enum` but instead it returned: `{:?}`",
+                        #name_stringified,
+                        other
+                    )
                 };
 
                 #fuels_types_path::Token::Enum(#std_lib::boxed::Box::new((discriminant, token, variants)))
@@ -125,8 +146,18 @@ fn tokenizable_for_enum(
                         let (discriminant, variant_token, _) = *selector;
                         #constructed_variant
                     }
-                    _ => ::core::result::Result::Err(#std_lib::format!("Given token ({}) is not of the type Token::Enum.", token)),
-                }.map_err(|e| #fuels_types_path::errors::Error::InvalidData(#std_lib::format!("Error while instantiating {} from token! {}", #name_stringified, e)) )
+                    _ => ::core::result::Result::Err(
+                            #std_lib::format!("token `{}` is not of the type `Token::Enum`", token)
+                        ),
+                }.map_err(|e| {
+                    #fuels_types_path::errors::Error::Codec(
+                        #std_lib::format!(
+                            "error while instantiating `{}` from token `{}`",
+                            #name_stringified,
+                            e
+                        )
+                    )
+                })
             }
         }
     })

@@ -117,6 +117,7 @@ mod tests {
         let decoded = ABIDecoder::default().decode(&ParamType::U32, &data)?;
 
         assert_eq!(decoded, Token::U32(u32::MAX));
+
         Ok(())
     }
 
@@ -153,6 +154,7 @@ mod tests {
             Token::U256(U256::MAX),
         ];
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -166,6 +168,7 @@ mod tests {
         let expected = vec![Token::Bool(true), Token::Bool(false)];
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -180,6 +183,7 @@ mod tests {
         let decoded = ABIDecoder::default().decode(&ParamType::B256, &data)?;
 
         assert_eq!(decoded, Token::B256(data));
+
         Ok(())
     }
 
@@ -204,6 +208,7 @@ mod tests {
         ];
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -224,6 +229,7 @@ mod tests {
         ))];
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -237,6 +243,7 @@ mod tests {
 
         let expected = vec![Token::Array(vec![Token::U8(255), Token::U8(42)])];
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -260,6 +267,7 @@ mod tests {
         let expected = Token::Struct(vec![Token::U8(1), Token::Bool(true)]);
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -271,6 +279,7 @@ mod tests {
         let expected = Token::Bytes(data.to_vec());
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -297,6 +306,7 @@ mod tests {
 
         let expected = vec![Token::Enum(Box::new((0, Token::U32(42), inner_enum_types)))];
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -349,6 +359,7 @@ mod tests {
             Token::U32(54321),
         ]);
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -395,6 +406,7 @@ mod tests {
         ];
 
         assert_eq!(decoded, Token::Struct(my_nested_struct));
+
         Ok(())
     }
 
@@ -471,6 +483,7 @@ mod tests {
         let expected: Vec<Token> = vec![foo, u8_arr, b256];
 
         assert_eq!(decoded, expected);
+
         Ok(())
     }
 
@@ -488,6 +501,7 @@ mod tests {
 
         let expected = Token::Struct(vec![Token::Unit, Token::U64(u64::MAX)]);
         assert_eq!(actual, expected);
+
         Ok(())
     }
 
@@ -505,6 +519,7 @@ mod tests {
 
         let expected_enum = Token::Enum(Box::new((1, Token::Unit, variants)));
         assert_eq!(result, expected_enum);
+
         Ok(())
     }
 
@@ -520,10 +535,11 @@ mod tests {
 
         let result = ABIDecoder::default().decode(&enum_type, &data);
 
-        let error = result.expect_err("Should have resulted in an error");
+        let error = result.expect_err("should have resulted in an error");
 
-        let expected_msg = "Discriminant '1' doesn't point to any variant: ";
-        assert!(matches!(error, Error::InvalidData(str) if str.starts_with(expected_msg)));
+        let expected_msg = "discriminant `1` doesn't point to any variant: ";
+        assert!(matches!(error, Error::Other(str) if str.starts_with(expected_msg)));
+
         Ok(())
     }
 
@@ -531,7 +547,7 @@ mod tests {
     pub fn division_by_zero() {
         let param_type = Vec::<[u16; 0]>::param_type();
         let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::InvalidType(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
@@ -556,7 +572,7 @@ mod tests {
             },
             &[],
         );
-        assert!(matches!(result, Err(Error::InvalidType(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
@@ -572,7 +588,7 @@ mod tests {
             },
             &[],
         );
-        assert!(matches!(result, Err(Error::InvalidType(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
@@ -581,7 +597,7 @@ mod tests {
             &Array(Box::new(Array(Box::new(Tuple(vec![])), usize::MAX)), 1),
             &[],
         );
-        assert!(matches!(result, Err(Error::InvalidType(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
@@ -591,14 +607,14 @@ mod tests {
             param_type = Vector(Box::new(param_type));
         }
         let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::InvalidType(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
     pub fn capacity_maloc() {
         let param_type = Array(Box::new(U8), usize::MAX);
         let result = ABIDecoder::default().decode(&param_type, &[]);
-        assert!(matches!(result, Err(Error::InvalidData(_))));
+        assert!(matches!(result, Err(Error::Codec(_))));
     }
 
     #[test]
@@ -630,10 +646,9 @@ mod tests {
         // fails if there is more than one variant using heap type in the enum
         let error = ABIDecoder::default()
             .decode(&enum_param_type, &data)
-            .expect_err("Should fail");
+            .expect_err("should fail");
         let expected_error =
-            "Invalid type: Enums currently support only one heap-type variant. Found: 2"
-                .to_string();
+            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
         assert_eq!(error.to_string(), expected_error);
 
         Ok(())
@@ -658,13 +673,13 @@ mod tests {
             .decode(&enum_param_type, &[])
             .expect_err("should have failed");
 
-        let Error::InvalidType(msg) = err else {
-            panic!("Unexpected err: {err}");
+        let Error::Codec(msg) = err else {
+            panic!("unexpected err: {err}");
         };
 
         assert_eq!(
             msg,
-            "Enums currently support only one level deep heap types."
+            "enums currently support only one level deep heap types"
         );
     }
 
@@ -675,7 +690,7 @@ mod tests {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = format!("Depth limit ({MAX_DEPTH}) reached while decoding. Try increasing it.");
+        let msg = format!("depth limit `{MAX_DEPTH}` reached while decoding. Try increasing it");
         // for each nested enum so that it may read the discriminant
         let data = [0; MAX_DEPTH * WORD_SIZE];
 
@@ -736,7 +751,7 @@ mod tests {
             assert_decoding_failed_w_data(
                 config,
                 &param_type,
-                "Token limit (3) reached while decoding. Try increasing it.",
+                "token limit `3` reached while decoding. Try increasing it",
                 &data,
             );
         }
@@ -748,14 +763,15 @@ mod tests {
 
         let err = ABIDecoder::default()
             .decode(&param_type, &[])
-            .expect_err("Vectors of ZST should be prohibited");
+            .expect_err("vectors of ZST should be prohibited");
 
-        let Error::InvalidType(msg) = err else {
-            panic!("Expected error of type InvalidType")
+        let Error::Codec(msg) = err else {
+            panic!("expected error of type Codec")
         };
+
         assert_eq!(
             msg,
-            "Cannot calculate the number of elements because the type is zero-sized."
+            "cannot calculate the number of elements because the type is zero-sized"
         );
     }
 
@@ -776,7 +792,7 @@ mod tests {
         let result = decoder.decode(&param_type, &[]);
 
         // then
-        result.expect("Element count to be reset");
+        result.expect("element count to be reset");
     }
 
     fn assert_decoding_failed_w_data(
@@ -789,9 +805,10 @@ mod tests {
 
         let err = decoder.decode(param_type, data);
 
-        let Err(Error::InvalidType(actual_msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        let Err(Error::Codec(actual_msg)) = err else {
+            panic!("expected a `Codec` error. Got: `{err:?}`");
         };
+
         assert_eq!(actual_msg, msg);
     }
 

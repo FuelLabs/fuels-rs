@@ -15,7 +15,7 @@ pub struct EnumVariants {
 impl EnumVariants {
     pub fn new(param_types: Vec<ParamType>) -> Result<EnumVariants> {
         if param_types.is_empty() {
-            return Err(error!(InvalidData, "Enum variants can not be empty!"));
+            return Err(error!(Other, "enum variants cannot be empty!"));
         }
         Ok(EnumVariants { param_types })
     }
@@ -27,8 +27,8 @@ impl EnumVariants {
     pub fn param_type_of_variant(&self, discriminant: u64) -> Result<&ParamType> {
         self.param_types.get(discriminant as usize).ok_or_else(|| {
             error!(
-                InvalidData,
-                "Discriminant '{discriminant}' doesn't point to any variant: {:?}",
+                Other,
+                "discriminant `{discriminant}` doesn't point to any variant: {:?}",
                 self.param_types()
             )
         })
@@ -60,7 +60,7 @@ impl EnumVariants {
 
         checked_round_up_to_word_alignment(width)?
             .checked_add(ENUM_DISCRIMINANT_BYTE_WIDTH)
-            .ok_or_else(|| error!(InvalidType, "Enum variants are too wide"))
+            .ok_or_else(|| error!(Other, "enum variants are too wide"))
     }
 
     /// Determines the padding needed for the provided enum variant (based on the width of the

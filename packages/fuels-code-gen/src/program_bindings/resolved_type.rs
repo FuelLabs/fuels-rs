@@ -133,7 +133,7 @@ impl TypeResolver {
         }
 
         let type_field = &type_application.type_decl.type_field;
-        Err(error!("Could not resolve '{type_field}' to any known type"))
+        Err(error!("could not resolve '{type_field}' to any known type"))
     }
 
     fn resolve_multiple(
@@ -149,7 +149,7 @@ impl TypeResolver {
     fn is_deprecated(type_field: &str) -> Result<()> {
         match type_field {
             "struct std::u256::U256" | "struct U256" => {
-                Err(error!("{} is deprecated. Use `u256` instead.", type_field))
+                Err(error!("{} is deprecated. Use `u256` instead", type_field))
             }
             _ => Ok(()),
         }
@@ -178,7 +178,7 @@ impl TypeResolver {
             [single_type] => single_type,
             other => {
                 return Err(error!(
-                    "Array must have only one component! Actual components: {other:?}"
+                    "array must have only one component. Actual components: {other:?}"
                 ));
             }
         };

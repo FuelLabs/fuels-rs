@@ -24,7 +24,10 @@ use itertools::Itertools;
 use crate::{
     constants::BASE_ASSET_ID,
     traits::Signer,
-    types::{bech32::Bech32Address, errors::error, Result},
+    types::{
+        bech32::Bech32Address,
+        errors::{error_transaction, Result},
+    },
     utils::{calculate_witnesses_size, sealed},
 };
 
@@ -381,8 +384,8 @@ macro_rules! impl_tx_wrapper {
                 )) as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {
-                    Err(error!(
-                        ValidationError,
+                    Err(error_transaction!(
+                        Validation,
                         "Witness limit exceeded. Consider setting the limit manually with \
                         a transaction builder. The new limit should be: `{new_witnesses_size}`"
                     ))
@@ -465,8 +468,8 @@ impl GasValidation for CreateTransaction {
     // because `CreateTransaction` has no gas_limit`
     fn validate_gas(&self, min_gas_price: u64, _: u64) -> Result<()> {
         if min_gas_price > self.tx.gas_price() {
-            return Err(error!(
-                ValidationError,
+            return Err(error_transaction!(
+                Validation,
                 "gas_price({}) is lower than the required min_gas_price({})",
                 self.tx.gas_price(),
                 min_gas_price
@@ -488,15 +491,15 @@ impl EstimablePredicates for ScriptTransaction {
 impl GasValidation for ScriptTransaction {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()> {
         if gas_used > *self.tx.script_gas_limit() {
-            return Err(error!(
-                ValidationError,
+            return Err(error_transaction!(
+                Validation,
                 "script_gas_limit({}) is lower than the estimated gas_used({})",
                 self.tx.script_gas_limit(),
                 gas_used
             ));
         } else if min_gas_price > self.tx.gas_price() {
-            return Err(error!(
-                ValidationError,
+            return Err(error_transaction!(
+                Validation,
                 "gas_price({}) is lower than the required min_gas_price({})",
                 self.tx.gas_price(),
                 min_gas_price
@@ -551,7 +554,7 @@ mod test {
         let witness = vec![0, 1, 2].into();
         let err = tx.append_witness(witness).expect_err("should error");
 
-        let expected_err_str = "Validation error: Witness limit exceeded. \
+        let expected_err_str = "transaction validation: Witness limit exceeded. \
                                 Consider setting the limit manually with a transaction builder. \
                                 The new limit should be: `16`";
 

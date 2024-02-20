@@ -1,11 +1,8 @@
-use std::fmt::Debug;
-
 use fuels::{
+    core::codec::DecoderConfig,
     prelude::*,
-    tx::Receipt,
-    types::{Bits256, SizedAsciiString},
+    types::{errors::transaction::Reason, Bits256, SizedAsciiString},
 };
-use fuels_core::codec::DecoderConfig;
 
 #[tokio::test]
 async fn test_parse_logged_variables() -> Result<()> {
@@ -425,8 +422,8 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
 }
 
 fn assert_revert_containing_msg(msg: &str, error: Error) {
-    assert!(matches!(error, Error::RevertTransactionError { .. }));
-    if let Error::RevertTransactionError { reason, .. } = error {
+    assert!(matches!(error, Error::Transaction(Reason::Reverted { .. })));
+    if let Error::Transaction(Reason::Reverted { reason, .. }) = error {
         assert!(
             reason.contains(msg),
             "message: \"{msg}\" not contained in reason: \"{reason}\""
@@ -1081,7 +1078,7 @@ async fn test_script_require_from_contract() -> Result<()> {
     Ok(())
 }
 
-fn assert_assert_eq_containing_msg<T: Debug>(left: T, right: T, error: Error) {
+fn assert_assert_eq_containing_msg<T: std::fmt::Debug>(left: T, right: T, error: Error) {
     let msg = format!("left: `\"{left:?}\"`\n right: `\"{right:?}\"`");
     assert_revert_containing_msg(&msg, error)
 }
@@ -1293,8 +1290,8 @@ async fn test_log_results() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err = format!(
-        "Invalid data: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
-         Consider adding external contracts with `with_contracts()`",
+        "codec: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
+         Consider adding external contracts using `with_contracts()`",
         contract_instance.id().hash,
         [0u8; 8]
     );
@@ -1370,11 +1367,11 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
             .await?;
 
         response.decode_logs_with_type::<[u8; 1000]>().expect_err(
-            "Should have failed since there are more tokens than what is supported by default.",
+            "should have failed since there are more tokens than what is supported by default",
         );
 
         let logs = response.decode_logs();
-        assert!(!logs.filter_failed().is_empty(), "Should have had failed to decode logs since there are more tokens than what is supported by default");
+        assert!(!logs.filter_failed().is_empty(), "should have had failed to decode logs since there are more tokens than what is supported by default");
     }
     {
         // Multi call: increasing limits makes the test pass
@@ -1451,7 +1448,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     Ok(())
 }
 
-// String slices can not be decoded from logs as they are encoded as ptr, len
+// String slices cannot be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
 #[cfg(not(experimental))]
@@ -1478,7 +1475,7 @@ async fn string_slice_log() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err =
-        "Invalid data: String slices can not be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
+        "codec: string slices cannot be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
 
     let failed = log.filter_failed();
     assert_eq!(failed.first().unwrap().to_string(), expected_err);
