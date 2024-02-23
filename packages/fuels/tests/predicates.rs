@@ -629,7 +629,7 @@ async fn predicate_configurables() -> Result<()> {
         "tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin",
     )?
     .with_data(predicate_data)
-    .with_configurables(configurables);
+    .with_configurables(configurables)?;
     // ANCHOR_END: predicate_configurables
 
     let num_coins = 4;

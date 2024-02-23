@@ -376,7 +376,7 @@ macro_rules! impl_tx_wrapper {
             fn append_witness(&mut self, witness: Witness) -> Result<usize> {
                 let new_witnesses_size = padded_len_usize(calculate_witnesses_size(
                     self.tx.witnesses().iter().chain(std::iter::once(&witness)),
-                )) as u64;
+                )?) as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {
                     Err(error!(

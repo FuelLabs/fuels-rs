@@ -44,8 +44,13 @@ impl ABIEncoder {
 
         for token in tokens.iter() {
             let mut new_data = Self::encode_token(token)?;
+            let new_data_size = new_data
+                .iter()
+                .map(Data::size_in_bytes)
+                .try_fold(0, usize::checked_add)
+                .ok_or_else(|| error!(InvalidType, "Addition overflow while calculating offset"))?;
             offset_in_bytes = offset_in_bytes
-                .checked_add(new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>())
+                .checked_add(new_data_size)
                 .ok_or_else(|| error!(InvalidType, "Addition overflow while calculating offset"))?;
 
             data.append(&mut new_data);

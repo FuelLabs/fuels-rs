@@ -60,11 +60,11 @@ pub(crate) fn script_bindings(
             }
 
             pub fn with_configurables(mut self, configurables: impl Into<::fuels::core::Configurables>)
-                -> Self
+                -> ::fuels::types::errors::Result<Self>
             {
                 let configurables: ::fuels::core::Configurables = configurables.into();
-                configurables.update_constants_in(&mut self.binary);
-                self
+                configurables.update_constants_in(&mut self.binary)?;
+                ::core::result::Result::Ok(self)
             }
 
             pub fn log_decoder(&self) -> ::fuels::core::codec::LogDecoder {

@@ -39,7 +39,9 @@ async fn assert_predicate_spendable(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance.saturating_add(predicate_balance),
+        receiver_balance
+            .checked_add(predicate_balance)
+            .expect("addition overflow"),
     )
     .await;
 

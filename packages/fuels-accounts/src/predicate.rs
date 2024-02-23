@@ -65,12 +65,12 @@ impl Predicate {
         }
     }
 
-    pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Self {
+    pub fn with_configurables(mut self, configurables: impl Into<Configurables>) -> Result<Self> {
         let configurables: Configurables = configurables.into();
-        configurables.update_constants_in(&mut self.code);
+        configurables.update_constants_in(&mut self.code)?;
         let address = Self::calculate_address(&self.code);
         self.address = address;
-        self
+        Ok(self)
     }
 }
 

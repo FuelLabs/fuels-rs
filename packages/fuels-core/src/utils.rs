@@ -28,9 +28,21 @@ pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
 }
 pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
     witnesses: I,
-) -> usize {
+) -> Result<usize> {
     witnesses
         .into_iter()
-        .map(|w| w.as_ref().len().saturating_add(WITNESS_STATIC_SIZE))
+        .map(|w| {
+            w.as_ref()
+                .len()
+                .checked_add(WITNESS_STATIC_SIZE)
+                .ok_or_else(|| {
+                    error!(
+                        InvalidType,
+                        "Addition overflow while calculating witnesses size ({} + {})",
+                        w.as_ref().len(),
+                        WITNESS_STATIC_SIZE
+                    )
+                })
+        })
         .sum()
 }

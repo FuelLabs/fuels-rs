@@ -149,7 +149,7 @@ async fn script_configurables() -> Result<()> {
         .with_ENUM(new_enum.clone());
 
     let response = instance
-        .with_configurables(configurables)
+        .with_configurables(configurables)?
         .main()
         .call()
         .await?;

@@ -333,7 +333,7 @@ impl Contract {
         let mut binary = fs::read(binary_filepath)
             .map_err(|_| error!(InvalidData, "failed to read binary: {binary_filepath:?}"))?;
 
-        config.configurables.update_constants_in(&mut binary);
+        config.configurables.update_constants_in(&mut binary)?;
 
         let storage_slots = Self::determine_storage_slots(config.storage, binary_filepath)?;
 

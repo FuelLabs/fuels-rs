@@ -251,7 +251,7 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(&self, network_min_gas_price: u64) -> Policies {
+            fn generate_fuel_policies(&self, network_min_gas_price: u64) -> Result<Policies> {
                 let mut policies = Policies::default();
                 policies.set(PolicyType::MaxFee, self.tx_policies.max_fee());
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
@@ -259,15 +259,16 @@ macro_rules! impl_tx_trait {
                 let witness_limit = self
                     .tx_policies
                     .witness_limit()
-                    .or_else(|| self.calculate_witnesses_size());
-                policies.set(PolicyType::WitnessLimit, witness_limit);
+                    .map(Ok)
+                    .unwrap_or_else(|| self.calculate_witnesses_size())?;
+                policies.set(PolicyType::WitnessLimit, Some(witness_limit));
 
                 policies.set(
                     PolicyType::GasPrice,
                     self.tx_policies.gas_price().or(Some(network_min_gas_price)),
                 );
 
-                policies
+                Ok(policies)
             }
 
             fn is_using_predicates(&self) -> bool {
@@ -289,12 +290,19 @@ macro_rules! impl_tx_trait {
                 Ok(num_witnesses as u8)
             }
 
-            fn calculate_witnesses_size(&self) -> Option<u64> {
-                let witnesses_size = calculate_witnesses_size(&self.witnesses);
+            fn calculate_witnesses_size(&self) -> Result<u64> {
+                let witnesses_size = calculate_witnesses_size(&self.witnesses)?;
                 let signature_size = SIGNATURE_WITNESS_SIZE
                     .saturating_mul(self.unresolved_witness_indexes.owner_to_idx_offset.len());
 
-                Some(padded_len_usize(witnesses_size.saturating_add(signature_size)) as u64)
+                let witnesses_with_signature_size =
+                    witnesses_size.checked_add(signature_size).ok_or_else(|| {
+                        error!(
+                            InvalidType,
+                            "Addition overflow while calculating witnesses size"
+                        )
+                    })?;
+                Ok(padded_len_usize(witnesses_with_signature_size) as u64)
             }
         }
     };
@@ -463,7 +471,7 @@ impl ScriptTransactionBuilder {
         provider: &impl DryRunner,
     ) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies(provider.min_gas_price().await?);
+        let policies = self.generate_fuel_policies(provider.min_gas_price().await?)?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -674,7 +682,7 @@ impl CreateTransactionBuilder {
         network_min_gas_price: u64,
     ) -> Result<Create> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies(network_min_gas_price);
+        let policies = self.generate_fuel_policies(network_min_gas_price)?;
 
         let storage_slots_offset = self
             .storage_slots

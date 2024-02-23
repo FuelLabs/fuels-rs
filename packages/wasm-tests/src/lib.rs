@@ -189,7 +189,7 @@ mod tests {
 
         let predicate: Predicate = Predicate::from_code(code.clone())
             .with_data(predicate_data)
-            .with_configurables(configurables);
+            .with_configurables(configurables)?;
 
         let mut expected_code = code.clone();
         *expected_code.last_mut().unwrap() = value as u8;

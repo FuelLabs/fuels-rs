@@ -45,7 +45,9 @@ impl Backoff {
             Backoff::Linear(base_duration) => {
                 base_duration.saturating_mul(attempt.saturating_add(1))
             }
-            Backoff::Exponential(base_duration) => base_duration.saturating_mul(2u32.pow(attempt)),
+            Backoff::Exponential(base_duration) => {
+                base_duration.saturating_mul(2u32.saturating_pow(attempt))
+            }
             Backoff::Fixed(interval) => *interval,
         }
     }
