@@ -96,14 +96,3 @@ fuels-core = { version = "0.55.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.55.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.55.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.55.0", path = "./packages/fuels-test-helpers", default-features = false }
-
-
-[patch.crates-io]
-fuel-core = { path = "./../fuel-core/crates/fuel-core" }
-fuel-vm = { path = "./../fuel-vm/fuel-vm" }
-fuel-asm = { path = "./../fuel-vm/fuel-asm" }
-fuel-crypto = { path = "./../fuel-vm/fuel-crypto" }
-fuel-merkle = { path = "./../fuel-vm/fuel-merkle" }
-fuel-storage = { path = "./../fuel-vm/fuel-storage" }
-fuel-tx = { path = "./../fuel-vm/fuel-tx" }
-fuel-types = { path = "./../fuel-vm/fuel-types" }

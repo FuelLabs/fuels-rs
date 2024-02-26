@@ -90,11 +90,11 @@ impl Predicate {
         tx_policies: TxPolicies,
     ) -> Result<()> {
         let provider = self.try_provider()?;
-        let block_height = provider.latest_block_height().await?;
+        let block_height = provider.latest_block_height().await?.into();
         let consensus_parameters = provider.consensus_parameters();
 
         let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
-        let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
+        let outputs = self.get_asset_outputs_for_amount(&to, asset_id, amount);
 
         let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
 
