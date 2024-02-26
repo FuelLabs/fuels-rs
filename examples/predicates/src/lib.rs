@@ -215,7 +215,7 @@ mod tests {
         let amount_to_unlock = 500;
 
         predicate
-            .validate_predicate(
+            .validate(
                 second_wallet.address(),
                 amount_to_unlock,
                 asset_id,
