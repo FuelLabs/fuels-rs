@@ -123,7 +123,7 @@ where
     fn param_type() -> ParamType {
         let param_types = vec![ParamType::Unit, T::param_type()];
         let variants = EnumVariants::new(param_types)
-            .expect("should never happen as we provided valid Option param types");
+            .expect("should never happen as we provided valid `Option` param types");
         ParamType::Enum {
             variants,
             generics: vec![T::param_type()],
@@ -139,7 +139,7 @@ where
     fn param_type() -> ParamType {
         let param_types = vec![T::param_type(), E::param_type()];
         let variants = EnumVariants::new(param_types.clone())
-            .expect("should never happen as we provided valid Result param types");
+            .expect("should never happen as we provided valid `Result` param types");
         ParamType::Enum {
             variants,
             generics: param_types,

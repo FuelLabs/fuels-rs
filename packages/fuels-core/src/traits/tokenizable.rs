@@ -35,8 +35,8 @@ impl Tokenizable for Bits256 {
         match token {
             Token::B256(data) => Ok(Bits256(data)),
             _ => Err(error!(
-                InvalidData,
-                "Bits256 cannot be constructed from token {token}"
+                Other,
+                "`Bits256` cannot be constructed from token {token}"
             )),
         }
     }
@@ -55,8 +55,8 @@ impl<T: Tokenizable> Tokenizable for Vec<T> {
             tokens.into_iter().map(Tokenizable::from_token).collect()
         } else {
             Err(error!(
-                InvalidData,
-                "Vec::from_token must only be given a Token::Vector. Got: {token}"
+                Other,
+                "`Vec::from_token` must only be given a `Token::Vector`. Got: `{token}`"
             ))
         }
     }
@@ -71,10 +71,7 @@ impl Tokenizable for bool {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::Bool(data) => Ok(data),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `bool`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `bool`, got `{:?}`", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -89,10 +86,7 @@ impl Tokenizable for () {
     {
         match token {
             Token::Unit => Ok(()),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `Unit`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `Unit`, got `{:?}`", other)),
         }
     }
 
@@ -105,7 +99,7 @@ impl Tokenizable for u8 {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U8(data) => Ok(data),
-            other => Err(error!(InstantiationError, "Expected `u8`, got {:?}", other)),
+            other => Err(error!(Other, "expected `u8`, got `{:?}`", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -117,10 +111,7 @@ impl Tokenizable for u16 {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U16(data) => Ok(data),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `u16`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `u16`, got `{:?}`", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -132,10 +123,7 @@ impl Tokenizable for u32 {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U32(data) => Ok(data),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `u32`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `u32`, got {:?}", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -147,10 +135,7 @@ impl Tokenizable for u64 {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U64(data) => Ok(data),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `u64`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `u64`, got {:?}", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -162,10 +147,7 @@ impl Tokenizable for u128 {
     fn from_token(token: Token) -> Result<Self> {
         match token {
             Token::U128(data) => Ok(data),
-            other => Err(error!(
-                InstantiationError,
-                "Expected `u128`, got {:?}", other
-            )),
+            other => Err(error!(Other, "expected `u128`, got {:?}", other)),
         }
     }
     fn into_token(self) -> Token {
@@ -180,8 +162,8 @@ impl Tokenizable for RawSlice {
     {
         match token {
             Token::RawSlice(contents) => Ok(Self(contents)),
-            _ => Err(error!(InvalidData,
-                "RawSlice::from_token expected a token of the variant Token::RawSlice, got: {token}"
+            _ => Err(error!(Other,
+                "`RawSlice::from_token` expected a token of the variant `Token::RawSlice`, got: `{token}`"
             )),
         }
     }
@@ -199,8 +181,8 @@ impl Tokenizable for Bytes {
         match token {
             Token::Bytes(contents) => Ok(Self(contents)),
             _ => Err(error!(
-                InvalidData,
-                "Bytes::from_token expected a token of the variant Token::Bytes, got: {token}"
+                Other,
+                "`Bytes::from_token` expected a token of the variant `Token::Bytes`, got: `{token}`"
             )),
         }
     }
@@ -218,8 +200,8 @@ impl Tokenizable for String {
         match token {
             Token::String(string) => Ok(string),
             _ => Err(error!(
-                InvalidData,
-                "String::from_token expected a token of the variant Token::String, got: {token}"
+                Other,
+                "`String::from_token` expected a token of the variant `Token::String`, got: `{token}`"
             )),
         }
     }
@@ -246,15 +228,15 @@ macro_rules! impl_tokenizable_tuples {
                         let mut it = tokens.into_iter();
                         let mut next_token = move || {
                             it.next().ok_or_else(|| {
-                                error!(InstantiationError,"Ran out of tokens before tuple could be constructed")
+                                error!(Other, "ran out of tokens before tuple could be constructed")
                             })
                         };
                         Ok(($(
                           $ty::from_token(next_token()?)?,
                         )+))
                     },
-                    other => Err(error!(InstantiationError,
-                        "Expected `Tuple`, got {:?}",
+                    other => Err(error!(Other,
+                        "expected `Tuple`, got `{:?}`",
                         other
                     )),
                 }
@@ -299,14 +281,14 @@ impl Tokenizable for ContractId {
                 Ok(ContractId::from(*data))
             } else {
                 Err(error!(
-                    InstantiationError,
-                    "ContractId expected one `Token::B256`, got {tokens:?}"
+                    Other,
+                    "`ContractId` expected one `Token::B256`, got `{tokens:?}`"
                 ))
             }
         } else {
             Err(error!(
-                InstantiationError,
-                "Address expected `Token::Struct` got {token:?}"
+                Other,
+                "`ContractId` expected `Token::Struct` got `{token:?}`"
             ))
         }
     }
@@ -327,14 +309,14 @@ impl Tokenizable for Address {
                 Ok(Address::from(*data))
             } else {
                 Err(error!(
-                    InstantiationError,
-                    "Address expected one `Token::B256`, got {tokens:?}"
+                    Other,
+                    "`Address` expected one `Token::B256`, got `{tokens:?}`"
                 ))
             }
         } else {
             Err(error!(
-                InstantiationError,
-                "Address expected `Token::Struct` got {token:?}"
+                Other,
+                "`Address` expected `Token::Struct` got `{token:?}`"
             ))
         }
     }
@@ -356,14 +338,14 @@ impl Tokenizable for AssetId {
                 Ok(AssetId::from(*data))
             } else {
                 Err(error!(
-                    InstantiationError,
-                    "AssetId expected one `Token::B256`, got {tokens:?}"
+                    Other,
+                    "`AssetId` expected one `Token::B256`, got `{tokens:?}`"
                 ))
             }
         } else {
             Err(error!(
-                InstantiationError,
-                "AssetId expected `Token::Struct` got {token:?}"
+                Other,
+                "`AssetId` expected `Token::Struct` got `{token:?}`"
             ))
         }
     }
@@ -384,14 +366,15 @@ where
                 (0, _, _) => Ok(None),
                 (1, token, _) => Ok(Option::<T>::Some(T::from_token(token)?)),
                 (_, _, _) => Err(error!(
-                    InstantiationError,
-                    "Could not construct Option from enum_selector. Received: {:?}", enum_selector
+                    Other,
+                    "could not construct `Option` from `enum_selector`. Received: `{:?}`",
+                    enum_selector
                 )),
             }
         } else {
             Err(error!(
-                InstantiationError,
-                "Could not construct Option from token. Received: {token:?}"
+                Other,
+                "could not construct `Option` from token. Received: `{token:?}`"
             ))
         }
     }
@@ -404,7 +387,7 @@ where
             let selector = (dis, tok, variants);
             Token::Enum(Box::new(selector))
         } else {
-            panic!("should never happen as Option::param_type() returns valid Enum variants");
+            panic!("should never happen as `Option::param_type()` returns valid Enum variants");
         }
     }
 }
@@ -420,14 +403,15 @@ where
                 (0, token, _) => Ok(std::result::Result::<T, E>::Ok(T::from_token(token)?)),
                 (1, token, _) => Ok(std::result::Result::<T, E>::Err(E::from_token(token)?)),
                 (_, _, _) => Err(error!(
-                    InstantiationError,
-                    "Could not construct Result from enum_selector. Received: {:?}", enum_selector
+                    Other,
+                    "could not construct `Result` from `enum_selector`. Received: `{:?}`",
+                    enum_selector
                 )),
             }
         } else {
             Err(error!(
-                InstantiationError,
-                "Could not construct Result from token. Received: {token:?}"
+                Other,
+                "could not construct `Result` from token. Received: `{token:?}`"
             ))
         }
     }
@@ -450,19 +434,14 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
     where
         Self: Sized,
     {
-        let gen_error = |reason| {
-            error!(
-                InvalidData,
-                "While constructing an array of size {SIZE}: {reason}"
-            )
-        };
+        let gen_error = |reason| error!(Other, "constructing an array of size {SIZE}: {reason}");
 
         match token {
             Token::Array(elements) => {
                 let len = elements.len();
                 if len != SIZE {
                     return Err(gen_error(format!(
-                        "Was given a Token::Array with wrong number of elements: {len}"
+                        "`Token::Array` has wrong number of elements: {len}"
                     )));
                 }
 
@@ -475,10 +454,10 @@ impl<const SIZE: usize, T: Tokenizable> Tokenizable for [T; SIZE] {
                     })?;
 
                 Ok(detokenized.try_into().unwrap_or_else(|_| {
-                    panic!("This should never fail since we're checking the length beforehand.")
+                    panic!("this should never fail since we're checking the length beforehand")
                 }))
             }
-            _ => Err(gen_error(format!("Expected a Token::Array, got {token}"))),
+            _ => Err(gen_error(format!("expected a `Token::Array`, got {token}"))),
         }
     }
 
@@ -496,12 +475,12 @@ impl<const LEN: usize> Tokenizable for SizedAsciiString<LEN> {
             Token::StringArray(contents) => {
                 let expected_len = contents.get_encodable_str()?.len() ;
                 if expected_len!= LEN {
-                    return Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token got a Token::StringArray whose expected length({}) is != {LEN}", expected_len))
+                    return Err(error!(Other,"`SizedAsciiString<{LEN}>::from_token` got a `Token::StringArray` whose expected length({}) is != {LEN}", expected_len))
                 }
                 Self::new(contents.try_into()?)
             },
             _ => {
-                Err(error!(InvalidData,"SizedAsciiString<{LEN}>::from_token expected a token of the variant Token::StringArray, got: {token}"))
+                Err(error!(Other,"`SizedAsciiString<{LEN}>::from_token` expected a token of the variant `Token::StringArray`, got: `{token}`"))
             }
         }
     }
@@ -521,7 +500,7 @@ impl Tokenizable for AsciiString {
                 Self::new(contents.try_into()?)
             },
             _ => {
-                Err(error!(InvalidData,"AsciiString::from_token expected a token of the variant Token::StringSlice, got: {token}"))
+                Err(error!(Other,"`AsciiString::from_token` expected a token of the variant `Token::StringSlice`, got: `{token}`"))
             }
         }
     }
@@ -591,7 +570,7 @@ mod tests {
                 assert_eq!(contents, "abc");
             }
             _ => {
-                panic!("Not tokenized correctly! Should have gotten a Token::String")
+                panic!("not tokenized correctly! Should have gotten a `Token::String`")
             }
         }
 
@@ -603,7 +582,7 @@ mod tests {
         let token = Token::StringArray(StaticStringToken::new("abc".to_string(), Some(3)));
 
         let sized_ascii_string =
-            SizedAsciiString::<3>::from_token(token).expect("Should have succeeded");
+            SizedAsciiString::<3>::from_token(token).expect("should have succeeded");
 
         assert_eq!(sized_ascii_string, "abc");
 

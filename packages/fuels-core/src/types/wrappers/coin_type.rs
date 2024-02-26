@@ -1,11 +1,17 @@
 #![cfg(feature = "std")]
 
 use fuel_core_client::client::types::CoinType as ClientCoinType;
-use fuel_types::AssetId;
 
 use crate::{
     constants::BASE_ASSET_ID,
-    types::{bech32::Bech32Address, coin::Coin, coin_type_id::CoinTypeId, message::Message},
+    types::{
+        bech32::Bech32Address,
+        coin::Coin,
+        coin_type_id::CoinTypeId,
+        errors::{error, Error},
+        message::Message,
+        AssetId,
+    },
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -15,16 +21,13 @@ pub enum CoinType {
 }
 
 impl TryFrom<ClientCoinType> for CoinType {
-    type Error = std::io::Error;
+    type Error = Error;
 
     fn try_from(client_resource: ClientCoinType) -> Result<Self, Self::Error> {
         match client_resource {
             ClientCoinType::Coin(coin) => Ok(CoinType::Coin(coin.into())),
             ClientCoinType::MessageCoin(message) => Ok(CoinType::Message(message.into())),
-            ClientCoinType::Unknown => Err(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Got unknown `ClientCoinType`",
-            )),
+            ClientCoinType::Unknown => Err(error!(Other, "unknown `ClientCoinType`")),
         }
     }
 }

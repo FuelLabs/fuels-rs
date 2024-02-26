@@ -39,17 +39,14 @@ impl StaticStringToken {
 
     fn validate(&self) -> Result<()> {
         if !self.data.is_ascii() {
-            return Err(error!(
-                InvalidData,
-                "String data can only have ascii values"
-            ));
+            return Err(error!(Codec, "string data can only have ascii values"));
         }
 
         if let Some(expected_len) = self.expected_len {
             if self.data.len() != expected_len {
                 return Err(error!(
-                    InvalidData,
-                    "String data has len {}, but the expected len is {}",
+                    Codec,
+                    "string data has len {}, but the expected len is {}",
                     self.data.len(),
                     expected_len
                 ));

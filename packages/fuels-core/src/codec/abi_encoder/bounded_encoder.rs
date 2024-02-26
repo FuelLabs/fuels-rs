@@ -1,7 +1,11 @@
-use crate::codec::utils::CodecDirection;
+use fuel_types::bytes::padded_len_usize;
+
 use crate::{
     checked_round_up_to_word_alignment,
-    codec::{utils::CounterWithLimit, EncoderConfig},
+    codec::{
+        utils::{CodecDirection, CounterWithLimit},
+        EncoderConfig,
+    },
     error,
     types::{
         errors::Result,
@@ -10,7 +14,6 @@ use crate::{
         EnumSelector, StaticStringToken, Token, U256,
     },
 };
-use fuel_types::bytes::padded_len_usize;
 
 pub(crate) struct BoundedEncoder {
     depth_tracker: CounterWithLimit,
@@ -21,9 +24,9 @@ pub(crate) struct BoundedEncoder {
 impl BoundedEncoder {
     pub(crate) fn new(config: EncoderConfig) -> Self {
         let depth_tracker =
-            CounterWithLimit::new(config.max_depth, "Depth", CodecDirection::Encoding);
+            CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);
         let token_tracker =
-            CounterWithLimit::new(config.max_tokens, "Token", CodecDirection::Encoding);
+            CounterWithLimit::new(config.max_tokens, "token", CodecDirection::Encoding);
         Self {
             depth_tracker,
             token_tracker,
@@ -191,8 +194,8 @@ impl BoundedEncoder {
 
             if enum_width_in_bytes > self.max_total_enum_width {
                 return Err(error!(
-                    InvalidData,
-                    "Cannot encode Enum with variants {variants:?}: it is {enum_width_in_bytes} bytes wide. Try increasing encoder max memory."
+                    Codec,
+                    "cannot encode enum with variants: {variants:?}. It is `{enum_width_in_bytes}` bytes wide. Try increasing maximum total enum width."
                 ));
             }
             let padding_amount = variants.compute_padding_amount_in_bytes(variant_param_type)?;

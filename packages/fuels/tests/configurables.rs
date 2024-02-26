@@ -174,7 +174,7 @@ async fn script_configurables() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_configurable_encoder_config_is_applied() {
+async fn configurable_encoder_config_is_applied() {
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
 
     let new_struct = StructWithGeneric {
@@ -182,19 +182,24 @@ async fn test_configurable_encoder_config_is_applied() {
         field_2: 32,
     };
 
-    let _configurables = MyScriptConfigurables::default()
-        .with_STRUCT(new_struct.clone())
-        .expect("No encoder config, it works");
+    {
+        let _configurables = MyScriptConfigurables::default()
+            .with_STRUCT(new_struct.clone())
+            .expect("no encoder config, it works");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
 
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
-    // Fails when an encoder config is set
-    let configurables_error = MyScriptConfigurables::new(encoder_config)
-        .with_STRUCT(new_struct)
-        .unwrap_err();
-    assert!(configurables_error
-        .to_string()
-        .contains("Token limit (1) reached while encoding. Try increasing it."),)
+        // Fails when a wrong encoder config is set
+        let configurables_error = MyScriptConfigurables::new(encoder_config)
+            .with_STRUCT(new_struct)
+            .expect_err("should error");
+
+        assert!(configurables_error
+            .to_string()
+            .contains("token limit `1` reached while encoding. Try increasing it"),)
+    }
 }

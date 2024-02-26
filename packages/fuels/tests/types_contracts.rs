@@ -1,4 +1,4 @@
-use std::{result::Result as StdResult, str::FromStr};
+use std::str::FromStr;
 
 use fuels::{
     prelude::*,
@@ -8,7 +8,7 @@ use fuels::{
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
     Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
-        .unwrap()
+        .expect("is valid")
 }
 
 #[tokio::test]
@@ -538,7 +538,7 @@ async fn test_enum_inside_struct() -> Result<()> {
 }
 
 #[tokio::test]
-async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn native_types_support() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -571,6 +571,7 @@ async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
         response.value,
         Address::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")?
     );
+
     Ok(())
 }
 
@@ -790,13 +791,13 @@ async fn type_inside_enum() -> Result<()> {
         response.value,
         "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
     );
+
     Ok(())
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
-)]
+#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
+    `String` of length 4. Got: `fuell`")]
 async fn strings_must_have_correct_length() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -847,9 +848,8 @@ async fn strings_must_have_correct_length() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
-)]
+#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
+    containing only ascii encodable characters. Got: `fueŁ`")]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -898,9 +898,8 @@ async fn strings_must_have_all_ascii_chars() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
-)]
+#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
+    `String` of length 4. Got: `fuell`")]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -984,9 +983,8 @@ async fn strings_must_have_correct_length_custom_types() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
-)]
+#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
+    containing only ascii encodable characters. Got: `fueŁ`")]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -1078,7 +1076,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1130,7 +1128,7 @@ async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1184,7 +1182,7 @@ async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1236,7 +1234,7 @@ async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1271,7 +1269,7 @@ async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1316,7 +1314,7 @@ async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1364,7 +1362,7 @@ async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_with_two_contracts() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -2141,9 +2139,8 @@ async fn test_heap_type_in_enums() -> Result<()> {
         .returns_a_heap_type_too_deep()
         .call()
         .await
-        .expect_err("Should fail because it has a deeply nested heap type");
-    let expected =
-        "Invalid type: Enums currently support only one level deep heap types.".to_string();
+        .expect_err("should fail because it has a deeply nested heap type");
+    let expected = "codec: enums currently support only one level deep heap types".to_string();
     assert_eq!(resp.to_string(), expected);
     Ok(())
 }

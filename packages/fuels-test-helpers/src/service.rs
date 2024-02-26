@@ -24,12 +24,10 @@ impl FuelService {
         #[cfg(feature = "fuel-core-lib")]
         let service = CoreFuelService::new_node(config.into())
             .await
-            .map_err(|err| error!(InfrastructureError, "{}", err))?;
+            .map_err(|err| error!(Other, "{err}"))?;
 
         #[cfg(not(feature = "fuel-core-lib"))]
-        let service = BinFuelService::new_node(config)
-            .await
-            .map_err(|err| error!(InfrastructureError, "{}", err))?;
+        let service = BinFuelService::new_node(config).await?;
 
         let bound_address = service.bound_address;
 
@@ -46,7 +44,7 @@ impl FuelService {
         #[cfg(not(feature = "fuel-core-lib"))]
         let result = self.service.stop();
 
-        result.map_err(|err| error!(InfrastructureError, "{}", err))
+        result.map_err(|err| error!(Other, "{err}"))
     }
 
     pub fn bound_address(&self) -> SocketAddr {

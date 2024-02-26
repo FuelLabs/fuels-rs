@@ -18,9 +18,9 @@ mod tests {
         let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
 
         // Setup a private key
-        let secret =
-            SecretKey::from_str("a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
-                .unwrap();
+        let secret = SecretKey::from_str(
+            "a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568",
+        )?;
 
         // Create the wallet
         let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
@@ -33,10 +33,9 @@ mod tests {
         let port = provider.url().split(':').last().unwrap();
 
         // ANCHOR: local_node_address
-        let _provider = Provider::connect(format!("127.0.0.1:{port}"))
-            .await
-            .unwrap();
+        let _provider = Provider::connect(format!("127.0.0.1:{port}")).await?;
         // ANCHOR_END: local_node_address
+
         Ok(())
     }
 

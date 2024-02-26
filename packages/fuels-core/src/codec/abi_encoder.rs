@@ -50,16 +50,19 @@ impl ABIEncoder {
 
 #[cfg(test)]
 mod tests {
-    use itertools::chain;
-    use sha2::{Digest, Sha256};
     use std::slice;
 
+    use itertools::chain;
+    use sha2::{Digest, Sha256};
+
     use super::*;
-    use crate::types::errors::Error;
     use crate::{
         codec::first_four_bytes_of_sha256_hash,
         constants::WORD_SIZE,
-        types::{enum_variants::EnumVariants, param_types::ParamType, StaticStringToken, U256},
+        types::{
+            enum_variants::EnumVariants, errors::Error, param_types::ParamType, StaticStringToken,
+            U256,
+        },
     };
 
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
@@ -1093,9 +1096,11 @@ mod tests {
             ])?,
         )));
         let capacity_overflow_error = ABIEncoder::default().encode(&[token]).unwrap_err();
+
         assert!(capacity_overflow_error
             .to_string()
-            .contains("Try increasing encoder max memory"));
+            .contains("Try increasing maximum total enum width"));
+
         Ok(())
     }
 
@@ -1106,23 +1111,23 @@ mod tests {
             max_depth: MAX_DEPTH,
             ..Default::default()
         };
-        let msg = "Depth limit (2) reached while encoding. Try increasing it.".to_string();
+        let msg = "depth limit `2` reached while encoding. Try increasing it".to_string();
 
         [nested_struct, nested_enum, nested_tuple, nested_array]
             .iter()
             .map(|fun| fun(MAX_DEPTH + 1))
             .for_each(|token| {
-                assert_decoding_failed(config, token, &msg);
+                assert_encoding_failed(config, token, &msg);
             })
     }
 
-    fn assert_decoding_failed(config: EncoderConfig, token: Token, msg: &str) {
+    fn assert_encoding_failed(config: EncoderConfig, token: Token, msg: &str) {
         let encoder = ABIEncoder::new(config);
 
         let err = encoder.encode(&[token]);
 
-        let Err(Error::InvalidType(actual_msg)) = err else {
-            panic!("Unexpected an InvalidType error! Got: {err:?}");
+        let Err(Error::Codec(actual_msg)) = err else {
+            panic!("expected a Codec error. Got: `{err:?}`");
         };
         assert_eq!(actual_msg, msg);
     }

@@ -27,7 +27,7 @@ mod tests {
 
         // From a hex string.
         let hex_str = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        let b256 = Bytes32::from_str(hex_str).expect("failed to create Bytes32 from string");
+        let b256 = Bytes32::from_str(hex_str)?;
         assert_eq!([0u8; 32], *b256);
         // ANCHOR_END: bytes32
 
@@ -62,7 +62,7 @@ mod tests {
 
         // From a string.
         let hex_str = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        let address = Address::from_str(hex_str).expect("failed to create Address from string");
+        let address = Address::from_str(hex_str)?;
         assert_eq!([0u8; 32], *address);
         // ANCHOR_END: address
         Ok(())
@@ -83,8 +83,7 @@ mod tests {
 
         // From a string.
         let address = "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2";
-        let bech32_address =
-            Bech32Address::from_str(address).expect("failed to create Bech32 address from string");
+        let bech32_address = Bech32Address::from_str(address)?;
         assert_eq!([0u8; 32], *bech32_address.hash());
 
         // From Address
@@ -120,7 +119,7 @@ mod tests {
 
         // From a string.
         let hex_str = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        let asset_id = AssetId::from_str(hex_str).expect("failed to create AssetId from string");
+        let asset_id = AssetId::from_str(hex_str)?;
         assert_eq!([0u8; 32], *asset_id);
         // ANCHOR_END: asset_id
         Ok(())
@@ -146,8 +145,7 @@ mod tests {
 
         // From a string.
         let hex_str = "0x0000000000000000000000000000000000000000000000000000000000000000";
-        let contract_id =
-            ContractId::from_str(hex_str).expect("failed to create ContractId from string");
+        let contract_id = ContractId::from_str(hex_str)?;
         assert_eq!([0u8; 32], *contract_id);
         // ANCHOR_END: contract_id
         Ok(())

@@ -1,4 +1,4 @@
-use std::{iter, ops::Add, str::FromStr, vec};
+use std::{ops::Add, str::FromStr};
 
 use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
 use fuels::{
@@ -10,13 +10,12 @@ use fuels::{
     types::{
         block::Block,
         coin_type::CoinType,
+        errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
         Bits256,
     },
 };
-use rand::Rng;
-use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -89,7 +88,7 @@ async fn test_network_error() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await;
 
-    assert!(matches!(response, Err(Error::ProviderError(_))));
+    assert!(matches!(response, Err(Error::Provider(_))));
     Ok(())
 }
 
@@ -97,7 +96,7 @@ async fn test_network_error() -> Result<()> {
 async fn test_input_message() -> Result<()> {
     let compare_messages =
         |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
-            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+            std::iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender
                     && a.recipient == b.recipient
                     && a.nonce == b.nonce
@@ -292,18 +291,18 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     };
 
     let err = deploy_w_maturity(1)?.await.expect_err(
-        "Should not deploy contract since block height (0) is less than the requested maturity (1)",
+        "should not deploy contract since block height `0` is less than the requested maturity `1`",
     );
 
-    let Error::ValidationError(s) = err else {
-        panic!("Expected a ValidationError, got: {err}");
+    let Error::Transaction(Reason::Validation(s)) = err else {
+        panic!("expected `Validation`, got: `{err}`");
     };
     assert_eq!(s, "TransactionMaturity");
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)?
         .await
-        .expect("Should deploy contract since maturity (1) is <= than the block height (1)");
+        .expect("Should deploy contract since maturity `1` is <= than the block height `1`");
 
     Ok(())
 }
@@ -487,7 +486,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
@@ -499,7 +498,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -530,7 +529,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
+    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -575,6 +575,8 @@ async fn test_get_gas_used() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
+    use rand::Rng;
+
     // Note that this test might become flaky.
     // This test depends on:
     // 1. The testnet being up and running;
@@ -735,7 +737,7 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 }
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
-    let unix = Tai64(timestamp).to_unix();
+    let unix = tai64::Tai64(timestamp).to_unix();
     NaiveDateTime::from_timestamp_opt(unix, 0)
         .unwrap()
         .and_local_timezone(Utc)

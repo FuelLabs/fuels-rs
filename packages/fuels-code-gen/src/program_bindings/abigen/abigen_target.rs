@@ -65,7 +65,7 @@ impl FromStr for ProgramType {
             "Predicate" => ProgramType::Predicate,
             _ => {
                 return Err(error!(
-                    "'{string}' is not a valid program type. Expected one of: 'Script', 'Contract', 'Predicate'."
+                    "`{string}` is not a valid program type. Expected one of: `Script`, `Contract`, `Predicate`"
                 ))
             }
         };

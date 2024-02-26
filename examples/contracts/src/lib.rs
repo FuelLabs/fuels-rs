@@ -1,10 +1,12 @@
 #[cfg(test)]
 mod tests {
-    use fuels::core::codec::EncoderConfig;
     use fuels::{
-        core::codec::DecoderConfig,
+        core::codec::{DecoderConfig, EncoderConfig},
         prelude::{Config, LoadConfiguration, StorageConfiguration},
-        types::{errors::Result, Bits256},
+        types::{
+            errors::{transaction::Reason, Result},
+            Bits256,
+        },
     };
 
     #[tokio::test]
@@ -403,7 +405,7 @@ mod tests {
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
         // ANCHOR_END: dependency_estimation_fail
 
@@ -438,80 +440,32 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<()> {
-        use fuels::{prelude::*, tx::Receipt};
-        {
-            abigen!(Contract(
-                name = "TestContract",
-                abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-            ));
-            let wallet = launch_provider_and_get_wallet().await?;
+        use fuels::prelude::*;
 
-            let contract_id = Contract::load_from(
-                "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-                LoadConfiguration::default(),
-            )?
-            .deploy(&wallet, TxPolicies::default())
-            .await?;
+        // ANCHOR: deployed_contracts
+        abigen!(Contract(
+            name = "MyContract",
+            // Replace with your contract ABI.json path
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
+        let wallet_original = launch_provider_and_get_wallet().await?;
 
-            let contract_methods = TestContract::new(contract_id, wallet).methods();
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy".parse()?;
 
-            let response = contract_methods.increment_counter(162).call().await?;
-            let response = contract_methods.increment_counter(162).call().await;
-            match response {
-                // The transaction is valid and executes to completion
-                Ok(call_response) => {
-                    let receipts: Vec<Receipt> = call_response.receipts;
-                    // Do things with logs and receipts
-                }
-                // The transaction is malformed
-                Err(Error::ValidationError(e)) => {
-                    println!("Transaction is malformed (ValidationError): {e}");
-                }
-                // Failed request to provider
-                Err(Error::ProviderError(reason)) => {
-                    println!("Provider request failed with reason: {reason}");
-                }
-                // The transaction is valid but reverts
-                Err(Error::RevertTransactionError {
-                    reason, receipts, ..
-                }) => {
-                    println!("ContractCall failed with reason: {reason}");
-                    println!("Transaction receipts are: {receipts:?}");
-                }
-                Err(_) => {}
-            }
-        }
-        {
-            // ANCHOR: deployed_contracts
-            abigen!(Contract(
-                name = "MyContract",
-                // Replace with your contract ABI.json path
-                abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-            ));
-            let wallet_original = launch_provider_and_get_wallet().await?;
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
+        // ANCHOR_END: deployed_contracts
 
-            let wallet = wallet_original.clone();
-            // Your bech32m encoded contract ID.
-            let contract_id: Bech32ContractId =
-                "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy"
-                    .parse()
-                    .expect("Invalid ID");
+        let wallet = wallet_original;
+        // ANCHOR: deployed_contracts_hex
+        let contract_id: ContractId =
+            "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3".parse()?;
 
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // You can now use the `connected_contract_instance` just as you did above!
-            // ANCHOR_END: deployed_contracts
-
-            let wallet = wallet_original;
-            // ANCHOR: deployed_contracts_hex
-            let contract_id: ContractId =
-                "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
-                    .parse()
-                    .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // ANCHOR_END: deployed_contracts_hex
-        }
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // ANCHOR_END: deployed_contracts_hex
 
         Ok(())
     }

@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, io, net::SocketAddr};
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
 
 mod retry_util;
 mod retryable_client;
@@ -27,7 +27,7 @@ use fuels_core::{
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Error, Result},
+        errors::{error, Result},
         message::Message,
         message_proof::MessageProof,
         node_info::NodeInfo,
@@ -40,15 +40,12 @@ use fuels_core::{
 pub use retry_util::{Backoff, RetryConfig};
 use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
 use tai64::Tai64;
-use thiserror::Error;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
 
 #[cfg(feature = "coin-cache")]
 use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
-
-type ProviderResult<T> = std::result::Result<T, ProviderError>;
 
 #[derive(Debug)]
 pub struct TransactionCost {
@@ -128,28 +125,6 @@ impl Default for ResourceFilter {
             excluded_utxos: Default::default(),
             excluded_message_nonces: Default::default(),
         }
-    }
-}
-
-#[derive(Debug, Error)]
-pub enum ProviderError {
-    // Every IO error in the context of Provider comes from the gql client
-    #[error("Client request error: {0}")]
-    ClientRequestError(#[from] io::Error),
-    #[error("Receipts have not yet been propagated. Retry the request later.")]
-    ReceiptsNotPropagatedYet,
-    #[error("Invalid Fuel client version: {0}")]
-    InvalidFuelClientVersion(#[from] semver::Error),
-    #[error("Unsupported Fuel client version. Current version: {current}, supported version: {supported}")]
-    UnsupportedFuelClientVersion {
-        current: semver::Version,
-        supported: semver::Version,
-    },
-}
-
-impl From<ProviderError> for Error {
-    fn from(e: ProviderError) -> Self {
-        Error::ProviderError(e.to_string())
     }
 }
 
@@ -272,15 +247,11 @@ impl Provider {
         Ok(tx_id)
     }
 
-    pub async fn tx_status(&self, tx_id: &TxId) -> ProviderResult<TxStatus> {
-        self.client
-            .transaction_status(tx_id)
-            .await
-            .map(Into::into)
-            .map_err(Into::into)
+    pub async fn tx_status(&self, tx_id: &TxId) -> Result<TxStatus> {
+        Ok(self.client.transaction_status(tx_id).await?.into())
     }
 
-    pub async fn chain_info(&self) -> ProviderResult<ChainInfo> {
+    pub async fn chain_info(&self) -> Result<ChainInfo> {
         Ok(self.client.chain_info().await?.into())
     }
 
@@ -288,8 +259,12 @@ impl Provider {
         &self.consensus_parameters
     }
 
-    fn ensure_client_version_is_supported(node_info: &NodeInfo) -> ProviderResult<()> {
-        let node_version = node_info.node_version.parse::<semver::Version>()?;
+    fn ensure_client_version_is_supported(node_info: &NodeInfo) -> Result<()> {
+        let node_version = node_info
+            .node_version
+            .parse::<semver::Version>()
+            .map_err(|e| error!(Provider, "could not parse Fuel client version: {}", e))?;
+
         let VersionCompatibility {
             supported_version,
             is_major_supported,
@@ -298,15 +273,18 @@ impl Provider {
         } = check_fuel_core_version_compatibility(node_version.clone());
 
         if !is_major_supported || !is_minor_supported {
-            return Err(ProviderError::UnsupportedFuelClientVersion {
-                current: node_version,
-                supported: supported_version,
-            });
+            return Err(error!(
+                Provider,
+                "unsupported Fuel client version. \\
+                Current version: {}, supported version: {}",
+                node_version,
+                supported_version
+            ));
         } else if !is_patch_supported {
             tracing::warn!(
                 fuel_client_version = %node_version,
                 supported_version = %supported_version,
-                "The patch versions of the client and SDK differ.",
+                "the patch versions of the client and SDK differ",
             );
         };
 
@@ -317,7 +295,7 @@ impl Provider {
         self.consensus_parameters.chain_id
     }
 
-    pub async fn node_info(&self) -> ProviderResult<NodeInfo> {
+    pub async fn node_info(&self) -> Result<NodeInfo> {
         Ok(self.client.node_info().await?.into())
     }
 
@@ -357,11 +335,7 @@ impl Provider {
     }
 
     /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
-    pub async fn get_coins(
-        &self,
-        from: &Bech32Address,
-        asset_id: AssetId,
-    ) -> ProviderResult<Vec<Coin>> {
+    pub async fn get_coins(&self, from: &Bech32Address, asset_id: AssetId) -> Result<Vec<Coin>> {
         let mut coins: Vec<Coin> = vec![];
 
         let mut cursor = None;
@@ -390,10 +364,7 @@ impl Provider {
         Ok(coins)
     }
 
-    async fn request_coins_to_spend(
-        &self,
-        filter: ResourceFilter,
-    ) -> ProviderResult<Vec<CoinType>> {
+    async fn request_coins_to_spend(&self, filter: ResourceFilter) -> Result<Vec<CoinType>> {
         let queries = filter.resource_queries();
 
         let res = self
@@ -406,8 +377,8 @@ impl Provider {
             .await?
             .into_iter()
             .flatten()
-            .map(|c| CoinType::try_from(c).map_err(ProviderError::ClientRequestError))
-            .collect::<ProviderResult<Vec<CoinType>>>()?;
+            .map(CoinType::try_from)
+            .collect::<Result<Vec<CoinType>>>()?;
 
         Ok(res)
     }
@@ -416,10 +387,7 @@ impl Provider {
     /// amount `amount`. The returned coins (UTXOs) are actual coins that can be spent. The number
     /// of coins (UXTOs) is optimized to prevent dust accumulation.
     #[cfg(not(feature = "coin-cache"))]
-    pub async fn get_spendable_resources(
-        &self,
-        filter: ResourceFilter,
-    ) -> ProviderResult<Vec<CoinType>> {
+    pub async fn get_spendable_resources(&self, filter: ResourceFilter) -> Result<Vec<CoinType>> {
         self.request_coins_to_spend(filter).await
     }
 
@@ -431,8 +399,9 @@ impl Provider {
     pub async fn get_spendable_resources(
         &self,
         mut filter: ResourceFilter,
-    ) -> ProviderResult<Vec<CoinType>> {
+    ) -> Result<Vec<CoinType>> {
         self.extend_filter_with_cached(&mut filter).await;
+
         self.request_coins_to_spend(filter).await
     }
 
@@ -472,11 +441,11 @@ impl Provider {
         &self,
         address: &Bech32Address,
         asset_id: AssetId,
-    ) -> ProviderResult<u64> {
-        self.client
+    ) -> Result<u64> {
+        Ok(self
+            .client
             .balance(&address.into(), Some(&asset_id))
-            .await
-            .map_err(Into::into)
+            .await?)
     }
 
     /// Get the balance of all spendable coins `asset_id` for contract with id `contract_id`.
@@ -484,20 +453,17 @@ impl Provider {
         &self,
         contract_id: &Bech32ContractId,
         asset_id: AssetId,
-    ) -> ProviderResult<u64> {
-        self.client
+    ) -> Result<u64> {
+        Ok(self
+            .client
             .contract_balance(&contract_id.into(), Some(&asset_id))
-            .await
-            .map_err(Into::into)
+            .await?)
     }
 
     /// Get all the spendable balances of all assets for address `address`. This is different from
     /// getting the coins because we are only returning the numbers (the sum of UTXOs coins amount
     /// for each asset id) and not the UTXOs coins themselves
-    pub async fn get_balances(
-        &self,
-        address: &Bech32Address,
-    ) -> ProviderResult<HashMap<String, u64>> {
+    pub async fn get_balances(&self, address: &Bech32Address) -> Result<HashMap<String, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -527,7 +493,7 @@ impl Provider {
     pub async fn get_contract_balances(
         &self,
         contract_id: &Bech32ContractId,
-    ) -> ProviderResult<HashMap<AssetId, u64>> {
+    ) -> Result<HashMap<AssetId, u64>> {
         // We don't paginate results because there are likely at most ~100 different assets in one
         // wallet
         let pagination = PaginationRequest {
@@ -554,17 +520,14 @@ impl Provider {
         Ok(balances)
     }
 
-    pub async fn get_transaction_by_id(
-        &self,
-        tx_id: &TxId,
-    ) -> ProviderResult<Option<TransactionResponse>> {
+    pub async fn get_transaction_by_id(&self, tx_id: &TxId) -> Result<Option<TransactionResponse>> {
         Ok(self.client.transaction(tx_id).await?.map(Into::into))
     }
 
     pub async fn get_transactions(
         &self,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
+    ) -> Result<PaginatedResult<TransactionResponse, String>> {
         let pr = self.client.transactions(request).await?;
 
         Ok(PaginatedResult {
@@ -580,7 +543,7 @@ impl Provider {
         &self,
         owner: &Bech32Address,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<TransactionResponse, String>> {
+    ) -> Result<PaginatedResult<TransactionResponse, String>> {
         let pr = self
             .client
             .transactions_by_owner(&owner.into(), request)
@@ -594,11 +557,11 @@ impl Provider {
         })
     }
 
-    pub async fn latest_block_height(&self) -> ProviderResult<u32> {
+    pub async fn latest_block_height(&self) -> Result<u32> {
         Ok(self.chain_info().await?.latest_block.header.height)
     }
 
-    pub async fn latest_block_time(&self) -> ProviderResult<Option<DateTime<Utc>>> {
+    pub async fn latest_block_time(&self) -> Result<Option<DateTime<Utc>>> {
         Ok(self.chain_info().await?.latest_block.header.time)
     }
 
@@ -606,25 +569,26 @@ impl Provider {
         &self,
         blocks_to_produce: u32,
         start_time: Option<DateTime<Utc>>,
-    ) -> io::Result<u32> {
+    ) -> Result<u32> {
         let start_time = start_time.map(|time| Tai64::from_unix(time.timestamp()).0);
-        self.client
+
+        Ok(self
+            .client
             .produce_blocks(blocks_to_produce, start_time)
-            .await
-            .map(Into::into)
+            .await?
+            .into())
     }
 
     /// Get block by id.
-    pub async fn block(&self, block_id: &Bytes32) -> ProviderResult<Option<Block>> {
-        let block = self.client.block(block_id).await?.map(Into::into);
-        Ok(block)
+    pub async fn block(&self, block_id: &Bytes32) -> Result<Option<Block>> {
+        Ok(self.client.block(block_id).await?.map(Into::into))
     }
 
     // - Get block(s)
     pub async fn get_blocks(
         &self,
         request: PaginationRequest<String>,
-    ) -> ProviderResult<PaginatedResult<Block, String>> {
+    ) -> Result<PaginatedResult<Block, String>> {
         let pr = self.client.blocks(request).await?;
 
         Ok(PaginatedResult {
@@ -669,6 +633,7 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64> {
         let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
@@ -684,12 +649,13 @@ impl Provider {
             .unwrap_or(0)
     }
 
-    pub async fn get_messages(&self, from: &Bech32Address) -> ProviderResult<Vec<Message>> {
+    pub async fn get_messages(&self, from: &Bech32Address) -> Result<Vec<Message>> {
         let pagination = PaginationRequest {
             cursor: None,
             results: 100,
             direction: PageDirection::Forward,
         };
+
         Ok(self
             .client
             .messages(Some(&from.into()), pagination)
@@ -706,7 +672,7 @@ impl Provider {
         nonce: &Nonce,
         commit_block_id: Option<&Bytes32>,
         commit_block_height: Option<u32>,
-    ) -> ProviderResult<Option<MessageProof>> {
+    ) -> Result<Option<MessageProof>> {
         let proof = self
             .client
             .message_proof(
@@ -717,11 +683,13 @@ impl Provider {
             )
             .await?
             .map(Into::into);
+
         Ok(proof)
     }
 
     pub fn with_retry_config(mut self, retry_config: RetryConfig) -> Self {
         self.client.set_retry_config(retry_config);
+
         self
     }
 }
@@ -731,14 +699,12 @@ impl DryRunner for Provider {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
         let gas_used = self.get_gas_used(&receipts);
+
         Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
     }
 
     async fn min_gas_price(&self) -> Result<u64> {
-        self.node_info()
-            .await
-            .map(|ni| ni.min_gas_price)
-            .map_err(Into::into)
+        Ok(self.node_info().await.map(|ni| ni.min_gas_price)?)
     }
 
     fn consensus_parameters(&self) -> &ConsensusParameters {

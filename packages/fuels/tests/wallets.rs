@@ -1,12 +1,7 @@
 use std::iter::repeat;
 
 use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
-use fuels::{
-    prelude::*,
-    types::transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
-};
-use fuels_accounts::wallet::WalletUnlocked;
-use fuels_test_helpers::setup_test_provider;
+use fuels::prelude::*;
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {

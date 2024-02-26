@@ -1,5 +1,8 @@
-use fuels::{prelude::*, types::Bits256};
-use fuels_core::codec::{DecoderConfig, EncoderConfig};
+use fuels::{
+    core::codec::{DecoderConfig, EncoderConfig},
+    prelude::*,
+    types::Bits256,
+};
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -389,7 +392,7 @@ async fn test_script_transaction_builder() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_encoder_config_is_applied() {
+async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
@@ -398,33 +401,40 @@ async fn test_script_encoder_config_is_applied() {
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
-    let _encoding_ok = script_instance_without_encoder_config
-        .main(1, 2)
-        .call()
-        .await
-        .expect("Should not fail as it uses the default encoder config");
+    {
+        let _encoding_ok = script_instance_without_encoder_config
+            .main(1, 2)
+            .call()
+            .await
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let script_instance_with_encoder_config =
+            MyScript::new(wallet.clone(), bin_path).with_encoder_config(encoder_config);
 
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
-    let script_instance_with_encoder_config =
-        MyScript::new(wallet.clone(), bin_path).with_encoder_config(encoder_config);
-    // uses 2 tokens when 1 is the limit
-    let encoding_error = script_instance_with_encoder_config
-        .main(1, 2)
-        .call()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode script call arguments: Invalid type: Token limit (1) reached while encoding."));
-    let encoding_error = script_instance_with_encoder_config
-        .main(1, 2)
-        .simulate()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode script call arguments: Invalid type: Token limit (1) reached while encoding."));
+        // uses 2 tokens when 1 is the limit
+        let encoding_error = script_instance_with_encoder_config
+            .main(1, 2)
+            .call()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode script call arguments: codec: token limit `1` reached while encoding"
+        ));
+
+        let encoding_error = script_instance_with_encoder_config
+            .main(1, 2)
+            .simulate()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode script call arguments: codec: token limit `1` reached while encoding"
+        ));
+    }
 }

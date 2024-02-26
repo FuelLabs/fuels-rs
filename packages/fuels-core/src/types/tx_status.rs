@@ -10,7 +10,7 @@ use fuel_vm::state::ProgramState;
 
 use crate::{
     codec::LogDecoder,
-    types::errors::{Error, Result},
+    types::errors::{transaction::Reason, Error, Result},
 };
 
 #[derive(Debug, Clone)]
@@ -32,7 +32,9 @@ pub enum TxStatus {
 impl TxStatus {
     pub fn check(&self, log_decoder: Option<&LogDecoder>) -> Result<()> {
         match self {
-            Self::SqueezedOut { reason } => Err(Error::SqueezedOutTransactionError(reason.clone())),
+            Self::SqueezedOut { reason } => {
+                Err(Error::Transaction(Reason::SqueezedOut(reason.clone())))
+            }
             Self::Revert {
                 receipts,
                 reason,
@@ -62,17 +64,17 @@ impl TxStatus {
                     }
                 }
             }
-            (FAILED_ASSERT_SIGNAL, _) => "assertion failed.".into(),
-            (FAILED_SEND_MESSAGE_SIGNAL, _) => "failed to send message.".into(),
-            (FAILED_TRANSFER_TO_ADDRESS_SIGNAL, _) => "failed transfer to address.".into(),
+            (FAILED_ASSERT_SIGNAL, _) => "assertion failed".into(),
+            (FAILED_SEND_MESSAGE_SIGNAL, _) => "failed to send message".into(),
+            (FAILED_TRANSFER_TO_ADDRESS_SIGNAL, _) => "failed transfer to address".into(),
             _ => reason.to_string(),
         };
 
-        Err(Error::RevertTransactionError {
+        Err(Error::Transaction(Reason::Reverted {
             reason,
             revert_id: id,
             receipts: receipts.to_vec(),
-        })
+        }))
     }
 
     pub fn take_receipts_checked(self, log_decoder: Option<&LogDecoder>) -> Result<Vec<Receipt>> {

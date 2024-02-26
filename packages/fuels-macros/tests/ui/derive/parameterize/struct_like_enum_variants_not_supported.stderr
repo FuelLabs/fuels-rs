@@ -1,4 +1,4 @@
-error: Struct-like enum variants are not supported.
+error: struct-like enum variants are not supported
  --> tests/ui/derive/parameterize/struct_like_enum_variants_not_supported.rs:6:7
   |
 6 |     B { something: u64 },
