@@ -18,7 +18,9 @@ use fuel_tx::{
     TransactionFee, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::EstimatePredicates;
+use fuel_vm::checked_transaction::{
+    CheckPredicateParams, CheckPredicates, Checked, EstimatePredicates, IntoChecked,
+};
 use itertools::Itertools;
 
 use crate::{
@@ -176,10 +178,28 @@ pub trait GasValidation: sealed::Sealed {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
+pub trait ValidablePredicates: sealed::Sealed {
+    /// If a transaction contains predicates, we can verify that these predicates validate, ie
+    /// that they return 1
+    fn validate_predicates(
+        self,
+        block_height: u32,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()>
+    where
+        Self: Sized;
+}
+
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug + sealed::Sealed
+    Into<FuelTransaction>
+    + EstimablePredicates
+    + ValidablePredicates
+    + GasValidation
+    + Clone
+    + Debug
+    + sealed::Sealed
 {
     fn fee_checked_from_tx(
         &self,
@@ -302,6 +322,31 @@ macro_rules! impl_tx_wrapper {
         }
 
         impl sealed::Sealed for $wrapper {}
+
+        impl $wrapper {
+            fn into_checked(
+                self,
+                block_height: u32,
+                consensus_parameters: &ConsensusParameters,
+            ) -> Result<Checked<$wrapped>> {
+                Ok(self
+                    .tx
+                    .into_checked(block_height.into(), consensus_parameters)?)
+            }
+        }
+
+        impl ValidablePredicates for $wrapper {
+            fn validate_predicates(
+                self,
+                block_height: u32,
+                consensus_parameters: &ConsensusParameters,
+            ) -> Result<()> {
+                let checked = self.into_checked(block_height.into(), &consensus_parameters)?;
+                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+                checked.check_predicates(&check_predicates_parameters)?;
+                Ok(())
+            }
+        }
 
         #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
         #[cfg_attr(not(target_arch = "wasm32"), async_trait)]

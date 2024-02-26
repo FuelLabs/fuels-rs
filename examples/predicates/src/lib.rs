@@ -172,4 +172,58 @@ mod tests {
         // ANCHOR_END: predicate_data_unlock
         Ok(())
     }
+
+    #[tokio::test]
+    async fn predicate_data_validation() -> Result<()> {
+        let asset_id = AssetId::default();
+        let wallets_config = WalletsConfig::new_multiple_assets(
+            2,
+            vec![AssetConfig {
+                id: asset_id,
+                num_coins: 1,
+                coin_amount: 1_000,
+            }],
+        );
+
+        let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
+
+        let first_wallet = &wallets[0];
+        let second_wallet = &wallets[1];
+
+        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
+
+        // ANCHOR: predicate_validate
+        // this data will make the predicate return `true` (the two arguments are equal)
+        let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
+        let code_path =
+            "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+
+        let predicate: Predicate = Predicate::load_from(code_path)?
+            .with_provider(first_wallet.try_provider()?.clone())
+            .with_data(correct_predicate_data);
+
+        // First wallet transfers amount to predicate.
+        first_wallet
+            .transfer(predicate.address(), 500, asset_id, TxPolicies::default())
+            .await?;
+
+        // Check predicate balance.
+        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
+
+        assert_eq!(balance, 500);
+
+        let amount_to_unlock = 500;
+
+        predicate
+            .validate_predicate(
+                second_wallet.address(),
+                amount_to_unlock,
+                asset_id,
+                TxPolicies::default(),
+            )
+            .await?;
+        // This means the transfer can occur !
+        // ANCHOR_END: predicate_validate
+        Ok(())
+    }
 }

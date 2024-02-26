@@ -3,7 +3,14 @@ use std::{fmt::Debug, fs};
 #[cfg(feature = "std")]
 use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
-    types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
+    types::{
+        bech32::Bech32Address,
+        errors::Result,
+        transaction::TxPolicies,
+        transaction::{EstimablePredicates, ValidablePredicates},
+        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        unresolved_bytes::UnresolvedBytes,
+    },
     Configurables,
 };
 
@@ -73,6 +80,29 @@ impl Predicate {
         let address = Self::calculate_address(&self.code);
         self.address = address;
         self
+    }
+
+    pub async fn validate_predicate(
+        &self,
+        to: &Bech32Address,
+        amount: u64,
+        asset_id: AssetId,
+        tx_policies: TxPolicies,
+    ) -> Result<()> {
+        let provider = self.try_provider()?;
+        let block_height = provider.latest_block_height().await?.into();
+        let consensus_parameters = provider.consensus_parameters();
+
+        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
+        let outputs = self.get_asset_outputs_for_amount(&to, asset_id, amount);
+
+        let tx_builder = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, tx_policies);
+
+        let mut tx = tx_builder.build(provider).await?;
+
+        tx.estimate_predicates(consensus_parameters)?;
+        tx.validate_predicates(block_height, consensus_parameters)?;
+        Ok(())
     }
 }
 
