@@ -36,7 +36,7 @@ We can use the `transfer` method from the [Account](../accounts.md) trait to tra
 {{#include ../../../examples/predicates/src/lib.rs:predicate_spend}}
 ```
 
-To check that the predicate data is correct, you can use the `validate_predicate` method on your `Predicate` instance.
+To check that the predicate data is correct, you can use the `validate` method on your `Predicate` instance.
 
 ```rust,ignore
 {{ ../../../examples/predicates/src/lib.rs:predicate_validate}}
