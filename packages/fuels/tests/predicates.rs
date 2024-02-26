@@ -989,7 +989,7 @@ async fn predicate_validation() -> Result<()> {
         // Validate that the predicate has correct data
         predicate_with_correct_data
             .validate_predicate(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 other_asset_id,
                 tx_policies,
@@ -998,7 +998,7 @@ async fn predicate_validation() -> Result<()> {
         // Check that a validated predicate => transfer can occur
         predicate_with_correct_data
             .transfer(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 other_asset_id,
                 tx_policies,
@@ -1010,7 +1010,7 @@ async fn predicate_validation() -> Result<()> {
         );
 
         let error_string = predicate_with_incorrect_data
-            .validate_predicate(&first_wallet.address(), 10, other_asset_id, tx_policies)
+            .validate_predicate(first_wallet.address(), 10, other_asset_id, tx_policies)
             .await
             .unwrap_err()
             .to_string();
@@ -1019,7 +1019,7 @@ async fn predicate_validation() -> Result<()> {
         );
         let transfer_error_string = predicate_with_incorrect_data
             .transfer(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 other_asset_id,
                 tx_policies,
@@ -1042,7 +1042,7 @@ async fn predicate_validation() -> Result<()> {
         // Validate that the predicate has correct data
         predicate_with_correct_data
             .validate_predicate(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 default_asset_id,
                 tx_policies,
@@ -1051,7 +1051,7 @@ async fn predicate_validation() -> Result<()> {
         // Check that a validated predicate => transfer can occur
         predicate_with_correct_data
             .transfer(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 default_asset_id,
                 tx_policies,
@@ -1063,7 +1063,7 @@ async fn predicate_validation() -> Result<()> {
         );
 
         let error_string = predicate_with_incorrect_data
-            .validate_predicate(&first_wallet.address(), 10, default_asset_id, tx_policies)
+            .validate_predicate(first_wallet.address(), 10, default_asset_id, tx_policies)
             .await
             .unwrap_err()
             .to_string();
@@ -1072,7 +1072,7 @@ async fn predicate_validation() -> Result<()> {
         );
         let transfer_error_string = predicate_with_incorrect_data
             .transfer(
-                &second_wallet.address(),
+                second_wallet.address(),
                 amount_to_unlock,
                 default_asset_id,
                 tx_policies,
