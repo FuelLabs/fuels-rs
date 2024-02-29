@@ -200,9 +200,9 @@ impl Provider {
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx.estimate_predicates(&self.consensus_parameters())?;
+            tx.estimate_predicates(self.consensus_parameters())?;
             tx.clone()
-                .validate_predicates(&self.consensus_parameters(), latest_block_height)?;
+                .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
 
         self.validate_transaction(tx.clone()).await?;
