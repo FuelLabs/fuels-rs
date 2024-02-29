@@ -18,7 +18,9 @@ use fuel_tx::{
     TransactionFee, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::EstimatePredicates;
+use fuel_vm::checked_transaction::{
+    CheckPredicateParams, CheckPredicates, EstimatePredicates, IntoChecked,
+};
 use itertools::Itertools;
 
 use crate::{
@@ -176,10 +178,26 @@ pub trait GasValidation: sealed::Sealed {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
+pub trait ValidablePredicates: sealed::Sealed {
+    /// If a transaction contains predicates, we can verify that these predicates validate, ie
+    /// that they return 1
+    fn validate_predicates(
+        self,
+        consensus_parameters: &ConsensusParameters,
+        block_height: u32,
+    ) -> Result<()>;
+}
+
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug + sealed::Sealed
+    Into<FuelTransaction>
+    + EstimablePredicates
+    + ValidablePredicates
+    + GasValidation
+    + Clone
+    + Debug
+    + sealed::Sealed
 {
     fn fee_checked_from_tx(
         &self,
@@ -445,6 +463,21 @@ impl EstimablePredicates for CreateTransaction {
     }
 }
 
+impl ValidablePredicates for CreateTransaction {
+    fn validate_predicates(
+        self,
+        consensus_parameters: &ConsensusParameters,
+        block_height: u32,
+    ) -> Result<()> {
+        let checked = self
+            .tx
+            .into_checked(block_height.into(), consensus_parameters)?;
+        let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+        checked.check_predicates(&check_predicates_parameters)?;
+        Ok(())
+    }
+}
+
 impl CreateTransaction {
     pub fn salt(&self) -> &FuelSalt {
         self.tx.salt()
@@ -484,6 +517,21 @@ impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 
+        Ok(())
+    }
+}
+
+impl ValidablePredicates for ScriptTransaction {
+    fn validate_predicates(
+        self,
+        consensus_parameters: &ConsensusParameters,
+        block_height: u32,
+    ) -> Result<()> {
+        let checked = self
+            .tx
+            .into_checked(block_height.into(), consensus_parameters)?;
+        let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+        checked.check_predicates(&check_predicates_parameters)?;
         Ok(())
     }
 }
