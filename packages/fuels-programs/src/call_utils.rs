@@ -383,8 +383,8 @@ pub(crate) fn get_single_call_instructions(
 
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
-        ParamType::Enum { variants, .. } => {
-            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+        ParamType::Enum { enum_variants, .. } => {
+            let Some((discriminant, heap_type)) = enum_variants.heap_type_variant() else {
                 return Ok(vec![]);
             };
 
@@ -1022,7 +1022,14 @@ mod test {
             for variant_set in variant_sets {
                 let mut call = ContractCall::new_with_random_id();
                 call.output_param = ParamType::Enum {
-                    variants: EnumVariants::new(variant_set).unwrap(),
+                    name: "".to_string(),
+                    enum_variants: EnumVariants::new(
+                        variant_set
+                            .into_iter()
+                            .map(|pt| ("".to_string(), pt))
+                            .collect(),
+                    )
+                    .unwrap(),
                     generics: Vec::new(),
                 };
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
@@ -1040,7 +1047,12 @@ mod test {
         fn test_with_enum_with_only_non_heap_variants() {
             let mut call = ContractCall::new_with_random_id();
             call.output_param = ParamType::Enum {
-                variants: EnumVariants::new(vec![ParamType::Bool, ParamType::U8]).unwrap(),
+                name: "".to_string(),
+                enum_variants: EnumVariants::new(vec![
+                    ("".to_string(), ParamType::Bool),
+                    ("".to_string(), ParamType::U8),
+                ])
+                .unwrap(),
                 generics: Vec::new(),
             };
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
