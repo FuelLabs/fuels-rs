@@ -54,7 +54,7 @@ pub(crate) fn generate_types<'a, T: IntoIterator<Item = &'a FullTypeDeclaration>
 /// Instead of generating bindings for `ttype` this fn will just generate a `pub use` pointing to
 /// the already generated equivalent shared type.
 fn reexport_the_shared_type(ttype: &FullTypeDeclaration, no_std: bool) -> Result<GeneratedCode> {
-    // e.g. some_libary::another_mod::SomeStruct
+    // e.g. some_library::another_mod::SomeStruct
     let type_path = ttype
         .custom_type_path()
         .expect("This must be a custom type due to the previous filter step");
