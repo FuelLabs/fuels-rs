@@ -108,7 +108,6 @@ impl MyContract for Contract {
                 "Expected the variant EnumUsedAndUnusedGenericParams::Two",
             );
         }
-
         (
             StructUsedAndUnusedGenericParams { field: 12u8 },
             EnumUsedAndUnusedGenericParams::Two(13u8),
