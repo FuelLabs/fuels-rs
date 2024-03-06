@@ -10,7 +10,6 @@ use fuel_core_client::client::{
     },
     FuelClient,
 };
-
 use fuel_core_types::services::executor::TransactionExecutionStatus;
 use fuel_tx::{Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};

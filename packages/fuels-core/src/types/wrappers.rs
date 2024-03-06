@@ -14,6 +14,5 @@ pub mod output {
 }
 #[cfg(feature = "std")]
 pub mod gas_price {
-    pub use fuel_core_client::client::types::gas_price::EstimateGasPrice;
-    pub use fuel_core_client::client::types::gas_price::LatestGasPrice;
+    pub use fuel_core_client::client::types::gas_price::{EstimateGasPrice, LatestGasPrice};
 }
