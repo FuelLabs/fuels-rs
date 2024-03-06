@@ -1,11 +1,14 @@
 mod bounded_decoder;
+mod decode_as_debug_str;
 #[cfg(experimental)]
 mod experimental_bounded_decoder;
 
 #[cfg(experimental)]
 use crate::codec::abi_decoder::experimental_bounded_decoder::ExperimentalBoundedDecoder;
 use crate::{
-    codec::abi_decoder::bounded_decoder::BoundedDecoder,
+    codec::abi_decoder::{
+        bounded_decoder::BoundedDecoder, decode_as_debug_str::decode_as_debug_str,
+    },
     types::{errors::Result, param_types::ParamType, Token},
 };
 
@@ -80,6 +83,31 @@ impl ABIDecoder {
     /// ```
     pub fn decode_multiple(&self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
+    }
+
+    /// Decodes `bytes` following the schema described in `param_type` into its respective debug
+    /// string.
+    ///
+    /// # Arguments
+    ///
+    /// * `param_type`: The `ParamType` of the type we expect is encoded
+    ///                  inside `bytes`.
+    /// * `bytes`:       The bytes to be used in the decoding process.
+    /// # Examples
+    ///
+    /// ```
+    /// use fuels_core::codec::ABIDecoder;
+    /// use fuels_core::types::param_types::ParamType;
+    ///
+    /// let decoder = ABIDecoder::default();
+    ///
+    /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    ///
+    /// assert_eq!(debug_string, format!("{7u64}"));
+    /// ```
+    pub fn decode_as_debug_str(&self, param_type: &ParamType, bytes: &[u8]) -> Result<String> {
+        let token = BoundedDecoder::new(self.config).decode(param_type, bytes)?;
+        decode_as_debug_str(param_type, &token)
     }
 
     #[cfg(experimental)]

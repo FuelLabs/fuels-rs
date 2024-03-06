@@ -28,7 +28,7 @@ pub type EnumSelector = (u64, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct StaticStringToken {
-    data: String,
+    pub(crate) data: String,
     expected_len: Option<usize>,
 }
 

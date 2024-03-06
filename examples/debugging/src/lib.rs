@@ -5,7 +5,7 @@ mod tests {
     use fuel_abi_types::abi::program::ProgramABI;
     use fuels::{
         core::{
-            codec::{calldata, fn_selector, resolve_fn_selector},
+            codec::{calldata, fn_selector, resolve_fn_selector, ABIDecoder},
             traits::Parameterize,
         },
         macros::abigen,
@@ -100,6 +100,7 @@ mod tests {
                 .first()
                 .expect("should be there")
         };
+        let decoder = ABIDecoder::default();
 
         {
             // simple struct with a single generic parameter
@@ -112,7 +113,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                param_type.decode_debug(&[0, 0, 0, 0, 0, 0, 0, 123])?
+                decoder.decode_as_debug_str(&param_type, &[0, 0, 0, 0, 0, 0, 0, 123])?
             );
         }
         {
@@ -128,7 +129,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_struct:?}"),
-                param_type.decode_debug(&[97, 98, 99])?
+                decoder.decode_as_debug_str(&param_type, &[97, 98, 99])?
             );
         }
         {
@@ -140,7 +141,10 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_enum:?}"),
-                param_type.decode_debug(&[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10])?
+                decoder.decode_as_debug_str(
+                    &param_type,
+                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 10]
+                )?
             );
         }
         {
@@ -159,7 +163,7 @@ mod tests {
 
             assert_eq!(
                 format!("{expected_u8}"),
-                param_type.decode_debug(&[0, 0, 0, 0, 0, 0, 0, 1])?
+                decoder.decode_as_debug_str(&param_type, &[0, 0, 0, 0, 0, 0, 0, 1])?
             );
         }
 

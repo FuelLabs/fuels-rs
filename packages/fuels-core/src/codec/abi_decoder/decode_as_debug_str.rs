@@ -1,32 +1,22 @@
 use std::iter::zip;
 
-use crate::{
-    codec::ABIDecoder,
-    types::{
-        errors::{error, Result},
-        param_types::ParamType,
-        Token,
-    },
+use crate::types::{
+    errors::{error, Result},
+    param_types::ParamType,
+    Token,
 };
-
-impl ParamType {
-    pub fn decode_debug(&self, bytes: &[u8]) -> Result<String> {
-        let token = ABIDecoder::default().decode(self, bytes)?;
-        paramtype_decode_debug(self, &token)
-    }
-}
 
 fn inner_types_debug(tokens: &[Token], inner_type: &ParamType, join_str: &str) -> Result<String> {
     let inner_types_log = tokens
         .iter()
-        .map(|token| paramtype_decode_debug(inner_type, token))
+        .map(|token| decode_as_debug_str(inner_type, token))
         .collect::<Result<Vec<_>>>()?
         .join(join_str);
 
     Ok(inner_types_log)
 }
 
-fn paramtype_decode_debug(param_type: &ParamType, token: &Token) -> Result<String> {
+pub(crate) fn decode_as_debug_str(param_type: &ParamType, token: &Token) -> Result<String> {
     let result = match (param_type, token) {
         (ParamType::Unit, Token::Unit) => "()".to_string(),
         (ParamType::Bool, Token::Bool(val)) => val.to_string(),
@@ -54,7 +44,7 @@ fn paramtype_decode_debug(param_type: &ParamType, token: &Token) -> Result<Strin
         }
         (ParamType::Tuple(types), Token::Tuple(tokens)) => {
             let elements = zip(types, tokens)
-                .map(|(ptype, token)| paramtype_decode_debug(ptype, token))
+                .map(|(ptype, token)| decode_as_debug_str(ptype, token))
                 .collect::<Result<Vec<_>>>()?
                 .join(", ");
 
@@ -71,7 +61,7 @@ fn paramtype_decode_debug(param_type: &ParamType, token: &Token) -> Result<Strin
         (ParamType::Struct { name, fields, .. }, Token::Struct(field_tokens)) => {
             let fields = zip(fields, field_tokens)
                 .map(|((field_name, param_type), token)| -> Result<_> {
-                    let field_stringified = paramtype_decode_debug(param_type, token)?;
+                    let field_stringified = decode_as_debug_str(param_type, token)?;
                     Ok(format!("{field_name}: {field_stringified}"))
                 })
                 .collect::<Result<Vec<_>>>()?
@@ -82,7 +72,7 @@ fn paramtype_decode_debug(param_type: &ParamType, token: &Token) -> Result<Strin
             let (discriminant, token, variants) = selector.as_ref();
 
             let (variant_name, variant_param_type) = variants.select_variant(*discriminant)?;
-            let variant_str = paramtype_decode_debug(variant_param_type, token)?;
+            let variant_str = decode_as_debug_str(variant_param_type, token)?;
             let variant_str = if variant_str == "()" {
                 "".into()
             } else {
@@ -104,6 +94,7 @@ fn paramtype_decode_debug(param_type: &ParamType, token: &Token) -> Result<Strin
 #[cfg(test)]
 mod tests {
     use crate::{
+        codec::ABIDecoder,
         traits::Parameterize,
         types::{
             errors::Result, AsciiString, Bits256, Bytes, EvmAddress, RawSlice, SizedAsciiString,
@@ -113,44 +104,50 @@ mod tests {
 
     #[test]
     fn param_type_decode_debug() -> Result<()> {
+        let decoder = ABIDecoder::default();
         {
             assert_eq!(
                 format!("{:?}", true),
-                bool::param_type().decode_debug(&[0, 0, 0, 0, 0, 0, 0, 1])?
+                decoder.decode_as_debug_str(&bool::param_type(), &[0, 0, 0, 0, 0, 0, 0, 1])?
             );
 
             assert_eq!(
                 format!("{:?}", 128u8),
-                u8::param_type().decode_debug(&[0, 0, 0, 0, 0, 0, 0, 128])?
+                decoder.decode_as_debug_str(&u8::param_type(), &[0, 0, 0, 0, 0, 0, 0, 128])?
             );
 
             assert_eq!(
                 format!("{:?}", 256u16),
-                u16::param_type().decode_debug(&[0, 0, 0, 0, 0, 0, 1, 0])?
+                decoder.decode_as_debug_str(&u16::param_type(), &[0, 0, 0, 0, 0, 0, 1, 0])?
             );
 
             assert_eq!(
                 format!("{:?}", 512u32),
-                u32::param_type().decode_debug(&[0, 0, 0, 0, 0, 0, 2, 0])?
+                decoder.decode_as_debug_str(&u32::param_type(), &[0, 0, 0, 0, 0, 0, 2, 0])?
             );
 
             assert_eq!(
                 format!("{:?}", 1024u64),
-                u64::param_type().decode_debug(&[0, 0, 0, 0, 0, 0, 4, 0])?
+                decoder.decode_as_debug_str(&u64::param_type(), &[0, 0, 0, 0, 0, 0, 4, 0])?
             );
 
             assert_eq!(
                 format!("{:?}", 1024u128),
-                u128::param_type()
-                    .decode_debug(&[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0])?
+                decoder.decode_as_debug_str(
+                    &u128::param_type(),
+                    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", U256::from(2048)),
-                U256::param_type().decode_debug(&[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 8, 0
-                ])?
+                decoder.decode_as_debug_str(
+                    &U256::param_type(),
+                    &[
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                        0, 0, 0, 0, 0, 8, 0
+                    ]
+                )?
             );
         }
         {
@@ -162,77 +159,99 @@ mod tests {
 
             assert_eq!(
                 format!("{bits256:?}"),
-                Bits256::param_type().decode_debug(&[
-                    239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
-                    161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
-                ])?
+                decoder.decode_as_debug_str(
+                    &Bits256::param_type(),
+                    &[
+                        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
+                        161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
+                    ]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", Bytes(bytes.to_vec())),
-                Bytes::param_type().decode_debug(&[
-                    239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
-                    161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
-                ])?
+                decoder.decode_as_debug_str(
+                    &Bytes::param_type(),
+                    &[
+                        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
+                        161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
+                    ]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", RawSlice(bytes.to_vec())),
-                RawSlice::param_type().decode_debug(&[
-                    239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
-                    161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
-                ])?
+                decoder.decode_as_debug_str(
+                    &RawSlice::param_type(),
+                    &[
+                        239, 134, 175, 169, 105, 108, 240, 220, 99, 133, 226, 196, 7, 166, 225, 89,
+                        161, 16, 60, 239, 183, 226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
+                    ]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", EvmAddress::from(bits256)),
-                EvmAddress::param_type().decode_debug(&[
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 166, 225, 89, 161, 16, 60, 239, 183,
-                    226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
-                ])?
+                decoder.decode_as_debug_str(
+                    &EvmAddress::param_type(),
+                    &[
+                        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 166, 225, 89, 161, 16, 60, 239, 183,
+                        226, 174, 6, 54, 251, 51, 211, 203, 42, 158, 74
+                    ]
+                )?
             );
         }
         {
             assert_eq!(
                 format!("{:?}", AsciiString::new("Fuel".to_string())?),
-                AsciiString::param_type().decode_debug(&[70, 117, 101, 108])?
+                decoder.decode_as_debug_str(&AsciiString::param_type(), &[70, 117, 101, 108])?
             );
 
             assert_eq!(
                 format!("{:?}", SizedAsciiString::<4>::new("Fuel".to_string())?),
-                SizedAsciiString::<4>::param_type()
-                    .decode_debug(&[70, 117, 101, 108, 0, 0, 0, 0])?
+                decoder.decode_as_debug_str(
+                    &SizedAsciiString::<4>::param_type(),
+                    &[70, 117, 101, 108, 0, 0, 0, 0]
+                )?
             );
 
             assert_eq!(
                 format!("{}", "Fuel"),
-                String::param_type().decode_debug(&[70, 117, 101, 108])?
+                decoder.decode_as_debug_str(&String::param_type(), &[70, 117, 101, 108])?
             );
         }
         {
             assert_eq!(
                 format!("{:?}", (1, 2)),
-                <(u8, u8)>::param_type()
-                    .decode_debug(&[1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0])?
+                decoder.decode_as_debug_str(
+                    &<(u8, u8)>::param_type(),
+                    &[1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", [3, 4]),
-                <[u64; 2]>::param_type()
-                    .decode_debug(&[0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4])?
+                decoder.decode_as_debug_str(
+                    &<[u64; 2]>::param_type(),
+                    &[0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4]
+                )?
             );
         }
         {
             assert_eq!(
                 format!("{:?}", Some(42)),
-                <Option<u64>>::param_type()
-                    .decode_debug(&[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42])?
+                decoder.decode_as_debug_str(
+                    &<Option<u64>>::param_type(),
+                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42]
+                )?
             );
 
             assert_eq!(
                 format!("{:?}", Err::<u64, u64>(42u64)),
-                <std::result::Result<u64, u64>>::param_type()
-                    .decode_debug(&[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42])?
+                decoder.decode_as_debug_str(
+                    &<std::result::Result<u64, u64>>::param_type(),
+                    &[0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 42]
+                )?
             );
         }
 
