@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
@@ -34,8 +34,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             | ClientTransactionStatus::SqueezedOut { .. } => None,
             ClientTransactionStatus::Success { time, .. }
             | ClientTransactionStatus::Failure { time, .. } => {
-                let native = NaiveDateTime::from_timestamp_opt(time.to_unix(), 0);
-                native.map(|time| DateTime::<Utc>::from_naive_utc_and_offset(time, Utc))
+                DateTime::from_timestamp(time.to_unix(), 0)
             }
         };
 
