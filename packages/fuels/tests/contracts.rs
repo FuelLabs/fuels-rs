@@ -1415,8 +1415,6 @@ fn db_rocksdb() {
                 .await?
                 .results;
 
-            // TODO: @hal3e why did rocksdb not write/read the chain name ?
-            // assert_eq!(provider.chain_info().await?.name, temp_dir_name);
             assert_eq!(blocks.len(), 3);
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
