@@ -858,7 +858,6 @@ mod test {
                     block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });

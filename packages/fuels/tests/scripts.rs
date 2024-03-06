@@ -82,9 +82,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     assert_eq!(result.value, "hello");
 
     // ANCHOR: script_with_tx_policies
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(1_000_000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .with_tx_policies(tx_policies)

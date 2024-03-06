@@ -622,7 +622,13 @@ where
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            let [(_, tx_status)] = provider
+                .checked_dry_run(vec![tx])
+                .await?
+                .try_into()
+                .expect("should have only one element");
+
+            tx_status
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -917,7 +923,13 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            let [(_, tx_status)] = provider
+                .checked_dry_run(vec![tx])
+                .await?
+                .try_into()
+                .expect("should have only one element");
+
+            tx_status
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -931,7 +943,12 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(tx).await?.check(None)?;
+        let [(_, tx_status)] = provider
+            .checked_dry_run(vec![tx])
+            .await?
+            .try_into()
+            .expect("should have only one element");
+        tx_status.check(None)?;
 
         Ok(())
     }

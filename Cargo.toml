@@ -68,25 +68,25 @@ tokio = { version = "1.34.0", default-features = false }
 tracing = "0.1.40"
 trybuild = "1.0.85"
 uint = { version = "0.9.5", default-features = false }
-which = { version = "5.0.0", default-features = false }
+which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.22.1", default-features = false }
-fuel-core-chain-config = { version = "0.22.1", default-features = false }
-fuel-core-client = { version = "0.22.1", default-features = false }
-fuel-core-poa = { version = "0.22.1", default-features = false }
-fuel-core-services = { version = "0.22.1", default-features = false }
-fuel-core-types = { version = "0.22.1", default-features = false }
+fuel-core = { version = "0.23.0", default-features = false }
+fuel-core-chain-config = { version = "0.23.0", default-features = false }
+fuel-core-client = { version = "0.23.0", default-features = false }
+fuel-core-poa = { version = "0.23.0", default-features = false }
+fuel-core-services = { version = "0.23.0", default-features = false }
+fuel-core-types = { version = "0.23.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.43.2" }
-fuel-crypto = { version = "0.43.2" }
-fuel-merkle = { version = "0.43.2" }
-fuel-storage = { version = "0.43.2" }
-fuel-tx = { version = "0.43.2" }
-fuel-types = { version = "0.43.2" }
-fuel-vm = { version = "0.43.2" }
+fuel-asm = { version = "0.47.1" }
+fuel-crypto = { version = "0.47.1" }
+fuel-merkle = { version = "0.47.1" }
+fuel-storage = { version = "0.47.1" }
+fuel-tx = { version = "0.47.1" }
+fuel-types = { version = "0.47.1" }
+fuel-vm = { version = "0.47.1" }
 
 # Workspace projects
 fuels = { version = "0.55.0", path = "./packages/fuels" }
