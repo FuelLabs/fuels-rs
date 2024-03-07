@@ -102,8 +102,9 @@ impl ABIDecoder {
     /// let decoder = ABIDecoder::default();
     ///
     /// let debug_string = decoder.decode_as_debug_str(&ParamType::U64,  &[0, 0, 0, 0, 0, 0, 0, 7]).unwrap();
+    /// let expected_value = 7u64;
     ///
-    /// assert_eq!(debug_string, format!("{7u64}"));
+    /// assert_eq!(debug_string, format!("{expected_value}"));
     /// ```
     pub fn decode_as_debug_str(&self, param_type: &ParamType, bytes: &[u8]) -> Result<String> {
         let token = BoundedDecoder::new(self.config).decode(param_type, bytes)?;
