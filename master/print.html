@@ -3454,7 +3454,7 @@ should point to root of the <code>forc</code> project.</p>
     provider.produce_blocks(blocks_to_produce, None).await?;
     assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
     let expected_latest_block_time = origin_block_time
-        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .checked_add_signed(Duration::try_seconds((blocks_to_produce * block_time) as i64).unwrap())
         .unwrap();
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
