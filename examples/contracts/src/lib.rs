@@ -99,7 +99,7 @@ mod tests {
         let contract_instance = MyContract::new(contract_id, wallet);
 
         let tolerance = Some(0.0);
-        let block_horizon = Some(10);
+        let block_horizon = Some(1);
         let transaction_cost = contract_instance
             .methods()
             .initialize_counter(42) // Build the ABI call
@@ -596,7 +596,7 @@ mod tests {
             .add_call(call_handler_2);
 
         let tolerance = Some(0.0);
-        let block_horizon = Some(10);
+        let block_horizon = Some(1);
         let transaction_cost = multi_call_handler
             .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;

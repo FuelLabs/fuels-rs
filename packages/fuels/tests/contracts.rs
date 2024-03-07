@@ -272,7 +272,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
 
     let gas_limit = 800;
     let tolerance = Some(0.2);
-    let block_horizon = Some(10);
+    let block_horizon = Some(1);
 
     let expected_min_gas_price = 0; // This is the default `min_gas_price` from `ConsensusParameters`
     let expected_gas_used = 949;
@@ -315,7 +315,7 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
     let contract_methods = contract_instance.methods();
 
     let tolerance = Some(0.0);
-    let block_horizon = Some(10);
+    let block_horizon = Some(1);
 
     let estimated_gas_used = contract_methods
         .initialize_counter(42)
@@ -359,7 +359,7 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         .add_call(call_handler_2);
 
     let tolerance = Some(0.0);
-    let block_horizon = Some(10);
+    let block_horizon = Some(1);
     let estimated_gas_used = multi_call_handler
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?
