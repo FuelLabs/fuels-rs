@@ -5,6 +5,7 @@ With the function `estimate_transaction_cost(tolerance: Option<f64>, block_horiz
 ```rust,ignore
 {{#include ../../../packages/fuels-accounts/src/provider.rs:transaction_cost}}
 ```
+
 Below are examples that show how to get the estimated transaction cost from single and multi call transactions.
 
 ```rust,ignore
