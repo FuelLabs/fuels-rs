@@ -476,7 +476,7 @@ async fn test_gas_errors() -> Result<()> {
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
-        .estimate_transaction_cost(None)
+        .estimate_transaction_cost(None, None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);

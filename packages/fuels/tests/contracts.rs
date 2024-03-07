@@ -271,7 +271,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     );
 
     let gas_limit = 800;
-    let tolerance = 0.2;
+    let tolerance = Some(0.2);
+    let block_horizon = Some(10);
 
     let expected_min_gas_price = 0; // This is the default `min_gas_price` from `ConsensusParameters`
     let expected_gas_used = 949;
@@ -281,7 +282,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         .methods()
         .initialize_counter(42)
         .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit))
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
     assert_eq!(
@@ -311,12 +312,14 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    let tolerance = 0.0;
     let contract_methods = contract_instance.methods();
+
+    let tolerance = Some(0.0);
+    let block_horizon = Some(10);
+
     let estimated_gas_used = contract_methods
         .initialize_counter(42)
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 
@@ -355,9 +358,10 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let tolerance = 0.0;
+    let tolerance = Some(0.0);
+    let block_horizon = Some(10);
     let estimated_gas_used = multi_call_handler
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 

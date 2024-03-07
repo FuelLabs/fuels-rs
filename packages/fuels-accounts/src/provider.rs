@@ -24,7 +24,9 @@ use fuel_types::{Address, BlockHeight, Bytes32, ChainId, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
+    constants::{
+        BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE,
+    },
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -52,6 +54,7 @@ use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
 
 #[derive(Debug)]
+// ANCHOR: transaction_cost
 pub struct TransactionCost {
     pub min_gas_price: u64,
     pub gas_price: u64,
@@ -59,6 +62,7 @@ pub struct TransactionCost {
     pub metered_bytes_size: u64,
     pub total_fee: u64,
 }
+// ANCHOR_END: transaction_cost
 
 pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
@@ -225,7 +229,7 @@ impl Provider {
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
         let tolerance = 0.0;
         let TransactionCost { gas_used, .. } = self
-            .estimate_transaction_cost(tx.clone(), Some(tolerance))
+            .estimate_transaction_cost(tx.clone(), Some(tolerance), None)
             .await?;
 
         tx.validate_gas(gas_used)?;
@@ -639,10 +643,13 @@ impl Provider {
         &self,
         tx: T,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
-        let NodeInfo { min_gas_price, .. } = self.node_info().await?;
-        let LatestGasPrice { gas_price, .. } = self.latest_gas_price().await?;
+        let block_horizon = block_horizon.unwrap_or(DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON);
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
+
+        let NodeInfo { min_gas_price, .. } = self.node_info().await?;
+        let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
 
         let gas_used = self
             .get_gas_used_with_tolerance(tx.clone(), tolerance)

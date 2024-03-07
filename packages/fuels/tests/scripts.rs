@@ -45,19 +45,21 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         )
     );
 
-    let tolerance = 0.0;
+    let tolerance = Some(0.0);
+    let block_horizon = Some(10);
 
     let a = 4u64;
     let b = 2u32;
     let estimated_gas_used = script_instance
         .main(a, b)
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 
     let gas_used = script_instance.main(a, b).call().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
+
     Ok(())
 }
 

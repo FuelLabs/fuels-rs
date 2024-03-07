@@ -641,12 +641,13 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)
@@ -957,13 +958,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
 
         let transaction_cost = self
             .account
             .try_provider()?
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)

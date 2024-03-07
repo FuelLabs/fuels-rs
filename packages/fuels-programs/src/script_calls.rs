@@ -277,12 +277,13 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let tx = self.build_tx().await?;
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)
