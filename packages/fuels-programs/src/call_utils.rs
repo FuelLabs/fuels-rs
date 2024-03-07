@@ -635,7 +635,7 @@ mod test {
         const SELECTOR_LEN: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
-        let contract_ids = vec![
+        let contract_ids = [
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),

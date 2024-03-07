@@ -1,6 +1,6 @@
 #![cfg(feature = "std")]
 
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use fuel_core_client::client::types::{
     block::{Block as ClientBlock, Header as ClientHeader},
     primitives::Bytes32,
@@ -22,8 +22,7 @@ pub struct Header {
 
 impl From<ClientHeader> for Header {
     fn from(client_header: ClientHeader) -> Self {
-        let naive = NaiveDateTime::from_timestamp_opt(client_header.time.to_unix(), 0);
-        let time = naive.map(|time| DateTime::<Utc>::from_naive_utc_and_offset(time, Utc));
+        let time = DateTime::from_timestamp(client_header.time.to_unix(), 0);
 
         Self {
             id: client_header.id,
