@@ -173,9 +173,7 @@ pub trait EstimablePredicates: sealed::Sealed {
 }
 
 pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
-        Ok(())
-    }
+    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -463,7 +461,12 @@ impl EstimablePredicates for ScriptTransaction {
     }
 }
 
-impl GasValidation for CreateTransaction {}
+impl GasValidation for CreateTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl GasValidation for ScriptTransaction {
     fn validate_gas(&self, gas_used: u64) -> Result<()> {
         if gas_used > *self.tx.script_gas_limit() {

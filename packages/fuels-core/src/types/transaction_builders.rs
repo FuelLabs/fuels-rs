@@ -70,12 +70,12 @@ struct UnresolvedWitnessIndexes {
 pub trait BuildableTransaction: sealed::Sealed {
     type TxType: Transaction;
 
-    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType>;
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
 
     /// Building without signatures will set the witness indexes of signed coins in the
     /// order as they appear in the inputs. Multiple coins with the same owner will have
     /// the same witness index. Make sure you sign the built transaction in the expected order.
-    async fn build_without_signatures(self, provider: &impl DryRunner) -> Result<Self::TxType>;
+    async fn build_without_signatures(self, provider: impl DryRunner) -> Result<Self::TxType>;
 }
 
 impl sealed::Sealed for ScriptTransactionBuilder {}
@@ -84,11 +84,11 @@ impl sealed::Sealed for ScriptTransactionBuilder {}
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
 
-    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 
-    async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.set_witness_indexes();
         self.unresolved_signers = Default::default();
 
@@ -102,11 +102,11 @@ impl sealed::Sealed for CreateTransactionBuilder {}
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
 
-    async fn build(self, provider: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
     }
 
-    async fn build_without_signatures(mut self, provider: &impl DryRunner) -> Result<Self::TxType> {
+    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.set_witness_indexes();
         self.unresolved_signers = Default::default();
 
@@ -119,10 +119,8 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     type TxType: Transaction;
 
     fn add_signer(&mut self, signer: impl Signer + Send + Sync) -> Result<&mut Self>;
-    async fn fee_checked_from_tx(
-        &self,
-        provider: &impl DryRunner,
-    ) -> Result<Option<TransactionFee>>;
+    async fn fee_checked_from_tx(&self, provider: impl DryRunner)
+        -> Result<Option<TransactionFee>>;
     fn with_tx_policies(self, tx_policies: TxPolicies) -> Self;
     fn with_inputs(self, inputs: Vec<Input>) -> Self;
     fn with_outputs(self, outputs: Vec<Output>) -> Self;
@@ -166,7 +164,7 @@ macro_rules! impl_tx_trait {
 
             async fn fee_checked_from_tx(
                 &self,
-                provider: &impl DryRunner,
+                provider: impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
                 let mut fee_estimation_tb = self.clone_without_signers();
 
@@ -178,7 +176,7 @@ macro_rules! impl_tx_trait {
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
                 let mut tx =
-                    BuildableTransaction::build_without_signatures(fee_estimation_tb, provider)
+                    BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
                         .await?;
 
                 let consensus_parameters = provider.consensus_parameters();
@@ -312,7 +310,7 @@ macro_rules! impl_tx_trait {
 
             async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
                 tx: &mut T,
-                provider: &impl DryRunner,
+                provider: impl DryRunner,
                 block_horizon: u32,
             ) -> Result<()> {
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
@@ -379,7 +377,7 @@ impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
-    async fn build(self, provider: &impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
             self.base_offset(provider.consensus_parameters())
@@ -421,7 +419,7 @@ impl ScriptTransactionBuilder {
 
     async fn set_script_gas_limit_to_gas_used(
         tx: &mut Script,
-        provider: &impl DryRunner,
+        provider: impl DryRunner,
         tolerance: f32,
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
@@ -466,11 +464,7 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    async fn resolve_fuel_tx(
-        self,
-        base_offset: usize,
-        provider: &impl DryRunner,
-    ) -> Result<Script> {
+    async fn resolve_fuel_tx(self, base_offset: usize, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies();
 
@@ -501,11 +495,15 @@ impl ScriptTransactionBuilder {
         // If the `script_gas_limit` was not set by the user,
         // dry-run the tx to get the `gas_used`
         } else {
-            Self::set_script_gas_limit_to_gas_used(&mut tx, provider, self.gas_estimation_tolerance)
-                .await?
+            Self::set_script_gas_limit_to_gas_used(
+                &mut tx,
+                &provider,
+                self.gas_estimation_tolerance,
+            )
+            .await?
         };
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
+        Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
             .await?;
 
         let missing_witnesses = generate_missing_witnesses(
@@ -647,7 +645,7 @@ impl ScriptTransactionBuilder {
 }
 
 impl CreateTransactionBuilder {
-    pub async fn build(self, provider: &impl DryRunner) -> Result<CreateTransaction> {
+    pub async fn build(self, provider: impl DryRunner) -> Result<CreateTransaction> {
         let consensus_parameters = provider.consensus_parameters();
 
         let is_using_predicates = self.is_using_predicates();
@@ -658,7 +656,7 @@ impl CreateTransactionBuilder {
         };
 
         let tx = self
-            .resolve_fuel_tx(base_offset, &consensus_parameters.chain_id, provider)
+            .resolve_fuel_tx(base_offset, &consensus_parameters.chain_id, &provider)
             .await?;
 
         Ok(CreateTransaction {
@@ -671,7 +669,7 @@ impl CreateTransactionBuilder {
         self,
         mut base_offset: usize,
         chain_id: &ChainId,
-        provider: &impl DryRunner,
+        provider: impl DryRunner,
     ) -> Result<Create> {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies();
