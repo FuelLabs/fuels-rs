@@ -946,7 +946,7 @@ mod test {
 
     mod compute_calls_instructions_len {
         use fuel_asm::Instruction;
-        use fuels_core::types::{enum_variants::EnumVariants, param_types::ParamType};
+        use fuels_core::types::param_types::{EnumVariants, ParamType};
 
         use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
 

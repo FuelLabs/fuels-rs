@@ -61,8 +61,9 @@ mod tests {
         constants::WORD_SIZE,
         to_named,
         types::{
-            enum_variants::EnumVariants, errors::Error, param_types::ParamType, StaticStringToken,
-            U256,
+            errors::Error,
+            param_types::{EnumVariants, ParamType},
+            StaticStringToken, U256,
         },
     };
 

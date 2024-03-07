@@ -102,7 +102,7 @@ fn parameterize_for_enum(
         impl #impl_gen #fuels_core_path::traits::Parameterize for #name #type_gen #where_clause {
             fn param_type() -> #fuels_types_path::param_types::ParamType {
                 let variants = #std_lib::vec![#((#variant_names, #variant_param_types)),*];
-                let enum_variants = #fuels_types_path::enum_variants::EnumVariants::new(variants)
+                let enum_variants = #fuels_types_path::param_types::EnumVariants::new(variants)
                     .unwrap_or_else(|_| ::std::panic!(
                             "{} has no variants which isn't allowed",
                             #enum_name_str

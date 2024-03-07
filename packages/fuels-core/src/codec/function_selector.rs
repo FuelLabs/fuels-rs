@@ -1,6 +1,9 @@
 use sha2::{Digest, Sha256};
 
-use crate::types::{param_types::ParamType, ByteArray};
+use crate::types::{
+    param_types::{NamedParamType, ParamType},
+    ByteArray,
+};
 
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
@@ -20,7 +23,7 @@ fn resolve_args(args: &[ParamType]) -> String {
     args.iter().map(resolve_arg).collect::<Vec<_>>().join(",")
 }
 
-fn resolve_named_args(args: &[(String, ParamType)]) -> String {
+fn resolve_named_args(args: &[NamedParamType]) -> String {
     args.iter()
         .map(|(_, param_type)| resolve_arg(param_type))
         .collect::<Vec<_>>()
@@ -126,7 +129,7 @@ pub use calldata;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{to_named, types::enum_variants::EnumVariants};
+    use crate::{to_named, types::param_types::EnumVariants};
 
     #[test]
     fn handles_primitive_types() {

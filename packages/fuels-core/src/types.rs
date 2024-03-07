@@ -8,13 +8,12 @@ pub use fuel_types::{
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{
-    enum_variants::EnumVariants,
     errors::{error, Error, Result},
+    param_types::EnumVariants,
 };
 
 pub mod bech32;
 mod core;
-pub mod enum_variants;
 pub mod errors;
 pub mod param_types;
 pub mod transaction_builders;

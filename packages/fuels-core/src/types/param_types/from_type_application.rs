@@ -6,9 +6,8 @@ use fuel_abi_types::{
 };
 
 use crate::types::{
-    enum_variants::EnumVariants,
     errors::{error, Error, Result},
-    param_types::ParamType,
+    param_types::{EnumVariants, NamedParamType, ParamType},
 };
 
 impl ParamType {
@@ -211,7 +210,7 @@ fn convert_into_param_types(coll: &[Type]) -> Result<Vec<ParamType>> {
     coll.iter().map(ParamType::try_from).collect()
 }
 
-fn named_param_types(coll: &[Type]) -> Result<Vec<(String, ParamType)>> {
+fn named_param_types(coll: &[Type]) -> Result<Vec<NamedParamType>> {
     coll.iter()
         .map(|ttype| Ok((ttype.name.clone(), ttype.try_into()?)))
         .collect()

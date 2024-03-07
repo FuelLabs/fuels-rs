@@ -3,11 +3,12 @@ use itertools::chain;
 use crate::{
     checked_round_up_to_word_alignment,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::debug_with_depth::DebugWithDepth,
+        param_types::{debug_with_depth::DebugWithDepth, EnumVariants},
     },
 };
+
+pub type NamedParamType = (String, ParamType);
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum ParamType {
@@ -30,7 +31,7 @@ pub enum ParamType {
     Vector(Box<ParamType>),
     Struct {
         name: String,
-        fields: Vec<(String, ParamType)>,
+        fields: Vec<NamedParamType>,
         generics: Vec<ParamType>,
     },
     Enum {

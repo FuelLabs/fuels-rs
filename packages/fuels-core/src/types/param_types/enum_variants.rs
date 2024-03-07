@@ -2,18 +2,18 @@ use crate::{
     constants::ENUM_DISCRIMINANT_BYTE_WIDTH,
     types::{
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{NamedParamType, ParamType},
     },
     utils::checked_round_up_to_word_alignment,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct EnumVariants {
-    variants: Vec<(String, ParamType)>,
+    variants: Vec<NamedParamType>,
 }
 
 impl EnumVariants {
-    pub fn new(variants: Vec<(String, ParamType)>) -> Result<EnumVariants> {
+    pub fn new(variants: Vec<NamedParamType>) -> Result<EnumVariants> {
         if variants.is_empty() {
             return Err(error!(Other, "enum variants cannot be empty!"));
         }
@@ -21,7 +21,7 @@ impl EnumVariants {
         Ok(EnumVariants { variants })
     }
 
-    pub fn variants(&self) -> &Vec<(String, ParamType)> {
+    pub fn variants(&self) -> &Vec<NamedParamType> {
         &self.variants
     }
 
@@ -29,7 +29,7 @@ impl EnumVariants {
         self.variants.iter().map(|(_, param_type)| param_type)
     }
 
-    pub fn select_variant(&self, discriminant: u64) -> Result<&(String, ParamType)> {
+    pub fn select_variant(&self, discriminant: u64) -> Result<&NamedParamType> {
         self.variants.get(discriminant as usize).ok_or_else(|| {
             error!(
                 Other,

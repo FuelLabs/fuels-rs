@@ -8,9 +8,8 @@ use crate::{
     },
     constants::WORD_SIZE,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
     },
 };
@@ -167,11 +166,7 @@ impl BoundedDecoder {
         })
     }
 
-    fn decode_struct(
-        &mut self,
-        param_types: &[(String, ParamType)],
-        bytes: &[u8],
-    ) -> Result<Decoded> {
+    fn decode_struct(&mut self, param_types: &[NamedParamType], bytes: &[u8]) -> Result<Decoded> {
         let mut tokens = vec![];
 
         let mut bytes_read = 0;

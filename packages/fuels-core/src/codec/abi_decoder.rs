@@ -137,7 +137,7 @@ mod tests {
         constants::WORD_SIZE,
         to_named,
         traits::Parameterize,
-        types::{enum_variants::EnumVariants, errors::Error, StaticStringToken, U256},
+        types::{errors::Error, param_types::EnumVariants, StaticStringToken, U256},
     };
 
     #[test]

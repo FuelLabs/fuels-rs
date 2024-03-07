@@ -4,9 +4,8 @@ use crate::{
     codec::DecoderConfig,
     constants::WORD_SIZE,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
     },
 };
@@ -249,7 +248,7 @@ impl ExperimentalBoundedDecoder {
         })
     }
 
-    fn decode_struct(&mut self, fields: &[(String, ParamType)], bytes: &[u8]) -> Result<Decoded> {
+    fn decode_struct(&mut self, fields: &[NamedParamType], bytes: &[u8]) -> Result<Decoded> {
         let (tokens, bytes_read) = self.decode_params(fields.iter().map(|(_, pt)| pt), bytes)?;
 
         Ok(Decoded {

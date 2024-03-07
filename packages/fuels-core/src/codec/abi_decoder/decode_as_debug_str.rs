@@ -61,8 +61,10 @@ pub(crate) fn decode_as_debug_str(param_type: &ParamType, token: &Token) -> Resu
         (ParamType::Struct { name, fields, .. }, Token::Struct(field_tokens)) => {
             let fields = zip(fields, field_tokens)
                 .map(|((field_name, param_type), token)| -> Result<_> {
-                    let field_stringified = decode_as_debug_str(param_type, token)?;
-                    Ok(format!("{field_name}: {field_stringified}"))
+                    Ok(format!(
+                        "{field_name}: {}",
+                        decode_as_debug_str(param_type, token)?
+                    ))
                 })
                 .collect::<Result<Vec<_>>>()?
                 .join(", ");
