@@ -21,10 +21,12 @@ async fn main_function_generic_arguments() -> Result<()> {
         twix: bam_comp,
         mars: 1000,
     };
+
     let result = script_instance
         .main(bim.clone(), bam.clone())
         .call()
         .await?;
+
     let expected = (
         GenericSnack {
             twix: GenericBimbam {
@@ -34,7 +36,9 @@ async fn main_function_generic_arguments() -> Result<()> {
         },
         GenericBimbam { val: 255_u8 },
     );
+
     assert_eq!(result.value, expected);
+
     Ok(())
 }
 
@@ -52,14 +56,23 @@ async fn main_function_option_result() -> Result<()> {
             wallet = "wallet"
         )
     );
+    {
+        let result = script_instance.main(Some(42), None).call().await?;
 
-    let result = script_instance.main(Some(42), None).call().await?;
-    assert_eq!(result.value, Ok(Some(true)));
-    let result = script_instance.main(Some(987), None).call().await?;
-    assert_eq!(result.value, Ok(None));
-    let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
-    let result = script_instance.main(None, Some(987)).call().await?;
-    assert_eq!(result.value, expected_error);
+        assert_eq!(result.value, Ok(Some(true)));
+    }
+    {
+        let result = script_instance.main(Some(987), None).call().await?;
+
+        assert_eq!(result.value, Ok(None));
+    }
+    {
+        let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
+        let result = script_instance.main(None, Some(987)).call().await?;
+
+        assert_eq!(result.value, expected_error);
+    }
+
     Ok(())
 }
 

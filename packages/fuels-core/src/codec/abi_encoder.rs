@@ -1,10 +1,15 @@
+#[cfg(experimental)]
 mod bounded_encoder;
+#[cfg(not(experimental))]
+mod experimental_bounded_encoder;
+
 use std::default::Default;
 
-use crate::{
-    codec::abi_encoder::bounded_encoder::BoundedEncoder,
-    types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
-};
+#[cfg(experimental)]
+use crate::codec::abi_encoder::bounded_encoder::BoundedEncoder;
+#[cfg(not(experimental))]
+use crate::codec::abi_encoder::experimental_bounded_encoder::BoundedEncoder;
+use crate::types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EncoderConfig {

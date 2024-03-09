@@ -33,6 +33,7 @@ async fn test_methods_typeless_argument() -> Result<()> {
         .await?;
 
     assert_eq!(response.value, 63);
+
     Ok(())
 }
 

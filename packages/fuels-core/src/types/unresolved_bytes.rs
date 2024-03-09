@@ -9,6 +9,7 @@ pub enum Data {
     Dynamic(Vec<Data>),
 }
 impl Data {
+    #[cfg(experimental)]
     pub(crate) fn size_in_bytes(&self) -> usize {
         match self {
             Data::Inline(data) => data.len(),

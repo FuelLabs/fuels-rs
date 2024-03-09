@@ -1,13 +1,13 @@
-mod bounded_decoder;
 #[cfg(experimental)]
+mod bounded_decoder;
+#[cfg(not(experimental))]
 mod experimental_bounded_decoder;
 
 #[cfg(experimental)]
-use crate::codec::abi_decoder::experimental_bounded_decoder::ExperimentalBoundedDecoder;
-use crate::{
-    codec::abi_decoder::bounded_decoder::BoundedDecoder,
-    types::{errors::Result, param_types::ParamType, Token},
-};
+use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
+#[cfg(not(experimental))]
+use crate::codec::abi_decoder::experimental_bounded_decoder::BoundedDecoder;
+use crate::types::{errors::Result, param_types::ParamType, Token};
 
 #[derive(Debug, Clone, Copy)]
 pub struct DecoderConfig {
@@ -80,20 +80,6 @@ impl ABIDecoder {
     /// ```
     pub fn decode_multiple(&self, param_types: &[ParamType], bytes: &[u8]) -> Result<Vec<Token>> {
         BoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
-    }
-
-    #[cfg(experimental)]
-    pub fn experimental_decode(&self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        ExperimentalBoundedDecoder::new(self.config).decode(param_type, bytes)
-    }
-
-    #[cfg(experimental)]
-    pub fn experimental_decode_multiple(
-        &self,
-        param_types: &[ParamType],
-        bytes: &[u8],
-    ) -> Result<Vec<Token>> {
-        ExperimentalBoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
     }
 }
 
