@@ -58,11 +58,11 @@ mod tests {
     use std::slice;
 
     use itertools::chain;
+    #[cfg(experimental)]
     use sha2::{Digest, Sha256};
 
     use super::*;
     use crate::{
-        codec::first_four_bytes_of_sha256_hash,
         constants::WORD_SIZE,
         types::{
             enum_variants::EnumVariants, errors::Error, param_types::ParamType, StaticStringToken,
@@ -70,10 +70,14 @@ mod tests {
         },
     };
 
+    #[cfg(experimental)]
+    use crate::codec::first_four_bytes_of_sha256_hash;
+
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_signature() {
         let fn_signature = "entry_one(u64)";
 
@@ -85,6 +89,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_u32_type() -> Result<()> {
         // @todo eventually we must update the json abi examples in here.
         // They're in the old format.
@@ -122,6 +127,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_u32_type_multiple_args() -> Result<()> {
         // let json_abi =
         // r#"
@@ -158,6 +164,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_u64_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -192,6 +199,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_bool_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -226,6 +234,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_two_different_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -265,6 +274,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_bits256_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -309,6 +319,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_array_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -350,6 +361,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_string_array_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -389,6 +401,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_string_slice_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -431,6 +444,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_struct() -> Result<()> {
         // let json_abi =
         // r#"
@@ -480,6 +494,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_enum() -> Result<()> {
         // let json_abi =
         // r#"
@@ -624,6 +639,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_function_with_nested_structs() -> Result<()> {
         // let json_abi =
         // r#"
@@ -679,6 +695,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(experimental)]
     fn encode_comprehensive_function() -> Result<()> {
         // let json_abi =
         // r#"

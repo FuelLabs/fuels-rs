@@ -5,8 +5,9 @@ use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuel_types::{Address, Word};
 use fuels_accounts::Account;
+#[cfg(experimental)]
+use fuels_core::constants::WORD_SIZE;
 use fuels_core::{
-    constants::WORD_SIZE,
     error,
     offsets::call_script_data_offset,
     types::{
@@ -244,6 +245,7 @@ pub(crate) fn get_instructions(
         })
 }
 
+#[cfg(experimental)]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -313,6 +315,91 @@ pub(crate) fn build_script_data_from_contract_calls(
             .as_ref()
             .map(|ub| ub.resolve(encoded_args_start_offset as Word))
             .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
+        script_data.extend(bytes);
+
+        // the data segment that holds the parameters for the next call
+        // begins at the original offset + the data we added so far
+        segment_offset = data_offset + script_data.len();
+    }
+
+    Ok((script_data, param_offsets))
+}
+
+#[cfg(not(experimental))]
+/// Returns script data, consisting of the following items in the given order:
+/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
+/// 4. Contract ID ([`ContractId::LEN`]);
+/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
+/// 7. Encoded arguments (optional) (variable length)
+pub(crate) fn build_script_data_from_contract_calls(
+    calls: &[ContractCall],
+    data_offset: usize,
+) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
+    use fuel_types::bytes::WORD_SIZE;
+
+    let mut script_data = vec![];
+    let mut param_offsets = vec![];
+
+    // The data for each call is ordered into segments
+    let mut segment_offset = data_offset;
+
+    for call in calls {
+        let gas_forwarded = call.call_parameters.gas_forwarded();
+
+        script_data.extend(call.call_parameters.amount().to_be_bytes());
+        script_data.extend(call.call_parameters.asset_id().iter());
+
+        let gas_forwarded_size = gas_forwarded
+            .map(|gf| {
+                script_data.extend((gf as Word).to_be_bytes());
+
+                WORD_SIZE
+            })
+            .unwrap_or_default();
+
+        script_data.extend(call.contract_id.hash().as_ref());
+
+        let call_param_offsets = CallOpcodeParamsOffset {
+            amount_offset: segment_offset,
+            asset_id_offset: segment_offset + WORD_SIZE,
+            gas_forwarded_offset: gas_forwarded.map(|_| segment_offset + WORD_SIZE + AssetId::LEN),
+            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN + gas_forwarded_size,
+        };
+
+        let encoded_selector_offset =
+            call_param_offsets.call_data_offset + ContractId::LEN + WORD_SIZE + WORD_SIZE;
+
+        script_data.extend((encoded_selector_offset as u64).to_be_bytes());
+
+        param_offsets.push(call_param_offsets);
+
+        // If the method call takes custom inputs or has more than
+        // one argument, we need to calculate the `call_data_offset`,
+        // which points to where the data for the custom types start in the
+        // transaction. If it doesn't take any custom inputs, this isn't necessary.
+        // Custom inputs are stored after the previously added parameters,
+        // including custom_input_offset
+        let custom_input_offset = segment_offset
+                + WORD_SIZE // amount size
+                + AssetId::LEN
+                + gas_forwarded_size
+                + ContractId::LEN
+                + WORD_SIZE
+                + WORD_SIZE
+                + call.encoded_selector.len();
+
+        script_data.extend((custom_input_offset as u64).to_be_bytes());
+        script_data.extend(call.encoded_selector.clone());
+
+        let bytes = call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(custom_input_offset as Word))
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
+
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -589,6 +676,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
+    use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::{
         codec::ABIEncoder,
@@ -604,12 +692,17 @@ mod test {
     use super::*;
     use crate::contract::CallParameters;
 
+    #[cfg(not(experimental))]
+
     impl ContractCall {
         pub fn new_with_random_id() -> Self {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
+                #[cfg(experimental)]
                 encoded_selector: [0; 8],
+                #[cfg(not(experimental))]
+                encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
                 variable_outputs: vec![],
@@ -658,7 +751,10 @@ mod test {
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
+                #[cfg(experimental)]
                 encoded_selector: selectors[i],
+                #[cfg(not(experimental))]
+                encoded_selector: selectors[i].to_vec(),
                 encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,

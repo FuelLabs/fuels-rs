@@ -68,6 +68,7 @@ impl MyContract for Contract {
     }
 
     fn return_bytes(len: u8) -> Bytes {
+        log(len);
         let mut bytes = Bytes::new();
         let mut i: u8 = 0;
         while i < len {

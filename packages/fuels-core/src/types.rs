@@ -18,7 +18,10 @@ pub mod unresolved_bytes;
 mod wrappers;
 
 pub type ByteArray = [u8; 8];
+#[cfg(experimental)]
 pub type Selector = ByteArray;
+#[cfg(not(experimental))]
+pub type Selector = Vec<u8>;
 
 /// Converts a u16 to a right aligned array of 8 bytes.
 pub fn pad_u16(value: u16) -> ByteArray {

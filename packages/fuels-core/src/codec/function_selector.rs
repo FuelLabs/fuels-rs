@@ -1,7 +1,11 @@
+#[cfg(experimental)]
 use sha2::{Digest, Sha256};
 
-use crate::types::{param_types::ParamType, ByteArray};
+use crate::types::param_types::ParamType;
+#[cfg(experimental)]
+use crate::types::ByteArray;
 
+#[cfg(experimental)]
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
@@ -10,16 +14,27 @@ pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     first_four_bytes_of_sha256_hash(&fn_signature)
 }
 
+#[cfg(not(experimental))]
+pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
+    let bytes = name.as_bytes().to_vec();
+    let len = bytes.len() as u64;
+
+    [len.to_be_bytes().to_vec(), bytes].concat()
+}
+
+#[cfg(experimental)]
 fn resolve_fn_signature(name: &str, inputs: &[ParamType]) -> String {
     let fn_args = resolve_args(inputs);
 
     format!("{name}({fn_args})")
 }
 
+#[cfg(experimental)]
 fn resolve_args(arg: &[ParamType]) -> String {
     arg.iter().map(resolve_arg).collect::<Vec<_>>().join(",")
 }
 
+#[cfg(experimental)]
 fn resolve_arg(arg: &ParamType) -> String {
     match &arg {
         ParamType::U8 => "u8".to_owned(),
@@ -79,6 +94,7 @@ fn resolve_arg(arg: &ParamType) -> String {
     }
 }
 
+#[cfg(experimental)]
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined
 /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
@@ -116,6 +132,7 @@ macro_rules! calldata {
 
 pub use calldata;
 
+#[cfg(experimental)]
 #[cfg(test)]
 mod tests {
     use super::*;

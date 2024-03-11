@@ -108,7 +108,7 @@ impl BoundedEncoder {
     }
 
     fn encode_string_slice(arg_string: &StaticStringToken) -> Result<Vec<u8>> {
-        Ok(arg_string.get_encodable_str()?.as_bytes().to_vec())
+        Self::encode_bytes(arg_string.get_encodable_str()?.as_bytes().to_vec())
     }
 
     fn encode_vector(&mut self, data: &[Token]) -> Result<Vec<u8>> {

@@ -925,6 +925,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
+
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)

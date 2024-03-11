@@ -93,6 +93,7 @@ async fn call_with_structs() -> Result<()> {
     let response = contract_methods.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
+
     Ok(())
 }
 
