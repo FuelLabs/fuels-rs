@@ -71,7 +71,7 @@ Convert a `[u8; 32]` array to to `ContractId`:
 {{#include ../../../examples/types/src/lib.rs:array_to_contract_id}}
 ```
 
-Convert a string to a `ContractId`:
+Convert a hex string to a `ContractId`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:string_to_contract_id}}
@@ -99,13 +99,13 @@ Convert a `ContractId` to an `Identity`:
 
 ## Convert to `AssetId`
 
-Convert to `AssetId` from a `[u8; 32]` array:
+Convert a `[u8; 32]` array to an `AssetId`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:array_to_asset_id}}
 ```
 
-Convert to `AssetId` from a string:
+Convert a hex string to an `AssetId`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:string_to_asset_id}}
@@ -113,25 +113,25 @@ Convert to `AssetId` from a string:
 
 ## Convert to `Bech32`
 
-Convert to `Bech32` from an array:
+Convert a `[u8; 32]` array to a `Bech32` address:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:array_to_bech32}}
 ```
 
-Convert to `Bech32` from `bytes32`:
+Convert `Bytes32` to a `Bech32` address:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:bytes32_to_bech32}}
 ```
 
-Convert to `Bech32` from a string:
+Convert a string to a `Bech32` address:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:str_to_bech32}}
 ```
 
-Convert to `Bech32` from an `Address`:
+Convert an `Address` to a `Bech32` address:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:address_to_bech32}}
@@ -169,6 +169,24 @@ Convert a hex string to `Bits256`:
 
 ```rust,ignore
 {{#include ../../../packages/fuels-core/src/types/core/bits.rs:hex_str_to_bits256}}
+```
+
+Convert a `ContractId` to `Bits256`:
+
+```rust,ignore
+{{#include ../../../examples/types/src/lib.rs:contract_id_to_bits256}}
+```
+
+Convert an `Address` to `Bits256`:
+
+```rust,ignore
+{{#include ../../../examples/types/src/lib.rs:address_to_bits256}}
+```
+
+Convert an `AssetId` to `Bits256`:
+
+```rust,ignore
+{{#include ../../../examples/types/src/lib.rs:asset_id_to_bits256}}
 ```
 
 ## Convert to `Bytes`
