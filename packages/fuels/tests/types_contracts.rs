@@ -757,7 +757,7 @@ async fn type_inside_enum() -> Result<()> {
     assert_eq!(response.value, enum_string);
 
     // Array inside enum
-    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4, 5, 6, 7]);
+    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4]);
     let response = contract_methods
         .arr_inside_enum(enum_array.clone())
         .call()

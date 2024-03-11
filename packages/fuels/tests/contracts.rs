@@ -22,7 +22,6 @@ async fn test_multiple_args() -> Result<()> {
     // Make sure we can call the contract with multiple arguments
     let contract_methods = contract_instance.methods();
     let response = contract_methods.get(5, 6).call().await?;
-    dbg!(&response);
 
     assert_eq!(response.value, 11);
 
