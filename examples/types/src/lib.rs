@@ -5,11 +5,7 @@ mod tests {
     #[cfg(feature = "fuel-core-lib")]
     use fuels::prelude::Config;
     use fuels::prelude::Result;
-    use fuels::types::{
-      Bits256,
-      Identity,
-      EvmAddress
-    };
+    use fuels::types::{Bits256, EvmAddress, Identity};
 
     #[tokio::test]
     async fn bytes32() -> Result<()> {

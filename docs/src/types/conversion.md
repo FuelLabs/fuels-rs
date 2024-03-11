@@ -207,7 +207,7 @@ Convert two hex strings to `B512`:
 
 ## Convert to `EvmAddress`
 
-Convert a `Bytes32` address to an `EvmAddress`:
+Convert a `Bits256` address to an `EvmAddress`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:b256_to_evm_address}}
