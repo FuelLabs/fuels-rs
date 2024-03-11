@@ -45,7 +45,7 @@ mod tests {
         assert_eq!(hex_str, b256_hex_string);
 
         // ANCHOR: bytes32_to_str
-        let str_from_bytes32: &str = b256.to_string().as_str();
+        let _str_from_bytes32: &str = b256.to_string().as_str();
         // ANCHOR_END: bytes32_to_str
 
         Ok(())
@@ -80,11 +80,11 @@ mod tests {
         // ANCHOR_END: address
 
         // ANCHOR: address_to_identity
-        let identity_from_address = Identity::Address(address);
+        let _identity_from_address = Identity::Address(address);
         // ANCHOR_END: address_to_identity
 
         // ANCHOR: address_to_str
-        let str_from_address: &str = address.to_string().as_str();
+        let _str_from_address: &str = address.to_string().as_str();
         // ANCHOR_END: address_to_str
 
         // ANCHOR: address_to_bits256
@@ -92,7 +92,7 @@ mod tests {
         // ANCHOR_END: address_to_bits256
 
         // ANCHOR: b256_to_evm_address
-        let evm_address = EvmAddress::from(bits_256);
+        let _evm_address = EvmAddress::from(bits_256);
         // ANCHOR_END: b256_to_evm_address
 
         Ok(())
@@ -198,11 +198,11 @@ mod tests {
         // ANCHOR_END: contract_id
 
         // ANCHOR: contract_id_to_identity
-        let identity_from_contract_id = Identity::ContractId(contract_id);
+        let _identity_from_contract_id = Identity::ContractId(contract_id);
         // ANCHOR_END: contract_id_to_identity
 
         // ANCHOR: contract_id_to_str
-        let str_from_contract_id: &str = contract_id.to_string().as_str();
+        let _str_from_contract_id: &str = contract_id.to_string().as_str();
         // ANCHOR_END: contract_id_to_str
 
         Ok(())
@@ -221,15 +221,15 @@ mod tests {
         // ANCHOR_END: type_conversion
 
         // ANCHOR: asset_id_to_str
-        let str_from_asset_id: &str = asset_id.to_string().as_str();
+        let _str_from_asset_id: &str = asset_id.to_string().as_str();
         // ANCHOR_END: asset_id_to_str
 
         // ANCHOR: contract_id_to_bits256
-        let contract_id_to_bits_256 = Bits256(contract_id.into());
+        let _contract_id_to_bits_256 = Bits256(contract_id.into());
         // ANCHOR_END: contract_id_to_bits256
 
         // ANCHOR: asset_id_to_bits256
-        let asset_id_to_bits_256 = Bits256(asset_id.into());
+        let _asset_id_to_bits_256 = Bits256(asset_id.into());
         // ANCHOR_END: asset_id_to_bits256
 
         Ok(())
