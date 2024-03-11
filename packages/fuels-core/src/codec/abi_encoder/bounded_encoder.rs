@@ -16,13 +16,14 @@ use crate::{
 };
 
 pub(crate) struct BoundedEncoder {
+    used_for_configurables: bool,
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
     max_total_enum_width: usize,
 }
 
 impl BoundedEncoder {
-    pub(crate) fn new(config: EncoderConfig) -> Self {
+    pub(crate) fn new(config: EncoderConfig, used_for_configurables: bool) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);
         let token_tracker =
@@ -31,6 +32,7 @@ impl BoundedEncoder {
             depth_tracker,
             token_tracker,
             max_total_enum_width: config.max_total_enum_width,
+            used_for_configurables,
         }
     }
 
@@ -41,8 +43,16 @@ impl BoundedEncoder {
         // going through the whole array of tokens, which can be pretty inefficient.
         let data = if args.len() == 1 {
             match args[0] {
-                Token::Bool(arg_bool) => vec![Self::encode_bool_as_u64(arg_bool)],
+                Token::U8(arg_u8) if self.used_for_configurables => {
+                    vec![Self::encode_u8_as_byte(arg_u8)]
+                }
                 Token::U8(arg_u8) => vec![Self::encode_u8_as_u64(arg_u8)],
+                Token::Bool(arg_bool) if self.used_for_configurables => {
+                    vec![Self::encode_bool_as_byte(arg_bool)]
+                }
+                Token::Bool(arg_bool) => {
+                    vec![Self::encode_bool_as_u64(arg_bool)]
+                }
                 _ => self.encode_tokens(args, true)?,
             }
         } else {
@@ -56,10 +66,10 @@ impl BoundedEncoder {
         let mut offset_in_bytes = 0;
         let mut data = vec![];
 
-        for token in tokens.iter() {
+        for token in tokens {
             self.token_tracker.increase()?;
             let mut new_data = self.encode_token(token)?;
-            offset_in_bytes += new_data.iter().map(|x| x.size_in_bytes()).sum::<usize>();
+            offset_in_bytes += new_data.iter().map(Data::size_in_bytes).sum::<usize>();
 
             data.append(&mut new_data);
 
@@ -102,7 +112,7 @@ impl BoundedEncoder {
             Token::U256(arg_u256) => vec![Self::encode_u256(*arg_u256)],
             Token::Bool(arg_bool) => vec![Self::encode_bool_as_byte(*arg_bool)],
             Token::B256(arg_bits256) => vec![Self::encode_b256(arg_bits256)],
-            Token::RawSlice(data) => Self::encode_raw_slice(data.to_vec())?,
+            Token::RawSlice(data) => Self::encode_raw_slice(data.clone())?,
             Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
             Token::StringArray(arg_string) => vec![Self::encode_string_array(arg_string)?],
             Token::Array(arg_array) => {
