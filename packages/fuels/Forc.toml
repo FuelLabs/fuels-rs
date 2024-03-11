@@ -106,4 +106,4 @@ members = [
 ]
 
 [patch.'https://github.com/fuellabs/sway']
-std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/fix-new-encoding-abi" }
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/fix-decode-for-u16-u32" }
