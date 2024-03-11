@@ -274,7 +274,6 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    let expected_min_gas_price = 0; // This is the default `min_gas_price` from `ConsensusParameters`
     let expected_gas_used = 949;
     let expected_metered_bytes_size = 784;
 
@@ -285,10 +284,6 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
-    assert_eq!(
-        estimated_transaction_cost.min_gas_price,
-        expected_min_gas_price
-    );
     assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
     assert_eq!(
         estimated_transaction_cost.metered_bytes_size,

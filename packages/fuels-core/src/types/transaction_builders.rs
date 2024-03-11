@@ -131,7 +131,7 @@ pub trait TransactionBuilder: BuildableTransaction + Send + sealed::Sealed {
     fn outputs_mut(&mut self) -> &mut Vec<Output>;
     fn witnesses(&self) -> &Vec<Witness>;
     fn witnesses_mut(&mut self) -> &mut Vec<Witness>;
-    fn with_gas_price_estimation_block_horizon(self, block_horizon: u32) -> Self;
+    fn with_estimation_horizon(self, block_horizon: u32) -> Self;
 }
 
 macro_rules! impl_tx_trait {
@@ -240,7 +240,7 @@ macro_rules! impl_tx_trait {
                 &mut self.witnesses
             }
 
-            fn with_gas_price_estimation_block_horizon(mut self, block_horizon: u32) -> Self {
+            fn with_estimation_horizon(mut self, block_horizon: u32) -> Self {
                 self.gas_price_estimation_block_horizon = block_horizon;
 
                 self

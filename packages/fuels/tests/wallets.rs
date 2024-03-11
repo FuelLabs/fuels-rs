@@ -241,12 +241,14 @@ async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
-    // Configure transaction policies.
+    // Configure transaction policies
+    let tip = 2;
     let script_gas_limit = 500_000;
     let expected_script_gas_limit = 0;
     let maturity = 0;
 
     let tx_policies = TxPolicies::default()
+        .with_tip(tip)
         .with_maturity(maturity)
         .with_script_gas_limit(script_gas_limit);
 

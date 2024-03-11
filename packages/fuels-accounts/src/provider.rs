@@ -56,7 +56,6 @@ use crate::provider::retryable_client::RetryableClient;
 #[derive(Debug)]
 // ANCHOR: transaction_cost
 pub struct TransactionCost {
-    pub min_gas_price: u64,
     pub gas_price: u64,
     pub gas_used: u64,
     pub metered_bytes_size: u64,
@@ -648,7 +647,6 @@ impl Provider {
         let block_horizon = block_horizon.unwrap_or(DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON);
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
 
-        let NodeInfo { min_gas_price, .. } = self.node_info().await?;
         let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
 
         let gas_used = self
@@ -661,7 +659,6 @@ impl Provider {
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
-            min_gas_price,
             gas_price,
             gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
