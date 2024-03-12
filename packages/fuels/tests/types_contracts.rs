@@ -1479,8 +1479,8 @@ async fn generics_test() -> Result<()> {
         assert_eq!(result, arg1);
     }
     {
-        // struct with generic in variant
-        let arg1 = EnumWGeneric::b(10);
+        // enum with generic in variant
+        let arg1 = EnumWGeneric::B(10);
         let result = contract_methods
             .enum_w_generic(arg1.clone())
             .call()
@@ -1528,7 +1528,7 @@ async fn generics_test() -> Result<()> {
         let arg1 = MegaExample {
             a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
             b: vec![(
-                [EnumWGeneric::b(StructWTupleGeneric {
+                [EnumWGeneric::B(StructWTupleGeneric {
                     a: (w_arr_generic.clone(), w_arr_generic),
                 })],
                 10u32,
