@@ -106,4 +106,4 @@ members = [
 ]
 
 [patch.'https://github.com/fuellabs/sway']
-std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/source-id-optional-when-auto-impl" }
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/fix-predicate-entry" }
