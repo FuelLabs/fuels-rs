@@ -94,6 +94,7 @@ async fn contract_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::default()
+        .with_U8(7)?
         .with_STR_4(new_str.clone())?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
@@ -115,7 +116,7 @@ async fn contract_configurables() -> Result<()> {
         .await?;
 
     let expected_value = (
-        8u8,
+        7u8,
         true,
         [253u32, 254u32, 255u32],
         new_str,
