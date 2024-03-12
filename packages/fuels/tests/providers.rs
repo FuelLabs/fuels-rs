@@ -573,7 +573,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore]
 async fn testnet_hello_world() -> Result<()> {
     use rand::Rng;
 
@@ -590,7 +589,7 @@ async fn testnet_hello_world() -> Result<()> {
     ));
 
     // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
+    let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
 
     // Setup the private key.
     let secret =
@@ -604,9 +603,7 @@ async fn testnet_hello_world() -> Result<()> {
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default();
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
