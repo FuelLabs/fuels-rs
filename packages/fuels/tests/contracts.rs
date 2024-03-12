@@ -1,5 +1,8 @@
+#[cfg(experimental)]
+use fuels::core::codec::{calldata, fn_selector};
+
 use fuels::{
-    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
+    core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
     types::{errors::transaction::Reason, Bits256},
 };
@@ -275,9 +278,9 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = 0.2;
 
     let expected_min_gas_price = 0; // This is the default `min_gas_price` from `ConsensusParameters`
-    let expected_gas_used = 949;
-    let expected_metered_bytes_size = 792;
-    let expected_total_fee = 898;
+    let expected_gas_used = 960;
+    let expected_metered_bytes_size = 832;
+    let expected_total_fee = 914;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -1224,6 +1227,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg(experimental)] // TODO: @hal3e add other example with new the new call function
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 

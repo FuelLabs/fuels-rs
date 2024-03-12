@@ -331,9 +331,10 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
 /// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
 /// 4. Contract ID ([`ContractId::LEN`]);
-/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
+/// 5. Function selector offset `(1 * `[`WORD_SIZE`]`)`
 /// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
-/// 7. Encoded arguments (optional) (variable length)
+/// 7. Encoded function selector
+/// 8. Encoded arguments
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
@@ -360,8 +361,6 @@ pub(crate) fn build_script_data_from_contract_calls(
             })
             .unwrap_or_default();
 
-        script_data.extend(call.contract_id.hash().as_ref());
-
         let call_param_offsets = CallOpcodeParamsOffset {
             amount_offset: segment_offset,
             asset_id_offset: segment_offset + WORD_SIZE,
@@ -372,27 +371,9 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_selector_offset =
             call_param_offsets.call_data_offset + ContractId::LEN + WORD_SIZE + WORD_SIZE;
 
-        script_data.extend((encoded_selector_offset as u64).to_be_bytes());
-
         param_offsets.push(call_param_offsets);
 
-        // If the method call takes custom inputs or has more than
-        // one argument, we need to calculate the `call_data_offset`,
-        // which points to where the data for the custom types start in the
-        // transaction. If it doesn't take any custom inputs, this isn't necessary.
-        // Custom inputs are stored after the previously added parameters,
-        // including custom_input_offset
-        let custom_input_offset = segment_offset
-                + WORD_SIZE // amount size
-                + AssetId::LEN
-                + gas_forwarded_size
-                + ContractId::LEN
-                + WORD_SIZE
-                + WORD_SIZE
-                + call.encoded_selector.len();
-
-        script_data.extend((custom_input_offset as u64).to_be_bytes());
-        script_data.extend(call.encoded_selector.clone());
+        let custom_input_offset = encoded_selector_offset + call.encoded_selector.len();
 
         let bytes = call
             .encoded_args
@@ -400,6 +381,10 @@ pub(crate) fn build_script_data_from_contract_calls(
             .map(|ub| ub.resolve(custom_input_offset as Word))
             .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
 
+        script_data.extend(call.contract_id.hash().as_ref());
+        script_data.extend((encoded_selector_offset as Word).to_be_bytes());
+        script_data.extend((custom_input_offset as Word).to_be_bytes());
+        script_data.extend(call.encoded_selector.clone());
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -423,7 +408,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
-    output_param_type: &ParamType,
+    _output_param_type: &ParamType,
 ) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
@@ -441,6 +426,7 @@ pub(crate) fn get_single_call_instructions(
     let mut instructions = [
         op::movi(0x10, call_data_offset),
         op::movi(0x11, amount_offset),
+        #[cfg(experimental)]
         op::lw(0x11, 0x11, 0),
         op::movi(0x12, asset_id_offset),
     ]
@@ -454,6 +440,7 @@ pub(crate) fn get_single_call_instructions(
 
             instructions.extend(&[
                 op::movi(0x13, gas_forwarded_offset),
+                #[cfg(experimental)]
                 op::lw(0x13, 0x13, 0),
                 op::call(0x10, 0x11, 0x12, 0x13),
             ]);
@@ -462,12 +449,14 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    instructions.extend(extract_heap_data(output_param_type)?);
+    #[cfg(experimental)]
+    instructions.extend(extract_heap_data(_output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
+#[cfg(experimental)]
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
         ParamType::Enum { variants, .. } => {
@@ -503,6 +492,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
     }
 }
 
+#[cfg(experimental)]
 fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,

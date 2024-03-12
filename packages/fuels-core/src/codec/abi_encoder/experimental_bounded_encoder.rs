@@ -71,7 +71,7 @@ impl BoundedEncoder {
             Token::B256(arg_bits256) => arg_bits256.to_vec(),
             Token::Bytes(data) => Self::encode_bytes(data.to_vec())?,
             Token::String(string) => Self::encode_bytes(string.clone().into_bytes())?,
-            Token::RawSlice(data) => data.clone(),
+            Token::RawSlice(data) => Self::encode_bytes(data.clone())?,
             Token::StringArray(arg_string) => Self::encode_string_array(arg_string)?,
             Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
             Token::Tuple(arg_tuple) => {
