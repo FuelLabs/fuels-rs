@@ -1460,6 +1460,7 @@ impl TestContract for Contract {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::default()
+        .with_U8(7)?
         .with_STR_4(new_str.clone())?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
