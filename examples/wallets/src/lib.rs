@@ -303,6 +303,11 @@ mod tests {
         let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
         let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
         // ANCHOR_END: custom_assets_wallet_short
+
+        // ANCHOR: wallet_to_address
+        let wallet_unlocked = WalletUnlocked::new_random(None);
+        let address: Address = wallet_unlocked.address().into();
+        // ANCHOR_END: wallet_to_address
         Ok(())
     }
 

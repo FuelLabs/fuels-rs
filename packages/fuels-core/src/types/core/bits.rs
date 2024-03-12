@@ -108,9 +108,11 @@ mod tests {
         assert_eq!(bits256.0, [1u8; 32]);
 
         // With the `0x0` prefix
+        // ANCHOR: hex_str_to_bits256
         let hex_str = "0x0101010101010101010101010101010101010101010101010101010101010101";
 
         let bits256 = Bits256::from_hex_str(hex_str)?;
+        // ANCHOR_END: hex_str_to_bits256
 
         assert_eq!(bits256.0, [1u8; 32]);
         // ANCHOR_END: from_hex_str
