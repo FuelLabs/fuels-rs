@@ -8,9 +8,8 @@ use crate::{
     },
     constants::WORD_SIZE,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
     },
 };
@@ -107,8 +106,8 @@ impl BoundedDecoder {
             ParamType::Struct { fields, .. } => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_struct(fields, bytes))
             }
-            ParamType::Enum { variants, .. } => {
-                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, variants))
+            ParamType::Enum { enum_variants, .. } => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, enum_variants))
             }
             ParamType::Tuple(types) => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_tuple(types, bytes))
@@ -167,12 +166,12 @@ impl BoundedDecoder {
         })
     }
 
-    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
+    fn decode_struct(&mut self, param_types: &[NamedParamType], bytes: &[u8]) -> Result<Decoded> {
         let mut tokens = vec![];
 
         let mut bytes_read = 0;
 
-        for param_type in param_types.iter() {
+        for (_, param_type) in param_types.iter() {
             // padding has to be taken into account
             bytes_read = checked_round_up_to_word_alignment(bytes_read)?;
             let res = self.decode_param(param_type, skip(bytes, bytes_read)?)?;
@@ -324,13 +323,13 @@ impl BoundedDecoder {
     ///
     /// * `data`: slice of encoded data on whose beginning we're expecting an encoded enum
     /// * `variants`: all types that this particular enum type could hold
-    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
-        let enum_width_in_bytes = variants.compute_enum_width_in_bytes()?;
+    fn decode_enum(&mut self, bytes: &[u8], enum_variants: &EnumVariants) -> Result<Decoded> {
+        let enum_width_in_bytes = enum_variants.compute_enum_width_in_bytes()?;
 
         let discriminant = peek_u64(bytes)?;
-        let selected_variant = variants.param_type_of_variant(discriminant)?;
+        let (_, selected_variant) = enum_variants.select_variant(discriminant)?;
 
-        let skip_extra_in_bytes = match variants.heap_type_variant() {
+        let skip_extra_in_bytes = match enum_variants.heap_type_variant() {
             Some((heap_type_discriminant, heap_type)) if heap_type_discriminant == discriminant => {
                 heap_type.compute_encoding_in_bytes()?
             }
@@ -341,9 +340,10 @@ impl BoundedDecoder {
             + skip_extra_in_bytes;
 
         let enum_content_bytes = skip(bytes, bytes_to_skip)?;
-        let result = self.decode_token_in_enum(enum_content_bytes, variants, selected_variant)?;
+        let result =
+            self.decode_token_in_enum(enum_content_bytes, enum_variants, selected_variant)?;
 
-        let selector = Box::new((discriminant, result.token, variants.clone()));
+        let selector = Box::new((discriminant, result.token, enum_variants.clone()));
         Ok(Decoded {
             token: Token::Enum(selector),
             bytes_read: enum_width_in_bytes,

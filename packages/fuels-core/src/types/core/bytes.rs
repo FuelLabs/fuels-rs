@@ -50,9 +50,11 @@ mod tests {
         assert_eq!(bytes.0, vec![1u8; 32]);
 
         // With the `0x0` prefix
+        // ANCHOR: hex_string_to_bytes32
         let hex_str = "0x0101010101010101010101010101010101010101010101010101010101010101";
 
         let bytes = Bytes::from_hex_str(hex_str)?;
+        // ANCHOR_END: hex_string_to_bytes32
 
         assert_eq!(bytes.0, vec![1u8; 32]);
         // ANCHOR_END: bytes_from_hex_str
