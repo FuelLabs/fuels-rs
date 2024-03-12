@@ -4,9 +4,8 @@ use crate::{
     codec::DecoderConfig,
     constants::WORD_SIZE,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
     },
 };
@@ -93,8 +92,8 @@ impl ExperimentalBoundedDecoder {
             ParamType::Struct { fields, .. } => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_struct(fields, bytes))
             }
-            ParamType::Enum { variants, .. } => {
-                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, variants))
+            ParamType::Enum { enum_variants, .. } => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, enum_variants))
             }
         }
     }
@@ -249,8 +248,8 @@ impl ExperimentalBoundedDecoder {
         })
     }
 
-    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
+    fn decode_struct(&mut self, fields: &[NamedParamType], bytes: &[u8]) -> Result<Decoded> {
+        let (tokens, bytes_read) = self.decode_params(fields.iter().map(|(_, pt)| pt), bytes)?;
 
         Ok(Decoded {
             token: Token::Struct(tokens),
@@ -258,15 +257,19 @@ impl ExperimentalBoundedDecoder {
         })
     }
 
-    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
+    fn decode_enum(&mut self, bytes: &[u8], enum_variants: &EnumVariants) -> Result<Decoded> {
         let discriminant = peek_discriminant(bytes)?;
         let variant_bytes = skip(bytes, DISCRIMINANT_BYTES_SIZE)?;
-        let selected_variant = variants.param_type_of_variant(discriminant)?;
+        let (_, selected_variant) = enum_variants.select_variant(discriminant)?;
 
         let decoded = self.decode_param(selected_variant, variant_bytes)?;
 
         Ok(Decoded {
-            token: Token::Enum(Box::new((discriminant, decoded.token, variants.clone()))),
+            token: Token::Enum(Box::new((
+                discriminant,
+                decoded.token,
+                enum_variants.clone(),
+            ))),
             bytes_read: DISCRIMINANT_BYTES_SIZE + decoded.bytes_read,
         })
     }

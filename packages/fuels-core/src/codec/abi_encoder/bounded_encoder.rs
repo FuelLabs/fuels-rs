@@ -189,7 +189,7 @@ impl BoundedEncoder {
 
         // Enums that contain only Units as variants have only their discriminant encoded.
         if !variants.only_units_inside() {
-            let variant_param_type = variants.param_type_of_variant(*discriminant)?;
+            let (_, variant_param_type) = variants.select_variant(*discriminant)?;
             let enum_width_in_bytes = variants.compute_enum_width_in_bytes()?;
 
             if enum_width_in_bytes > self.max_total_enum_width {
