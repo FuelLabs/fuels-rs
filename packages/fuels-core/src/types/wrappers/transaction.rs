@@ -31,6 +31,27 @@ use crate::{
     utils::{calculate_witnesses_size, sealed},
 };
 
+#[derive(Default, Debug, Clone)]
+pub struct Transactions {
+    fuel_transactions: Vec<FuelTransaction>,
+}
+
+impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(mut self, tx: impl Into<FuelTransaction>) -> Self {
+        self.fuel_transactions.push(tx.into());
+
+        self
+    }
+
+    pub fn as_slice(&self) -> &[FuelTransaction] {
+        &self.fuel_transactions
+    }
+}
+
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct MintTransaction {
     tx: Box<Mint>,

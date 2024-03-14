@@ -235,14 +235,7 @@ where
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let tx_status = if simulate {
-            let [(_, tx_status)] = self
-                .provider
-                .checked_dry_run(vec![tx])
-                .await?
-                .try_into()
-                .expect("should have only one element");
-
-            tx_status
+            self.provider.checked_dry_run(tx).await?
         } else {
             self.provider.send_transaction_and_await_commit(tx).await?
         };

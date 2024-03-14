@@ -37,7 +37,7 @@ use fuels_core::{
         message::Message,
         message_proof::MessageProof,
         node_info::NodeInfo,
-        transaction::Transaction,
+        transaction::{Transaction, Transactions},
         transaction_builders::DryRunner,
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
@@ -213,6 +213,7 @@ impl Provider {
         }
 
         self.validate_transaction(tx.clone()).await?;
+
         Ok(())
     }
 
@@ -310,15 +311,27 @@ impl Provider {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
     }
 
-    pub async fn checked_dry_run<T: Transaction>(
-        &self,
-        tx: Vec<T>,
-    ) -> Result<Vec<(TxId, TxStatus)>> {
-        let new_tx: Vec<_> = tx.into_iter().map(Into::into).collect();
+    pub async fn checked_dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
+        let [(_, tx_status)] = self
+            .client
+            .dry_run(Transactions::new().insert(tx).as_slice())
+            .await?
+            .into_iter()
+            .map(Self::tx_status_from_execution_status)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("should have only one element");
 
+        Ok(tx_status)
+    }
+
+    pub async fn checked_dry_run_multiple(
+        &self,
+        transactions: Transactions,
+    ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .client
-            .dry_run(&new_tx)
+            .dry_run(transactions.as_slice())
             .await?
             .into_iter()
             .map(Self::tx_status_from_execution_status)
@@ -343,27 +356,54 @@ impl Provider {
         )
     }
 
-    pub async fn dry_run<T: Transaction>(&self, tx: Vec<T>) -> Result<Vec<(TxId, Vec<Receipt>)>> {
-        let new_tx: Vec<_> = tx.into_iter().map(Into::into).collect();
+    pub async fn dry_run(&self, tx: impl Transaction) -> Result<Vec<Receipt>> {
+        let [receipts] = self
+            .client
+            .dry_run(Transactions::new().insert(tx).as_slice())
+            .await?
+            .into_iter()
+            .map(|tx_status| tx_status.result.receipts().to_vec())
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("should have only one element");
 
+        Ok(receipts)
+    }
+
+    pub async fn dry_run_multiple(
+        &self,
+        transactions: Transactions,
+    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
         Ok(self
             .client
-            .dry_run(&new_tx)
+            .dry_run(transactions.as_slice())
             .await?
             .into_iter()
             .map(|tx_status| (tx_status.id, tx_status.result.receipts().to_vec()))
             .collect())
     }
 
-    pub async fn dry_run_no_validation<T: Transaction>(
-        &self,
-        tx: Vec<T>,
-    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
-        let new_tx: Vec<_> = tx.into_iter().map(Into::into).collect();
+    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<Vec<Receipt>> {
+        let [receipts] = self
+            .client
+            .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
+            .await?
+            .into_iter()
+            .map(|tx_status| tx_status.result.receipts().to_vec())
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("should have only one element");
 
+        Ok(receipts)
+    }
+
+    pub async fn dry_run_no_validation_multiple(
+        &self,
+        transactions: Transactions,
+    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
         Ok(self
             .client
-            .dry_run_opt(&new_tx, Some(false))
+            .dry_run_opt(transactions.as_slice(), Some(false))
             .await?
             .into_iter()
             .map(|tx_status| (tx_status.id, tx_status.result.receipts().to_vec()))
@@ -672,12 +712,7 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let [(_, receipts)] = self
-            .dry_run_no_validation(vec![tx])
-            .await?
-            .try_into()
-            .expect("should have exactly one element");
-
+        let receipts = self.dry_run_no_validation(tx).await?;
         let gas_used = self.get_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
