@@ -1,7 +1,7 @@
 use fuel_types::AssetId;
 use fuels_macros::{Parameterize, Tokenizable, TryFrom};
 
-use crate::types::errors::{error, Result};
+use crate::types::errors::Result;
 
 // A simple wrapper around [u8; 32] representing the `b256` type. Exists
 // mainly so that we may differentiate `Parameterize` and `Tokenizable`
@@ -25,12 +25,8 @@ impl Bits256 {
         };
 
         let mut bytes = [0u8; 32];
-        hex::decode_to_slice(hex, &mut bytes as &mut [u8]).map_err(|e| {
-            error!(
-                InvalidData,
-                "Could not convert hex str '{hex}' to Bits256! {e}"
-            )
-        })?;
+        hex::decode_to_slice(hex, &mut bytes as &mut [u8])?;
+
         Ok(Bits256(bytes))
     }
 }
@@ -112,9 +108,11 @@ mod tests {
         assert_eq!(bits256.0, [1u8; 32]);
 
         // With the `0x0` prefix
+        // ANCHOR: hex_str_to_bits256
         let hex_str = "0x0101010101010101010101010101010101010101010101010101010101010101";
 
         let bits256 = Bits256::from_hex_str(hex_str)?;
+        // ANCHOR_END: hex_str_to_bits256
 
         assert_eq!(bits256.0, [1u8; 32]);
         // ANCHOR_END: from_hex_str
@@ -127,7 +125,8 @@ mod tests {
         assert_eq!(
             EvmAddress::param_type(),
             ParamType::Struct {
-                fields: vec![ParamType::B256],
+                name: "EvmAddress".to_string(),
+                fields: vec![("value".to_string(), ParamType::B256)],
                 generics: vec![]
             }
         );

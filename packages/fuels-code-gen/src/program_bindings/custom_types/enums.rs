@@ -25,7 +25,7 @@ pub(crate) fn expand_custom_enum(
 
     let components = Components::new(&type_decl.components, false, enum_type_path.parent())?;
     if components.is_empty() {
-        return Err(error!("Enum must have at least one component!"));
+        return Err(error!("enum must have at least one component"));
     }
     let generics = extract_generic_parameters(type_decl);
 

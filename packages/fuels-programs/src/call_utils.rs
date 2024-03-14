@@ -11,7 +11,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{transaction::Reason, Error, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -91,7 +91,7 @@ pub trait TxDependencyExtension: Sized + sealed::Sealed {
             match self.simulate().await {
                 Ok(_) => return Ok(self),
 
-                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     self = self.append_missing_dependencies(receipts);
                 }
 
@@ -312,7 +312,7 @@ pub(crate) fn build_script_data_from_contract_calls(
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(encoded_args_start_offset as Word))
-            .map_err(|e| error!(InvalidData, "Cannot encode contract call arguments: {e}"))?;
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -383,8 +383,8 @@ pub(crate) fn get_single_call_instructions(
 
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
-        ParamType::Enum { variants, .. } => {
-            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+        ParamType::Enum { enum_variants, .. } => {
+            let Some((discriminant, heap_type)) = enum_variants.heap_type_variant() else {
                 return Ok(vec![]);
             };
 
@@ -635,7 +635,7 @@ mod test {
         const SELECTOR_LEN: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
-        let contract_ids = vec![
+        let contract_ids = [
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
@@ -819,7 +819,7 @@ mod test {
                     expected_contract_ids.remove(&contract_id);
                 }
                 _ => {
-                    panic!("Expected only inputs of type Input::Contract");
+                    panic!("expected only inputs of type `Input::Contract`");
                 }
             }
         }
@@ -858,7 +858,6 @@ mod test {
                     block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
@@ -946,7 +945,7 @@ mod test {
 
     mod compute_calls_instructions_len {
         use fuel_asm::Instruction;
-        use fuels_core::types::{enum_variants::EnumVariants, param_types::ParamType};
+        use fuels_core::types::param_types::{EnumVariants, ParamType};
 
         use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
 
@@ -1022,7 +1021,14 @@ mod test {
             for variant_set in variant_sets {
                 let mut call = ContractCall::new_with_random_id();
                 call.output_param = ParamType::Enum {
-                    variants: EnumVariants::new(variant_set).unwrap(),
+                    name: "".to_string(),
+                    enum_variants: EnumVariants::new(
+                        variant_set
+                            .into_iter()
+                            .map(|pt| ("".to_string(), pt))
+                            .collect(),
+                    )
+                    .unwrap(),
                     generics: Vec::new(),
                 };
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
@@ -1040,7 +1046,12 @@ mod test {
         fn test_with_enum_with_only_non_heap_variants() {
             let mut call = ContractCall::new_with_random_id();
             call.output_param = ParamType::Enum {
-                variants: EnumVariants::new(vec![ParamType::Bool, ParamType::U8]).unwrap(),
+                name: "".to_string(),
+                enum_variants: EnumVariants::new(vec![
+                    ("".to_string(), ParamType::Bool),
+                    ("".to_string(), ParamType::U8),
+                ])
+                .unwrap(),
                 generics: Vec::new(),
             };
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();

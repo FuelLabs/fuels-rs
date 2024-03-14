@@ -75,18 +75,18 @@ mod tests {
         let stream = quote! {SomeCommand("lit1", "lit2", "lit1")};
 
         // when
-        let err = parse_unique_lit_strs(stream).expect_err("Should have failed");
+        let err = parse_unique_lit_strs(stream).expect_err("should have failed");
 
         // then
         let messages = err.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
-        assert_eq!(messages, vec!["Original defined here:", "Duplicate!"]);
+        assert_eq!(messages, vec!["original defined here:", "duplicate!"]);
     }
 
     #[test]
     fn only_strings_allowed() {
         let stream = quote! {SomeCommand("lit1", "lit2", true)};
 
-        let err = parse_unique_lit_strs(stream).expect_err("Should have failed");
+        let err = parse_unique_lit_strs(stream).expect_err("should have failed");
 
         assert_eq!(err.to_string(), "expected string literal");
     }

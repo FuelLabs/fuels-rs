@@ -72,6 +72,7 @@ pub mod prelude {
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
+            predicate::Predicate,
             provider::*,
             wallet::{generate_mnemonic_phrase, WalletUnlocked},
             Account, ViewOnlyAccount,
@@ -93,6 +94,7 @@ pub mod prelude {
     pub use super::{
         core::constants::*,
         macros::{abigen, setup_program_test},
+        tx::Receipt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},

@@ -1,10 +1,10 @@
-error: Original defined here:
+error: original defined here:
  --> tests/ui/setup_program_test/duplicate_wallet_names.rs:4:13
   |
 4 |     Wallets("wallet1", "wallet1"),
   |             ^^^^^^^^^
 
-error: Duplicate!
+error: duplicate!
  --> tests/ui/setup_program_test/duplicate_wallet_names.rs:4:24
   |
 4 |     Wallets("wallet1", "wallet1"),

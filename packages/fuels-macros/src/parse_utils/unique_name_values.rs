@@ -20,7 +20,7 @@ impl UniqueNameValues {
     pub fn new(tokens: TokenStream) -> syn::Result<Self> {
         let name_value_metas = Punctuated::<MetaNameValue, syn::token::Comma>::parse_terminated
             .parse2(tokens)
-            .map_err(|e| Error::new(e.span(), "Expected name='value'"))?;
+            .map_err(|e| Error::new(e.span(), "expected name='value'"))?;
         let span = name_value_metas.span();
         let name_values = Self::extract_name_values(name_value_metas.into_iter())?;
 
@@ -49,9 +49,7 @@ impl UniqueNameValues {
             .map(|name| {
                 Error::new_spanned(
                     name.clone(),
-                    format!(
-                        "Attribute '{name}' not recognized! Expected one of: {expected_names}."
-                    ),
+                    format!("attribute '{name}' not recognized. Expected one of: {expected_names}"),
                 )
             })
             .validate_no_errors()
@@ -60,14 +58,14 @@ impl UniqueNameValues {
     pub fn get_as_lit_str(&self, name: &str) -> syn::Result<&LitStr> {
         let value = self
             .try_get(name)
-            .ok_or_else(|| Error::new(self.span, format!("Missing attribute '{name}'.")))?;
+            .ok_or_else(|| Error::new(self.span, format!("missing attribute '{name}'")))?;
 
         if let Lit::Str(lit_str) = value {
             Ok(lit_str)
         } else {
             Err(Error::new_spanned(
                 value.clone(),
-                format!("Expected the attribute '{name}' to have a string value!"),
+                format!("expected the attribute '{name}' to have a string value"),
             ))
         }
     }
@@ -81,12 +79,12 @@ impl UniqueNameValues {
                 let ident = nv.path.get_ident().cloned().ok_or_else(|| {
                     Error::new_spanned(
                         nv.path,
-                        "Attribute name cannot be a `Path` -- i.e. must not contain ':'.",
+                        "attribute name cannot be a `Path` -- i.e. must not contain ':'",
                     )
                 })?;
 
                 let Expr::Lit(expr_lit) = nv.value else {
-                    return Err(Error::new_spanned(nv.value, "Expected literal"));
+                    return Err(Error::new_spanned(nv.value, "expected literal"));
                 };
 
                 Ok((ident, expr_lit.lit))
@@ -117,7 +115,7 @@ mod tests {
         let attr_values = ["attr1", "attr2"].map(|attr| {
             name_values
                 .try_get(attr)
-                .unwrap_or_else(|| panic!("Attribute {attr} should have existed!"))
+                .unwrap_or_else(|| panic!("attribute {attr} should have existed"))
                 .clone()
         });
 
@@ -138,22 +136,22 @@ mod tests {
         let tokens = quote! {SomeCommand(duplicate=1, something=2, duplicate=3)};
 
         // when
-        let err = extract_name_values(tokens).expect_err("Should have failed");
+        let err = extract_name_values(tokens).expect_err("should have failed");
 
         // then
         let messages = err.into_iter().map(|e| e.to_string()).collect::<Vec<_>>();
-        assert_eq!(messages, vec!["Original defined here:", "Duplicate!"]);
+        assert_eq!(messages, vec!["original defined here:", "duplicate!"]);
     }
 
     #[test]
     fn attr_names_cannot_be_paths() {
         let tokens = quote! {SomeCommand(something::duplicate=1)};
 
-        let err = extract_name_values(tokens).expect_err("Should have failed");
+        let err = extract_name_values(tokens).expect_err("should have failed");
 
         assert_eq!(
             err.to_string(),
-            "Attribute name cannot be a `Path` -- i.e. must not contain ':'."
+            "attribute name cannot be a `Path` -- i.e. must not contain ':'"
         );
     }
 
@@ -161,9 +159,9 @@ mod tests {
     fn only_name_value_is_accepted() {
         let tokens = quote! {SomeCommand(name="value", "something_else")};
 
-        let err = extract_name_values(tokens).expect_err("Should have failed");
+        let err = extract_name_values(tokens).expect_err("should have failed");
 
-        assert_eq!(err.to_string(), "Expected name='value'");
+        assert_eq!(err.to_string(), "expected name='value'");
     }
 
     #[test]
@@ -185,11 +183,11 @@ mod tests {
 
         let err = name_values
             .validate_has_no_other_names(&["name", "other_is_not_allowed"])
-            .expect_err("Should have failed");
+            .expect_err("should have failed");
 
         assert_eq!(
             err.to_string(),
-            "Attribute 'other' not recognized! Expected one of: 'name', 'other_is_not_allowed'."
+            "attribute 'other' not recognized. Expected one of: 'name', 'other_is_not_allowed'"
         );
 
         Ok(())
@@ -212,11 +210,11 @@ mod tests {
 
         let err = name_values
             .get_as_lit_str("name")
-            .expect_err("Should have failed");
+            .expect_err("should have failed");
 
         assert_eq!(
             err.to_string(),
-            "Expected the attribute 'name' to have a string value!"
+            "expected the attribute 'name' to have a string value"
         );
 
         Ok(())
@@ -228,9 +226,9 @@ mod tests {
 
         let err = name_values
             .get_as_lit_str("missing")
-            .expect_err("Should have failed");
+            .expect_err("should have failed");
 
-        assert_eq!(err.to_string(), "Missing attribute 'missing'.");
+        assert_eq!(err.to_string(), "missing attribute 'missing'");
 
         Ok(())
     }

@@ -1,4 +1,8 @@
-use std::{net::SocketAddr, path::PathBuf, time::Duration};
+use std::{
+    net::{IpAddr, SocketAddr},
+    path::PathBuf,
+    time::Duration,
+};
 
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
@@ -103,9 +107,9 @@ impl FuelService {
         let requested_port = config.addr.port();
 
         let bound_address = match requested_port {
-            0 => get_socket_address(),
+            0 => get_socket_address()?,
             _ if is_free(requested_port) => config.addr,
-            _ => return Err(Error::IOError(std::io::ErrorKind::AddrInUse.into())),
+            _ => return Err(Error::IO(std::io::ErrorKind::AddrInUse.into())),
         };
 
         let config = Config {
@@ -148,18 +152,17 @@ async fn server_health_check(address: SocketAddr) -> FuelResult<()> {
     }
 
     if !healthy {
-        return Err(error!(
-            InfrastructureError,
-            "Could not connect to fuel core server."
-        ));
+        return Err(error!(Other, "could not connect to fuel core server"));
     }
 
     Ok(())
 }
 
-fn get_socket_address() -> SocketAddr {
-    let free_port = pick_unused_port().expect("No ports free");
-    SocketAddr::new("127.0.0.1".parse().unwrap(), free_port)
+fn get_socket_address() -> FuelResult<SocketAddr> {
+    let free_port = pick_unused_port().ok_or(error!(Other, "could not pick a free port"))?;
+    let address: IpAddr = "127.0.0.1".parse().expect("is valid ip");
+
+    Ok(SocketAddr::new(address, free_port))
 }
 
 async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
@@ -168,22 +171,16 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let binary_name = "fuel-core";
 
     let paths = which::which_all(binary_name)
-        .map_err(|_| {
-            error!(
-                InfrastructureError,
-                "failed to list '{}' binaries", binary_name
-            )
-        })?
+        .map_err(|_| error!(Other, "failed to list `{binary_name}` binaries"))?
         .collect::<Vec<_>>();
 
     let path = paths
         .first()
-        .ok_or_else(|| error!(InfrastructureError, "no '{}' in PATH", binary_name))?;
+        .ok_or_else(|| error!(Other, "no `{binary_name}` in PATH"))?;
 
     if paths.len() > 1 {
         eprintln!(
-            "found more than one '{}' binary in PATH, using '{}'",
-            binary_name,
+            "found more than one `{binary_name}` binary in PATH, using `{}`",
             path.display()
         );
     }
@@ -196,7 +193,7 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
         let _unused = extended_config;
         let result = running_node
             .await
-            .expect("error: Couldn't find fuel-core in PATH.");
+            .expect("error: could not find `fuel-core` in PATH`");
         let stdout = String::from_utf8_lossy(&result.stdout);
         let stderr = String::from_utf8_lossy(&result.stderr);
         eprintln!("the exit status from the fuel binary was: {result:?}, stdout: {stdout}, stderr: {stderr}");

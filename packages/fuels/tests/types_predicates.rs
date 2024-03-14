@@ -1,12 +1,12 @@
-use std::default::Default;
-use std::path::Path;
+use std::{default::Default, path::Path};
 
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, U256},
+    types::{
+        coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, Bits256, U256,
+    },
 };
-use fuels_core::types::Bits256;
 
 async fn assert_predicate_spendable(
     data: UnresolvedBytes,
@@ -148,9 +148,8 @@ async fn spend_predicate_coins_messages_address() -> Result<()> {
         abi = "packages/fuels/tests/types/predicates/address/out/debug/address-abi.json"
     ));
 
-    let addr: Address = "0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a"
-        .parse()
-        .unwrap();
+    let addr: Address =
+        "0xef86afa9696cf0dc6385e2c407a6e159a1103cefb7e2ae0636fb33d3cb2a9e4a".parse()?;
 
     let data = MyPredicateEncoder::default().encode_data(addr)?;
 

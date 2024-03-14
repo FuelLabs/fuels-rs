@@ -1,7 +1,8 @@
+use std::default::Default;
+
 use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
-use std::default::Default;
 
 use crate::{
     error::Result,
