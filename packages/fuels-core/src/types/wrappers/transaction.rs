@@ -180,7 +180,7 @@ pub trait GasValidation: sealed::Sealed {
 
 pub trait ValidatablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we can verify that these predicates validate, ie
-    /// that they return 1
+    /// that they return `true`
     fn validate_predicates(
         self,
         consensus_parameters: &ConsensusParameters,
