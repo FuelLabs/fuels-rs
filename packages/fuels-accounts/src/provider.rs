@@ -311,7 +311,7 @@ impl Provider {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
     }
 
-    pub async fn checked_dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
+    pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
         let [(_, tx_status)] = self
             .client
             .dry_run(Transactions::new().insert(tx).as_slice())
@@ -325,7 +325,7 @@ impl Provider {
         Ok(tx_status)
     }
 
-    pub async fn checked_dry_run_multiple(
+    pub async fn dry_run_multiple(
         &self,
         transactions: Transactions,
     ) -> Result<Vec<(TxId, TxStatus)>> {
@@ -356,57 +356,30 @@ impl Provider {
         )
     }
 
-    pub async fn dry_run(&self, tx: impl Transaction) -> Result<Vec<Receipt>> {
-        let [receipts] = self
-            .client
-            .dry_run(Transactions::new().insert(tx).as_slice())
-            .await?
-            .into_iter()
-            .map(|tx_status| tx_status.result.receipts().to_vec())
-            .collect::<Vec<_>>()
-            .try_into()
-            .expect("should have only one element");
-
-        Ok(receipts)
-    }
-
-    pub async fn dry_run_multiple(
-        &self,
-        transactions: Transactions,
-    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
-        Ok(self
-            .client
-            .dry_run(transactions.as_slice())
-            .await?
-            .into_iter()
-            .map(|tx_status| (tx_status.id, tx_status.result.receipts().to_vec()))
-            .collect())
-    }
-
-    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<Vec<Receipt>> {
-        let [receipts] = self
+    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
+        let [(_, tx_status)] = self
             .client
             .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
             .await?
             .into_iter()
-            .map(|tx_status| tx_status.result.receipts().to_vec())
+            .map(Self::tx_status_from_execution_status)
             .collect::<Vec<_>>()
             .try_into()
             .expect("should have only one element");
 
-        Ok(receipts)
+        Ok(tx_status)
     }
 
     pub async fn dry_run_no_validation_multiple(
         &self,
         transactions: Transactions,
-    ) -> Result<Vec<(TxId, Vec<Receipt>)>> {
+    ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .client
             .dry_run_opt(transactions.as_slice(), Some(false))
             .await?
             .into_iter()
-            .map(|tx_status| (tx_status.id, tx_status.result.receipts().to_vec()))
+            .map(Self::tx_status_from_execution_status)
             .collect())
     }
 
@@ -712,7 +685,7 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let receipts = self.dry_run_no_validation(tx).await?;
+        let receipts = self.dry_run_no_validation(tx).await?.take_receipts();
         let gas_used = self.get_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)

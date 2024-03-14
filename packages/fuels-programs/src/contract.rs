@@ -622,7 +622,7 @@ where
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -918,7 +918,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -932,8 +932,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        let tx_status = provider.checked_dry_run(tx).await?;
-        tx_status.check(None)?;
+        provider.dry_run(tx).await?.check(None)?;
 
         Ok(())
     }
