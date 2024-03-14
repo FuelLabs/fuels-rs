@@ -1,7 +1,9 @@
 #[cfg(experimental)]
 use sha2::{Digest, Sha256};
 
-use crate::types::param_types::{NamedParamType, ParamType};
+#[cfg(experimental)]
+use crate::types::param_types::NamedParamType;
+use crate::types::param_types::ParamType;
 #[cfg(experimental)]
 use crate::types::ByteArray;
 

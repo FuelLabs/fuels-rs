@@ -1,14 +1,13 @@
-#[cfg(experimental)]
 mod bounded_encoder;
 #[cfg(not(experimental))]
 mod experimental_bounded_encoder;
 
 use std::default::Default;
 
-#[cfg(experimental)]
 use crate::codec::abi_encoder::bounded_encoder::BoundedEncoder;
+
 #[cfg(not(experimental))]
-use crate::codec::abi_encoder::experimental_bounded_encoder::BoundedEncoder;
+use crate::codec::abi_encoder::experimental_bounded_encoder::ExperimentalBoundedEncoder;
 use crate::types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token};
 
 #[derive(Debug, Clone, Copy)]
@@ -49,7 +48,12 @@ impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        BoundedEncoder::new(self.config, false).encode(args)
+        #[cfg(experimental)]
+        let res = BoundedEncoder::new(self.config, false).encode(args);
+        #[cfg(not(experimental))]
+        let res = ExperimentalBoundedEncoder::new(self.config, false).encode(args);
+
+        res
     }
 }
 

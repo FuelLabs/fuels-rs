@@ -332,8 +332,8 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
 /// 4. Contract ID ([`ContractId::LEN`]);
 /// 5. Function selector offset `(1 * `[`WORD_SIZE`]`)`
-/// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
-/// 7. Encoded function selector
+/// 6. Calldata offset `(1 * `[`WORD_SIZE`]`)`
+/// 7. Encoded function selector - method name
 /// 8. Encoded arguments
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
@@ -350,10 +350,10 @@ pub(crate) fn build_script_data_from_contract_calls(
     for call in calls {
         let gas_forwarded = call.call_parameters.gas_forwarded();
 
-        script_data.extend(call.call_parameters.amount().to_be_bytes());
-        script_data.extend(call.call_parameters.asset_id().iter());
+        script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
+        script_data.extend(call.call_parameters.asset_id().iter()); // 2. Asset ID
 
-        let gas_forwarded_size = gas_forwarded
+        let gas_forwarded_size = gas_forwarded // 3. Gas to be forwarded - Optional
             .map(|gf| {
                 script_data.extend((gf as Word).to_be_bytes());
 
@@ -381,11 +381,11 @@ pub(crate) fn build_script_data_from_contract_calls(
             .map(|ub| ub.resolve(custom_input_offset as Word))
             .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
 
-        script_data.extend(call.contract_id.hash().as_ref());
-        script_data.extend((encoded_selector_offset as Word).to_be_bytes());
-        script_data.extend((custom_input_offset as Word).to_be_bytes());
-        script_data.extend(call.encoded_selector.clone());
-        script_data.extend(bytes);
+        script_data.extend(call.contract_id.hash().as_ref()); // 4. Contract ID
+        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 5. Fun. selector offset
+        script_data.extend((custom_input_offset as Word).to_be_bytes()); // 6. Calldata offset
+        script_data.extend(call.encoded_selector.clone()); // 7. Encoded function selector
+        script_data.extend(bytes); // 8. Encoded arguments
 
         // the data segment that holds the parameters for the next call
         // begins at the original offset + the data we added so far
@@ -426,7 +426,6 @@ pub(crate) fn get_single_call_instructions(
     let mut instructions = [
         op::movi(0x10, call_data_offset),
         op::movi(0x11, amount_offset),
-        #[cfg(experimental)]
         op::lw(0x11, 0x11, 0),
         op::movi(0x12, asset_id_offset),
     ]
@@ -440,7 +439,6 @@ pub(crate) fn get_single_call_instructions(
 
             instructions.extend(&[
                 op::movi(0x13, gas_forwarded_offset),
-                #[cfg(experimental)]
                 op::lw(0x13, 0x13, 0),
                 op::call(0x10, 0x11, 0x12, 0x13),
             ]);

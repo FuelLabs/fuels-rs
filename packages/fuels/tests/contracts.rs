@@ -1707,7 +1707,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         let response = contract_instance
             .methods()
             .get_single(x)
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
 
@@ -1717,7 +1717,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         contract_instance_2
             .methods()
             .u32_vec(vec_input.clone())
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
     }

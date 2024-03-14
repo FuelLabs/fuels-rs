@@ -1453,7 +1453,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // String slices cannot be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 async fn string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
