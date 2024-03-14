@@ -80,7 +80,6 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
                 asset_id,
                 tx_pointer,
                 witness_index,
-                maturity,
                 ..
             }) => Input::coin_signed(
                 zero_utxo_id,
@@ -89,7 +88,6 @@ fn compare_inputs(inputs: &[Input], expected_inputs: &mut Vec<Input>) -> bool {
                 *asset_id,
                 *tx_pointer,
                 *witness_index,
-                *maturity,
             ),
             other => other.clone(),
         })
@@ -149,7 +147,6 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0u32.into(),
     )];
     let expected_outputs = vec![Output::change(wallet.address().into(), 0, BASE_ASSET_ID)];
 
@@ -189,7 +186,6 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
         BASE_ASSET_ID,
         TxPointer::default(),
         0,
-        0u32.into(),
     ))
     .take(3)
     .collect::<Vec<_>>();
@@ -245,14 +241,14 @@ async fn send_transfer_transactions() -> Result<()> {
     const AMOUNT: u64 = 5;
     let (wallet_1, wallet_2) = setup_transfer_test(AMOUNT).await?;
 
-    // Configure transaction policies.
-    let gas_price = 1;
+    // Configure transaction policies
+    let tip = 2;
     let script_gas_limit = 500_000;
     let expected_script_gas_limit = 0;
     let maturity = 0;
 
     let tx_policies = TxPolicies::default()
-        .with_gas_price(gas_price)
+        .with_tip(tip)
         .with_maturity(maturity)
         .with_script_gas_limit(script_gas_limit);
 
@@ -275,7 +271,6 @@ async fn send_transfer_transactions() -> Result<()> {
     };
     // Transfer scripts have `script_gas_limit` set to `0`
     assert_eq!(script.gas_limit(), expected_script_gas_limit);
-    assert_eq!(script.gas_price(), gas_price);
     assert_eq!(script.maturity(), maturity as u32);
 
     let wallet_1_spendable_resources = wallet_1.get_spendable_resources(BASE_ASSET_ID, 1).await?;

@@ -15,6 +15,7 @@ chrono = { workspace = true }
 elliptic-curve = { workspace = true, default-features = false }
 eth-keystore =  { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
+fuel-core-types = { workspace = true }
 fuel-crypto = { workspace = true, features = ["random"] }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }

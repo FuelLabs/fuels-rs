@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
-        GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
-        ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField, ScriptData,
+        ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -30,6 +30,27 @@ use crate::{
     },
     utils::{calculate_witnesses_size, sealed},
 };
+
+#[derive(Default, Debug, Clone)]
+pub struct Transactions {
+    fuel_transactions: Vec<FuelTransaction>,
+}
+
+impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(mut self, tx: impl Into<FuelTransaction>) -> Self {
+        self.fuel_transactions.push(tx.into());
+
+        self
+    }
+
+    pub fn as_slice(&self) -> &[FuelTransaction] {
+        &self.fuel_transactions
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct MintTransaction {
@@ -83,7 +104,7 @@ impl MintTransaction {
 #[derive(Default, Debug, Copy, Clone)]
 //ANCHOR: tx_policies_struct
 pub struct TxPolicies {
-    gas_price: Option<u64>,
+    tip: Option<u64>,
     witness_limit: Option<u64>,
     maturity: Option<u64>,
     max_fee: Option<u64>,
@@ -93,14 +114,14 @@ pub struct TxPolicies {
 
 impl TxPolicies {
     pub fn new(
-        gas_price: Option<u64>,
+        tip: Option<u64>,
         witness_limit: Option<u64>,
         maturity: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
     ) -> Self {
         Self {
-            gas_price,
+            tip,
             witness_limit,
             maturity,
             max_fee,
@@ -108,13 +129,13 @@ impl TxPolicies {
         }
     }
 
-    pub fn with_gas_price(mut self, gas_price: u64) -> Self {
-        self.gas_price = Some(gas_price);
+    pub fn with_tip(mut self, tip: u64) -> Self {
+        self.tip = Some(tip);
         self
     }
 
-    pub fn gas_price(&self) -> Option<u64> {
-        self.gas_price
+    pub fn tip(&self) -> Option<u64> {
+        self.tip
     }
 
     pub fn with_witness_limit(mut self, witness_limit: u64) -> Self {
@@ -173,7 +194,7 @@ pub trait EstimablePredicates: sealed::Sealed {
 }
 
 pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
+    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -184,6 +205,7 @@ pub trait Transaction:
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
+        gas_price: u64,
     ) -> Option<TransactionFee>;
 
     fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64;
@@ -198,10 +220,6 @@ pub trait Transaction:
     fn maturity(&self) -> u32;
 
     fn with_maturity(self, maturity: u32) -> Self;
-
-    fn gas_price(&self) -> u64;
-
-    fn with_gas_price(self, gas_price: u64) -> Self;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -316,11 +334,13 @@ macro_rules! impl_tx_wrapper {
             fn fee_checked_from_tx(
                 &self,
                 consensus_parameters: &ConsensusParameters,
+                gas_price: u64,
             ) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs,
                     consensus_parameters.fee_params(),
                     &self.tx,
+                    gas_price,
                 )
             }
 
@@ -342,15 +362,6 @@ macro_rules! impl_tx_wrapper {
 
             fn with_maturity(mut self, maturity: u32) -> Self {
                 self.tx.set_maturity(maturity.into());
-                self
-            }
-
-            fn gas_price(&self) -> u64 {
-                self.tx.gas_price()
-            }
-
-            fn with_gas_price(mut self, gas_price: u64) -> Self {
-                self.tx.set_gas_price(gas_price);
                 self
             }
 
@@ -463,23 +474,6 @@ impl CreateTransaction {
     }
 }
 
-impl GasValidation for CreateTransaction {
-    // We're not using `gas_used` in this implementation
-    // because `CreateTransaction` has no gas_limit`
-    fn validate_gas(&self, min_gas_price: u64, _: u64) -> Result<()> {
-        if min_gas_price > self.tx.gas_price() {
-            return Err(error_transaction!(
-                Validation,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                self.tx.gas_price(),
-                min_gas_price
-            ));
-        }
-
-        Ok(())
-    }
-}
-
 impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
@@ -488,21 +482,20 @@ impl EstimablePredicates for ScriptTransaction {
     }
 }
 
+impl GasValidation for CreateTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl GasValidation for ScriptTransaction {
-    fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()> {
+    fn validate_gas(&self, gas_used: u64) -> Result<()> {
         if gas_used > *self.tx.script_gas_limit() {
             return Err(error_transaction!(
                 Validation,
                 "script_gas_limit({}) is lower than the estimated gas_used({})",
                 self.tx.script_gas_limit(),
                 gas_used
-            ));
-        } else if min_gas_price > self.tx.gas_price() {
-            return Err(error_transaction!(
-                Validation,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                self.tx.gas_price(),
-                min_gas_price
             ));
         }
 

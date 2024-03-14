@@ -331,10 +331,12 @@ mod tests {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
             Ok(0)
         }
+
         fn consensus_parameters(&self) -> &ConsensusParameters {
             &self.c_param
         }
-        async fn min_gas_price(&self) -> Result<u64> {
+
+        async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
         }
     }
@@ -390,7 +392,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a7446cb9703d3bc9e68677715fc7ef6ed72ff4eeac0c67bdb0d9b9c8ba38048e078e38fdd85bf988cefd3737005f1be97ed8b9662f002b0480d4404ebb397fed")?);
+        assert_eq!(signature, Signature::from_str("37cf6bdefc9e673f99a7fdbbeff454cb5c1bdf632c072f19cf8ac68fa1ede2749c568c56f87d73fc5c97f73b76dfe637422b77c1fdc6010fb4f488444ff5df1a")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;
