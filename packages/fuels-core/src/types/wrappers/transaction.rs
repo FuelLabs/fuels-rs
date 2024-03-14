@@ -193,7 +193,7 @@ pub trait ValidatablePredicates: sealed::Sealed {
 pub trait Transaction:
     Into<FuelTransaction>
     + EstimablePredicates
-    + ValidablePredicates
+    + ValidatablePredicates
     + GasValidation
     + Clone
     + Debug
@@ -316,6 +316,22 @@ macro_rules! impl_tx_wrapper {
                     tx,
                     is_using_predicates,
                 }
+            }
+        }
+
+        impl ValidatablePredicates for $wrapper {
+            fn validate_predicates(
+                self,
+                consensus_parameters: &ConsensusParameters,
+                block_height: u32,
+            ) -> Result<()> {
+                let checked = self
+                    .tx
+                    .into_checked(block_height.into(), consensus_parameters)?;
+                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+                checked.check_predicates(&check_predicates_parameters)?;
+
+                Ok(())
             }
         }
 
@@ -463,21 +479,6 @@ impl EstimablePredicates for CreateTransaction {
     }
 }
 
-impl ValidablePredicates for CreateTransaction {
-    fn validate_predicates(
-        self,
-        consensus_parameters: &ConsensusParameters,
-        block_height: u32,
-    ) -> Result<()> {
-        let checked = self
-            .tx
-            .into_checked(block_height.into(), consensus_parameters)?;
-        let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-        checked.check_predicates(&check_predicates_parameters)?;
-        Ok(())
-    }
-}
-
 impl CreateTransaction {
     pub fn salt(&self) -> &FuelSalt {
         self.tx.salt()
@@ -517,21 +518,6 @@ impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 
-        Ok(())
-    }
-}
-
-impl ValidablePredicates for ScriptTransaction {
-    fn validate_predicates(
-        self,
-        consensus_parameters: &ConsensusParameters,
-        block_height: u32,
-    ) -> Result<()> {
-        let checked = self
-            .tx
-            .into_checked(block_height.into(), consensus_parameters)?;
-        let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-        checked.check_predicates(&check_predicates_parameters)?;
         Ok(())
     }
 }
