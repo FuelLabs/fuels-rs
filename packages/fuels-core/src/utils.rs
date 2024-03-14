@@ -38,3 +38,13 @@ pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
+
+#[cfg(test)]
+pub(crate) fn to_named<'a, I: IntoIterator<Item = &'a crate::types::param_types::ParamType>>(
+    param_types: I,
+) -> Vec<(String, crate::types::param_types::ParamType)> {
+    param_types
+        .into_iter()
+        .map(|pt| ("".to_string(), pt.clone()))
+        .collect()
+}

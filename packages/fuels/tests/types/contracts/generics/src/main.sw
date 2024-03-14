@@ -44,8 +44,8 @@ struct StructWTupleGeneric<M> {
 
 #[allow(dead_code)]
 enum EnumWGeneric<N> {
-    a: u64,
-    b: N,
+    A: u64,
+    B: N,
 }
 
 #[allow(dead_code)]
@@ -88,15 +88,18 @@ impl MyContract for Contract {
         _arg_1: StructOneUnusedGenericParam<u64>,
         _arg_2: EnumOneUnusedGenericParam<u32>,
     ) {}
+
     fn two_unused_generic_args(
         _arg_1: StructTwoUnusedGenericParams<u32, u64>,
         _arg_2: EnumTwoUnusedGenericParams<u64, u32>,
     ) {}
+
     fn used_and_unused_generic_args(
         arg_1: StructUsedAndUnusedGenericParams<u32, u8, u64>,
         arg_2: EnumUsedAndUnusedGenericParams<u64, u8, u32>,
     ) -> (StructUsedAndUnusedGenericParams<u64, u8, u32>, EnumUsedAndUnusedGenericParams<u32, u8, u64>) {
         assert_eq(arg_1.field, 10u8);
+
         if let EnumUsedAndUnusedGenericParams::Two(val) = arg_2 {
             assert_eq(val, 11u8);
         } else {
@@ -110,6 +113,7 @@ impl MyContract for Contract {
             EnumUsedAndUnusedGenericParams::Two(13u8),
         )
     }
+
     fn struct_w_generic(arg1: SimpleGeneric<u64>) -> SimpleGeneric<u64> {
         let expected = SimpleGeneric {
             single_generic_param: 123u64,
@@ -157,14 +161,14 @@ impl MyContract for Contract {
 
     fn enum_w_generic(arg1: EnumWGeneric<u64>) -> EnumWGeneric<u64> {
         match arg1 {
-            EnumWGeneric::b(value) => {
+            EnumWGeneric::B(value) => {
                 assert(value == 10u64);
             }
             _ => {
                 assert(false)
             }
         }
-        EnumWGeneric::b(10)
+        EnumWGeneric::B(10)
     }
 
     fn complex_test(_arg: MegaExample<str[2], b256>) {}

@@ -1,6 +1,6 @@
 use std::{ops::Add, str::FromStr};
 
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -234,7 +234,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     provider.produce_blocks(blocks_to_produce, None).await?;
     assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
     let expected_latest_block_time = origin_block_time
-        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .checked_add_signed(Duration::try_seconds((blocks_to_produce * block_time) as i64).unwrap())
         .unwrap();
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
@@ -738,10 +738,7 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
     let unix = tai64::Tai64(timestamp).to_unix();
-    NaiveDateTime::from_timestamp_opt(unix, 0)
-        .unwrap()
-        .and_local_timezone(Utc)
-        .unwrap()
+    DateTime::from_timestamp(unix, 0).unwrap()
 }
 
 /// This test is here in addition to `can_set_custom_block_time` because even though this test
@@ -781,7 +778,8 @@ async fn test_sway_timestamp() -> Result<()> {
     let methods = contract_instance.methods();
 
     let response = methods.return_timestamp().call().await?;
-    let mut expected_datetime = origin_timestamp.add(Duration::seconds(block_time as i64));
+    let mut expected_datetime =
+        origin_timestamp.add(Duration::try_seconds(block_time as i64).unwrap());
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
 
     let blocks_to_produce = 600;
@@ -790,10 +788,10 @@ async fn test_sway_timestamp() -> Result<()> {
     let response = methods.return_timestamp().call().await?;
 
     // `produce_blocks` call
-    expected_datetime =
-        expected_datetime.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    expected_datetime = expected_datetime
+        .add(Duration::try_seconds((block_time * blocks_to_produce) as i64).unwrap());
     // method call
-    expected_datetime = expected_datetime.add(Duration::seconds(block_time as i64));
+    expected_datetime = expected_datetime.add(Duration::try_seconds(block_time as i64).unwrap());
 
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
     assert_eq!(

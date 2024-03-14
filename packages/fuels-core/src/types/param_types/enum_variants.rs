@@ -2,49 +2,53 @@ use crate::{
     constants::ENUM_DISCRIMINANT_BYTE_WIDTH,
     types::{
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{NamedParamType, ParamType},
     },
     utils::checked_round_up_to_word_alignment,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct EnumVariants {
-    param_types: Vec<ParamType>,
+    variants: Vec<NamedParamType>,
 }
 
 impl EnumVariants {
-    pub fn new(param_types: Vec<ParamType>) -> Result<EnumVariants> {
-        if param_types.is_empty() {
+    pub fn new(variants: Vec<NamedParamType>) -> Result<EnumVariants> {
+        if variants.is_empty() {
             return Err(error!(Other, "enum variants cannot be empty!"));
         }
-        Ok(EnumVariants { param_types })
+
+        Ok(EnumVariants { variants })
     }
 
-    pub fn param_types(&self) -> &[ParamType] {
-        &self.param_types
+    pub fn variants(&self) -> &Vec<NamedParamType> {
+        &self.variants
     }
 
-    pub fn param_type_of_variant(&self, discriminant: u64) -> Result<&ParamType> {
-        self.param_types.get(discriminant as usize).ok_or_else(|| {
+    pub fn param_types(&self) -> impl Iterator<Item = &ParamType> {
+        self.variants.iter().map(|(_, param_type)| param_type)
+    }
+
+    pub fn select_variant(&self, discriminant: u64) -> Result<&NamedParamType> {
+        self.variants.get(discriminant as usize).ok_or_else(|| {
             error!(
                 Other,
                 "discriminant `{discriminant}` doesn't point to any variant: {:?}",
-                self.param_types()
+                self.variants()
             )
         })
     }
 
     pub fn heap_type_variant(&self) -> Option<(u64, &ParamType)> {
         self.param_types()
-            .iter()
             .enumerate()
             .find_map(|(d, p)| p.is_extra_receipt_needed(false).then_some((d as u64, p)))
     }
 
     pub fn only_units_inside(&self) -> bool {
-        self.param_types
+        self.variants
             .iter()
-            .all(|param_type| *param_type == ParamType::Unit)
+            .all(|(_, param_type)| *param_type == ParamType::Unit)
     }
 
     /// Calculates how many bytes are needed to encode an enum.
@@ -53,7 +57,7 @@ impl EnumVariants {
             return Ok(ENUM_DISCRIMINANT_BYTE_WIDTH);
         }
 
-        let width = self.param_types().iter().try_fold(0, |a, p| -> Result<_> {
+        let width = self.param_types().try_fold(0, |a, p| -> Result<_> {
             let size = p.compute_encoding_in_bytes()?;
             Ok(a.max(size))
         })?;
@@ -77,28 +81,37 @@ impl EnumVariants {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::to_named;
 
     #[test]
     fn test_get_heap_type_variant_discriminant() -> Result<()> {
-        let param_types = vec![
-            ParamType::U64,
-            ParamType::Bool,
-            ParamType::Vector(Box::from(ParamType::U64)),
-        ];
-        let variants = EnumVariants::new(param_types)?;
-        assert_eq!(variants.heap_type_variant().unwrap().0, 2);
+        {
+            let variants = to_named(&[
+                ParamType::U64,
+                ParamType::Bool,
+                ParamType::Vector(Box::from(ParamType::U64)),
+            ]);
+            let enum_variants = EnumVariants::new(variants)?;
 
-        let param_types = vec![
-            ParamType::Vector(Box::from(ParamType::U64)),
-            ParamType::U64,
-            ParamType::Bool,
-        ];
-        let variants = EnumVariants::new(param_types)?;
-        assert_eq!(variants.heap_type_variant().unwrap().0, 0);
+            assert_eq!(enum_variants.heap_type_variant().unwrap().0, 2);
+        }
+        {
+            let variants = to_named(&[
+                ParamType::Vector(Box::from(ParamType::U64)),
+                ParamType::U64,
+                ParamType::Bool,
+            ]);
+            let enum_variants = EnumVariants::new(variants)?;
 
-        let param_types = vec![ParamType::U64, ParamType::Bool];
-        let variants = EnumVariants::new(param_types)?;
-        assert!(variants.heap_type_variant().is_none());
+            assert_eq!(enum_variants.heap_type_variant().unwrap().0, 0);
+        }
+        {
+            let variants = to_named(&[ParamType::U64, ParamType::Bool]);
+            let enum_variants = EnumVariants::new(variants)?;
+
+            assert!(enum_variants.heap_type_variant().is_none());
+        }
+
         Ok(())
     }
 }
