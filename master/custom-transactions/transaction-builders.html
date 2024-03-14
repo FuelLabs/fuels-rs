@@ -201,7 +201,7 @@
 <p><strong>Note</strong> It is recommended to add signers before calling <code>adjust_for_fee()</code> as the estimation will include the size of the witnesses.</p>
 </blockquote>
 <p>We can also define transaction policies. For example, we can limit the gas price by doing the following:</p>
-<pre><code class="language-rust ignore">        let tx_policies = TxPolicies::default().with_gas_price(1);
+<pre><code class="language-rust ignore">        let tx_policies = TxPolicies::default().with_tip(1);
         let tb = tb.with_tx_policies(tx_policies);
 </code></pre>
 <p>Our builder needs a signature from the hot wallet to unlock its coins before we call <code>build()</code> and submit the resulting transaction through the provider:</p>

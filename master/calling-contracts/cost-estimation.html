@@ -138,24 +138,23 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
-<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
-<pre><code class="language-rust ignore">TransactionCost {
-    min_gas_price: u64,
-    min_byte_price: u64,
-    gas_price: u64,
-    gas_used: u64,
-    metered_bytes_size: u64,
-    total_fee: f64, // where total_fee is the sum of the gas and byte fees
+<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>ContractCallHandler</code> and <code>ContractMultiCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
+<pre><code class="language-rust ignore">pub struct TransactionCost {
+    pub gas_price: u64,
+    pub gas_used: u64,
+    pub metered_bytes_size: u64,
+    pub total_fee: u64,
 }
 </code></pre>
 <p>Below are examples that show how to get the estimated transaction cost from single and multi call transactions.</p>
 <pre><code class="language-rust ignore">        let contract_instance = MyContract::new(contract_id, wallet);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = contract_instance
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
 </code></pre>
 <pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
@@ -167,12 +166,16 @@
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = multi_call_handler
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
 </code></pre>
 <p>The transaction cost estimation can be used to set the gas limit for an actual call, or to show the user the estimated cost.</p>
+<blockquote>
+<p><strong>Note</strong> The same estimation interface is available for scripts.</p>
+</blockquote>
 
                     </main>
 

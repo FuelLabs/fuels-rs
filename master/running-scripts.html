@@ -165,9 +165,7 @@
 </code></pre>
 <h2 id="running-scripts-with-transaction-policies"><a class="header" href="#running-scripts-with-transaction-policies">Running scripts with transaction policies</a></h2>
 <p>The method for passing transaction policies is the same as <a href="./calling-contracts/tx-policies.html">with contracts</a>. As a reminder, the workflow would look like this:</p>
-<pre><code class="language-rust ignore">    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(1_000_000);
+<pre><code class="language-rust ignore">    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .with_tx_policies(tx_policies)

@@ -142,7 +142,7 @@
 <!-- tx_policies:example:start -->
 <p>Transaction policies are defined as follows:</p>
 <pre><code class="language-rust ignore">pub struct TxPolicies {
-    gas_price: Option&lt;u64&gt;,
+    tip: Option&lt;u64&gt;,
     witness_limit: Option&lt;u64&gt;,
     maturity: Option&lt;u64&gt;,
     max_fee: Option&lt;u64&gt;,
@@ -151,20 +151,20 @@
 </code></pre>
 <p>Where:</p>
 <ol>
-<li><strong>Gas Price</strong> - Maximum gas price for transaction.</li>
+<li><strong>Tip</strong> - amount to pay the block producer to prioritize the transaction.</li>
 <li><strong>Witness Limit</strong> - The maximum amount of witness data allowed for the transaction.</li>
 <li><strong>Maturity</strong> - Block until which the transaction cannot be included.</li>
 <li><strong>Max Fee</strong> - The maximum fee payable by this transaction.</li>
 <li><strong>Script Gas Limit</strong> - The maximum amount of gas the transaction may consume for executing its script code.</li>
 </ol>
-<p>When the <strong>Script Gas Limit</strong> is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit. Similarly, if no <strong>Gas Price</strong> is defined, the Rust SDK defaults to the network's minimum gas price.</p>
+<p>When the <strong>Script Gas Limit</strong> is not set, the Rust SDK will estimate the consumed gas in the background and set it as the limit.</p>
 <p>If the <strong>Witness Limit</strong> is not set, the SDK will set it to the size of all witnesses and signatures defined in the transaction builder.</p>
 <p>You can configure these parameters by creating an instance of <code>TxPolicies</code> and passing it to a chain method called <code>with_tx_policies</code>:</p>
 <!-- tx_policies:example:end-->
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
-            .with_gas_price(1)
+            .with_tip(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
