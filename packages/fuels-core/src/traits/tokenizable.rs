@@ -383,8 +383,8 @@ where
             None => (0, Token::Unit),
             Some(value) => (1, value.into_token()),
         };
-        if let ParamType::Enum { variants, .. } = Self::param_type() {
-            let selector = (dis, tok, variants);
+        if let ParamType::Enum { enum_variants, .. } = Self::param_type() {
+            let selector = (dis, tok, enum_variants);
             Token::Enum(Box::new(selector))
         } else {
             panic!("should never happen as `Option::param_type()` returns valid Enum variants");
@@ -420,8 +420,8 @@ where
             Ok(value) => (0, value.into_token()),
             Err(value) => (1, value.into_token()),
         };
-        if let ParamType::Enum { variants, .. } = Self::param_type() {
-            let selector = (dis, tok, variants);
+        if let ParamType::Enum { enum_variants, .. } = Self::param_type() {
+            let selector = (dis, tok, enum_variants);
             Token::Enum(Box::new(selector))
         } else {
             panic!("should never happen as Result::param_type() returns valid Enum variants");

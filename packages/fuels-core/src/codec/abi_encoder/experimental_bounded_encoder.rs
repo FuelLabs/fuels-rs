@@ -16,7 +16,7 @@ pub(crate) struct BoundedEncoder {
 }
 
 impl BoundedEncoder {
-    pub(crate) fn new(config: EncoderConfig) -> Self {
+    pub(crate) fn new(config: EncoderConfig, _unused: bool) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);
         let token_tracker =

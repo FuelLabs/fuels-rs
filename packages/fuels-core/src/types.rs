@@ -8,7 +8,6 @@ pub use crate::types::{core::*, token::*, wrappers::*};
 
 pub mod bech32;
 mod core;
-pub mod enum_variants;
 pub mod errors;
 pub mod param_types;
 mod token;

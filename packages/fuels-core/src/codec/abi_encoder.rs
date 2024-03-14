@@ -49,7 +49,24 @@ impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        BoundedEncoder::new(self.config).encode(args)
+        BoundedEncoder::new(self.config, false).encode(args)
+    }
+}
+
+#[derive(Default, Clone, Debug)]
+pub struct ConfigurablesEncoder {
+    pub config: EncoderConfig,
+}
+
+impl ConfigurablesEncoder {
+    pub fn new(config: EncoderConfig) -> Self {
+        Self { config }
+    }
+
+    /// Encodes `Token`s in `args` following the ABI specs defined
+    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
+        BoundedEncoder::new(self.config, true).encode(args)
     }
 }
 
@@ -64,9 +81,11 @@ mod tests {
     use super::*;
     use crate::{
         constants::WORD_SIZE,
+        to_named,
         types::{
-            enum_variants::EnumVariants, errors::Error, param_types::ParamType, StaticStringToken,
-            U256,
+            errors::Error,
+            param_types::{EnumVariants, ParamType},
+            StaticStringToken, U256,
         },
     };
 
@@ -514,7 +533,7 @@ mod tests {
         //     x: u32,
         //     y: bool,
         // }
-        let types = vec![ParamType::U32, ParamType::Bool];
+        let types = to_named(&[ParamType::U32, ParamType::Bool]);
         let params = EnumVariants::new(types)?;
 
         // An `EnumSelector` indicating that we've chosen the first Enum variant,
@@ -548,7 +567,7 @@ mod tests {
         // Our enum has two variants: B256, and U64. So the enum will set aside
         // 256b of space or 4 WORDS because that is the space needed to fit the
         // largest variant(B256).
-        let types = vec![ParamType::B256, ParamType::U64];
+        let types = to_named(&[ParamType::B256, ParamType::U64]);
         let enum_variants = EnumVariants::new(types)?;
         let enum_selector = Box::new((1, Token::U64(42), enum_variants));
 
@@ -579,7 +598,7 @@ mod tests {
             v2: str[10]
         }
          */
-        let types = vec![ParamType::Bool, ParamType::StringArray(10)];
+        let types = to_named(&[ParamType::Bool, ParamType::StringArray(10)]);
         let deeper_enum_variants = EnumVariants::new(types)?;
         let deeper_enum_token =
             Token::StringArray(StaticStringToken::new("0123456789".into(), Some(10)));
@@ -591,14 +610,16 @@ mod tests {
         }
          */
 
-        let fields = vec![
+        let fields = to_named(&[
             ParamType::Enum {
-                variants: deeper_enum_variants.clone(),
+                name: "".to_string(),
+                enum_variants: deeper_enum_variants.clone(),
                 generics: vec![],
             },
             ParamType::Bool,
-        ];
+        ]);
         let struct_a_type = ParamType::Struct {
+            name: "".to_string(),
             fields,
             generics: vec![],
         };
@@ -616,7 +637,7 @@ mod tests {
         }
         */
 
-        let types = vec![struct_a_type, ParamType::Bool, ParamType::U64];
+        let types = to_named(&[struct_a_type, ParamType::Bool, ParamType::U64]);
         let top_level_enum_variants = EnumVariants::new(types)?;
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
@@ -795,7 +816,7 @@ mod tests {
     fn enums_with_only_unit_variants_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 1];
 
-        let types = vec![ParamType::Unit, ParamType::Unit];
+        let types = to_named(&[ParamType::Unit, ParamType::Unit]);
         let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
         let actual = ABIEncoder::default()
@@ -824,7 +845,7 @@ mod tests {
         let padding = vec![0; 32];
         let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
 
-        let types = vec![ParamType::B256, ParamType::Unit];
+        let types = to_named(&[ParamType::B256, ParamType::Unit]);
         let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
         let actual = ABIEncoder::default()
@@ -898,7 +919,7 @@ mod tests {
     fn a_vec_in_an_enum() -> Result<()> {
         // arrange
         let offset = 40;
-        let types = vec![ParamType::B256, ParamType::Vector(Box::new(ParamType::U64))];
+        let types = to_named(&[ParamType::B256, ParamType::Vector(Box::new(ParamType::U64))]);
         let variants = EnumVariants::new(types)?;
         let selector = (1, Token::Vector(vec![Token::U64(5)]), variants);
         let token = Token::Enum(Box::new(selector));
@@ -939,7 +960,7 @@ mod tests {
     fn an_enum_in_a_vec() -> Result<()> {
         // arrange
         let offset = 40;
-        let types = vec![ParamType::B256, ParamType::U8];
+        let types = to_named(&[ParamType::B256, ParamType::U8]);
         let variants = EnumVariants::new(types)?;
         let selector = (1, Token::U8(8), variants);
         let enum_token = Token::Enum(Box::new(selector));
@@ -1112,10 +1133,10 @@ mod tests {
         let token = Token::Enum(Box::new((
             1,
             Token::String("".to_string()),
-            EnumVariants::new(vec![
+            EnumVariants::new(to_named(&[
                 ParamType::StringArray(18446742977385549567),
                 ParamType::U8,
-            ])?,
+            ]))?,
         )));
         let capacity_overflow_error = ABIEncoder::default().encode(&[token]).unwrap_err();
 
@@ -1140,7 +1161,31 @@ mod tests {
             .map(|fun| fun(MAX_DEPTH + 1))
             .for_each(|token| {
                 assert_encoding_failed(config, token, &msg);
-            })
+            });
+    }
+
+    #[test]
+    fn encoder_for_configurables_optimizes_top_level_u8() {
+        // given
+        let encoder = ConfigurablesEncoder::default();
+
+        // when
+        let encoded = encoder.encode(&[Token::U8(255)]).unwrap().resolve(0);
+
+        // then
+        assert_eq!(encoded, vec![255]);
+    }
+
+    #[test]
+    fn encoder_for_configurables_optimizes_top_level_bool() {
+        // given
+        let encoder = ConfigurablesEncoder::default();
+
+        // when
+        let encoded = encoder.encode(&[Token::Bool(true)]).unwrap().resolve(0);
+
+        // then
+        assert_eq!(encoded, vec![1]);
     }
 
     fn assert_encoding_failed(config: EncoderConfig, token: Token, msg: &str) {
@@ -1176,7 +1221,7 @@ mod tests {
         let selector = (
             0u64,
             inner_enum,
-            EnumVariants::new(vec![ParamType::U64]).unwrap(),
+            EnumVariants::new(to_named(&[ParamType::U64])).unwrap(),
         );
 
         Token::Enum(Box::new(selector))

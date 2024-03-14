@@ -125,8 +125,8 @@ fn tokenizable_for_enum(
             fn into_token(self) -> #fuels_types_path::Token {
                 let (discriminant, token) = #discriminant_and_token;
 
-                let variants = match <Self as #fuels_core_path::traits::Parameterize>::param_type() {
-                    #fuels_types_path::param_types::ParamType::Enum{variants, ..} => variants,
+                let enum_variants = match <Self as #fuels_core_path::traits::Parameterize>::param_type() {
+                    #fuels_types_path::param_types::ParamType::Enum{enum_variants, ..} => enum_variants,
                     other => ::std::panic!(
                         "calling {}::param_type() must return a `ParamType::Enum` but instead it returned: `{:?}`",
                         #name_stringified,
@@ -134,7 +134,7 @@ fn tokenizable_for_enum(
                     )
                 };
 
-                #fuels_types_path::Token::Enum(#std_lib::boxed::Box::new((discriminant, token, variants)))
+                #fuels_types_path::Token::Enum(#std_lib::boxed::Box::new((discriminant, token, enum_variants)))
             }
 
             fn from_token(token: #fuels_types_path::Token) -> #fuels_types_path::errors::Result<Self>

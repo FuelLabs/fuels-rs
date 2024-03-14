@@ -198,6 +198,13 @@ impl Members {
         })
     }
 
+    pub(crate) fn names_as_strings(&self) -> impl Iterator<Item = TokenStream> + '_ {
+        self.names().map(|ident| {
+            let name = ident.to_string();
+            quote! {#name.to_string()}
+        })
+    }
+
     pub(crate) fn ignored_names(&self) -> impl Iterator<Item = &Ident> + '_ {
         self.members.iter().filter_map(|member| {
             if let Member::Ignored { name } = member {

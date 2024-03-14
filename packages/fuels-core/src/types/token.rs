@@ -2,15 +2,15 @@ use std::fmt;
 
 use crate::types::{
     core::U256,
-    enum_variants::EnumVariants,
     errors::{error, Error, Result},
+    param_types::EnumVariants,
 };
 
 pub type EnumSelector = (u64, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct StaticStringToken {
-    data: String,
+    pub(crate) data: String,
     expected_len: Option<usize>,
 }
 
