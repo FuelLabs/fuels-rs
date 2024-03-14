@@ -178,7 +178,7 @@ pub trait GasValidation: sealed::Sealed {
     fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
 }
 
-pub trait ValidablePredicates: sealed::Sealed {
+pub trait ValidatablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we can verify that these predicates validate, ie
     /// that they return 1
     fn validate_predicates(
