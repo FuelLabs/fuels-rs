@@ -1,13 +1,11 @@
 #![cfg(feature = "std")]
 
-use std::str::FromStr;
-
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::types::{
     TransactionResponse as ClientTransactionResponse, TransactionStatus as ClientTransactionStatus,
 };
 use fuel_tx::Transaction;
-use fuel_types::Bytes32;
+use fuel_types::BlockHeight;
 
 use crate::types::{
     transaction::{CreateTransaction, ScriptTransaction, TransactionType},
@@ -18,20 +16,18 @@ use crate::types::{
 pub struct TransactionResponse {
     pub transaction: TransactionType,
     pub status: TxStatus,
-    pub block_id: Option<Bytes32>,
+    pub block_height: Option<BlockHeight>,
     pub time: Option<DateTime<Utc>>,
 }
 
 impl From<ClientTransactionResponse> for TransactionResponse {
     fn from(client_response: ClientTransactionResponse) -> Self {
-        let block_id = match &client_response.status {
+        let block_height = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }
             | ClientTransactionStatus::SqueezedOut { .. } => None,
-            ClientTransactionStatus::Success { block_id, .. }
-            | ClientTransactionStatus::Failure { block_id, .. } => Some(block_id),
+            ClientTransactionStatus::Success { block_height, .. }
+            | ClientTransactionStatus::Failure { block_height, .. } => Some(*block_height),
         };
-        let block_id = block_id
-            .map(|id| Bytes32::from_str(id).expect("client returned block id with invalid format"));
 
         let time = match &client_response.status {
             ClientTransactionStatus::Submitted { .. }
@@ -51,7 +47,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
         Self {
             transaction,
             status: client_response.status.into(),
-            block_id,
+            block_height,
             time,
         }
     }

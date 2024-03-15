@@ -476,7 +476,7 @@ async fn test_gas_errors() -> Result<()> {
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
-        .estimate_transaction_cost(None)
+        .estimate_transaction_cost(None, None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);
@@ -493,7 +493,7 @@ async fn test_gas_errors() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_gas_price(100_000_000_000))
+        .with_tx_policies(TxPolicies::default().with_tip(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
@@ -604,9 +604,7 @@ async fn testnet_hello_world() -> Result<()> {
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -641,9 +639,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
@@ -651,17 +647,15 @@ async fn test_parse_block_time() -> Result<()> {
         .await?;
 
     let tx_response = wallet
-        .try_provider()
-        .unwrap()
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .try_provider()
-        .unwrap()
-        .block(&tx_response.block_id.unwrap())
+        .try_provider()?
+        .block_by_height(tx_response.block_height.unwrap())
         .await?
         .unwrap();
     assert!(block.header.time.is_some());

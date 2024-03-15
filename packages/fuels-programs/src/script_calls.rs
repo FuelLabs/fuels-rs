@@ -235,7 +235,7 @@ where
         self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
 
         let tx_status = if simulate {
-            self.provider.checked_dry_run(tx).await?
+            self.provider.dry_run(tx).await?
         } else {
             self.provider.send_transaction_and_await_commit(tx).await?
         };
@@ -270,12 +270,13 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let tx = self.build_tx().await?;
 
         let transaction_cost = self
             .provider
-            .estimate_transaction_cost(tx, tolerance)
+            .estimate_transaction_cost(tx, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)

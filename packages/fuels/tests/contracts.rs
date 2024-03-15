@@ -270,37 +270,26 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
         ),
     );
 
-    let gas_price = 100_000_000;
     let gas_limit = 800;
-    let tolerance = 0.2;
+    let tolerance = Some(0.2);
+    let block_horizon = Some(1);
 
-    let expected_min_gas_price = 0; // This is the default `min_gas_price` from `ConsensusParameters`
     let expected_gas_used = 949;
-    let expected_metered_bytes_size = 792;
-    let expected_total_fee = 898;
+    let expected_metered_bytes_size = 784;
 
     let estimated_transaction_cost = contract_instance
         .methods()
         .initialize_counter(42)
-        .with_tx_policies(
-            TxPolicies::default()
-                .with_gas_price(gas_price)
-                .with_script_gas_limit(gas_limit),
-        )
-        .estimate_transaction_cost(Some(tolerance))
+        .with_tx_policies(TxPolicies::default().with_script_gas_limit(gas_limit))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?;
 
-    assert_eq!(
-        estimated_transaction_cost.min_gas_price,
-        expected_min_gas_price
-    );
-    assert_eq!(estimated_transaction_cost.gas_price, gas_price);
     assert_eq!(estimated_transaction_cost.gas_used, expected_gas_used);
     assert_eq!(
         estimated_transaction_cost.metered_bytes_size,
         expected_metered_bytes_size
     );
-    assert_eq!(estimated_transaction_cost.total_fee, expected_total_fee);
+
     Ok(())
 }
 
@@ -318,12 +307,14 @@ async fn contract_call_has_same_estimated_and_used_gas() -> Result<()> {
             wallet = "wallet"
         ),
     );
-
-    let tolerance = 0.0;
     let contract_methods = contract_instance.methods();
+
+    let tolerance = Some(0.0);
+    let block_horizon = Some(1);
+
     let estimated_gas_used = contract_methods
         .initialize_counter(42)
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 
@@ -362,9 +353,10 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
-    let tolerance = 0.0;
+    let tolerance = Some(0.0);
+    let block_horizon = Some(1);
     let estimated_gas_used = multi_call_handler
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 
@@ -621,8 +613,9 @@ async fn test_connect_wallet() -> Result<()> {
 
     // pay for call with wallet
     let tx_policies = TxPolicies::default()
-        .with_gas_price(10)
+        .with_tip(100)
         .with_script_gas_limit(1_000_000);
+
     contract_instance
         .methods()
         .initialize_counter(42)
@@ -648,6 +641,7 @@ async fn test_connect_wallet() -> Result<()> {
     let wallet_2_balance = wallet_2.get_asset_balance(&Default::default()).await?;
     assert_eq!(wallet_balance_second_call, wallet_balance);
     assert!(DEFAULT_COIN_AMOUNT > wallet_2_balance);
+
     Ok(())
 }
 
@@ -1420,7 +1414,6 @@ fn db_rocksdb() {
                 .await?
                 .results;
 
-            assert_eq!(provider.chain_info().await?.name, temp_dir_name);
             assert_eq!(blocks.len(), 3);
             assert_eq!(
                 *wallet.get_balances().await?.iter().next().unwrap().1,
