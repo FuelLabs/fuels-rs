@@ -11,6 +11,7 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 // ANCHOR_END: default_call_parameters
 
 pub const DEFAULT_GAS_ESTIMATION_TOLERANCE: f64 = 0.2;
+pub const DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON: u32 = 1;
 
 // The size of a signature inside a transaction `Witness`
 pub const WITNESS_STATIC_SIZE: usize = 8;

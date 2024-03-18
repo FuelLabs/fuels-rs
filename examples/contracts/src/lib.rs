@@ -98,11 +98,12 @@ mod tests {
         // ANCHOR: contract_call_cost_estimation
         let contract_instance = MyContract::new(contract_id, wallet);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = contract_instance
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
@@ -144,7 +145,7 @@ mod tests {
 
         // Optional: Configure deployment parameters
         let tx_policies = TxPolicies::default()
-            .with_gas_price(0)
+            .with_tip(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
@@ -281,7 +282,7 @@ mod tests {
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
-            .with_gas_price(1)
+            .with_tip(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
@@ -594,9 +595,10 @@ mod tests {
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = multi_call_handler
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 

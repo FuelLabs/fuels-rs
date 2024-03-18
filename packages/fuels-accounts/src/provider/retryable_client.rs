@@ -3,13 +3,15 @@ use std::{future::Future, io};
 use fuel_core_client::client::{
     pagination::{PaginatedResult, PaginationRequest},
     types::{
+        gas_price::{EstimateGasPrice, LatestGasPrice},
         primitives::{BlockId, TransactionId},
         Balance, Block, ChainInfo, Coin, CoinType, ContractBalance, Message, MessageProof,
         NodeInfo, TransactionResponse, TransactionStatus,
     },
     FuelClient,
 };
-use fuel_tx::{Receipt, Transaction, TxId, UtxoId};
+use fuel_core_types::services::executor::TransactionExecutionStatus;
+use fuel_tx::{Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
 
@@ -101,15 +103,28 @@ impl RetryableClient {
         self.our_retry(|| self.client.node_info()).await
     }
 
-    pub async fn dry_run(&self, tx: &Transaction) -> RequestResult<Vec<Receipt>> {
+    pub async fn latest_gas_price(&self) -> RequestResult<LatestGasPrice> {
+        self.our_retry(|| self.client.latest_gas_price()).await
+    }
+
+    pub async fn estimate_gas_price(&self, block_horizon: u32) -> RequestResult<EstimateGasPrice> {
+        self.our_retry(|| self.client.estimate_gas_price(block_horizon))
+            .await
+            .map(Into::into)
+    }
+
+    pub async fn dry_run(
+        &self,
+        tx: &[Transaction],
+    ) -> RequestResult<Vec<TransactionExecutionStatus>> {
         self.our_retry(|| self.client.dry_run(tx)).await
     }
 
     pub async fn dry_run_opt(
         &self,
-        tx: &Transaction,
+        tx: &[Transaction],
         utxo_validation: Option<bool>,
-    ) -> RequestResult<Vec<Receipt>> {
+    ) -> RequestResult<Vec<TransactionExecutionStatus>> {
         self.our_retry(|| self.client.dry_run_opt(tx, utxo_validation))
             .await
     }
@@ -200,6 +215,10 @@ impl RetryableClient {
 
     pub async fn block(&self, id: &BlockId) -> RequestResult<Option<Block>> {
         self.our_retry(|| self.client.block(id)).await
+    }
+
+    pub async fn block_by_height(&self, height: BlockHeight) -> RequestResult<Option<Block>> {
+        self.our_retry(|| self.client.block_by_height(height)).await
     }
 
     pub async fn blocks(

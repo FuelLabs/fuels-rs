@@ -215,7 +215,7 @@ async fn pay_with_predicate() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
+        .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
@@ -270,7 +270,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
+        .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
     assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
@@ -506,9 +506,10 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     .deploy(&predicate, TxPolicies::default())
     .await?;
     println!("Contract deployed @ {contract_id}");
+
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let tx_policies = TxPolicies::default().with_gas_price(1);
+    let tx_policies = TxPolicies::default().with_tip(100);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
@@ -525,7 +526,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
 
         assert_eq!(
             predicate.get_asset_balance(&AssetId::default()).await?,
-            1899
+            1800
         );
     }
     {
@@ -686,7 +687,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
-        TxPolicies::default().with_gas_price(1),
+        TxPolicies::default().with_tip(1),
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
     let tx = tb.build(&provider).await?;
@@ -739,7 +740,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxPolicies::default().with_gas_price(1),
+        TxPolicies::default().with_tip(1),
     );
 
     tb.add_signer(wallet.clone())?;

@@ -10,17 +10,23 @@ use std::sync::Arc;
 use chrono::{DateTime, Utc};
 use fuel_core_client::client::{
     pagination::{PageDirection, PaginatedResult, PaginationRequest},
-    types::{balance::Balance, contract::ContractBalance},
+    types::{
+        balance::Balance,
+        contract::ContractBalance,
+        gas_price::{EstimateGasPrice, LatestGasPrice},
+    },
 };
+use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
 use fuel_tx::{
-    AssetId, ConsensusParameters, Receipt, ScriptExecutionResult, Transaction as FuelTransaction,
-    TxId, UtxoId,
+    AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
-use fuel_types::{Address, Bytes32, ChainId, Nonce};
+use fuel_types::{Address, BlockHeight, Bytes32, ChainId, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
-    constants::{BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_TOLERANCE},
+    constants::{
+        BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE,
+    },
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -31,7 +37,7 @@ use fuels_core::{
         message::Message,
         message_proof::MessageProof,
         node_info::NodeInfo,
-        transaction::Transaction,
+        transaction::{Transaction, Transactions},
         transaction_builders::DryRunner,
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
@@ -48,13 +54,14 @@ use crate::coin_cache::CoinsCache;
 use crate::provider::retryable_client::RetryableClient;
 
 #[derive(Debug)]
+// ANCHOR: transaction_cost
 pub struct TransactionCost {
-    pub min_gas_price: u64,
     pub gas_price: u64,
     pub gas_used: u64,
     pub metered_bytes_size: u64,
     pub total_fee: u64,
 }
+// ANCHOR_END: transaction_cost
 
 pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
@@ -206,6 +213,7 @@ impl Provider {
         }
 
         self.validate_transaction(tx.clone()).await?;
+
         Ok(())
     }
 
@@ -220,15 +228,11 @@ impl Provider {
 
     async fn validate_transaction<T: Transaction>(&self, tx: T) -> Result<()> {
         let tolerance = 0.0;
-        let TransactionCost {
-            gas_used,
-            min_gas_price,
-            ..
-        } = self
-            .estimate_transaction_cost(tx.clone(), Some(tolerance))
+        let TransactionCost { gas_used, .. } = self
+            .estimate_transaction_cost(tx.clone(), Some(tolerance), None)
             .await?;
 
-        tx.validate_gas(min_gas_price, gas_used)?;
+        tx.validate_gas(gas_used)?;
 
         Ok(())
     }
@@ -299,39 +303,84 @@ impl Provider {
         Ok(self.client.node_info().await?.into())
     }
 
-    pub async fn checked_dry_run<T: Transaction>(&self, tx: T) -> Result<TxStatus> {
-        let receipts = self.dry_run(tx).await?;
-        Ok(Self::tx_status_from_receipts(receipts))
+    pub async fn latest_gas_price(&self) -> Result<LatestGasPrice> {
+        Ok(self.client.latest_gas_price().await?)
     }
 
-    fn tx_status_from_receipts(receipts: Vec<Receipt>) -> TxStatus {
-        let revert_reason = receipts.iter().find_map(|receipt| match receipt {
-            Receipt::ScriptResult { result, .. } if *result != ScriptExecutionResult::Success => {
-                Some(format!("{result:?}"))
-            }
-            _ => None,
-        });
+    pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
+        Ok(self.client.estimate_gas_price(block_horizon).await?)
+    }
 
-        match revert_reason {
-            Some(reason) => TxStatus::Revert {
-                receipts,
-                reason,
-                revert_id: 0,
+    pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
+        let [(_, tx_status)] = self
+            .client
+            .dry_run(Transactions::new().insert(tx).as_slice())
+            .await?
+            .into_iter()
+            .map(Self::tx_status_from_execution_status)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("should have only one element");
+
+        Ok(tx_status)
+    }
+
+    pub async fn dry_run_multiple(
+        &self,
+        transactions: Transactions,
+    ) -> Result<Vec<(TxId, TxStatus)>> {
+        Ok(self
+            .client
+            .dry_run(transactions.as_slice())
+            .await?
+            .into_iter()
+            .map(Self::tx_status_from_execution_status)
+            .collect())
+    }
+
+    fn tx_status_from_execution_status(
+        tx_execution_status: TransactionExecutionStatus,
+    ) -> (TxId, TxStatus) {
+        (
+            tx_execution_status.id,
+            match tx_execution_status.result {
+                TransactionExecutionResult::Success { receipts, .. } => {
+                    TxStatus::Success { receipts }
+                }
+                TransactionExecutionResult::Failed { receipts, result } => TxStatus::Revert {
+                    reason: TransactionExecutionResult::reason(&receipts, &result),
+                    receipts,
+                    revert_id: 0,
+                },
             },
-            None => TxStatus::Success { receipts },
-        }
+        )
     }
 
-    pub async fn dry_run<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run(&tx.into()).await?;
+    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
+        let [(_, tx_status)] = self
+            .client
+            .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
+            .await?
+            .into_iter()
+            .map(Self::tx_status_from_execution_status)
+            .collect::<Vec<_>>()
+            .try_into()
+            .expect("should have only one element");
 
-        Ok(receipts)
+        Ok(tx_status)
     }
 
-    pub async fn dry_run_no_validation<T: Transaction>(&self, tx: T) -> Result<Vec<Receipt>> {
-        let receipts = self.client.dry_run_opt(&tx.into(), Some(false)).await?;
-
-        Ok(receipts)
+    pub async fn dry_run_no_validation_multiple(
+        &self,
+        transactions: Transactions,
+    ) -> Result<Vec<(TxId, TxStatus)>> {
+        Ok(self
+            .client
+            .dry_run_opt(transactions.as_slice(), Some(false))
+            .await?
+            .into_iter()
+            .map(Self::tx_status_from_execution_status)
+            .collect())
     }
 
     /// Gets all unspent coins owned by address `from`, with asset ID `asset_id`.
@@ -579,9 +628,12 @@ impl Provider {
             .into())
     }
 
-    /// Get block by id.
     pub async fn block(&self, block_id: &Bytes32) -> Result<Option<Block>> {
         Ok(self.client.block(block_id).await?.map(Into::into))
+    }
+
+    pub async fn block_by_height(&self, height: BlockHeight) -> Result<Option<Block>> {
+        Ok(self.client.block_by_height(height).await?.map(Into::into))
     }
 
     // - Get block(s)
@@ -603,10 +655,12 @@ impl Provider {
         &self,
         tx: T,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
-        let NodeInfo { min_gas_price, .. } = self.node_info().await?;
-        let gas_price = std::cmp::max(tx.gas_price(), min_gas_price);
+        let block_horizon = block_horizon.unwrap_or(DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON);
         let tolerance = tolerance.unwrap_or(DEFAULT_GAS_ESTIMATION_TOLERANCE);
+
+        let EstimateGasPrice { gas_price, .. } = self.estimate_gas_price(block_horizon).await?;
 
         let gas_used = self
             .get_gas_used_with_tolerance(tx.clone(), tolerance)
@@ -614,11 +668,10 @@ impl Provider {
 
         let transaction_fee = tx
             .clone()
-            .fee_checked_from_tx(&self.consensus_parameters)
+            .fee_checked_from_tx(&self.consensus_parameters, gas_price)
             .expect("Error calculating TransactionFee");
 
         Ok(TransactionCost {
-            min_gas_price,
             gas_price,
             gas_used,
             metered_bytes_size: tx.metered_bytes_size() as u64,
@@ -632,7 +685,8 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let gas_used = self.get_gas_used(&self.dry_run_no_validation(tx).await?);
+        let receipts = self.dry_run_no_validation(tx).await?.take_receipts();
+        let gas_used = self.get_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
@@ -697,14 +751,20 @@ impl Provider {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl DryRunner for Provider {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
-        let receipts = self.client.dry_run_opt(&tx, Some(false)).await?;
-        let gas_used = self.get_gas_used(&receipts);
+        let [tx_execution_status] = self
+            .client
+            .dry_run_opt(&vec![tx], Some(false))
+            .await?
+            .try_into()
+            .expect("should have only one element");
+
+        let gas_used = self.get_gas_used(tx_execution_status.result.receipts());
 
         Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
     }
 
-    async fn min_gas_price(&self) -> Result<u64> {
-        Ok(self.node_info().await.map(|ni| ni.min_gas_price)?)
+    async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64> {
+        Ok(self.estimate_gas_price(block_horizon).await?.gas_price)
     }
 
     fn consensus_parameters(&self) -> &ConsensusParameters {

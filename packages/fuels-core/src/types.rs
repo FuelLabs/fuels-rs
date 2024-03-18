@@ -1,7 +1,7 @@
 use fuel_types::bytes::padded_len;
 pub use fuel_types::{
-    Address, AssetId, Bytes32, Bytes4, Bytes64, Bytes8, ChainId, ContractId, MessageId, Nonce,
-    Salt, Word,
+    Address, AssetId, BlockHeight, Bytes32, Bytes4, Bytes64, Bytes8, ChainId, ContractId,
+    MessageId, Nonce, Salt, Word,
 };
 
 pub use crate::types::{core::*, token::*, wrappers::*};
