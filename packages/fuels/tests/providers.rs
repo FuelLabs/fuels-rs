@@ -13,6 +13,7 @@ use fuels::{
         errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        tx_status::TxStatus,
         Bits256,
     },
 };
