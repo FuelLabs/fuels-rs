@@ -1001,7 +1001,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
-    let tx = tb.build(&provider).await?;
+    let tx = tb.build(provider).await?;
     let tx_id = tx.id(provider.chain_id());
 
     provider.send_transaction(tx).await?;
