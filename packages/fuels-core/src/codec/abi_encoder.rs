@@ -78,13 +78,15 @@ impl ConfigurablesEncoder {
 mod tests {
     use std::slice;
 
+    #[cfg(experimental)]
     use itertools::chain;
     #[cfg(experimental)]
     use sha2::{Digest, Sha256};
 
     use super::*;
+    #[cfg(experimental)]
+    use crate::constants::WORD_SIZE;
     use crate::{
-        constants::WORD_SIZE,
         to_named,
         types::{
             errors::Error,
@@ -96,7 +98,9 @@ mod tests {
     #[cfg(experimental)]
     use crate::codec::first_four_bytes_of_sha256_hash;
 
+    #[cfg(experimental)]
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
+    #[cfg(experimental)]
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
@@ -566,6 +570,7 @@ mod tests {
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
+    #[cfg(experimental)]
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() -> Result<()> {
         // Our enum has two variants: B256, and U64. So the enum will set aside
@@ -646,20 +651,28 @@ mod tests {
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
 
-        let encoded = ABIEncoder::default()
+        let result = ABIEncoder::default()
             .encode(slice::from_ref(&top_level_enum_token))?
             .resolve(0);
 
-        let correct_encoding: Vec<u8> = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // TopLevelEnum::v1 discriminant
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, // DeeperEnum::v2 discriminant
-            b'0', b'1', b'2', b'3', b'4', b'5', b'6', b'7', b'8', b'9', // str[10]
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // DeeperEnum padding
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2c, 0x44, // StructA.some_number
-        ]
-        .into();
+        #[cfg(experimental)]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
+            0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
+            48, 49, 50, 51, 52, 53, 54, 55, 56, 57, // str[10]
+            0, 0, 0, 0, 0, 0, // DeeperEnum padding
+            0, 0, 0, 0, 0, 0, 44, 68, // StructA.some_number
+        ];
+        #[cfg(not(experimental))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
+            0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
+            48, 49, 50, 51, 52, 53, 54, 55, 56, 57, // str[10]
+            0, 0, 44, 68, // StructA.some_number
+        ];
 
-        assert_eq!(hex::encode(correct_encoding), hex::encode(encoded));
+        assert_eq!(result, expected);
+
         Ok(())
     }
 
@@ -828,9 +841,11 @@ mod tests {
             .resolve(0);
 
         assert_eq!(actual, expected);
+
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
@@ -843,6 +858,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn enums_with_units_are_correctly_padded() -> Result<()> {
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
@@ -860,6 +876,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn vector_has_ptr_cap_len_and_then_data() -> Result<()> {
         // arrange
@@ -884,6 +901,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn data_from_two_vectors_aggregated_at_the_end() -> Result<()> {
         // arrange
@@ -920,7 +938,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vec_in_an_enum() -> Result<()> {
+    fn vec_in_enum() -> Result<()> {
         // arrange
         let offset = 40;
         let types = to_named(&[ParamType::B256, ParamType::Vector(Box::new(ParamType::U64))]);
@@ -934,26 +952,34 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
+        #[cfg(experimental)]
+        let expected = {
+            let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
 
-        const PADDING: usize = std::mem::size_of::<[u8; 32]>() - VEC_METADATA_SIZE;
+            const PADDING: usize = std::mem::size_of::<[u8; 32]>() - VEC_METADATA_SIZE;
 
-        let vec1_ptr = ((DISCRIMINANT_SIZE + PADDING + VEC_METADATA_SIZE + offset) as u64)
-            .to_be_bytes()
-            .to_vec();
-        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
+            let vec1_ptr = ((DISCRIMINANT_SIZE + PADDING + VEC_METADATA_SIZE + offset) as u64)
+                .to_be_bytes()
+                .to_vec();
+            let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
 
-        let expected = chain!(
-            discriminant,
-            vec![0; PADDING],
-            vec1_ptr,
-            vec1_cap,
-            vec1_len,
-            vec1_data
-        )
-        .collect::<Vec<u8>>();
+            chain!(
+                discriminant,
+                vec![0; PADDING],
+                vec1_ptr,
+                vec1_cap,
+                vec1_len,
+                vec1_data
+            )
+            .collect::<Vec<u8>>()
+        };
+        #[cfg(not(experimental))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 1, // enum dicsriminant
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
+        ];
 
         assert_eq!(result, expected);
 
@@ -961,7 +987,7 @@ mod tests {
     }
 
     #[test]
-    fn an_enum_in_a_vec() -> Result<()> {
+    fn enum_in_vec() -> Result<()> {
         // arrange
         let offset = 40;
         let types = to_named(&[ParamType::B256, ParamType::U8]);
@@ -977,15 +1003,24 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
+        #[cfg(experimental)]
+        let expected = {
+            const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
 
-        let vec1_ptr = ((VEC_METADATA_SIZE + offset) as u64).to_be_bytes().to_vec();
-        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let discriminant = 1u64.to_be_bytes();
-        let vec1_data = chain!(discriminant, [0; PADDING], 8u64.to_be_bytes()).collect::<Vec<_>>();
+            let vec1_ptr = ((VEC_METADATA_SIZE + offset) as u64).to_be_bytes().to_vec();
+            let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+            let discriminant = 1u64.to_be_bytes();
+            let vec1_data =
+                chain!(discriminant, [0; PADDING], 8u64.to_be_bytes()).collect::<Vec<_>>();
 
-        let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
+            chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
+        };
+        #[cfg(not(experimental))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 1, // vec len
+            0, 0, 0, 0, 0, 0, 0, 1, 8, // enum discriminant and u8 value
+        ];
 
         assert_eq!(result, expected);
 
@@ -993,7 +1028,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vec_in_a_struct() -> Result<()> {
+    fn vec_in_struct() -> Result<()> {
         // arrange
         let offset = 40;
         let token = Token::Struct(vec![Token::Vector(vec![Token::U64(5)]), Token::U8(9)]);
@@ -1004,15 +1039,22 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
-            .to_be_bytes()
-            .to_vec();
-        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
+        #[cfg(experimental)]
+        let expected = {
+            let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
+                .to_be_bytes()
+                .to_vec();
+            let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
 
-        let expected =
-            chain!(vec1_ptr, vec1_cap, vec1_len, [9], [0; 7], vec1_data).collect::<Vec<u8>>();
+            chain!(vec1_ptr, vec1_cap, vec1_len, [9], [0; 7], vec1_data).collect::<Vec<u8>>()
+        };
+        #[cfg(not(experimental))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
+            9, // u8
+        ];
 
         assert_eq!(result, expected);
 
@@ -1020,7 +1062,7 @@ mod tests {
     }
 
     #[test]
-    fn a_vec_in_a_vec() -> Result<()> {
+    fn vec_in_vec() -> Result<()> {
         // arrange
         let offset = 40;
         let token = Token::Vector(vec![Token::Vector(vec![Token::U8(5), Token::U8(6)])]);
@@ -1031,21 +1073,29 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
-        let vec1_ptr = vec1_data_offset.to_be_bytes().to_vec();
-        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
+        #[cfg(experimental)]
+        let expected = {
+            let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
+            let vec1_ptr = vec1_data_offset.to_be_bytes().to_vec();
+            let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
+            let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
 
-        let vec2_ptr = (vec1_data_offset + VEC_METADATA_SIZE as u64)
-            .to_be_bytes()
-            .to_vec();
-        let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 2];
-        let vec2_len = [0, 0, 0, 0, 0, 0, 0, 2];
-        let vec2_data = [5, 6];
+            let vec2_ptr = (vec1_data_offset + VEC_METADATA_SIZE as u64)
+                .to_be_bytes()
+                .to_vec();
+            let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 2];
+            let vec2_len = [0, 0, 0, 0, 0, 0, 0, 2];
+            let vec2_data = [5, 6];
 
-        let vec1_data = chain!(vec2_ptr, vec2_cap, vec2_len, vec2_data).collect::<Vec<_>>();
+            let vec1_data = chain!(vec2_ptr, vec2_cap, vec2_len, vec2_data).collect::<Vec<_>>();
 
-        let expected = chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>();
+            chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
+        };
+        #[cfg(not(experimental))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 1, // vec1 len
+            0, 0, 0, 0, 0, 0, 0, 2, 5, 6, // vec2 [len, u8, u8]
+        ];
 
         assert_eq!(result, expected);
 
@@ -1059,17 +1109,22 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_bytes = ABIEncoder::default().encode(&[token])?.resolve(offset);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
-        let cap = [0, 0, 0, 0, 0, 0, 0, 8];
-        let len = [0, 0, 0, 0, 0, 0, 0, 3];
-        let data = [1, 2, 3, 0, 0, 0, 0, 0];
+        #[cfg(experimental)]
+        let expected = {
+            let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
+            let cap = [0, 0, 0, 0, 0, 0, 0, 8];
+            let len = [0, 0, 0, 0, 0, 0, 0, 3];
+            let data = [1, 2, 3, 0, 0, 0, 0, 0];
 
-        let expected_encoded_bytes = [ptr, cap, len, data].concat();
+            [ptr, cap, len, data].concat()
+        };
+        #[cfg(not(experimental))]
+        let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // bytes[len, u8, u8, u8]
 
-        assert_eq!(expected_encoded_bytes, encoded_bytes);
+        assert_eq!(result, expected);
 
         Ok(())
     }
@@ -1081,17 +1136,22 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_bytes = ABIEncoder::default().encode(&[token])?.resolve(offset);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
-        let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
-        let data = [1, 2, 3].to_vec();
-        let padding = [0, 0, 0, 0, 0].to_vec();
+        #[cfg(experimental)]
+        let expected = {
+            let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
+            let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
+            let data = [1, 2, 3].to_vec();
+            let padding = [0, 0, 0, 0, 0].to_vec();
 
-        let expected_encoded_bytes = [ptr, len, data, padding].concat();
+            [ptr, len, data, padding].concat()
+        };
+        #[cfg(not(experimental))]
+        let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // raw_slice[len, u8, u8, u8]
 
-        assert_eq!(expected_encoded_bytes, encoded_bytes);
+        assert_eq!(result, expected);
 
         Ok(())
     }
@@ -1104,34 +1164,49 @@ mod tests {
         let offset = 40;
 
         // act
-        let encoded_std_string = ABIEncoder::default().encode(&[token])?.resolve(offset);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
-        let cap = [0, 0, 0, 0, 0, 0, 0, 8];
-        let len = [0, 0, 0, 0, 0, 0, 0, 5];
-        let data = [0x54, 0x68, 0x69, 0x73, 0x20, 0, 0, 0];
+        #[cfg(experimental)]
+        let expected = {
+            let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
+            let cap = [0, 0, 0, 0, 0, 0, 0, 8];
+            let len = [0, 0, 0, 0, 0, 0, 0, 5];
+            let data = [0x54, 0x68, 0x69, 0x73, 0x20, 0, 0, 0];
 
-        let expected_encoded_std_string = [ptr, cap, len, data].concat();
+            [ptr, cap, len, data].concat()
+        };
+        #[cfg(not(experimental))]
+        let expected = [0, 0, 0, 0, 0, 0, 0, 5, 84, 104, 105, 115, 32]; // string[len, data]
 
-        assert_eq!(expected_encoded_std_string, encoded_std_string);
+        assert_eq!(result, expected);
 
         Ok(())
     }
 
     #[test]
     fn encoding_large_unsigned_integers() -> Result<()> {
-        let token = Token::U128(u128::MAX);
-        let expected_encoding = [255; 16];
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
-        assert_eq!(result, expected_encoding);
-        let token = Token::U256(U256::MAX);
-        let expected_encoding = [255; 32];
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
-        assert_eq!(result, expected_encoding);
+        {
+            let token = Token::U128(u128::MAX);
+            let expected_encoding = [255; 16];
+
+            let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+            assert_eq!(result, expected_encoding);
+        }
+        {
+            let token = Token::U256(U256::MAX);
+            let expected_encoding = [255; 32];
+
+            let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+            assert_eq!(result, expected_encoding);
+        }
+
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn capacity_overflow_is_caught() -> Result<()> {
         let token = Token::Enum(Box::new((

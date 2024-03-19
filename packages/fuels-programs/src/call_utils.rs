@@ -664,17 +664,16 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
+    #[cfg(experimental)]
     use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
-    use fuels_core::{
-        codec::ABIEncoder,
-        types::{
-            bech32::Bech32ContractId,
-            coin::{Coin, CoinStatus},
-            coin_type::CoinType,
-            Token,
-        },
+    use fuels_core::types::{
+        bech32::Bech32ContractId,
+        coin::{Coin, CoinStatus},
+        coin_type::CoinType,
     };
+    #[cfg(experimental)]
+    use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
     use super::*;
@@ -710,6 +709,7 @@ mod test {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
+    #[cfg(experimental)]
     #[tokio::test]
     async fn test_script_data() {
         // Arrange
@@ -1037,8 +1037,10 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
+        #[cfg(experimental)]
         // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
         const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
+        #[cfg(experimental)]
         // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
         const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
@@ -1060,6 +1062,7 @@ mod test {
             );
         }
 
+        #[cfg(experimental)]
         #[test]
         fn test_with_heap_type() {
             let output_params = vec![
@@ -1079,6 +1082,7 @@ mod test {
             }
         }
 
+        #[cfg(experimental)]
         #[test]
         fn test_with_gas_offset_and_heap_type() {
             let mut call = ContractCall::new_with_random_id();
@@ -1095,6 +1099,7 @@ mod test {
             );
         }
 
+        #[cfg(experimental)]
         #[test]
         fn test_with_enum_with_heap_and_non_heap_variant() {
             let variant_sets = vec![

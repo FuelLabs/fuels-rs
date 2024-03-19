@@ -326,7 +326,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     #[cfg(experimental)]
     let gas_used_by_script = 360;
     #[cfg(not(experimental))]
-    let gas_used_by_script = 864;
+    let gas_used_by_script = 876;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()

@@ -3,17 +3,19 @@ mod tests {
     use std::collections::HashMap;
 
     use fuel_abi_types::abi::program::ProgramABI;
+    #[cfg(experimental)]
+    use fuels::core::codec::{calldata, fn_selector};
     use fuels::{
-        core::{
-            codec::{calldata, fn_selector, resolve_fn_selector, ABIDecoder},
-            traits::Parameterize,
-        },
+        core::codec::ABIDecoder,
         macros::abigen,
         types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
+    #[cfg(experimental)]
     #[test]
     fn get_a_fn_selector() {
+        use fuels::core::{codec::resolve_fn_selector, traits::Parameterize};
+
         // ANCHOR: example_fn_selector
         // fn some_fn_name(arg1: Vec<str[3]>, arg2: u8)
         let fn_name = "some_fn_name";
@@ -25,8 +27,11 @@ mod tests {
         // ANCHOR_END: example_fn_selector
     }
 
+    #[cfg(experimental)]
     #[test]
     fn a_fn_selector_from_json_abi() -> Result<()> {
+        use fuels::core::codec::resolve_fn_selector;
+
         let json_abi_file =
             "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
@@ -60,6 +65,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[test]
     fn test_macros() -> Result<()> {
         let function_selector = fn_selector!(initialize_counter(u64));
@@ -161,9 +167,14 @@ mod tests {
 
             let expected_u8 = 1;
 
+            #[cfg(experimental)]
+            let data = [0, 0, 0, 0, 0, 0, 0, 1];
+            #[cfg(not(experimental))]
+            let data = [1];
+
             assert_eq!(
                 format!("{expected_u8}"),
-                decoder.decode_as_debug_str(&param_type, &[0, 0, 0, 0, 0, 0, 0, 1])?
+                decoder.decode_as_debug_str(&param_type, &data)?
             );
         }
 

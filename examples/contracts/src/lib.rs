@@ -107,7 +107,12 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 791);
+        #[cfg(experimental)]
+        let expected_gas = 791;
+        #[cfg(not(experimental))]
+        let expected_gas = 2086;
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -602,7 +607,12 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1162);
+        #[cfg(experimental)]
+        let expected_gas = 1162;
+        #[cfg(not(experimental))]
+        let expected_gas = 3511;
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -676,6 +686,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[tokio::test]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{

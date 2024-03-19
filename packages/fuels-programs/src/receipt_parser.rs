@@ -324,7 +324,13 @@ mod tests {
         let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
+        #[cfg(experimental)]
         receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
+        #[cfg(not(experimental))] // all data is returned as RETD
+        receipts.push(get_return_data_receipt(
+            contract_id,
+            &RECEIPT_VAL.to_be_bytes(),
+        ));
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
@@ -337,6 +343,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(experimental)]
     #[tokio::test]
     async fn receipt_parser_extract_return_data_heap() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
