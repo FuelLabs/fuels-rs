@@ -1,4 +1,4 @@
-use std::default::Default;
+use std::{default::Default, str::FromStr};
 
 use fuels::{
     core::{
@@ -911,6 +911,158 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
         assert!(encoding_error
             .to_string()
             .contains("token limit `1` reached while encoding"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_validation() -> Result<()> {
+    let default_asset_id = AssetId::default();
+    let hex_str = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe";
+    let other_asset_id = AssetId::from_str(hex_str)?;
+    let begin_coin_amount = 1_000;
+
+    let tx_policies = TxPolicies::default();
+    let wallets_config = WalletsConfig::new_multiple_assets(
+        2,
+        vec![
+            AssetConfig {
+                id: default_asset_id,
+                num_coins: 1,
+                coin_amount: begin_coin_amount,
+            },
+            AssetConfig {
+                id: other_asset_id,
+                num_coins: 1,
+                coin_amount: begin_coin_amount,
+            },
+        ],
+    );
+
+    let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
+
+    let first_wallet = &wallets[0];
+    let second_wallet = &wallets[1];
+
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+    ));
+    let code_path =
+        "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+
+    // the predicate evaluates to true if the two arguments are equal
+    let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
+    let predicate_with_correct_data: Predicate = Predicate::load_from(code_path)?
+        .with_provider(first_wallet.try_provider()?.clone())
+        .with_data(correct_predicate_data);
+
+    let incorrect_predicate_data = MyPredicateEncoder::default().encode_data(1000, 0)?;
+    let predicate_with_incorrect_data: Predicate = Predicate::load_from(code_path)?
+        .with_provider(first_wallet.try_provider()?.clone())
+        .with_data(incorrect_predicate_data);
+
+    // The predicate needs to be funded with the target asset id, and the base asset id to pay for
+    // gas, even for just validation.
+    let amount_to_transfer_to_predicate = 1000;
+    first_wallet
+        .transfer(
+            // the data doesn't change the predicate's address
+            predicate_with_correct_data.address(),
+            amount_to_transfer_to_predicate,
+            other_asset_id,
+            tx_policies,
+        )
+        .await?;
+    first_wallet
+        .transfer(
+            predicate_with_correct_data.address(),
+            amount_to_transfer_to_predicate,
+            default_asset_id,
+            tx_policies,
+        )
+        .await?;
+
+    let amount_to_unlock = 500;
+    // Test with a non-default asset ID,to check that fee estimation works
+    {
+        // Check that a validated predicate => transfer can occur
+        predicate_with_correct_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                other_asset_id,
+                tx_policies,
+            )
+            .await?;
+        assert_eq!(
+            second_wallet.get_asset_balance(&other_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+
+        let error_string = predicate_with_incorrect_data
+            .transfer(second_wallet.address(), 10, other_asset_id, tx_policies)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))")
+        );
+        let transfer_error_string = predicate_with_incorrect_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                other_asset_id,
+                tx_policies,
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        // the transfer failed as expected
+        assert!(transfer_error_string
+            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+        // so the balance is not modified
+        assert_eq!(
+            second_wallet.get_asset_balance(&other_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+    }
+
+    // Test with default asset ID
+    {
+        // Check that a validated predicate => transfer can occur
+        predicate_with_correct_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                default_asset_id,
+                tx_policies,
+            )
+            .await?;
+        assert_eq!(
+            second_wallet.get_asset_balance(&default_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+
+        let transfer_error_string = predicate_with_incorrect_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                default_asset_id,
+                tx_policies,
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        // the transfer failed as expected
+        assert!(transfer_error_string
+            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+        // so the balance is not modified
+        assert_eq!(
+            second_wallet.get_asset_balance(&default_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
     }
 
     Ok(())
