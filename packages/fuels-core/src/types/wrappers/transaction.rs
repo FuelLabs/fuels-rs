@@ -18,7 +18,9 @@ use fuel_tx::{
     TransactionFee, UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::EstimatePredicates;
+use fuel_vm::checked_transaction::{
+    CheckPredicateParams, CheckPredicates, EstimatePredicates, IntoChecked,
+};
 use itertools::Itertools;
 
 use crate::{
@@ -197,10 +199,26 @@ pub trait GasValidation: sealed::Sealed {
     fn validate_gas(&self, _gas_used: u64) -> Result<()>;
 }
 
+pub trait ValidatablePredicates: sealed::Sealed {
+    /// If a transaction contains predicates, we can verify that these predicates validate, ie
+    /// that they return `true`
+    fn validate_predicates(
+        self,
+        consensus_parameters: &ConsensusParameters,
+        block_height: u32,
+    ) -> Result<()>;
+}
+
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug + sealed::Sealed
+    Into<FuelTransaction>
+    + EstimablePredicates
+    + ValidatablePredicates
+    + GasValidation
+    + Clone
+    + Debug
+    + sealed::Sealed
 {
     fn fee_checked_from_tx(
         &self,
@@ -316,6 +334,22 @@ macro_rules! impl_tx_wrapper {
                     tx,
                     is_using_predicates,
                 }
+            }
+        }
+
+        impl ValidatablePredicates for $wrapper {
+            fn validate_predicates(
+                self,
+                consensus_parameters: &ConsensusParameters,
+                block_height: u32,
+            ) -> Result<()> {
+                let checked = self
+                    .tx
+                    .into_checked(block_height.into(), consensus_parameters)?;
+                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+                checked.check_predicates(&check_predicates_parameters)?;
+
+                Ok(())
             }
         }
 
