@@ -11,6 +11,7 @@ use fuel_asm::{op, GTFArgs, RegId};
 use fuel_crypto::{Message as CryptoMessage, Signature};
 use fuel_tx::{
     field::{Inputs, WitnessLimit, Witnesses},
+    input::coin::{CoinPredicate, CoinSigned},
     policies::{Policies, PolicyType},
     Buildable, Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script,
     StorageSlot, Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier,
@@ -371,10 +372,8 @@ impl ScriptTransactionBuilder {
         !inputs.into_iter().any(|i| {
             matches!(
                 i,
-                FuelInput::CoinSigned(_)
-                    | FuelInput::CoinPredicate(_)
-                    | FuelInput::MessageCoinSigned(_)
-                    | FuelInput::MessageCoinPredicate(_)
+                FuelInput::CoinSigned(CoinSigned{asset_id, ..})
+                    | FuelInput::CoinPredicate(CoinPredicate{asset_id, ..}) if *asset_id == BASE_ASSET_ID
             )
         })
     }
