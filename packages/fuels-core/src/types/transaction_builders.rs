@@ -368,7 +368,7 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_spendable_input<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
+    fn no_input_to_cover_fees<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
         !inputs.into_iter().any(|i| {
             matches!(
                 i,
@@ -385,10 +385,10 @@ impl ScriptTransactionBuilder {
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
 
-        // The dry-run validation will check if there is any spendable input present in
-        // the transaction. If we are dry-running without inputs we have to add a temporary one.
-        let no_spendable_input = Self::no_spendable_input(tx.inputs());
-        if no_spendable_input {
+        // The dry-run validation will check if there is any input that can cover the fees.
+        // If we are dry-running without inputs we have to add a temporary one.
+        let no_input_to_cover_fees = Self::no_input_to_cover_fees(tx.inputs());
+        if no_input_to_cover_fees {
             tx.inputs_mut().push(FuelInput::coin_signed(
                 Default::default(),
                 Default::default(),
@@ -415,7 +415,7 @@ impl ScriptTransactionBuilder {
             .await?;
 
         // Remove dry-run input and witness.
-        if no_spendable_input {
+        if no_input_to_cover_fees {
             tx.inputs_mut().pop();
             tx.witnesses_mut().pop();
             tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
