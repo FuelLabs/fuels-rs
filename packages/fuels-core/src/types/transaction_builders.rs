@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
     iter::repeat,
+    ops::Not,
 };
 
 use async_trait::async_trait;
@@ -369,13 +370,19 @@ impl ScriptTransactionBuilder {
     }
 
     fn no_input_to_cover_fees<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
-        !inputs.into_iter().any(|i| {
-            matches!(
-                i,
-                FuelInput::CoinSigned(CoinSigned{asset_id, ..})
-                    | FuelInput::CoinPredicate(CoinPredicate{asset_id, ..}) if *asset_id == BASE_ASSET_ID
-            )
-        })
+        inputs
+            .into_iter()
+            .any(|i| match i {
+                FuelInput::CoinSigned(CoinSigned { asset_id, .. })
+                | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
+                    if *asset_id == BASE_ASSET_ID =>
+                {
+                    true
+                }
+                FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
+                _ => false,
+            })
+            .not()
     }
 
     async fn set_script_gas_limit_to_gas_used(
