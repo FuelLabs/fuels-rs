@@ -20,7 +20,7 @@ env:
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.74.0
   FORC_VERSION: 0.51.1
-  FORC_PATCH_BRANCH: ""
+  FORC_PATCH_BRANCH: "xunilrj/new-encoding-fixes"
   FORC_PATCH_REVISION: ""
 
 jobs:
