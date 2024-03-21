@@ -1959,8 +1959,8 @@ async fn test_bytes_as_input() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_raw_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "RawSliceContract",
             project = "packages/fuels/tests/types/contracts/raw_slice"
@@ -2004,8 +2004,8 @@ async fn test_contract_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_returning_string_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "StringSliceContract",
             project = "packages/fuels/tests/types/contracts/string_slice"
@@ -2029,8 +2029,8 @@ async fn test_contract_returning_string_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_std_lib_string() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "StdLibString",
             project = "packages/fuels/tests/types/contracts/std_lib_string"
@@ -2059,8 +2059,8 @@ async fn test_contract_std_lib_string() -> Result<()> {
 
 #[tokio::test]
 async fn test_heap_type_in_enums() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "HeapTypeInEnum",
             project = "packages/fuels/tests/types/contracts/heap_type_in_enums"
@@ -2183,6 +2183,43 @@ async fn test_heap_type_in_enums() -> Result<()> {
 
         assert_eq!(resp.to_string(), expected);
     }
+
+    Ok(())
+}
+
+#[cfg(not(experimental))]
+#[tokio::test]
+async fn nested_heap_types() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "HeapTypeInEnum",
+            project = "packages/fuels/tests/types/contracts/heap_types"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "HeapTypeInEnum",
+            wallet = "wallet"
+        ),
+    );
+
+    let arr = [2u8, 4, 8];
+    let struct_generics = StructGenerics {
+        one: Bytes(arr.to_vec()),
+        two: String::from("fuel"),
+        three: RawSlice(arr.to_vec()),
+    };
+
+    let enum_vec = [struct_generics.clone(), struct_generics].to_vec();
+    let expected = EnumGeneric::One(enum_vec);
+
+    let result = contract_instance
+        .methods()
+        .nested_heap_types()
+        .call()
+        .await?;
+
+    assert_eq!(result.value, expected);
 
     Ok(())
 }
