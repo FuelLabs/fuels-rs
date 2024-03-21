@@ -329,12 +329,12 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
-/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
-/// 4. Contract ID ([`ContractId::LEN`]);
-/// 5. Function selector offset `(1 * `[`WORD_SIZE`]`)`
-/// 6. Calldata offset `(1 * `[`WORD_SIZE`]`)`
-/// 7. Encoded function selector - method name
-/// 8. Encoded arguments
+/// 3. Contract ID ([`ContractId::LEN`]);
+/// 4. Function selector offset `(1 * `[`WORD_SIZE`]`)`
+/// 5. Calldata offset `(1 * `[`WORD_SIZE`]`)`
+/// 6. Encoded function selector - method name
+/// 7. Encoded arguments
+/// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
@@ -348,44 +348,40 @@ pub(crate) fn build_script_data_from_contract_calls(
     let mut segment_offset = data_offset;
 
     for call in calls {
-        let gas_forwarded = call.call_parameters.gas_forwarded();
+        let amount_offset = segment_offset;
+        let asset_id_offset = amount_offset + WORD_SIZE;
+        let call_data_offset = asset_id_offset + AssetId::LEN;
+        let encoded_selector_offset = call_data_offset + ContractId::LEN + 2 * WORD_SIZE;
+        let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
         script_data.extend(call.call_parameters.asset_id().iter()); // 2. Asset ID
+        script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
+        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
+        script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
+        script_data.extend(call.encoded_selector.clone()); // 6. Encoded function selector
 
-        let gas_forwarded_size = gas_forwarded // 3. Gas to be forwarded - Optional
-            .map(|gf| {
-                script_data.extend((gf as Word).to_be_bytes());
-
-                WORD_SIZE
-            })
-            .unwrap_or_default();
-
-        let call_param_offsets = CallOpcodeParamsOffset {
-            amount_offset: segment_offset,
-            asset_id_offset: segment_offset + WORD_SIZE,
-            gas_forwarded_offset: gas_forwarded.map(|_| segment_offset + WORD_SIZE + AssetId::LEN),
-            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN + gas_forwarded_size,
-        };
-
-        let encoded_selector_offset =
-            call_param_offsets.call_data_offset + ContractId::LEN + WORD_SIZE + WORD_SIZE;
-
-        param_offsets.push(call_param_offsets);
-
-        let custom_input_offset = encoded_selector_offset + call.encoded_selector.len();
-
-        let bytes = call
+        let encoded_args = call
             .encoded_args
             .as_ref()
-            .map(|ub| ub.resolve(custom_input_offset as Word))
+            .map(|ub| ub.resolve(encoded_args_offset as Word))
             .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
+        let encoded_args_len = encoded_args.len();
 
-        script_data.extend(call.contract_id.hash().as_ref()); // 4. Contract ID
-        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 5. Fun. selector offset
-        script_data.extend((custom_input_offset as Word).to_be_bytes()); // 6. Calldata offset
-        script_data.extend(call.encoded_selector.clone()); // 7. Encoded function selector
-        script_data.extend(bytes); // 8. Encoded arguments
+        script_data.extend(encoded_args); // 7. Encoded arguments
+
+        let gas_forwarded_offset = call.call_parameters.gas_forwarded().map(|gf| {
+            script_data.extend((gf as Word).to_be_bytes()); // 8. Gas to be forwarded - Optional
+
+            encoded_args_offset + encoded_args_len
+        });
+
+        param_offsets.push(CallOpcodeParamsOffset {
+            amount_offset,
+            asset_id_offset,
+            gas_forwarded_offset,
+            call_data_offset,
+        });
 
         // the data segment that holds the parameters for the next call
         // begins at the original offset + the data we added so far

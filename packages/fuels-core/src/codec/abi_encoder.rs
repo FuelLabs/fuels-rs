@@ -4,11 +4,12 @@ mod experimental_bounded_encoder;
 
 use std::default::Default;
 
-use crate::codec::abi_encoder::bounded_encoder::BoundedEncoder;
-
 #[cfg(not(experimental))]
 use crate::codec::abi_encoder::experimental_bounded_encoder::ExperimentalBoundedEncoder;
-use crate::types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token};
+use crate::{
+    codec::abi_encoder::bounded_encoder::BoundedEncoder,
+    types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct EncoderConfig {
@@ -85,6 +86,8 @@ mod tests {
 
     use super::*;
     #[cfg(experimental)]
+    use crate::codec::first_four_bytes_of_sha256_hash;
+    #[cfg(experimental)]
     use crate::constants::WORD_SIZE;
     use crate::{
         to_named,
@@ -94,9 +97,6 @@ mod tests {
             StaticStringToken, U256,
         },
     };
-
-    #[cfg(experimental)]
-    use crate::codec::first_four_bytes_of_sha256_hash;
 
     #[cfg(experimental)]
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;

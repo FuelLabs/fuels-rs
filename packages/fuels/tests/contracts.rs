@@ -1,6 +1,5 @@
 #[cfg(experimental)]
 use fuels::core::codec::{calldata, fn_selector};
-
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
