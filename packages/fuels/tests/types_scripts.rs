@@ -322,3 +322,36 @@ async fn script_handles_std_string() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(not(experimental))]
+#[tokio::test]
+async fn nested_heap_types() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_heap_types",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let arr = [2u8, 4, 8];
+    let struct_generics = StructGenerics {
+        one: Bytes(arr.to_vec()),
+        two: String::from("fuel"),
+        three: arr.to_vec(),
+    };
+
+    let enum_vec = [struct_generics.clone(), struct_generics].to_vec();
+    let expected = EnumGeneric::One(enum_vec);
+
+    let result = script_instance.main().call().await?;
+
+    assert_eq!(result.value, expected);
+
+    Ok(())
+}
