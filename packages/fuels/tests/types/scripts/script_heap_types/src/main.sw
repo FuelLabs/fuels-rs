@@ -4,18 +4,17 @@ use std::bytes::Bytes;
 use std::string::String;
 
 #[allow(dead_code)]
-struct StructGenerics<T,K, U> {
+struct StructGenerics<T, K, U> {
     one: T,
     two: K,
-    three: U
+    three: U,
 }
 
 #[allow(dead_code)]
-enum EnumGeneric<H,I> {
+enum EnumGeneric<H, I> {
     One: H,
     Two: I,
 }
-
 
 fn main() -> EnumGeneric<Vec<StructGenerics<Bytes, String, Vec<u8>>>, String> {
     let mut some_vec = Vec::new();
@@ -26,7 +25,7 @@ fn main() -> EnumGeneric<Vec<StructGenerics<Bytes, String, Vec<u8>>>, String> {
     let struct_generics = StructGenerics {
         one: Bytes::from(some_vec),
         two: String::from_ascii_str("fuel"),
-        three: some_vec
+        three: some_vec,
     };
 
     let mut enum_vec = Vec::new();

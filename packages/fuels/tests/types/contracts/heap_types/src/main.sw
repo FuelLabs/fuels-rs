@@ -4,14 +4,14 @@ use std::bytes::Bytes;
 use std::string::String;
 
 #[allow(dead_code)]
-struct StructGenerics<T,K, U> {
+struct StructGenerics<T, K, U> {
     one: T,
     two: K,
-    three: U
+    three: U,
 }
 
 #[allow(dead_code)]
-enum EnumGeneric<H,I> {
+enum EnumGeneric<H, I> {
     One: H,
     Two: I,
 }
@@ -30,7 +30,7 @@ impl HeapTypesContract for Contract {
         let struct_generics = StructGenerics {
             one: Bytes::from(some_vec),
             two: String::from_ascii_str("fuel"),
-            three: some_vec.as_raw_slice()
+            three: some_vec.as_raw_slice(),
         };
 
         let mut enum_vec = Vec::new();
