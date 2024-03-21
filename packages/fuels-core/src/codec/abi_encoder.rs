@@ -1,10 +1,10 @@
 mod bounded_encoder;
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 mod experimental_bounded_encoder;
 
 use std::default::Default;
 
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 use crate::codec::abi_encoder::experimental_bounded_encoder::ExperimentalBoundedEncoder;
 use crate::{
     codec::abi_encoder::bounded_encoder::BoundedEncoder,
@@ -49,9 +49,9 @@ impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        #[cfg(experimental)]
-        let res = BoundedEncoder::new(self.config, false).encode(args);
         #[cfg(not(experimental))]
+        let res = BoundedEncoder::new(self.config, false).encode(args);
+        #[cfg(experimental)]
         let res = ExperimentalBoundedEncoder::new(self.config, false).encode(args);
 
         res
@@ -79,15 +79,15 @@ impl ConfigurablesEncoder {
 mod tests {
     use std::slice;
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     use itertools::chain;
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     use sha2::{Digest, Sha256};
 
     use super::*;
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     use crate::codec::first_four_bytes_of_sha256_hash;
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     use crate::constants::WORD_SIZE;
     use crate::{
         to_named,
@@ -98,13 +98,13 @@ mod tests {
         },
     };
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_signature() {
         let fn_signature = "entry_one(u64)";
 
@@ -116,7 +116,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_u32_type() -> Result<()> {
         // @todo eventually we must update the json abi examples in here.
         // They're in the old format.
@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_u32_type_multiple_args() -> Result<()> {
         // let json_abi =
         // r#"
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_u64_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -226,7 +226,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_bool_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -261,7 +261,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_two_different_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -301,7 +301,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_bits256_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -346,7 +346,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_array_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -388,7 +388,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_string_array_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -428,7 +428,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_string_slice_type() -> Result<()> {
         // let json_abi =
         // r#"
@@ -471,7 +471,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_struct() -> Result<()> {
         // let json_abi =
         // r#"
@@ -521,7 +521,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_enum() -> Result<()> {
         // let json_abi =
         // r#"
@@ -570,7 +570,7 @@ mod tests {
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() -> Result<()> {
         // Our enum has two variants: B256, and U64. So the enum will set aside
@@ -655,7 +655,7 @@ mod tests {
             .encode(slice::from_ref(&top_level_enum_token))?
             .resolve(0);
 
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
             0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
@@ -663,7 +663,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, // DeeperEnum padding
             0, 0, 0, 0, 0, 0, 44, 68, // StructA.some_number
         ];
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
             0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
@@ -677,7 +677,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_function_with_nested_structs() -> Result<()> {
         // let json_abi =
         // r#"
@@ -733,7 +733,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn encode_comprehensive_function() -> Result<()> {
         // let json_abi =
         // r#"
@@ -845,7 +845,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
@@ -858,7 +858,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn enums_with_units_are_correctly_padded() -> Result<()> {
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
@@ -876,7 +876,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn vector_has_ptr_cap_len_and_then_data() -> Result<()> {
         // arrange
@@ -901,7 +901,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn data_from_two_vectors_aggregated_at_the_end() -> Result<()> {
         // arrange
@@ -952,7 +952,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
 
@@ -975,7 +975,7 @@ mod tests {
             )
             .collect::<Vec<u8>>()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // enum dicsriminant
             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
@@ -1003,7 +1003,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
 
@@ -1016,7 +1016,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // vec len
             0, 0, 0, 0, 0, 0, 0, 1, 8, // enum discriminant and u8 value
@@ -1039,7 +1039,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
                 .to_be_bytes()
@@ -1050,7 +1050,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, [9], [0; 7], vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
             9, // u8
@@ -1073,7 +1073,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
             let vec1_ptr = vec1_data_offset.to_be_bytes().to_vec();
@@ -1091,7 +1091,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // vec1 len
             0, 0, 0, 0, 0, 0, 0, 2, 5, 6, // vec2 [len, u8, u8]
@@ -1112,7 +1112,7 @@ mod tests {
         let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
             let cap = [0, 0, 0, 0, 0, 0, 0, 8];
@@ -1121,7 +1121,7 @@ mod tests {
 
             [ptr, cap, len, data].concat()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // bytes[len, u8, u8, u8]
 
         assert_eq!(result, expected);
@@ -1139,7 +1139,7 @@ mod tests {
         let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
             let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
@@ -1148,7 +1148,7 @@ mod tests {
 
             [ptr, len, data, padding].concat()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // raw_slice[len, u8, u8, u8]
 
         assert_eq!(result, expected);
@@ -1167,7 +1167,7 @@ mod tests {
         let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
 
         // assert
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let expected = {
             let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
             let cap = [0, 0, 0, 0, 0, 0, 0, 8];
@@ -1176,7 +1176,7 @@ mod tests {
 
             [ptr, cap, len, data].concat()
         };
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let expected = [0, 0, 0, 0, 0, 0, 0, 5, 84, 104, 105, 115, 32]; // string[len, data]
 
         assert_eq!(result, expected);
@@ -1206,7 +1206,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn capacity_overflow_is_caught() -> Result<()> {
         let token = Token::Enum(Box::new((

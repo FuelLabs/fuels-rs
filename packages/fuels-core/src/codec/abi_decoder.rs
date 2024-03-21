@@ -1,12 +1,12 @@
-#[cfg(experimental)]
+#[cfg(not(experimental))]
 mod bounded_decoder;
 mod decode_as_debug_str;
-#[cfg(not(experimental))]
+#[cfg(experimental)]
 mod experimental_bounded_decoder;
 
-#[cfg(experimental)]
-use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
 #[cfg(not(experimental))]
+use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
+#[cfg(experimental)]
 use crate::codec::abi_decoder::experimental_bounded_decoder::BoundedDecoder;
 use crate::{
     codec::abi_decoder::decode_as_debug_str::decode_as_debug_str,
@@ -129,9 +129,9 @@ mod tests {
 
     #[test]
     fn decode_int() -> Result<()> {
-        #[cfg(experimental)]
-        let data = [0, 0, 0, 0, 255, 255, 255, 255];
         #[cfg(not(experimental))]
+        let data = [0, 0, 0, 0, 255, 255, 255, 255];
+        #[cfg(experimental)]
         let data = [255, 255, 255, 255];
 
         let decoded = ABIDecoder::default().decode(&ParamType::U32, &data)?;
@@ -152,7 +152,7 @@ mod tests {
             ParamType::U256,
         ];
 
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let data = [
             0, 0, 0, 0, 255, 255, 255, 255, // u32
             255, // u8
@@ -163,7 +163,7 @@ mod tests {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let data = [
             255, 255, 255, 255, // u32
             255, // u8
@@ -221,13 +221,13 @@ mod tests {
     #[test]
     fn decode_string_array() -> Result<()> {
         let types = vec![ParamType::StringArray(23), ParamType::StringArray(5)];
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
-            116, 101, 110, 99, 101, //This is a full sentence
-            72, 101, 108, 108, 111, // Hello
+            116, 101, 110, 99, 101, 0, //This is a full sentence
+            72, 101, 108, 108, 111, 0, 0, 0, // Hello
         ];
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
@@ -252,12 +252,12 @@ mod tests {
     #[test]
     fn decode_string_slice() -> Result<()> {
         let types = vec![ParamType::StringSlice];
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
         ];
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 23, // [length]
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -296,9 +296,9 @@ mod tests {
         //     bar: bool,
         // }
 
-        #[cfg(experimental)]
-        let data = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
         #[cfg(not(experimental))]
+        let data = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+        #[cfg(experimental)]
         let data = [1, 1];
 
         let param_type = ParamType::Struct {
@@ -318,9 +318,9 @@ mod tests {
 
     #[test]
     fn decode_bytes() -> Result<()> {
-        #[cfg(experimental)]
-        let data = [255, 0, 1, 2, 3, 4, 5];
         #[cfg(not(experimental))]
+        let data = [255, 0, 1, 2, 3, 4, 5];
+        #[cfg(experimental)]
         let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
 
         let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
@@ -348,9 +348,9 @@ mod tests {
         }];
 
         // "0" discriminant and 42 enum value
-        #[cfg(experimental)]
-        let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
         #[cfg(not(experimental))]
+        let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
+        #[cfg(experimental)]
         let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
@@ -361,7 +361,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn decoder_will_skip_enum_padding_and_decode_next_arg() -> Result<()> {
         // struct MyStruct {
@@ -446,11 +446,11 @@ mod tests {
             generics: vec![],
         };
 
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 10, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0,
         ];
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let data = [0, 10, 1, 1, 2];
 
         let decoded = ABIDecoder::default().decode(&nested_struct, &data)?;
@@ -505,7 +505,7 @@ mod tests {
 
         let types = [nested_struct, u8_arr, b256];
 
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         let bytes = [
             0, 0, 0, 0, 0, 0, 0, 10, // u16
             1, 0, 0, 0, 0, 0, 0, 0, // bool
@@ -515,7 +515,7 @@ mod tests {
             152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11, // b256
         ];
 
-        #[cfg(not(experimental))]
+        #[cfg(experimental)]
         let bytes = [
             0, 10, // u16
             1,  // bool
@@ -550,7 +550,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn units_in_structs_are_decoded_as_one_word() -> Result<()> {
         let data = [
@@ -570,7 +570,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
@@ -688,7 +688,7 @@ mod tests {
         assert!(matches!(result, Err(Error::Codec(_))));
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
         let mut param_types = vec![
@@ -728,7 +728,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn enums_w_too_deeply_nested_heap_types_not_allowed() {
         let variants = to_named(&[
@@ -846,7 +846,7 @@ mod tests {
         }
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     #[test]
     fn vectors_of_zst_are_not_supported() {
         let param_type = ParamType::Vector(Box::new(ParamType::StringArray(0)));

@@ -31,7 +31,7 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
-        #[cfg(experimental)]
+        #[cfg(not(experimental))]
         Self::can_decode_log_with_type::<T>()?;
 
         let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
@@ -39,8 +39,10 @@ impl LogFormatter {
         Ok(format!("{:?}", T::from_token(token)?))
     }
 
-    #[cfg(experimental)]
+    #[cfg(not(experimental))]
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
+        use crate::types::param_types::ParamType;
+
         match T::param_type() {
             // String slices cannot be decoded from logs as they are encoded as ptr, len
             // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
