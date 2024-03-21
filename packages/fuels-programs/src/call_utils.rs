@@ -5,7 +5,6 @@ use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
 use fuel_types::{Address, Word};
 use fuels_accounts::Account;
-#[cfg(experimental)]
 use fuels_core::constants::WORD_SIZE;
 use fuels_core::{
     error,
@@ -339,8 +338,6 @@ pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
-    use fuel_types::bytes::WORD_SIZE;
-
     let mut script_data = vec![];
     let mut param_offsets = vec![];
 
@@ -439,7 +436,7 @@ pub(crate) fn get_single_call_instructions(
                 op::call(0x10, 0x11, 0x12, 0x13),
             ]);
         }
-        // If `gas_forwarded` was not set use `REG_CGAS`
+        // if `gas_forwarded` was not set use `REG_CGAS`
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
@@ -674,8 +671,6 @@ mod test {
 
     use super::*;
     use crate::contract::CallParameters;
-
-    #[cfg(not(experimental))]
 
     impl ContractCall {
         pub fn new_with_random_id() -> Self {

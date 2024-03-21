@@ -1220,7 +1220,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(experimental)] // TODO: @hal3e add other example with new the new call function
+#[cfg(experimental)]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
