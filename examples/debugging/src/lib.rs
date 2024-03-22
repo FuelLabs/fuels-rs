@@ -6,8 +6,8 @@ mod tests {
     #[cfg(not(experimental))]
     use fuels::core::codec::{calldata, fn_selector};
     use fuels::{
-        core::codec::ABIDecoder,
-        macros::abigen,
+        //core::codec::ABIDecoder, // TODO: @hal3e temporarily disabled
+        //macros::abigen, // TODO: @hal3e temporarily disabled
         types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
