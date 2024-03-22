@@ -1425,7 +1425,7 @@ async fn test_identity_with_two_contracts() -> Result<()> {
 //     let contract_methods = contract_instance.methods();
 
 //     {
-//         // ANCHOR: generic
+// ANCHOR: generic
 //         // simple struct with a single generic param
 //         let arg1 = SimpleGeneric {
 //             single_generic_param: 123u64,
@@ -1438,7 +1438,7 @@ async fn test_identity_with_two_contracts() -> Result<()> {
 //             .value;
 
 //         assert_eq!(result, arg1);
-//         // ANCHOR_END: generic
+// ANCHOR_END: generic
 //     }
 //     {
 //         // struct that delegates the generic param internally
