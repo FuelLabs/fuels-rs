@@ -25,6 +25,7 @@ members = [
   "packages/fuels-test-helpers",
   "packages/wasm-tests",
   "scripts/check-docs",
+  "scripts/fuel-core-version",
   "scripts/versions-replacer",
 ]
 
@@ -44,6 +45,8 @@ async-trait = { version = "0.1.74", default-features = false }
 bech32 = "0.9.1"
 bytes = { version = "1.5.0", default-features = false }
 chrono = "0.4.31"
+clap = { version = "4.5.3", features = ["derive"] }
+color-eyre = "0.6.2"
 elliptic-curve = { version = "0.13.8", default-features = false }
 eth-keystore = "0.5.0"
 fuel-abi-types = "0.4.0"
