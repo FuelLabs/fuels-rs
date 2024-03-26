@@ -115,6 +115,31 @@ mod tests {
         Ok(())
     }
 
+
+    #[tokio::test]
+    async fn create_and_store_mnemonic_wallet_with_address_named_keystore() -> Result<()> {
+        // ANCHOR: create_and_store_mnemonic_wallet_with_address_named_keystore
+        use fuels::prelude::*;
+
+        let dir = std::env::temp_dir();
+
+        let phrase =
+            "oblige salon price punch saddle immune slogan rare snap desert retire surprise";
+
+        // Use the test helper to setup a test provider.
+        let provider = setup_test_provider(vec![], vec![], None, None).await?;
+
+        // Create first account from mnemonic phrase.
+        let wallet = WalletUnlocked::new_from_mnemonic_phrase(phrase, Some(provider))?;
+
+        let password = "my_master_password";
+
+        // Encrypts and stores it on disk. Can be recovered using `Wallet::load_keystore`.
+        let _uuid = wallet.encrypt_with_name(&dir, password, wallet.clone().address())?;
+        // ANCHOR_END: create_and_store_mnemonic_wallet_with_address_named_keystore
+        Ok(())
+    }
+
     #[tokio::test]
     async fn wallet_transfer() -> Result<()> {
         // ANCHOR: wallet_transfer
