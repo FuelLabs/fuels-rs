@@ -10,7 +10,9 @@ use std::{
 use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
+
 use fuels_accounts::{provider::TransactionCost, Account};
+use fuels_core::types::transaction::CreateTransaction;
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
@@ -303,12 +305,29 @@ impl Contract {
         account: &impl Account,
         tx_policies: TxPolicies,
     ) -> Result<Bech32ContractId> {
+        let provider = account.try_provider()?;
+
+        let tx = self.build_deploy_transaction(account, tx_policies).await?;
+
+        provider
+            .send_transaction_and_await_commit(tx)
+            .await?
+            .check(None)?;
+
+        Ok(self.contract_id.into())
+    }
+
+    pub async fn build_deploy_transaction(
+        &self,
+        account: &impl Account,
+        tx_policies: TxPolicies,
+    ) -> Result<CreateTransaction> {
         let mut tb = CreateTransactionBuilder::prepare_contract_deployment(
-            self.binary,
+            self.binary.clone(),
             self.contract_id,
             self.state_root,
             self.salt,
-            self.storage_slots,
+            self.storage_slots.clone(),
             tx_policies,
         );
 
@@ -317,14 +336,7 @@ impl Contract {
 
         let provider = account.try_provider()?;
 
-        let tx = tb.build(provider).await?;
-
-        provider
-            .send_transaction_and_await_commit(tx)
-            .await?
-            .check(None)?;
-
-        Ok(self.contract_id.into())
+        tb.build(provider).await
     }
 
     pub fn load_from(binary_filepath: impl AsRef<Path>, config: LoadConfiguration) -> Result<Self> {
