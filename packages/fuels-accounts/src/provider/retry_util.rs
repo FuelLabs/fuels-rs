@@ -186,7 +186,7 @@ mod tests {
         }
 
         #[tokio::test]
-        async fn stops_retrying_when_predicate_is_satistfied() -> Result<()> {
+        async fn stops_retrying_when_predicate_is_satisfied() -> Result<()> {
             // given
             let values = Mutex::new(vec![1, 2, 3]);
 
