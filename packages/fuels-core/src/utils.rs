@@ -22,7 +22,7 @@ pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
     lhs.checked_sub(rhs).ok_or_else(|| {
         error!(
             Codec,
-            "substraction overflow while rounding up {bytes_len} bytes to word alignment"
+            "subtraction overflow while rounding up {bytes_len} bytes to word alignment"
         )
     })
 }
