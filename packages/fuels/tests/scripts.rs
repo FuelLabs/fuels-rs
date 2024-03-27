@@ -97,6 +97,8 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 }
 
 #[tokio::test]
+// Remove this test once the new encoding lands as the max_input will be irrelevant
+// for direct script calls as all script_data is `inline`
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels::{
         test_helpers::ChainConfig,
@@ -144,6 +146,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "heyoo");
+
     Ok(())
 }
 

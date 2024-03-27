@@ -244,6 +244,7 @@ pub(crate) fn get_instructions(
         })
 }
 
+#[cfg(not(feature = "experimental"))]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -323,6 +324,70 @@ pub(crate) fn build_script_data_from_contract_calls(
     Ok((script_data, param_offsets))
 }
 
+#[cfg(feature = "experimental")]
+/// Returns script data, consisting of the following items in the given order:
+/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 3. Contract ID ([`ContractId::LEN`]);
+/// 4. Function selector offset `(1 * `[`WORD_SIZE`]`)`
+/// 5. Calldata offset `(1 * `[`WORD_SIZE`]`)`
+/// 6. Encoded function selector - method name
+/// 7. Encoded arguments
+/// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
+pub(crate) fn build_script_data_from_contract_calls(
+    calls: &[ContractCall],
+    data_offset: usize,
+) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
+    let mut script_data = vec![];
+    let mut param_offsets = vec![];
+
+    // The data for each call is ordered into segments
+    let mut segment_offset = data_offset;
+
+    for call in calls {
+        let amount_offset = segment_offset;
+        let asset_id_offset = amount_offset + WORD_SIZE;
+        let call_data_offset = asset_id_offset + AssetId::LEN;
+        let encoded_selector_offset = call_data_offset + ContractId::LEN + 2 * WORD_SIZE;
+        let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
+
+        script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
+        script_data.extend(call.call_parameters.asset_id().iter()); // 2. Asset ID
+        script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
+        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
+        script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
+        script_data.extend(call.encoded_selector.clone()); // 6. Encoded function selector
+
+        let encoded_args = call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(encoded_args_offset as Word))
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
+        let encoded_args_len = encoded_args.len();
+
+        script_data.extend(encoded_args); // 7. Encoded arguments
+
+        let gas_forwarded_offset = call.call_parameters.gas_forwarded().map(|gf| {
+            script_data.extend((gf as Word).to_be_bytes()); // 8. Gas to be forwarded - Optional
+
+            encoded_args_offset + encoded_args_len
+        });
+
+        param_offsets.push(CallOpcodeParamsOffset {
+            amount_offset,
+            asset_id_offset,
+            gas_forwarded_offset,
+            call_data_offset,
+        });
+
+        // the data segment that holds the parameters for the next call
+        // begins at the original offset + the data we added so far
+        segment_offset = data_offset + script_data.len();
+    }
+
+    Ok((script_data, param_offsets))
+}
+
 /// Returns the VM instructions for calling a contract method
 /// We use the [`Opcode`] to call a contract: [`CALL`](Opcode::CALL)
 /// pointing at the following registers:
@@ -336,7 +401,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
-    output_param_type: &ParamType,
+    _output_param_type: &ParamType,
 ) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
@@ -371,16 +436,18 @@ pub(crate) fn get_single_call_instructions(
                 op::call(0x10, 0x11, 0x12, 0x13),
             ]);
         }
-        // If `gas_forwarded` was not set use `REG_CGAS`
+        // if `gas_forwarded` was not set use `REG_CGAS`
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    instructions.extend(extract_heap_data(output_param_type)?);
+    #[cfg(not(feature = "experimental"))]
+    instructions.extend(extract_heap_data(_output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
+#[cfg(not(feature = "experimental"))]
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
         ParamType::Enum { enum_variants, .. } => {
@@ -416,6 +483,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
     }
 }
 
+#[cfg(not(feature = "experimental"))]
 fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,
@@ -589,16 +657,16 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
+    #[cfg(not(feature = "experimental"))]
+    use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
-    use fuels_core::{
-        codec::ABIEncoder,
-        types::{
-            bech32::Bech32ContractId,
-            coin::{Coin, CoinStatus},
-            coin_type::CoinType,
-            Token,
-        },
+    use fuels_core::types::{
+        bech32::Bech32ContractId,
+        coin::{Coin, CoinStatus},
+        coin_type::CoinType,
     };
+    #[cfg(not(feature = "experimental"))]
+    use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
     use super::*;
@@ -609,7 +677,10 @@ mod test {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
+                #[cfg(not(feature = "experimental"))]
                 encoded_selector: [0; 8],
+                #[cfg(feature = "experimental")]
+                encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
                 variable_outputs: vec![],
@@ -629,6 +700,7 @@ mod test {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[tokio::test]
     async fn test_script_data() {
         // Arrange
@@ -658,7 +730,10 @@ mod test {
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
+                #[cfg(not(feature = "experimental"))]
                 encoded_selector: selectors[i],
+                #[cfg(feature = "experimental")]
+                encoded_selector: selectors[i].to_vec(),
                 encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
@@ -953,8 +1028,10 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
+        #[cfg(not(feature = "experimental"))]
         // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
         const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
+        #[cfg(not(feature = "experimental"))]
         // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
         const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
@@ -976,6 +1053,7 @@ mod test {
             );
         }
 
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_heap_type() {
             let output_params = vec![
@@ -995,6 +1073,7 @@ mod test {
             }
         }
 
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_gas_offset_and_heap_type() {
             let mut call = ContractCall::new_with_random_id();
@@ -1011,6 +1090,7 @@ mod test {
             );
         }
 
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_enum_with_heap_and_non_heap_variant() {
             let variant_sets = vec![

@@ -1,7 +1,10 @@
 use std::{iter::repeat, str};
 
 use crate::{
-    codec::DecoderConfig,
+    codec::{
+        utils::{CodecDirection, CounterWithLimit},
+        DecoderConfig,
+    },
     constants::WORD_SIZE,
     types::{
         errors::{error, Result},
@@ -12,7 +15,7 @@ use crate::{
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
-pub(crate) struct ExperimentalBoundedDecoder {
+pub(crate) struct BoundedDecoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
 }
@@ -27,10 +30,12 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 const LENGTH_BYTES_SIZE: usize = WORD_SIZE;
 const DISCRIMINANT_BYTES_SIZE: usize = WORD_SIZE;
 
-impl ExperimentalBoundedDecoder {
+impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "token");
+        let depth_tracker =
+            CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Decoding);
+        let token_tracker =
+            CounterWithLimit::new(config.max_tokens, "token", CodecDirection::Decoding);
         Self {
             depth_tracker,
             token_tracker,
@@ -298,40 +303,6 @@ struct Decoded {
     bytes_read: usize,
 }
 
-struct CounterWithLimit {
-    count: usize,
-    max: usize,
-    name: String,
-}
-
-impl CounterWithLimit {
-    fn new(max: usize, name: impl Into<String>) -> Self {
-        Self {
-            count: 0,
-            max,
-            name: name.into(),
-        }
-    }
-
-    fn increase(&mut self) -> Result<()> {
-        self.count += 1;
-        if self.count > self.max {
-            return Err(error!(
-                Codec,
-                "{} limit `{}` reached while decoding. Try increasing it", self.name, self.max
-            ));
-        }
-
-        Ok(())
-    }
-
-    fn decrease(&mut self) {
-        if self.count > 0 {
-            self.count -= 1;
-        }
-    }
-}
-
 fn peek_u8(bytes: &[u8]) -> Result<u8> {
     let slice = peek_fixed::<U8_BYTES_SIZE>(bytes)?;
     Ok(u8::from_be_bytes(*slice))
@@ -376,7 +347,7 @@ fn peek_discriminant(bytes: &[u8]) -> Result<u64> {
 }
 
 fn peek(data: &[u8], len: usize) -> Result<&[u8]> {
-    (len <= data.len()).then_some(&data[..len]).ok_or(error!(
+    (len <= data.len()).then(|| &data[..len]).ok_or(error!(
         Codec,
         "tried to read `{len}` bytes but only had `{}` remaining!",
         data.len()

@@ -7,8 +7,6 @@ use std::{
 
 use fuel_tx::{ContractId, Receipt};
 
-#[cfg(not(experimental))]
-use crate::types::param_types::ParamType;
 use crate::{
     codec::{ABIDecoder, DecoderConfig},
     traits::{Parameterize, Tokenizable},
@@ -33,20 +31,18 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
-        #[cfg(not(experimental))]
-        let token = {
-            Self::can_decode_log_with_type::<T>()?;
-            ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?
-        };
+        #[cfg(not(feature = "experimental"))]
+        Self::can_decode_log_with_type::<T>()?;
 
-        #[cfg(experimental)]
-        let token = ABIDecoder::new(decoder_config).experimental_decode(&T::param_type(), bytes)?;
+        let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
 
         Ok(format!("{:?}", T::from_token(token)?))
     }
 
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
+        use crate::types::param_types::ParamType;
+
         match T::param_type() {
             // String slices cannot be decoded from logs as they are encoded as ptr, len
             // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
@@ -195,11 +191,6 @@ impl LogDecoder {
             .extract_log_id_and_data()
             .filter_map(|(log_id, bytes)| {
                 target_ids.contains(&log_id).then(|| {
-                    #[cfg(experimental)]
-                    let token = ABIDecoder::new(self.decoder_config)
-                        .experimental_decode(&T::param_type(), &bytes)?;
-
-                    #[cfg(not(experimental))]
                     let token =
                         ABIDecoder::new(self.decoder_config).decode(&T::param_type(), &bytes)?;
 

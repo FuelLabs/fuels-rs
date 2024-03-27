@@ -19,7 +19,7 @@ env:
   FUEL_CORE_VERSION: 0.23.0
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.76.0
-  FORC_VERSION: 0.51.1
+  FORC_VERSION: 0.52.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
 
@@ -98,14 +98,14 @@ jobs:
             !packages/fuels/tests/.gitignore
 
       # TODO: To be removed once experimental encoding is the default
-      - name: Build Sway test projects w experimental logs
+      - name: Build Sway test projects w experimental encoding
         run: forc build --terse --error-on-warnings --json-abi-with-callpaths --experimental-new-encoding
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
         with:
           retention-days: 2
-          name: sway-examples-w-experimental-logs
+          name: sway-examples-w-experimental-encoding
           # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
@@ -202,9 +202,9 @@ jobs:
           - command: check_doc_unresolved_links
             args:
           # TODO: To be removed once experimental encoding is the default
-          - command: test_experimental_logs
-            args:
-            download_sway_artifacts: sway-examples-w-experimental-logs
+          - cargo_command: nextest
+            args: run --all-targets --features "experimental" --workspace
+            download_sway_artifacts: sway-examples-w-experimental-encoding
             install_fuel_core: true
     steps:
       - name: Checkout repository
@@ -242,9 +242,8 @@ jobs:
           name: ${{ matrix.download_sway_artifacts }}
           path: packages/fuels/tests/
 
-      # TODO: `test_experimental_logs` to be removed once experimental encoding is the default.
       - name: Install nextest
-        if: ${{ matrix.cargo_command == 'nextest' || matrix.command == 'test_experimental_logs' }}
+        if: ${{ matrix.cargo_command == 'nextest' }}
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-machete
@@ -272,6 +271,7 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd packages/wasm-tests
           wasm-pack test --node
+          wasm-pack test --node --features experimental
 
       - name: Check for invalid documentation anchors
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}
@@ -281,11 +281,6 @@ jobs:
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
-
-      # TODO: To be removed once experimental encoding is the default.
-      - name: Test experimental logs
-        if: ${{ matrix.command == 'test_experimental_logs' }}
-        run: RUSTFLAGS='--cfg experimental' cargo nextest run --test logs
 
   publish:
     needs:

@@ -15,3 +15,6 @@ fuels = { workspace = true }
 rand = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
+
+[features]
+experimental = ["fuels/experimental"]

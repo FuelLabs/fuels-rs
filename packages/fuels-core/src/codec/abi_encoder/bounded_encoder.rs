@@ -36,8 +36,6 @@ impl BoundedEncoder {
         }
     }
 
-    /// Encodes `Token`s in `args` following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&mut self, args: &[Token]) -> Result<UnresolvedBytes> {
         // Checking that the tokens can be encoded is not done here, because it would require
         // going through the whole array of tokens, which can be pretty inefficient.

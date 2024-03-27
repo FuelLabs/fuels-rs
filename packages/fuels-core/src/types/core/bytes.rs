@@ -19,8 +19,8 @@ impl Bytes {
 }
 
 impl From<Bytes> for Vec<u8> {
-    fn from(raw_slice: Bytes) -> Vec<u8> {
-        raw_slice.0
+    fn from(bytes: Bytes) -> Vec<u8> {
+        bytes.0
     }
 }
 

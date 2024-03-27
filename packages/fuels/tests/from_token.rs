@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
-use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
+use fuels::prelude::*;
+#[cfg(not(feature = "experimental"))]
+use fuels::{core::traits::Tokenizable, types::Token};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -8,6 +10,7 @@ pub fn null_contract_id() -> Bech32ContractId {
         .unwrap()
 }
 
+#[cfg(not(feature = "experimental"))]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -102,6 +105,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "experimental"))]
 #[tokio::test]
 async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.

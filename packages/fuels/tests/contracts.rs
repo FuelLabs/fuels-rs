@@ -1,5 +1,7 @@
+#[cfg(not(feature = "experimental"))]
+use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
-    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
+    core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
     types::{errors::transaction::Reason, Bits256},
 };
@@ -274,8 +276,15 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    let expected_gas_used = 949;
+    #[cfg(not(feature = "experimental"))]
+    let expected_gas_used = 955;
+    #[cfg(feature = "experimental")]
+    let expected_gas_used = 960;
+
+    #[cfg(not(feature = "experimental"))]
     let expected_metered_bytes_size = 784;
+    #[cfg(feature = "experimental")]
+    let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -1218,6 +1227,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg(not(feature = "experimental"))]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1696,7 +1706,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         let response = contract_instance
             .methods()
             .get_single(x)
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
 
@@ -1706,7 +1716,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         contract_instance_2
             .methods()
             .u32_vec(vec_input.clone())
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
     }
