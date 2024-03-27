@@ -1,10 +1,13 @@
 #[cfg(test)]
 mod tests {
+    #[cfg(not(feature = "experimental"))]
     use std::collections::HashMap;
 
+    #[cfg(not(feature = "experimental"))]
     use fuel_abi_types::abi::program::ProgramABI;
     #[cfg(not(feature = "experimental"))]
     use fuels::core::codec::{calldata, fn_selector};
+    #[cfg(not(feature = "experimental"))]
     use fuels::{
         //core::codec::ABIDecoder, // TODO: @hal3e temporarily disabled
         //macros::abigen, // TODO: @hal3e temporarily disabled
