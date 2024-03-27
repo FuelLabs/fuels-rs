@@ -108,9 +108,9 @@ mod tests {
         // ANCHOR_END: contract_call_cost_estimation
 
         #[cfg(not(feature = "experimental"))]
-        let expected_gas = 795;
+        let expected_gas = 796;
         #[cfg(feature = "experimental")]
-        let expected_gas = 2086;
+        let expected_gas = 2087;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -608,9 +608,9 @@ mod tests {
         // ANCHOR_END: multi_call_cost_estimation
 
         #[cfg(not(feature = "experimental"))]
-        let expected_gas = 1170;
+        let expected_gas = 1172;
         #[cfg(feature = "experimental")]
-        let expected_gas = 3511;
+        let expected_gas = 3513;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
