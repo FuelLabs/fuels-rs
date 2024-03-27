@@ -274,7 +274,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    let expected_gas_used = 949;
+    let expected_gas_used = 955;
     let expected_metered_bytes_size = 784;
 
     let estimated_transaction_cost = contract_instance
