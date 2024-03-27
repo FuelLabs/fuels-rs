@@ -1,13 +1,13 @@
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 use sha2::{Digest, Sha256};
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 use crate::types::param_types::NamedParamType;
 use crate::types::param_types::ParamType;
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 use crate::types::ByteArray;
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
@@ -16,7 +16,7 @@ pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     first_four_bytes_of_sha256_hash(&fn_signature)
 }
 
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
     let bytes = name.as_bytes().to_vec();
     let len = bytes.len() as u64;
@@ -24,19 +24,19 @@ pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
     [len.to_be_bytes().to_vec(), bytes].concat()
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn resolve_fn_signature(name: &str, inputs: &[ParamType]) -> String {
     let fn_args = resolve_args(inputs);
 
     format!("{name}({fn_args})")
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn resolve_args(args: &[ParamType]) -> String {
     args.iter().map(resolve_arg).collect::<Vec<_>>().join(",")
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn resolve_named_args(args: &[NamedParamType]) -> String {
     args.iter()
         .map(|(_, param_type)| resolve_arg(param_type))
@@ -44,7 +44,7 @@ fn resolve_named_args(args: &[NamedParamType]) -> String {
         .join(",")
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn resolve_arg(arg: &ParamType) -> String {
     match &arg {
         ParamType::U8 => "u8".to_owned(),
@@ -104,7 +104,7 @@ fn resolve_arg(arg: &ParamType) -> String {
     }
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined
 /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
@@ -142,7 +142,7 @@ macro_rules! calldata {
 
 pub use calldata;
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 #[cfg(test)]
 mod tests {
     use super::*;

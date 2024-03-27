@@ -323,7 +323,7 @@ async fn script_handles_std_string() -> Result<()> {
     Ok(())
 }
 
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
     setup_program_test!(

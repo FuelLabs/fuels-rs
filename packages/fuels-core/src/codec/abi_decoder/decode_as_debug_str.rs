@@ -104,7 +104,7 @@ mod tests {
         },
     };
 
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn param_type_decode_debug() -> Result<()> {
         let decoder = ABIDecoder::default();
@@ -261,7 +261,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(experimental)]
+    #[cfg(feature = "experimental")]
     #[test]
     fn param_type_decode_debug() -> Result<()> {
         let decoder = ABIDecoder::default();

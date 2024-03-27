@@ -244,7 +244,7 @@ pub(crate) fn get_instructions(
         })
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -324,7 +324,7 @@ pub(crate) fn build_script_data_from_contract_calls(
     Ok((script_data, param_offsets))
 }
 
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -440,14 +440,14 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     instructions.extend(extract_heap_data(_output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
         ParamType::Enum { enum_variants, .. } => {
@@ -483,7 +483,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
     }
 }
 
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,
@@ -657,7 +657,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::{
@@ -665,7 +665,7 @@ mod test {
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
     };
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
@@ -677,9 +677,9 @@ mod test {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
-                #[cfg(not(experimental))]
+                #[cfg(not(feature = "experimental"))]
                 encoded_selector: [0; 8],
-                #[cfg(experimental)]
+                #[cfg(feature = "experimental")]
                 encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
@@ -700,7 +700,7 @@ mod test {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
-    #[cfg(not(experimental))]
+    #[cfg(not(feature = "experimental"))]
     #[tokio::test]
     async fn test_script_data() {
         // Arrange
@@ -730,9 +730,9 @@ mod test {
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
-                #[cfg(not(experimental))]
+                #[cfg(not(feature = "experimental"))]
                 encoded_selector: selectors[i],
-                #[cfg(experimental)]
+                #[cfg(feature = "experimental")]
                 encoded_selector: selectors[i].to_vec(),
                 encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
@@ -1028,10 +1028,10 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
-        #[cfg(not(experimental))]
+        #[cfg(not(feature = "experimental"))]
         // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
         const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
-        #[cfg(not(experimental))]
+        #[cfg(not(feature = "experimental"))]
         // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
         const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
@@ -1053,7 +1053,7 @@ mod test {
             );
         }
 
-        #[cfg(not(experimental))]
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_heap_type() {
             let output_params = vec![
@@ -1073,7 +1073,7 @@ mod test {
             }
         }
 
-        #[cfg(not(experimental))]
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_gas_offset_and_heap_type() {
             let mut call = ContractCall::new_with_random_id();
@@ -1090,7 +1090,7 @@ mod test {
             );
         }
 
-        #[cfg(not(experimental))]
+        #[cfg(not(feature = "experimental"))]
         #[test]
         fn test_with_enum_with_heap_and_non_heap_variant() {
             let variant_sets = vec![
