@@ -27,8 +27,6 @@ impl ExperimentalBoundedEncoder {
         }
     }
 
-    /// Encodes `Token`s in `args` following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&mut self, args: &[Token]) -> Result<UnresolvedBytes> {
         let data = vec![Data::Inline(self.encode_tokens(args)?)];
 

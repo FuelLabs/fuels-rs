@@ -570,7 +570,6 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(experimental))]
     #[test]
     fn enums_with_all_unit_variants_are_decoded_from_one_word() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1];
