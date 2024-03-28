@@ -13,6 +13,7 @@ use fuels::{
         errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        tx_status::TxStatus,
         Bits256,
     },
 };
@@ -976,6 +977,38 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
 
     assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_produce_blocks_with_trig_never() -> Result<()> {
+    let config = Config {
+        block_production: Trigger::Never,
+        ..Config::default()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
+    let wallet = &wallets[0];
+    let provider = wallet.try_provider()?;
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+    let tx = tb.build(provider).await?;
+    let tx_id = tx.id(provider.chain_id());
+
+    provider.send_transaction(tx).await?;
+    provider.produce_blocks(1, None).await?;
+
+    let status = provider.tx_status(&tx_id).await?;
+    assert!(matches!(status, TxStatus::Success { .. }));
 
     Ok(())
 }
