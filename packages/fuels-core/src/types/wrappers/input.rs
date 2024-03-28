@@ -55,7 +55,7 @@ impl Input {
     pub fn asset_id(&self) -> Option<AssetId> {
         match self {
             Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id())
+                resource.asset_id()
             }
             _ => None,
         }

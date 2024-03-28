@@ -218,7 +218,12 @@ async fn pay_with_predicate() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        192
+    );
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
@@ -227,7 +232,12 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 191);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        191
+    );
 
     Ok(())
 }
@@ -273,7 +283,12 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        192
+    );
 
     let response = contract_methods
         .initialize_counter(42)
@@ -282,7 +297,12 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 191);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        191
+    );
 
     Ok(())
 }
@@ -673,7 +693,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
             .with_data(predicate_data);
 
     let amount = 1000;
-    let coins = setup_single_asset_coins(predicate.address(), BASE_ASSET_ID, 1, amount);
+    let coins = setup_single_asset_coins(predicate.address(), AssetId::default(), 1, amount);
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
@@ -717,7 +737,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, amount);
+    let mut coins = setup_single_asset_coins(wallet.address(), AssetId::default(), 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -734,7 +754,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         .await?;
     let outputs = vec![
         Output::change(wallet.address().into(), 0, non_base_asset_id),
-        Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+        Output::change(wallet.address().into(), 0, *provider.base_asset_id()),
     ];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(

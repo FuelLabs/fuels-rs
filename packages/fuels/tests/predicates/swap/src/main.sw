@@ -1,7 +1,7 @@
 predicate;
 
 use std::{
-    constants::BASE_ASSET_ID,
+    constants::ZERO_B256,
     outputs::{
         Output,
         output_amount,
@@ -18,5 +18,5 @@ fn main() -> bool {
     let to = Address::from(output_asset_to(output_index).unwrap());
     let asset_id = output_asset_id(output_index).unwrap();
     let amount = output_amount(output_index);
-    (to == receiver) && (amount == ask_amount) && (asset_id == BASE_ASSET_ID)
+    (to == receiver) && (amount == ask_amount) && (asset_id == AssetId::from(ZERO_B256))
 }

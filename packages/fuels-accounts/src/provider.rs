@@ -24,9 +24,7 @@ use fuel_types::{Address, BlockHeight, Bytes32, ChainId, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
-    constants::{
-        BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE,
-    },
+    constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -98,6 +96,7 @@ impl ResourceQueries {
     }
 }
 
+#[derive(Default)]
 // ANCHOR: resource_filter
 pub struct ResourceFilter {
     pub from: Bech32Address,
@@ -120,18 +119,6 @@ impl ResourceFilter {
             self.asset_id,
             self.amount,
         )
-    }
-}
-
-impl Default for ResourceFilter {
-    fn default() -> Self {
-        Self {
-            from: Default::default(),
-            asset_id: BASE_ASSET_ID,
-            amount: Default::default(),
-            excluded_utxos: Default::default(),
-            excluded_message_nonces: Default::default(),
-        }
     }
 }
 
@@ -193,7 +180,10 @@ impl Provider {
             tx_status,
             TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
         ) {
-            self.cache.lock().await.remove_items(tx.used_coins())
+            self.cache
+                .lock()
+                .await
+                .remove_items(tx.used_coins(self.base_asset_id()))
         }
 
         Ok(tx_status)
@@ -244,7 +234,7 @@ impl Provider {
 
     #[cfg(feature = "coin-cache")]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let used_utxos = tx.used_coins();
+        let used_utxos = tx.used_coins(self.base_asset_id());
         let tx_id = self.client.submit(&tx.into()).await?;
         self.cache.lock().await.insert_multiple(used_utxos);
 
@@ -261,6 +251,10 @@ impl Provider {
 
     pub fn consensus_parameters(&self) -> &ConsensusParameters {
         &self.consensus_parameters
+    }
+
+    pub fn base_asset_id(&self) -> &AssetId {
+        &self.consensus_parameters.base_asset_id
     }
 
     fn ensure_client_version_is_supported(node_info: &NodeInfo) -> Result<()> {
