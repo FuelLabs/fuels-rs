@@ -110,7 +110,8 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
-    let consensus_parameters = account.try_provider()?.consensus_parameters();
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters();
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
@@ -128,7 +129,12 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         asset_inputs.extend(resources);
     }
 
-    let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
+    let (inputs, outputs) = get_transaction_inputs_outputs(
+        calls,
+        asset_inputs,
+        account.address(),
+        *provider.base_asset_id(),
+    );
 
     Ok(ScriptTransactionBuilder::default()
         .with_tx_policies(tx_policies)
@@ -446,9 +452,10 @@ fn extract_data_receipt(
 pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     asset_inputs: Vec<Input>,
-    account: &impl Account,
+    address: &Bech32Address,
+    base_asset_id: AssetId,
 ) -> (Vec<Input>, Vec<Output>) {
-    let asset_ids = extract_unique_asset_ids(&asset_inputs);
+    let asset_ids = extract_unique_asset_ids(&asset_inputs, base_asset_id);
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
@@ -460,11 +467,12 @@ pub(crate) fn get_transaction_inputs_outputs(
     // `inputs` array we've sent over.
     let outputs = chain!(
         generate_contract_outputs(num_of_contracts),
-        generate_asset_change_outputs(account.address(), asset_ids),
+        generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
         extract_variable_outputs(calls)
     )
     .collect();
+
     (inputs, outputs)
 }
 
@@ -490,12 +498,12 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect::<Vec<_>>()
 }
 
-fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
+fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> HashSet<AssetId> {
     asset_inputs
         .iter()
         .filter_map(|input| match input {
             Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id())
+                Some(resource.asset_id().unwrap_or(base_asset_id))
             }
             _ => None,
         })
@@ -732,8 +740,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         assert_eq!(
             inputs,
@@ -757,7 +769,12 @@ mod test {
 
         let calls = [call, call_w_same_contract];
 
-        let (inputs, _) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         assert_eq!(
             inputs,
@@ -777,7 +794,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         assert_eq!(
             outputs,
@@ -795,8 +817,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         // then
         let mut expected_contract_ids: HashSet<ContractId> =
@@ -835,7 +861,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         // then
         let expected_outputs = (0..=1)
@@ -869,7 +900,8 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], coins, &wallet);
+        let (_, outputs) =
+            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::default());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -904,7 +936,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::default(),
+        );
 
         // then
         let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();

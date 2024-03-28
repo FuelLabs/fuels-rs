@@ -20,7 +20,7 @@ use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId
 use itertools::Itertools;
 
 use crate::{
-    constants::{BASE_ASSET_ID, SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
+    constants::{SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
     offsets,
     traits::Signer,
     types::{
@@ -597,6 +597,7 @@ impl ScriptTransactionBuilder {
         amount: u64,
         inputs: Vec<Input>,
         tx_policies: TxPolicies,
+        base_asset_id: AssetId,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
@@ -618,7 +619,7 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
+        let outputs = vec![Output::change(to, 0, base_asset_id)];
 
         ScriptTransactionBuilder::default()
             .with_tx_policies(tx_policies)

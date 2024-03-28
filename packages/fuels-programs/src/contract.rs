@@ -13,7 +13,7 @@ use fuel_tx::{
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
-    constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
+    constants::DEFAULT_CALL_PARAMS_AMOUNT,
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -86,7 +86,7 @@ impl Default for CallParameters {
     fn default() -> Self {
         Self {
             amount: DEFAULT_CALL_PARAMS_AMOUNT,
-            asset_id: BASE_ASSET_ID,
+            asset_id: Default::default(),
             gas_forwarded: None,
         }
     }
@@ -564,7 +564,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
+    /// let params = CallParameters { amount: 1, asset_id: AssetId::default() };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
