@@ -81,12 +81,8 @@ mod tests {
 
     #[cfg(not(feature = "experimental"))]
     use itertools::chain;
-    #[cfg(not(feature = "experimental"))]
-    use sha2::{Digest, Sha256};
 
     use super::*;
-    #[cfg(not(feature = "experimental"))]
-    use crate::codec::first_four_bytes_of_sha256_hash;
     #[cfg(not(feature = "experimental"))]
     use crate::constants::WORD_SIZE;
     use crate::{
@@ -104,468 +100,244 @@ mod tests {
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_signature() {
-        let fn_signature = "entry_one(u64)";
-
-        let result = first_four_bytes_of_sha256_hash(fn_signature);
-
-        println!("Encoded function selector for ({fn_signature}): {result:#0x?}");
-
-        assert_eq!(result, [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c]);
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_u32_type() -> Result<()> {
-        // @todo eventually we must update the json abi examples in here.
-        // They're in the old format.
-        //
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"u32"}],
-        //         "name":"entry_one",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "entry_one(u32)";
-        let arg = Token::U32(u32::MAX);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_u32_type_multiple_args() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"first","type":"u32"},{"name":"second","type":"u32"}],
-        //         "name":"takes_two",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "takes_two(u32,u32)";
-        let first = Token::U32(u32::MAX);
-        let second = Token::U32(u32::MAX);
-
-        let args: Vec<Token> = vec![first, second];
-
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff,
+    fn encode_multiple_uint() -> Result<()> {
+        let tokens = [
+            Token::U8(u8::MAX),
+            Token::U16(u16::MAX),
+            Token::U32(u32::MAX),
+            Token::U64(u64::MAX),
+            Token::U128(u128::MAX),
+            Token::U256(U256::MAX),
         ];
 
-        let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
+        let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_fn_selector);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_u64_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"u64"}],
-        //         "name":"entry_one",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "entry_one(u64)";
-        let arg = Token::U64(u64::MAX);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_bool_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"bool"}],
-        //         "name":"bool_check",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "bool_check(bool)";
-        let arg = Token::Bool(true);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_two_different_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"first","type":"u32"},{"name":"second","type":"bool"}],
-        //         "name":"takes_two_types",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "takes_two_types(u32,bool)";
-        let first = Token::U32(u32::MAX);
-        let second = Token::Bool(true);
-
-        let args: Vec<Token> = vec![first, second];
-
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, // u32::MAX
-            0x1,  // true
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            255, 0, 0, 0, 0, 0, 0, 0, // u8
+            0, 0, 0, 0, 0, 0, 255, 255, // u16
+            0, 0, 0, 0, 255, 255, 255, 255, // u32
+            255, 255, 255, 255, 255, 255, 255, 255, // u64
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, // u128
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            255, // u8
+            255, 255, // u16
+            255, 255, 255, 255, // u32
+            255, 255, 255, 255, 255, 255, 255, 255, // u64
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, // u128
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_bits256_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"b256"}],
-        //         "name":"takes_bits256",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
+    fn encode_bool() -> Result<()> {
+        let token = Token::Bool(true);
 
-        let fn_signature = "takes_bits256(b256)";
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        let mut hasher = Sha256::new();
-        hasher.update("test string".as_bytes());
+        #[cfg(not(feature = "experimental"))]
+        let expected = [0, 0, 0, 0, 0, 0, 0, 1];
+        #[cfg(feature = "experimental")]
+        let expected = [1];
 
-        let arg = hasher.finalize();
+        assert_eq!(result, expected);
 
-        let arg = Token::B256(arg.into());
+        Ok(())
+    }
 
-        let args: Vec<Token> = vec![arg];
+    #[test]
+    fn encode_b256() -> Result<()> {
+        let data = [
+            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
+            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11,
+        ];
+        let token = Token::B256(data);
 
-        let expected_encoded_abi = [
-            0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, 0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44,
-            0xe4, 0xcb, 0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, 0xa8, 0xf8, 0x27, 0x43,
-            0xf3, 0x1e, 0x93, 0xb,
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+        assert_eq!(result, data);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encode_bytes() -> Result<()> {
+        let token = Token::Bytes([255, 0, 1, 2, 3, 4, 5].to_vec());
+
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 24, // ptr
+            0, 0, 0, 0, 0, 0, 0, 8, // cap
+            0, 0, 0, 0, 0, 0, 0, 7, // len
+            255, 0, 1, 2, 3, 4, 5, 0, // data
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 7, // len
+            255, 0, 1, 2, 3, 4, 5, // data
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_array_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"u8[3]"}],
-        //         "name":"takes_integer_array",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
+    fn encode_string() -> Result<()> {
+        let token = Token::String("This is a full sentence".to_string());
 
-        let fn_signature = "takes_integer_array(u8[3])";
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        // Keeping the construction of the arguments array separate for better readability.
-        let first = Token::U8(1);
-        let second = Token::U8(2);
-        let third = Token::U8(3);
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 24, // ptr
+            0, 0, 0, 0, 0, 0, 0, 24, // cap
+            0, 0, 0, 0, 0, 0, 0, 23, // len
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, 0, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 23, // len
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
 
-        let arg = vec![first, second, third];
-        let arg_array = Token::Array(arg);
+        assert_eq!(result, expected);
 
-        let args: Vec<Token> = vec![arg_array];
-
-        let expected_encoded_abi = [0x1, 0x2, 0x3, 0x0, 0x0, 0x0, 0x0, 0x0];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_string_array_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"str[23]"}],
-        //         "name":"takes_string",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
+    fn encode_raw_slice() -> Result<()> {
+        let token = Token::RawSlice([255, 0, 1, 2, 3, 4, 5].to_vec());
 
-        let fn_signature = "takes_string(str[23])";
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        let args: Vec<Token> = vec![Token::StringArray(StaticStringToken::new(
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 16, // cap
+            0, 0, 0, 0, 0, 0, 0, 7, // len
+            255, 0, 1, 2, 3, 4, 5, 0, // data
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 7, // len
+            255, 0, 1, 2, 3, 4, 5, // data
+        ];
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn encode_string_array() -> Result<()> {
+        let token = Token::StringArray(StaticStringToken::new(
             "This is a full sentence".into(),
             Some(23),
-        ))];
+        ));
 
-        let expected_encoded_abi = [
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c,
-            0x20, 0x73, 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x0,
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, 0, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_string_slice_type() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"str"}],
-        //         "name":"takes_string",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        let fn_signature = "takes_string(str)";
-
-        let args: Vec<Token> = vec![Token::StringSlice(StaticStringToken::new(
+    fn encode_string_slice() -> Result<()> {
+        let token = Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
-        ))];
+        ));
 
-        let expected_encoded_abi = [
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, // str at data index 16
-            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x17, // str of lenght 23
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, //
-            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, //
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, //
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 16, // ptr
+            0, 0, 0, 0, 0, 0, 0, 23, // len
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 23, // len
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let expected_function_selector = [0, 0, 0, 0, 239, 77, 222, 230];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_struct() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"MyStruct"}],
-        //         "name":"takes_my_struct",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
+    fn encode_tuple() -> Result<()> {
+        let token = Token::Tuple(vec![Token::U32(255), Token::Bool(true)]);
 
-        let fn_signature = "takes_my_struct(MyStruct)";
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        // struct MyStruct {
-        //     foo: u8,
-        //     bar: bool,
-        // }
-
-        let foo = Token::U8(1);
-        let bar = Token::Bool(true);
-
-        // Create the custom struct token using the array of tuples above
-        let arg = Token::Struct(vec![foo, bar]);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [
-            0x1, // 1u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
-            0x1, // true
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 255, //u32
+            1, 0, 0, 0, 0, 0, 0, 0, //bool
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 255, //u32
+            1,   //bool
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_enum() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"MyEnum"}],
-        //         "name":"takes_my_enum",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
+    fn encode_array() -> Result<()> {
+        let token = Token::Tuple(vec![Token::U32(255), Token::U32(128)]);
 
-        let fn_signature = "takes_my_enum(MyEnum)";
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        // enum MyEnum {
-        //     x: u32,
-        //     y: bool,
-        // }
-        let types = to_named(&[ParamType::U32, ParamType::Bool]);
-        let params = EnumVariants::new(types)?;
-
-        // An `EnumSelector` indicating that we've chosen the first Enum variant,
-        // whose value is 42 of the type ParamType::U32 and that the Enum could
-        // have held any of the other types present in `params`.
-
-        let enum_selector = Box::new((0, Token::U32(42), params));
-
-        let arg = Token::Enum(enum_selector);
-
-        let args: Vec<Token> = vec![arg];
-
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 255, //u32
+            0, 0, 0, 0, 0, 0, 0, 128, //u32
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 0, 0, 255, //u32
+            0, 0, 0, 128, //u32
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
@@ -600,7 +372,7 @@ mod tests {
     }
 
     #[test]
-    fn encoding_enums_with_deeply_nested_types() -> Result<()> {
+    fn encode_enum_with_deeply_nested_types() -> Result<()> {
         /*
         enum DeeperEnum {
             v1: bool,
@@ -677,106 +449,8 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_function_with_nested_structs() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type":"function",
-        //         "inputs": [{"name":"arg","type":"Foo"}],
-        //         "name":"takes_my_nested_struct",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        // struct Foo {
-        //     x: u16,
-        //     y: Bar,
-        // }
-        //
-        // struct Bar {
-        //     a: bool,
-        //     b: u8[2],
-        // }
-
-        let fn_signature = "takes_my_nested_struct(Foo)";
-
-        let args: Vec<Token> = vec![Token::Struct(vec![
-            Token::U16(10),
-            Token::Struct(vec![
-                Token::Bool(true),
-                Token::Array(vec![Token::U8(1), Token::U8(2)]),
-            ]),
-        ])];
-
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // 10u16
-            0x1, // true
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
-            0x1, 0x2, // [1u8, 2u8]
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // padding
-        ];
-
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xea, 0x0a, 0xfd, 0x23];
-
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        println!("Encoded ABI for ({fn_signature}): {encoded:#0x?}");
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
-        Ok(())
-    }
-
-    #[test]
-    #[cfg(not(feature = "experimental"))]
-    fn encode_comprehensive_function() -> Result<()> {
-        // let json_abi =
-        // r#"
-        // [
-        //     {
-        //         "type": "contract",
-        //         "inputs": [
-        //         {
-        //             "name": "arg",
-        //             "type": "Foo"
-        //         },
-        //         {
-        //             "name": "arg2",
-        //             "type": "u8[2]"
-        //         },
-        //         {
-        //             "name": "arg3",
-        //             "type": "b256"
-        //         },
-        //         {
-        //             "name": "arg",
-        //             "type": "str[23]"
-        //         }
-        //         ],
-        //         "name": "long_function",
-        //         "outputs": []
-        //     }
-        // ]
-        // "#;
-
-        // struct Foo {
-        //     x: u16,
-        //     y: Bar,
-        // }
-        //
-        // struct Bar {
-        //     a: bool,
-        //     b: u8[2],
-        // }
-
-        let fn_signature = "long_function(Foo,u8[2],b256,str[23])";
-
-        let foo = Token::Struct(vec![
+    fn encode_nested_structs() -> Result<()> {
+        let token = Token::Struct(vec![
             Token::U16(10),
             Token::Struct(vec![
                 Token::Bool(true),
@@ -784,48 +458,83 @@ mod tests {
             ]),
         ]);
 
-        let u8_arr = Token::Array(vec![Token::U8(1), Token::U8(2)]);
+        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        let mut hasher = Sha256::new();
-        hasher.update("test string".as_bytes());
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 10, // u16
+            1,  // bool
+            0, 0, 0, 0, 0, 0, 0, // padding
+            1, 2, // [u8, u8]
+            0, 0, 0, 0, 0, 0, // padding
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 10, // u16
+            1,  // bool
+            1, 2, // [u8, u8]
+        ];
 
-        let b256 = Token::B256(hasher.finalize().into());
+        assert_eq!(result, expected);
 
-        let s = Token::StringArray(StaticStringToken::new(
+        Ok(())
+    }
+
+    #[test]
+    fn encode_comprehensive() -> Result<()> {
+        let foo = Token::Struct(vec![
+            Token::U16(10),
+            Token::Struct(vec![
+                Token::Bool(true),
+                Token::Array(vec![Token::U8(1), Token::U8(2)]),
+            ]),
+        ]);
+        let arr_u8 = Token::Array(vec![Token::U8(1), Token::U8(2)]);
+        let b256 = Token::B256([255; 32]);
+        let str_arr = Token::StringArray(StaticStringToken::new(
             "This is a full sentence".into(),
             Some(23),
         ));
+        let tokens = vec![foo, arr_u8, b256, str_arr];
 
-        let args: Vec<Token> = vec![foo, u8_arr, b256, s];
+        let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
 
-        let expected_encoded_abi = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // foo.x == 10u16
-            0x1, // foo.y.a == true
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // foo.y.a padding
-            0x1, // foo.y.b.0 == 1u8
-            0x2, // foo.y.b.1 == 2u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // foo.y.a
-            0x1, // u8[2].0 == 1u8
-            0x2, // u8[2].0 == 2u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f,
-            0x18, // b256
-            0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44, 0xe4, 0xcb, // b256
-            0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, // b256
-            0xa8, 0xf8, 0x27, 0x43, 0xf3, 0x1e, 0x93, 0xb, // b256
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // str[23]
-            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // str[23]
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // str[23]
-            0x0,
+        #[cfg(not(feature = "experimental"))]
+        let expected = [
+            0, 0, 0, 0, 0, 0, 0, 10, // foo.x == 10u16
+            1,  // foo.y.a == true
+            0, 0, 0, 0, 0, 0, 0, // foo.y.a padding
+            1, // foo.y.b.0 == 1u8
+            2, // foo.y.b.1 == 2u8
+            0, 0, 0, 0, 0, 0, // foo.y.a
+            1, // u8[2].0 == 1u8
+            2, // u8[2].0 == 2u8
+            0, 0, 0, 0, 0, 0, // padding
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, 0, // str[23]
+        ];
+        #[cfg(feature = "experimental")]
+        let expected = [
+            0, 10, // foo.x == 10u16
+            1,  // foo.y.a == true
+            1,  // foo.y.b.0 == 1u8
+            2,  // foo.y.b.1 == 2u8
+            1,  // u8[2].0 == 1u8
+            2,  // u8[2].0 == 2u8
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            255, 255, 255, 255, 255, 255, 255, 255, // b256
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, // str[23]
         ];
 
-        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
+        assert_eq!(result, expected);
 
-        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
-
-        let encoded = ABIEncoder::default().encode(&args)?.resolve(0);
-
-        assert_eq!(hex::encode(expected_encoded_abi), hex::encode(encoded));
-        assert_eq!(encoded_function_selector, expected_function_selector);
         Ok(())
     }
 
@@ -1098,110 +807,6 @@ mod tests {
         ];
 
         assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn encoding_bytes() -> Result<()> {
-        // arrange
-        let token = Token::Bytes(vec![1, 2, 3]);
-        let offset = 40;
-
-        // act
-        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
-
-        // assert
-        #[cfg(not(feature = "experimental"))]
-        let expected = {
-            let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
-            let cap = [0, 0, 0, 0, 0, 0, 0, 8];
-            let len = [0, 0, 0, 0, 0, 0, 0, 3];
-            let data = [1, 2, 3, 0, 0, 0, 0, 0];
-
-            [ptr, cap, len, data].concat()
-        };
-        #[cfg(feature = "experimental")]
-        let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // bytes[len, u8, u8, u8]
-
-        assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn encoding_raw_slices() -> Result<()> {
-        // arrange
-        let token = Token::RawSlice(vec![1, 2, 3]);
-        let offset = 40;
-
-        // act
-        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
-
-        // assert
-        #[cfg(not(feature = "experimental"))]
-        let expected = {
-            let ptr = [0, 0, 0, 0, 0, 0, 0, 56].to_vec();
-            let len = [0, 0, 0, 0, 0, 0, 0, 3].to_vec();
-            let data = [1, 2, 3].to_vec();
-            let padding = [0, 0, 0, 0, 0].to_vec();
-
-            [ptr, len, data, padding].concat()
-        };
-        #[cfg(feature = "experimental")]
-        let expected = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3]; // raw_slice[len, u8, u8, u8]
-
-        assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn encoding_std_string() -> Result<()> {
-        // arrange
-        let string = String::from("This ");
-        let token = Token::String(string);
-        let offset = 40;
-
-        // act
-        let result = ABIEncoder::default().encode(&[token])?.resolve(offset);
-
-        // assert
-        #[cfg(not(feature = "experimental"))]
-        let expected = {
-            let ptr = [0, 0, 0, 0, 0, 0, 0, 64];
-            let cap = [0, 0, 0, 0, 0, 0, 0, 8];
-            let len = [0, 0, 0, 0, 0, 0, 0, 5];
-            let data = [0x54, 0x68, 0x69, 0x73, 0x20, 0, 0, 0];
-
-            [ptr, cap, len, data].concat()
-        };
-        #[cfg(feature = "experimental")]
-        let expected = [0, 0, 0, 0, 0, 0, 0, 5, 84, 104, 105, 115, 32]; // string[len, data]
-
-        assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn encoding_large_unsigned_integers() -> Result<()> {
-        {
-            let token = Token::U128(u128::MAX);
-            let expected_encoding = [255; 16];
-
-            let result = ABIEncoder::default().encode(&[token])?.resolve(0);
-
-            assert_eq!(result, expected_encoding);
-        }
-        {
-            let token = Token::U256(U256::MAX);
-            let expected_encoding = [255; 32];
-
-            let result = ABIEncoder::default().encode(&[token])?.resolve(0);
-
-            assert_eq!(result, expected_encoding);
-        }
 
         Ok(())
     }

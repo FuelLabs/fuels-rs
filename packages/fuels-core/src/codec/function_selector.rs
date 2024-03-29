@@ -17,6 +17,8 @@ pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
 }
 
 #[cfg(feature = "experimental")]
+//TODO: remove `_inputs` once the new encoding stabilizes
+//https://github.com/FuelLabs/fuels-rs/issues/1318
 pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
     let bytes = name.as_bytes().to_vec();
     let len = bytes.len() as u64;
@@ -303,5 +305,159 @@ mod tests {
         let selector = resolve_fn_signature("complex_test", &inputs);
 
         assert_eq!(selector, "complex_test(s<str[2],b256>((a[b256;2],str[2]),(a[e<s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])))>(u64,s<s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2])>((s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]),s<s<str[2]>(s<str[2]>(str[2]))>(a[s<str[2]>(s<str[2]>(str[2]));2]))));1],u32)))");
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_signature() {
+        let fn_signature = "entry_one(u64)";
+
+        let result = first_four_bytes_of_sha256_hash(fn_signature);
+
+        assert_eq!(result, [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c]);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_u32_type() {
+        let fn_signature = "entry_one(u32)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xb7, 0x9e, 0xf7, 0x43];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_u32_type_multiple_args() {
+        let fn_signature = "takes_two(u32,u32)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_fn_selector = [0x0, 0x0, 0x0, 0x0, 0xa7, 0x07, 0xb0, 0x8e];
+
+        assert_eq!(encoded_function_selector, expected_fn_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_u64_type() {
+        let fn_signature = "entry_one(u64)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x0c, 0x36, 0xcb, 0x9c];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_bool_type() {
+        let fn_signature = "bool_check(bool)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x66, 0x8f, 0xff, 0x58];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_two_different_type() {
+        let fn_signature = "takes_two_types(u32,bool)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xf5, 0x40, 0x73, 0x2b];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_bits256_type() {
+        let fn_signature = "takes_bits256(b256)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x01, 0x49, 0x42, 0x96];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_array_type() {
+        let fn_signature = "takes_integer_array(u8[3])";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x2c, 0x5a, 0x10, 0x2e];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_string_array_type() {
+        let fn_signature = "takes_string(str[23])";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xd5, 0x6e, 0x76, 0x51];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_string_slice_type() {
+        let fn_signature = "takes_string(str)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0, 0, 0, 0, 239, 77, 222, 230];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_struct() {
+        let fn_signature = "takes_my_struct(MyStruct)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0xa8, 0x1e, 0x8d, 0xd7];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_function_with_enum() {
+        let fn_signature = "takes_my_enum(MyEnum)";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x35, 0x5c, 0xa6, 0xfa];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
+    }
+
+    #[test]
+    #[cfg(not(feature = "experimental"))]
+    fn encode_comprehensive_function() {
+        let fn_signature = "long_function(Foo,u8[2],b256,str[23])";
+
+        let encoded_function_selector = first_four_bytes_of_sha256_hash(fn_signature);
+
+        let expected_function_selector = [0x0, 0x0, 0x0, 0x0, 0x10, 0x93, 0xb2, 0x12];
+
+        assert_eq!(encoded_function_selector, expected_function_selector);
     }
 }

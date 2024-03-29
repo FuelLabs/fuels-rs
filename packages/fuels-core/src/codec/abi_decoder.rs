@@ -128,25 +128,11 @@ mod tests {
     };
 
     #[test]
-    fn decode_int() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
-        let data = [0, 0, 0, 0, 255, 255, 255, 255];
-        #[cfg(feature = "experimental")]
-        let data = [255, 255, 255, 255];
-
-        let decoded = ABIDecoder::default().decode(&ParamType::U32, &data)?;
-
-        assert_eq!(decoded, Token::U32(u32::MAX));
-
-        Ok(())
-    }
-
-    #[test]
-    fn decode_multiple_int() -> Result<()> {
+    fn decode_multiple_uint() -> Result<()> {
         let types = vec![
-            ParamType::U32,
             ParamType::U8,
             ParamType::U16,
+            ParamType::U32,
             ParamType::U64,
             ParamType::U128,
             ParamType::U256,
@@ -154,9 +140,9 @@ mod tests {
 
         #[cfg(not(feature = "experimental"))]
         let data = [
-            0, 0, 0, 0, 255, 255, 255, 255, // u32
             255, // u8
             0, 0, 0, 0, 0, 0, 255, 255, // u16
+            0, 0, 0, 0, 255, 255, 255, 255, // u32
             255, 255, 255, 255, 255, 255, 255, 255, // u64
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, // u128
@@ -165,9 +151,9 @@ mod tests {
         ];
         #[cfg(feature = "experimental")]
         let data = [
-            255, 255, 255, 255, // u32
             255, // u8
             255, 255, // u16
+            255, 255, 255, 255, // u32
             255, 255, 255, 255, 255, 255, 255, 255, // u64
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, // u128
@@ -178,9 +164,9 @@ mod tests {
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
-            Token::U32(u32::MAX),
             Token::U8(u8::MAX),
             Token::U16(u16::MAX),
+            Token::U32(u32::MAX),
             Token::U64(u64::MAX),
             Token::U128(u128::MAX),
             Token::U256(U256::MAX),
@@ -251,7 +237,6 @@ mod tests {
 
     #[test]
     fn decode_string_slice() -> Result<()> {
-        let types = vec![ParamType::StringSlice];
         #[cfg(not(feature = "experimental"))]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -264,14 +249,60 @@ mod tests {
             116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::StringSlice, &data)?;
 
-        let expected = vec![Token::StringSlice(StaticStringToken::new(
+        let expected = Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
-        ))];
+        ));
 
         assert_eq!(decoded, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn decode_string() -> Result<()> {
+        #[cfg(not(feature = "experimental"))]
+        let data = [
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 23, // [length]
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+
+        let decoded = ABIDecoder::default().decode(&ParamType::String, &data)?;
+
+        let expected = Token::String("This is a full sentence".to_string());
+
+        assert_eq!(decoded, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn decode_tuple() -> Result<()> {
+        let param_type = ParamType::Tuple(vec![ParamType::U32, ParamType::Bool]);
+        #[cfg(not(feature = "experimental"))]
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 255, //u32
+            1, 0, 0, 0, 0, 0, 0, 0, //bool
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            0, 0, 0, 255, //u32
+            1,   //bool
+        ];
+
+        let result = ABIDecoder::default().decode(&param_type, &data)?;
+
+        let expected = Token::Tuple(vec![Token::U32(255), Token::Bool(true)]);
+
+        assert_eq!(result, expected);
 
         Ok(())
     }
@@ -326,6 +357,22 @@ mod tests {
         let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
 
         let expected = Token::Bytes([255, 0, 1, 2, 3, 4, 5].to_vec());
+
+        assert_eq!(decoded, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn decode_raw_slice() -> Result<()> {
+        #[cfg(not(feature = "experimental"))]
+        let data = [255, 0, 1, 2, 3, 4, 5];
+        #[cfg(feature = "experimental")]
+        let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
+
+        let decoded = ABIDecoder::default().decode(&ParamType::RawSlice, &data)?;
+
+        let expected = Token::RawSlice([255, 0, 1, 2, 3, 4, 5].to_vec());
 
         assert_eq!(decoded, expected);
 

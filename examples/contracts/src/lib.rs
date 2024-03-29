@@ -107,10 +107,11 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        #[cfg(not(feature = "experimental"))]
-        let expected_gas = 796;
-        #[cfg(feature = "experimental")]
-        let expected_gas = 2087;
+        let expected_gas = if cfg!(feature = "experimental") {
+            2087
+        } else {
+            796
+        };
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 

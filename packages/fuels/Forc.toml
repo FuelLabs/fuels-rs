@@ -60,8 +60,6 @@ members = [
   'tests/types/contracts/enum_encoding',
   'tests/types/contracts/enum_inside_struct',
   'tests/types/contracts/evm_address',
-  # TODO: @hal3e tempoarily disabled this forc project
-  #'tests/types/contracts/generics',
   'tests/types/contracts/heap_type_in_enums',
   'tests/types/contracts/heap_types',
   'tests/types/contracts/identity',
