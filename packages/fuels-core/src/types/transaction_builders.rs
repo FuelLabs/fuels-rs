@@ -4,7 +4,6 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
     iter::repeat,
-    ops::Not,
 };
 
 use async_trait::async_trait;
@@ -369,20 +368,19 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_input_to_cover_fees<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
-        inputs
-            .into_iter()
-            .any(|i| match i {
-                FuelInput::CoinSigned(CoinSigned { asset_id, .. })
-                | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                    if *asset_id == BASE_ASSET_ID =>
-                {
-                    true
-                }
-                FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
-                _ => false,
-            })
-            .not()
+    fn no_base_asset_input<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
+        let has_base_asset = inputs.into_iter().any(|i| match i {
+            FuelInput::CoinSigned(CoinSigned { asset_id, .. })
+            | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
+                if *asset_id == BASE_ASSET_ID =>
+            {
+                true
+            }
+            FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
+            _ => false,
+        });
+
+        !has_base_asset
     }
 
     async fn set_script_gas_limit_to_gas_used(
@@ -392,10 +390,10 @@ impl ScriptTransactionBuilder {
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
 
-        // The dry-run validation will check if there is any input that can cover the fees.
+        // The dry-run validation will check if there is any base asset input.
         // If we are dry-running without inputs we have to add a temporary one.
-        let no_input_to_cover_fees = Self::no_input_to_cover_fees(tx.inputs());
-        if no_input_to_cover_fees {
+        let no_base_asset_input = Self::no_base_asset_input(tx.inputs());
+        if no_base_asset_input {
             tx.inputs_mut().push(FuelInput::coin_signed(
                 Default::default(),
                 Default::default(),
@@ -422,7 +420,7 @@ impl ScriptTransactionBuilder {
             .await?;
 
         // Remove dry-run input and witness.
-        if no_input_to_cover_fees {
+        if no_base_asset_input {
             tx.inputs_mut().pop();
             tx.witnesses_mut().pop();
             tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
