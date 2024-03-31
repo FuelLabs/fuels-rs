@@ -296,7 +296,7 @@ impl Provider {
     }
 
     pub fn chain_id(&self) -> ChainId {
-        self.consensus_parameters.chain_id
+        self.consensus_parameters.chain_id()
     }
 
     pub async fn node_info(&self) -> Result<NodeInfo> {

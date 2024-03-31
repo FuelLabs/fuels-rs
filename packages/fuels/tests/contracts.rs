@@ -274,7 +274,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    let expected_gas_used = 949;
+    let expected_gas_used = 960;
     let expected_metered_bytes_size = 784;
 
     let estimated_transaction_cost = contract_instance
@@ -1008,10 +1008,9 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         types::coin::Coin,
     };
 
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(123),
-        ..Default::default()
-    };
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default().with_max_inputs(123);
+    consensus_parameters.set_tx_params(tx_params);
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -1355,14 +1354,13 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-            let node_config = Config {
+            let node_config = NodeConfig {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::default()
+                ..NodeConfig::default()
             };
 
             let chain_config = ChainConfig {
                 chain_name: temp_dir_name.clone(),
-                initial_state: None,
                 consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
@@ -1389,9 +1387,9 @@ fn db_rocksdb() {
     tokio::runtime::Runtime::new()
         .expect("tokio runtime failed")
         .block_on(async {
-            let node_config = Config {
+            let node_config = NodeConfig {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::default()
+                ..NodeConfig::default()
             };
 
             let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;

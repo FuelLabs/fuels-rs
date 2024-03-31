@@ -3,7 +3,6 @@ extern crate core;
 
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
-use fuel_core_chain_config::StateConfig;
 use fuel_tx::{Bytes32, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
@@ -130,24 +129,22 @@ pub fn setup_single_message(
 pub async fn setup_test_provider(
     coins: Vec<Coin>,
     messages: Vec<Message>,
-    node_config: Option<Config>,
+    node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Provider> {
+    let node_config = node_config.unwrap_or_default();
+    let chain_config = chain_config.unwrap_or_else(ChainConfig::local_testnet);
+
     let coin_configs = into_coin_configs(coins);
     let message_configs = into_message_configs(messages);
-    let mut chain_conf = chain_config.unwrap_or_else(ChainConfig::local_testnet);
 
-    chain_conf.initial_state = Some(StateConfig {
-        coins: Some(coin_configs),
-        contracts: None,
-        messages: Some(message_configs),
-        ..StateConfig::default()
-    });
+    let state_config = StateConfig {
+        coins: coin_configs,
+        messages: message_configs,
+        ..StateConfig::local_testnet()
+    };
 
-    let mut config = node_config.unwrap_or_default();
-    config.chain_conf = chain_conf;
-
-    let srv = FuelService::start(config).await?;
+    let srv = FuelService::start(node_config, chain_config, state_config).await?;
 
     let address = srv.bound_address();
 
@@ -292,9 +289,9 @@ mod tests {
     #[tokio::test]
     async fn test_setup_test_provider_custom_config() -> Result<()> {
         let socket = SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 4000);
-        let config = Config {
+        let config = NodeConfig {
             addr: socket,
-            ..Config::default()
+            ..NodeConfig::default()
         };
 
         let provider = setup_test_provider(vec![], vec![], Some(config.clone()), None).await?;
@@ -317,12 +314,10 @@ mod tests {
         let fee_params = FeeParameters::default().with_gas_per_byte(2);
         let contract_params = ContractParameters::default().with_max_storage_slots(83);
 
-        let consensus_parameters = ConsensusParameters {
-            tx_params,
-            fee_params,
-            contract_params,
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
+        consensus_parameters.set_tx_params(tx_params);
+        consensus_parameters.set_fee_params(fee_params);
+        consensus_parameters.set_contract_params(contract_params);
 
         let chain_config = ChainConfig {
             consensus_parameters: consensus_parameters.clone(),
@@ -342,11 +337,13 @@ mod tests {
         let max_inputs = 123;
         let gas_per_byte = 456;
 
-        let consensus_parameters = ConsensusParameters {
-            tx_params: TxParameters::default().with_max_inputs(max_inputs),
-            fee_params: FeeParameters::default().with_gas_per_byte(gas_per_byte),
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
+
+        let tx_params = TxParameters::default().with_max_inputs(max_inputs);
+        consensus_parameters.set_tx_params(tx_params);
+
+        let fee_params = FeeParameters::default().with_gas_per_byte(gas_per_byte);
+        consensus_parameters.set_fee_params(fee_params);
 
         let chain_name = "fuel-0".to_string();
         let chain_config = ChainConfig {
@@ -361,11 +358,11 @@ mod tests {
 
         assert_eq!(chain_info.name, chain_name);
         assert_eq!(
-            chain_info.consensus_parameters.tx_params().max_inputs,
+            chain_info.consensus_parameters.tx_params().max_inputs(),
             max_inputs
         );
         assert_eq!(
-            chain_info.consensus_parameters.fee_params().gas_per_byte,
+            chain_info.consensus_parameters.fee_params().gas_per_byte(),
             gas_per_byte
         );
         Ok(())

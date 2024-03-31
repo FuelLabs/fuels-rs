@@ -5,10 +5,13 @@ use std::{
 };
 
 pub use fuel_core_chain_config::ChainConfig;
-use fuel_types::{BlockHeight, Word};
-use fuels_core::constants::WORD_SIZE;
+pub use fuel_core_chain_config::StateConfig;
+use fuel_tx::Word;
+use fuel_types::{bytes::WORD_SIZE, BlockHeight};
+use fuels_core::types::errors::Result;
 use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
+use tempfile::TempDir;
 
 const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
@@ -47,7 +50,7 @@ impl From<DbType> for fuel_core::service::DbType {
 }
 
 #[derive(Clone, Debug)]
-pub struct Config {
+pub struct NodeConfig {
     pub addr: SocketAddr,
     pub max_database_cache_size: Option<usize>,
     pub database_type: DbType,
@@ -56,10 +59,9 @@ pub struct Config {
     pub block_production: Trigger,
     pub vm_backtrace: bool,
     pub silent: bool,
-    pub chain_conf: ChainConfig,
 }
 
-impl Default for Config {
+impl Default for NodeConfig {
     fn default() -> Self {
         Self {
             addr: SocketAddr::new(Ipv4Addr::new(127, 0, 0, 1).into(), 0),
@@ -70,14 +72,128 @@ impl Default for Config {
             block_production: Trigger::Instant,
             vm_backtrace: false,
             silent: true,
-            chain_conf: ChainConfig::local_testnet(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ExtendedConfig {
+    pub node_config: NodeConfig,
+    pub chain_config: ChainConfig,
+    pub state_config: StateConfig,
+    pub snapshot_dir: TempDir,
+}
+
+impl ExtendedConfig {
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub fn args_vec(&self) -> Result<Vec<String>> {
+        let port = self.node_config.addr.port().to_string();
+        let mut args = vec![
+            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+            "--ip".to_string(),
+            "127.0.0.1".to_string(),
+            "--port".to_string(),
+            port,
+            "--snapshot".to_string(),
+            self.snapshot_dir
+                .path()
+                .to_str()
+                .expect("Failed to find config file")
+                .to_string(),
+        ];
+
+        args.push("--db-type".to_string());
+        match &self.node_config.database_type {
+            DbType::InMemory => args.push("in-memory".to_string()),
+            DbType::RocksDb(path_to_db) => {
+                args.push("rocks-db".to_string());
+                let path = path_to_db.as_ref().cloned().unwrap_or_else(|| {
+                    PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
+                        .join(".fuel/db")
+                });
+                args.push("--db-path".to_string());
+                args.push(path.to_string_lossy().to_string());
+            }
+        }
+
+        if let Some(cache_size) = self.node_config.max_database_cache_size {
+            args.push("--max-database-cache-size".to_string());
+            args.push(cache_size.to_string());
+        }
+
+        match self.node_config.block_production {
+            Trigger::Instant => {
+                args.push("--poa-instant=true".to_string());
+            }
+            Trigger::Never => {
+                args.push("--poa-instant=false".to_string());
+            }
+            Trigger::Interval { block_time } => {
+                args.push(format!(
+                    "--poa-interval-period={}ms",
+                    block_time.as_millis()
+                ));
+            }
+        };
+
+        args.extend(
+            [
+                (self.node_config.vm_backtrace, "--vm-backtrace"),
+                (self.node_config.utxo_validation, "--utxo-validation"),
+                (self.node_config.debug, "--debug"),
+            ]
+            .into_iter()
+            .filter(|(flag, _)| *flag)
+            .map(|(_, arg)| arg.to_string()),
+        );
+
+        Ok(args)
+    }
+
+    #[cfg(not(feature = "fuel-core-lib"))]
+    pub fn write_temp_snapshot_files(self) -> Result<TempDir> {
+        use fuel_core_chain_config::SnapshotWriter;
+        use fuels_core::error;
+
+        let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
+        writer
+            .write_chain_config(&self.chain_config)
+            .map_err(|e| error!(Other, "could not write chain config: {}", e))?;
+        writer
+            .write_state_config(self.state_config)
+            .map_err(|e| error!(Other, "could not write state config: {}", e))?;
+
+        Ok(self.snapshot_dir)
+    }
+
+    #[cfg(feature = "fuel-core-lib")]
+    fn service_config(self) -> fuel_core::Config {
+        use fuel_core_chain_config::SnapshotReader;
+
+        let snapshot_reader = SnapshotReader::new_in_memory(self.chain_config, self.state_config);
+
+        Self {
+            addr: self.node_config.addr,
+            max_database_cache_size: self
+                .node_config
+                .max_database_cache_size
+                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
+            database_path: match &self.node_config.database_type {
+                DbType::InMemory => Default::default(),
+                DbType::RocksDb(path) => path.clone().unwrap_or_default(),
+            },
+            database_type: self.node_config.database_type.into(),
+            utxo_validation: self.node_config.utxo_validation,
+            debug: self.node_config.debug,
+            block_production: self.node_config.block_production.into(),
+            ..fuel_core::service::Config::local_node()
         }
     }
 }
 
 #[cfg(feature = "fuel-core-lib")]
-impl From<Config> for fuel_core::service::Config {
-    fn from(value: Config) -> Self {
+impl From<NodeConfig> for fuel_core::service::Config {
+    fn from(value: NodeConfig) -> Self {
         Self {
             addr: value.addr,
             max_database_cache_size: value
@@ -129,7 +245,7 @@ pub(crate) mod serde_hex {
 pub(crate) struct HexNumber;
 
 impl SerializeAs<u64> for HexNumber {
-    fn serialize_as<S>(value: &u64, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize_as<S>(value: &u64, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -139,7 +255,7 @@ impl SerializeAs<u64> for HexNumber {
 }
 
 impl<'de> DeserializeAs<'de, Word> for HexNumber {
-    fn deserialize_as<D>(deserializer: D) -> Result<Word, D::Error>
+    fn deserialize_as<D>(deserializer: D) -> std::result::Result<Word, D::Error>
     where
         D: Deserializer<'de>,
     {
@@ -164,7 +280,7 @@ impl<'de> DeserializeAs<'de, Word> for HexNumber {
 }
 
 impl SerializeAs<BlockHeight> for HexNumber {
-    fn serialize_as<S>(value: &BlockHeight, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize_as<S>(value: &BlockHeight, serializer: S) -> std::result::Result<S::Ok, S::Error>
     where
         S: Serializer,
     {
@@ -174,7 +290,7 @@ impl SerializeAs<BlockHeight> for HexNumber {
 }
 
 impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
-    fn deserialize_as<D>(deserializer: D) -> Result<BlockHeight, D::Error>
+    fn deserialize_as<D>(deserializer: D) -> std::result::Result<BlockHeight, D::Error>
     where
         D: Deserializer<'de>,
     {

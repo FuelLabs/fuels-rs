@@ -1,6 +1,5 @@
 use std::{
     net::{IpAddr, SocketAddr},
-    path::PathBuf,
     time::Duration,
 };
 
@@ -11,91 +10,9 @@ use fuels_core::{
     types::errors::{Error, Result as FuelResult},
 };
 use portpicker::{is_free, pick_unused_port};
-use tempfile::NamedTempFile;
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
-use crate::node_types::{Config, DbType, Trigger};
-
-#[derive(Debug)]
-struct ExtendedConfig {
-    config: Config,
-    config_file: NamedTempFile,
-}
-
-impl ExtendedConfig {
-    pub fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
-        self.write_temp_chain_config_file()?;
-
-        let port = self.config.addr.port().to_string();
-        let mut args = vec![
-            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
-            "--ip".to_string(),
-            "127.0.0.1".to_string(),
-            "--port".to_string(),
-            port,
-            "--chain".to_string(),
-            self.config_file
-                .path()
-                .to_str()
-                .expect("Failed to find config file")
-                .to_string(),
-        ];
-
-        args.push("--db-type".to_string());
-        match &self.config.database_type {
-            DbType::InMemory => args.push("in-memory".to_string()),
-            DbType::RocksDb(path_to_db) => {
-                args.push("rocks-db".to_string());
-                let path = path_to_db.as_ref().cloned().unwrap_or_else(|| {
-                    PathBuf::from(std::env::var("HOME").expect("HOME env var missing"))
-                        .join(".fuel/db")
-                });
-                args.push("--db-path".to_string());
-                args.push(path.to_string_lossy().to_string());
-            }
-        }
-
-        if let Some(cache_size) = self.config.max_database_cache_size {
-            args.push("--max-database-cache-size".to_string());
-            args.push(cache_size.to_string());
-        }
-
-        match self.config.block_production {
-            Trigger::Instant => {
-                args.push("--poa-instant=true".to_string());
-            }
-            Trigger::Never => {
-                args.push("--poa-instant=false".to_string());
-            }
-            Trigger::Interval { block_time } => {
-                args.push(format!(
-                    "--poa-interval-period={}ms",
-                    block_time.as_millis()
-                ));
-            }
-        };
-
-        args.extend(
-            [
-                (self.config.vm_backtrace, "--vm-backtrace"),
-                (self.config.utxo_validation, "--utxo-validation"),
-                (self.config.debug, "--debug"),
-            ]
-            .into_iter()
-            .filter(|(flag, _)| *flag)
-            .map(|(_, arg)| arg.to_string()),
-        );
-
-        Ok(args)
-    }
-
-    pub fn write_temp_chain_config_file(&mut self) -> FuelResult<()> {
-        Ok(serde_json::to_writer(
-            &mut self.config_file,
-            &self.config.chain_conf,
-        )?)
-    }
-}
+use crate::{node_types::NodeConfig, ExtendedConfig};
 
 pub struct FuelService {
     pub bound_address: SocketAddr,
@@ -103,26 +20,26 @@ pub struct FuelService {
 }
 
 impl FuelService {
-    pub async fn new_node(config: Config) -> FuelResult<Self> {
-        let requested_port = config.addr.port();
+    pub async fn new_node(config: ExtendedConfig) -> FuelResult<Self> {
+        let requested_port = config.node_config.addr.port();
 
         let bound_address = match requested_port {
             0 => get_socket_address()?,
-            _ if is_free(requested_port) => config.addr,
+            _ if is_free(requested_port) => config.node_config.addr,
             _ => return Err(Error::IO(std::io::ErrorKind::AddrInUse.into())),
         };
 
-        let config = Config {
+        let node_config = NodeConfig {
             addr: bound_address,
-            ..config
+            ..config.node_config
         };
 
         let extended_config = ExtendedConfig {
-            config,
-            config_file: NamedTempFile::new()?,
+            node_config,
+            ..config
         };
 
-        let addr = extended_config.config.addr;
+        let addr = extended_config.node_config.addr;
         let handle = run_node(extended_config).await?;
         server_health_check(addr).await?;
 
@@ -165,8 +82,9 @@ fn get_socket_address() -> FuelResult<SocketAddr> {
     Ok(SocketAddr::new(address, free_port))
 }
 
-async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
-    let args = extended_config.config_to_args_vec()?;
+async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
+    let args = extended_config.args_vec()?;
+    let tempdir = extended_config.write_temp_snapshot_files()?;
 
     let binary_name = "fuel-core";
 
@@ -189,8 +107,8 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let running_node = command.args(args).kill_on_drop(true).output();
 
     let join_handle = spawn(async move {
-        // ensure drop is not called on the tmp file and it lives throughout the lifetime of the node
-        let _unused = extended_config;
+        // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
+        let _unused = tempdir;
         let result = running_node
             .await
             .expect("error: could not find `fuel-core` in PATH`");
