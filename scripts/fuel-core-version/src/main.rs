@@ -13,7 +13,7 @@ use versions_replacer::metadata::collect_versions_from_cargo_toml;
 
 fn get_version_from_toml(manifest_path: impl AsRef<Path>) -> Result<Version> {
     let versions = collect_versions_from_cargo_toml(manifest_path)?;
-    let version = versions["fuel-core"].parse::<Version>()?;
+    let version = versions["fuel-core-types"].parse::<Version>()?;
     Ok(version)
 }
 
