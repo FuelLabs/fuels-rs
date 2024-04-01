@@ -277,7 +277,7 @@ jobs:
 
       - name: Check that fuel_core version.rs file is up to date
         if: ${{ matrix.command == 'check_fuel_core_version' }}
-        run: cargo run --bin fuel-core-version --manifest-path ./Cargo.toml verify
+        run: cargo run --bin fuel-core-version -- --manifest-path ./Cargo.toml verify
 
       - name: Check for invalid documentation anchors
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}
