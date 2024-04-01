@@ -895,7 +895,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 async fn predicate_encoder_config_is_applied() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
     {
         let _encoding_ok = MyPredicateEncoder::default()
@@ -950,10 +951,11 @@ async fn predicate_validation() -> Result<()> {
 
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
     let code_path =
-        "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+        "../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin";
 
     // the predicate evaluates to true if the two arguments are equal
     let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;

@@ -60,7 +60,8 @@ mod tests {
         ));
 
         let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
-        let code_path = "../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin";
+        let code_path =
+            "../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(provider)

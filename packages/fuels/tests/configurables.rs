@@ -177,7 +177,7 @@ async fn script_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn configurable_encoder_config_is_applied() {
-    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/release/script_configurables-abi.json"));
 
     let new_struct = StructWithGeneric {
         field_1: 16u8,

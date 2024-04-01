@@ -1782,7 +1782,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         Wallets("wallet")
     );
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
