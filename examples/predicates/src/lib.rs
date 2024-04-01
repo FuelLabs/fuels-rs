@@ -11,19 +11,13 @@ mod tests {
     async fn predicate_example() -> Result<()> {
         // ANCHOR: predicate_wallets
         let secret_key1: SecretKey =
-            "0x862512a2363db2b3a375c0d4bbbd27172180d89f23f2e259bac850ab02619301"
-                .parse()
-                .unwrap();
+            "0x862512a2363db2b3a375c0d4bbbd27172180d89f23f2e259bac850ab02619301".parse()?;
 
         let secret_key2: SecretKey =
-            "0x37fa81c84ccd547c30c176b118d5cb892bdb113e8e80141f266519422ef9eefd"
-                .parse()
-                .unwrap();
+            "0x37fa81c84ccd547c30c176b118d5cb892bdb113e8e80141f266519422ef9eefd".parse()?;
 
         let secret_key3: SecretKey =
-            "0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb"
-                .parse()
-                .unwrap();
+            "0x976e5c3fa620092c718d852ca703b6da9e3075b9f2ecb8ed42d9f746bf26aafb".parse()?;
 
         let mut wallet = WalletUnlocked::new_from_private_key(secret_key1, None);
         let mut wallet2 = WalletUnlocked::new_from_private_key(secret_key2, None);
@@ -65,9 +59,8 @@ mod tests {
             abi = "packages/fuels/tests/predicates/signatures/out/release/signatures-abi.json"
         ));
 
-        let predicate_data = MyPredicateEncoder::encode_data(signatures);
-        let code_path =
-            "../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin";
+        let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
+        let code_path = "../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(provider)
@@ -135,7 +128,7 @@ mod tests {
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: with_predicate_data
-        let predicate_data = MyPredicateEncoder::encode_data(4096, 4096);
+        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
             "../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin";
 

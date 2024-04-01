@@ -41,7 +41,7 @@ impl GeneratedCode {
                     panic,
                 };
 
-                use #lib::{string::ToString, format, vec};
+                use #lib::{string::ToString, format, vec, default::Default};
 
         }
     }
@@ -186,7 +186,7 @@ mod tests {
                     panic,
                 };
 
-                use ::std::{string::ToString, format, vec};
+                use ::std::{string::ToString, format, vec, default::Default};
 
                 struct SomeType;
             }
@@ -242,7 +242,7 @@ mod tests {
                     marker::Sized,
                     panic,
                 };
-                use ::std::{string::ToString, format, vec};
+                use ::std::{string::ToString, format, vec, default::Default};
         };
 
         let expected_code = quote! {
@@ -343,6 +343,6 @@ mod tests {
     }
 
     fn given_type_path(path: &str) -> TypePath {
-        TypePath::new(path).expect("Hand crafted, should be valid.")
+        TypePath::new(path).expect("hand crafted, should be valid")
     }
 }

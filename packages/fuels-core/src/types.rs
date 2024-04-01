@@ -2,19 +2,18 @@ use std::fmt;
 
 use fuel_types::bytes::padded_len;
 pub use fuel_types::{
-    Address, AssetId, Bytes32, Bytes4, Bytes64, Bytes8, ChainId, ContractId, MessageId, Nonce,
-    Salt, Word,
+    Address, AssetId, BlockHeight, Bytes32, Bytes4, Bytes64, Bytes8, ChainId, ContractId,
+    MessageId, Nonce, Salt, Word,
 };
 
 pub use crate::types::{core::*, wrappers::*};
 use crate::types::{
-    enum_variants::EnumVariants,
     errors::{error, Error, Result},
+    param_types::EnumVariants,
 };
 
 pub mod bech32;
 mod core;
-pub mod enum_variants;
 pub mod errors;
 pub mod param_types;
 pub mod transaction_builders;
@@ -28,7 +27,7 @@ pub type EnumSelector = (u64, Token, EnumVariants);
 
 #[derive(Debug, Clone, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub struct StaticStringToken {
-    data: String,
+    pub(crate) data: String,
     expected_len: Option<usize>,
 }
 
@@ -39,17 +38,14 @@ impl StaticStringToken {
 
     fn validate(&self) -> Result<()> {
         if !self.data.is_ascii() {
-            return Err(error!(
-                InvalidData,
-                "String data can only have ascii values"
-            ));
+            return Err(error!(Codec, "string data can only have ascii values"));
         }
 
         if let Some(expected_len) = self.expected_len {
             if self.data.len() != expected_len {
                 return Err(error!(
-                    InvalidData,
-                    "String data has len {}, but the expected len is {}",
+                    Codec,
+                    "string data has len {}, but the expected len is {}",
                     self.data.len(),
                     expected_len
                 ));

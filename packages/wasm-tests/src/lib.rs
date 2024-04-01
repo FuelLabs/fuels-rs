@@ -2,7 +2,7 @@ extern crate alloc;
 
 #[cfg(test)]
 mod tests {
-    use std::str::FromStr;
+    use std::{default::Default, str::FromStr};
 
     use fuels::{
         accounts::predicate::Predicate,
@@ -112,7 +112,9 @@ mod tests {
 
         let original = SomeEnum::V2(SomeStruct { a: 123, b: false });
 
-        let bytes = ABIEncoder::encode(&[original.clone().into_token()])?.resolve(0);
+        let bytes = ABIEncoder::default()
+            .encode(&[original.clone().into_token()])?
+            .resolve(0);
 
         let reconstructed = bytes.try_into().unwrap();
 
@@ -184,8 +186,8 @@ mod tests {
         ];
         let value = 128;
 
-        let predicate_data = MyPredicateEncoder::encode_data(value);
-        let configurables = MyPredicateConfigurables::new().with_U64(value);
+        let predicate_data = MyPredicateEncoder::default().encode_data(value)?;
+        let configurables = MyPredicateConfigurables::default().with_U64(value)?;
 
         let predicate: Predicate = Predicate::from_code(code.clone())
             .with_data(predicate_data)

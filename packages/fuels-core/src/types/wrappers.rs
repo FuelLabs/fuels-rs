@@ -12,3 +12,7 @@ pub mod transaction_response;
 pub mod output {
     pub use fuel_tx::Output;
 }
+#[cfg(feature = "std")]
+pub mod gas_price {
+    pub use fuel_core_client::client::types::gas_price::{EstimateGasPrice, LatestGasPrice};
+}

@@ -41,12 +41,12 @@ pub mod abigen_bindings {
             pub fn account(&self) -> T {
                 self.account.clone()
             }
-            pub fn with_account<U: Account>(&self, account: U) -> Result<MyContract<U>> {
-                ::core::result::Result::Ok(MyContract {
+            pub fn with_account<U: Account>(&self, account: U) -> MyContract<U> {
+                MyContract {
                     contract_id: self.contract_id.clone(),
                     account,
                     log_decoder: self.log_decoder.clone(),
-                })
+                }
             }
             pub async fn get_balances(&self) -> Result<::std::collections::HashMap<AssetId, u64>> {
                 ViewOnlyAccount::try_provider(&self.account)?
@@ -77,8 +77,8 @@ pub mod abigen_bindings {
                     &[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect("method not found (this should never happen)")
             }
             #[doc = "Calls the contract's `increment_counter` function"]
             pub fn increment_counter(&self, value: u64) -> ContractCallHandler<T, u64> {
@@ -89,8 +89,8 @@ pub mod abigen_bindings {
                     &[value.into_token()],
                     self.log_decoder.clone(),
                     false,
+                    ABIEncoder::new(EncoderConfig::default()),
                 )
-                .expect("method not found (this should never happen)")
             }
         }
         impl<T: Account> contract::SettableContract for MyContract<T> {
@@ -120,4 +120,3 @@ pub mod abigen_bindings {
 pub use abigen_bindings::my_contract_mod::MyContract;
 pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
 pub use abigen_bindings::my_contract_mod::MyContractMethods;
-

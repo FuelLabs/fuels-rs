@@ -54,8 +54,8 @@ impl ReceiptParser {
 
     fn missing_receipts_error(output_param: &ParamType) -> Error {
         error!(
-            InvalidData,
-            "ReceiptDecoder: failed to find matching receipts entry for {output_param:?}"
+            Codec,
+            "`ReceiptDecoder`: failed to find matching receipts entry for {output_param:?}"
         )
     }
 

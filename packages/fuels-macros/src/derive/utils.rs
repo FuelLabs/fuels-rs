@@ -17,7 +17,7 @@ pub(crate) fn get_path_from_attr_or(
     let Meta::NameValue(name_value) = &attr.meta else {
         return Err(Error::new_spanned(
             attr.meta.path(),
-            "Expected name='value'",
+            "expected name='value'",
         ));
     };
 
@@ -28,12 +28,12 @@ pub(crate) fn get_path_from_attr_or(
     else {
         return Err(Error::new_spanned(
             &name_value.value,
-            "Expected string literal",
+            "expected string literal",
         ));
     };
 
     TypePath::new(lit_str.value())
-        .map_err(|_| Error::new_spanned(lit_str.value(), "Invalid path."))
+        .map_err(|_| Error::new_spanned(lit_str.value(), "invalid path"))
         .map(|type_path| type_path.to_token_stream())
 }
 
@@ -81,7 +81,7 @@ pub(crate) fn extract_variants(
                 validate_variant_type(&variant)?;
 
                 let discriminant = discriminant.try_into().map_err(|_| {
-                    Error::new_spanned(&variant.ident, "Enums can not have more than 256 variants")
+                    Error::new_spanned(&variant.ident, "enums cannot have more than 256 variants")
                 })?;
 
                 Ok(ExtractedVariant::Normal {
@@ -121,7 +121,7 @@ impl ExtractedVariants {
                 ExtractedVariant::Ignored { info: VariantInfo{ name, is_unit } } => {
                     let panic_expression = {
                         let name_stringified = name.to_string();
-                        quote! {::core::panic!("Variant '{}' should never be constructed.", #name_stringified)} 
+                        quote! {::core::panic!("variant `{}` should never be constructed", #name_stringified)}
                     };
                     if *is_unit {
                         quote! { Self::#name => #panic_expression }
@@ -163,7 +163,7 @@ impl ExtractedVariants {
             match discriminant {
                 #(#match_discriminant,)*
                 _ => ::core::result::Result::Err(#std_lib::format!(
-                    "Discriminant {} doesn't point to any of the enums variants.", discriminant
+                    "discriminant {} doesn't point to any of the enums variants", discriminant
                 )),
             }
         }
@@ -175,7 +175,7 @@ fn validate_variant_type(variant: &Variant) -> Result<()> {
         Fields::Named(named_fields) => {
             return Err(Error::new_spanned(
                 named_fields.clone(),
-                "Struct like enum variants are not supported".to_string(),
+                "struct like enum variants are not supported".to_string(),
             ))
         }
         Fields::Unnamed(unnamed_fields) => {
@@ -184,7 +184,7 @@ fn validate_variant_type(variant: &Variant) -> Result<()> {
             if fields.len() != 1 {
                 return Err(Error::new_spanned(
                     unnamed_fields.clone(),
-                    "Tuple-like enum variants must contain exactly one element.".to_string(),
+                    "tuple-like enum variants must contain exactly one element".to_string(),
                 ));
             }
         }

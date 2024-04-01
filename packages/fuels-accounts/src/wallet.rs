@@ -2,56 +2,23 @@ use std::{fmt, ops, path::Path};
 
 use async_trait::async_trait;
 use elliptic_curve::rand_core;
-use eth_keystore::KeystoreError;
 use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
 use fuels_core::{
     traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
-        errors::{Error, Result},
+        errors::{error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
         AssetId,
     },
 };
 use rand::{CryptoRng, Rng};
-use thiserror::Error;
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
-use crate::{
-    provider::{Provider, ProviderError},
-    Account, AccountError, AccountResult, ViewOnlyAccount,
-};
+use crate::{accounts_utils::try_provider_error, provider::Provider, Account, ViewOnlyAccount};
 
 pub const DEFAULT_DERIVATION_PATH_PREFIX: &str = "m/44'/1179993420'";
-
-#[derive(Error, Debug)]
-/// Error thrown by the Wallet module
-pub enum WalletError {
-    /// Error propagated from the hex crate.
-    #[error(transparent)]
-    Hex(#[from] hex::FromHexError),
-    /// Error propagated by parsing of a slice
-    #[error("Failed to parse slice")]
-    Parsing(#[from] std::array::TryFromSliceError),
-    /// Keystore error
-    #[error(transparent)]
-    KeystoreError(#[from] KeystoreError),
-    #[error(transparent)]
-    FuelCrypto(#[from] fuel_crypto::Error),
-    #[error(transparent)]
-    ProviderError(#[from] ProviderError),
-    #[error("Called `try_provider` method on wallet where no provider was set up")]
-    NoProviderError,
-}
-
-impl From<WalletError> for Error {
-    fn from(e: WalletError) -> Self {
-        Error::WalletError(e.to_string())
-    }
-}
-
-type WalletResult<T> = std::result::Result<T, WalletError>;
 
 /// A FuelVM-compatible wallet that can be used to list assets, balances and more.
 ///
@@ -115,8 +82,8 @@ impl ViewOnlyAccount for Wallet {
         self.address()
     }
 
-    fn try_provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::no_provider())
+    fn try_provider(&self) -> Result<&Provider> {
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 
@@ -152,10 +119,7 @@ impl WalletUnlocked {
 
     /// Creates a new wallet from a mnemonic phrase.
     /// The default derivation path is used.
-    pub fn new_from_mnemonic_phrase(
-        phrase: &str,
-        provider: Option<Provider>,
-    ) -> WalletResult<Self> {
+    pub fn new_from_mnemonic_phrase(phrase: &str, provider: Option<Provider>) -> Result<Self> {
         let path = format!("{DEFAULT_DERIVATION_PATH_PREFIX}/0'/0/0");
         Self::new_from_mnemonic_phrase_with_path(phrase, provider, &path)
     }
@@ -166,7 +130,7 @@ impl WalletUnlocked {
         phrase: &str,
         provider: Option<Provider>,
         path: &str,
-    ) -> WalletResult<Self> {
+    ) -> Result<Self> {
         let secret_key = SecretKey::new_from_mnemonic_phrase_with_path(phrase, path)?;
 
         Ok(Self::new_from_private_key(secret_key, provider))
@@ -178,16 +142,16 @@ impl WalletUnlocked {
         rng: &mut R,
         password: S,
         provider: Option<Provider>,
-    ) -> WalletResult<(Self, String)>
+    ) -> Result<(Self, String)>
     where
         P: AsRef<Path>,
         R: Rng + CryptoRng + rand_core::CryptoRng,
         S: AsRef<[u8]>,
     {
-        let (secret, uuid) = eth_keystore::new(dir, rng, password, None)?;
+        let (secret, uuid) =
+            eth_keystore::new(dir, rng, password, None).map_err(|e| error!(Other, "{e}"))?;
 
-        let secret_key =
-            SecretKey::try_from(secret.as_slice()).expect("A new secret should be correct size");
+        let secret_key = SecretKey::try_from(secret.as_slice()).expect("should have correct size");
 
         let wallet = Self::new_from_private_key(secret_key, provider);
 
@@ -196,33 +160,25 @@ impl WalletUnlocked {
 
     /// Encrypts the wallet's private key with the given password and saves it
     /// to the given path.
-    pub fn encrypt<P, S>(&self, dir: P, password: S) -> WalletResult<String>
+    pub fn encrypt<P, S>(&self, dir: P, password: S) -> Result<String>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
     {
         let mut rng = rand::thread_rng();
 
-        Ok(eth_keystore::encrypt_key(
-            dir,
-            &mut rng,
-            *self.private_key,
-            password,
-            None,
-        )?)
+        eth_keystore::encrypt_key(dir, &mut rng, *self.private_key, password, None)
+            .map_err(|e| error!(Other, "{e}"))
     }
 
     /// Recreates a wallet from an encrypted JSON wallet given the provided path and password.
-    pub fn load_keystore<P, S>(
-        keypath: P,
-        password: S,
-        provider: Option<Provider>,
-    ) -> WalletResult<Self>
+    pub fn load_keystore<P, S>(keypath: P, password: S, provider: Option<Provider>) -> Result<Self>
     where
         P: AsRef<Path>,
         S: AsRef<[u8]>,
     {
-        let secret = eth_keystore::decrypt_key(keypath, password)?;
+        let secret =
+            eth_keystore::decrypt_key(keypath, password).map_err(|e| error!(Other, "{e}"))?;
         let secret_key = SecretKey::try_from(secret.as_slice())
             .expect("Decrypted key should have a correct size");
         Ok(Self::new_from_private_key(secret_key, provider))
@@ -238,8 +194,8 @@ impl ViewOnlyAccount for WalletUnlocked {
         self.wallet.address()
     }
 
-    fn try_provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::no_provider())
+    fn try_provider(&self) -> Result<&Provider> {
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 
@@ -300,7 +256,7 @@ impl ops::Deref for WalletUnlocked {
 
 /// Generates a random mnemonic phrase given a random number generator and the number of words to
 /// generate, `count`.
-pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> WalletResult<String> {
+pub fn generate_mnemonic_phrase<R: Rng>(rng: &mut R, count: usize) -> Result<String> {
     Ok(fuel_crypto::generate_mnemonic_phrase(rng, count)?)
 }
 
@@ -338,8 +294,8 @@ mod tests {
     #[tokio::test]
     async fn mnemonic_generation() -> Result<()> {
         let mnemonic = generate_mnemonic_phrase(&mut rand::thread_rng(), 12)?;
-
         let _wallet = WalletUnlocked::new_from_mnemonic_phrase(&mnemonic, None)?;
+
         Ok(())
     }
 

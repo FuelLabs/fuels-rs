@@ -169,7 +169,7 @@ mod tests {
                         CoinType::Coin(coin) => {
                             assert_eq!(&coin.owner, wallet.address())
                         }
-                        CoinType::Message(_) => panic!("Resources contained messages."),
+                        CoinType::Message(_) => panic!("resources contained messages"),
                     }
                 }
             }

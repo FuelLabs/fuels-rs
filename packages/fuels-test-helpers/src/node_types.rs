@@ -1,5 +1,4 @@
 use std::{
-    fmt,
     net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
     time::Duration,
@@ -95,30 +94,6 @@ impl From<Config> for fuel_core::service::Config {
             chain_conf: value.chain_conf,
             ..fuel_core::service::Config::local_node()
         }
-    }
-}
-
-pub(crate) struct HexType;
-
-impl<T: AsRef<[u8]>> SerializeAs<T> for HexType {
-    fn serialize_as<S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serde_hex::serialize(value, serializer)
-    }
-}
-
-impl<'de, T, E> DeserializeAs<'de, T> for HexType
-where
-    for<'a> T: TryFrom<&'a [u8], Error = E>,
-    E: fmt::Display,
-{
-    fn deserialize_as<D>(deserializer: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        serde_hex::deserialize(deserializer)
     }
 }
 

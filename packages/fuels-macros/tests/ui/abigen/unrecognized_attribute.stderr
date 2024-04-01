@@ -1,4 +1,4 @@
-error: Attribute 'unknown' not recognized! Expected one of: 'name', 'abi'.
+error: attribute 'unknown' not recognized. Expected one of: 'name', 'abi'
  --> tests/ui/abigen/unrecognized_attribute.rs:6:5
   |
 6 |     unknown = "something"

@@ -1,4 +1,5 @@
 use fuels::{prelude::*, types::SizedAsciiString};
+use fuels_core::codec::EncoderConfig;
 
 #[tokio::test]
 async fn contract_uses_default_configurables() -> Result<()> {
@@ -92,10 +93,11 @@ async fn contract_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyContractConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyContractConfigurables::default()
+        .with_U8(7)?
+        .with_STR_4(new_str.clone())?
+        .with_STRUCT(new_struct.clone())?
+        .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
         "tests/contracts/configurables/out/release/configurables.bin",
@@ -114,7 +116,7 @@ async fn contract_configurables() -> Result<()> {
         .await?;
 
     let expected_value = (
-        8u8,
+        7u8,
         true,
         [253u32, 254u32, 255u32],
         new_str,
@@ -144,10 +146,13 @@ async fn script_configurables() -> Result<()> {
     };
     let new_enum = EnumWithGeneric::VariantTwo;
 
-    let configurables = MyScriptConfigurables::new()
-        .with_STR_4(new_str.clone())
-        .with_STRUCT(new_struct.clone())
-        .with_ENUM(new_enum.clone());
+    let configurables = MyScriptConfigurables::new(EncoderConfig {
+        max_tokens: 5,
+        ..Default::default()
+    })
+    .with_STR_4(new_str.clone())?
+    .with_STRUCT(new_struct.clone())?
+    .with_ENUM(new_enum.clone())?;
 
     let response = instance
         .with_configurables(configurables)
@@ -168,4 +173,35 @@ async fn script_configurables() -> Result<()> {
     assert_eq!(response.value, expected_value);
 
     Ok(())
+}
+
+#[tokio::test]
+async fn configurable_encoder_config_is_applied() {
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+
+    let new_struct = StructWithGeneric {
+        field_1: 16u8,
+        field_2: 32,
+    };
+
+    {
+        let _configurables = MyScriptConfigurables::default()
+            .with_STRUCT(new_struct.clone())
+            .expect("no encoder config, it works");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+
+        // Fails when a wrong encoder config is set
+        let configurables_error = MyScriptConfigurables::new(encoder_config)
+            .with_STRUCT(new_struct)
+            .expect_err("should error");
+
+        assert!(configurables_error
+            .to_string()
+            .contains("token limit `1` reached while encoding. Try increasing it"),)
+    }
 }

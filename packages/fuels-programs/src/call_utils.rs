@@ -7,10 +7,11 @@ use fuel_types::{Address, Word};
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
+    error,
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{transaction::Reason, Error, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -36,8 +37,12 @@ pub(crate) struct CallOpcodeParamsOffset {
 /// How many times to attempt to resolve missing tx dependencies.
 pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
 
+pub(crate) mod sealed {
+    pub trait Sealed {}
+}
+
 #[async_trait::async_trait]
-pub trait TxDependencyExtension: Sized {
+pub trait TxDependencyExtension: Sized + sealed::Sealed {
     async fn simulate(&mut self) -> Result<()>;
 
     /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
@@ -86,7 +91,7 @@ pub trait TxDependencyExtension: Sized {
             match self.simulate().await {
                 Ok(_) => return Ok(self),
 
-                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     self = self.append_missing_dependencies(receipts);
                 }
 
@@ -109,7 +114,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset);
+        build_script_data_from_contract_calls(calls, data_offset)?;
     let script = get_instructions(calls, call_param_offsets)?;
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
@@ -250,7 +255,7 @@ pub(crate) fn get_instructions(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
-) -> (Vec<u8>, Vec<CallOpcodeParamsOffset>) {
+) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
 
@@ -303,7 +308,11 @@ pub(crate) fn build_script_data_from_contract_calls(
             segment_offset
         };
 
-        let bytes = call.encoded_args.resolve(encoded_args_start_offset as Word);
+        let bytes = call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(encoded_args_start_offset as Word))
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         script_data.extend(bytes);
 
         // the data segment that holds the parameters for the next call
@@ -311,7 +320,7 @@ pub(crate) fn build_script_data_from_contract_calls(
         segment_offset = data_offset + script_data.len();
     }
 
-    (script_data, param_offsets)
+    Ok((script_data, param_offsets))
 }
 
 /// Returns the VM instructions for calling a contract method
@@ -374,8 +383,8 @@ pub(crate) fn get_single_call_instructions(
 
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
-        ParamType::Enum { variants, .. } => {
-            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+        ParamType::Enum { enum_variants, .. } => {
+            let Some((discriminant, heap_type)) = enum_variants.heap_type_variant() else {
                 return Ok(vec![]);
             };
 
@@ -599,7 +608,7 @@ mod test {
         pub fn new_with_random_id() -> Self {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
-                encoded_args: Default::default(),
+                encoded_args: Ok(Default::default()),
                 encoded_selector: [0; 8],
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
@@ -626,7 +635,7 @@ mod test {
         const SELECTOR_LEN: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
-        let contract_ids = vec![
+        let contract_ids = [
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
@@ -643,14 +652,14 @@ mod test {
         // Call 2 has multiple inputs, compute_custom_input_offset will be true
 
         let args = [Token::U8(1), Token::U16(2), Token::U8(3)]
-            .map(|token| ABIEncoder::encode(&[token]).unwrap())
+            .map(|token| ABIEncoder::default().encode(&[token]).unwrap())
             .to_vec();
 
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
                 encoded_selector: selectors[i],
-                encoded_args: args[i].clone(),
+                encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
                 variable_outputs: vec![],
@@ -662,7 +671,8 @@ mod test {
             .collect();
 
         // Act
-        let (script_data, param_offsets) = build_script_data_from_contract_calls(&calls, 0);
+        let (script_data, param_offsets) =
+            build_script_data_from_contract_calls(&calls, 0).unwrap();
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -809,7 +819,7 @@ mod test {
                     expected_contract_ids.remove(&contract_id);
                 }
                 _ => {
-                    panic!("Expected only inputs of type Input::Contract");
+                    panic!("expected only inputs of type `Input::Contract`");
                 }
             }
         }
@@ -848,7 +858,6 @@ mod test {
                     block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
@@ -936,7 +945,7 @@ mod test {
 
     mod compute_calls_instructions_len {
         use fuel_asm::Instruction;
-        use fuels_core::types::{enum_variants::EnumVariants, param_types::ParamType};
+        use fuels_core::types::param_types::{EnumVariants, ParamType};
 
         use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
 
@@ -1012,7 +1021,14 @@ mod test {
             for variant_set in variant_sets {
                 let mut call = ContractCall::new_with_random_id();
                 call.output_param = ParamType::Enum {
-                    variants: EnumVariants::new(variant_set).unwrap(),
+                    name: "".to_string(),
+                    enum_variants: EnumVariants::new(
+                        variant_set
+                            .into_iter()
+                            .map(|pt| ("".to_string(), pt))
+                            .collect(),
+                    )
+                    .unwrap(),
                     generics: Vec::new(),
                 };
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
@@ -1030,7 +1046,12 @@ mod test {
         fn test_with_enum_with_only_non_heap_variants() {
             let mut call = ContractCall::new_with_random_id();
             call.output_param = ParamType::Enum {
-                variants: EnumVariants::new(vec![ParamType::Bool, ParamType::U8]).unwrap(),
+                name: "".to_string(),
+                enum_variants: EnumVariants::new(vec![
+                    ("".to_string(), ParamType::Bool),
+                    ("".to_string(), ParamType::U8),
+                ])
+                .unwrap(),
                 generics: Vec::new(),
             };
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
