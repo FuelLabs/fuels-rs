@@ -127,7 +127,7 @@ mod tests {
         let num_wallets = 3;
 
         let asset_base = AssetConfig {
-            id: Default::default(),
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };

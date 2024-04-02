@@ -41,7 +41,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct CallParameters {
     amount: u64,
-    asset_id: AssetId,
+    asset_id: Option<AssetId>,
     gas_forwarded: Option<u64>,
 }
 
@@ -49,7 +49,7 @@ impl CallParameters {
     pub fn new(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
         Self {
             amount,
-            asset_id,
+            asset_id: Some(asset_id),
             gas_forwarded: Some(gas_forwarded),
         }
     }
@@ -64,11 +64,11 @@ impl CallParameters {
     }
 
     pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
-        self.asset_id = asset_id;
+        self.asset_id = Some(asset_id);
         self
     }
 
-    pub fn asset_id(&self) -> AssetId {
+    pub fn asset_id(&self) -> Option<AssetId> {
         self.asset_id
     }
 
@@ -86,7 +86,7 @@ impl Default for CallParameters {
     fn default() -> Self {
         Self {
             amount: DEFAULT_CALL_PARAMS_AMOUNT,
-            asset_id: Default::default(),
+            asset_id: None,
             gas_forwarded: None,
         }
     }

@@ -76,7 +76,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
-            asset_id,
+            asset_id: Some(asset_id),
             amount,
             ..Default::default()
         };

@@ -64,25 +64,11 @@ pub struct TransactionCost {
 pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
     messages: Vec<Nonce>,
-    asset_id: AssetId,
+    asset_id: Option<AssetId>,
     amount: u64,
 }
 
 impl ResourceQueries {
-    pub fn new(
-        utxo_ids: Vec<UtxoId>,
-        message_nonces: Vec<Nonce>,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Self {
-        Self {
-            utxos: utxo_ids,
-            messages: message_nonces,
-            asset_id,
-            amount,
-        }
-    }
-
     pub fn exclusion_query(&self) -> Option<(Vec<UtxoId>, Vec<Nonce>)> {
         if self.utxos.is_empty() && self.messages.is_empty() {
             return None;
@@ -91,8 +77,8 @@ impl ResourceQueries {
         Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self) -> Vec<(AssetId, u64, Option<u32>)> {
-        vec![(self.asset_id, self.amount, None)]
+    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u64, Option<u32>)> {
+        vec![(self.asset_id.unwrap_or(base_asset_id), self.amount, None)]
     }
 }
 
@@ -100,7 +86,7 @@ impl ResourceQueries {
 // ANCHOR: resource_filter
 pub struct ResourceFilter {
     pub from: Bech32Address,
-    pub asset_id: AssetId,
+    pub asset_id: Option<AssetId>,
     pub amount: u64,
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_nonces: Vec<Nonce>,
@@ -113,12 +99,12 @@ impl ResourceFilter {
     }
 
     pub(crate) fn resource_queries(&self) -> ResourceQueries {
-        ResourceQueries::new(
-            self.excluded_utxos.clone(),
-            self.excluded_message_nonces.clone(),
-            self.asset_id,
-            self.amount,
-        )
+        ResourceQueries {
+            utxos: self.excluded_utxos.clone(),
+            messages: self.excluded_message_nonces.clone(),
+            asset_id: self.asset_id,
+            amount: self.amount,
+        }
     }
 }
 
@@ -414,7 +400,7 @@ impl Provider {
             .client
             .coins_to_spend(
                 &filter.owner(),
-                queries.spend_query(),
+                queries.spend_query(*self.base_asset_id()),
                 queries.exclusion_query(),
             )
             .await?
@@ -451,7 +437,8 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
         let mut cache = self.cache.lock().await;
-        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id));
+        let asset_id = filter.asset_id.unwrap_or(*self.base_asset_id());
+        let used_coins = cache.get_active(&(filter.from.clone(), asset_id));
 
         let excluded_utxos = used_coins
             .iter()

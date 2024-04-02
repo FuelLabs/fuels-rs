@@ -115,10 +115,10 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset)?;
+        build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
     let script = get_instructions(calls, call_param_offsets)?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let required_asset_amounts = calculate_required_asset_amounts(calls, *provider.base_asset_id());
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
@@ -154,7 +154,8 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account).await?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let base_asset_id = *account.try_provider()?.base_asset_id();
+    let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
 
     let base_asset_id = account.try_provider()?.base_asset_id();
     let used_base_amount = required_asset_amounts
@@ -191,12 +192,15 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
-pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
+pub(crate) fn calculate_required_asset_amounts(
+    calls: &[ContractCall],
+    base_asset_id: AssetId,
+) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
         .map(|call| {
             (
-                call.call_parameters.asset_id(),
+                call.call_parameters.asset_id().unwrap_or(base_asset_id),
                 call.call_parameters.amount(),
             )
         })
@@ -263,6 +267,7 @@ pub(crate) fn get_instructions(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
+    base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -274,7 +279,12 @@ pub(crate) fn build_script_data_from_contract_calls(
         let gas_forwarded = call.call_parameters.gas_forwarded();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes());
-        script_data.extend(call.call_parameters.asset_id().iter());
+        script_data.extend(
+            call.call_parameters
+                .asset_id()
+                .unwrap_or(base_asset_id)
+                .iter(),
+        );
 
         let gas_forwarded_size = gas_forwarded
             .map(|gf| {
@@ -756,7 +766,7 @@ mod test {
 
         // Act
         let (script_data, param_offsets) =
-            build_script_data_from_contract_calls(&calls, 0).unwrap();
+            build_script_data_from_contract_calls(&calls, 0, AssetId::zeroed()).unwrap();
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -1046,7 +1056,7 @@ mod test {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });
 
-        let asset_id_amounts = calculate_required_asset_amounts(&calls);
+        let asset_id_amounts = calculate_required_asset_amounts(&calls, AssetId::zeroed());
 
         let expected_asset_id_amounts = [(asset_id_1, 400), (asset_id_2, 600)].into();
 
