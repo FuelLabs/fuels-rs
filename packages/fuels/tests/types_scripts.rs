@@ -87,7 +87,7 @@ async fn main_function_tuple_types() -> Result<()> {
         .main(
             (bim, bam, boum),
             Bam {
-                bam: "secod".try_into()?,
+                bam: "second".try_into()?,
             },
         )
         .call()

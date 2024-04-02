@@ -163,7 +163,7 @@ mod tests {
         wallet_2.set_provider(provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
-        // ANCHOR: transfer_multiple_inout
+        // ANCHOR: transfer_multiple_input
         let balances = wallet_1.get_balances().await?;
 
         let mut inputs = vec![];
@@ -182,7 +182,7 @@ mod tests {
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
             outputs.extend(output);
         }
-        // ANCHOR_END: transfer_multiple_inout
+        // ANCHOR_END: transfer_multiple_input
 
         // ANCHOR: transfer_multiple_transaction
         let mut tb =
