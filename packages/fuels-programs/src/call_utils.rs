@@ -354,6 +354,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
+    base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -369,7 +370,8 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
-        script_data.extend(call.call_parameters.asset_id().iter()); // 2. Asset ID
+        let asset_id = call.call_parameters.asset_id().unwrap_or(base_asset_id);
+        script_data.extend(asset_id.iter()); // 2. Asset ID
         script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
         script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
         script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
