@@ -57,7 +57,18 @@ impl MyContract for Contract {
 Your Rust code would look like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:generic}}
+         // simple struct with a single generic param
+         let arg1 = SimpleGeneric {
+             single_generic_param: 123u64,
+         };
+
+         let result = contract_methods
+             .struct_w_generic(arg1.clone())
+             .call()
+             .await?
+             .value;
+
+         assert_eq!(result, arg1);
 ```
 
 ### Unused generic type parameters
