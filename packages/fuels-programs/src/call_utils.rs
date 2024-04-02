@@ -156,9 +156,10 @@ pub(crate) async fn build_tx_from_contract_calls(
 
     let required_asset_amounts = calculate_required_asset_amounts(calls);
 
+    let base_asset_id = account.try_provider()?.base_asset_id();
     let used_base_amount = required_asset_amounts
         .iter()
-        .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
+        .find_map(|(asset_id, amount)| (asset_id == base_asset_id).then_some(*amount))
         .unwrap_or_default();
 
     account.add_witnesses(&mut tb)?;
@@ -587,7 +588,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
         Output::Variable {
             amount: 0,
             to: Address::zeroed(),
-            asset_id: AssetId::default(),
+            asset_id: AssetId::zeroed(),
         };
         num
     ]
@@ -744,7 +745,7 @@ mod test {
             slice::from_ref(&call),
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         assert_eq!(
@@ -773,7 +774,7 @@ mod test {
             &calls,
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         assert_eq!(
@@ -798,7 +799,7 @@ mod test {
             &[call],
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         assert_eq!(
@@ -821,7 +822,7 @@ mod test {
             slice::from_ref(&call),
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         // then
@@ -865,7 +866,7 @@ mod test {
             &[call],
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         // then
@@ -879,7 +880,7 @@ mod test {
     #[test]
     fn change_per_asset_id_added() {
         // given
-        let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
+        let asset_ids = [AssetId::zeroed(), AssetId::from([1; 32])];
 
         let coins = asset_ids
             .into_iter()
@@ -901,7 +902,7 @@ mod test {
 
         // when
         let (_, outputs) =
-            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::default());
+            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::zeroed());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -940,7 +941,7 @@ mod test {
             &calls,
             Default::default(),
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
         );
 
         // then

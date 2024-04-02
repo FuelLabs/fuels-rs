@@ -138,7 +138,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(AssetId::default()).await?;
+        let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -155,7 +155,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let base_asset = AssetConfig {
-            id: AssetId::default(),
+            id: AssetId::zeroed(),
             num_coins: 1,
             coin_amount: 1000,
         };
@@ -271,7 +271,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {
-            id: AssetId::default(),
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -323,7 +323,7 @@ mod tests {
 
         let wallet = launch_provider_and_get_wallet().await?;
         // ANCHOR: get_asset_balance
-        let asset_id = AssetId::default();
+        let asset_id = AssetId::zeroed();
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances

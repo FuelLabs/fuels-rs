@@ -58,7 +58,7 @@ mod tests {
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            AssetId::default(),
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );

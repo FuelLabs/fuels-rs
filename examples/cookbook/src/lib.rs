@@ -36,7 +36,7 @@ mod tests {
         let base_asset_id: AssetId =
             "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c".parse()?;
 
-        let asset_ids = [AssetId::default(), base_asset_id];
+        let asset_ids = [AssetId::zeroed(), base_asset_id];
         let asset_configs = asset_ids
             .map(|id| AssetConfig {
                 id,
@@ -234,7 +234,7 @@ mod tests {
         let amount = 1000;
         let bridged_asset_id = AssetId::from([1u8; 32]);
         let base_coins =
-            setup_single_asset_coins(hot_wallet.address(), AssetId::default(), num_coins, amount);
+            setup_single_asset_coins(hot_wallet.address(), AssetId::zeroed(), num_coins, amount);
         let other_coins =
             setup_single_asset_coins(predicate.address(), bridged_asset_id, num_coins, amount);
 

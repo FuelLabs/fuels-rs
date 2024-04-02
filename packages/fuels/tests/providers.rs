@@ -29,7 +29,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     let coins = setup_single_asset_coins(
         wallet.address(),
-        AssetId::default(),
+        AssetId::zeroed(),
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
@@ -109,7 +109,7 @@ async fn test_input_message() -> Result<()> {
 
     // coin to pay transaction fee
     let coins =
-        setup_single_asset_coins(wallet.address(), AssetId::default(), 1, DEFAULT_COIN_AMOUNT);
+        setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, DEFAULT_COIN_AMOUNT);
 
     let messages = vec![setup_single_message(
         &Bech32Address::default(),
@@ -405,7 +405,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
     assert_eq!(
         call_response.unwrap().asset_id().unwrap(),
-        &AssetId::default()
+        &AssetId::zeroed()
     );
 
     let address = wallet.address();
@@ -454,7 +454,7 @@ async fn test_gas_errors() -> Result<()> {
     let amount_per_coin = 1_000_000;
     let coins = setup_single_asset_coins(
         wallet.address(),
-        AssetId::default(),
+        AssetId::zeroed(),
         number_of_coins,
         amount_per_coin,
     );
@@ -643,7 +643,7 @@ async fn testnet_hello_world() -> Result<()> {
 #[tokio::test]
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(wallet.address(), asset_id, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
@@ -681,7 +681,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let coins = [coin_amount_1, coin_amount_2]
         .into_iter()
-        .flat_map(|amount| setup_single_asset_coins(address, AssetId::default(), 1, amount))
+        .flat_map(|amount| setup_single_asset_coins(address, AssetId::zeroed(), 1, amount))
         .collect::<Vec<_>>();
 
     let message_amount = 200;
@@ -809,7 +809,7 @@ async fn create_transfer(
     amount: u64,
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
@@ -857,7 +857,7 @@ async fn test_caching() -> Result<()> {
     }
 
     // Verify the transfers were succesful
-    assert_eq!(wallet_2.get_asset_balance(&AssetId::default()).await?, 1000);
+    assert_eq!(wallet_2.get_asset_balance(&AssetId::zeroed()).await?, 1000);
 
     Ok(())
 }
@@ -867,7 +867,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
     use fuel_core_types::fuel_asm::Opcode;
 
     let amount = 1;
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 

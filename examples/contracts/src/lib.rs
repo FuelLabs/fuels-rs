@@ -669,7 +669,7 @@ mod tests {
             .methods()
             .initialize_counter(42)
             .add_custom_asset(
-                AssetId::default(),
+                AssetId::zeroed(),
                 amount,
                 Some(other_wallet.address().clone()),
             )

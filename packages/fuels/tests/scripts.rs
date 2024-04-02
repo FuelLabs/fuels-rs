@@ -167,7 +167,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 1000;
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let script_call = script_instance.main(amount, asset_id, receiver.address());
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call

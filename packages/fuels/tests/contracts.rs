@@ -781,7 +781,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
         .force_transfer_to_contract(
             &contract_id,
             total_amount,
-            AssetId::default(),
+            AssetId::zeroed(),
             TxPolicies::default(),
         )
         .await
@@ -1053,7 +1053,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 async fn test_add_custom_assets() -> Result<()> {
     let initial_amount = 100_000;
     let asset_base = AssetConfig {
-        id: AssetId::default(),
+        id: AssetId::zeroed(),
         num_coins: 1,
         coin_amount: initial_amount,
     };
@@ -1646,7 +1646,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         .transfer(
             predicate.address(),
             10_000,
-            AssetId::default(),
+            AssetId::zeroed(),
             TxPolicies::default(),
         )
         .await?;

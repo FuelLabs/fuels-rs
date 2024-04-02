@@ -564,7 +564,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// let params = CallParameters { amount: 1, asset_id: AssetId::default() };
+    /// let params = CallParameters { amount: 1, asset_id: AssetId::zeroed() };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self> {

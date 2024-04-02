@@ -227,7 +227,7 @@ mod tests {
                 block_gas_limit
             );
             assert_eq!(
-                wallet.get_coins(AssetId::default()).await?.len() as u64,
+                wallet.get_coins(AssetId::zeroed()).await?.len() as u64,
                 num_coins
             );
             assert_eq!(
