@@ -13,6 +13,9 @@ use serde::{de::Error as SerdeError, Deserializer, Serializer};
 use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::TempDir;
 
+#[cfg(feature = "fuel-core-lib")]
+use fuel_core::service::Config as ServiceConfig;
+
 const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
 #[derive(Clone, Debug)]
@@ -167,12 +170,12 @@ impl ExtendedConfig {
     }
 
     #[cfg(feature = "fuel-core-lib")]
-    fn service_config(self) -> fuel_core::Config {
+    fn service_config(self) -> ServiceConfig {
         use fuel_core_chain_config::SnapshotReader;
 
         let snapshot_reader = SnapshotReader::new_in_memory(self.chain_config, self.state_config);
 
-        Self {
+        ServiceConfig {
             addr: self.node_config.addr,
             max_database_cache_size: self
                 .node_config
@@ -186,29 +189,7 @@ impl ExtendedConfig {
             utxo_validation: self.node_config.utxo_validation,
             debug: self.node_config.debug,
             block_production: self.node_config.block_production.into(),
-            ..fuel_core::service::Config::local_node()
-        }
-    }
-}
-
-#[cfg(feature = "fuel-core-lib")]
-impl From<NodeConfig> for fuel_core::service::Config {
-    fn from(value: NodeConfig) -> Self {
-        Self {
-            addr: value.addr,
-            max_database_cache_size: value
-                .max_database_cache_size
-                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
-            database_path: match &value.database_type {
-                DbType::InMemory => Default::default(),
-                DbType::RocksDb(path) => path.clone().unwrap_or_default(),
-            },
-            database_type: value.database_type.into(),
-            utxo_validation: value.utxo_validation,
-            debug: value.debug,
-            block_production: value.block_production.into(),
-            chain_conf: value.chain_conf,
-            ..fuel_core::service::Config::local_node()
+            ..ServiceConfig::local_node()
         }
     }
 }

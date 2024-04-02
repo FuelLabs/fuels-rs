@@ -35,7 +35,7 @@ impl FuelService {
         };
 
         #[cfg(feature = "fuel-core-lib")]
-        let service = CoreFuelService::new_node(config.into())
+        let service = CoreFuelService::new_node(extended_config.service_config())
             .await
             .map_err(|err| error!(Other, "{err}"))?;
 
