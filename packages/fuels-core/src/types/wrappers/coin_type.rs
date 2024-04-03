@@ -44,7 +44,7 @@ impl CoinType {
         }
     }
 
-    pub fn asset_id(&self) -> Option<AssetId> {
+    pub fn coin_asset_id(&self) -> Option<AssetId> {
         match self {
             CoinType::Coin(coin) => Some(coin.asset_id),
             CoinType::Message(_) => None,

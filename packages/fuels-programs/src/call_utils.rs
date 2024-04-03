@@ -584,7 +584,7 @@ fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> H
         .iter()
         .filter_map(|input| match input {
             Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id().unwrap_or(base_asset_id))
+                Some(resource.coin_asset_id().unwrap_or(base_asset_id))
             }
             _ => None,
         })
