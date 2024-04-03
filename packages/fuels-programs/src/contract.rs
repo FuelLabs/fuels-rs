@@ -726,7 +726,10 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
+    #[cfg(not(feature = "experimental"))]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
+    #[cfg(feature = "experimental")]
+    let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
@@ -756,6 +759,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
+#[cfg(not(feature = "experimental"))]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {
@@ -922,6 +926,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
+
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
