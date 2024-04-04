@@ -7,7 +7,7 @@ homepage = { workspace = true }
 license = { workspace = true }
 repository = { workspace = true }
 rust-version = { workspace = true }
-description = "Fuel Rust SDK marcros to generate types from ABI."
+description = "Fuel Rust SDK macros to generate types from ABI."
 
 [lib]
 proc-macro = true
