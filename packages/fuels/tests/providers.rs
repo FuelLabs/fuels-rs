@@ -2,7 +2,6 @@ use std::{ops::Add, str::FromStr};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_core::chain_config::StateConfig;
-use fuel_core::chain_config::StateConfig;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -330,7 +329,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
     // The gas used by the script to call a contract and forward remaining gas limit.
     #[cfg(not(feature = "experimental"))]
-    let gas_used_by_script: i32 = 841;
+    let gas_used_by_script = 841;
     #[cfg(feature = "experimental")]
     let gas_used_by_script = 876;
     let gas_limit = 225_883;
