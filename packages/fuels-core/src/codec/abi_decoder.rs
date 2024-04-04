@@ -1,14 +1,15 @@
+#[cfg(not(feature = "experimental"))]
 mod bounded_decoder;
 mod decode_as_debug_str;
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 mod experimental_bounded_decoder;
 
-#[cfg(experimental)]
-use crate::codec::abi_decoder::experimental_bounded_decoder::ExperimentalBoundedDecoder;
+#[cfg(not(feature = "experimental"))]
+use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
+#[cfg(feature = "experimental")]
+use crate::codec::abi_decoder::experimental_bounded_decoder::BoundedDecoder;
 use crate::{
-    codec::abi_decoder::{
-        bounded_decoder::BoundedDecoder, decode_as_debug_str::decode_as_debug_str,
-    },
+    codec::abi_decoder::decode_as_debug_str::decode_as_debug_str,
     types::{errors::Result, param_types::ParamType, Token},
 };
 
@@ -110,20 +111,6 @@ impl ABIDecoder {
         let token = BoundedDecoder::new(self.config).decode(param_type, bytes)?;
         decode_as_debug_str(param_type, &token)
     }
-
-    #[cfg(experimental)]
-    pub fn experimental_decode(&self, param_type: &ParamType, bytes: &[u8]) -> Result<Token> {
-        ExperimentalBoundedDecoder::new(self.config).decode(param_type, bytes)
-    }
-
-    #[cfg(experimental)]
-    pub fn experimental_decode_multiple(
-        &self,
-        param_types: &[ParamType],
-        bytes: &[u8],
-    ) -> Result<Vec<Token>> {
-        ExperimentalBoundedDecoder::new(self.config).decode_multiple(param_types, bytes)
-    }
 }
 
 #[cfg(test)]
@@ -141,44 +128,45 @@ mod tests {
     };
 
     #[test]
-    fn decode_int() -> Result<()> {
-        let data = [0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff];
-
-        let decoded = ABIDecoder::default().decode(&ParamType::U32, &data)?;
-
-        assert_eq!(decoded, Token::U32(u32::MAX));
-
-        Ok(())
-    }
-
-    #[test]
-    fn decode_multiple_int() -> Result<()> {
+    fn decode_multiple_uint() -> Result<()> {
         let types = vec![
-            ParamType::U32,
             ParamType::U8,
             ParamType::U16,
+            ParamType::U32,
             ParamType::U64,
             ParamType::U128,
             ParamType::U256,
         ];
+
+        #[cfg(not(feature = "experimental"))]
         let data = [
-            0x0, 0x0, 0x0, 0x0, 0xff, 0xff, 0xff, 0xff, // u32
-            0xff, // u8
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xff, 0xff, // u16
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // u64
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, // u128
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
-            0xff, 0xff, 0xff, 0xff, // u256
+            255, // u8
+            0, 0, 0, 0, 0, 0, 255, 255, // u16
+            0, 0, 0, 0, 255, 255, 255, 255, // u32
+            255, 255, 255, 255, 255, 255, 255, 255, // u64
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, // u128
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            255, // u8
+            255, 255, // u16
+            255, 255, 255, 255, // u32
+            255, 255, 255, 255, 255, 255, 255, 255, // u64
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, // u128
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+            255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
         let expected = vec![
-            Token::U32(u32::MAX),
             Token::U8(u8::MAX),
             Token::U16(u16::MAX),
+            Token::U32(u32::MAX),
             Token::U64(u64::MAX),
             Token::U128(u128::MAX),
             Token::U256(U256::MAX),
@@ -191,7 +179,7 @@ mod tests {
     #[test]
     fn decode_bool() -> Result<()> {
         let types = vec![ParamType::Bool, ParamType::Bool];
-        let data = [0x01, 0x0];
+        let data = [1, 0];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
@@ -205,9 +193,8 @@ mod tests {
     #[test]
     fn decode_b256() -> Result<()> {
         let data = [
-            0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, 0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44,
-            0xe4, 0xcb, 0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, 0xa8, 0xf8, 0x27, 0x43,
-            0xf3, 0x1e, 0x93, 0xb,
+            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
+            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11,
         ];
 
         let decoded = ABIDecoder::default().decode(&ParamType::B256, &data)?;
@@ -220,11 +207,17 @@ mod tests {
     #[test]
     fn decode_string_array() -> Result<()> {
         let types = vec![ParamType::StringArray(23), ParamType::StringArray(5)];
+        #[cfg(not(feature = "experimental"))]
         let data = [
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
-            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, 0x00, // entence
-            0x48, 0x65, 0x6c, 0x6c, 0x6f, 0x00, 0x00, 0x00, // Hello
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, 0, //This is a full sentence
+            72, 101, 108, 108, 111, 0, 0, 0, // Hello
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+            72, 101, 108, 108, 111, // Hello
         ];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
@@ -244,19 +237,24 @@ mod tests {
 
     #[test]
     fn decode_string_slice() -> Result<()> {
-        let types = vec![ParamType::StringSlice];
+        #[cfg(not(feature = "experimental"))]
         let data = [
-            0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, // This is
-            0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, // a full s
-            0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, // entence
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 23, // [length]
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
         ];
 
-        let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
+        let decoded = ABIDecoder::default().decode(&ParamType::StringSlice, &data)?;
 
-        let expected = vec![Token::StringSlice(StaticStringToken::new(
+        let expected = Token::StringSlice(StaticStringToken::new(
             "This is a full sentence".into(),
             None,
-        ))];
+        ));
 
         assert_eq!(decoded, expected);
 
@@ -264,10 +262,55 @@ mod tests {
     }
 
     #[test]
+    fn decode_string() -> Result<()> {
+        #[cfg(not(feature = "experimental"))]
+        let data = [
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 23, // [length]
+            84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
+            116, 101, 110, 99, 101, //This is a full sentence
+        ];
+
+        let decoded = ABIDecoder::default().decode(&ParamType::String, &data)?;
+
+        let expected = Token::String("This is a full sentence".to_string());
+
+        assert_eq!(decoded, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn decode_tuple() -> Result<()> {
+        let param_type = ParamType::Tuple(vec![ParamType::U32, ParamType::Bool]);
+        #[cfg(not(feature = "experimental"))]
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 255, //u32
+            1, 0, 0, 0, 0, 0, 0, 0, //bool
+        ];
+        #[cfg(feature = "experimental")]
+        let data = [
+            0, 0, 0, 255, //u32
+            1,   //bool
+        ];
+
+        let result = ABIDecoder::default().decode(&param_type, &data)?;
+
+        let expected = Token::Tuple(vec![Token::U32(255), Token::Bool(true)]);
+
+        assert_eq!(result, expected);
+
+        Ok(())
+    }
+
+    #[test]
     fn decode_array() -> Result<()> {
-        // Create a parameter type for u8[2].
         let types = vec![ParamType::Array(Box::new(ParamType::U8), 2)];
-        let data = [0xff, 0x2a];
+        let data = [255, 42];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
@@ -284,9 +327,11 @@ mod tests {
         //     bar: bool,
         // }
 
-        let data = [
-            0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
-        ];
+        #[cfg(not(feature = "experimental"))]
+        let data = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
+        #[cfg(feature = "experimental")]
+        let data = [1, 1];
+
         let param_type = ParamType::Struct {
             name: "".to_string(),
             fields: to_named(&[ParamType::U8, ParamType::Bool]),
@@ -304,10 +349,30 @@ mod tests {
 
     #[test]
     fn decode_bytes() -> Result<()> {
-        let data = [0xFF, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05];
+        #[cfg(not(feature = "experimental"))]
+        let data = [255, 0, 1, 2, 3, 4, 5];
+        #[cfg(feature = "experimental")]
+        let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
+
         let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
 
-        let expected = Token::Bytes(data.to_vec());
+        let expected = Token::Bytes([255, 0, 1, 2, 3, 4, 5].to_vec());
+
+        assert_eq!(decoded, expected);
+
+        Ok(())
+    }
+
+    #[test]
+    fn decode_raw_slice() -> Result<()> {
+        #[cfg(not(feature = "experimental"))]
+        let data = [255, 0, 1, 2, 3, 4, 5];
+        #[cfg(feature = "experimental")]
+        let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
+
+        let decoded = ABIDecoder::default().decode(&ParamType::RawSlice, &data)?;
+
+        let expected = Token::RawSlice([255, 0, 1, 2, 3, 4, 5].to_vec());
 
         assert_eq!(decoded, expected);
 
@@ -330,9 +395,10 @@ mod tests {
         }];
 
         // "0" discriminant and 42 enum value
-        let data = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a,
-        ];
+        #[cfg(not(feature = "experimental"))]
+        let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
+        #[cfg(feature = "experimental")]
+        let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 
@@ -342,6 +408,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn decoder_will_skip_enum_padding_and_decode_next_arg() -> Result<()> {
         // struct MyStruct {
@@ -426,10 +493,12 @@ mod tests {
             generics: vec![],
         };
 
+        #[cfg(not(feature = "experimental"))]
         let data = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, 0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-            0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+            0, 0, 0, 0, 0, 0, 0, 10, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0,
         ];
+        #[cfg(feature = "experimental")]
+        let data = [0, 10, 1, 1, 2];
 
         let decoded = ABIDecoder::default().decode(&nested_struct, &data)?;
 
@@ -483,20 +552,24 @@ mod tests {
 
         let types = [nested_struct, u8_arr, b256];
 
+        #[cfg(not(feature = "experimental"))]
         let bytes = [
-            0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xa, // u16
-            0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, // bool
-            0x1, 0x2, // array[u8]
-            0x1, 0x2, // array[u8]
-            0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, // b256 start
-            0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44, 0xe4, 0xcb, //
-            0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, //
-            0xa8, 0xf8, 0x27, 0x43, 0xf3, 0x1e, 0x93,
-            0xb, // b256 end
-                 // 0x66, 0x6f, 0x6f, 0x00, 0x00, 0x00, 0x00, 0x00, // "foo"
-                 // 0x54, 0x68, 0x69, 0x73, 0x20, 0x69, 0x73, 0x20, //
-                 // 0x61, 0x20, 0x66, 0x75, 0x6c, 0x6c, 0x20, 0x73, //
-                 // 0x65, 0x6e, 0x74, 0x65, 0x6e, 0x63, 0x65, //
+            0, 0, 0, 0, 0, 0, 0, 10, // u16
+            1, 0, 0, 0, 0, 0, 0, 0, // bool
+            1, 2, // array[u8;2]
+            1, 2, // array[u8;2]
+            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
+            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11, // b256
+        ];
+
+        #[cfg(feature = "experimental")]
+        let bytes = [
+            0, 10, // u16
+            1,  // bool
+            1, 2, // array[u8;2]
+            1, 2, // array[u8;2]
+            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
+            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11, // b256
         ];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &bytes)?;
@@ -513,9 +586,8 @@ mod tests {
         let u8_arr = Token::Array(vec![Token::U8(1), Token::U8(2)]);
 
         let b256 = Token::B256([
-            0xd5, 0x57, 0x9c, 0x46, 0xdf, 0xcc, 0x7f, 0x18, 0x20, 0x70, 0x13, 0xe6, 0x5b, 0x44,
-            0xe4, 0xcb, 0x4e, 0x2c, 0x22, 0x98, 0xf4, 0xac, 0x45, 0x7b, 0xa8, 0xf8, 0x27, 0x43,
-            0xf3, 0x1e, 0x93, 0xb,
+            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
+            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11,
         ]);
 
         let expected: Vec<Token> = vec![foo, u8_arr, b256];
@@ -525,6 +597,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn units_in_structs_are_decoded_as_one_word() -> Result<()> {
         let data = [
@@ -566,7 +639,7 @@ mod tests {
     #[test]
     fn out_of_bounds_discriminant_is_detected() -> Result<()> {
         let data = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        let types = to_named(&[ParamType::U32]);
+        let types = to_named(&[ParamType::U64]);
         let enum_variants = EnumVariants::new(types)?;
         let enum_type = ParamType::Enum {
             name: "".to_string(),
@@ -655,12 +728,13 @@ mod tests {
     }
 
     #[test]
-    pub fn capacity_maloc() {
+    pub fn capacity_malloc() {
         let param_type = Array(Box::new(U8), usize::MAX);
         let result = ABIDecoder::default().decode(&param_type, &[]);
         assert!(matches!(result, Err(Error::Codec(_))));
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
         let mut param_types = vec![
@@ -700,6 +774,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn enums_w_too_deeply_nested_heap_types_not_allowed() {
         let variants = to_named(&[
@@ -785,28 +860,39 @@ mod tests {
             max_tokens: 3,
             ..Default::default()
         };
+        {
+            let data = [0; 3 * WORD_SIZE];
+            let inner_param_types = vec![ParamType::U64; 3];
+            for param_type in [
+                ParamType::Struct {
+                    name: "".to_string(),
+                    fields: to_named(&inner_param_types),
+                    generics: vec![],
+                },
+                ParamType::Tuple(inner_param_types.clone()),
+                ParamType::Array(Box::new(ParamType::U64), 3),
+            ] {
+                assert_decoding_failed_w_data(
+                    config,
+                    &param_type,
+                    "token limit `3` reached while decoding. Try increasing it",
+                    &data,
+                );
+            }
+        }
+        {
+            let data = [0, 0, 0, 0, 0, 0, 0, 3, 1, 2, 3];
 
-        let data = [0; 3 * WORD_SIZE];
-        let inner_param_types = vec![ParamType::U8; 3];
-        for param_type in [
-            ParamType::Struct {
-                name: "".to_string(),
-                fields: to_named(&inner_param_types),
-                generics: vec![],
-            },
-            ParamType::Tuple(inner_param_types.clone()),
-            ParamType::Array(Box::new(ParamType::U8), 3),
-            ParamType::Vector(Box::new(ParamType::U8)),
-        ] {
             assert_decoding_failed_w_data(
                 config,
-                &param_type,
+                &ParamType::Vector(Box::new(ParamType::U8)),
                 "token limit `3` reached while decoding. Try increasing it",
                 &data,
             );
         }
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[test]
     fn vectors_of_zst_are_not_supported() {
         let param_type = ParamType::Vector(Box::new(ParamType::StringArray(0)));
