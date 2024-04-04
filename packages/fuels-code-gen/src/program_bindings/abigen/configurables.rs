@@ -51,7 +51,7 @@ fn generate_struct_decl(configurable_struct_name: &Ident) -> TokenStream {
         #[derive(Clone, Debug, Default)]
         pub struct #configurable_struct_name {
             offsets_with_data: ::std::vec::Vec<(u64, ::std::vec::Vec<u8>)>,
-            encoder: ::fuels::core::codec::ABIEncoder,
+            encoder: ::fuels::core::codec::ConfigurablesEncoder,
         }
     }
 }
@@ -66,7 +66,7 @@ fn generate_struct_impl(
         impl #configurable_struct_name {
             pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -> Self {
                 Self {
-                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config),
+                    encoder: ::fuels::core::codec::ConfigurablesEncoder::new(encoder_config),
                     ..::std::default::Default::default()
                 }
             }

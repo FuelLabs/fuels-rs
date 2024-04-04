@@ -32,8 +32,9 @@ uint = { workspace = true, default-features = false }
 
 [dev-dependencies]
 fuels-macros = { workspace = true }
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client"]
+experimental = []

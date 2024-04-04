@@ -22,7 +22,7 @@ pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
     lhs.checked_sub(rhs).ok_or_else(|| {
         error!(
             Codec,
-            "substraction overflow while rounding up {bytes_len} bytes to word alignment"
+            "subtraction overflow while rounding up {bytes_len} bytes to word alignment"
         )
     })
 }
@@ -37,4 +37,14 @@ pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
 
 pub(crate) mod sealed {
     pub trait Sealed {}
+}
+
+#[cfg(test)]
+pub(crate) fn to_named<'a, I: IntoIterator<Item = &'a crate::types::param_types::ParamType>>(
+    param_types: I,
+) -> Vec<(String, crate::types::param_types::ParamType)> {
+    param_types
+        .into_iter()
+        .map(|pt| ("".to_string(), pt.clone()))
+        .collect()
 }

@@ -767,7 +767,9 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
         format!("{:?}", [1, 2, 3]),
     ];
 
+    // ANCHOR: instance_to_contract_id
     let contract_id: ContractId = contract_instance.id().into();
+    // ANCHOR_END: instance_to_contract_id
 
     // ANCHOR: external_contract_ids
     let response = script_instance
@@ -1451,7 +1453,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 // String slices cannot be decoded from logs as they are encoded as ptr, len
 // TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
-#[cfg(not(experimental))]
+#[cfg(not(feature = "experimental"))]
 async fn string_slice_log() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1484,7 +1486,7 @@ async fn string_slice_log() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 async fn contract_experimental_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
@@ -1543,7 +1545,7 @@ async fn contract_experimental_log() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(experimental)]
+#[cfg(feature = "experimental")]
 async fn script_experimental_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
