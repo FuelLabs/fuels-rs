@@ -796,8 +796,8 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
         .await
         .unwrap();
 
-    let base_layer_addres = Bits256([1u8; 32]);
-    let call_handler = contract_methods.send_message(base_layer_addres, amount);
+    let base_layer_address = Bits256([1u8; 32]);
+    let call_handler = contract_methods.send_message(base_layer_address, amount);
     multi_call_handler.add_call(call_handler);
 
     let _ = multi_call_handler
