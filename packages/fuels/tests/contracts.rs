@@ -1,3 +1,4 @@
+use fuel_tx::ContractParameters;
 #[cfg(not(feature = "experimental"))]
 use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
@@ -276,10 +277,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    #[cfg(not(feature = "experimental"))]
-    let expected_gas_used = 955;
-    #[cfg(feature = "experimental")]
-    let expected_gas_used = 965;
+    let expected_gas_used = 960;
 
     #[cfg(not(feature = "experimental"))]
     let expected_metered_bytes_size = 784;
@@ -1018,8 +1016,12 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
     };
 
     let mut consensus_parameters = ConsensusParameters::default();
-    let tx_params = TxParameters::default().with_max_inputs(123);
+    let tx_params = TxParameters::default()
+        .with_max_inputs(123)
+        .with_max_size(1_000_000);
     consensus_parameters.set_tx_params(tx_params);
+    let contract_params = ContractParameters::default().with_contract_max_size(1_000_000);
+    consensus_parameters.set_contract_params(contract_params);
 
     let mut wallet = WalletUnlocked::new_random(None);
 

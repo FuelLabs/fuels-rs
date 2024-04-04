@@ -81,21 +81,10 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) ->
 
     let num_wallets = wallet_names.len();
     quote! {
-        // Increase the max transaction size
-        let mut consensus_parameters = ::fuels::tx::ConsensusParameters::default();
-        let tx_params = ::fuels::tx::TxParameters::default().with_max_size(1_000_000);
-        let contract_params = ::fuels::tx::ContractParameters::default().with_contract_max_size(1000 * 1024);
-        consensus_parameters.set_tx_params(tx_params);
-        consensus_parameters.set_contract_params(contract_params);
-        let chain_config = ChainConfig {
-            consensus_parameters,
-            ..ChainConfig::local_testnet()
-        };
-
         let [#(#wallet_names),*]: [_; #num_wallets] = launch_custom_provider_and_get_wallets(
             WalletsConfig::new(Some(#num_wallets as u64), None, None),
             None,
-            Some(chain_config),
+            None,
         )
         .await
         .expect("Error while trying to fetch wallets from the custom provider")

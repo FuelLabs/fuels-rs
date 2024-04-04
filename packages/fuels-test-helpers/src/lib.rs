@@ -3,7 +3,7 @@ extern crate core;
 
 #[cfg(feature = "fuels-accounts")]
 pub use accounts::*;
-use fuel_tx::{Bytes32, UtxoId};
+use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
 use fuels_core::{
@@ -133,7 +133,7 @@ pub async fn setup_test_provider(
     chain_config: Option<ChainConfig>,
 ) -> Result<Provider> {
     let node_config = node_config.unwrap_or_default();
-    let chain_config = chain_config.unwrap_or_else(ChainConfig::local_testnet);
+    let chain_config = chain_config.unwrap_or_else(testnet_chain_config);
 
     let coin_configs = into_coin_configs(coins);
     let message_configs = into_message_configs(messages);
@@ -154,6 +154,20 @@ pub async fn setup_test_provider(
     });
 
     Provider::from(address).await
+}
+
+// Testnet ChainConfig with increased tx size and contract size limits
+fn testnet_chain_config() -> ChainConfig {
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default().with_max_size(10_000_000);
+    let contract_params = ContractParameters::default().with_contract_max_size(1_000_000);
+    consensus_parameters.set_tx_params(tx_params);
+    consensus_parameters.set_contract_params(contract_params);
+    
+    ChainConfig {
+        consensus_parameters,
+        ..ChainConfig::local_testnet()
+    }
 }
 
 #[cfg(test)]

@@ -1,6 +1,5 @@
 use std::{default::Default, path::Path};
 
-use fuel_tx::{ConsensusParameters, TxParameters};
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
@@ -116,14 +115,7 @@ async fn setup_predicate_test(
         receiver_amount,
     ));
 
-    let mut consensus_parameters = ConsensusParameters::default();
-    let tx_params = TxParameters::default().with_max_size(200_000);
-    consensus_parameters.set_tx_params(tx_params);
-    let chain_config = ChainConfig {
-        consensus_parameters,
-        ..ChainConfig::local_testnet()
-    };
-    let provider = setup_test_provider(coins, messages, None, Some(chain_config)).await?;
+    let provider = setup_test_provider(coins, messages, None, None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
