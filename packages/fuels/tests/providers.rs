@@ -859,7 +859,7 @@ async fn test_caching() -> Result<()> {
         assert!(matches!(status, TxStatus::Success { .. }));
     }
 
-    // Verify the transfers were succesful
+    // Verify the transfers were successful
     assert_eq!(wallet_2.get_asset_balance(&AssetId::zeroed()).await?, 1000);
 
     Ok(())
