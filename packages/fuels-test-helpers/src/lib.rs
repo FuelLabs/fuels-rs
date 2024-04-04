@@ -163,7 +163,7 @@ fn testnet_chain_config() -> ChainConfig {
     let contract_params = ContractParameters::default().with_contract_max_size(1_000_000);
     consensus_parameters.set_tx_params(tx_params);
     consensus_parameters.set_contract_params(contract_params);
-    
+
     ChainConfig {
         consensus_parameters,
         ..ChainConfig::local_testnet()
