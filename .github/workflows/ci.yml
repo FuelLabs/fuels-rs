@@ -201,6 +201,8 @@ jobs:
             args:
           - command: check_doc_unresolved_links
             args:
+          - command: check_typos
+            args:
           # TODO: To be removed once experimental encoding is the default
           - cargo_command: nextest
             args: run --all-targets --features "experimental" --workspace
@@ -281,6 +283,10 @@ jobs:
         if: ${{ matrix.command == 'check_doc_unresolved_links' }}
         run: |
           ! cargo doc --document-private-items |& grep -A 6  "warning: unresolved link to"
+
+      - name: Check for typos
+        if: ${{ matrix.command == 'check_typos' }}
+        uses: crate-ci/typos@v1.20.3
 
   publish:
     needs:
