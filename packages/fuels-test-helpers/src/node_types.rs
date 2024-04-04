@@ -3,15 +3,13 @@ use std::{
     path::PathBuf,
     time::Duration,
 };
-
-pub use fuel_core_chain_config::ChainConfig;
-pub use fuel_core_chain_config::StateConfig;
-use fuel_tx::Word;
-use fuel_types::{bytes::WORD_SIZE, BlockHeight};
-use fuels_core::types::errors::Result;
-use serde::{de::Error as SerdeError, Deserializer, Serializer};
-use serde_with::{DeserializeAs, SerializeAs};
 use tempfile::TempDir;
+
+use fuels_core::error;
+use fuels_core::types::errors::Result as FuelResult;
+
+use fuel_core_chain_config::SnapshotWriter;
+pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core::service::Config as ServiceConfig;
@@ -88,11 +86,10 @@ pub(crate) struct ExtendedConfig {
 }
 
 impl ExtendedConfig {
-    #[cfg(not(feature = "fuel-core-lib"))]
-    pub fn args_vec(&self) -> Result<Vec<String>> {
+    pub fn args_vec(&self) -> fuels_core::types::errors::Result<Vec<String>> {
         let port = self.node_config.addr.port().to_string();
         let mut args = vec![
-            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+            "run".to_string(),
             "--ip".to_string(),
             "127.0.0.1".to_string(),
             "--port".to_string(),
@@ -153,11 +150,7 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    #[cfg(not(feature = "fuel-core-lib"))]
-    pub fn write_temp_snapshot_files(self) -> Result<TempDir> {
-        use fuel_core_chain_config::SnapshotWriter;
-        use fuels_core::error;
-
+    pub fn write_temp_snapshot_files(self) -> FuelResult<TempDir> {
         let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
         writer
             .write_chain_config(&self.chain_config)
@@ -170,7 +163,7 @@ impl ExtendedConfig {
     }
 
     #[cfg(feature = "fuel-core-lib")]
-    fn service_config(self) -> ServiceConfig {
+    pub fn service_config(self) -> ServiceConfig {
         use fuel_core_chain_config::SnapshotReader;
 
         let snapshot_reader = SnapshotReader::new_in_memory(self.chain_config, self.state_config);
@@ -191,91 +184,5 @@ impl ExtendedConfig {
             block_production: self.node_config.block_production.into(),
             ..ServiceConfig::local_node()
         }
-    }
-}
-
-pub(crate) mod serde_hex {
-    use std::{convert::TryFrom, fmt};
-
-    use hex::{FromHex, ToHex};
-    use serde::{de::Error, Deserializer, Serializer};
-
-    pub fn serialize<T, S>(target: T, ser: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-        T: ToHex,
-    {
-        let s = format!("0x{}", target.encode_hex::<String>());
-        ser.serialize_str(&s)
-    }
-
-    pub fn deserialize<'de, T, E, D>(des: D) -> Result<T, D::Error>
-    where
-        D: Deserializer<'de>,
-        for<'a> T: TryFrom<&'a [u8], Error = E>,
-        E: fmt::Display,
-    {
-        let raw_string: String = serde::Deserialize::deserialize(des)?;
-        let stripped_prefix = raw_string.trim_start_matches("0x");
-        let bytes: Vec<u8> = FromHex::from_hex(stripped_prefix).map_err(D::Error::custom)?;
-        let result = T::try_from(bytes.as_slice()).map_err(D::Error::custom)?;
-        Ok(result)
-    }
-}
-
-pub(crate) struct HexNumber;
-
-impl SerializeAs<u64> for HexNumber {
-    fn serialize_as<S>(value: &u64, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let bytes = value.to_be_bytes();
-        serde_hex::serialize(bytes, serializer)
-    }
-}
-
-impl<'de> DeserializeAs<'de, Word> for HexNumber {
-    fn deserialize_as<D>(deserializer: D) -> std::result::Result<Word, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let mut bytes: Vec<u8> = serde_hex::deserialize(deserializer)?;
-        match bytes.len() {
-            len if len > WORD_SIZE => {
-                return Err(D::Error::custom(format!(
-                    "value can't exceed {WORD_SIZE} bytes",
-                )));
-            }
-            len if len < WORD_SIZE => {
-                // pad if length < word size
-                bytes = (0..WORD_SIZE - len).map(|_| 0u8).chain(bytes).collect();
-            }
-            _ => {}
-        }
-        // We've already verified the bytes.len == WORD_SIZE, force the conversion here.
-        Ok(Word::from_be_bytes(
-            bytes.try_into().expect("byte lengths checked"),
-        ))
-    }
-}
-
-impl SerializeAs<BlockHeight> for HexNumber {
-    fn serialize_as<S>(value: &BlockHeight, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let number = u32::from(*value) as u64;
-        HexNumber::serialize_as(&number, serializer)
-    }
-}
-
-impl<'de> DeserializeAs<'de, BlockHeight> for HexNumber {
-    fn deserialize_as<D>(deserializer: D) -> std::result::Result<BlockHeight, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let number: u64 = HexNumber::deserialize_as(deserializer)?;
-        Ok((number as u32).into())
     }
 }

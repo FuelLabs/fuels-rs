@@ -10,7 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-core = { workspace = true, default-features = false, optional = true }
+fuel-core = { workspace = true, default-features = false }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true }
 fuel-core-poa = { workspace = true }
@@ -33,4 +33,4 @@ which = { workspace = true, default-features = false }
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std"]
-fuel-core-lib = ["fuel-core"]
+fuel-core-lib = []
