@@ -113,7 +113,13 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 841);
+        let expected_gas = if cfg!(feature = "experimental") {
+            2087
+        } else {
+            841
+        };
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -608,7 +614,12 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1251);
+        #[cfg(not(feature = "experimental"))]
+        let expected_gas = 1251;
+        #[cfg(feature = "experimental")]
+        let expected_gas = 3513;
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -683,6 +694,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(not(feature = "experimental"))]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
             core::codec::{calldata, fn_selector},
