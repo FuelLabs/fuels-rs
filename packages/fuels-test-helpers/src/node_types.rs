@@ -82,10 +82,12 @@ pub(crate) struct ExtendedConfig {
     pub node_config: NodeConfig,
     pub chain_config: ChainConfig,
     pub state_config: StateConfig,
+    #[cfg(not(feature = "fuel-core-lib"))]
     pub snapshot_dir: TempDir,
 }
 
 impl ExtendedConfig {
+    #[cfg(not(feature = "fuel-core-lib"))]
     pub fn args_vec(&self) -> fuels_core::types::errors::Result<Vec<String>> {
         let port = self.node_config.addr.port().to_string();
         let mut args = vec![
@@ -150,6 +152,7 @@ impl ExtendedConfig {
         Ok(args)
     }
 
+    #[cfg(not(feature = "fuel-core-lib"))]
     pub fn write_temp_snapshot_files(self) -> FuelResult<TempDir> {
         let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
         writer
@@ -164,12 +167,12 @@ impl ExtendedConfig {
 
     #[cfg(feature = "fuel-core-lib")]
     pub fn service_config(self) -> ServiceConfig {
+        use fuel_core::combined_database::CombinedDatabaseConfig;
         use fuel_core_chain_config::SnapshotReader;
 
         let snapshot_reader = SnapshotReader::new_in_memory(self.chain_config, self.state_config);
 
-        ServiceConfig {
-            addr: self.node_config.addr,
+        let combined_db_config = CombinedDatabaseConfig {
             max_database_cache_size: self
                 .node_config
                 .max_database_cache_size
@@ -179,6 +182,11 @@ impl ExtendedConfig {
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: self.node_config.database_type.into(),
+        };
+        ServiceConfig {
+            addr: self.node_config.addr,
+            combined_db_config,
+            snapshot_reader,
             utxo_validation: self.node_config.utxo_validation,
             debug: self.node_config.debug,
             block_production: self.node_config.block_production.into(),

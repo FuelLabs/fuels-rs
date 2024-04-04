@@ -31,6 +31,7 @@ impl FuelService {
             node_config,
             chain_config,
             state_config,
+            #[cfg(not(feature = "fuel-core-lib"))]
             snapshot_dir: tempdir()?,
         };
 

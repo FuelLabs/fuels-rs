@@ -1549,7 +1549,6 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     Ok(())
 }
 
-#[ignore] // TODO
 #[tokio::test]
 async fn test_arguments_with_gas_forwarded() -> Result<()> {
     setup_program_test!(
