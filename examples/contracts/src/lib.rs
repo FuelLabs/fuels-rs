@@ -116,7 +116,7 @@ mod tests {
         let expected_gas = if cfg!(feature = "experimental") {
             2087
         } else {
-            841
+            796
         };
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -615,7 +615,7 @@ mod tests {
         // ANCHOR_END: multi_call_cost_estimation
 
         #[cfg(not(feature = "experimental"))]
-        let expected_gas = 1251;
+        let expected_gas = 1172;
         #[cfg(feature = "experimental")]
         let expected_gas = 3513;
 
