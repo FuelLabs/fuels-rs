@@ -13,7 +13,7 @@ rust-version = { workspace = true }
 crate-type = ['cdylib']
 
 [dev-dependencies]
-# `fuels` itentionally not specified through `workspace=true`. In
+# `fuels` intentionally not specified through `workspace=true`. In
 # the workspace cargo.toml `fuels` has default features enabled (so
 # that our examples don't inherit `fuels` with disabled features).
 # Cargo wouldn't respect any attempts here to disable them again.
