@@ -1337,7 +1337,7 @@ async fn low_level_call() -> Result<()> {
 }
 
 #[ignore]
-#[cfg(any(not(feature = "fuel-core-lib")))]
+#[cfg(not(feature = "fuel-core-lib"))]
 #[test]
 fn db_rocksdb() {
     use std::{fs, str::FromStr};
