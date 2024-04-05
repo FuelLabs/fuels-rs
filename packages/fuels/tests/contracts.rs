@@ -1336,7 +1336,6 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
-// TODO: reenable once https://github.com/FuelLabs/fuel-core/issues/1801 is released
 #[ignore]
 #[cfg(any(not(feature = "fuel-core-lib")))]
 #[test]
