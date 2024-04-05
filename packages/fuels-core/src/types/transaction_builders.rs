@@ -290,10 +290,10 @@ macro_rules! impl_tx_trait {
             fn num_witnesses(&self) -> Result<u16> {
                 let num_witnesses = self.witnesses().len();
 
-                if num_witnesses + self.unresolved_signers.len() > 256 {
+                if num_witnesses + self.unresolved_signers.len() > u16::MAX as usize {
                     return Err(error_transaction!(
                         Builder,
-                        "tx cannot have more than 256 witnesses"
+                        "tx exceeds maximum number of witnesses"
                     ));
                 }
 
