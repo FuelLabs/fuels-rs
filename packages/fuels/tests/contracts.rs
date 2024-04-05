@@ -1336,6 +1336,121 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
+// TODO: reenable once https://github.com/FuelLabs/fuel-core/issues/1801 is released
+#[ignore]
+#[cfg(any(not(feature = "fuel-core-lib")))]
+#[test]
+fn db_rocksdb() {
+    use std::{fs, str::FromStr};
+
+    use fuels::{
+        accounts::wallet::WalletUnlocked,
+        client::{PageDirection, PaginationRequest},
+        crypto::SecretKey,
+        prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
+    };
+
+    let temp_dir = tempfile::tempdir()
+        .expect("failed to make tempdir")
+        .into_path();
+    let temp_dir_name = temp_dir
+        .file_name()
+        .expect("failed to get file name")
+        .to_string_lossy()
+        .to_string();
+    let temp_database_path = temp_dir.join("db");
+
+    tokio::runtime::Runtime::new()
+        .expect("tokio runtime failed")
+        .block_on(async {
+            let wallet = WalletUnlocked::new_from_private_key(
+                SecretKey::from_str(
+                    "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+                )?,
+                None,
+            );
+
+            const NUMBER_OF_ASSETS: u64 = 2;
+            let node_config = NodeConfig {
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
+                ..NodeConfig::default()
+            };
+
+            let chain_config = ChainConfig {
+                chain_name: temp_dir_name.clone(),
+                consensus_parameters: Default::default(),
+                ..ChainConfig::local_testnet()
+            };
+
+            let (coins, _) = setup_multiple_assets_coins(
+                wallet.address(),
+                NUMBER_OF_ASSETS,
+                DEFAULT_NUM_COINS,
+                DEFAULT_COIN_AMOUNT,
+            );
+
+            let provider =
+                setup_test_provider(coins.clone(), vec![], Some(node_config), Some(chain_config))
+                    .await?;
+
+            provider.produce_blocks(2, None).await?;
+
+            Ok::<(), Error>(())
+        })
+        .unwrap();
+
+    // The runtime needs to be terminated because the node can currently only be killed when the runtime itself shuts down.
+
+    tokio::runtime::Runtime::new()
+        .expect("tokio runtime failed")
+        .block_on(async {
+            let node_config = NodeConfig {
+                database_type: DbType::RocksDb(Some(temp_database_path.clone())),
+                ..NodeConfig::default()
+            };
+
+            let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
+            // the same wallet that was used when rocksdb was built. When we connect it to the provider, we expect it to have the same amount of assets
+            let mut wallet = WalletUnlocked::new_from_private_key(
+                SecretKey::from_str(
+                    "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
+                )?,
+                None,
+            );
+
+            wallet.set_provider(provider.clone());
+
+            let blocks = provider
+                .get_blocks(PaginationRequest {
+                    cursor: None,
+                    results: 10,
+                    direction: PageDirection::Forward,
+                })
+                .await?
+                .results;
+
+            assert_eq!(blocks.len(), 3);
+            assert_eq!(
+                *wallet.get_balances().await?.iter().next().unwrap().1,
+                DEFAULT_COIN_AMOUNT
+            );
+            assert_eq!(
+                *wallet.get_balances().await?.iter().next().unwrap().1,
+                DEFAULT_COIN_AMOUNT
+            );
+            assert_eq!(wallet.get_balances().await?.len(), 2);
+
+            fs::remove_dir_all(
+                temp_database_path
+                    .parent()
+                    .expect("db parent folder does not exist"),
+            )?;
+
+            Ok::<(), Error>(())
+        })
+        .unwrap();
+}
+
 #[tokio::test]
 async fn can_configure_decoding_of_contract_return() -> Result<()> {
     setup_program_test!(
