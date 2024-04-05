@@ -1336,7 +1336,6 @@ async fn low_level_call() -> Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[cfg(not(feature = "fuel-core-lib"))]
 #[test]
 fn db_rocksdb() {
