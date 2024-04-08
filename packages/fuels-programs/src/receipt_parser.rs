@@ -43,6 +43,7 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
+        #[cfg(not(feature = "experimental"))]
         output_param.validate_is_decodable(self.decoder.config.max_depth)?;
 
         let data = self
@@ -64,7 +65,11 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
+        #[cfg(not(feature = "experimental"))]
         let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
+        #[cfg(feature = "experimental")]
+        let extra_receipts_needed = false;
+
         match output_param.get_return_location() {
             ReturnLocation::ReturnData
                 if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
@@ -319,7 +324,13 @@ mod tests {
         let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
+        #[cfg(not(feature = "experimental"))]
         receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
+        #[cfg(feature = "experimental")] // all data is returned as RETD
+        receipts.push(get_return_data_receipt(
+            contract_id,
+            &RECEIPT_VAL.to_be_bytes(),
+        ));
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
@@ -332,6 +343,7 @@ mod tests {
         Ok(())
     }
 
+    #[cfg(not(feature = "experimental"))]
     #[tokio::test]
     async fn receipt_parser_extract_return_data_heap() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
