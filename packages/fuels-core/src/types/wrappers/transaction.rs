@@ -24,7 +24,6 @@ use fuel_vm::checked_transaction::{
 use itertools::Itertools;
 
 use crate::{
-    constants::BASE_ASSET_ID,
     traits::Signer,
     types::{
         bech32::Bech32Address,
@@ -256,7 +255,10 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
-    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+    fn used_coins(
+        &self,
+        base_asset_id: &AssetId,
+    ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 
     async fn sign_with(
         &mut self,
@@ -442,7 +444,10 @@ macro_rules! impl_tx_wrapper {
                 }
             }
 
-            fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+            fn used_coins(
+                &self,
+                base_asset_id: &AssetId,
+            ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {
@@ -451,7 +456,7 @@ macro_rules! impl_tx_wrapper {
                             // Not a contract, it's safe to expect.
                             let owner = extract_owner_or_recipient(input).expect("has owner");
                             let asset_id = input
-                                .asset_id(&BASE_ASSET_ID)
+                                .asset_id(base_asset_id)
                                 .expect("has `asset_id`")
                                 .to_owned();
 

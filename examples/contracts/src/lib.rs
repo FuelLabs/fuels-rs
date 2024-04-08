@@ -679,7 +679,11 @@ mod tests {
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(BASE_ASSET_ID, amount, Some(other_wallet.address().clone()))
+            .add_custom_asset(
+                AssetId::zeroed(),
+                amount,
+                Some(other_wallet.address().clone()),
+            )
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets

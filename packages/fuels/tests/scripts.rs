@@ -171,11 +171,9 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 1000;
-    let asset_id = BASE_ASSET_ID;
+    let asset_id = AssetId::zeroed();
     let script_call = script_instance.main(amount, asset_id, receiver.address());
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
-        .await?;
+    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
         .estimate_tx_dependencies(None)
@@ -183,7 +181,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         .call()
         .await?;
 
-    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    let receiver_balance = receiver.get_asset_balance(&asset_id).await?;
     assert_eq!(receiver_balance, amount);
 
     Ok(())

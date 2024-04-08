@@ -81,7 +81,7 @@ fn get_test_coins_and_messages(
     num_messages: u64,
     amount: u64,
 ) -> (Vec<Coin>, Vec<Message>, AssetId) {
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
         .map(|i| setup_single_message(&Bech32Address::default(), address, amount, i.into(), vec![]))
