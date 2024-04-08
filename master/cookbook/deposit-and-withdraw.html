@@ -199,7 +199,7 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let base_asset_id: AssetId =
             &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;.parse()?;
 
-        let asset_ids = [AssetId::default(), base_asset_id];
+        let asset_ids = [AssetId::zeroed(), base_asset_id];
         let asset_configs = asset_ids
             .map(|id| AssetConfig {
                 id,

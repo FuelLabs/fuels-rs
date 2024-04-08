@@ -162,7 +162,7 @@
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );
@@ -174,14 +174,16 @@
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all unspent coins (of a given asset ID) from a wallet.</p>
-<pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
+<pre><code class="language-rust ignore">        let coins = provider
+            .get_coins(wallet.address(), *provider.base_asset_id())
+            .await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
 <h2 id="get-spendable-resources-owned-by-an-address"><a class="header" href="#get-spendable-resources-owned-by-an-address">Get spendable resources owned by an address</a></h2>
 <p>The following example shows how to fetch resources owned by an address. First, you create a  <code>ResourceFilter</code> which specifies the target address, asset ID, and amount. You can also define UTXO IDs and message IDs that should be excluded when retrieving the resources:</p>
 <pre><code class="language-rust ignore">pub struct ResourceFilter {
     pub from: Bech32Address,
-    pub asset_id: AssetId,
+    pub asset_id: Option&lt;AssetId&gt;,
     pub amount: u64,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
     pub excluded_message_nonces: Vec&lt;Nonce&gt;,

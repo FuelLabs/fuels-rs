@@ -156,7 +156,7 @@ fn main(a: u32, b: u64) -&gt; bool {
 <blockquote>
 <p>Note: The <code>abigen!</code> macro will append <code>Encoder</code> and <code>Configurables</code> to the predicate's <code>name</code> field. Fox example, <code>name=&quot;MyPredicate&quot;</code> will result in two structs called <code>MyPredicateEncoder</code> and <code>MyPredicateConfigurables</code>.</p>
 </blockquote>
-<pre><code class="language-rust ignore">        let asset_id = AssetId::default();
+<pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
         let wallets_config = WalletsConfig::new_multiple_assets(
             2,
             vec![AssetConfig {
@@ -189,7 +189,7 @@ fn main(a: u32, b: u64) -&gt; bool {
             .await?;
 
         // Check predicate balance.
-        let balance = predicate.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
 
         assert_eq!(balance, 500);
 </code></pre>
@@ -206,12 +206,12 @@ fn main(a: u32, b: u64) -&gt; bool {
             .await?;
 
         // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
 
         assert_eq!(balance, 0);
 
         // Second wallet balance is updated.
-        let balance = second_wallet.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = second_wallet.get_asset_balance(&amp;AssetId::zeroed()).await?;
         assert_eq!(balance, 1500);
 </code></pre>
 <h2 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h2>

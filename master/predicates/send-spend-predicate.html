@@ -186,7 +186,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         let mut receiver = WalletUnlocked::new_random(None);
 </code></pre>
 <p>Next, let's add some coins, start a provider and connect it with the wallets.</p>
-<pre><code class="language-rust ignore">        let asset_id = AssetId::default();
+<pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
         let num_coins = 32;
         let amount = 64;
         let initial_balance = amount * num_coins;

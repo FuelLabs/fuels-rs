@@ -356,7 +356,7 @@ To build these tests, run the following command:</p>
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );
@@ -368,14 +368,16 @@ To build these tests, run the following command:</p>
 </code></pre>
 <h2 id="get-all-coins-from-an-address"><a class="header" href="#get-all-coins-from-an-address">Get all coins from an address</a></h2>
 <p>This method returns all unspent coins (of a given asset ID) from a wallet.</p>
-<pre><code class="language-rust ignore">        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
+<pre><code class="language-rust ignore">        let coins = provider
+            .get_coins(wallet.address(), *provider.base_asset_id())
+            .await?;
         assert_eq!(coins.len(), 1);
 </code></pre>
 <h2 id="get-spendable-resources-owned-by-an-address"><a class="header" href="#get-spendable-resources-owned-by-an-address">Get spendable resources owned by an address</a></h2>
 <p>The following example shows how to fetch resources owned by an address. First, you create a  <code>ResourceFilter</code> which specifies the target address, asset ID, and amount. You can also define UTXO IDs and message IDs that should be excluded when retrieving the resources:</p>
 <pre><code class="language-rust ignore">pub struct ResourceFilter {
     pub from: Bech32Address,
-    pub asset_id: AssetId,
+    pub asset_id: Option&lt;AssetId&gt;,
     pub amount: u64,
     pub excluded_utxos: Vec&lt;UtxoId&gt;,
     pub excluded_message_nonces: Vec&lt;Nonce&gt;,
@@ -466,7 +468,7 @@ pub enum Backoff {
             .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -704,7 +706,7 @@ vulnerabilities in downstream libraries and applications.</p>
 <!-- balance:example:start -->
 <p>In the Fuel network, each UTXO corresponds to a unique <em>coin</em>, and said <em>coin</em> has a corresponding <em>amount</em> (the same way a dollar bill has either 10$ or 5$ face value). So, when you want to query the balance for a given asset ID, you want to query the sum of the amount in each unspent coin. This querying is done very easily with a wallet:</p>
 <!-- balance:example:end -->
-<pre><code class="language-rust ignore">        let asset_id: AssetId = BASE_ASSET_ID;
+<pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
         let balance: u64 = wallet.get_asset_balance(&amp;asset_id).await?;
 </code></pre>
 <!-- This section should explain getting all of the balances of a wallet -->
@@ -785,7 +787,7 @@ will have deterministic addresses.</p>
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -852,7 +854,7 @@ coins and coin amount</p>
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );
@@ -1725,8 +1727,6 @@ half-word   byte   op                raw           notes
 </blockquote>
 <p>You can also use <code>CallParameters::default()</code> to use the default values:</p>
 <pre><code class="language-rust ignore">pub const DEFAULT_CALL_PARAMS_AMOUNT: u64 = 0;
-// Bytes representation of the asset ID of the &quot;base&quot; asset used for gas fees.
-pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
 </code></pre>
 <p>This way:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
@@ -1765,7 +1765,11 @@ pub const BASE_ASSET_ID: AssetId = AssetId::BASE;
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(BASE_ASSET_ID, amount, Some(other_wallet.address().clone()))
+            .add_custom_asset(
+                AssetId::zeroed(),
+                amount,
+                Some(other_wallet.address().clone()),
+            )
             .call()
             .await?;
 </code></pre>
@@ -2053,7 +2057,7 @@ let is_error = response.is_err();
     ) {
         let call_params = CallParams {
             coins: 0,
-            asset_id: BASE_ASSET_ID,
+            asset_id: AssetId::from(ZERO_B256),
             gas: 10_000,
         };
 
@@ -2244,7 +2248,7 @@ fn main(a: u32, b: u64) -&gt; bool {
 <blockquote>
 <p>Note: The <code>abigen!</code> macro will append <code>Encoder</code> and <code>Configurables</code> to the predicate's <code>name</code> field. Fox example, <code>name=&quot;MyPredicate&quot;</code> will result in two structs called <code>MyPredicateEncoder</code> and <code>MyPredicateConfigurables</code>.</p>
 </blockquote>
-<pre><code class="language-rust ignore">        let asset_id = AssetId::default();
+<pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
         let wallets_config = WalletsConfig::new_multiple_assets(
             2,
             vec![AssetConfig {
@@ -2277,7 +2281,7 @@ fn main(a: u32, b: u64) -&gt; bool {
             .await?;
 
         // Check predicate balance.
-        let balance = predicate.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
 
         assert_eq!(balance, 500);
 </code></pre>
@@ -2294,12 +2298,12 @@ fn main(a: u32, b: u64) -&gt; bool {
             .await?;
 
         // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
 
         assert_eq!(balance, 0);
 
         // Second wallet balance is updated.
-        let balance = second_wallet.get_asset_balance(&amp;AssetId::default()).await?;
+        let balance = second_wallet.get_asset_balance(&amp;AssetId::zeroed()).await?;
         assert_eq!(balance, 1500);
 </code></pre>
 <h2 id="configurable-constants-2"><a class="header" href="#configurable-constants-2">Configurable constants</a></h2>
@@ -2408,7 +2412,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         let mut receiver = WalletUnlocked::new_random(None);
 </code></pre>
 <p>Next, let's add some coins, start a provider and connect it with the wallets.</p>
-<pre><code class="language-rust ignore">        let asset_id = AssetId::default();
+<pre><code class="language-rust ignore">        let asset_id = AssetId::zeroed();
         let num_coins = 32;
         let amount = 64;
         let initial_balance = amount * num_coins;
@@ -2503,10 +2507,13 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <p>Next, we need to define transaction inputs of the base asset that sum up to <strong>ask_amount</strong>. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods <code>get_asset_inputs_for_amount</code> and <code>get_asset_outputs_for_amount</code> can help with that. We need to specify the asset ID, the target amount, and the target address:</p>
 <pre><code class="language-rust ignore">        let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, ask_amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount)
             .await?;
-        let base_outputs =
-            hot_wallet.get_asset_outputs_for_amount(&amp;receiver, BASE_ASSET_ID, ask_amount);
+        let base_outputs = hot_wallet.get_asset_outputs_for_amount(
+            &amp;receiver,
+            *provider.base_asset_id(),
+            ask_amount,
+        );
 </code></pre>
 <p>Let's repeat the same process but this time for transferring the assets held by the predicate to our cold storage:</p>
 <pre><code class="language-rust ignore">        let other_asset_inputs = predicate
@@ -3706,7 +3713,7 @@ impl LiquidityPool for Contract {
 <pre><code class="language-rust ignore">        let base_asset_id: AssetId =
             &quot;0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c&quot;.parse()?;
 
-        let asset_ids = [AssetId::default(), base_asset_id];
+        let asset_ids = [AssetId::zeroed(), base_asset_id];
         let asset_configs = asset_ids
             .map(|id| AssetConfig {
                 id,
@@ -3788,7 +3795,7 @@ impl LiquidityPool for Contract {
             let id = AssetId::from_str(&amp;id_string)?;
 
             // leave the base asset to cover transaction fees
-            if id == BASE_ASSET_ID {
+            if id == *provider.base_asset_id() {
                 continue;
             }
 

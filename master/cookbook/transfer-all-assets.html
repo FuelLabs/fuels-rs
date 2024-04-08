@@ -165,7 +165,7 @@
             let id = AssetId::from_str(&amp;id_string)?;
 
             // leave the base asset to cover transaction fees
-            if id == BASE_ASSET_ID {
+            if id == *provider.base_asset_id() {
                 continue;
             }
 

@@ -203,7 +203,7 @@ will have deterministic addresses.</p>
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -270,7 +270,7 @@ coins and coin amount</p>
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );
