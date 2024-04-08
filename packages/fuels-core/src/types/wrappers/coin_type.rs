@@ -2,16 +2,13 @@
 
 use fuel_core_client::client::types::CoinType as ClientCoinType;
 
-use crate::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address,
-        coin::Coin,
-        coin_type_id::CoinTypeId,
-        errors::{error, Error},
-        message::Message,
-        AssetId,
-    },
+use crate::types::{
+    bech32::Bech32Address,
+    coin::Coin,
+    coin_type_id::CoinTypeId,
+    errors::{error, Error},
+    message::Message,
+    AssetId,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -47,10 +44,10 @@ impl CoinType {
         }
     }
 
-    pub fn asset_id(&self) -> AssetId {
+    pub fn coin_asset_id(&self) -> Option<AssetId> {
         match self {
-            CoinType::Coin(coin) => coin.asset_id,
-            CoinType::Message(_) => BASE_ASSET_ID,
+            CoinType::Coin(coin) => Some(coin.asset_id),
+            CoinType::Message(_) => None,
         }
     }
 

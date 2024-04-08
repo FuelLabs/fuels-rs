@@ -110,14 +110,15 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
-    let consensus_parameters = account.try_provider()?.consensus_parameters();
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters();
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset)?;
+        build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
     let script = get_instructions(calls, call_param_offsets)?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let required_asset_amounts = calculate_required_asset_amounts(calls, *provider.base_asset_id());
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
@@ -128,7 +129,12 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         asset_inputs.extend(resources);
     }
 
-    let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
+    let (inputs, outputs) = get_transaction_inputs_outputs(
+        calls,
+        asset_inputs,
+        account.address(),
+        *provider.base_asset_id(),
+    );
 
     Ok(ScriptTransactionBuilder::default()
         .with_tx_policies(tx_policies)
@@ -148,11 +154,13 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account).await?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let base_asset_id = *account.try_provider()?.base_asset_id();
+    let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
 
+    let base_asset_id = account.try_provider()?.base_asset_id();
     let used_base_amount = required_asset_amounts
         .iter()
-        .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
+        .find_map(|(asset_id, amount)| (asset_id == base_asset_id).then_some(*amount))
         .unwrap_or_default();
 
     account.add_witnesses(&mut tb)?;
@@ -184,12 +192,15 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
-pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
+pub(crate) fn calculate_required_asset_amounts(
+    calls: &[ContractCall],
+    base_asset_id: AssetId,
+) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
         .map(|call| {
             (
-                call.call_parameters.asset_id(),
+                call.call_parameters.asset_id().unwrap_or(base_asset_id),
                 call.call_parameters.amount(),
             )
         })
@@ -256,6 +267,7 @@ pub(crate) fn get_instructions(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
+    base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -267,7 +279,12 @@ pub(crate) fn build_script_data_from_contract_calls(
         let gas_forwarded = call.call_parameters.gas_forwarded();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes());
-        script_data.extend(call.call_parameters.asset_id().iter());
+        script_data.extend(
+            call.call_parameters
+                .asset_id()
+                .unwrap_or(base_asset_id)
+                .iter(),
+        );
 
         let gas_forwarded_size = gas_forwarded
             .map(|gf| {
@@ -337,6 +354,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
+    base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -352,7 +370,8 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
-        script_data.extend(call.call_parameters.asset_id().iter()); // 2. Asset ID
+        let asset_id = call.call_parameters.asset_id().unwrap_or(base_asset_id);
+        script_data.extend(asset_id.iter()); // 2. Asset ID
         script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
         script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
         script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
@@ -514,9 +533,10 @@ fn extract_data_receipt(
 pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     asset_inputs: Vec<Input>,
-    account: &impl Account,
+    address: &Bech32Address,
+    base_asset_id: AssetId,
 ) -> (Vec<Input>, Vec<Output>) {
-    let asset_ids = extract_unique_asset_ids(&asset_inputs);
+    let asset_ids = extract_unique_asset_ids(&asset_inputs, base_asset_id);
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
@@ -528,11 +548,12 @@ pub(crate) fn get_transaction_inputs_outputs(
     // `inputs` array we've sent over.
     let outputs = chain!(
         generate_contract_outputs(num_of_contracts),
-        generate_asset_change_outputs(account.address(), asset_ids),
+        generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
         extract_variable_outputs(calls)
     )
     .collect();
+
     (inputs, outputs)
 }
 
@@ -558,12 +579,12 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect::<Vec<_>>()
 }
 
-fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
+fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> HashSet<AssetId> {
     asset_inputs
         .iter()
         .filter_map(|input| match input {
             Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id())
+                Some(resource.coin_asset_id().unwrap_or(base_asset_id))
             }
             _ => None,
         })
@@ -647,7 +668,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
         Output::Variable {
             amount: 0,
             to: Address::zeroed(),
-            asset_id: AssetId::default(),
+            asset_id: AssetId::zeroed(),
         };
         num
     ]
@@ -747,7 +768,7 @@ mod test {
 
         // Act
         let (script_data, param_offsets) =
-            build_script_data_from_contract_calls(&calls, 0).unwrap();
+            build_script_data_from_contract_calls(&calls, 0, AssetId::zeroed()).unwrap();
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -807,8 +828,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             inputs,
@@ -832,7 +857,12 @@ mod test {
 
         let calls = [call, call_w_same_contract];
 
-        let (inputs, _) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             inputs,
@@ -852,7 +882,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             outputs,
@@ -870,8 +905,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let mut expected_contract_ids: HashSet<ContractId> =
@@ -910,7 +949,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let expected_outputs = (0..=1)
@@ -923,7 +967,7 @@ mod test {
     #[test]
     fn change_per_asset_id_added() {
         // given
-        let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
+        let asset_ids = [AssetId::zeroed(), AssetId::from([1; 32])];
 
         let coins = asset_ids
             .into_iter()
@@ -944,7 +988,8 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], coins, &wallet);
+        let (_, outputs) =
+            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::zeroed());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -979,7 +1024,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
@@ -1008,7 +1058,7 @@ mod test {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });
 
-        let asset_id_amounts = calculate_required_asset_amounts(&calls);
+        let asset_id_amounts = calculate_required_asset_amounts(&calls, AssetId::zeroed());
 
         let expected_asset_id_amounts = [(asset_id_1, 400), (asset_id_2, 600)].into();
 
