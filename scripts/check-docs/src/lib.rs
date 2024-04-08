@@ -100,7 +100,7 @@ pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
 
     apply_regex(
         Regex::new(r"^(\S+):(\d+):\s*\{\{\s*#include\s*(\S+?)\s*(?::\s*(\S+)\s*)?\}\}")
-            .expect("could not contstruct regex"),
+            .expect("could not construct regex"),
     )
 }
 
