@@ -6,14 +6,11 @@ pub use accounts::*;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
 use fuels_accounts::provider::Provider;
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address,
-        coin::{Coin, CoinStatus},
-        errors::Result,
-        message::{Message, MessageStatus},
-    },
+use fuels_core::types::{
+    bech32::Bech32Address,
+    coin::{Coin, CoinStatus},
+    errors::Result,
+    message::{Message, MessageStatus},
 };
 pub use node_types::*;
 use rand::Fill;
@@ -54,7 +51,7 @@ pub fn setup_multiple_assets_coins(
                 .expect("failed to fill with random data");
             random_asset_id
         })
-        .chain([BASE_ASSET_ID])
+        .chain([AssetId::zeroed()])
         .collect::<Vec<AssetId>>();
 
     let coins = asset_ids
@@ -231,7 +228,7 @@ mod tests {
         // Check that the wallet has base assets to pay for gas
         assert!(unique_asset_ids
             .iter()
-            .any(|&asset_id| asset_id == BASE_ASSET_ID));
+            .any(|&asset_id| asset_id == AssetId::zeroed()));
         for asset_id in unique_asset_ids {
             let coins_asset_id: Vec<Coin> = coins
                 .clone()
@@ -257,7 +254,7 @@ mod tests {
         let address = Bech32Address::new(FUEL_BECH32_HRP, hash);
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };

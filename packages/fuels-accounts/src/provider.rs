@@ -24,9 +24,7 @@ use fuel_types::{Address, BlockHeight, Bytes32, ChainId, Nonce};
 #[cfg(feature = "coin-cache")]
 use fuels_core::types::coin_type_id::CoinTypeId;
 use fuels_core::{
-    constants::{
-        BASE_ASSET_ID, DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE,
-    },
+    constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
         block::Block,
@@ -66,25 +64,11 @@ pub struct TransactionCost {
 pub(crate) struct ResourceQueries {
     utxos: Vec<UtxoId>,
     messages: Vec<Nonce>,
-    asset_id: AssetId,
+    asset_id: Option<AssetId>,
     amount: u64,
 }
 
 impl ResourceQueries {
-    pub fn new(
-        utxo_ids: Vec<UtxoId>,
-        message_nonces: Vec<Nonce>,
-        asset_id: AssetId,
-        amount: u64,
-    ) -> Self {
-        Self {
-            utxos: utxo_ids,
-            messages: message_nonces,
-            asset_id,
-            amount,
-        }
-    }
-
     pub fn exclusion_query(&self) -> Option<(Vec<UtxoId>, Vec<Nonce>)> {
         if self.utxos.is_empty() && self.messages.is_empty() {
             return None;
@@ -93,15 +77,16 @@ impl ResourceQueries {
         Some((self.utxos.clone(), self.messages.clone()))
     }
 
-    pub fn spend_query(&self) -> Vec<(AssetId, u64, Option<u32>)> {
-        vec![(self.asset_id, self.amount, None)]
+    pub fn spend_query(&self, base_asset_id: AssetId) -> Vec<(AssetId, u64, Option<u32>)> {
+        vec![(self.asset_id.unwrap_or(base_asset_id), self.amount, None)]
     }
 }
 
+#[derive(Default)]
 // ANCHOR: resource_filter
 pub struct ResourceFilter {
     pub from: Bech32Address,
-    pub asset_id: AssetId,
+    pub asset_id: Option<AssetId>,
     pub amount: u64,
     pub excluded_utxos: Vec<UtxoId>,
     pub excluded_message_nonces: Vec<Nonce>,
@@ -114,23 +99,11 @@ impl ResourceFilter {
     }
 
     pub(crate) fn resource_queries(&self) -> ResourceQueries {
-        ResourceQueries::new(
-            self.excluded_utxos.clone(),
-            self.excluded_message_nonces.clone(),
-            self.asset_id,
-            self.amount,
-        )
-    }
-}
-
-impl Default for ResourceFilter {
-    fn default() -> Self {
-        Self {
-            from: Default::default(),
-            asset_id: BASE_ASSET_ID,
-            amount: Default::default(),
-            excluded_utxos: Default::default(),
-            excluded_message_nonces: Default::default(),
+        ResourceQueries {
+            utxos: self.excluded_utxos.clone(),
+            messages: self.excluded_message_nonces.clone(),
+            asset_id: self.asset_id,
+            amount: self.amount,
         }
     }
 }
@@ -193,7 +166,10 @@ impl Provider {
             tx_status,
             TxStatus::SqueezedOut { .. } | TxStatus::Revert { .. }
         ) {
-            self.cache.lock().await.remove_items(tx.used_coins())
+            self.cache
+                .lock()
+                .await
+                .remove_items(tx.used_coins(self.base_asset_id()))
         }
 
         Ok(tx_status)
@@ -244,7 +220,7 @@ impl Provider {
 
     #[cfg(feature = "coin-cache")]
     async fn submit<T: Transaction>(&self, tx: T) -> Result<TxId> {
-        let used_utxos = tx.used_coins();
+        let used_utxos = tx.used_coins(self.base_asset_id());
         let tx_id = self.client.submit(&tx.into()).await?;
         self.cache.lock().await.insert_multiple(used_utxos);
 
@@ -261,6 +237,10 @@ impl Provider {
 
     pub fn consensus_parameters(&self) -> &ConsensusParameters {
         &self.consensus_parameters
+    }
+
+    pub fn base_asset_id(&self) -> &AssetId {
+        &self.consensus_parameters.base_asset_id
     }
 
     fn ensure_client_version_is_supported(node_info: &NodeInfo) -> Result<()> {
@@ -420,7 +400,7 @@ impl Provider {
             .client
             .coins_to_spend(
                 &filter.owner(),
-                queries.spend_query(),
+                queries.spend_query(*self.base_asset_id()),
                 queries.exclusion_query(),
             )
             .await?
@@ -457,7 +437,8 @@ impl Provider {
     #[cfg(feature = "coin-cache")]
     async fn extend_filter_with_cached(&self, filter: &mut ResourceFilter) {
         let mut cache = self.cache.lock().await;
-        let used_coins = cache.get_active(&(filter.from.clone(), filter.asset_id));
+        let asset_id = filter.asset_id.unwrap_or(*self.base_asset_id());
+        let used_coins = cache.get_active(&(filter.from.clone(), asset_id));
 
         let excluded_utxos = used_coins
             .iter()

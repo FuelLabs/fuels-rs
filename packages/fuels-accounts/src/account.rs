@@ -4,21 +4,16 @@ use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::{Bech32Address, Bech32ContractId},
-        coin::Coin,
-        coin_type::CoinType,
-        errors::Result,
-        input::Input,
-        message::Message,
-        transaction::{Transaction, TxPolicies},
-        transaction_builders::{
-            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
-        },
-        transaction_response::TransactionResponse,
-    },
+use fuels_core::types::{
+    bech32::{Bech32Address, Bech32ContractId},
+    coin::Coin,
+    coin_type::CoinType,
+    errors::Result,
+    input::Input,
+    message::Message,
+    transaction::{Transaction, TxPolicies},
+    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
+    transaction_response::TransactionResponse,
 };
 
 use crate::{
@@ -81,7 +76,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
-            asset_id,
+            asset_id: Some(asset_id),
             amount,
             ..Default::default()
         };
@@ -125,15 +120,21 @@ pub trait Account: ViewOnlyAccount {
         tb: &mut Tb,
         used_base_amount: u64,
     ) -> Result<()> {
+        let provider = self.try_provider()?;
         let missing_base_amount =
-            calculate_missing_base_amount(tb, used_base_amount, self.try_provider()?).await?;
+            calculate_missing_base_amount(tb, used_base_amount, provider).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
-                .get_asset_inputs_for_amount(BASE_ASSET_ID, missing_base_amount)
+                .get_asset_inputs_for_amount(*provider.base_asset_id(), missing_base_amount)
                 .await?;
 
-            adjust_inputs_outputs(tb, new_base_inputs, self.address());
+            adjust_inputs_outputs(
+                tb,
+                new_base_inputs,
+                self.address(),
+                provider.base_asset_id(),
+            );
         };
 
         Ok(())
@@ -164,7 +165,11 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tx_builder)?;
 
-        let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
+        let used_base_amount = if asset_id == *provider.base_asset_id() {
+            amount
+        } else {
+            0
+        };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
 
@@ -249,7 +254,7 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -257,6 +262,7 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_policies,
+            *provider.base_asset_id(),
         );
 
         self.add_witnesses(&mut tb)?;
