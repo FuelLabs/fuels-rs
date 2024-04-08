@@ -58,7 +58,7 @@ mod tests {
 
         let coins = setup_single_asset_coins(
             wallet.address(),
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             number_of_coins,
             amount_per_coin,
         );
@@ -73,7 +73,9 @@ mod tests {
         // ANCHOR_END: setup_test_blockchain
 
         // ANCHOR: get_coins
-        let coins = provider.get_coins(wallet.address(), BASE_ASSET_ID).await?;
+        let coins = provider
+            .get_coins(wallet.address(), *provider.base_asset_id())
+            .await?;
         assert_eq!(coins.len(), 1);
         // ANCHOR_END: get_coins
 
