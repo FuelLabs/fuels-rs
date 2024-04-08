@@ -17,7 +17,7 @@ pub fn generate_try_from_impl(input: DeriveInput) -> Result<TokenStream> {
         }
         Data::Union(union) => Err(Error::new_spanned(
             union.union_token,
-            "Unions are not supported.",
+            "unions are not supported",
         )),
     }
 }

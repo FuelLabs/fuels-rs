@@ -1,4 +1,4 @@
-use std::{result::Result as StdResult, str::FromStr};
+use std::str::FromStr;
 
 use fuels::{
     prelude::*,
@@ -8,7 +8,7 @@ use fuels::{
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
     Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
-        .unwrap()
+        .expect("is valid")
 }
 
 #[tokio::test]
@@ -33,6 +33,7 @@ async fn test_methods_typeless_argument() -> Result<()> {
         .await?;
 
     assert_eq!(response.value, 63);
+
     Ok(())
 }
 
@@ -92,6 +93,7 @@ async fn call_with_structs() -> Result<()> {
     let response = contract_methods.increment_counter(10).call().await?;
 
     assert_eq!(52, response.value);
+
     Ok(())
 }
 
@@ -538,7 +540,7 @@ async fn test_enum_inside_struct() -> Result<()> {
 }
 
 #[tokio::test]
-async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn native_types_support() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -571,6 +573,7 @@ async fn native_types_support() -> StdResult<(), Box<dyn std::error::Error>> {
         response.value,
         Address::from_str("0x0000000000000000000000000000000000000000000000000000000000000000")?
     );
+
     Ok(())
 }
 
@@ -755,7 +758,7 @@ async fn type_inside_enum() -> Result<()> {
     assert_eq!(response.value, enum_string);
 
     // Array inside enum
-    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4, 5, 6, 7]);
+    let enum_array = SomeEnum::SomeArr([1, 2, 3, 4]);
     let response = contract_methods
         .arr_inside_enum(enum_array.clone())
         .call()
@@ -790,13 +793,13 @@ async fn type_inside_enum() -> Result<()> {
         response.value,
         "The FuelVM deems that we've not encoded the nested enum correctly. Investigate!"
     );
+
     Ok(())
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
-)]
+#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
+    `String` of length 4. Got: `fuell`")]
 async fn strings_must_have_correct_length() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -847,9 +850,8 @@ async fn strings_must_have_correct_length() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
-)]
+#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
+    containing only ascii encodable characters. Got: `fueŁ`")]
 async fn strings_must_have_all_ascii_chars() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -898,9 +900,8 @@ async fn strings_must_have_all_ascii_chars() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString<4> can only be constructed from a String of length 4. Got: fuell"
-)]
+#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
+    `String` of length 4. Got: `fuell`")]
 async fn strings_must_have_correct_length_custom_types() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -984,9 +985,8 @@ async fn strings_must_have_correct_length_custom_types() {
 }
 
 #[tokio::test]
-#[should_panic(
-    expected = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: fueŁ"
-)]
+#[should_panic(expected = "`SizedAsciiString` must be constructed from a `String` \
+    containing only ascii encodable characters. Got: `fueŁ`")]
 async fn strings_must_have_all_ascii_chars_custom_types() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -1078,7 +1078,7 @@ async fn strings_must_have_all_ascii_chars_custom_types() {
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1130,7 +1130,7 @@ async fn test_rust_option_can_be_decoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_option_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1184,7 +1184,7 @@ async fn test_rust_option_can_be_encoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1236,7 +1236,7 @@ async fn test_rust_result_can_be_decoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_rust_result_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1271,7 +1271,7 @@ async fn test_rust_result_can_be_encoded() -> StdResult<(), Box<dyn std::error::
 }
 
 #[tokio::test]
-async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_decoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1316,7 +1316,7 @@ async fn test_identity_can_be_decoded() -> StdResult<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_can_be_encoded() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1364,7 +1364,7 @@ async fn test_identity_can_be_encoded() -> StdResult<(), Box<dyn std::error::Err
 }
 
 #[tokio::test]
-async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error::Error>> {
+async fn test_identity_with_two_contracts() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1403,141 +1403,6 @@ async fn test_identity_with_two_contracts() -> StdResult<(), Box<dyn std::error:
             .await?;
 
         assert!(response.value);
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn generics_test() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "TypesContract",
-            project = "packages/fuels/tests/types/contracts/generics"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "TypesContract",
-            wallet = "wallet"
-        ),
-    );
-    let contract_methods = contract_instance.methods();
-
-    {
-        // ANCHOR: generic
-        // simple struct with a single generic param
-        let arg1 = SimpleGeneric {
-            single_generic_param: 123u64,
-        };
-
-        let result = contract_methods
-            .struct_w_generic(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
-        // ANCHOR_END: generic
-    }
-    {
-        // struct that delegates the generic param internally
-        let arg1 = PassTheGenericOn {
-            one: SimpleGeneric {
-                single_generic_param: "abc".try_into()?,
-            },
-        };
-
-        let result = contract_methods
-            .struct_delegating_generic(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
-    }
-    {
-        // struct that has the generic in an array
-        let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
-
-        let result = contract_methods
-            .struct_w_generic_in_array(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
-    }
-    {
-        // struct that has the generic in a tuple
-        let arg1 = StructWTupleGeneric { a: (1, 2) };
-
-        let result = contract_methods
-            .struct_w_generic_in_tuple(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
-    }
-    {
-        // struct with generic in variant
-        let arg1 = EnumWGeneric::b(10);
-        let result = contract_methods
-            .enum_w_generic(arg1.clone())
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(result, arg1);
-    }
-    {
-        contract_methods
-            .unused_generic_args(
-                StructOneUnusedGenericParam::default(),
-                EnumOneUnusedGenericParam::One,
-            )
-            .call()
-            .await?;
-
-        let (the_struct, the_enum) = contract_methods
-            .used_and_unused_generic_args(
-                StructUsedAndUnusedGenericParams::new(10u8),
-                EnumUsedAndUnusedGenericParams::Two(11u8),
-            )
-            .call()
-            .await?
-            .value;
-
-        assert_eq!(the_struct.field, 12u8);
-        if let EnumUsedAndUnusedGenericParams::Two(val) = the_enum {
-            assert_eq!(val, 13)
-        } else {
-            panic!("Expected the variant EnumUsedAndUnusedGenericParams::Two");
-        }
-    }
-    {
-        // complex case
-        let pass_through = PassTheGenericOn {
-            one: SimpleGeneric {
-                single_generic_param: "ab".try_into()?,
-            },
-        };
-        let w_arr_generic = StructWArrayGeneric {
-            a: [pass_through.clone(), pass_through],
-        };
-
-        let arg1 = MegaExample {
-            a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
-            b: vec![(
-                [EnumWGeneric::b(StructWTupleGeneric {
-                    a: (w_arr_generic.clone(), w_arr_generic),
-                })],
-                10u32,
-            )],
-        };
-
-        contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
     Ok(())
@@ -1802,6 +1667,7 @@ async fn test_base_type_in_vec_output() -> Result<()> {
 
     Ok(())
 }
+
 #[tokio::test]
 async fn test_composite_types_in_vec_output() -> Result<()> {
     setup_program_test!(
@@ -1871,6 +1737,7 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
     Ok(())
 }
 
+#[cfg(not(feature = "experimental"))]
 #[tokio::test]
 async fn test_nested_vector_methods_fail() -> Result<()> {
     // This is just an E2E test of the method `ParamType::contains_nested_heap_types`, hence it's
@@ -1957,8 +1824,8 @@ async fn test_bytes_as_input() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_raw_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "RawSliceContract",
             project = "packages/fuels/tests/types/contracts/raw_slice"
@@ -2002,8 +1869,8 @@ async fn test_contract_raw_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_returning_string_slice() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "StringSliceContract",
             project = "packages/fuels/tests/types/contracts/string_slice"
@@ -2027,8 +1894,8 @@ async fn test_contract_returning_string_slice() -> Result<()> {
 
 #[tokio::test]
 async fn test_contract_std_lib_string() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "StdLibString",
             project = "packages/fuels/tests/types/contracts/std_lib_string"
@@ -2057,8 +1924,8 @@ async fn test_contract_std_lib_string() -> Result<()> {
 
 #[tokio::test]
 async fn test_heap_type_in_enums() -> Result<()> {
-    let wallet = launch_provider_and_get_wallet().await?;
     setup_program_test!(
+        Wallets("wallet"),
         Abigen(Contract(
             name = "HeapTypeInEnum",
             project = "packages/fuels/tests/types/contracts/heap_type_in_enums"
@@ -2071,79 +1938,153 @@ async fn test_heap_type_in_enums() -> Result<()> {
     );
     let contract_methods = contract_instance.methods();
 
-    let resp = contract_methods.returns_bytes_result(true).call().await?;
-    let expected = Ok(Bytes(vec![1, 1, 1, 1]));
-    assert_eq!(resp.value, expected);
+    {
+        let resp = contract_methods.returns_bytes_result(true).call().await?;
+        let expected = Ok(Bytes(vec![1, 1, 1, 1]));
 
-    let resp = contract_methods.returns_bytes_result(false).call().await?;
-    let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_bytes_result(false).call().await?;
+        let expected = Err(TestError::Something([255u8, 255u8, 255u8, 255u8, 255u8]));
 
-    let resp = contract_methods.returns_vec_result(true).call().await?;
-    let expected = Ok(vec![2, 2, 2, 2, 2]);
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_vec_result(true).call().await?;
+        let expected = Ok(vec![2, 2, 2, 2, 2]);
 
-    let resp = contract_methods.returns_vec_result(false).call().await?;
-    let expected = Err(TestError::Else(7777));
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_vec_result(false).call().await?;
+        let expected = Err(TestError::Else(7777));
 
-    let resp = contract_methods.returns_string_result(true).call().await?;
-    let expected = Ok("Hello World".to_string());
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_string_result(true).call().await?;
+        let expected = Ok("Hello World".to_string());
 
-    let resp = contract_methods.returns_string_result(false).call().await?;
-    let expected = Err(TestError::Else(3333));
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_string_result(false).call().await?;
+        let expected = Err(TestError::Else(3333));
 
-    let resp = contract_methods.returns_str_result(true).call().await?;
-    let expected = Ok("Hello World".try_into()?);
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_str_result(true).call().await?;
+        let expected = Ok("Hello World".try_into()?);
 
-    let resp = contract_methods.returns_string_result(false).call().await?;
-    let expected = Err(TestError::Else(3333));
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_string_result(false).call().await?;
+        let expected = Err(TestError::Else(3333));
 
-    let resp = contract_methods.returns_bytes_option(true).call().await?;
-    let expected = Some(Bytes(vec![1, 1, 1, 1]));
-    assert_eq!(resp.value, expected);
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_bytes_option(true).call().await?;
+        let expected = Some(Bytes(vec![1, 1, 1, 1]));
 
-    let resp = contract_methods.returns_bytes_option(false).call().await?;
-    assert!(resp.value.is_none());
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_bytes_option(false).call().await?;
 
-    let resp = contract_methods.returns_vec_option(true).call().await?;
-    let expected = Some(vec![2, 2, 2, 2, 2]);
-    assert_eq!(resp.value, expected);
+        assert!(resp.value.is_none());
+    }
+    {
+        let resp = contract_methods.returns_vec_option(true).call().await?;
+        let expected = Some(vec![2, 2, 2, 2, 2]);
 
-    let resp = contract_methods.returns_vec_option(false).call().await?;
-    assert!(resp.value.is_none());
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_vec_option(false).call().await?;
 
-    let resp = contract_methods.returns_string_option(true).call().await?;
-    let expected = Some("Hello World".to_string());
-    assert_eq!(resp.value, expected);
+        assert!(resp.value.is_none());
+    }
+    {
+        let resp = contract_methods.returns_string_option(true).call().await?;
+        let expected = Some("Hello World".to_string());
 
-    let resp = contract_methods.returns_string_option(false).call().await?;
-    assert!(resp.value.is_none());
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_string_option(false).call().await?;
 
-    let resp = contract_methods.returns_str_option(true).call().await?;
-    let expected = Some("Hello World".try_into()?);
-    assert_eq!(resp.value, expected);
+        assert!(resp.value.is_none());
+    }
+    {
+        let resp = contract_methods.returns_str_option(true).call().await?;
+        let expected = Some("Hello World".try_into()?);
 
-    let resp = contract_methods.returns_string_option(false).call().await?;
-    assert!(resp.value.is_none());
+        assert_eq!(resp.value, expected);
+    }
+    {
+        let resp = contract_methods.returns_string_option(false).call().await?;
 
-    // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
-    let _ = contract_methods
-        .would_raise_a_memory_overflow()
+        assert!(resp.value.is_none());
+    }
+
+    #[cfg(not(feature = "experimental"))]
+    {
+        // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
+        let _ = contract_methods
+            .would_raise_a_memory_overflow()
+            .call()
+            .await?;
+
+        let resp = contract_methods
+            .returns_a_heap_type_too_deep()
+            .call()
+            .await
+            .expect_err("should fail because it has a deeply nested heap type");
+        let expected = "codec: enums currently support only one level deep heap types".to_string();
+
+        assert_eq!(resp.to_string(), expected);
+    }
+
+    Ok(())
+}
+
+#[cfg(feature = "experimental")]
+#[tokio::test]
+async fn nested_heap_types() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "HeapTypeInEnum",
+            project = "packages/fuels/tests/types/contracts/heap_types"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "HeapTypeInEnum",
+            wallet = "wallet"
+        ),
+    );
+
+    let arr = [2u8, 4, 8];
+    let struct_generics = StructGenerics {
+        one: Bytes(arr.to_vec()),
+        two: String::from("fuel"),
+        three: RawSlice(arr.to_vec()),
+    };
+
+    let enum_vec = [struct_generics.clone(), struct_generics].to_vec();
+    let expected = EnumGeneric::One(enum_vec);
+
+    let result = contract_instance
+        .methods()
+        .nested_heap_types()
         .call()
         .await?;
 
-    let resp = contract_methods
-        .returns_a_heap_type_too_deep()
-        .call()
-        .await
-        .expect_err("Should fail because it has a deeply nested heap type");
-    let expected =
-        "Invalid type: Enums currently support only one level deep heap types.".to_string();
-    assert_eq!(resp.to_string(), expected);
+    assert_eq!(result.value, expected);
+
     Ok(())
 }

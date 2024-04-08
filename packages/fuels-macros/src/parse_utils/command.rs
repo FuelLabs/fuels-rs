@@ -27,7 +27,7 @@ impl Command {
             let name = meta_list.path.get_ident().cloned().ok_or_else(|| {
                 Error::new_spanned(
                     &meta_list.path,
-                    "Command name cannot be a Path -- i.e. contain ':'.",
+                    "command name cannot be a Path -- i.e. contain ':'",
                 )
             })?;
 
@@ -38,7 +38,7 @@ impl Command {
         } else {
             Err(Error::new_spanned(
                 meta,
-                "Expected a command name literal -- e.g. `Something(...)`",
+                "expected a command name literal -- e.g. `Something(...)`",
             ))
         }
     }
@@ -60,7 +60,7 @@ impl Command {
     ) -> syn::Result<Self> {
         syn::parse::Parser::parse2(Command::parse_multiple, stream.clone())?
             .pop()
-            .ok_or_else(|| Error::new_spanned(stream, "Expected to have at least one command!"))
+            .ok_or_else(|| Error::new_spanned(stream, "expected to have at least one command!"))
     }
 }
 #[cfg(test)]

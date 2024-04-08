@@ -100,7 +100,6 @@ pub fn setup_single_asset_coins(
                 utxo_id,
                 amount: amount_per_coin,
                 asset_id,
-                maturity: Default::default(),
                 status: CoinStatus::Unspent,
                 block_created: Default::default(),
             }

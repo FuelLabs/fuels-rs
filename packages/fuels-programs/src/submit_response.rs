@@ -73,7 +73,8 @@ where
             CallHandler::Contract(contract_handler) => &contract_handler.account,
             CallHandler::Script(script_handler) => &script_handler.account,
         };
-        Ok(account.try_provider()?)
+
+        account.try_provider()
     }
 
     fn log_decoder(&self) -> &LogDecoder {

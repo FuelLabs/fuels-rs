@@ -35,9 +35,7 @@ mod tests {
 
         // ANCHOR: liquidity_wallet
         let base_asset_id: AssetId =
-            "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c"
-                .parse()
-                .unwrap();
+            "0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c".parse()?;
 
         let asset_ids = [AssetId::default(), base_asset_id];
         let asset_configs = asset_ids
@@ -165,13 +163,13 @@ mod tests {
         wallet_2.set_provider(provider.clone());
         // ANCHOR_END: transfer_multiple_setup
 
-        // ANCHOR: transfer_multiple_inout
+        // ANCHOR: transfer_multiple_input
         let balances = wallet_1.get_balances().await?;
 
         let mut inputs = vec![];
         let mut outputs = vec![];
         for (id_string, amount) in balances {
-            let id = AssetId::from_str(&id_string).unwrap();
+            let id = AssetId::from_str(&id_string)?;
 
             // leave the base asset to cover transaction fees
             if id == BASE_ASSET_ID {
@@ -184,7 +182,7 @@ mod tests {
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
             outputs.extend(output);
         }
-        // ANCHOR_END: transfer_multiple_inout
+        // ANCHOR_END: transfer_multiple_input
 
         // ANCHOR: transfer_multiple_transaction
         let mut tb =
@@ -304,7 +302,7 @@ mod tests {
         // ANCHOR_END: custom_tx_adjust
 
         // ANCHOR: custom_tx_policies
-        let tx_policies = TxPolicies::default().with_gas_price(1);
+        let tx_policies = TxPolicies::default().with_tip(1);
         let tb = tb.with_tx_policies(tx_policies);
         // ANCHOR_END: custom_tx_policies
 

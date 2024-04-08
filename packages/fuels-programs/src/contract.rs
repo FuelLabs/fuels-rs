@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     default::Default,
     fmt::Debug,
-    fs,
+    fs, io,
     marker::PhantomData,
     path::{Path, PathBuf},
 };
@@ -11,9 +11,8 @@ use fuel_tx::{
     AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
 };
 use fuels_accounts::{provider::TransactionCost, Account};
-use fuels_core::codec::EncoderConfig;
 use fuels_core::{
-    codec::{ABIEncoder, DecoderConfig, LogDecoder},
+    codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
     constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
     traits::{Parameterize, Tokenizable},
     types::{
@@ -186,9 +185,9 @@ impl StorageSlots {
         validate_path_and_extension(storage_path, "json")?;
 
         let storage_json_string = std::fs::read_to_string(storage_path).map_err(|e| {
-            error!(
-                InvalidData,
-                "failed to read storage slots from: {storage_path:?}. Reason: {e}"
+            io::Error::new(
+                e.kind(),
+                format!("failed to read storage slots from: {storage_path:?}: {e}"),
             )
         })?;
 
@@ -332,8 +331,12 @@ impl Contract {
         let binary_filepath = binary_filepath.as_ref();
         validate_path_and_extension(binary_filepath, "bin")?;
 
-        let mut binary = fs::read(binary_filepath)
-            .map_err(|_| error!(InvalidData, "failed to read binary: {binary_filepath:?}"))?;
+        let mut binary = fs::read(binary_filepath).map_err(|e| {
+            std::io::Error::new(
+                e.kind(),
+                format!("failed to read binary: {binary_filepath:?}: {e}"),
+            )
+        })?;
 
         config.configurables.update_constants_in(&mut binary);
 
@@ -362,10 +365,11 @@ impl Contract {
 
 fn autoload_storage_slots(contract_binary: &Path) -> Result<StorageSlots> {
     let storage_file = expected_storage_slots_filepath(contract_binary)
-        .ok_or_else(|| error!(InvalidData, "Could not determine storage slots file"))?;
+        .ok_or_else(|| error!(Other, "could not determine storage slots file"))?;
 
     StorageSlots::load_from_file(&storage_file)
-                .map_err(|_| error!(InvalidData, "Could not autoload storage slots from file: {storage_file:?}. Either provide the file or disable autoloading in StorageConfiguration"))
+                .map_err(|_| error!(Other, "could not autoload storage slots from file: {storage_file:?}. \
+                                    Either provide the file or disable autoloading in `StorageConfiguration`"))
 }
 
 fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
@@ -378,19 +382,19 @@ fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
 
 fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
     if !file_path.exists() {
-        return Err(error!(InvalidData, "file {file_path:?} does not exist"));
+        return Err(Error::IO(io::Error::new(
+            io::ErrorKind::NotFound,
+            format!("file {file_path:?} does not exist"),
+        )));
     }
 
-    let path_extension = file_path.extension().ok_or_else(|| {
-        error!(
-            InvalidData,
-            "could not extract extension from: {file_path:?}"
-        )
-    })?;
+    let path_extension = file_path
+        .extension()
+        .ok_or_else(|| error!(Other, "could not extract extension from: {file_path:?}"))?;
 
     if extension != path_extension {
         return Err(error!(
-            InvalidData,
+            Other,
             "expected {file_path:?} to have '.{extension}' extension"
         ));
     }
@@ -565,7 +569,7 @@ where
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
         if !self.is_payable() && params.amount > 0 {
-            return Err(Error::AssetsForwardedToNonPayableMethod);
+            return Err(error!(Other, "assets forwarded to non-payable method"));
         }
         self.contract_call.call_parameters = params;
         Ok(self)
@@ -618,7 +622,7 @@ where
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -631,12 +635,13 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)
@@ -721,7 +726,10 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
+    #[cfg(not(feature = "experimental"))]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
+    #[cfg(feature = "experimental")]
+    let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
@@ -751,6 +759,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
+#[cfg(not(feature = "experimental"))]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {
@@ -825,8 +834,8 @@ impl<T: Account> MultiContractCallHandler<T> {
     fn validate_contract_calls(&self) -> Result<()> {
         if self.contract_calls.is_empty() {
             return Err(error!(
-                InvalidData,
-                "No calls added. Have you used '.add_calls()'?"
+                Other,
+                "no calls added. Have you used '.add_calls()'?"
             ));
         }
 
@@ -849,13 +858,13 @@ impl<T: Account> MultiContractCallHandler<T> {
                     Ok(())
                 } else {
                     Err(error!(
-                        InvalidData,
-                        "The contract call with the heap type return must be at the last position"
+                        Other,
+                        "the contract call with the heap type return must be at the last position"
                     ))
                 }
             }
             _ => Err(error!(
-                InvalidData,
+                Other,
                 "`MultiContractCallHandler` can have only one call that returns a heap type"
             )),
         }
@@ -913,10 +922,11 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
+
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
@@ -927,7 +937,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(tx).await?.check(None)?;
+        provider.dry_run(tx).await?.check(None)?;
 
         Ok(())
     }
@@ -936,13 +946,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
 
         let transaction_cost = self
             .account
             .try_provider()?
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)
@@ -1065,14 +1076,14 @@ mod tests {
 
         // when
         let error = Contract::load_from(&contract_bin, load_config)
-            .expect_err("Should have failed because the storage slots file is missing");
+            .expect_err("should have failed because the storage slots file is missing");
 
         // then
         let storage_slots_path = temp_dir.path().join("my_contract-storage_slots.json");
-        let Error::InvalidData(msg) = error else {
-            panic!("Expected an error of type InvalidData");
+        let Error::Other(msg) = error else {
+            panic!("expected an error of type `Other`");
         };
-        assert_eq!(msg, format!("Could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in StorageConfiguration"));
+        assert_eq!(msg, format!("could not autoload storage slots from file: {storage_slots_path:?}. Either provide the file or disable autoloading in `StorageConfiguration`"));
     }
 
     fn save_slots(slots: &Vec<StorageSlot>, path: &Path) {

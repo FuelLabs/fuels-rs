@@ -1,10 +1,10 @@
-error: Tuple-like enum variants must contain exactly one element.
+error: tuple-like enum variants must contain exactly one element
  --> tests/ui/derive/tokenizable/only_one_variant_element_supported.rs:6:6
   |
 6 |     B(),
   |      ^^
 
-error: Tuple-like enum variants must contain exactly one element.
+error: tuple-like enum variants must contain exactly one element
   --> tests/ui/derive/tokenizable/only_one_variant_element_supported.rs:11:6
    |
 11 |     A(u64, u32),

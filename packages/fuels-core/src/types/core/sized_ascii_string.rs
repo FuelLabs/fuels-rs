@@ -14,8 +14,8 @@ pub struct AsciiString {
 impl AsciiString {
     pub fn new(data: String) -> Result<Self> {
         if !data.is_ascii() {
-            return Err(error!(InvalidData,
-                "AsciiString must be constructed from a string containing only ascii encodable characters. Got: {data}"
+            return Err(error!(Other,
+                "`AsciiString` must be constructed from a string containing only ascii encodable characters. Got: `{data}`"
             ));
         }
         Ok(Self { data })
@@ -82,13 +82,13 @@ pub struct SizedAsciiString<const LEN: usize> {
 impl<const LEN: usize> SizedAsciiString<LEN> {
     pub fn new(data: String) -> Result<Self> {
         if !data.is_ascii() {
-            return Err(error!(InvalidData,
-                "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: {data}"
+            return Err(error!(Other,
+                "`SizedAsciiString` must be constructed from a `String` containing only ascii encodable characters. Got: `{data}`"
             ));
         }
         if data.len() != LEN {
-            return Err(error!(InvalidData,
-                "SizedAsciiString<{LEN}> can only be constructed from a String of length {LEN}. Got: {data}"
+            return Err(error!(Other,
+                "`SizedAsciiString<{LEN}>` must be constructed from a `String` of length {LEN}. Got: `{data}`"
             ));
         }
         Ok(Self { data })
@@ -108,8 +108,8 @@ impl<const LEN: usize> SizedAsciiString<LEN> {
     pub fn new_with_right_whitespace_padding(data: String) -> Result<Self> {
         if data.len() > LEN {
             return Err(error!(
-                InvalidData,
-                "SizedAsciiString<{LEN}> cannot be constructed from a string of size {}",
+                Other,
+                "`SizedAsciiString<{LEN}>` cannot be constructed from a string of size {}",
                 data.len()
             ));
         }
@@ -194,7 +194,7 @@ mod tests {
         let ascii_data = "abc".to_string();
 
         SizedAsciiString::<3>::new(ascii_data)
-            .expect("Should have succeeded since we gave ascii data of correct length!");
+            .expect("should have succeeded since we gave ascii data of correct length!");
         // ANCHOR_END: string_simple_example
     }
 
@@ -203,10 +203,10 @@ mod tests {
         let ascii_data = "ab©".to_string();
 
         let err = SizedAsciiString::<3>::new(ascii_data)
-            .expect_err("Should not have succeeded since we gave non ascii data");
+            .expect_err("should not have succeeded since we gave non ascii data");
 
-        let expected_reason = "SizedAsciiString must be constructed from a string containing only ascii encodable characters. Got: ";
-        assert!(matches!(err, Error::InvalidData(reason) if reason.starts_with(expected_reason)));
+        let expected_reason = "`SizedAsciiString` must be constructed from a `String` containing only ascii encodable characters. Got: ";
+        assert!(matches!(err, Error::Other(reason) if reason.starts_with(expected_reason)));
     }
 
     #[test]
@@ -214,22 +214,22 @@ mod tests {
         let ascii_data = "abcd".to_string();
 
         let err = SizedAsciiString::<3>::new(ascii_data)
-            .expect_err("Should not have succeeded since we gave data of wrong length");
+            .expect_err("should not have succeeded since we gave data of wrong length");
 
         let expected_reason =
-            "SizedAsciiString<3> can only be constructed from a String of length 3. Got: abcd";
-        assert!(matches!(err, Error::InvalidData(reason) if reason.starts_with(expected_reason)));
+            "`SizedAsciiString<3>` must be constructed from a `String` of length 3. Got: `abcd`";
+        assert!(matches!(err, Error::Other(reason) if reason.starts_with(expected_reason)));
     }
 
     // ANCHOR: conversion
     #[test]
     fn can_be_constructed_from_str_ref() {
-        let _: SizedAsciiString<3> = "abc".try_into().expect("Should have succeeded");
+        let _: SizedAsciiString<3> = "abc".try_into().expect("should have succeeded");
     }
 
     #[test]
     fn can_be_constructed_from_string() {
-        let _: SizedAsciiString<3> = "abc".to_string().try_into().expect("Should have succeeded");
+        let _: SizedAsciiString<3> = "abc".to_string().try_into().expect("should have succeeded");
     }
 
     #[test]

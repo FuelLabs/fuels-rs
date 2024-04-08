@@ -1,6 +1,6 @@
-use std::{iter, ops::Add, str::FromStr, vec};
+use std::{ops::Add, str::FromStr};
 
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -10,13 +10,13 @@ use fuels::{
     types::{
         block::Block,
         coin_type::CoinType,
+        errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        tx_status::TxStatus,
         Bits256,
     },
 };
-use rand::Rng;
-use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -89,7 +89,7 @@ async fn test_network_error() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await;
 
-    assert!(matches!(response, Err(Error::ProviderError(_))));
+    assert!(matches!(response, Err(Error::Provider(_))));
     Ok(())
 }
 
@@ -97,7 +97,7 @@ async fn test_network_error() -> Result<()> {
 async fn test_input_message() -> Result<()> {
     let compare_messages =
         |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
-            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+            std::iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender
                     && a.recipient == b.recipient
                     && a.nonce == b.nonce
@@ -235,7 +235,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     provider.produce_blocks(blocks_to_produce, None).await?;
     assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
     let expected_latest_block_time = origin_block_time
-        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .checked_add_signed(Duration::try_seconds((blocks_to_produce * block_time) as i64).unwrap())
         .unwrap();
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
@@ -292,18 +292,18 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     };
 
     let err = deploy_w_maturity(1)?.await.expect_err(
-        "Should not deploy contract since block height (0) is less than the requested maturity (1)",
+        "should not deploy contract since block height `0` is less than the requested maturity `1`",
     );
 
-    let Error::ValidationError(s) = err else {
-        panic!("Expected a ValidationError, got: {err}");
+    let Error::Transaction(Reason::Validation(s)) = err else {
+        panic!("expected `Validation`, got: `{err}`");
     };
     assert_eq!(s, "TransactionMaturity");
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)?
         .await
-        .expect("Should deploy contract since maturity (1) is <= than the block height (1)");
+        .expect("Should deploy contract since maturity `1` is <= than the block height `1`");
 
     Ok(())
 }
@@ -324,7 +324,10 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 398;
+    #[cfg(not(feature = "experimental"))]
+    let gas_used_by_script = 364;
+    #[cfg(feature = "experimental")]
+    let gas_used_by_script = 876;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -477,7 +480,7 @@ async fn test_gas_errors() -> Result<()> {
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
-        .estimate_transaction_cost(None)
+        .estimate_transaction_cost(None, None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);
@@ -487,19 +490,19 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_gas_price(100_000_000_000))
+        .with_tx_policies(TxPolicies::default().with_tip(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
 
-    let expected = "Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -530,7 +533,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
+    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -575,6 +579,8 @@ async fn test_get_gas_used() -> Result<()> {
 #[tokio::test]
 #[ignore]
 async fn testnet_hello_world() -> Result<()> {
+    use rand::Rng;
+
     // Note that this test might become flaky.
     // This test depends on:
     // 1. The testnet being up and running;
@@ -602,9 +608,7 @@ async fn testnet_hello_world() -> Result<()> {
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -639,9 +643,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
@@ -649,17 +651,15 @@ async fn test_parse_block_time() -> Result<()> {
         .await?;
 
     let tx_response = wallet
-        .try_provider()
-        .unwrap()
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .try_provider()
-        .unwrap()
-        .block(&tx_response.block_id.unwrap())
+        .try_provider()?
+        .block_by_height(tx_response.block_height.unwrap())
         .await?
         .unwrap();
     assert!(block.header.time.is_some());
@@ -735,11 +735,8 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 }
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
-    let unix = Tai64(timestamp).to_unix();
-    NaiveDateTime::from_timestamp_opt(unix, 0)
-        .unwrap()
-        .and_local_timezone(Utc)
-        .unwrap()
+    let unix = tai64::Tai64(timestamp).to_unix();
+    DateTime::from_timestamp(unix, 0).unwrap()
 }
 
 /// This test is here in addition to `can_set_custom_block_time` because even though this test
@@ -779,7 +776,8 @@ async fn test_sway_timestamp() -> Result<()> {
     let methods = contract_instance.methods();
 
     let response = methods.return_timestamp().call().await?;
-    let mut expected_datetime = origin_timestamp.add(Duration::seconds(block_time as i64));
+    let mut expected_datetime =
+        origin_timestamp.add(Duration::try_seconds(block_time as i64).unwrap());
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
 
     let blocks_to_produce = 600;
@@ -788,10 +786,10 @@ async fn test_sway_timestamp() -> Result<()> {
     let response = methods.return_timestamp().call().await?;
 
     // `produce_blocks` call
-    expected_datetime =
-        expected_datetime.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    expected_datetime = expected_datetime
+        .add(Duration::try_seconds((block_time * blocks_to_produce) as i64).unwrap());
     // method call
-    expected_datetime = expected_datetime.add(Duration::seconds(block_time as i64));
+    expected_datetime = expected_datetime.add(Duration::try_seconds(block_time as i64).unwrap());
 
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
     assert_eq!(
@@ -855,7 +853,7 @@ async fn test_caching() -> Result<()> {
         assert!(matches!(status, TxStatus::Success { .. }));
     }
 
-    // Verify the transfers were succesful
+    // Verify the transfers were successful
     assert_eq!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?, 1000);
 
     Ok(())
@@ -1025,6 +1023,38 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
 
     assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_produce_blocks_with_trig_never() -> Result<()> {
+    let config = Config {
+        block_production: Trigger::Never,
+        ..Config::default()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
+    let wallet = &wallets[0];
+    let provider = wallet.try_provider()?;
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+    let tx = tb.build(provider).await?;
+    let tx_id = tx.id(provider.chain_id());
+
+    provider.send_transaction(tx).await?;
+    provider.produce_blocks(1, None).await?;
+
+    let status = provider.tx_status(&tx_id).await?;
+    assert!(matches!(status, TxStatus::Success { .. }));
 
     Ok(())
 }

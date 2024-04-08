@@ -1,19 +1,21 @@
 use std::{iter::repeat, str};
 
 use crate::{
-    codec::DecoderConfig,
+    codec::{
+        utils::{CodecDirection, CounterWithLimit},
+        DecoderConfig,
+    },
     constants::WORD_SIZE,
     types::{
-        enum_variants::EnumVariants,
         errors::{error, Result},
-        param_types::ParamType,
+        param_types::{EnumVariants, NamedParamType, ParamType},
         StaticStringToken, Token, U256,
     },
 };
 
 /// Is used to decode bytes into `Token`s from which types implementing `Tokenizable` can be
 /// instantiated. Implements decoding limits to control resource usage.
-pub(crate) struct ExperimentalBoundedDecoder {
+pub(crate) struct BoundedDecoder {
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
 }
@@ -28,10 +30,12 @@ const B256_BYTES_SIZE: usize = 4 * WORD_SIZE;
 const LENGTH_BYTES_SIZE: usize = WORD_SIZE;
 const DISCRIMINANT_BYTES_SIZE: usize = WORD_SIZE;
 
-impl ExperimentalBoundedDecoder {
+impl BoundedDecoder {
     pub(crate) fn new(config: DecoderConfig) -> Self {
-        let depth_tracker = CounterWithLimit::new(config.max_depth, "Depth");
-        let token_tracker = CounterWithLimit::new(config.max_tokens, "Token");
+        let depth_tracker =
+            CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Decoding);
+        let token_tracker =
+            CounterWithLimit::new(config.max_tokens, "token", CodecDirection::Decoding);
         Self {
             depth_tracker,
             token_tracker,
@@ -93,8 +97,8 @@ impl ExperimentalBoundedDecoder {
             ParamType::Struct { fields, .. } => {
                 self.run_w_depth_tracking(|ctx| ctx.decode_struct(fields, bytes))
             }
-            ParamType::Enum { variants, .. } => {
-                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, variants))
+            ParamType::Enum { enum_variants, .. } => {
+                self.run_w_depth_tracking(|ctx| ctx.decode_enum(bytes, enum_variants))
             }
         }
     }
@@ -249,8 +253,8 @@ impl ExperimentalBoundedDecoder {
         })
     }
 
-    fn decode_struct(&mut self, param_types: &[ParamType], bytes: &[u8]) -> Result<Decoded> {
-        let (tokens, bytes_read) = self.decode_params(param_types, bytes)?;
+    fn decode_struct(&mut self, fields: &[NamedParamType], bytes: &[u8]) -> Result<Decoded> {
+        let (tokens, bytes_read) = self.decode_params(fields.iter().map(|(_, pt)| pt), bytes)?;
 
         Ok(Decoded {
             token: Token::Struct(tokens),
@@ -258,15 +262,19 @@ impl ExperimentalBoundedDecoder {
         })
     }
 
-    fn decode_enum(&mut self, bytes: &[u8], variants: &EnumVariants) -> Result<Decoded> {
+    fn decode_enum(&mut self, bytes: &[u8], enum_variants: &EnumVariants) -> Result<Decoded> {
         let discriminant = peek_discriminant(bytes)?;
         let variant_bytes = skip(bytes, DISCRIMINANT_BYTES_SIZE)?;
-        let selected_variant = variants.param_type_of_variant(discriminant)?;
+        let (_, selected_variant) = enum_variants.select_variant(discriminant)?;
 
         let decoded = self.decode_param(selected_variant, variant_bytes)?;
 
         Ok(Decoded {
-            token: Token::Enum(Box::new((discriminant, decoded.token, variants.clone()))),
+            token: Token::Enum(Box::new((
+                discriminant,
+                decoded.token,
+                enum_variants.clone(),
+            ))),
             bytes_read: DISCRIMINANT_BYTES_SIZE + decoded.bytes_read,
         })
     }
@@ -293,40 +301,6 @@ impl ExperimentalBoundedDecoder {
 struct Decoded {
     token: Token,
     bytes_read: usize,
-}
-
-struct CounterWithLimit {
-    count: usize,
-    max: usize,
-    name: String,
-}
-
-impl CounterWithLimit {
-    fn new(max: usize, name: impl Into<String>) -> Self {
-        Self {
-            count: 0,
-            max,
-            name: name.into(),
-        }
-    }
-
-    fn increase(&mut self) -> Result<()> {
-        self.count += 1;
-        if self.count > self.max {
-            return Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while decoding. Try increasing it.", self.name, self.max
-            ));
-        }
-
-        Ok(())
-    }
-
-    fn decrease(&mut self) {
-        if self.count > 0 {
-            self.count -= 1;
-        }
-    }
 }
 
 fn peek_u8(bytes: &[u8]) -> Result<u8> {
@@ -364,7 +338,7 @@ fn peek_length(bytes: &[u8]) -> Result<usize> {
 
     u64::from_be_bytes(*slice)
         .try_into()
-        .map_err(|_| error!(InvalidData, "could not convert `u64` to `usize`"))
+        .map_err(|_| error!(Other, "could not convert `u64` to `usize`"))
 }
 
 fn peek_discriminant(bytes: &[u8]) -> Result<u64> {
@@ -373,8 +347,8 @@ fn peek_discriminant(bytes: &[u8]) -> Result<u64> {
 }
 
 fn peek(data: &[u8], len: usize) -> Result<&[u8]> {
-    (len <= data.len()).then_some(&data[..len]).ok_or(error!(
-        InvalidData,
+    (len <= data.len()).then(|| &data[..len]).ok_or(error!(
+        Codec,
         "tried to read `{len}` bytes but only had `{}` remaining!",
         data.len()
     ))
@@ -391,7 +365,7 @@ fn skip(slice: &[u8], num_bytes: usize) -> Result<&[u8]> {
     (num_bytes <= slice.len())
         .then_some(&slice[num_bytes..])
         .ok_or(error!(
-            InvalidData,
+            Codec,
             "tried to consume `{num_bytes}` bytes but only had `{}` remaining!",
             slice.len()
         ))

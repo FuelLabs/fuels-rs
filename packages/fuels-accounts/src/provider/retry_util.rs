@@ -1,6 +1,6 @@
 use std::{fmt::Debug, future::Future, num::NonZeroU32, time::Duration};
 
-use fuels_core::types::errors::{error, Result as SdkResult};
+use fuels_core::types::errors::{error, Result};
 
 /// A set of strategies to control retry intervals between attempts.
 ///
@@ -81,9 +81,9 @@ pub struct RetryConfig {
 // ANCHOR_END: retry_config
 
 impl RetryConfig {
-    pub fn new(max_attempts: u32, interval: Backoff) -> SdkResult<Self> {
+    pub fn new(max_attempts: u32, interval: Backoff) -> Result<Self> {
         let max_attempts = NonZeroU32::new(max_attempts)
-            .ok_or_else(|| error!(InvalidData, "`max_attempts` must be greater than 0."))?;
+            .ok_or_else(|| error!(Other, "`max_attempts` must be greater than `0`"))?;
 
         Ok(RetryConfig {
             max_attempts,
@@ -95,7 +95,7 @@ impl RetryConfig {
 impl Default for RetryConfig {
     fn default() -> Self {
         Self {
-            max_attempts: NonZeroU32::new(1).expect("Should not fail!"),
+            max_attempts: NonZeroU32::new(1).expect("should not fail"),
             interval: Default::default(),
         }
     }
@@ -145,7 +145,7 @@ where
         tokio::time::sleep(retry_config.interval.wait_duration(attempt)).await;
     }
 
-    last_result.expect("Should not happen")
+    last_result.expect("should not happen")
 }
 
 #[cfg(test)]
@@ -153,10 +153,7 @@ mod tests {
     mod retry_until {
         use std::time::{Duration, Instant};
 
-        use fuels_core::{
-            error,
-            types::errors::{Error, Result},
-        };
+        use fuels_core::types::errors::{error, Result};
         use tokio::sync::Mutex;
 
         use crate::provider::{retry_util, Backoff, RetryConfig};
@@ -164,7 +161,7 @@ mod tests {
         #[tokio::test]
         async fn returns_last_received_response() -> Result<()> {
             // given
-            let err_msgs = ["Err1", "Err2", "Err3"];
+            let err_msgs = ["err1", "err2", "err3"];
             let number_of_attempts = Mutex::new(0usize);
 
             let will_always_fail = || async {
@@ -183,7 +180,7 @@ mod tests {
                 retry_util::retry(will_always_fail, &retry_options, should_retry_fn).await;
 
             // then
-            assert_eq!(response, "Err3");
+            assert_eq!(response, "err3");
 
             Ok(())
         }
@@ -216,7 +213,7 @@ mod tests {
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<()>::Err(Error::InvalidData("Error".to_string()))
+                Result::<()>::Err(error!(Other, "error"))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
@@ -244,7 +241,7 @@ mod tests {
 
             assert!(
                 timestamps_spaced_out_at_least_100_mills,
-                "Retry did not wait for the specified time between attempts."
+                "retry did not wait for the specified time between attempts"
             );
 
             Ok(())
@@ -257,7 +254,7 @@ mod tests {
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<()>::Err(Error::InvalidData("Error".to_string()))
+                Result::<()>::Err(error!(Other, "error"))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
@@ -286,7 +283,7 @@ mod tests {
 
             assert!(
                 timestamps_spaced_out_at_least_100_mills,
-                "Retry did not wait for the specified time between attempts."
+                "retry did not wait for the specified time between attempts"
             );
 
             Ok(())
@@ -299,7 +296,7 @@ mod tests {
 
             let will_fail_and_record_timestamp = || async {
                 timestamps.lock().await.push(Instant::now());
-                Result::<()>::Err(error!(InvalidData, "Error"))
+                Result::<()>::Err(error!(Other, "error"))
             };
 
             let should_retry_fn = |_res: &_| -> bool { true };
@@ -329,7 +326,7 @@ mod tests {
 
             assert!(
                 timestamps_spaced_out_at_least_100_mills,
-                "Retry did not wait for the specified time between attempts."
+                "retry did not wait for the specified time between attempts"
             );
 
             Ok(())
