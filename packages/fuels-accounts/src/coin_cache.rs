@@ -65,7 +65,6 @@ impl CoinsCache {
     pub fn iter_dependent(&mut self, key: &CoinCacheKey) -> impl Iterator<Item = &Coin> {
         self.dependent
             .get(key)
-            .map(VecDeque::iter)
             .into_iter()
             .flatten()
     }
