@@ -1,5 +1,7 @@
+#[cfg(not(feature = "experimental"))]
+use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
-    core::codec::{calldata, fn_selector, DecoderConfig, EncoderConfig},
+    core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
     types::{errors::transaction::Reason, Bits256},
 };
@@ -274,8 +276,15 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    let expected_gas_used = 949;
+    #[cfg(not(feature = "experimental"))]
+    let expected_gas_used = 955;
+    #[cfg(feature = "experimental")]
+    let expected_gas_used = 960;
+
+    #[cfg(not(feature = "experimental"))]
     let expected_metered_bytes_size = 784;
+    #[cfg(feature = "experimental")]
+    let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
         .methods()
@@ -781,14 +790,14 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
         .force_transfer_to_contract(
             &contract_id,
             total_amount,
-            AssetId::BASE,
+            AssetId::zeroed(),
             TxPolicies::default(),
         )
         .await
         .unwrap();
 
-    let base_layer_addres = Bits256([1u8; 32]);
-    let call_handler = contract_methods.send_message(base_layer_addres, amount);
+    let base_layer_address = Bits256([1u8; 32]);
+    let call_handler = contract_methods.send_message(base_layer_address, amount);
     multi_call_handler.add_call(call_handler);
 
     let _ = multi_call_handler
@@ -1053,7 +1062,7 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
 async fn test_add_custom_assets() -> Result<()> {
     let initial_amount = 100_000;
     let asset_base = AssetConfig {
-        id: BASE_ASSET_ID,
+        id: AssetId::zeroed(),
         num_coins: 1,
         coin_amount: initial_amount,
     };
@@ -1218,6 +1227,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
+#[cfg(not(feature = "experimental"))]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1646,7 +1656,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
         .transfer(
             predicate.address(),
             10_000,
-            BASE_ASSET_ID,
+            AssetId::zeroed(),
             TxPolicies::default(),
         )
         .await?;
@@ -1696,7 +1706,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         let response = contract_instance
             .methods()
             .get_single(x)
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
 
@@ -1706,7 +1716,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         contract_instance_2
             .methods()
             .u32_vec(vec_input.clone())
-            .call_params(CallParameters::default().with_gas_forwarded(1024))?
+            .call_params(CallParameters::default().with_gas_forwarded(4096))?
             .call()
             .await?;
     }
@@ -1751,7 +1761,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
     let amount = 10;
     let new_base_inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
 

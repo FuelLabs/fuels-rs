@@ -97,6 +97,9 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 }
 
 #[tokio::test]
+// Remove this test once the new encoding lands as the max_input will be irrelevant
+// for direct script calls as all script_data is `inline`
+// TODO: https://github.com/FuelLabs/fuels-rs/issues/1317
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels::{
         test_helpers::ChainConfig,
@@ -144,6 +147,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "heyoo");
+
     Ok(())
 }
 
@@ -167,11 +171,9 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 1000;
-    let asset_id = BASE_ASSET_ID;
+    let asset_id = AssetId::zeroed();
     let script_call = script_instance.main(amount, asset_id, receiver.address());
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
-        .await?;
+    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
         .estimate_tx_dependencies(None)
@@ -179,7 +181,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         .call()
         .await?;
 
-    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    let receiver_balance = receiver.get_asset_balance(&asset_id).await?;
     assert_eq!(receiver_balance, amount);
 
     Ok(())

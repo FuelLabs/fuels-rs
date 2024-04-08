@@ -24,7 +24,7 @@ impl WalletsConfig {
         Self {
             num_wallets: num_wallets.unwrap_or(DEFAULT_NUM_WALLETS),
             assets: vec![AssetConfig {
-                id: AssetId::default(),
+                id: AssetId::zeroed(),
                 num_coins: num_coins.unwrap_or(DEFAULT_NUM_COINS),
                 coin_amount: coin_amount.unwrap_or(DEFAULT_COIN_AMOUNT),
             }],
@@ -52,7 +52,7 @@ impl Default for WalletsConfig {
         Self {
             num_wallets: DEFAULT_NUM_WALLETS,
             assets: vec![AssetConfig {
-                id: AssetId::default(),
+                id: AssetId::zeroed(),
                 num_coins: DEFAULT_NUM_COINS,
                 coin_amount: DEFAULT_COIN_AMOUNT,
             }],
