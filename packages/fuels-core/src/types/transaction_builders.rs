@@ -21,7 +21,7 @@ use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId
 use itertools::Itertools;
 
 use crate::{
-    constants::{BASE_ASSET_ID, SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
+    constants::{SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
     offsets,
     traits::Signer,
     types::{
@@ -406,11 +406,14 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_base_asset_input<'a, I: IntoIterator<Item = &'a FuelInput>>(inputs: I) -> bool {
+    fn no_base_asset_input<'a>(
+        inputs: impl IntoIterator<Item = &'a FuelInput>,
+        base_asset_id: AssetId,
+    ) -> bool {
         let has_base_asset = inputs.into_iter().any(|i| match i {
             FuelInput::CoinSigned(CoinSigned { asset_id, .. })
             | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                if *asset_id == BASE_ASSET_ID =>
+                if *asset_id == base_asset_id =>
             {
                 true
             }
@@ -427,10 +430,11 @@ impl ScriptTransactionBuilder {
         tolerance: f32,
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
+        let base_asset_id = provider.consensus_parameters().base_asset_id;
 
         // The dry-run validation will check if there is any base asset input.
         // If we are dry-running without inputs we have to add a temporary one.
-        let no_base_asset_input = Self::no_base_asset_input(tx.inputs());
+        let no_base_asset_input = Self::no_base_asset_input(tx.inputs(), base_asset_id);
         if no_base_asset_input {
             tx.inputs_mut().push(FuelInput::coin_signed(
                 Default::default(),
@@ -601,6 +605,7 @@ impl ScriptTransactionBuilder {
         amount: u64,
         inputs: Vec<Input>,
         tx_policies: TxPolicies,
+        base_asset_id: AssetId,
     ) -> Self {
         let script_data: Vec<u8> = [to.to_vec(), amount.to_be_bytes().to_vec()]
             .into_iter()
@@ -622,7 +627,7 @@ impl ScriptTransactionBuilder {
         .into_iter()
         .collect();
 
-        let outputs = vec![Output::change(to, 0, BASE_ASSET_ID)];
+        let outputs = vec![Output::change(to, 0, base_asset_id)];
 
         ScriptTransactionBuilder::default()
             .with_tx_policies(tx_policies)

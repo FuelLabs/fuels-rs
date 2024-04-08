@@ -91,10 +91,7 @@ mod tests {
     use fuel_tx::{ConsensusParameters, TxParameters};
     use fuel_types::AssetId;
     use fuels_accounts::ViewOnlyAccount;
-    use fuels_core::{
-        constants::BASE_ASSET_ID,
-        types::{coin_type::CoinType, errors::Result},
-    };
+    use fuels_core::types::{coin_type::CoinType, errors::Result};
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
@@ -107,11 +104,12 @@ mod tests {
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
         let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
+        let provider = wallets.first().unwrap().try_provider()?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins(BASE_ASSET_ID).await?;
+            let coins = wallet.get_coins(*provider.base_asset_id()).await?;
 
             assert_eq!(coins.len(), num_coins as usize);
 
@@ -129,7 +127,7 @@ mod tests {
         let num_wallets = 3;
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -229,7 +227,7 @@ mod tests {
                 block_gas_limit
             );
             assert_eq!(
-                wallet.get_coins(AssetId::default()).await?.len() as u64,
+                wallet.get_coins(AssetId::zeroed()).await?.len() as u64,
                 num_coins
             );
             assert_eq!(

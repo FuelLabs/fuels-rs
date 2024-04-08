@@ -138,7 +138,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -155,7 +155,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let base_asset = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 1,
             coin_amount: 1000,
         };
@@ -271,7 +271,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -317,16 +317,13 @@ mod tests {
         use std::collections::HashMap;
 
         use fuels::{
-            prelude::{
-                launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT,
-                DEFAULT_NUM_COINS,
-            },
+            prelude::{launch_provider_and_get_wallet, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS},
             types::AssetId,
         };
 
         let wallet = launch_provider_and_get_wallet().await?;
         // ANCHOR: get_asset_balance
-        let asset_id: AssetId = BASE_ASSET_ID;
+        let asset_id = AssetId::zeroed();
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances
