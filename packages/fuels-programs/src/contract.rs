@@ -622,7 +622,7 @@ where
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
@@ -635,12 +635,13 @@ where
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
         let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)
@@ -725,7 +726,10 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
+    #[cfg(not(feature = "experimental"))]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
+    #[cfg(feature = "experimental")]
+    let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
@@ -755,6 +759,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
+#[cfg(not(feature = "experimental"))]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {
@@ -917,10 +922,11 @@ impl<T: Account> MultiContractCallHandler<T> {
         self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            provider.checked_dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
             provider.send_transaction_and_await_commit(tx).await?
         };
+
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
@@ -931,7 +937,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let provider = self.account.try_provider()?;
         let tx = self.build_tx().await?;
 
-        provider.checked_dry_run(tx).await?.check(None)?;
+        provider.dry_run(tx).await?.check(None)?;
 
         Ok(())
     }
@@ -940,13 +946,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn estimate_transaction_cost(
         &self,
         tolerance: Option<f64>,
+        block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
         let script = self.build_tx().await?;
 
         let transaction_cost = self
             .account
             .try_provider()?
-            .estimate_transaction_cost(script, tolerance)
+            .estimate_transaction_cost(script, tolerance, block_horizon)
             .await?;
 
         Ok(transaction_cost)

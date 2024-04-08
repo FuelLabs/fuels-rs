@@ -15,7 +15,7 @@ Transactions require us to define input and output coins. Let's assume we do not
 For the sake of simplicity, we avoid transferring the base asset so we don't have to worry about transaction fees:
 
 ```rust,ignore
-{{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_inout}}
+{{#include ../../../examples/cookbook/src/lib.rs:transfer_multiple_input}}
 ```
 
 All that is left is to build the transaction via `ScriptTransactionBuilder`, have `wallet_1` sign it, and we can send it. We confirm this by checking the number of balances present in the receiving wallet and their amount:

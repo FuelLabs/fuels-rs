@@ -13,6 +13,7 @@ use fuels::{
         errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        tx_status::TxStatus,
         Bits256,
     },
 };
@@ -323,7 +324,10 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 360;
+    #[cfg(not(feature = "experimental"))]
+    let gas_used_by_script = 364;
+    #[cfg(feature = "experimental")]
+    let gas_used_by_script = 876;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -476,7 +480,7 @@ async fn test_gas_errors() -> Result<()> {
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
-        .estimate_transaction_cost(None)
+        .estimate_transaction_cost(None, None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);
@@ -493,7 +497,7 @@ async fn test_gas_errors() -> Result<()> {
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_gas_price(100_000_000_000))
+        .with_tx_policies(TxPolicies::default().with_tip(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
@@ -604,9 +608,7 @@ async fn testnet_hello_world() -> Result<()> {
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -641,9 +643,7 @@ async fn test_parse_block_time() -> Result<()> {
     let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
@@ -651,17 +651,15 @@ async fn test_parse_block_time() -> Result<()> {
         .await?;
 
     let tx_response = wallet
-        .try_provider()
-        .unwrap()
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .try_provider()
-        .unwrap()
-        .block(&tx_response.block_id.unwrap())
+        .try_provider()?
+        .block_by_height(tx_response.block_height.unwrap())
         .await?
         .unwrap();
     assert!(block.header.time.is_some());
@@ -982,6 +980,38 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
 
     assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_produce_blocks_with_trig_never() -> Result<()> {
+    let config = Config {
+        block_production: Trigger::Never,
+        ..Config::default()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
+    let wallet = &wallets[0];
+    let provider = wallet.try_provider()?;
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, 100);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+    let tx = tb.build(provider).await?;
+    let tx_id = tx.id(provider.chain_id());
+
+    provider.send_transaction(tx).await?;
+    provider.produce_blocks(1, None).await?;
+
+    let status = provider.tx_status(&tx_id).await?;
+    assert!(matches!(status, TxStatus::Success { .. }));
 
     Ok(())
 }
