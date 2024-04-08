@@ -1,13 +1,12 @@
-use fuel_tx::{Output, Receipt};
+use fuel_tx::{AssetId, Output, Receipt};
 use fuel_types::Nonce;
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::Bech32Address,
-        errors::{error, error_transaction, Error, Result},
-        input::Input,
-        transaction_builders::TransactionBuilder,
-    },
+use fuels_core::types::{
+    bech32::Bech32Address,
+    coin::Coin,
+    coin_type::CoinType,
+    errors::{error, error_transaction, Error, Result},
+    input::Input,
+    transaction_builders::TransactionBuilder,
 };
 
 use crate::provider::Provider;
@@ -29,7 +28,7 @@ pub async fn calculate_missing_base_amount(
             "error calculating `TransactionFee`"
         ))?;
 
-    let available_amount = available_base_amount(tb);
+    let available_amount = available_base_amount(tb, provider.base_asset_id());
 
     let total_used = transaction_fee.max_fee() + used_base_amount;
     let missing_amount = if total_used > available_amount {
@@ -45,11 +44,19 @@ pub async fn calculate_missing_base_amount(
     Ok(missing_amount)
 }
 
-fn available_base_amount(tb: &impl TransactionBuilder) -> u64 {
+fn available_base_amount(tb: &impl TransactionBuilder, base_asset_id: &AssetId) -> u64 {
     tb.inputs()
         .iter()
-        .filter_map(|input| match (input.amount(), input.asset_id()) {
-            (Some(amount), Some(asset_id)) if asset_id == BASE_ASSET_ID => Some(amount),
+        .filter_map(|input| match input {
+            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
+                match resource {
+                    CoinType::Coin(Coin {
+                        amount, asset_id, ..
+                    }) if asset_id == base_asset_id => Some(*amount),
+                    CoinType::Message(message) => Some(message.amount),
+                    _ => None,
+                }
+            }
             _ => None,
         })
         .sum()
@@ -65,17 +72,18 @@ pub fn adjust_inputs_outputs(
     tb: &mut impl TransactionBuilder,
     new_base_inputs: impl IntoIterator<Item = Input>,
     address: &Bech32Address,
+    base_asset_id: &AssetId,
 ) {
     tb.inputs_mut().extend(new_base_inputs);
 
     let is_base_change_present = tb.outputs().iter().any(|output| {
         matches!(output , Output::Change { asset_id , .. }
-                                        if asset_id == & BASE_ASSET_ID)
+                                        if asset_id == base_asset_id)
     });
 
     if !is_base_change_present {
         tb.outputs_mut()
-            .push(Output::change(address.into(), 0, BASE_ASSET_ID));
+            .push(Output::change(address.into(), 0, *base_asset_id));
     }
 }
 
