@@ -208,9 +208,9 @@ mod tests {
 
         use fuels::prelude::*;
         // ANCHOR: create_or_use_rocksdb
-        let provider_config = Config {
+        let provider_config = NodeConfig {
             database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
-            ..Config::default()
+            ..NodeConfig::default()
         };
         // ANCHOR_END: create_or_use_rocksdb
 

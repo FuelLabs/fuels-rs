@@ -407,12 +407,12 @@ impl ScriptTransactionBuilder {
 
     fn no_base_asset_input<'a>(
         inputs: impl IntoIterator<Item = &'a FuelInput>,
-        base_asset_id: AssetId,
+        base_asset_id: &AssetId,
     ) -> bool {
         let has_base_asset = inputs.into_iter().any(|i| match i {
             FuelInput::CoinSigned(CoinSigned { asset_id, .. })
             | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                if *asset_id == base_asset_id =>
+                if asset_id == base_asset_id =>
             {
                 true
             }
@@ -429,7 +429,7 @@ impl ScriptTransactionBuilder {
         tolerance: f32,
     ) -> Result<()> {
         let consensus_params = provider.consensus_parameters();
-        let base_asset_id = provider.consensus_parameters().base_asset_id;
+        let base_asset_id = provider.consensus_parameters().base_asset_id();
 
         // The dry-run validation will check if there is any base asset input.
         // If we are dry-running without inputs we have to add a temporary one.
