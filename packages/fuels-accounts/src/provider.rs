@@ -240,7 +240,7 @@ impl Provider {
     }
 
     pub fn base_asset_id(&self) -> &AssetId {
-        &self.consensus_parameters.base_asset_id()
+        self.consensus_parameters.base_asset_id()
     }
 
     fn ensure_client_version_is_supported(node_info: &NodeInfo) -> Result<()> {
