@@ -203,6 +203,25 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(any(not(feature = "fuel-core-lib"), feature = "rocksdb"))]
+    async fn create_or_use_rocksdb() -> Result<()> {
+        use std::path::PathBuf;
+
+        use fuels::prelude::*;
+        // ANCHOR: create_or_use_rocksdb
+        let provider_config = Config {
+            database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
+            ..Config::default()
+        };
+        // ANCHOR_END: create_or_use_rocksdb
+
+        launch_custom_provider_and_get_wallets(Default::default(), Some(provider_config), None)
+            .await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn custom_transaction() -> Result<()> {
         let mut hot_wallet = WalletUnlocked::new_random(None);
         let mut cold_wallet = WalletUnlocked::new_random(None);
