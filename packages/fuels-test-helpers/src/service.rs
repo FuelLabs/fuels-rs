@@ -1,7 +1,8 @@
 use std::net::SocketAddr;
 
 #[cfg(feature = "fuel-core-lib")]
-use fuel_core::service::FuelService as CoreFuelService;
+use fuel_core::service::{Config as ServiceConfig, FuelService as CoreFuelService};
+use fuel_core_chain_config::{ChainConfig, StateConfig};
 #[cfg(feature = "fuel-core-lib")]
 use fuel_core_services::Service;
 use fuel_core_services::State;
@@ -9,7 +10,7 @@ use fuels_core::types::errors::{error, Result};
 
 #[cfg(not(feature = "fuel-core-lib"))]
 use crate::fuel_bin_service::FuelService as BinFuelService;
-use crate::Config;
+use crate::NodeConfig;
 
 pub struct FuelService {
     #[cfg(feature = "fuel-core-lib")]
@@ -20,14 +21,21 @@ pub struct FuelService {
 }
 
 impl FuelService {
-    pub async fn start(config: Config) -> Result<Self> {
+    pub async fn start(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+    ) -> Result<Self> {
         #[cfg(feature = "fuel-core-lib")]
-        let service = CoreFuelService::new_node(config.into())
-            .await
-            .map_err(|err| error!(Other, "{err}"))?;
+        let service = {
+            let config = Self::service_config(node_config, chain_config, state_config);
+            CoreFuelService::new_node(config)
+                .await
+                .map_err(|err| error!(Other, "{err}"))?
+        };
 
         #[cfg(not(feature = "fuel-core-lib"))]
-        let service = BinFuelService::new_node(config).await?;
+        let service = BinFuelService::new_node(node_config, chain_config, state_config).await?;
 
         let bound_address = service.bound_address;
 
@@ -49,5 +57,38 @@ impl FuelService {
 
     pub fn bound_address(&self) -> SocketAddr {
         self.bound_address
+    }
+
+    #[cfg(feature = "fuel-core-lib")]
+    fn service_config(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+    ) -> ServiceConfig {
+        use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
+        use fuel_core::combined_database::CombinedDatabaseConfig;
+        use fuel_core_chain_config::SnapshotReader;
+
+        let snapshot_reader = SnapshotReader::new_in_memory(chain_config, state_config);
+
+        let combined_db_config = CombinedDatabaseConfig {
+            max_database_cache_size: node_config
+                .max_database_cache_size
+                .unwrap_or(MAX_DATABASE_CACHE_SIZE),
+            database_path: match &node_config.database_type {
+                DbType::InMemory => Default::default(),
+                DbType::RocksDb(path) => path.clone().unwrap_or_default(),
+            },
+            database_type: node_config.database_type.into(),
+        };
+        ServiceConfig {
+            addr: node_config.addr,
+            combined_db_config,
+            snapshot_reader,
+            utxo_validation: node_config.utxo_validation,
+            debug: node_config.debug,
+            block_production: node_config.block_production.into(),
+            ..ServiceConfig::local_node()
+        }
     }
 }

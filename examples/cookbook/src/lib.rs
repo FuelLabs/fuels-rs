@@ -112,11 +112,9 @@ mod tests {
             .with_max_inputs(2);
         let fee_params = FeeParameters::default().with_gas_price_factor(10);
 
-        let consensus_parameters = ConsensusParameters {
-            tx_params,
-            fee_params,
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
+        consensus_parameters.set_tx_params(tx_params);
+        consensus_parameters.set_fee_params(fee_params);
 
         let chain_config = ChainConfig {
             consensus_parameters,
@@ -135,7 +133,7 @@ mod tests {
         // ANCHOR_END: custom_chain_coins
 
         // ANCHOR: custom_chain_provider
-        let node_config = Config::default();
+        let node_config = NodeConfig::default();
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
         // ANCHOR_END: custom_chain_provider
@@ -211,9 +209,9 @@ mod tests {
 
         use fuels::prelude::*;
         // ANCHOR: create_or_use_rocksdb
-        let provider_config = Config {
+        let provider_config = NodeConfig {
             database_type: DbType::RocksDb(Some(PathBuf::from("/tmp/.spider/db"))),
-            ..Config::default()
+            ..NodeConfig::default()
         };
         // ANCHOR_END: create_or_use_rocksdb
 

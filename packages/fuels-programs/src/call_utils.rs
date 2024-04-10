@@ -610,7 +610,7 @@ fn generate_asset_change_outputs(
 
 pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
     (0..num_of_contracts)
-        .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
+        .map(|idx| Output::contract(idx as u16, Bytes32::zeroed(), Bytes32::zeroed()))
         .collect()
 }
 
@@ -620,7 +620,7 @@ pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec
         .enumerate()
         .map(|(idx, contract_id)| {
             Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u8),
+                UtxoId::new(Bytes32::zeroed(), idx as u16),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
@@ -925,7 +925,7 @@ mod test {
                     tx_pointer,
                     contract_id,
                 } => {
-                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u8));
+                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u16));
                     assert_eq!(balance_root, Bytes32::zeroed());
                     assert_eq!(state_root, Bytes32::zeroed());
                     assert_eq!(tx_pointer, TxPointer::default());
