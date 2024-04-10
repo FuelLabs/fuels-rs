@@ -13,9 +13,9 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
-    Buildable, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::{
@@ -176,7 +176,7 @@ impl TxPolicies {
     }
 }
 
-use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -373,7 +373,7 @@ macro_rules! impl_tx_wrapper {
                 gas_price: u64,
             ) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs,
+                    &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
                     &self.tx,
                     gas_price,
@@ -500,16 +500,12 @@ impl CreateTransaction {
         self.tx.salt()
     }
 
-    pub fn bytecode_witness_index(&self) -> u8 {
+    pub fn bytecode_witness_index(&self) -> u16 {
         *self.tx.bytecode_witness_index()
     }
 
     pub fn storage_slots(&self) -> &Vec<StorageSlot> {
         self.tx.storage_slots()
-    }
-
-    pub fn bytecode_length(&self) -> u64 {
-        *self.tx.bytecode_length()
     }
 }
 
@@ -556,7 +552,7 @@ impl ScriptTransaction {
     }
 
     pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-        self.tx.set_script_gas_limit(gas_limit);
+        *self.tx.script_gas_limit_mut() = gas_limit;
         self
     }
 }

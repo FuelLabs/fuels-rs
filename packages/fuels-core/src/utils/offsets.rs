@@ -1,7 +1,7 @@
 use fuel_asm::Instruction;
 use fuel_tx::{
-    field::{Salt, Script},
-    Bytes32, ConsensusParameters, InputRepr,
+    field::{Script, StorageSlots},
+    ConsensusParameters, InputRepr,
 };
 use fuel_types::{bytes::padded_len_usize, ContractId};
 
@@ -17,9 +17,7 @@ pub fn base_offset_create(consensus_parameters: &ConsensusParameters) -> usize {
     // The easiest way to get the offset of `fuel_tx::Create` is to get the offset of the last field
     // of `Create` -- i.e. `salt` and skip it by adding its length.
     // This should be updated if `fuel_tx::Create` ever adds more fields after `salt`.
-    consensus_parameters.tx_params().tx_offset()
-        + fuel_tx::Create::salt_offset_static()
-        + Bytes32::LEN
+    consensus_parameters.tx_params().tx_offset() + fuel_tx::Create::storage_slots_offset_static()
 }
 
 /// Calculates the length of the script based on the number of contract calls it

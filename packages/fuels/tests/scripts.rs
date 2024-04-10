@@ -107,10 +107,9 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         types::coin::Coin,
     };
 
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(128),
-        ..Default::default()
-    };
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default().with_max_inputs(128);
+    consensus_parameters.set_tx_params(tx_params);
     let chain_config = ChainConfig {
         consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()

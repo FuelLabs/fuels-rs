@@ -2,7 +2,8 @@
 mod tests {
     use fuels::{
         core::codec::{DecoderConfig, EncoderConfig},
-        prelude::{Config, LoadConfiguration, StorageConfiguration},
+        prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
+        test_helpers::{ChainConfig, StateConfig},
         types::{
             errors::{transaction::Reason, Result},
             Bits256,
@@ -15,7 +16,12 @@ mod tests {
         use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::start(Config::default()).await?;
+        let server = FuelService::start(
+            NodeConfig::default(),
+            ChainConfig::default(),
+            StateConfig::default(),
+        )
+        .await?;
 
         // Create a client that will talk to the node created above.
         let client = Provider::from(server.bound_address()).await?;
