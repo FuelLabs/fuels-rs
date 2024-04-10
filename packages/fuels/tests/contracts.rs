@@ -1348,19 +1348,19 @@ fn db_rocksdb() {
         prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
-    let temp_dir = tempfile::tempdir()
-        .expect("failed to make tempdir")
-        .into_path();
+    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
     let temp_dir_name = temp_dir
+        .path()
         .file_name()
         .expect("failed to get file name")
         .to_string_lossy()
         .to_string();
-    let temp_database_path = temp_dir.join("db");
+    let temp_database_path = temp_dir.path().join("db");
 
     tokio::runtime::Runtime::new()
         .expect("tokio runtime failed")
         .block_on(async {
+            let _ = temp_dir;
             let wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
                     "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
