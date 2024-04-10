@@ -30,4 +30,4 @@ which = { workspace = true, default-features = false }
 [features]
 default = ["fuels-accounts", "std"]
 std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
-fuel-core-lib = ["fuel-core"]
+fuel-core-lib = ["dep:fuel-core"]
