@@ -151,11 +151,9 @@
             .with_max_inputs(2);
         let fee_params = FeeParameters::default().with_gas_price_factor(10);
 
-        let consensus_parameters = ConsensusParameters {
-            tx_params,
-            fee_params,
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
+        consensus_parameters.set_tx_params(tx_params);
+        consensus_parameters.set_fee_params(fee_params);
 
         let chain_config = ChainConfig {
             consensus_parameters,
@@ -173,7 +171,7 @@
 </code></pre>
 <p>Finally, we call <code>setup_test_provider()</code>, which starts a node with the given configurations and returns a
 provider attached to that node:</p>
-<pre><code class="language-rust ignore">        let node_config = Config::default();
+<pre><code class="language-rust ignore">        let node_config = NodeConfig::default();
         let _provider =
             setup_test_provider(coins, vec![], Some(node_config), Some(chain_config)).await?;
 </code></pre>

@@ -140,9 +140,9 @@
                         <h1 id="rocksdb"><a class="header" href="#rocksdb">RocksDB</a></h1>
 <p>RocksDB enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
 <p>To create or use a local database, follow these instructions:</p>
-<pre><code class="language-rust ignore">        let provider_config = Config {
+<pre><code class="language-rust ignore">        let provider_config = NodeConfig {
             database_type: DbType::RocksDb(Some(PathBuf::from(&quot;/tmp/.spider/db&quot;))),
-            ..Config::default()
+            ..NodeConfig::default()
         };
 </code></pre>
 <blockquote>

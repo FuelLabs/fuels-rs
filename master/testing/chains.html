@@ -155,12 +155,12 @@
 </code></pre>
 <p>You can also set a custom block time as the second, optional argument. Here is an example:</p>
 <pre><code class="language-rust ignore">    let block_time = 20u32; // seconds
-    let config = Config {
+    let config = NodeConfig {
         // This is how you specify the time between blocks
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
