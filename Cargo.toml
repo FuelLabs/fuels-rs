@@ -36,7 +36,7 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.76.0"
-version = "0.56.0"
+version = "0.57.0"
 
 [workspace.dependencies]
 Inflector = "0.11.4"
@@ -89,10 +89,10 @@ fuel-types = { version = "0.48.0" }
 fuel-vm = { version = "0.48.0" }
 
 # Workspace projects
-fuels = { version = "0.56.0", path = "./packages/fuels" }
-fuels-accounts = { version = "0.56.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.56.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.56.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.56.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.56.0", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.56.0", path = "./packages/fuels-test-helpers", default-features = false }
+fuels = { version = "0.57.0", path = "./packages/fuels" }
+fuels-accounts = { version = "0.57.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.57.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.57.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.57.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.57.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.57.0", path = "./packages/fuels-test-helpers", default-features = false }
