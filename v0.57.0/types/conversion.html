@@ -1,0 +1,324 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>Converting types - The Fuel Rust SDK</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="../connecting/index.html"><strong aria-hidden="true">2.</strong> Connecting to a Fuel node</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../connecting/external-node.html"><strong aria-hidden="true">2.1.</strong> Connecting to the Testnet or an external node</a></li><li class="chapter-item expanded "><a href="../connecting/short-lived.html"><strong aria-hidden="true">2.2.</strong> Running a short-lived Fuel node with the SDK</a></li><li class="chapter-item expanded "><a href="../connecting/rocksdb.html"><strong aria-hidden="true">2.3.</strong> RocksDB</a></li><li class="chapter-item expanded "><a href="../connecting/querying.html"><strong aria-hidden="true">2.4.</strong> Querying the blockchain</a></li><li class="chapter-item expanded "><a href="../connecting/retrying.html"><strong aria-hidden="true">2.5.</strong> Retrying upon errors</a></li></ol></li><li class="chapter-item expanded "><a href="../accounts.html"><strong aria-hidden="true">3.</strong> Accounts</a></li><li class="chapter-item expanded "><a href="../wallets/index.html"><strong aria-hidden="true">4.</strong> Managing wallets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../wallets/private-keys.html"><strong aria-hidden="true">4.1.</strong> Creating a wallet from a private key</a></li><li class="chapter-item expanded "><a href="../wallets/mnemonic-wallet.html"><strong aria-hidden="true">4.2.</strong> Creating a wallet from mnemonic phrases</a></li><li class="chapter-item expanded "><a href="../wallets/access.html"><strong aria-hidden="true">4.3.</strong> Wallet Access</a></li><li class="chapter-item expanded "><a href="../wallets/encrypting-and-storing.html"><strong aria-hidden="true">4.4.</strong> Encrypting and storing wallets</a></li><li class="chapter-item expanded "><a href="../wallets/checking-balances-and-coins.html"><strong aria-hidden="true">4.5.</strong> Checking balances and coins</a></li><li class="chapter-item expanded "><a href="../wallets/test-wallets.html"><strong aria-hidden="true">4.6.</strong> Setting up test wallets</a></li><li class="chapter-item expanded "><a href="../wallets/signing.html"><strong aria-hidden="true">4.7.</strong> Signing</a></li></ol></li><li class="chapter-item expanded "><a href="../abigen/index.html"><strong aria-hidden="true">5.</strong> Generating bindings with abigen!</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../abigen/the-json-abi-file.html"><strong aria-hidden="true">5.1.</strong> The JSON ABI file</a></li><li class="chapter-item expanded "><a href="../abigen/the-abigen-macro.html"><strong aria-hidden="true">5.2.</strong> The abigen! macro</a></li></ol></li><li class="chapter-item expanded "><a href="../deploying/index.html"><strong aria-hidden="true">6.</strong> Deploying contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../deploying/configurable-constants.html"><strong aria-hidden="true">6.1.</strong> Configurable constants</a></li><li class="chapter-item expanded "><a href="../deploying/storage-slots.html"><strong aria-hidden="true">6.2.</strong> Storage slots</a></li><li class="chapter-item expanded "><a href="../deploying/interacting-with-contracts.html"><strong aria-hidden="true">6.3.</strong> Interacting with contracts</a></li><li class="chapter-item expanded "><a href="../deploying/the-fuelvm-binary-file.html"><strong aria-hidden="true">6.4.</strong> The FuelVM Binary file</a></li></ol></li><li class="chapter-item expanded "><a href="../calling-contracts/index.html"><strong aria-hidden="true">7.</strong> Calling contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../calling-contracts/calls-with-different-wallets.html"><strong aria-hidden="true">7.1.</strong> Connecting wallets</a></li><li class="chapter-item expanded "><a href="../calling-contracts/tx-policies.html"><strong aria-hidden="true">7.2.</strong> Transaction policies</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-params.html"><strong aria-hidden="true">7.3.</strong> Call parameters</a></li><li class="chapter-item expanded "><a href="../calling-contracts/custom-asset-transfer.html"><strong aria-hidden="true">7.4.</strong> Custom asset transfer</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-response.html"><strong aria-hidden="true">7.5.</strong> Call response</a></li><li class="chapter-item expanded "><a href="../calling-contracts/logs.html"><strong aria-hidden="true">7.6.</strong> Logs</a></li><li class="chapter-item expanded "><a href="../calling-contracts/variable-outputs.html"><strong aria-hidden="true">7.7.</strong> Variable outputs and messages</a></li><li class="chapter-item expanded "><a href="../calling-contracts/read-only.html"><strong aria-hidden="true">7.8.</strong> Read-only calls</a></li><li class="chapter-item expanded "><a href="../calling-contracts/other-contracts.html"><strong aria-hidden="true">7.9.</strong> Calling other contracts</a></li><li class="chapter-item expanded "><a href="../calling-contracts/multicalls.html"><strong aria-hidden="true">7.10.</strong> Multiple contract calls</a></li><li class="chapter-item expanded "><a href="../calling-contracts/tx-dependency-estimation.html"><strong aria-hidden="true">7.11.</strong> Transaction dependency estimation</a></li><li class="chapter-item expanded "><a href="../calling-contracts/cost-estimation.html"><strong aria-hidden="true">7.12.</strong> Estimating cost</a></li><li class="chapter-item expanded "><a href="../calling-contracts/low-level-calls.html"><strong aria-hidden="true">7.13.</strong> Low-level calls</a></li></ol></li><li class="chapter-item expanded "><a href="../running-scripts.html"><strong aria-hidden="true">8.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="../predicates/index.html"><strong aria-hidden="true">9.</strong> Predicates</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../predicates/send-spend-predicate.html"><strong aria-hidden="true">9.1.</strong> Signatures example</a></li></ol></li><li class="chapter-item expanded "><a href="../custom-transactions/index.html"><strong aria-hidden="true">10.</strong> Custom transactions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../custom-transactions/transaction-builders.html"><strong aria-hidden="true">10.1.</strong> Transaction builders</a></li><li class="chapter-item expanded "><a href="../custom-transactions/custom-calls.html"><strong aria-hidden="true">10.2.</strong> Custom contract and script calls</a></li></ol></li><li class="chapter-item expanded "><a href="../types/index.html"><strong aria-hidden="true">11.</strong> Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../types/bytes32.html"><strong aria-hidden="true">11.1.</strong> Bytes32</a></li><li class="chapter-item expanded "><a href="../types/address.html"><strong aria-hidden="true">11.2.</strong> Address</a></li><li class="chapter-item expanded "><a href="../types/contract-id.html"><strong aria-hidden="true">11.3.</strong> ContractId</a></li><li class="chapter-item expanded "><a href="../types/asset-id.html"><strong aria-hidden="true">11.4.</strong> AssetId</a></li><li class="chapter-item expanded "><a href="../types/bech32.html"><strong aria-hidden="true">11.5.</strong> Bech32</a></li><li class="chapter-item expanded "><a href="../types/custom_types.html"><strong aria-hidden="true">11.6.</strong> Structs and enums</a></li><li class="chapter-item expanded "><a href="../types/string.html"><strong aria-hidden="true">11.7.</strong> String</a></li><li class="chapter-item expanded "><a href="../types/bits256.html"><strong aria-hidden="true">11.8.</strong> Bits256</a></li><li class="chapter-item expanded "><a href="../types/bytes.html"><strong aria-hidden="true">11.9.</strong> Bytes</a></li><li class="chapter-item expanded "><a href="../types/B512.html"><strong aria-hidden="true">11.10.</strong> B512</a></li><li class="chapter-item expanded "><a href="../types/evm_address.html"><strong aria-hidden="true">11.11.</strong> EvmAddress</a></li><li class="chapter-item expanded "><a href="../types/vectors.html"><strong aria-hidden="true">11.12.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="../types/conversion.html" class="active"><strong aria-hidden="true">11.13.</strong> Converting types</a></li></ol></li><li class="chapter-item expanded "><a href="../codec/index.html"><strong aria-hidden="true">12.</strong> Codec</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../codec/encoding.html"><strong aria-hidden="true">12.1.</strong> Encoding</a></li><li class="chapter-item expanded "><a href="../codec/decoding.html"><strong aria-hidden="true">12.2.</strong> Decoding</a></li></ol></li><li class="chapter-item expanded "><a href="../reference.html"><strong aria-hidden="true">13.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">14.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../testing/basics.html"><strong aria-hidden="true">14.1.</strong> Testing basics</a></li><li class="chapter-item expanded "><a href="../testing/the-setup-program-test-macro.html"><strong aria-hidden="true">14.2.</strong> The setup_program_test! macro</a></li><li class="chapter-item expanded "><a href="../testing/chains.html"><strong aria-hidden="true">14.3.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../cookbook/index.html"><strong aria-hidden="true">15.</strong> Cookbook</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../cookbook/custom-chain.html"><strong aria-hidden="true">15.1.</strong> Custom consensus parameters</a></li><li class="chapter-item expanded "><a href="../cookbook/deposit-and-withdraw.html"><strong aria-hidden="true">15.2.</strong> Deposit and Withdraw</a></li><li class="chapter-item expanded "><a href="../cookbook/transfer-all-assets.html"><strong aria-hidden="true">15.3.</strong> Transfer all assets</a></li></ol></li><li class="chapter-item expanded "><a href="../debugging/index.html"><strong aria-hidden="true">16.</strong> Debugging</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../debugging/function-selector.html"><strong aria-hidden="true">16.1.</strong> The Function selector</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">17.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../contributing/CONTRIBUTING.html"><strong aria-hidden="true">18.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contributing/tests-structure.html"><strong aria-hidden="true">18.1.</strong> Integration tests structure</a></li></ol></li><li class="chapter-item expanded "><a href="../cli/index.html"><strong aria-hidden="true">19.</strong> Command Line Interfaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../cli/fuels-abi-cli.html"><strong aria-hidden="true">19.1.</strong> fuels-abi-cli</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Fuel Rust SDK</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/FuelLabs/fuels-rs" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="converting-types"><a class="header" href="#converting-types">Converting Types</a></h1>
+<p>Below you can find examples for common type conversions:</p>
+<ul>
+<li><a href="#convert-between-native-types">Convert Between Native Types</a></li>
+<li><a href="#convert-to-bytes32">Convert to <code>Bytes32</code></a></li>
+<li><a href="#convert-to-address">Convert to <code>Address</code></a></li>
+<li><a href="#convert-to-contractid">Convert to <code>ContractId</code></a></li>
+<li><a href="#convert-to-identity">Convert to <code>Identity</code></a></li>
+<li><a href="#convert-to-assetid">Convert to <code>AssetId</code></a></li>
+<li><a href="#convert-to-bech32">Convert to <code>Bech32</code></a></li>
+<li><a href="#convert-to-str">Convert to <code>str</code></a></li>
+<li><a href="#convert-to-bits256">Convert to <code>Bits256</code></a></li>
+<li><a href="#convert-to-bytes">Convert to <code>Bytes</code></a></li>
+<li><a href="#convert-to-b512">Convert to <code>B512</code></a></li>
+<li><a href="#convert-to-evmaddress">Convert to <code>EvmAddress</code></a></li>
+</ul>
+<h2 id="convert-between-native-types"><a class="header" href="#convert-between-native-types">Convert Between Native Types</a></h2>
+<p>You might want to convert between the native types (<code>Bytes32</code>, <code>Address</code>, <code>ContractId</code>, and <code>AssetId</code>). Because these types are wrappers on <code>[u8; 32]</code>, converting is a matter of dereferencing one and instantiating the other using the dereferenced value. Here's an example:</p>
+<pre><code class="language-rust ignore">        use fuels::types::{AssetId, ContractId};
+
+        let contract_id = ContractId::new([1u8; 32]);
+
+        let asset_id: AssetId = AssetId::new(*contract_id);
+
+        assert_eq!([1u8; 32], *asset_id);
+</code></pre>
+<h2 id="convert-to-bytes32"><a class="header" href="#convert-to-bytes32">Convert to <code>Bytes32</code></a></h2>
+<p>Convert a <code>[u8; 32]</code> array to <code>Bytes32</code>:</p>
+<pre><code class="language-rust ignore">        let my_slice = [1u8; 32];
+        let b256 = Bytes32::new(my_slice);
+</code></pre>
+<p>Convert a hex string to <code>Bytes32</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let b256 = Bytes32::from_str(hex_str)?;
+</code></pre>
+<h2 id="convert-to-address"><a class="header" href="#convert-to-address">Convert to <code>Address</code></a></h2>
+<p>Convert a <code>[u8; 32]</code> array to an <code>Address</code>:</p>
+<pre><code class="language-rust ignore">        let my_slice = [1u8; 32];
+        let address = Address::new(my_slice);
+</code></pre>
+<p>Convert a <code>Bech32</code> address to an <code>Address</code>:</p>
+<pre><code class="language-rust ignore">        let _plain_address: Address = bech32_address.into();
+</code></pre>
+<p>Convert a wallet to an <code>Address</code>:</p>
+<pre><code class="language-rust ignore">        let wallet_unlocked = WalletUnlocked::new_random(None);
+        let address: Address = wallet_unlocked.address().into();
+</code></pre>
+<p>Convert a hex string to an <code>Address</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let address = Address::from_str(hex_str)?;
+</code></pre>
+<h2 id="convert-to-contractid"><a class="header" href="#convert-to-contractid">Convert to <code>ContractId</code></a></h2>
+<p>Convert a <code>[u8; 32]</code> array to to <code>ContractId</code>:</p>
+<pre><code class="language-rust ignore">        let my_slice = [1u8; 32];
+        let contract_id = ContractId::new(my_slice);
+</code></pre>
+<p>Convert a hex string to a <code>ContractId</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let contract_id = ContractId::from_str(hex_str)?;
+</code></pre>
+<p>Convert a contract instance to a <code>ContractId</code>:</p>
+<pre><code class="language-rust ignore">    let contract_id: ContractId = contract_instance.id().into();
+</code></pre>
+<h2 id="convert-to-identity"><a class="header" href="#convert-to-identity">Convert to <code>Identity</code></a></h2>
+<p>Convert an <code>Address</code> to an <code>Identity</code>:</p>
+<pre><code class="language-rust ignore">        let _identity_from_address = Identity::Address(address);
+</code></pre>
+<p>Convert a <code>ContractId</code> to an <code>Identity</code>:</p>
+<pre><code class="language-rust ignore">        let _identity_from_contract_id = Identity::ContractId(contract_id);
+</code></pre>
+<h2 id="convert-to-assetid"><a class="header" href="#convert-to-assetid">Convert to <code>AssetId</code></a></h2>
+<p>Convert a <code>[u8; 32]</code> array to an <code>AssetId</code>:</p>
+<pre><code class="language-rust ignore">        let my_slice = [1u8; 32];
+        let asset_id = AssetId::new(my_slice);
+</code></pre>
+<p>Convert a hex string to an <code>AssetId</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0000000000000000000000000000000000000000000000000000000000000000&quot;;
+        let asset_id = AssetId::from_str(hex_str)?;
+</code></pre>
+<h2 id="convert-to-bech32"><a class="header" href="#convert-to-bech32">Convert to <code>Bech32</code></a></h2>
+<p>Convert a <code>[u8; 32]</code> array to a <code>Bech32</code> address:</p>
+<pre><code class="language-rust ignore">        let hrp = &quot;fuel&quot;;
+        let my_slice = [1u8; 32];
+        let _bech32_address = Bech32Address::new(hrp, my_slice);
+</code></pre>
+<p>Convert <code>Bytes32</code> to a <code>Bech32</code> address:</p>
+<pre><code class="language-rust ignore">        let my_hash = Bytes32::new([1u8; 32]);
+        let _bech32_address = Bech32Address::new(hrp, my_hash);
+</code></pre>
+<p>Convert a string to a <code>Bech32</code> address:</p>
+<pre><code class="language-rust ignore">        let address = &quot;fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2&quot;;
+        let bech32_address = Bech32Address::from_str(address)?;
+</code></pre>
+<p>Convert an <code>Address</code> to a <code>Bech32</code> address:</p>
+<pre><code class="language-rust ignore">        let plain_address = Address::new([0u8; 32]);
+        let bech32_address = Bech32Address::from(plain_address);
+</code></pre>
+<h2 id="convert-to-str"><a class="header" href="#convert-to-str">Convert to <code>str</code></a></h2>
+<p>Convert a <code>ContractId</code> to a <code>str</code>:</p>
+<pre><code class="language-rust ignore">        let _str_from_contract_id: &amp;str = contract_id.to_string().as_str();
+</code></pre>
+<p>Convert an <code>Address</code> to a <code>str</code>:</p>
+<pre><code class="language-rust ignore">        let _str_from_address: &amp;str = address.to_string().as_str();
+</code></pre>
+<p>Convert an <code>AssetId</code> to a <code>str</code>:</p>
+<pre><code class="language-rust ignore">        let _str_from_asset_id: &amp;str = asset_id.to_string().as_str();
+</code></pre>
+<p>Convert <code>Bytes32</code> to a <code>str</code>:</p>
+<pre><code class="language-rust ignore">        let _str_from_bytes32: &amp;str = b256.to_string().as_str();
+</code></pre>
+<h2 id="convert-to-bits256"><a class="header" href="#convert-to-bits256">Convert to <code>Bits256</code></a></h2>
+<p>Convert a hex string to <code>Bits256</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+        let bits256 = Bits256::from_hex_str(hex_str)?;
+</code></pre>
+<p>Convert a <code>ContractId</code> to <code>Bits256</code>:</p>
+<pre><code class="language-rust ignore">        let _contract_id_to_bits_256 = Bits256(contract_id.into());
+</code></pre>
+<p>Convert an <code>Address</code> to <code>Bits256</code>:</p>
+<pre><code class="language-rust ignore">        let bits_256 = Bits256(address.into());
+</code></pre>
+<p>Convert an <code>AssetId</code> to <code>Bits256</code>:</p>
+<pre><code class="language-rust ignore">        let _asset_id_to_bits_256 = Bits256(asset_id.into());
+</code></pre>
+<h2 id="convert-to-bytes"><a class="header" href="#convert-to-bytes">Convert to <code>Bytes</code></a></h2>
+<p>Convert a string to <code>Bytes</code>:</p>
+<pre><code class="language-rust ignore">        let hex_str = &quot;0x0101010101010101010101010101010101010101010101010101010101010101&quot;;
+
+        let bytes = Bytes::from_hex_str(hex_str)?;
+</code></pre>
+<h2 id="convert-to-b512"><a class="header" href="#convert-to-b512">Convert to <code>B512</code></a></h2>
+<p>Convert two hex strings to <code>B512</code>:</p>
+<pre><code class="language-rust ignore">    let hi_bits = Bits256::from_hex_str(
+        &quot;0xbd0c9b8792876713afa8bff383eebf31c43437823ed761cc3600d0016de5110c&quot;,
+    )?;
+    let lo_bits = Bits256::from_hex_str(
+        &quot;0x44ac566bd156b4fc71a4a4cb2655d3dd360c695edb17dc3b64d611e122fea23d&quot;,
+    )?;
+    let b512 = B512::from((hi_bits, lo_bits));
+</code></pre>
+<h2 id="convert-to-evmaddress"><a class="header" href="#convert-to-evmaddress">Convert to <code>EvmAddress</code></a></h2>
+<p>Convert a <code>Bits256</code> address to an <code>EvmAddress</code>:</p>
+<pre><code class="language-rust ignore">        let _evm_address = EvmAddress::from(bits_256);
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../types/vectors.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../codec/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../types/vectors.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../codec/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
