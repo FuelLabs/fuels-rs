@@ -60,6 +60,7 @@ members = [
   'tests/types/contracts/enum_encoding',
   'tests/types/contracts/enum_inside_struct',
   'tests/types/contracts/evm_address',
+  'tests/types/contracts/generics',
   'tests/types/contracts/heap_type_in_enums',
   'tests/types/contracts/heap_types',
   'tests/types/contracts/identity',
@@ -105,3 +106,6 @@ members = [
   'tests/types/scripts/script_u256',
   'tests/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "esdrubal/fix_mega_example_performance" }

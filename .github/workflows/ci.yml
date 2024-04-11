@@ -20,7 +20,7 @@ env:
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.76.0
   FORC_VERSION: 0.52.1
-  FORC_PATCH_BRANCH: ""
+  FORC_PATCH_BRANCH: "esdrubal/fix_mega_example_performance"
   FORC_PATCH_REVISION: ""
 
 jobs:
