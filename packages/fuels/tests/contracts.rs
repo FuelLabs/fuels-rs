@@ -278,7 +278,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let block_horizon = Some(1);
 
     #[cfg(not(feature = "experimental"))]
-    let expected_gas_used = 955;
+    let expected_gas_used = 661;
     #[cfg(feature = "experimental")]
     let expected_gas_used = 960;
 
