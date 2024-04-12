@@ -48,7 +48,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
     let tolerance = Some(0.0);
     let block_horizon = Some(1);
 
-    let a = 4u64;
+    let a = 8u64;
     let b = 2u32;
     let estimated_gas_used = script_instance
         .main(a, b)
