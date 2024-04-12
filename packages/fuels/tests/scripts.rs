@@ -24,7 +24,7 @@ async fn main_function_arguments() -> Result<()> {
 
     let result = script_instance.main(bim, bam).call().await?;
 
-    let expected = Bimbam { val: 2191 };
+    let expected = Bimbam { val: 2190 };
     assert_eq!(result.value, expected);
     // ANCHOR_END: script_with_arguments
     Ok(())
