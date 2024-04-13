@@ -103,7 +103,7 @@ impl ReceiptParser {
     }
 
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, receipt) in self.receipts.iter_mut().enumerate() {
+        for (index, receipt) in self.receipts.iter_mut().enumerate().rev() {
             if let Receipt::ReturnData {
                 id,
                 data: Some(data),
@@ -121,7 +121,9 @@ impl ReceiptParser {
     }
 
     fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, receipt) in self.receipts.iter_mut().enumerate() {
+        // There can be reentrant contract calls, so we need to look for the last Return receipt
+        // that matches the contract_id
+        for (index, receipt) in self.receipts.iter_mut().enumerate().rev() {
             if let Receipt::Return { id, val, .. } = receipt {
                 if *id == *contract_id {
                     let data = val.to_be_bytes().to_vec();
@@ -189,6 +191,7 @@ impl ReceiptParser {
 #[cfg(test)]
 mod tests {
     use fuel_tx::ScriptExecutionResult;
+    use fuel_types::AssetId;
     use fuels_core::traits::{Parameterize, Tokenizable};
 
     use super::*;
@@ -362,5 +365,197 @@ mod tests {
         assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
+    }
+
+    #[test]
+    fn can_handle_reentrant_contract_calls_primitive_value() {
+        // given
+        let top_level_contract =
+            "0xb7cac0a0521248f8baac940a0902bfd7fdc5b6bc1936b59a801df3b4a75483c8"
+                .parse()
+                .unwrap();
+        let delegating_contract =
+            "0x07822be5596a1039c73a41ffc1b8aa0b3cc0c9ffb98ebc563961b730f2e79795"
+                .parse()
+                .unwrap();
+        let receipts = [
+            Receipt::Call {
+                id: ContractId::zeroed(),
+                to: top_level_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 456,
+                param1: 1619450810,
+                param2: 10480,
+                pc: 11960,
+                is: 11960,
+            },
+            Receipt::Call {
+                id: top_level_contract,
+                to: delegating_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 238,
+                param1: 3752339489,
+                param2: 10480,
+                pc: 13168,
+                is: 13168,
+            },
+            Receipt::Call {
+                id: delegating_contract,
+                to: top_level_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 64,
+                param1: 1003047684,
+                param2: 0,
+                pc: 14320,
+                is: 14320,
+            },
+            Receipt::Return {
+                id: top_level_contract,
+                val: 1337,
+                pc: 14388,
+                is: 14320,
+            },
+            Receipt::Return {
+                id: delegating_contract,
+                val: 1337,
+                pc: 13304,
+                is: 13168,
+            },
+            Receipt::Return {
+                id: top_level_contract,
+                val: 42,
+                pc: 12128,
+                is: 11960,
+            },
+            Receipt::Return {
+                id: ContractId::zeroed(),
+                val: 1,
+                pc: 10388,
+                is: 10368,
+            },
+            Receipt::ScriptResult {
+                result: ScriptExecutionResult::Success,
+                gas_used: 646,
+            },
+        ];
+        let mut parser = ReceiptParser::new(&receipts, DecoderConfig::default());
+
+        // when
+        let result = parser
+            .parse(
+                Some(&Bech32ContractId::from(top_level_contract)),
+                &u64::param_type(),
+            )
+            .unwrap();
+
+        // then
+        let Token::U64(value) = result else {
+            panic!("Expected U64, got {:?}", result);
+        };
+
+        assert_eq!(value, 42);
+    }
+
+    #[test]
+    fn can_handle_reentrant_contract_calls_return_data() {
+        // given
+        let top_level_contract =
+            "0xb7cac0a0521248f8baac940a0902bfd7fdc5b6bc1936b59a801df3b4a75483c8"
+                .parse()
+                .unwrap();
+        let delegating_contract =
+            "0x07822be5596a1039c73a41ffc1b8aa0b3cc0c9ffb98ebc563961b730f2e79795"
+                .parse()
+                .unwrap();
+        let receipts = [
+            Receipt::Call {
+                id: ContractId::zeroed(),
+                to: top_level_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 456,
+                param1: 1619450810,
+                param2: 10480,
+                pc: 11960,
+                is: 11960,
+            },
+            Receipt::Call {
+                id: top_level_contract,
+                to: delegating_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 238,
+                param1: 3752339489,
+                param2: 10480,
+                pc: 13168,
+                is: 13168,
+            },
+            Receipt::Call {
+                id: delegating_contract,
+                to: top_level_contract,
+                amount: 0,
+                asset_id: AssetId::zeroed(),
+                gas: 64,
+                param1: 1003047684,
+                param2: 0,
+                pc: 14320,
+                is: 14320,
+            },
+            Receipt::ReturnData {
+                id: top_level_contract,
+                pc: 14388,
+                is: 14320,
+                ptr: Default::default(),
+                len: Default::default(),
+                digest: Default::default(),
+                data: Some([1; 32].to_vec()),
+            },
+            Receipt::Return {
+                id: delegating_contract,
+                val: 1337,
+                pc: 13304,
+                is: 13168,
+            },
+            Receipt::ReturnData {
+                id: top_level_contract,
+                pc: 12128,
+                is: 11960,
+                ptr: Default::default(),
+                len: Default::default(),
+                digest: Default::default(),
+                data: Some([2; 32].to_vec()),
+            },
+            Receipt::Return {
+                id: ContractId::zeroed(),
+                val: 1,
+                pc: 10388,
+                is: 10368,
+            },
+            Receipt::ScriptResult {
+                result: ScriptExecutionResult::Success,
+                gas_used: 646,
+            },
+        ];
+        let mut parser = ReceiptParser::new(&receipts, DecoderConfig::default());
+
+        // when
+        let result = parser
+            .parse(
+                Some(&Bech32ContractId::from(top_level_contract)),
+                &<[u8; 32]>::param_type(),
+            )
+            .unwrap();
+
+        // then
+        let Token::Array(value) = result else {
+            panic!("Expected an Array, got {:?}", result);
+        };
+
+        let expected = vec![Token::U8(2); 32];
+
+        assert_eq!(value, expected);
     }
 }
