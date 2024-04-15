@@ -1737,7 +1737,7 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn test_nested_vector_methods_fail() -> Result<()> {
     // This is just an E2E test of the method `ParamType::contains_nested_heap_types`, hence it's
@@ -2031,7 +2031,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
         assert!(resp.value.is_none());
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     {
         // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
         let _ = contract_methods
@@ -2052,7 +2052,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental")]
+#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
     setup_program_test!(

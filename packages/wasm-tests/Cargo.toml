@@ -23,4 +23,4 @@ getrandom = { version = "0.2.11", features = ["js"] }
 wasm-bindgen-test = "0.3.39"
 
 [features]
-experimental = ["fuels-core/experimental"]
+legacy_encoding = ["fuels-core/legacy_encoding"]

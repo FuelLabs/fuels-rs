@@ -1,5 +1,5 @@
 use fuel_tx::ContractParameters;
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
@@ -277,14 +277,14 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     let expected_gas_used = 955;
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     let expected_gas_used = 960;
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     let expected_metered_bytes_size = 784;
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -1231,7 +1231,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 

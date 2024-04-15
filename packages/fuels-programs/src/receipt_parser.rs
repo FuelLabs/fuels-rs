@@ -43,7 +43,7 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         output_param.validate_is_decodable(self.decoder.config.max_depth)?;
 
         let data = self
@@ -65,9 +65,9 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let extra_receipts_needed = false;
 
         match output_param.get_return_location() {
@@ -324,9 +324,9 @@ mod tests {
         let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
-        #[cfg(feature = "experimental")] // all data is returned as RETD
+        #[cfg(not(feature = "legacy_encoding"))] // all data is returned as RETD
         receipts.push(get_return_data_receipt(
             contract_id,
             &RECEIPT_VAL.to_be_bytes(),
@@ -343,7 +343,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[tokio::test]
     async fn receipt_parser_extract_return_data_heap() -> Result<()> {
         let expected_receipts = get_relevant_receipts();
