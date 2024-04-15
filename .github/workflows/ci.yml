@@ -22,6 +22,8 @@ env:
   FORC_VERSION: 0.52.1
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
+  NEXTEST_HIDE_PROGRESS_BAR: "true"
+  NEXTEST_STATUS_LEVEL: "fail"
 
 jobs:
   setup-test-projects:
@@ -184,11 +186,11 @@ jobs:
             args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace
+            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace --cargo-quiet
             download_sway_artifacts: sway-examples-w-type-paths
             install_fuel_core: true
           - cargo_command: nextest
-            args: run --all-targets --workspace
+            args: run --all-targets --workspace --cargo-quiet
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: test
@@ -205,7 +207,7 @@ jobs:
             args:
           # TODO: To be removed once experimental encoding is the default
           - cargo_command: nextest
-            args: run --all-targets --features "experimental" --workspace
+            args: run --all-targets --features "experimental" --workspace --cargo-quiet
             download_sway_artifacts: sway-examples-w-experimental-encoding
             install_fuel_core: true
     steps:
