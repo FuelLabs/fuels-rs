@@ -188,18 +188,18 @@ impl MyContract for Contract {
 }
 </code></pre>
 <p>Your Rust code would look like this:</p>
-<pre><code class="language-rust ignore">         // simple struct with a single generic param
-         let arg1 = SimpleGeneric {
-             single_generic_param: 123u64,
-         };
+<pre><code class="language-rust ignore">        // simple struct with a single generic param
+        let arg1 = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
 
-         let result = contract_methods
-             .struct_w_generic(arg1.clone())
-             .call()
-             .await?
-             .value;
+        let result = contract_methods
+            .struct_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
 
-         assert_eq!(result, arg1);
+        assert_eq!(result, arg1);
 </code></pre>
 <h3 id="unused-generic-type-parameters"><a class="header" href="#unused-generic-type-parameters">Unused generic type parameters</a></h3>
 <p>Sway supports unused generic type parameters when declaring structs/enums:</p>
