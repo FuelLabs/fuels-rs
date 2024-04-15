@@ -42,6 +42,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
             Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
             Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
+            _ => unimplemented!(),
         };
 
         Self {
