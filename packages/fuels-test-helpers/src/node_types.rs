@@ -1,9 +1,10 @@
-pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 use std::{
     net::{Ipv4Addr, SocketAddr},
     path::PathBuf,
     time::Duration,
 };
+
+pub use fuel_core_chain_config::{ChainConfig, StateConfig};
 
 pub(crate) const MAX_DATABASE_CACHE_SIZE: usize = 10 * 1024 * 1024;
 
