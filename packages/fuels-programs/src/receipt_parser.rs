@@ -133,7 +133,7 @@ impl ReceiptParser {
         }
         None
     }
-    
+
     #[cfg(not(feature = "legacy_encoding"))]
     fn extract_return_data(&mut self) -> Option<Vec<u8>> {
         let mut stack = vec![];
@@ -229,6 +229,7 @@ mod tests {
 
     use super::*;
 
+    #[cfg(feature = "legacy_encoding")]
     const RECEIPT_VAL: u64 = 225;
     const RECEIPT_DATA: &[u8; 3] = &[8, 8, 3];
     const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
@@ -259,9 +260,9 @@ mod tests {
         }
     }
 
-    fn get_call_receipt() -> Receipt {
+    fn get_call_receipt(id: ContractId) -> Receipt {
         Receipt::Call {
-            id: Default::default(),
+            id,
             to: Default::default(),
             amount: Default::default(),
             asset_id: Default::default(),
@@ -275,7 +276,7 @@ mod tests {
 
     fn get_relevant_receipts() -> Vec<Receipt> {
         vec![
-            get_call_receipt(),
+            get_call_receipt(ContractId::zeroed()),
             #[cfg(feature = "legacy_encoding")]
             get_return_receipt(Default::default(), RECEIPT_VAL),
             #[cfg(not(feature = "legacy_encoding"))]
@@ -356,6 +357,35 @@ mod tests {
             .expect("parsing should succeed");
 
         assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
+
+        Ok(())
+    }
+
+    #[cfg(not(feature = "legacy_encoding"))]
+    #[tokio::test]
+    async fn receipt_parser_extracts_top_level_call_receipts() -> Result<()> {
+        const CORRECT_DATA: [u8; 3] = [1, 2, 3];
+        let contract_top_lvl = ContractId::from([1u8; 32]);
+        let contract_nested = ContractId::from([9u8; 32]);
+
+        let receipts = vec![
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_top_lvl, &[9, 9, 9]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_top_lvl, &[7, 7, 7]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+        ];
+
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
+
+        let token = parser
+            .parse(Default::default(), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
+
+        assert_eq!(&<[u8; 3]>::from_token(token)?, &CORRECT_DATA);
 
         Ok(())
     }

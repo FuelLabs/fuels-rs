@@ -1,6 +1,6 @@
 # Estimating contract call cost
 
-With the function `estimate_transaction_cost(tolerance: Option<f64>, block_horizon: Option<u32>)` provided by `ContractCallHandler` and `ContractMultiCallHandler`, you can get a cost estimation for a specific call. The return type, `TransactionCost`, is a struct that contains relevant information for the estimation:
+With the function `estimate_transaction_cost(tolerance: Option<f64>, block_horizon: Option<u32>)` provided by `ContractCallHandler` and `MultiContractCallHandler`, you can get a cost estimation for a specific call. The return type, `TransactionCost`, is a struct that contains relevant information for the estimation:
 
 ```rust,ignore
 {{#include ../../../packages/fuels-accounts/src/provider.rs:transaction_cost}}
