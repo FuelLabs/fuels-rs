@@ -77,6 +77,7 @@ async fn script_uses_default_configurables() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore] // TODO: Enable test once issue https://github.com/FuelLabs/sway/issues/5727 is resolved
 async fn contract_configurables() -> Result<()> {
     // ANCHOR: contract_configurables
     abigen!(Contract(
@@ -130,6 +131,7 @@ async fn contract_configurables() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore] // TODO: Enable test once issue https://github.com/FuelLabs/sway/issues/5727 is resolved
 async fn script_configurables() -> Result<()> {
     // ANCHOR: script_configurables
     abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));

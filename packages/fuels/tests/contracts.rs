@@ -1,11 +1,10 @@
 use fuel_tx::ContractParameters;
-#[cfg(feature = "legacy_encoding")]
-use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
     types::{errors::transaction::Reason, Bits256},
 };
+use fuels_core::{calldata, codec::encode_fn_selector};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -276,15 +275,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-
-    #[cfg(feature = "legacy_encoding")]
-    let expected_gas_used = 955;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_gas_used = 960;
-
-    #[cfg(feature = "legacy_encoding")]
-    let expected_metered_bytes_size = 784;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -1231,7 +1222,6 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(feature = "legacy_encoding")]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1259,7 +1249,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
-    let function_selector = fn_selector!(initialize_counter(u64));
+    let function_selector = encode_fn_selector("initialize_counter");
     let call_data = calldata!(42u64)?;
 
     caller_contract_instance
@@ -1268,7 +1258,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            true,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1282,8 +1271,7 @@ async fn low_level_call() -> Result<()> {
         .await?;
     assert_eq!(response.value, 42);
 
-    let function_selector =
-        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let function_selector = encode_fn_selector("set_value_multiple_complex");
     let call_data = calldata!(
         MyStruct {
             a: true,
@@ -1298,7 +1286,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            false,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1596,42 +1583,6 @@ async fn test_heap_type_multicall() -> Result<()> {
         assert_eq!(val_1, 7);
         assert_eq!(val_2, 42);
         assert_eq!(val_3, vec![0, 1, 2]);
-    }
-
-    {
-        let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_2 = contract_instance.methods().get_single(7);
-        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
-
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
-
-        let error = multi_call_handler.submit().await.expect_err("should error");
-        assert!(error.to_string().contains(
-            "`MultiContractCallHandler` can have only one call that returns a heap type"
-        ));
-    }
-
-    {
-        let call_handler_1 = contract_instance.methods().get_single(7);
-        let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_3 = contract_instance.methods().get_single(42);
-
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
-
-        let error = multi_call_handler.submit().await.expect_err("should error");
-        assert!(error
-            .to_string()
-            .contains("the contract call with the heap type return must be at the last position"));
     }
 
     Ok(())

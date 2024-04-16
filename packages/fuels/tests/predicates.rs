@@ -617,6 +617,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 }
 
 #[tokio::test]
+#[ignore] // TODO: Enable test once issue https://github.com/FuelLabs/sway/issues/5727 is resolved
 async fn predicate_configurables() -> Result<()> {
     // ANCHOR: predicate_configurables
     abigen!(Predicate(
@@ -814,19 +815,9 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    #[cfg(feature = "legacy_encoding")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
 
-    #[cfg(not(feature = "legacy_encoding"))]
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
@@ -893,19 +884,9 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
-    #[cfg(feature = "legacy_encoding")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
 
-    #[cfg(not(feature = "legacy_encoding"))]
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;

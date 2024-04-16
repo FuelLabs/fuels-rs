@@ -1872,32 +1872,6 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "legacy_encoding")]
-#[tokio::test]
-async fn test_nested_vector_methods_fail() -> Result<()> {
-    // This is just an E2E test of the method `ParamType::contains_nested_heap_types`, hence it's
-    // not exhaustive, but its unit tests are.
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "VectorOutputContract",
-            project = "packages/fuels/tests/types/contracts/vector_output"
-        )),
-        Deploy(
-            name = "contract_instance",
-            contract = "VectorOutputContract",
-            wallet = "wallet"
-        ),
-    );
-    let contract_methods = contract_instance.methods();
-    contract_methods
-        .vec_inside_type()
-        .call()
-        .await
-        .expect_err("Should fail because nested vectors are not supported");
-    Ok(())
-}
-
 #[tokio::test]
 async fn test_bytes_output() -> Result<()> {
     setup_program_test!(
@@ -2166,28 +2140,9 @@ async fn test_heap_type_in_enums() -> Result<()> {
         assert!(resp.value.is_none());
     }
 
-    #[cfg(feature = "legacy_encoding")]
-    {
-        // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
-        let _ = contract_methods
-            .would_raise_a_memory_overflow()
-            .call()
-            .await?;
-
-        let resp = contract_methods
-            .returns_a_heap_type_too_deep()
-            .call()
-            .await
-            .expect_err("should fail because it has a deeply nested heap type");
-        let expected = "codec: enums currently support only one level deep heap types".to_string();
-
-        assert_eq!(resp.to_string(), expected);
-    }
-
     Ok(())
 }
 
-#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
     setup_program_test!(

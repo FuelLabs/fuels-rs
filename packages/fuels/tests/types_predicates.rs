@@ -3,15 +3,10 @@ use std::{default::Default, path::Path};
 use fuels::{
     accounts::{predicate::Predicate, Account},
     prelude::*,
-    types::{
-        coin::Coin, message::Message, unresolved_bytes::UnresolvedBytes, AssetId, Bits256, U256,
-    },
+    types::{coin::Coin, message::Message, AssetId, Bits256, U256},
 };
 
-async fn assert_predicate_spendable(
-    data: UnresolvedBytes,
-    project_path: impl AsRef<Path>,
-) -> Result<()> {
+async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path>) -> Result<()> {
     let binary_path = project_binary(project_path);
     let mut predicate: Predicate = Predicate::load_from(&binary_path)?.with_data(data);
 

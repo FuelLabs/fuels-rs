@@ -99,25 +99,6 @@ jobs:
             !packages/fuels/tests/**/Forc.lock
             !packages/fuels/tests/.gitignore
 
-      # TODO: To be removed once legacy encoding is removed
-      - name: Build Sway test projects w legacy encoding
-        run: forc build --terse --error-on-warnings --json-abi-with-callpaths
-        working-directory: packages/fuels
-
-      - uses: actions/upload-artifact@v2
-        with:
-          retention-days: 2
-          name: sway-examples-w-legacy-encoding
-          # cache only the sway build artifacts, skip all src files
-          path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
-
   get-workspace-members:
     runs-on: ubuntu-latest
     outputs:
@@ -205,11 +186,6 @@ jobs:
             args:
           - command: check_typos
             args:
-          # TODO: To be removed once legacy encoding is removed
-          - cargo_command: nextest
-            args: run --all-targets --features "legacy_encoding" --workspace --cargo-quiet
-            download_sway_artifacts: sway-examples-w-legacy-encoding
-            install_fuel_core: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -275,7 +251,6 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd packages/wasm-tests
           wasm-pack test --node
-          wasm-pack test --node --features legacy_encoding
 
       - name: Check for invalid documentation anchors
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}

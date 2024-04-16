@@ -4,11 +4,10 @@ use fuels_core::{
     types::{
         bech32::Bech32ContractId,
         errors::{error, Error, Result},
-        param_types::{ParamType, ReturnLocation},
+        param_types::ParamType,
         Token,
     },
 };
-use itertools::Itertools;
 
 pub struct ReceiptParser {
     receipts: Vec<Receipt>,
@@ -43,11 +42,8 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
-        #[cfg(feature = "legacy_encoding")]
-        output_param.validate_is_decodable(self.decoder.config.max_depth)?;
-
         let data = self
-            .extract_raw_data(output_param, &contract_id)
+            .extract_return_data(&contract_id)
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
         self.decoder.decode(output_param, &data)
@@ -58,48 +54,6 @@ impl ReceiptParser {
             Codec,
             "`ReceiptDecoder`: failed to find matching receipts entry for {output_param:?}"
         )
-    }
-
-    fn extract_raw_data(
-        &mut self,
-        output_param: &ParamType,
-        contract_id: &ContractId,
-    ) -> Option<Vec<u8>> {
-        #[cfg(feature = "legacy_encoding")]
-        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
-        #[cfg(not(feature = "legacy_encoding"))]
-        let extra_receipts_needed = false;
-
-        match output_param.get_return_location() {
-            ReturnLocation::ReturnData
-                if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
-            {
-                self.extract_enum_heap_type_data(contract_id)
-            }
-            ReturnLocation::ReturnData if extra_receipts_needed => {
-                self.extract_return_data_heap(contract_id)
-            }
-            ReturnLocation::ReturnData => self.extract_return_data(contract_id),
-            ReturnLocation::Return => self.extract_return(contract_id),
-        }
-    }
-
-    fn extract_enum_heap_type_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, (current_receipt, next_receipt)) in
-            self.receipts.iter().tuple_windows().enumerate()
-        {
-            if let (Some(first_data), Some(second_data)) =
-                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
-            {
-                let mut first_data = first_data.clone();
-                let mut second_data = second_data.clone();
-                self.receipts.drain(index..=index + 1);
-                first_data.append(&mut second_data);
-
-                return Some(first_data);
-            }
-        }
-        None
     }
 
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
@@ -117,72 +71,8 @@ impl ReceiptParser {
                 }
             }
         }
-        None
-    }
 
-    fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, receipt) in self.receipts.iter_mut().enumerate() {
-            if let Receipt::Return { id, val, .. } = receipt {
-                if *id == *contract_id {
-                    let data = val.to_be_bytes().to_vec();
-                    self.receipts.remove(index);
-                    return Some(data);
-                }
-            }
-        }
         None
-    }
-
-    fn extract_return_data_heap(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        // If the output of the function is a vector, then there are 2 consecutive ReturnData
-        // receipts. The first one is the one that returns the pointer to the vec struct in the
-        // VM memory, the second one contains the actual vector bytes (that the previous receipt
-        // points to).
-        // We ensure to take the right "first" ReturnData receipt by checking for the
-        // contract_id. There are no receipts in between the two ReturnData receipts because of
-        // the way the scripts are built (the calling script adds a RETD just after the CALL
-        // opcode, see `get_single_call_instructions`).
-        for (index, (current_receipt, next_receipt)) in
-            self.receipts.iter().tuple_windows().enumerate()
-        {
-            if let (_stack_data, Some(heap_data)) =
-                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
-            {
-                let data = heap_data.clone();
-                self.receipts.drain(index..=index + 1);
-                return Some(data);
-            }
-        }
-        None
-    }
-
-    fn extract_heap_data_from_receipts<'a>(
-        current_receipt: &'a Receipt,
-        next_receipt: &'a Receipt,
-        contract_id: &ContractId,
-    ) -> (Option<&'a Vec<u8>>, Option<&'a Vec<u8>>) {
-        match (current_receipt, next_receipt) {
-            (
-                Receipt::ReturnData {
-                    id: first_id,
-                    data: first_data,
-                    ..
-                },
-                Receipt::ReturnData {
-                    id: second_id,
-                    data: vec_data,
-                    ..
-                },
-            ) if *first_id == *contract_id
-                && first_data.is_some()
-                // The second ReturnData receipt was added by a script instruction, its contract id
-                // is null
-                && *second_id == ContractId::zeroed() =>
-            {
-                (first_data.as_ref(), vec_data.as_ref())
-            }
-            _ => (None, None),
-        }
     }
 }
 
@@ -324,9 +214,6 @@ mod tests {
         let contract_id = target_contract();
 
         let mut receipts = expected_receipts.clone();
-        #[cfg(feature = "legacy_encoding")]
-        receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
-        #[cfg(not(feature = "legacy_encoding"))] // all data is returned as RETD
         receipts.push(get_return_data_receipt(
             contract_id,
             &RECEIPT_VAL.to_be_bytes(),
@@ -338,27 +225,6 @@ mod tests {
             .expect("parsing should succeed");
 
         assert_eq!(u64::from_token(token)?, RECEIPT_VAL);
-        assert_eq!(parser.receipts, expected_receipts);
-
-        Ok(())
-    }
-
-    #[cfg(feature = "legacy_encoding")]
-    #[tokio::test]
-    async fn receipt_parser_extract_return_data_heap() -> Result<()> {
-        let expected_receipts = get_relevant_receipts();
-        let contract_id = target_contract();
-
-        let mut receipts = expected_receipts.clone();
-        receipts.push(get_return_data_receipt(target_contract(), &[9, 9, 9]));
-        receipts.push(get_return_data_receipt(Default::default(), RECEIPT_DATA));
-        let mut parser = ReceiptParser::new(&receipts, Default::default());
-
-        let token = parser
-            .parse(Some(&contract_id.into()), &<Vec<u8>>::param_type())
-            .expect("parsing should succeed");
-
-        assert_eq!(&<Vec<u8>>::from_token(token)?, DECODED_DATA);
         assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())

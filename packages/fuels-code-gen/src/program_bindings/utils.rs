@@ -93,15 +93,6 @@ impl Components {
         })
     }
 
-    pub fn param_type_calls(&self) -> Vec<TokenStream> {
-        self.components
-            .iter()
-            .map(|(_, ty)| {
-                quote! { <#ty as ::fuels::core::traits::Parameterize>::param_type() }
-            })
-            .collect()
-    }
-
     fn named_generics(&self) -> HashSet<Ident> {
         self.components
             .iter()
