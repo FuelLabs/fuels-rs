@@ -726,9 +726,9 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
@@ -759,7 +759,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {

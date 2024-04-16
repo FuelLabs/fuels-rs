@@ -116,14 +116,14 @@ mod tests {
             .encode(&[original.clone().into_token()])?
             .resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected_bytes = [
             0, 0, 0, 0, 0, 0, 0, 1, // enum discriminant
             0, 0, 0, 0, 0, 0, 0, 123, 0, 0, 0, 0, 0, 0, 0, 0, // SomeStruct
         ]
         .to_vec();
 
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected_bytes = [
             0, 0, 0, 0, 0, 0, 0, 1, // enum discriminant
             0, 0, 0, 123, 0, // SomeStruct

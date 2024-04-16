@@ -1,13 +1,13 @@
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use sha2::{Digest, Sha256};
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use crate::types::param_types::NamedParamType;
 use crate::types::param_types::ParamType;
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use crate::types::ByteArray;
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 /// Given a function name and its inputs  will return a ByteArray representing
 /// the function selector as specified in the Fuel specs.
 pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
@@ -16,7 +16,7 @@ pub fn resolve_fn_selector(name: &str, inputs: &[ParamType]) -> ByteArray {
     first_four_bytes_of_sha256_hash(&fn_signature)
 }
 
-#[cfg(feature = "experimental")]
+#[cfg(not(feature = "legacy_encoding"))]
 //TODO: remove `_inputs` once the new encoding stabilizes
 //https://github.com/FuelLabs/fuels-rs/issues/1318
 pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
@@ -26,19 +26,19 @@ pub fn resolve_fn_selector(name: &str, _inputs: &[ParamType]) -> Vec<u8> {
     [len.to_be_bytes().to_vec(), bytes].concat()
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn resolve_fn_signature(name: &str, inputs: &[ParamType]) -> String {
     let fn_args = resolve_args(inputs);
 
     format!("{name}({fn_args})")
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn resolve_args(args: &[ParamType]) -> String {
     args.iter().map(resolve_arg).collect::<Vec<_>>().join(",")
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn resolve_named_args(args: &[NamedParamType]) -> String {
     args.iter()
         .map(|(_, param_type)| resolve_arg(param_type))
@@ -46,7 +46,7 @@ fn resolve_named_args(args: &[NamedParamType]) -> String {
         .join(",")
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn resolve_arg(arg: &ParamType) -> String {
     match &arg {
         ParamType::U8 => "u8".to_owned(),
@@ -106,7 +106,7 @@ fn resolve_arg(arg: &ParamType) -> String {
     }
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 /// Hashes an encoded function selector using SHA256 and returns the first 4 bytes.
 /// The function selector has to have been already encoded following the ABI specs defined
 /// [here](https://github.com/FuelLabs/fuel-specs/blob/1be31f70c757d8390f74b9e1b3beb096620553eb/specs/protocol/abi.md)
@@ -144,7 +144,7 @@ macro_rules! calldata {
 
 pub use calldata;
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -308,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_signature() {
         let fn_signature = "entry_one(u64)";
 
@@ -318,7 +318,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_u32_type() {
         let fn_signature = "entry_one(u32)";
 
@@ -330,7 +330,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_u32_type_multiple_args() {
         let fn_signature = "takes_two(u32,u32)";
 
@@ -342,7 +342,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_u64_type() {
         let fn_signature = "entry_one(u64)";
 
@@ -354,7 +354,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_bool_type() {
         let fn_signature = "bool_check(bool)";
 
@@ -366,7 +366,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_two_different_type() {
         let fn_signature = "takes_two_types(u32,bool)";
 
@@ -378,7 +378,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_bits256_type() {
         let fn_signature = "takes_bits256(b256)";
 
@@ -390,7 +390,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_array_type() {
         let fn_signature = "takes_integer_array(u8[3])";
 
@@ -402,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_string_array_type() {
         let fn_signature = "takes_string(str[23])";
 
@@ -414,7 +414,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_string_slice_type() {
         let fn_signature = "takes_string(str)";
 
@@ -426,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_struct() {
         let fn_signature = "takes_my_struct(MyStruct)";
 
@@ -438,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_function_with_enum() {
         let fn_signature = "takes_my_enum(MyEnum)";
 
@@ -450,7 +450,7 @@ mod tests {
     }
 
     #[test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn encode_comprehensive_function() {
         let fn_signature = "long_function(Foo,u8[2],b256,str[23])";
 
