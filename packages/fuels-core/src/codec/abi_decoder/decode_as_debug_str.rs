@@ -104,7 +104,7 @@ mod tests {
         },
     };
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn param_type_decode_debug() -> Result<()> {
         let decoder = ABIDecoder::default();
@@ -261,7 +261,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     #[test]
     fn param_type_decode_debug() -> Result<()> {
         let decoder = ABIDecoder::default();

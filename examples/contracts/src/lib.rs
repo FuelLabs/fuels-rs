@@ -113,10 +113,10 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = if cfg!(feature = "experimental") {
-            2065
-        } else {
+        let expected_gas = if cfg!(feature = "legacy_encoding") {
             796
+        } else {
+            2065
         };
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -614,9 +614,9 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected_gas = 1172;
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected_gas = 3532;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -698,7 +698,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
             core::codec::{calldata, fn_selector},

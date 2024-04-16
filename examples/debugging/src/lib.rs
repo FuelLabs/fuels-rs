@@ -3,7 +3,7 @@ mod tests {
     use std::collections::HashMap;
 
     use fuel_abi_types::abi::program::ProgramABI;
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     use fuels::core::codec::{calldata, fn_selector};
     use fuels::{
         core::codec::ABIDecoder,
@@ -11,7 +11,7 @@ mod tests {
         types::{errors::Result, param_types::ParamType, SizedAsciiString},
     };
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn get_a_fn_selector() {
         use fuels::core::{codec::resolve_fn_selector, traits::Parameterize};
@@ -27,7 +27,7 @@ mod tests {
         // ANCHOR_END: example_fn_selector
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn a_fn_selector_from_json_abi() -> Result<()> {
         use fuels::core::codec::resolve_fn_selector;
@@ -65,7 +65,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn test_macros() -> Result<()> {
         let function_selector = fn_selector!(initialize_counter(u64));
@@ -167,9 +167,9 @@ mod tests {
 
             let expected_u8 = 1;
 
-            #[cfg(not(feature = "experimental"))]
+            #[cfg(feature = "legacy_encoding")]
             let data = [0, 0, 0, 0, 0, 0, 0, 1];
-            #[cfg(feature = "experimental")]
+            #[cfg(not(feature = "legacy_encoding"))]
             let data = [1];
 
             assert_eq!(
