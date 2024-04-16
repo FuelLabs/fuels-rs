@@ -34,9 +34,9 @@ mod tests {
 
     #[test]
     fn can_convert_bytes_into_tuple() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let tuple_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let tuple_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2];
 
         let the_tuple: (u64, u32) = try_from_bytes(&tuple_in_bytes, DecoderConfig::default())?;

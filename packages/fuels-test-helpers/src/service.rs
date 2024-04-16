@@ -65,9 +65,10 @@ impl FuelService {
         chain_config: ChainConfig,
         state_config: StateConfig,
     ) -> ServiceConfig {
-        use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
         use fuel_core::combined_database::CombinedDatabaseConfig;
         use fuel_core_chain_config::SnapshotReader;
+
+        use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
 
         let snapshot_reader = SnapshotReader::new_in_memory(chain_config, state_config);
 

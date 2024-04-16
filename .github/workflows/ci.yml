@@ -19,9 +19,11 @@ env:
   FUEL_CORE_VERSION: 0.24.2
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.76.0
-  FORC_VERSION: 0.52.1
+  FORC_VERSION: 0.54.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
+  NEXTEST_HIDE_PROGRESS_BAR: "true"
+  NEXTEST_STATUS_LEVEL: "fail"
 
 jobs:
   setup-test-projects:
@@ -61,7 +63,7 @@ jobs:
         working-directory: packages/fuels
 
       - name: Build Sway test projects
-        run: forc build --terse --error-on-warnings
+        run: forc build --terse --error-on-warnings --experimental-new-encoding
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
@@ -80,7 +82,7 @@ jobs:
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
-        run: forc build --terse --error-on-warnings --json-abi-with-callpaths
+        run: forc build --terse --error-on-warnings --json-abi-with-callpaths --experimental-new-encoding
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
@@ -97,15 +99,15 @@ jobs:
             !packages/fuels/tests/**/Forc.lock
             !packages/fuels/tests/.gitignore
 
-      # TODO: To be removed once experimental encoding is the default
-      - name: Build Sway test projects w experimental encoding
-        run: forc build --terse --error-on-warnings --json-abi-with-callpaths --experimental-new-encoding
+      # TODO: To be removed once legacy encoding is removed
+      - name: Build Sway test projects w legacy encoding
+        run: forc build --terse --error-on-warnings --json-abi-with-callpaths
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
         with:
           retention-days: 2
-          name: sway-examples-w-experimental-encoding
+          name: sway-examples-w-legacy-encoding
           # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
@@ -184,11 +186,11 @@ jobs:
             args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace
+            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace --cargo-quiet
             download_sway_artifacts: sway-examples-w-type-paths
             install_fuel_core: true
           - cargo_command: nextest
-            args: run --all-targets --workspace
+            args: run --all-targets --workspace --cargo-quiet
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: test
@@ -203,10 +205,10 @@ jobs:
             args:
           - command: check_typos
             args:
-          # TODO: To be removed once experimental encoding is the default
+          # TODO: To be removed once legacy encoding is removed
           - cargo_command: nextest
-            args: run --all-targets --features "experimental" --workspace
-            download_sway_artifacts: sway-examples-w-experimental-encoding
+            args: run --all-targets --features "legacy_encoding" --workspace --cargo-quiet
+            download_sway_artifacts: sway-examples-w-legacy-encoding
             install_fuel_core: true
     steps:
       - name: Checkout repository
@@ -273,7 +275,7 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd packages/wasm-tests
           wasm-pack test --node
-          wasm-pack test --node --features experimental
+          wasm-pack test --node --features legacy_encoding
 
       - name: Check for invalid documentation anchors
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}
