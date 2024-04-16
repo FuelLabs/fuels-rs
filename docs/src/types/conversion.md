@@ -65,7 +65,7 @@ Convert a hex string to an `Address`:
 
 ## Convert to `ContractId`
 
-Convert a `[u8; 32]` array to to `ContractId`:
+Convert a `[u8; 32]` array to `ContractId`:
 
 ```rust,ignore
 {{#include ../../../examples/types/src/lib.rs:array_to_contract_id}}
