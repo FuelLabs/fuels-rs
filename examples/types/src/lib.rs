@@ -3,7 +3,7 @@ mod tests {
     use std::str::FromStr;
 
     #[cfg(feature = "fuel-core-lib")]
-    use fuels::prelude::Config;
+    use fuels::prelude::NodeConfig;
     use fuels::{
         prelude::Result,
         types::{Bits256, EvmAddress, Identity},
