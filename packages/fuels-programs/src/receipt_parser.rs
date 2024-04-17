@@ -203,7 +203,7 @@ impl ReceiptParser {
         }
     }
 
-    /// Based on receipts returned by a script transaction, the contract ID (in the case of a contract call),
+    /// Based on receipts returned by a script transaction, the contract ID,
     /// and the output param, parse the values and return them as Token.
     pub fn parse_call(
         &mut self,
