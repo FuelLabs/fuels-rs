@@ -1,13 +1,13 @@
-#[cfg(not(feature = "experimental"))]
+#[cfg(not(feature = "legacy_encoding"))]
 mod bounded_decoder;
 mod decode_as_debug_str;
-#[cfg(feature = "experimental")]
-mod experimental_bounded_decoder;
+#[cfg(feature = "legacy_encoding")]
+mod legacy_bounded_decoder;
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(not(feature = "legacy_encoding"))]
 use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
-#[cfg(feature = "experimental")]
-use crate::codec::abi_decoder::experimental_bounded_decoder::BoundedDecoder;
+#[cfg(feature = "legacy_encoding")]
+use crate::codec::abi_decoder::legacy_bounded_decoder::BoundedDecoder;
 use crate::{
     codec::abi_decoder::decode_as_debug_str::decode_as_debug_str,
     types::{errors::Result, param_types::ParamType, Token},
@@ -138,7 +138,7 @@ mod tests {
             ParamType::U256,
         ];
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             255, // u8
             0, 0, 0, 0, 0, 0, 255, 255, // u16
@@ -149,7 +149,7 @@ mod tests {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [
             255, // u8
             255, 255, // u16
@@ -207,13 +207,13 @@ mod tests {
     #[test]
     fn decode_string_array() -> Result<()> {
         let types = vec![ParamType::StringArray(23), ParamType::StringArray(5)];
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, 0, //This is a full sentence
             72, 101, 108, 108, 111, 0, 0, 0, // Hello
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
@@ -237,12 +237,12 @@ mod tests {
 
     #[test]
     fn decode_string_slice() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 23, // [length]
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -263,12 +263,12 @@ mod tests {
 
     #[test]
     fn decode_string() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 23, // [length]
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -287,12 +287,12 @@ mod tests {
     #[test]
     fn decode_tuple() -> Result<()> {
         let param_type = ParamType::Tuple(vec![ParamType::U32, ParamType::Bool]);
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 255, //u32
             1, 0, 0, 0, 0, 0, 0, 0, //bool
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [
             0, 0, 0, 255, //u32
             1,   //bool
@@ -327,9 +327,9 @@ mod tests {
         //     bar: bool,
         // }
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [1, 1];
 
         let param_type = ParamType::Struct {
@@ -349,9 +349,9 @@ mod tests {
 
     #[test]
     fn decode_bytes() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [255, 0, 1, 2, 3, 4, 5];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
 
         let decoded = ABIDecoder::default().decode(&ParamType::Bytes, &data)?;
@@ -365,9 +365,9 @@ mod tests {
 
     #[test]
     fn decode_raw_slice() -> Result<()> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [255, 0, 1, 2, 3, 4, 5];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [0, 0, 0, 0, 0, 0, 0, 7, 255, 0, 1, 2, 3, 4, 5];
 
         let decoded = ABIDecoder::default().decode(&ParamType::RawSlice, &data)?;
@@ -395,9 +395,9 @@ mod tests {
         }];
 
         // "0" discriminant and 42 enum value
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
@@ -408,7 +408,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn decoder_will_skip_enum_padding_and_decode_next_arg() -> Result<()> {
         // struct MyStruct {
@@ -493,11 +493,11 @@ mod tests {
             generics: vec![],
         };
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let data = [
             0, 0, 0, 0, 0, 0, 0, 10, 1, 0, 0, 0, 0, 0, 0, 0, 1, 2, 0, 0, 0, 0, 0, 0,
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let data = [0, 10, 1, 1, 2];
 
         let decoded = ABIDecoder::default().decode(&nested_struct, &data)?;
@@ -552,7 +552,7 @@ mod tests {
 
         let types = [nested_struct, u8_arr, b256];
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let bytes = [
             0, 0, 0, 0, 0, 0, 0, 10, // u16
             1, 0, 0, 0, 0, 0, 0, 0, // bool
@@ -562,7 +562,7 @@ mod tests {
             152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11, // b256
         ];
 
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let bytes = [
             0, 10, // u16
             1,  // bool
@@ -597,7 +597,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn units_in_structs_are_decoded_as_one_word() -> Result<()> {
         let data = [
@@ -734,7 +734,7 @@ mod tests {
         assert!(matches!(result, Err(Error::Codec(_))));
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn decoding_enum_with_more_than_one_heap_type_variant_fails() -> Result<()> {
         let mut param_types = vec![
@@ -774,7 +774,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn enums_w_too_deeply_nested_heap_types_not_allowed() {
         let variants = to_named(&[
@@ -892,7 +892,7 @@ mod tests {
         }
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn vectors_of_zst_are_not_supported() {
         let param_type = ParamType::Vector(Box::new(ParamType::StringArray(0)));

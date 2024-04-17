@@ -31,7 +31,7 @@ impl LogFormatter {
         decoder_config: DecoderConfig,
         bytes: &[u8],
     ) -> Result<String> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         Self::can_decode_log_with_type::<T>()?;
 
         let token = ABIDecoder::new(decoder_config).decode(&T::param_type(), bytes)?;
@@ -39,7 +39,7 @@ impl LogFormatter {
         Ok(format!("{:?}", T::from_token(token)?))
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     fn can_decode_log_with_type<T: Parameterize>() -> Result<()> {
         use crate::types::param_types::ParamType;
 

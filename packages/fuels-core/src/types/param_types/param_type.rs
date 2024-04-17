@@ -50,7 +50,7 @@ impl ParamType {
     // Depending on the type, the returned value will be stored
     // either in `Return` or `ReturnData`.
     pub fn get_return_location(&self) -> ReturnLocation {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         match self {
             Self::Unit | Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => {
                 ReturnLocation::Return
@@ -59,7 +59,7 @@ impl ParamType {
             _ => ReturnLocation::ReturnData,
         }
 
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         ReturnLocation::ReturnData
     }
 

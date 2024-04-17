@@ -13,7 +13,7 @@ use fuel_tx::{
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
-    constants::{BASE_ASSET_ID, DEFAULT_CALL_PARAMS_AMOUNT},
+    constants::DEFAULT_CALL_PARAMS_AMOUNT,
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
@@ -41,7 +41,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct CallParameters {
     amount: u64,
-    asset_id: AssetId,
+    asset_id: Option<AssetId>,
     gas_forwarded: Option<u64>,
 }
 
@@ -49,7 +49,7 @@ impl CallParameters {
     pub fn new(amount: u64, asset_id: AssetId, gas_forwarded: u64) -> Self {
         Self {
             amount,
-            asset_id,
+            asset_id: Some(asset_id),
             gas_forwarded: Some(gas_forwarded),
         }
     }
@@ -64,11 +64,11 @@ impl CallParameters {
     }
 
     pub fn with_asset_id(mut self, asset_id: AssetId) -> Self {
-        self.asset_id = asset_id;
+        self.asset_id = Some(asset_id);
         self
     }
 
-    pub fn asset_id(&self) -> AssetId {
+    pub fn asset_id(&self) -> Option<AssetId> {
         self.asset_id
     }
 
@@ -86,7 +86,7 @@ impl Default for CallParameters {
     fn default() -> Self {
         Self {
             amount: DEFAULT_CALL_PARAMS_AMOUNT,
-            asset_id: BASE_ASSET_ID,
+            asset_id: None,
             gas_forwarded: None,
         }
     }
@@ -564,7 +564,7 @@ where
     /// Note that this is a builder method, i.e. use it as a chain:
     ///
     /// ```ignore
-    /// let params = CallParameters { amount: 1, asset_id: BASE_ASSET_ID };
+    /// let params = CallParameters { amount: 1, asset_id: AssetId::zeroed() };
     /// my_contract_instance.my_method(...).call_params(params).call()
     /// ```
     pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
@@ -726,9 +726,9 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
@@ -759,7 +759,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {
