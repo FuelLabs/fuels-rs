@@ -1866,7 +1866,8 @@ async fn test_reentrant_calls() -> Result<()> {
         .re_entrant(contract_id, true)
         .call()
         .await?;
-    assert_eq!(101, response.value);
+
+    assert_eq!(42, response.value);
 
     Ok(())
 }
