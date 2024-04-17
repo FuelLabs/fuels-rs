@@ -279,7 +279,7 @@ impl ReceiptParser {
             {
                 let call_id = nested_calls_stack.pop();
 
-                // Somethings off if there is a missmatch between the call and return ids
+                // Somethings off if there is a mismatch between the call and return ids
                 debug_assert_eq!(call_id.unwrap(), return_id);
 
                 if nested_calls_stack.is_empty() {
