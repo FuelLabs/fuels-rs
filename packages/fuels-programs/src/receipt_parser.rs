@@ -1,6 +1,8 @@
 use std::collections::VecDeque;
 
 use fuel_tx::{ContractId, Receipt};
+#[cfg(feature = "legacy_encoding")]
+use fuels_core::types::param_types::ReturnLocation;
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
@@ -12,8 +14,6 @@ use fuels_core::{
 };
 #[cfg(feature = "legacy_encoding")]
 use itertools::Itertools;
-#[cfg(feature = "legacy_encoding")]
-use fuels_core::types::param_types::ReturnLocation;
 
 pub struct ReceiptParser {
     receipts: VecDeque<Receipt>,
@@ -556,7 +556,7 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_empty_receipts() -> Result<()> {
         let receipts = [];
-        let output_param = ParamType::Unit;
+        let output_param = ParamType::U8;
 
         let error = ReceiptParser::new(&receipts, Default::default())
             .parse_call(&target_contract().into(), &output_param)

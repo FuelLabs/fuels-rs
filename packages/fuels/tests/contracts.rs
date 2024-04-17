@@ -1849,40 +1849,21 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
 async fn test_reentrant_calls() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
-        Abigen(
-            Contract(
-                name = "LibContract",
-                project = "packages/fuels/tests/contracts/lib_contract"
-            ),
-            Contract(
-                name = "LibContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller"
-            ),
-        ),
-        Deploy(
-            name = "lib_contract_instance",
-            contract = "LibContract",
-            wallet = "wallet"
-        ),
+        Abigen(Contract(
+            name = "LibContractCaller",
+            project = "packages/fuels/tests/contracts/lib_contract_caller"
+        ),),
         Deploy(
             name = "contract_caller_instance",
             contract = "LibContractCaller",
             wallet = "wallet"
         ),
     );
-    let lib_contract_id = lib_contract_instance.contract_id();
 
+    let contract_id = contract_caller_instance.contract_id();
     let response = contract_caller_instance
         .methods()
-        .increment_from_contract(lib_contract_id, 42)
-        .with_contracts(&[&lib_contract_instance])
-        .call()
-        .await?;
-    assert_eq!(43, response.value);
-
-    let response = lib_contract_instance
-        .methods()
-        .increment(100)
+        .re_entrant(contract_id, true)
         .call()
         .await?;
     assert_eq!(101, response.value);
