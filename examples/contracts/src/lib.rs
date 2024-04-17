@@ -2,7 +2,8 @@
 mod tests {
     use fuels::{
         core::codec::{DecoderConfig, EncoderConfig},
-        prelude::{Config, LoadConfiguration, StorageConfiguration},
+        prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
+        test_helpers::{ChainConfig, StateConfig},
         types::{
             errors::{transaction::Reason, Result},
             Bits256,
@@ -15,7 +16,12 @@ mod tests {
         use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::start(Config::default()).await?;
+        let server = FuelService::start(
+            NodeConfig::default(),
+            ChainConfig::default(),
+            StateConfig::default(),
+        )
+        .await?;
 
         // Create a client that will talk to the node created above.
         let client = Provider::from(server.bound_address()).await?;
@@ -107,10 +113,10 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = if cfg!(feature = "experimental") {
-            2087
-        } else {
+        let expected_gas = if cfg!(feature = "legacy_encoding") {
             796
+        } else {
+            2065
         };
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -608,10 +614,10 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected_gas = 1172;
-        #[cfg(feature = "experimental")]
-        let expected_gas = 3513;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let expected_gas = 3532;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -679,7 +685,11 @@ mod tests {
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(BASE_ASSET_ID, amount, Some(other_wallet.address().clone()))
+            .add_custom_asset(
+                AssetId::zeroed(),
+                amount,
+                Some(other_wallet.address().clone()),
+            )
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
@@ -688,7 +698,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
             core::codec::{calldata, fn_selector},

@@ -26,7 +26,7 @@ mod tests {
         // ANCHOR_END: predicate_wallets
 
         // ANCHOR: predicate_coins
-        let asset_id = AssetId::default();
+        let asset_id = AssetId::zeroed();
         let num_coins = 32;
         let amount = 64;
         let initial_balance = amount * num_coins;
@@ -109,7 +109,7 @@ mod tests {
     #[tokio::test]
     async fn predicate_data_example() -> Result<()> {
         // ANCHOR: predicate_data_setup
-        let asset_id = AssetId::default();
+        let asset_id = AssetId::zeroed();
         let wallets_config = WalletsConfig::new_multiple_assets(
             2,
             vec![AssetConfig {
@@ -144,7 +144,7 @@ mod tests {
             .await?;
 
         // Check predicate balance.
-        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&AssetId::zeroed()).await?;
 
         assert_eq!(balance, 500);
         // ANCHOR_END: predicate_data_lock_amount
@@ -162,12 +162,12 @@ mod tests {
             .await?;
 
         // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&AssetId::default()).await?;
+        let balance = predicate.get_asset_balance(&AssetId::zeroed()).await?;
 
         assert_eq!(balance, 0);
 
         // Second wallet balance is updated.
-        let balance = second_wallet.get_asset_balance(&AssetId::default()).await?;
+        let balance = second_wallet.get_asset_balance(&AssetId::zeroed()).await?;
         assert_eq!(balance, 1500);
         // ANCHOR_END: predicate_data_unlock
         Ok(())

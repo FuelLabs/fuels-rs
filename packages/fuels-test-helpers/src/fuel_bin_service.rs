@@ -4,6 +4,7 @@ use std::{
     time::Duration,
 };
 
+use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
 use fuels_core::{
@@ -11,30 +12,30 @@ use fuels_core::{
     types::errors::{Error, Result as FuelResult},
 };
 use portpicker::{is_free, pick_unused_port};
-use tempfile::NamedTempFile;
+use tempfile::{tempdir, TempDir};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
 
-use crate::node_types::{Config, DbType, Trigger};
+use crate::node_types::{DbType, NodeConfig, Trigger};
 
 #[derive(Debug)]
-struct ExtendedConfig {
-    config: Config,
-    config_file: NamedTempFile,
+pub(crate) struct ExtendedConfig {
+    pub node_config: NodeConfig,
+    pub chain_config: ChainConfig,
+    pub state_config: StateConfig,
+    pub snapshot_dir: TempDir,
 }
 
 impl ExtendedConfig {
-    pub fn config_to_args_vec(&mut self) -> FuelResult<Vec<String>> {
-        self.write_temp_chain_config_file()?;
-
-        let port = self.config.addr.port().to_string();
+    pub fn args_vec(&self) -> fuels_core::types::errors::Result<Vec<String>> {
+        let port = self.node_config.addr.port().to_string();
         let mut args = vec![
-            "run".to_string(), // `fuel-core` is now run with `fuel-core run`
+            "run".to_string(),
             "--ip".to_string(),
             "127.0.0.1".to_string(),
             "--port".to_string(),
             port,
-            "--chain".to_string(),
-            self.config_file
+            "--snapshot".to_string(),
+            self.snapshot_dir
                 .path()
                 .to_str()
                 .expect("Failed to find config file")
@@ -42,7 +43,7 @@ impl ExtendedConfig {
         ];
 
         args.push("--db-type".to_string());
-        match &self.config.database_type {
+        match &self.node_config.database_type {
             DbType::InMemory => args.push("in-memory".to_string()),
             DbType::RocksDb(path_to_db) => {
                 args.push("rocks-db".to_string());
@@ -55,12 +56,12 @@ impl ExtendedConfig {
             }
         }
 
-        if let Some(cache_size) = self.config.max_database_cache_size {
+        if let Some(cache_size) = self.node_config.max_database_cache_size {
             args.push("--max-database-cache-size".to_string());
             args.push(cache_size.to_string());
         }
 
-        match self.config.block_production {
+        match self.node_config.block_production {
             Trigger::Instant => {
                 args.push("--poa-instant=true".to_string());
             }
@@ -77,9 +78,9 @@ impl ExtendedConfig {
 
         args.extend(
             [
-                (self.config.vm_backtrace, "--vm-backtrace"),
-                (self.config.utxo_validation, "--utxo-validation"),
-                (self.config.debug, "--debug"),
+                (self.node_config.vm_backtrace, "--vm-backtrace"),
+                (self.node_config.utxo_validation, "--utxo-validation"),
+                (self.node_config.debug, "--debug"),
             ]
             .into_iter()
             .filter(|(flag, _)| *flag)
@@ -89,11 +90,16 @@ impl ExtendedConfig {
         Ok(args)
     }
 
-    pub fn write_temp_chain_config_file(&mut self) -> FuelResult<()> {
-        Ok(serde_json::to_writer(
-            &mut self.config_file,
-            &self.config.chain_conf,
-        )?)
+    pub fn write_temp_snapshot_files(self) -> FuelResult<TempDir> {
+        let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
+        writer
+            .write_chain_config(&self.chain_config)
+            .map_err(|e| error!(Other, "could not write chain config: {}", e))?;
+        writer
+            .write_state_config(self.state_config)
+            .map_err(|e| error!(Other, "could not write state config: {}", e))?;
+
+        Ok(self.snapshot_dir)
     }
 }
 
@@ -103,26 +109,32 @@ pub struct FuelService {
 }
 
 impl FuelService {
-    pub async fn new_node(config: Config) -> FuelResult<Self> {
-        let requested_port = config.addr.port();
+    pub async fn new_node(
+        node_config: NodeConfig,
+        chain_config: ChainConfig,
+        state_config: StateConfig,
+    ) -> FuelResult<Self> {
+        let requested_port = node_config.addr.port();
 
         let bound_address = match requested_port {
             0 => get_socket_address()?,
-            _ if is_free(requested_port) => config.addr,
+            _ if is_free(requested_port) => node_config.addr,
             _ => return Err(Error::IO(std::io::ErrorKind::AddrInUse.into())),
         };
 
-        let config = Config {
+        let node_config = NodeConfig {
             addr: bound_address,
-            ..config
+            ..node_config
         };
 
         let extended_config = ExtendedConfig {
-            config,
-            config_file: NamedTempFile::new()?,
+            node_config,
+            state_config,
+            chain_config,
+            snapshot_dir: tempdir()?,
         };
 
-        let addr = extended_config.config.addr;
+        let addr = extended_config.node_config.addr;
         let handle = run_node(extended_config).await?;
         server_health_check(addr).await?;
 
@@ -165,8 +177,9 @@ fn get_socket_address() -> FuelResult<SocketAddr> {
     Ok(SocketAddr::new(address, free_port))
 }
 
-async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
-    let args = extended_config.config_to_args_vec()?;
+async fn run_node(extended_config: ExtendedConfig) -> FuelResult<JoinHandle<()>> {
+    let args = extended_config.args_vec()?;
+    let tempdir = extended_config.write_temp_snapshot_files()?;
 
     let binary_name = "fuel-core";
 
@@ -189,8 +202,8 @@ async fn run_node(mut extended_config: ExtendedConfig) -> FuelResult<JoinHandle<
     let running_node = command.args(args).kill_on_drop(true).output();
 
     let join_handle = spawn(async move {
-        // ensure drop is not called on the tmp file and it lives throughout the lifetime of the node
-        let _unused = extended_config;
+        // ensure drop is not called on the tmp dir and it lives throughout the lifetime of the node
+        let _unused = tempdir;
         let result = running_node
             .await
             .expect("error: could not find `fuel-core` in PATH`");
