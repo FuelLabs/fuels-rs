@@ -265,7 +265,7 @@ impl ReceiptParser {
 
     #[cfg(not(feature = "legacy_encoding"))]
     fn extract_script_data(&self) -> Option<Vec<u8>> {
-        for receipt in self.receipts.iter() {
+        for receipt in &self.receipts {
             if let Receipt::ReturnData {
                 id,
                 data: Some(data),
