@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use fuels::prelude::*;
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use fuels::{core::traits::Tokenizable, types::Token};
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -10,10 +10,10 @@ pub fn null_contract_id() -> Bech32ContractId {
         .unwrap()
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {
-    // Generates the bindings from the an ABI definition inline.
+    // Generates the bindings from an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
         name = "SimpleContract",
@@ -105,7 +105,7 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.

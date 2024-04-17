@@ -5,7 +5,7 @@ use fuels_accounts::wallet::WalletUnlocked;
 use fuels_core::types::errors::Result;
 
 use crate::{
-    node_types::{ChainConfig, Config},
+    node_types::{ChainConfig, NodeConfig},
     setup_custom_assets_coins, setup_test_provider,
     wallets_config::*,
 };
@@ -52,7 +52,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// ```
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
-    provider_config: Option<Config>,
+    provider_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
@@ -91,10 +91,7 @@ mod tests {
     use fuel_tx::{ConsensusParameters, TxParameters};
     use fuel_types::AssetId;
     use fuels_accounts::ViewOnlyAccount;
-    use fuels_core::{
-        constants::BASE_ASSET_ID,
-        types::{coin_type::CoinType, errors::Result},
-    };
+    use fuels_core::types::{coin_type::CoinType, errors::Result};
     use rand::Fill;
 
     use crate::{launch_custom_provider_and_get_wallets, AssetConfig, WalletsConfig};
@@ -107,11 +104,12 @@ mod tests {
         let config = WalletsConfig::new(Some(num_wallets), Some(num_coins), Some(amount));
 
         let wallets = launch_custom_provider_and_get_wallets(config, None, None).await?;
+        let provider = wallets.first().unwrap().try_provider()?;
 
         assert_eq!(wallets.len(), num_wallets as usize);
 
         for wallet in &wallets {
-            let coins = wallet.get_coins(BASE_ASSET_ID).await?;
+            let coins = wallet.get_coins(*provider.base_asset_id()).await?;
 
             assert_eq!(coins.len(), num_coins as usize);
 
@@ -129,7 +127,7 @@ mod tests {
         let num_wallets = 3;
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -195,15 +193,17 @@ mod tests {
 
     #[tokio::test]
     async fn generated_wallets_with_custom_chain_config() -> Result<()> {
-        let consensus_parameters = ConsensusParameters {
-            tx_params: TxParameters::default().with_max_gas_per_tx(10_000_000_000),
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
 
         let block_gas_limit = 10_000_000_000;
+        consensus_parameters.set_block_gas_limit(block_gas_limit);
+
+        let max_gas_per_tx = 10_000_000_000;
+        let tx_params = TxParameters::default().with_max_gas_per_tx(max_gas_per_tx);
+        consensus_parameters.set_tx_params(tx_params);
+
         let chain_config = ChainConfig {
             consensus_parameters,
-            block_gas_limit,
             ..ChainConfig::default()
         };
 
@@ -225,11 +225,11 @@ mod tests {
                     .try_provider()?
                     .consensus_parameters()
                     .tx_params()
-                    .max_gas_per_tx,
-                block_gas_limit
+                    .max_gas_per_tx(),
+                max_gas_per_tx
             );
             assert_eq!(
-                wallet.get_coins(AssetId::default()).await?.len() as u64,
+                wallet.get_coins(AssetId::zeroed()).await?.len() as u64,
                 num_coins
             );
             assert_eq!(

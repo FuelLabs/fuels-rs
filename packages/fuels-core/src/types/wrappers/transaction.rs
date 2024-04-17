@@ -13,9 +13,9 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
-    Buildable, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::{
@@ -24,7 +24,6 @@ use fuel_vm::checked_transaction::{
 use itertools::Itertools;
 
 use crate::{
-    constants::BASE_ASSET_ID,
     traits::Signer,
     types::{
         bech32::Bech32Address,
@@ -177,7 +176,7 @@ impl TxPolicies {
     }
 }
 
-use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -256,7 +255,10 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
-    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+    fn used_coins(
+        &self,
+        base_asset_id: &AssetId,
+    ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 
     async fn sign_with(
         &mut self,
@@ -371,7 +373,7 @@ macro_rules! impl_tx_wrapper {
                 gas_price: u64,
             ) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs,
+                    &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
                     &self.tx,
                     gas_price,
@@ -442,7 +444,10 @@ macro_rules! impl_tx_wrapper {
                 }
             }
 
-            fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+            fn used_coins(
+                &self,
+                base_asset_id: &AssetId,
+            ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {
@@ -451,7 +456,7 @@ macro_rules! impl_tx_wrapper {
                             // Not a contract, it's safe to expect.
                             let owner = extract_owner_or_recipient(input).expect("has owner");
                             let asset_id = input
-                                .asset_id(&BASE_ASSET_ID)
+                                .asset_id(base_asset_id)
                                 .expect("has `asset_id`")
                                 .to_owned();
 
@@ -495,16 +500,12 @@ impl CreateTransaction {
         self.tx.salt()
     }
 
-    pub fn bytecode_witness_index(&self) -> u8 {
+    pub fn bytecode_witness_index(&self) -> u16 {
         *self.tx.bytecode_witness_index()
     }
 
     pub fn storage_slots(&self) -> &Vec<StorageSlot> {
         self.tx.storage_slots()
-    }
-
-    pub fn bytecode_length(&self) -> u64 {
-        *self.tx.bytecode_length()
     }
 }
 
@@ -551,7 +552,7 @@ impl ScriptTransaction {
     }
 
     pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-        self.tx.set_script_gas_limit(gas_limit);
+        *self.tx.script_gas_limit_mut() = gas_limit;
         self
     }
 }

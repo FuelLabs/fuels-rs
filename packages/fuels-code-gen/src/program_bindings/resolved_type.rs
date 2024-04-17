@@ -112,8 +112,6 @@ impl TypeResolver {
     }
 
     pub(crate) fn resolve(&self, type_application: &FullTypeApplication) -> Result<ResolvedType> {
-        Self::is_deprecated(type_application.type_decl.type_field.as_str())?;
-
         let resolvers = [
             Self::try_as_primitive_type,
             Self::try_as_bits256,
@@ -144,15 +142,6 @@ impl TypeResolver {
             .iter()
             .map(|type_application| self.resolve(type_application))
             .collect()
-    }
-
-    fn is_deprecated(type_field: &str) -> Result<()> {
-        match type_field {
-            "struct std::u256::U256" | "struct U256" => {
-                Err(error!("{} is deprecated. Use `u256` instead", type_field))
-            }
-            _ => Ok(()),
-        }
     }
 
     fn try_as_generic(
