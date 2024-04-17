@@ -18,6 +18,7 @@ pub struct ReceiptParser {
     decoder: ABIDecoder,
 }
 
+#[cfg(feature = "legacy_encoding")]
 impl ReceiptParser {
     pub fn new(receipts: &[Receipt], decoder_config: DecoderConfig) -> Self {
         let relevant_receipts = receipts
@@ -73,27 +74,23 @@ impl ReceiptParser {
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
-        #[cfg(feature = "legacy_encoding")]
-        {
-            use fuels_core::types::param_types::ReturnLocation;
+        use fuels_core::types::param_types::ReturnLocation;
+        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
 
-            let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
+        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
 
-            match output_param.get_return_location() {
-                ReturnLocation::ReturnData
-                    if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
-                {
-                    self.extract_enum_heap_type_data(contract_id)
-                }
-                ReturnLocation::ReturnData if extra_receipts_needed => {
-                    self.extract_return_data_heap(contract_id)
-                }
-                ReturnLocation::ReturnData => self.extract_return_data(contract_id),
-                ReturnLocation::Return => self.extract_return(contract_id),
+        match output_param.get_return_location() {
+            ReturnLocation::ReturnData
+                if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
+            {
+                self.extract_enum_heap_type_data(contract_id)
             }
+            ReturnLocation::ReturnData if extra_receipts_needed => {
+                self.extract_return_data_heap(contract_id)
+            }
+            ReturnLocation::ReturnData => self.extract_return_data(contract_id),
+            ReturnLocation::Return => self.extract_return(contract_id),
         }
-        #[cfg(not(feature = "legacy_encoding"))]
-        self.extract_return_data()
     }
 
     #[cfg(feature = "legacy_encoding")]
@@ -222,15 +219,107 @@ impl ReceiptParser {
     }
 }
 
+#[cfg(not(feature = "legacy_encoding"))]
+impl ReceiptParser {
+    pub fn new(receipts: &[Receipt], decoder_config: DecoderConfig) -> Self {
+        let relevant_receipts = receipts
+            .iter()
+            .filter(|receipt| matches!(receipt, Receipt::ReturnData { .. } | Receipt::Call { .. }))
+            .cloned()
+            .collect();
+
+        Self {
+            receipts: relevant_receipts,
+            decoder: ABIDecoder::new(decoder_config),
+        }
+    }
+
+    /// Based on receipts returned by a script transaction, the contract ID (in the case of a contract call),
+    /// and the output param, parse the values and return them as Token.
+    pub fn parse_call(
+        &mut self,
+        contract_id: &Bech32ContractId,
+        output_param: &ParamType,
+    ) -> Result<Token> {
+        let data = self
+            .extract_contract_call_data(contract_id.into())
+            .ok_or_else(|| Self::missing_receipts_error(output_param))?;
+
+        self.decoder.decode(output_param, &data)
+    }
+
+    pub fn parse_script(self, output_param: &ParamType) -> Result<Token> {
+        let data = self
+            .extract_script_data()
+            .ok_or_else(|| Self::missing_receipts_error(output_param))?;
+
+        self.decoder.decode(output_param, &data)
+    }
+
+    fn missing_receipts_error(output_param: &ParamType) -> Error {
+        error!(
+            Codec,
+            "`ReceiptDecoder`: failed to find matching receipts entry for {output_param:?}"
+        )
+    }
+
+    #[cfg(not(feature = "legacy_encoding"))]
+    fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
+        // If the script contains nested calls, we need to extract the data of the top-level call
+        let mut nested_calls_stack = vec![];
+
+        while let Some(receipt) = self.receipts.pop_front() {
+            if let Receipt::Call { to, .. } = receipt {
+                nested_calls_stack.push(to);
+            } else if let Receipt::ReturnData {
+                data,
+                id: return_id,
+                ..
+            } = receipt
+            {
+                let call_id = nested_calls_stack.pop();
+
+                // Somethings off if there is a missmatch between the call and return ids
+                debug_assert_eq!(call_id.unwrap(), return_id);
+
+                if nested_calls_stack.is_empty() {
+                    // The top-level call return should match our target contract
+                    debug_assert_eq!(target_contract, return_id);
+
+                    return data.clone();
+                }
+            }
+        }
+
+        None
+    }
+
+    #[cfg(not(feature = "legacy_encoding"))]
+    fn extract_script_data(&self) -> Option<Vec<u8>> {
+        for receipt in self.receipts.iter() {
+            if let Receipt::ReturnData {
+                id,
+                data: Some(data),
+                ..
+            } = receipt
+            {
+                if *id == ContractId::zeroed() {
+                    return Some(data.clone());
+                }
+            }
+        }
+        None
+    }
+}
+
+#[cfg(feature = "legacy_encoding")]
 #[cfg(test)]
 mod tests {
-    #[cfg(not(feature = "legacy_encoding"))]
     use fuel_tx::ScriptExecutionResult;
     use fuels_core::traits::{Parameterize, Tokenizable};
 
     use super::*;
 
-    #[cfg(feature = "legacy_encoding")]
     const RECEIPT_VAL: u64 = 225;
     const RECEIPT_DATA: &[u8; 3] = &[8, 8, 3];
     const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
@@ -239,7 +328,6 @@ mod tests {
         ContractId::from([1u8; 32])
     }
 
-    #[cfg(feature = "legacy_encoding")]
     fn get_return_receipt(id: ContractId, val: u64) -> Receipt {
         Receipt::Return {
             id,
@@ -261,34 +349,27 @@ mod tests {
         }
     }
 
-    fn get_call_receipt(id: ContractId) -> Receipt {
-        Receipt::Call {
-            id,
-            to: Default::default(),
-            amount: Default::default(),
-            asset_id: Default::default(),
-            gas: Default::default(),
-            param1: Default::default(),
-            param2: Default::default(),
-            pc: Default::default(),
-            is: Default::default(),
-        }
-    }
-
     fn get_relevant_receipts() -> Vec<Receipt> {
         vec![
-            get_call_receipt(ContractId::zeroed()),
-            #[cfg(feature = "legacy_encoding")]
-            get_return_receipt(Default::default(), RECEIPT_VAL),
-            #[cfg(not(feature = "legacy_encoding"))]
-            get_return_data_receipt(Default::default(), RECEIPT_DATA),
+            get_return_receipt(Default::default(), Default::default()),
+            get_return_data_receipt(Default::default(), Default::default()),
         ]
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
     #[tokio::test]
     async fn receipt_parser_filters_receipts() -> Result<()> {
         let mut receipts = vec![
+            Receipt::Call {
+                id: Default::default(),
+                to: Default::default(),
+                amount: Default::default(),
+                asset_id: Default::default(),
+                gas: Default::default(),
+                param1: Default::default(),
+                param2: Default::default(),
+                pc: Default::default(),
+                is: Default::default(),
+            },
             Receipt::Revert {
                 id: Default::default(),
                 ra: Default::default(),
@@ -345,12 +426,13 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
     #[tokio::test]
     async fn receipt_parser_extract_return_data() -> Result<()> {
-        let receipts = get_relevant_receipts();
+        let expected_receipts = get_relevant_receipts();
         let contract_id = target_contract();
 
+        let mut receipts = expected_receipts.clone();
+        receipts.push(get_return_data_receipt(contract_id, RECEIPT_DATA));
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
@@ -358,35 +440,32 @@ mod tests {
             .expect("parsing should succeed");
 
         assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
+        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
     #[tokio::test]
-    async fn receipt_parser_extracts_top_level_call_receipts() -> Result<()> {
-        const CORRECT_DATA: [u8; 3] = [1, 2, 3];
-        let contract_top_lvl = ContractId::from([1u8; 32]);
-        let contract_nested = ContractId::from([9u8; 32]);
+    async fn receipt_parser_extract_return() -> Result<()> {
+        let expected_receipts = get_relevant_receipts();
+        let contract_id = target_contract();
 
-        let receipts = vec![
-            get_call_receipt(contract_top_lvl),
-            get_call_receipt(contract_nested),
-            get_return_data_receipt(contract_top_lvl, &[9, 9, 9]),
-            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
-            get_call_receipt(contract_top_lvl),
-            get_call_receipt(contract_nested),
-            get_return_data_receipt(contract_top_lvl, &[7, 7, 7]),
-            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
-        ];
-
+        let mut receipts = expected_receipts.clone();
+        #[cfg(feature = "legacy_encoding")]
+        receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
+        #[cfg(not(feature = "legacy_encoding"))] // all data is returned as RETD
+        receipts.push(get_return_data_receipt(
+            contract_id,
+            &RECEIPT_VAL.to_be_bytes(),
+        ));
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
-            .parse(Default::default(), &<[u8; 3]>::param_type())
+            .parse(Some(&contract_id.into()), &u64::param_type())
             .expect("parsing should succeed");
 
-        assert_eq!(&<[u8; 3]>::from_token(token)?, &CORRECT_DATA);
+        assert_eq!(u64::from_token(token)?, RECEIPT_VAL);
+        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
@@ -407,6 +486,159 @@ mod tests {
             .expect("parsing should succeed");
 
         assert_eq!(&<Vec<u8>>::from_token(token)?, DECODED_DATA);
+        assert_eq!(parser.receipts, expected_receipts);
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use fuel_tx::ScriptExecutionResult;
+    use fuels_core::traits::{Parameterize, Tokenizable};
+
+    use super::*;
+
+    const RECEIPT_DATA: &[u8; 3] = &[8, 8, 3];
+    const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
+
+    fn target_contract() -> ContractId {
+        ContractId::from([1u8; 32])
+    }
+
+    fn get_return_data_receipt(id: ContractId, data: &[u8]) -> Receipt {
+        Receipt::ReturnData {
+            id,
+            ptr: Default::default(),
+            len: Default::default(),
+            digest: Default::default(),
+            data: Some(data.to_vec()),
+            pc: Default::default(),
+            is: Default::default(),
+        }
+    }
+
+    fn get_call_receipt(to: ContractId) -> Receipt {
+        Receipt::Call {
+            id: Default::default(),
+            to,
+            amount: Default::default(),
+            asset_id: Default::default(),
+            gas: Default::default(),
+            param1: Default::default(),
+            param2: Default::default(),
+            pc: Default::default(),
+            is: Default::default(),
+        }
+    }
+
+    fn get_relevant_receipts() -> Vec<Receipt> {
+        let id = target_contract();
+        vec![
+            get_call_receipt(id),
+            get_return_data_receipt(id, RECEIPT_DATA),
+        ]
+    }
+
+    #[tokio::test]
+    async fn receipt_parser_filters_receipts() -> Result<()> {
+        let mut receipts = vec![
+            Receipt::Revert {
+                id: Default::default(),
+                ra: Default::default(),
+                pc: Default::default(),
+                is: Default::default(),
+            },
+            Receipt::Log {
+                id: Default::default(),
+                ra: Default::default(),
+                rb: Default::default(),
+                rc: Default::default(),
+                rd: Default::default(),
+                pc: Default::default(),
+                is: Default::default(),
+            },
+            Receipt::LogData {
+                id: Default::default(),
+                ra: Default::default(),
+                rb: Default::default(),
+                ptr: Default::default(),
+                len: Default::default(),
+                digest: Default::default(),
+                data: Default::default(),
+                pc: Default::default(),
+                is: Default::default(),
+            },
+            Receipt::ScriptResult {
+                result: ScriptExecutionResult::Success,
+                gas_used: Default::default(),
+            },
+        ];
+        let relevant_receipts = get_relevant_receipts();
+        receipts.extend(relevant_receipts.clone());
+
+        let parser = ReceiptParser::new(&receipts, Default::default());
+
+        assert_eq!(parser.receipts, relevant_receipts);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn receipt_parser_empty_receipts() -> Result<()> {
+        let receipts = [];
+        let output_param = ParamType::Unit;
+
+        let error = ReceiptParser::new(&receipts, Default::default())
+            .parse_call(&target_contract().into(), &output_param)
+            .expect_err("should error");
+
+        let expected_error = ReceiptParser::missing_receipts_error(&output_param);
+        assert_eq!(error.to_string(), expected_error.to_string());
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn receipt_parser_extract_return_data() -> Result<()> {
+        let receipts = get_relevant_receipts();
+        let contract_id = target_contract();
+
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
+
+        let token = parser
+            .parse_call(&contract_id.into(), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
+
+        assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn receipt_parser_extracts_top_level_call_receipts() -> Result<()> {
+        const CORRECT_DATA: [u8; 3] = [1, 2, 3];
+        let contract_top_lvl = target_contract();
+        let contract_nested = ContractId::from([9u8; 32]);
+
+        let receipts = vec![
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_nested, &[9, 9, 9]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_nested, &[7, 7, 7]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+        ];
+
+        let mut parser = ReceiptParser::new(&receipts, Default::default());
+
+        let token = parser
+            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
+
+        assert_eq!(&<[u8; 3]>::from_token(token)?, &CORRECT_DATA);
 
         Ok(())
     }

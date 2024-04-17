@@ -649,8 +649,8 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
-            Some(&self.contract_call.contract_id),
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
+            &self.contract_call.contract_id,
             &self.contract_call.output_param,
         )?;
         Ok(FuelCallResponse::new(
@@ -969,7 +969,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let final_tokens = self
             .contract_calls
             .iter()
-            .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
