@@ -12,6 +12,8 @@ use fuels_core::{
 };
 #[cfg(feature = "legacy_encoding")]
 use itertools::Itertools;
+#[cfg(feature = "legacy_encoding")]
+use fuels_core::types::param_types::ReturnLocation;
 
 pub struct ReceiptParser {
     receipts: VecDeque<Receipt>,
