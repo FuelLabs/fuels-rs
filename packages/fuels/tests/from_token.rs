@@ -13,7 +13,7 @@ pub fn null_contract_id() -> Bech32ContractId {
 #[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {
-    // Generates the bindings from the an ABI definition inline.
+    // Generates the bindings from an ABI definition inline.
     // The generated bindings can be accessed through `SimpleContract`.
     abigen!(Contract(
         name = "SimpleContract",
