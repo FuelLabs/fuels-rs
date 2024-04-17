@@ -586,7 +586,9 @@ mod tests {
 
     #[tokio::test]
     async fn receipt_parser_extracts_top_level_call_receipts() -> Result<()> {
-        const CORRECT_DATA: [u8; 3] = [1, 2, 3];
+        const CORRECT_DATA_1: [u8; 3] = [1, 2, 3];
+        const CORRECT_DATA_2: [u8; 3] = [5, 6, 7];
+
         let contract_top_lvl = target_contract();
         let contract_nested = ContractId::from([9u8; 32]);
 
@@ -594,20 +596,24 @@ mod tests {
             get_call_receipt(contract_top_lvl),
             get_call_receipt(contract_nested),
             get_return_data_receipt(contract_nested, &[9, 9, 9]),
-            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA_1),
             get_call_receipt(contract_top_lvl),
             get_call_receipt(contract_nested),
             get_return_data_receipt(contract_nested, &[7, 7, 7]),
-            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA_2),
         ];
 
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
-        let token = parser
+        let token_1 = parser
+            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
+        let token_2 = parser
             .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
 
-        assert_eq!(&<[u8; 3]>::from_token(token)?, &CORRECT_DATA);
+        assert_eq!(&<[u8; 3]>::from_token(token_1)?, &CORRECT_DATA_1);
+        assert_eq!(&<[u8; 3]>::from_token(token_2)?, &CORRECT_DATA_2);
 
         Ok(())
     }

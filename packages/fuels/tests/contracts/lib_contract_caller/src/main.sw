@@ -52,8 +52,8 @@ impl ContractCaller for Contract {
         }
 
         let contract_instance = abi(ContractCaller, contract_id.into());
-        contract_instance.re_entrant(contract_id, false)
+        let _ = contract_instance.re_entrant(contract_id, false);
 
-        return 42
+        42
     }
 }
