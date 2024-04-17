@@ -21,14 +21,10 @@ pub struct ReceiptParser {
 #[cfg(feature = "legacy_encoding")]
 impl ReceiptParser {
     pub fn new(receipts: &[Receipt], decoder_config: DecoderConfig) -> Self {
-        let relevant_receipts = receipts
+        let relevant_receipts: Vec<Receipt> = receipts
             .iter()
             .filter(|receipt| {
-                if cfg!(feature = "legacy_encoding") {
-                    matches!(receipt, Receipt::ReturnData { .. } | Receipt::Return { .. })
-                } else {
-                    matches!(receipt, Receipt::ReturnData { .. } | Receipt::Call { .. })
-                }
+                matches!(receipt, Receipt::ReturnData { .. } | Receipt::Return { .. })
             })
             .cloned()
             .collect();
@@ -51,7 +47,6 @@ impl ReceiptParser {
             // During a script execution, the script's contract id is the **null** contract id
             .unwrap_or_else(ContractId::zeroed);
 
-        #[cfg(feature = "legacy_encoding")]
         output_param.validate_is_decodable(self.decoder.config.max_depth)?;
 
         let data = self
@@ -68,15 +63,11 @@ impl ReceiptParser {
         )
     }
 
-    #[allow(unused_variables)]
     fn extract_raw_data(
         &mut self,
         output_param: &ParamType,
         contract_id: &ContractId,
     ) -> Option<Vec<u8>> {
-        use fuels_core::types::param_types::ReturnLocation;
-        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
-
         let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
 
         match output_param.get_return_location() {
@@ -93,7 +84,6 @@ impl ReceiptParser {
         }
     }
 
-    #[cfg(feature = "legacy_encoding")]
     fn extract_enum_heap_type_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         for (index, (current_receipt, next_receipt)) in
             self.receipts.iter().tuple_windows().enumerate()
@@ -112,7 +102,6 @@ impl ReceiptParser {
         None
     }
 
-    #[cfg(feature = "legacy_encoding")]
     fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         for (index, receipt) in self.receipts.iter_mut().enumerate() {
             if let Receipt::ReturnData {
@@ -131,26 +120,6 @@ impl ReceiptParser {
         None
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
-    fn extract_return_data(&mut self) -> Option<Vec<u8>> {
-        let mut stack = vec![];
-
-        while let Some(receipt) = self.receipts.pop_front() {
-            if let Receipt::ReturnData { data, .. } = receipt {
-                stack.pop();
-
-                if stack.is_empty() {
-                    return data.clone();
-                }
-            } else if let Receipt::Call { .. } = receipt {
-                stack.push(receipt.clone());
-            }
-        }
-
-        None
-    }
-
-    #[cfg(feature = "legacy_encoding")]
     fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         for (index, receipt) in self.receipts.iter_mut().enumerate() {
             if let Receipt::Return { id, val, .. } = receipt {
@@ -164,7 +133,6 @@ impl ReceiptParser {
         None
     }
 
-    #[cfg(feature = "legacy_encoding")]
     fn extract_return_data_heap(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
         // If the output of the function is a vector, then there are 2 consecutive ReturnData
         // receipts. The first one is the one that returns the pointer to the vec struct in the
@@ -188,7 +156,6 @@ impl ReceiptParser {
         None
     }
 
-    #[cfg(feature = "legacy_encoding")]
     fn extract_heap_data_from_receipts<'a>(
         current_receipt: &'a Receipt,
         next_receipt: &'a Receipt,
