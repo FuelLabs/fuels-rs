@@ -1,0 +1,75 @@
+diff --git a/Cargo.toml b/Cargo.toml
+index 1e4145fe..09516d3d 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -96,3 +96,11 @@ fuels-core = { version = "0.57.0", path = "./packages/fuels-core", default-featu
+ fuels-macros = { version = "0.57.0", path = "./packages/fuels-macros", default-features = false }
+ fuels-programs = { version = "0.57.0", path = "./packages/fuels-programs", default-features = false }
+ fuels-test-helpers = { version = "0.57.0", path = "./packages/fuels-test-helpers", default-features = false }
++
++[patch.crates-io]
++fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
++fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
++fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
++fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
++fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
++fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/use-bytecode-from-database" }
+diff --git a/packages/fuels-core/src/types/wrappers/message.rs b/packages/fuels-core/src/types/wrappers/message.rs
+index 9db100ee..a8079ac9 100644
+--- a/packages/fuels-core/src/types/wrappers/message.rs
++++ b/packages/fuels-core/src/types/wrappers/message.rs
+@@ -2,9 +2,10 @@
+ 
+ use fuel_core_chain_config::MessageConfig;
+ use fuel_core_client::client::types::{
+-    coins::MessageCoin as ClientMessageCoin, message::Message as ClientMessage, primitives::Nonce,
++    coins::MessageCoin as ClientMessageCoin, message::Message as ClientMessage,
+ };
+ use fuel_tx::{Input, MessageId};
++use fuel_types::Nonce;
+ 
+ use crate::types::bech32::Bech32Address;
+ 
+diff --git a/packages/fuels-core/src/types/wrappers/transaction_response.rs b/packages/fuels-core/src/types/wrappers/transaction_response.rs
+index 90bd5413..9d2a6d51 100644
+--- a/packages/fuels-core/src/types/wrappers/transaction_response.rs
++++ b/packages/fuels-core/src/types/wrappers/transaction_response.rs
+@@ -42,6 +42,7 @@ impl From<ClientTransactionResponse> for TransactionResponse {
+             Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
+             Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
+             Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
++            _ => unimplemented!(),
+         };
+ 
+         Self {
+diff --git a/packages/fuels-test-helpers/Cargo.toml b/packages/fuels-test-helpers/Cargo.toml
+index 844fb7c0..a18ffb39 100644
+--- a/packages/fuels-test-helpers/Cargo.toml
++++ b/packages/fuels-test-helpers/Cargo.toml
+@@ -13,7 +13,6 @@ description = "Fuel Rust SDK test helpers."
+ fuel-core = { workspace = true, default-features = false, features = ["test-helpers"], optional = true }
+ fuel-core-chain-config = { workspace = true, features = ["test-helpers"] }
+ fuel-core-client = { workspace = true }
+-fuel-core-poa = { workspace = true }
+ fuel-core-services = { workspace = true }
+ fuel-crypto = { workspace = true }
+ fuel-tx = { workspace = true }
+diff --git a/packages/fuels-test-helpers/src/fuel_bin_service.rs b/packages/fuels-test-helpers/src/fuel_bin_service.rs
+index 48625692..bfa9c0dd 100644
+--- a/packages/fuels-test-helpers/src/fuel_bin_service.rs
++++ b/packages/fuels-test-helpers/src/fuel_bin_service.rs
+@@ -91,12 +91,9 @@ impl ExtendedConfig {
+     }
+ 
+     pub fn write_temp_snapshot_files(self) -> FuelResult<TempDir> {
+-        let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
++        let writer = SnapshotWriter::json(self.snapshot_dir.path());
+         writer
+-            .write_chain_config(&self.chain_config)
+-            .map_err(|e| error!(Other, "could not write chain config: {}", e))?;
+-        writer
+-            .write_state_config(self.state_config)
++            .write_state_config(self.state_config, &self.chain_config)
+             .map_err(|e| error!(Other, "could not write state config: {}", e))?;
+ 
+         Ok(self.snapshot_dir)
