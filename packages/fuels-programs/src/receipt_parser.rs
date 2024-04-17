@@ -1,3 +1,4 @@
+#[cfg(not(feature = "legacy_encoding"))]
 use std::collections::VecDeque;
 
 use fuel_tx::{ContractId, Receipt};
@@ -16,6 +17,9 @@ use fuels_core::{
 use itertools::Itertools;
 
 pub struct ReceiptParser {
+    #[cfg(feature = "legacy_encoding")]
+    receipts: Vec<Receipt>,
+    #[cfg(not(feature = "legacy_encoding"))]
     receipts: VecDeque<Receipt>,
     decoder: ABIDecoder,
 }
@@ -232,7 +236,6 @@ impl ReceiptParser {
         )
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
     fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
         // If the script contains nested calls, we need to extract the data of the top-level call
         let mut nested_calls_stack = vec![];
@@ -263,27 +266,21 @@ impl ReceiptParser {
         None
     }
 
-    #[cfg(not(feature = "legacy_encoding"))]
     fn extract_script_data(&self) -> Option<Vec<u8>> {
-        for receipt in self.receipts.iter() {
-            if let Receipt::ReturnData {
+        self.receipts.iter().find_map(|receipt| match receipt {
+            Receipt::ReturnData {
                 id,
                 data: Some(data),
                 ..
-            } = receipt
-            {
-                if *id == ContractId::zeroed() {
-                    return Some(data.clone());
-                }
-            }
-        }
-        None
+            } if *id == ContractId::zeroed() => Some(data.clone()),
+            _ => None,
+        })
     }
 }
 
 #[cfg(feature = "legacy_encoding")]
 #[cfg(test)]
-mod tests {
+mod tests_legacy {
     use fuel_tx::ScriptExecutionResult;
     use fuels_core::traits::{Parameterize, Tokenizable};
 
@@ -461,6 +458,7 @@ mod tests {
     }
 }
 
+#[cfg(not(feature = "legacy_encoding"))]
 #[cfg(test)]
 mod tests {
     use fuel_tx::ScriptExecutionResult;
