@@ -97,60 +97,6 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 }
 
 #[tokio::test]
-// Remove this test once the new encoding lands as the max_input will be irrelevant
-// for direct script calls as all script_data is `inline`
-// TODO: https://github.com/FuelLabs/fuels-rs/issues/1317
-async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{
-        test_helpers::ChainConfig,
-        tx::{ConsensusParameters, TxParameters},
-        types::coin::Coin,
-    };
-
-    let mut consensus_parameters = ConsensusParameters::default();
-    let tx_params = TxParameters::default().with_max_inputs(128);
-    consensus_parameters.set_tx_params(tx_params);
-    let chain_config = ChainConfig {
-        consensus_parameters: consensus_parameters.clone(),
-        ..ChainConfig::default()
-    };
-
-    let mut wallet = WalletUnlocked::new_random(None);
-
-    let coins: Vec<Coin> = setup_single_asset_coins(
-        wallet.address(),
-        Default::default(),
-        DEFAULT_NUM_COINS,
-        DEFAULT_COIN_AMOUNT,
-    );
-
-    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    assert_eq!(*provider.consensus_parameters(), consensus_parameters);
-    wallet.set_provider(provider.clone());
-
-    setup_program_test!(
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let a = 4u64;
-    let b = 2u32;
-
-    let result = script_instance.main(a, b).call().await?;
-
-    assert_eq!(result.value, "heyoo");
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_output_variable_estimation() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),

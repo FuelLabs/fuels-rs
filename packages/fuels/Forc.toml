@@ -98,7 +98,7 @@ members = [
   'tests/types/scripts/script_generics',
   'tests/types/scripts/script_heap_types',
   #TODO: Decide what to do with this test project once
-  # https://github.com/FuelLabs/sway/issues/5145 is resolved
+  # https://github.com/FuelLabs/sway/issues/5727 is resolved
   # 'tests/types/scripts/script_raw_slice',
   'tests/types/scripts/script_std_lib_string',
   'tests/types/scripts/script_tuples',
