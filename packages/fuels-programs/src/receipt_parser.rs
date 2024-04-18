@@ -280,7 +280,7 @@ impl ReceiptParser {
 
 #[cfg(feature = "legacy_encoding")]
 #[cfg(test)]
-mod tests_legacy {
+mod tests {
     use fuel_tx::ScriptExecutionResult;
     use fuels_core::traits::{Parameterize, Tokenizable};
 
