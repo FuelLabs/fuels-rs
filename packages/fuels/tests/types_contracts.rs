@@ -336,19 +336,18 @@ async fn test_evm_address() -> Result<()> {
     );
 
     {
+        // ANCHOR: evm_address_arg
         let b256 = Bits256::from_hex_str(
             "0x1616060606060606060606060606060606060606060606060606060606060606",
         )?;
         let evm_address = EvmAddress::from(b256);
 
-        assert!(
-            contract_instance
-                .methods()
-                .evm_address_as_input(evm_address)
-                .call()
-                .await?
-                .value
-        );
+        let call_handler = contract_instance
+            .methods()
+            .evm_address_as_input(evm_address);
+        // ANCHOR_END: evm_address_arg
+
+        assert!(call_handler.call().await?.value);
     }
 
     {
@@ -798,8 +797,7 @@ async fn type_inside_enum() -> Result<()> {
 }
 
 #[tokio::test]
-#[should_panic(expected = "`SizedAsciiString<4>` must be constructed from a \
-    `String` of length 4. Got: `fuell`")]
+#[should_panic(expected = "failed to convert string into SizedAsciiString")]
 async fn strings_must_have_correct_length() {
     abigen!(Contract(
         name = "SimpleContract",
@@ -844,9 +842,14 @@ async fn strings_must_have_correct_length() {
         .await
         .expect("Should have wallet");
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-    let _ = contract_instance
-        .methods()
-        .takes_string("fuell".try_into().unwrap());
+
+    // ANCHOR: contract_takes_string
+    let _ = contract_instance.methods().takes_string(
+        "fuell"
+            .try_into()
+            .expect("failed to convert string into SizedAsciiString"),
+    );
+    // ANCHOR_END: contract_takes_string
 }
 
 #[tokio::test]

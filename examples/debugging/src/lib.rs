@@ -10,6 +10,23 @@ mod tests {
     };
 
     #[test]
+    fn encode_fn_selector() {
+        use fuels::core::codec::encode_fn_selector;
+
+        // ANCHOR: example_fn_selector
+        // fn some_fn_name(arg1: Vec<str[3]>, arg2: u8)
+        let fn_name = "some_fn_name";
+
+        let selector = encode_fn_selector(fn_name);
+
+        assert_eq!(
+            selector,
+            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+        );
+        // ANCHOR_END: example_fn_selector
+    }
+
+    #[test]
     fn decoded_debug_matches_rust_debug() -> Result<()> {
         abigen!(Contract(
             name = "MyContract",
