@@ -2050,6 +2050,7 @@ async fn test_contract_std_lib_string() -> Result<()> {
     {
         let _resp = contract_methods
             .accepts_dynamic_string(String::from("Hello World"))
+            .with_tx_policies(TxPolicies::default().with_script_gas_limit(2000))
             .call()
             .await?;
     }
