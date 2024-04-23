@@ -2892,9 +2892,9 @@ enum SomeEnum&lt;T, K&gt; {
 <div style="break-before: page; page-break-before: always;"></div><h1 id="bits256"><a class="header" href="#bits256"><code>Bits256</code></a></h1>
 <p>In Fuel, a type called <code>b256</code> represents hashes and holds a 256-bit value. The Rust SDK represents <code>b256</code> as <code>Bits256(value)</code> where <code>value</code> is a <code>[u8; 32]</code>. If your contract method takes a <code>b256</code> as input, you must pass a <code>Bits256([u8; 32])</code> when calling it from the SDK.</p>
 <p>Here's an example:</p>
-<pre><code class="language-rust ignore">    let arg: [u8; 32] = hasher.finalize().into();
+<pre><code class="language-rust ignore">        let b256 = Bits256([1; 32]);
 
-    let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
+        let call_handler = contract_instance.methods().b256_as_input(b256);
 </code></pre>
 <p>If you have a hexadecimal value as a string and wish to convert it to <code>Bits256</code>, you may do so with <code>from_hex_str</code>:</p>
 <pre><code class="language-rust ignore">        let hex_str = &quot;0101010101010101010101010101010101010101010101010101010101010101&quot;;
