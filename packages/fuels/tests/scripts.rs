@@ -1,7 +1,6 @@
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
-    types::Bits256,
 };
 
 #[tokio::test]
@@ -252,28 +251,6 @@ async fn test_script_array() -> Result<()> {
     let response = script_instance.main(my_array).call().await?;
 
     assert_eq!(response.value, 10);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_script_b256() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let my_b256 = Bits256([1; 32]);
-    let response = script_instance.main(my_b256).call().await?;
-
-    assert!(response.value);
     Ok(())
 }
 

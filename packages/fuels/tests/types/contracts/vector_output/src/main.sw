@@ -27,6 +27,7 @@ abi VectorsOutputContract {
     fn u32_in_vec(len: u32) -> Vec<u32>;
     fn u64_in_vec(len: u64) -> Vec<u64>;
     fn u8_in_vec(len: u8) -> Vec<u8>;
+    fn b256_in_vec(len: u8) -> Vec<b256>;
 }
 
 impl VectorsOutputContract for Contract {
@@ -142,6 +143,16 @@ impl VectorsOutputContract for Contract {
         while i < len {
             vec.push(i);
             i += 1_u64;
+        }
+        vec
+    }
+
+    fn b256_in_vec(len: u8) -> Vec<b256> {
+        let mut vec: Vec<b256> = Vec::new();
+        let mut i = 0u8;
+        while i < len {
+            vec.push(0x0202020202020202020202020202020202020202020202020202020202020202);
+            i += 1;
         }
         vec
     }

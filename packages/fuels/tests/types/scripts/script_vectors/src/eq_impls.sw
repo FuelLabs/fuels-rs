@@ -39,6 +39,22 @@ impl Eq for Vec<u32> {
     }
 }
 
+impl Eq for Vec<b256> {
+    fn eq(self, other: Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+        let mut i = 0;
+        while i < self.len() {
+            if self.get(i).unwrap() != other.get(i).unwrap() {
+                return false;
+            }
+            i += 1;
+        }
+        true
+    }
+}
+
 impl Eq for (Vec<u32>, Vec<u32>) {
     fn eq(self, other: Self) -> bool {
         self.0 == other.0 && self.1 == other.1

@@ -1,4 +1,30 @@
-use fuels::{prelude::*, types::U256};
+use fuels::{
+    prelude::*,
+    types::{Bits256, U256},
+};
+
+#[tokio::test]
+async fn script_b256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_b256"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let b256 = Bits256([1; 32]);
+    let response = script_instance.main(b256).call().await?;
+
+    assert_eq!(response.value, Bits256([2; 32]));
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<()> {
@@ -144,6 +170,7 @@ async fn main_function_vector_arguments() -> Result<()> {
     let vec_in_array = [vec![0, 1, 2], vec![0, 1, 2]];
     let vec_in_enum = SomeEnum::a(vec![0, 1, 2]);
     let enum_in_vec = vec![SomeEnum::a(0), SomeEnum::a(1)];
+    let b256_in_vec = vec![Bits256([2; 32]), Bits256([2; 32])];
 
     let tuple_in_vec = vec![(0, 0), (1, 1)];
     let vec_in_tuple = (vec![0, 1, 2], vec![0, 1, 2]);
@@ -166,6 +193,7 @@ async fn main_function_vector_arguments() -> Result<()> {
             vec_in_array,
             vec_in_enum,
             enum_in_vec,
+            b256_in_vec,
             tuple_in_vec,
             vec_in_tuple,
             vec_in_a_vec_in_a_struct_in_a_vec,
