@@ -649,10 +649,17 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
+        #[cfg(feature = "legacy_encoding")]
         let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
+            &self.contract_call.contract_id,
+            &self.contract_call.output_param,
+        )?;
+
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
@@ -966,10 +973,17 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
+        #[cfg(feature = "legacy_encoding")]
         let final_tokens = self
             .contract_calls
             .iter()
             .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .collect::<Result<Vec<_>>>()?;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let final_tokens = self
+            .contract_calls
+            .iter()
+            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);

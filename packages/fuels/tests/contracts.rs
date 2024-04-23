@@ -1844,3 +1844,31 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(not(feature = "legacy_encoding"))]
+#[tokio::test]
+async fn test_reentrant_calls() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "LibContractCaller",
+            project = "packages/fuels/tests/contracts/lib_contract_caller"
+        ),),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "LibContractCaller",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_id = contract_caller_instance.contract_id();
+    let response = contract_caller_instance
+        .methods()
+        .re_entrant(contract_id, true)
+        .call()
+        .await?;
+
+    assert_eq!(42, response.value);
+
+    Ok(())
+}

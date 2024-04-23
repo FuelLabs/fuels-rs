@@ -1631,6 +1631,44 @@ async fn test_vector() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_b256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/b256"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+
+    assert_eq!(
+        Bits256([2; 32]),
+        contract_instance
+            .methods()
+            .b256_as_output()
+            .call()
+            .await?
+            .value
+    );
+
+    {
+        // ANCHOR: 256_arg
+        let b256 = Bits256([1; 32]);
+
+        let call_handler = contract_instance.methods().b256_as_input(b256);
+        // ANCHOR_END: 256_arg
+
+        assert!(call_handler.call().await?.value);
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_b512() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1799,6 +1837,9 @@ async fn test_base_type_in_vec_output() -> Result<()> {
 
     let response = contract_methods.bool_in_vec().call().await?;
     assert_eq!(response.value, [true, false, true, false].to_vec());
+
+    let response = contract_methods.b256_in_vec(13).call().await?;
+    assert_eq!(response.value, vec![Bits256([2; 32]); 13]);
 
     Ok(())
 }
