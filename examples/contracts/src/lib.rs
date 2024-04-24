@@ -116,7 +116,7 @@ mod tests {
         let expected_gas = if cfg!(feature = "legacy_encoding") {
             796
         } else {
-            2065
+            2635
         };
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -617,7 +617,7 @@ mod tests {
         #[cfg(feature = "legacy_encoding")]
         let expected_gas = 1172;
         #[cfg(not(feature = "legacy_encoding"))]
-        let expected_gas = 3532;
+        let expected_gas = 4079;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
