@@ -331,7 +331,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
 
     // The gas used by the script to call a contract and forward remaining gas limit.
     #[cfg(feature = "legacy_encoding")]
-    let gas_used_by_script = 663;
+    let gas_used_by_script = 231;
     #[cfg(not(feature = "legacy_encoding"))]
     let gas_used_by_script = 297;
     let gas_limit = 225_883;
@@ -349,8 +349,6 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .unwrap()
         .gas()
         .unwrap();
-
-    dbg!(&response);
 
     assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
 

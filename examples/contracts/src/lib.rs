@@ -114,7 +114,7 @@ mod tests {
         // ANCHOR_END: contract_call_cost_estimation
 
         let expected_gas = if cfg!(feature = "legacy_encoding") {
-            796
+            663
         } else {
             2635
         };
@@ -615,7 +615,7 @@ mod tests {
         // ANCHOR_END: multi_call_cost_estimation
 
         #[cfg(feature = "legacy_encoding")]
-        let expected_gas = 1172;
+        let expected_gas = 906;
         #[cfg(not(feature = "legacy_encoding"))]
         let expected_gas = 4079;
 
