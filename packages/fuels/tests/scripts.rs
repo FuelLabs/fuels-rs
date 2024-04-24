@@ -1,7 +1,6 @@
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
-    types::Bits256,
 };
 
 #[tokio::test]
@@ -107,10 +106,9 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         types::coin::Coin,
     };
 
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(128),
-        ..Default::default()
-    };
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default().with_max_inputs(128);
+    consensus_parameters.set_tx_params(tx_params);
     let chain_config = ChainConfig {
         consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
@@ -253,28 +251,6 @@ async fn test_script_array() -> Result<()> {
     let response = script_instance.main(my_array).call().await?;
 
     assert_eq!(response.value, 10);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_script_b256() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let my_b256 = Bits256([1; 32]);
-    let response = script_instance.main(my_b256).call().await?;
-
-    assert!(response.value);
     Ok(())
 }
 

@@ -255,7 +255,7 @@ pub(crate) fn get_instructions(
         })
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -341,7 +341,7 @@ pub(crate) fn build_script_data_from_contract_calls(
     Ok((script_data, param_offsets))
 }
 
-#[cfg(feature = "experimental")]
+#[cfg(not(feature = "legacy_encoding"))]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -459,14 +459,14 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     instructions.extend(extract_heap_data(_output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
         ParamType::Enum { enum_variants, .. } => {
@@ -502,7 +502,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
     }
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,
@@ -610,7 +610,7 @@ fn generate_asset_change_outputs(
 
 pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
     (0..num_of_contracts)
-        .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
+        .map(|idx| Output::contract(idx as u16, Bytes32::zeroed(), Bytes32::zeroed()))
         .collect()
 }
 
@@ -620,7 +620,7 @@ pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec
         .enumerate()
         .map(|(idx, contract_id)| {
             Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u8),
+                UtxoId::new(Bytes32::zeroed(), idx as u16),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
@@ -678,7 +678,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::{
@@ -686,7 +686,7 @@ mod test {
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
     };
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
@@ -698,9 +698,9 @@ mod test {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
-                #[cfg(not(feature = "experimental"))]
+                #[cfg(feature = "legacy_encoding")]
                 encoded_selector: [0; 8],
-                #[cfg(feature = "experimental")]
+                #[cfg(not(feature = "legacy_encoding"))]
                 encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
@@ -721,7 +721,7 @@ mod test {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[tokio::test]
     async fn test_script_data() {
         // Arrange
@@ -751,9 +751,9 @@ mod test {
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
-                #[cfg(not(feature = "experimental"))]
+                #[cfg(feature = "legacy_encoding")]
                 encoded_selector: selectors[i],
-                #[cfg(feature = "experimental")]
+                #[cfg(not(feature = "legacy_encoding"))]
                 encoded_selector: selectors[i].to_vec(),
                 encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
@@ -925,7 +925,7 @@ mod test {
                     tx_pointer,
                     contract_id,
                 } => {
-                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u8));
+                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u16));
                     assert_eq!(balance_root, Bytes32::zeroed());
                     assert_eq!(state_root, Bytes32::zeroed());
                     assert_eq!(tx_pointer, TxPointer::default());
@@ -1078,10 +1078,10 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
         const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
         const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
@@ -1103,7 +1103,7 @@ mod test {
             );
         }
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_heap_type() {
             let output_params = vec![
@@ -1123,7 +1123,7 @@ mod test {
             }
         }
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_gas_offset_and_heap_type() {
             let mut call = ContractCall::new_with_random_id();
@@ -1140,7 +1140,7 @@ mod test {
             );
         }
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_enum_with_heap_and_non_heap_variant() {
             let variant_sets = vec![

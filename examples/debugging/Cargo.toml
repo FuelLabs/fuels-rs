@@ -17,4 +17,4 @@ serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 
 [features]
-experimental = ["fuels/experimental"]
+legacy_encoding = ["fuels/legacy_encoding"]

@@ -1,13 +1,13 @@
+#[cfg(not(feature = "legacy_encoding"))]
 mod bounded_encoder;
-#[cfg(feature = "experimental")]
-mod experimental_bounded_encoder;
+mod legacy_bounded_encoder;
 
 use std::default::Default;
 
-#[cfg(feature = "experimental")]
-use crate::codec::abi_encoder::experimental_bounded_encoder::ExperimentalBoundedEncoder;
+#[cfg(not(feature = "legacy_encoding"))]
+use crate::codec::abi_encoder::bounded_encoder::BoundedEncoder;
 use crate::{
-    codec::abi_encoder::bounded_encoder::BoundedEncoder,
+    codec::abi_encoder::legacy_bounded_encoder::LegacyBoundedEncoder,
     types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
 };
 
@@ -49,10 +49,10 @@ impl ABIEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
+        let res = LegacyBoundedEncoder::new(self.config, false).encode(args);
+        #[cfg(not(feature = "legacy_encoding"))]
         let res = BoundedEncoder::new(self.config, false).encode(args);
-        #[cfg(feature = "experimental")]
-        let res = ExperimentalBoundedEncoder::new(self.config, false).encode(args);
 
         res
     }
@@ -71,7 +71,7 @@ impl ConfigurablesEncoder {
     /// Encodes `Token`s in `args` following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
     pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        BoundedEncoder::new(self.config, true).encode(args)
+        LegacyBoundedEncoder::new(self.config, true).encode(args)
     }
 }
 
@@ -79,11 +79,11 @@ impl ConfigurablesEncoder {
 mod tests {
     use std::slice;
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     use itertools::chain;
 
     use super::*;
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     use crate::constants::WORD_SIZE;
     use crate::{
         to_named,
@@ -94,9 +94,9 @@ mod tests {
         },
     };
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     const VEC_METADATA_SIZE: usize = 3 * WORD_SIZE;
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     const DISCRIMINANT_SIZE: usize = WORD_SIZE;
 
     #[test]
@@ -112,7 +112,7 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             255, 0, 0, 0, 0, 0, 0, 0, // u8
             0, 0, 0, 0, 0, 0, 255, 255, // u16
@@ -123,7 +123,7 @@ mod tests {
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
             255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, // u256
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             255, // u8
             255, 255, // u16
@@ -146,9 +146,9 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [0, 0, 0, 0, 0, 0, 0, 1];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [1];
 
         assert_eq!(result, expected);
@@ -177,14 +177,14 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 24, // ptr
             0, 0, 0, 0, 0, 0, 0, 8, // cap
             0, 0, 0, 0, 0, 0, 0, 7, // len
             255, 0, 1, 2, 3, 4, 5, 0, // data
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 7, // len
             255, 0, 1, 2, 3, 4, 5, // data
@@ -201,7 +201,7 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 24, // ptr
             0, 0, 0, 0, 0, 0, 0, 24, // cap
@@ -209,7 +209,7 @@ mod tests {
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, 0, //This is a full sentence
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 23, // len
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -227,13 +227,13 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 16, // cap
             0, 0, 0, 0, 0, 0, 0, 7, // len
             255, 0, 1, 2, 3, 4, 5, 0, // data
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 7, // len
             255, 0, 1, 2, 3, 4, 5, // data
@@ -253,12 +253,12 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, 0, //This is a full sentence
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
@@ -278,14 +278,14 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 16, // ptr
             0, 0, 0, 0, 0, 0, 0, 23, // len
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, //This is a full sentence
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 23, // len
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -303,12 +303,12 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 255, //u32
             1, 0, 0, 0, 0, 0, 0, 0, //bool
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 255, //u32
             1,   //bool
@@ -325,12 +325,12 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 255, //u32
             0, 0, 0, 0, 0, 0, 0, 128, //u32
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 255, //u32
             0, 0, 0, 128, //u32
@@ -342,7 +342,7 @@ mod tests {
     }
 
     // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn enums_are_sized_to_fit_the_biggest_variant() -> Result<()> {
         // Our enum has two variants: B256, and U64. So the enum will set aside
@@ -427,7 +427,7 @@ mod tests {
             .encode(slice::from_ref(&top_level_enum_token))?
             .resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
             0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
@@ -435,7 +435,7 @@ mod tests {
             0, 0, 0, 0, 0, 0, // DeeperEnum padding
             0, 0, 0, 0, 0, 0, 44, 68, // StructA.some_number
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
             0, 0, 0, 0, 0, 0, 0, 1, // DeeperEnum::v2 discriminant
@@ -460,7 +460,7 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 10, // u16
             1,  // bool
@@ -468,7 +468,7 @@ mod tests {
             1, 2, // [u8, u8]
             0, 0, 0, 0, 0, 0, // padding
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 10, // u16
             1,  // bool
@@ -499,7 +499,7 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
 
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 10, // foo.x == 10u16
             1,  // foo.y.a == true
@@ -517,7 +517,7 @@ mod tests {
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
             116, 101, 110, 99, 101, 0, // str[23]
         ];
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 10, // foo.x == 10u16
             1,  // foo.y.a == true
@@ -554,7 +554,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
         let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
@@ -567,7 +567,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn enums_with_units_are_correctly_padded() -> Result<()> {
         let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
@@ -585,7 +585,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn vector_has_ptr_cap_len_and_then_data() -> Result<()> {
         // arrange
@@ -610,7 +610,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn data_from_two_vectors_aggregated_at_the_end() -> Result<()> {
         // arrange
@@ -661,7 +661,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = {
             let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
 
@@ -684,7 +684,7 @@ mod tests {
             )
             .collect::<Vec<u8>>()
         };
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // enum dicsriminant
             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
@@ -712,7 +712,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = {
             const PADDING: usize = std::mem::size_of::<[u8; 32]>() - WORD_SIZE;
 
@@ -725,7 +725,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // vec len
             0, 0, 0, 0, 0, 0, 0, 1, 8, // enum discriminant and u8 value
@@ -748,7 +748,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = {
             let vec1_ptr = ((VEC_METADATA_SIZE + WORD_SIZE + offset) as u64)
                 .to_be_bytes()
@@ -759,7 +759,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, [9], [0; 7], vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 5, // vec[len, u64]
             9, // u8
@@ -782,7 +782,7 @@ mod tests {
             .resolve(offset as u64);
 
         // assert
-        #[cfg(not(feature = "experimental"))]
+        #[cfg(feature = "legacy_encoding")]
         let expected = {
             let vec1_data_offset = (VEC_METADATA_SIZE + offset) as u64;
             let vec1_ptr = vec1_data_offset.to_be_bytes().to_vec();
@@ -800,7 +800,7 @@ mod tests {
 
             chain!(vec1_ptr, vec1_cap, vec1_len, vec1_data).collect::<Vec<u8>>()
         };
-        #[cfg(feature = "experimental")]
+        #[cfg(not(feature = "legacy_encoding"))]
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 1, // vec1 len
             0, 0, 0, 0, 0, 0, 0, 2, 5, 6, // vec2 [len, u8, u8]
@@ -811,7 +811,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     #[test]
     fn capacity_overflow_is_caught() -> Result<()> {
         let token = Token::Enum(Box::new((

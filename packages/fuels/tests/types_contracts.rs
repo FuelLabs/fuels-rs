@@ -1409,6 +1409,141 @@ async fn test_identity_with_two_contracts() -> Result<()> {
 }
 
 #[tokio::test]
+async fn generics_test() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/generics"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+    let contract_methods = contract_instance.methods();
+
+    {
+        // ANCHOR: generic
+        // simple struct with a single generic param
+        let arg1 = SimpleGeneric {
+            single_generic_param: 123u64,
+        };
+
+        let result = contract_methods
+            .struct_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+        // ANCHOR_END: generic
+    }
+    {
+        // struct that delegates the generic param internally
+        let arg1 = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "abc".try_into()?,
+            },
+        };
+
+        let result = contract_methods
+            .struct_delegating_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in an array
+        let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
+
+        let result = contract_methods
+            .struct_w_generic_in_array(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has the generic in a tuple
+        let arg1 = StructWTupleGeneric { a: (1, 2) };
+
+        let result = contract_methods
+            .struct_w_generic_in_tuple(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // enum with generic in variant
+        let arg1 = EnumWGeneric::B(10);
+        let result = contract_methods
+            .enum_w_generic(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        contract_methods
+            .unused_generic_args(
+                StructOneUnusedGenericParam::default(),
+                EnumOneUnusedGenericParam::One,
+            )
+            .call()
+            .await?;
+
+        let (the_struct, the_enum) = contract_methods
+            .used_and_unused_generic_args(
+                StructUsedAndUnusedGenericParams::new(10u8),
+                EnumUsedAndUnusedGenericParams::Two(11u8),
+            )
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(the_struct.field, 12u8);
+        if let EnumUsedAndUnusedGenericParams::Two(val) = the_enum {
+            assert_eq!(val, 13)
+        } else {
+            panic!("Expected the variant EnumUsedAndUnusedGenericParams::Two");
+        }
+    }
+    {
+        // complex case
+        let pass_through = PassTheGenericOn {
+            one: SimpleGeneric {
+                single_generic_param: "ab".try_into()?,
+            },
+        };
+        let w_arr_generic = StructWArrayGeneric {
+            a: [pass_through.clone(), pass_through],
+        };
+
+        let arg1 = MegaExample {
+            a: ([Bits256([0; 32]), Bits256([0; 32])], "ab".try_into()?),
+            b: vec![(
+                [EnumWGeneric::B(StructWTupleGeneric {
+                    a: (w_arr_generic.clone(), w_arr_generic),
+                })],
+                10u32,
+            )],
+        };
+
+        contract_methods.complex_test(arg1.clone()).call().await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_vector() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -1490,6 +1625,44 @@ async fn test_vector() -> Result<()> {
             .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
             .call()
             .await?;
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_b256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TypesContract",
+            project = "packages/fuels/tests/types/contracts/b256"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TypesContract",
+            wallet = "wallet"
+        ),
+    );
+
+    assert_eq!(
+        Bits256([2; 32]),
+        contract_instance
+            .methods()
+            .b256_as_output()
+            .call()
+            .await?
+            .value
+    );
+
+    {
+        // ANCHOR: 256_arg
+        let b256 = Bits256([1; 32]);
+
+        let call_handler = contract_instance.methods().b256_as_input(b256);
+        // ANCHOR_END: 256_arg
+
+        assert!(call_handler.call().await?.value);
     }
 
     Ok(())
@@ -1665,6 +1838,9 @@ async fn test_base_type_in_vec_output() -> Result<()> {
     let response = contract_methods.bool_in_vec().call().await?;
     assert_eq!(response.value, [true, false, true, false].to_vec());
 
+    let response = contract_methods.b256_in_vec(13).call().await?;
+    assert_eq!(response.value, vec![Bits256([2; 32]); 13]);
+
     Ok(())
 }
 
@@ -1737,7 +1913,7 @@ async fn test_composite_types_in_vec_output() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn test_nested_vector_methods_fail() -> Result<()> {
     // This is just an E2E test of the method `ParamType::contains_nested_heap_types`, hence it's
@@ -2031,7 +2207,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
         assert!(resp.value.is_none());
     }
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     {
         // If the LW(RET) instruction was not executed only conditionally, then the FuelVM would OOM.
         let _ = contract_methods
@@ -2052,7 +2228,7 @@ async fn test_heap_type_in_enums() -> Result<()> {
     Ok(())
 }
 
-#[cfg(feature = "experimental")]
+#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
     setup_program_test!(

@@ -1,14 +1,14 @@
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use std::slice;
 use std::str::FromStr;
 
 use fuels::prelude::*;
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use fuels::{
     core::{codec::ABIEncoder, traits::Tokenizable},
     types::{Bits256, EvmAddress},
 };
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 use sha2::{Digest, Sha256};
 
 pub fn null_contract_id() -> Bech32ContractId {
@@ -17,7 +17,7 @@ pub fn null_contract_id() -> Bech32ContractId {
         .unwrap()
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_from_contract_file() {
     // Generates the bindings from an ABI definition in a JSON file
@@ -49,7 +49,7 @@ async fn compile_bindings_from_contract_file() {
     assert_eq!("000000005f68ee3d000000000000002a", encoded);
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_from_inline_contract() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -110,7 +110,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_array_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -188,7 +188,7 @@ async fn compile_bindings_array_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_bool_array_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -263,7 +263,7 @@ async fn compile_bindings_bool_array_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_string_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -334,79 +334,7 @@ async fn compile_bindings_string_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
-#[tokio::test]
-async fn compile_bindings_b256_input() -> Result<()> {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-            "types": [
-              {
-                "typeId": 0,
-                "type": "()",
-                "components": [],
-                "typeParameters": null
-              },
-              {
-                "typeId": 1,
-                "type": "b256",
-                "components": null,
-                "typeParameters": null
-              }
-            ],
-            "functions": [
-              {
-                "inputs": [
-                  {
-                    "name": "arg",
-                    "type": 1,
-                    "typeArguments": null
-                  }
-                ],
-                "name": "takes_b256",
-                "output": {
-                  "name": "",
-                  "type": 0,
-                  "typeArguments": null
-                }
-              }
-            ]
-          }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let mut hasher = Sha256::new();
-    hasher.update("test string".as_bytes());
-
-    // ANCHOR: 256_arg
-    let arg: [u8; 32] = hasher.finalize().into();
-
-    let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
-    // ANCHOR_END: 256_arg
-
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
-    let encoded = format!(
-        "{}{}",
-        hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(encoded_args)
-    );
-
-    assert_eq!(
-        "0000000054992852d5579c46dfcc7f18207013e65b44e4cb4e2c2298f4ac457ba8f82743f31e930b",
-        encoded
-    );
-
-    Ok(())
-}
-
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_evm_address_input() -> Result<()> {
     abigen!(Contract(
@@ -477,7 +405,7 @@ async fn compile_bindings_evm_address_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_struct_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -580,7 +508,7 @@ async fn compile_bindings_struct_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_nested_struct_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -689,7 +617,7 @@ async fn compile_bindings_nested_struct_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn compile_bindings_enum_input() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -777,7 +705,7 @@ async fn compile_bindings_enum_input() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn shared_types() -> Result<()> {
     setup_program_test!(

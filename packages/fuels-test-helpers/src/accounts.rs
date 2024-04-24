@@ -5,7 +5,7 @@ use fuels_accounts::wallet::WalletUnlocked;
 use fuels_core::types::errors::Result;
 
 use crate::{
-    node_types::{ChainConfig, Config},
+    node_types::{ChainConfig, NodeConfig},
     setup_custom_assets_coins, setup_test_provider,
     wallets_config::*,
 };
@@ -52,7 +52,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// ```
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
-    provider_config: Option<Config>,
+    provider_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
@@ -193,15 +193,17 @@ mod tests {
 
     #[tokio::test]
     async fn generated_wallets_with_custom_chain_config() -> Result<()> {
-        let consensus_parameters = ConsensusParameters {
-            tx_params: TxParameters::default().with_max_gas_per_tx(10_000_000_000),
-            ..Default::default()
-        };
+        let mut consensus_parameters = ConsensusParameters::default();
 
         let block_gas_limit = 10_000_000_000;
+        consensus_parameters.set_block_gas_limit(block_gas_limit);
+
+        let max_gas_per_tx = 10_000_000_000;
+        let tx_params = TxParameters::default().with_max_gas_per_tx(max_gas_per_tx);
+        consensus_parameters.set_tx_params(tx_params);
+
         let chain_config = ChainConfig {
             consensus_parameters,
-            block_gas_limit,
             ..ChainConfig::default()
         };
 
@@ -223,8 +225,8 @@ mod tests {
                     .try_provider()?
                     .consensus_parameters()
                     .tx_params()
-                    .max_gas_per_tx,
-                block_gas_limit
+                    .max_gas_per_tx(),
+                max_gas_per_tx
             );
             assert_eq!(
                 wallet.get_coins(AssetId::zeroed()).await?.len() as u64,
