@@ -27,7 +27,7 @@ use crate::{
     traits::Signer,
     types::{
         bech32::Bech32Address,
-        errors::{error_transaction, Result},
+        errors::{error, error_transaction, Result},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -426,9 +426,12 @@ macro_rules! impl_tx_wrapper {
             }
 
             fn append_witness(&mut self, witness: Witness) -> Result<usize> {
-                let new_witnesses_size = padded_len_usize(calculate_witnesses_size(
+                let witness_size = calculate_witnesses_size(
                     self.tx.witnesses().iter().chain(std::iter::once(&witness)),
-                )) as u64;
+                );
+                let new_witnesses_size = padded_len_usize(witness_size)
+                    .ok_or(error!(Other, "witness size overflow: {witness_size}"))?
+                    as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {
                     Err(error_transaction!(
