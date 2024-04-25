@@ -43,8 +43,14 @@ fn parse_program_abi(abi_source: &str) -> Result<Abi> {
     let source = Source::parse(abi_source).expect("failed to parse JSON ABI");
 
     let json_abi_str = source.get().expect("failed to parse JSON ABI from string");
-    let abi = FullProgramABI::from_json_abi(&json_abi_str)?;
+    let abi = FullProgramABI::from_json_abi(&json_abi_str).map_err(|e| {
+        error!(
+            "{} {}",
+            "malformed `abi`. Did you use `forc` to create it?: ", e
+        )
+    })?;
     let path = source.path();
+
     Ok(Abi { path, abi })
 }
 
