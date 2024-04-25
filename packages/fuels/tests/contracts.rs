@@ -1796,7 +1796,6 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn test_reentrant_calls() -> Result<()> {
     setup_program_test!(

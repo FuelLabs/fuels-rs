@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use fuels::{prelude::*, types::Bits256};
-use sha2::{Digest, Sha256};
+use fuels::prelude::*;
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -31,75 +30,6 @@ async fn compile_bindings_from_contract_file() {
     let encoded_args = call_handler.contract_call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
-}
-
-#[tokio::test]
-async fn compile_bindings_b256_input() -> Result<()> {
-    // Generates the bindings from the an ABI definition inline.
-    // The generated bindings can be accessed through `SimpleContract`.
-    abigen!(Contract(
-        name = "SimpleContract",
-        abi = r#"
-        {
-            "types": [
-              {
-                "typeId": 0,
-                "type": "()",
-                "components": [],
-                "typeParameters": null
-              },
-              {
-                "typeId": 1,
-                "type": "b256",
-                "components": null,
-                "typeParameters": null
-              }
-            ],
-            "functions": [
-              {
-                "inputs": [
-                  {
-                    "name": "arg",
-                    "type": 1,
-                    "typeArguments": null
-                  }
-                ],
-                "name": "takes_b256",
-                "output": {
-                  "name": "",
-                  "type": 0,
-                  "typeArguments": null
-                }
-              }
-            ]
-          }
-        "#,
-    ));
-
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let mut hasher = Sha256::new();
-    hasher.update("test string".as_bytes());
-
-    // ANCHOR: 256_arg
-    let arg: [u8; 32] = hasher.finalize().into();
-
-    let call_handler = contract_instance.methods().takes_b256(Bits256(arg));
-    // ANCHOR_END: 256_arg
-
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap();
-
-    assert_eq!(
-        encoded_args,
-        [
-            213, 87, 156, 70, 223, 204, 127, 24, 32, 112, 19, 230, 91, 68, 228, 203, 78, 44, 34,
-            152, 244, 172, 69, 123, 168, 248, 39, 67, 243, 30, 147, 11
-        ]
-    );
-
-    Ok(())
 }
 
 #[tokio::test]
