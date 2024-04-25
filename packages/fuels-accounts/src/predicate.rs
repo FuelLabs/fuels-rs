@@ -26,11 +26,11 @@ impl Predicate {
         &self.address
     }
 
-    pub fn code(&self) -> &Vec<u8> {
+    pub fn code(&self) -> &[u8] {
         &self.code
     }
 
-    pub fn data(&self) -> &Vec<u8> {
+    pub fn data(&self) -> &[u8] {
         &self.data
     }
 

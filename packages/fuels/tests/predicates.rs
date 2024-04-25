@@ -695,8 +695,8 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
-        predicate.code().clone(),
-        predicate.data().clone(),
+        predicate.code().to_owned(),
+        predicate.data().to_owned(),
     );
 
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
