@@ -39,7 +39,18 @@ impl Source {
         if source.starts_with('{') || source.starts_with('[') || source.starts_with('\n') {
             return Ok(Source::String(source.to_owned()));
         }
-        let root = env::current_dir()?.canonicalize()?;
+
+        let current_dir = env::current_dir()
+            .map_err(|e| error!("unable to get current directory: ").combine(e))?;
+
+        let root = current_dir.canonicalize().map_err(|e| {
+            error!(
+                "unable to canonicalize current directory {}: ",
+                current_dir.display()
+            )
+            .combine(e)
+        })?;
+
         Ok(Source::with_root(root, source))
     }
 
@@ -62,12 +73,11 @@ impl Source {
         Source::Local(path.as_ref().into())
     }
 
-    /// Retrieves the source JSON of the artifact this will either read the JSON
-    /// from the file system or retrieve a contract ABI from the network
-    /// depending on the source type.
+    /// Retrieves the source JSON of the artifact. Either read the JSON
+    /// from the file system or the provided `String`.
     pub fn get(&self) -> Result<String> {
         match self {
-            Source::Local(path) => get_local_contract(path),
+            Source::Local(path) => read_abi(path),
             Source::String(abi) => Ok(abi.clone()),
         }
     }
@@ -80,17 +90,17 @@ impl Source {
     }
 }
 
-fn get_local_contract(path: &Path) -> Result<String> {
+fn read_abi(path: &Path) -> Result<String> {
     let path = if path.is_relative() {
         let absolute_path = path.canonicalize().map_err(|e| {
             error!(
-                "unable to canonicalize file from working dir {} with path {}",
+                "unable to canonicalize file from working dir {} with path {}: {}",
                 env::current_dir()
                     .map(|cwd| cwd.display().to_string())
                     .unwrap_or_else(|err| format!("??? ({err})")),
-                path.display()
+                path.display(),
+                e
             )
-            .combine(e)
         })?;
         Cow::Owned(absolute_path)
     } else {
@@ -99,11 +109,12 @@ fn get_local_contract(path: &Path) -> Result<String> {
 
     let json = fs::read_to_string(&path).map_err(|e| {
         error!(
-            "failed to read artifact JSON file with path {}",
-            path.display()
+            "failed to read `abi` file with path {}: {}",
+            path.display(),
+            e
         )
-        .combine(e)
     })?;
+
     Ok(json)
 }
 
