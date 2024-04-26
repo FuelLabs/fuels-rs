@@ -36,14 +36,18 @@ mod setup_program_test;
 pub fn abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);
 
-    Abigen::generate(targets.into(), false).unwrap().into()
+    Abigen::generate(targets.into(), false)
+        .expect("abigen generation failed")
+        .into()
 }
 
 #[proc_macro]
 pub fn wasm_abigen(input: TokenStream) -> TokenStream {
     let targets = parse_macro_input!(input as MacroAbigenTargets);
 
-    Abigen::generate(targets.into(), true).unwrap().into()
+    Abigen::generate(targets.into(), true)
+        .expect("abigen generation failed")
+        .into()
 }
 
 /// Used to reduce boilerplate in integration tests.

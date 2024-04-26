@@ -1,4 +1,4 @@
-use fuels_code_gen::{AbigenTarget, ProgramType};
+use fuels_code_gen::{utils::parse_program_abi, Abi, AbigenTarget, ProgramType};
 use syn::{
     parse::{Parse, ParseStream},
     Result,
@@ -16,7 +16,7 @@ impl From<MacroAbigenTarget> for AbigenTarget {
     fn from(macro_target: MacroAbigenTarget) -> Self {
         AbigenTarget {
             name: macro_target.name,
-            abi: macro_target.abi,
+            source: macro_target.source,
             program_type: macro_target.program_type,
         }
     }
@@ -27,8 +27,8 @@ impl From<MacroAbigenTarget> for AbigenTarget {
 #[derive(Debug)]
 pub(crate) struct MacroAbigenTarget {
     pub(crate) name: String,
-    pub(crate) abi: String,
-    pub(crate) program_type: ProgramType,
+    pub(crate) source: Abi,
+    pub program_type: ProgramType,
 }
 
 pub(crate) struct MacroAbigenTargets {
@@ -54,11 +54,14 @@ impl MacroAbigenTarget {
         name_values.validate_has_no_other_names(&["name", "abi"])?;
 
         let name = name_values.get_as_lit_str("name")?.value();
-        let abi = name_values.get_as_lit_str("abi")?.value();
+        let abi_lit_str = name_values.get_as_lit_str("abi")?;
+
+        let source = parse_program_abi(&abi_lit_str.value())
+            .map_err(|e| syn::Error::new(abi_lit_str.span(), e.to_string()))?;
 
         Ok(Self {
             name,
-            abi,
+            source,
             program_type,
         })
     }
