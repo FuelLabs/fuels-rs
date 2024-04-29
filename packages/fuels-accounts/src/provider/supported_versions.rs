@@ -12,9 +12,7 @@ pub(crate) struct VersionCompatibility {
     pub(crate) is_patch_supported: bool,
 }
 
-pub(crate) fn check_fuel_core_version_compatibility(
-    network_version: Version,
-) -> VersionCompatibility {
+pub(crate) fn compare_node_compatibility(network_version: Version) -> VersionCompatibility {
     let supported_version = get_supported_fuel_core_version();
     check_version_compatibility(network_version, supported_version)
 }

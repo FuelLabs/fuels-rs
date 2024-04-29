@@ -17,10 +17,12 @@ use fuels_core::types::errors::{error, Error, Result};
 
 use crate::provider::{retry_util, RetryConfig};
 
+use super::supported_versions::{self, VersionCompatibility};
+
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RequestError {
-    #[error(transparent)]
-    IO(#[from] io::Error),
+    #[error("io error: {0}")]
+    IO(String),
 }
 
 type RequestResult<T> = std::result::Result<T, RequestError>;
@@ -36,18 +38,47 @@ pub(crate) struct RetryableClient {
     client: FuelClient,
     url: String,
     retry_config: RetryConfig,
+    prepend_warning: Option<String>,
 }
 
 impl RetryableClient {
-    pub(crate) fn new(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
+    pub(crate) async fn connect(url: impl AsRef<str>, retry_config: RetryConfig) -> Result<Self> {
         let url = url.as_ref().to_string();
         let client = FuelClient::new(&url).map_err(|e| error!(Provider, "{e}"))?;
+
+        let node_info = client.node_info().await?;
+        let warning = Self::version_compatibility_warning(&node_info)?;
 
         Ok(Self {
             client,
             retry_config,
             url,
+            prepend_warning: warning,
         })
+    }
+
+    fn version_compatibility_warning(node_info: &NodeInfo) -> Result<Option<String>> {
+        let node_version = node_info
+            .node_version
+            .parse::<semver::Version>()
+            .map_err(|e| error!(Provider, "could not parse Fuel client version: {}", e))?;
+
+        let VersionCompatibility {
+            supported_version,
+            is_major_supported,
+            is_minor_supported,
+            ..
+        } = supported_versions::compare_node_compatibility(node_version.clone());
+
+        let msg = if !is_major_supported || !is_minor_supported {
+            Some(format!(
+                "warning: the fuel node version to which this provider is connected has a semver incompatible version from the one the SDK was developed against. Connected node version: {node_version}, supported version: {supported_version}",
+            ))
+        } else {
+            None
+        };
+
+        Ok(msg)
     }
 
     pub(crate) fn url(&self) -> &str {
@@ -58,57 +89,64 @@ impl RetryableClient {
         self.retry_config = retry_config;
     }
 
-    async fn our_retry<T, Fut>(&self, action: impl Fn() -> Fut) -> RequestResult<T>
+    async fn wrap<T, Fut>(&self, action: impl Fn() -> Fut) -> RequestResult<T>
     where
         Fut: Future<Output = io::Result<T>>,
     {
-        Ok(retry_util::retry(action, &self.retry_config, |result| result.is_err()).await?)
+        retry_util::retry(action, &self.retry_config, |result| result.is_err())
+            .await
+            .map_err(|e| {
+                let msg = if let Some(warning) = &self.prepend_warning {
+                    format!("{warning}. {e}")
+                } else {
+                    e.to_string()
+                };
+                RequestError::IO(msg)
+            })
     }
 
     // DELEGATION START
     pub async fn health(&self) -> RequestResult<bool> {
-        self.our_retry(|| self.client.health()).await
+        self.wrap(|| self.client.health()).await
     }
 
     pub async fn transaction(&self, id: &TxId) -> RequestResult<Option<TransactionResponse>> {
-        self.our_retry(|| self.client.transaction(id)).await
+        self.wrap(|| self.client.transaction(id)).await
     }
 
     pub(crate) async fn chain_info(&self) -> RequestResult<ChainInfo> {
-        self.our_retry(|| self.client.chain_info()).await
+        self.wrap(|| self.client.chain_info()).await
     }
 
     pub async fn await_transaction_commit(&self, id: &TxId) -> RequestResult<TransactionStatus> {
-        self.our_retry(|| self.client.await_transaction_commit(id))
-            .await
+        self.wrap(|| self.client.await_transaction_commit(id)).await
     }
 
     pub async fn submit_and_await_commit(
         &self,
         tx: &Transaction,
     ) -> RequestResult<TransactionStatus> {
-        self.our_retry(|| self.client.submit_and_await_commit(tx))
-            .await
+        self.wrap(|| self.client.submit_and_await_commit(tx)).await
     }
 
     pub async fn submit(&self, tx: &Transaction) -> RequestResult<TransactionId> {
-        self.our_retry(|| self.client.submit(tx)).await
+        self.wrap(|| self.client.submit(tx)).await
     }
 
     pub async fn transaction_status(&self, id: &TxId) -> RequestResult<TransactionStatus> {
-        self.our_retry(|| self.client.transaction_status(id)).await
+        self.wrap(|| self.client.transaction_status(id)).await
     }
 
     pub async fn node_info(&self) -> RequestResult<NodeInfo> {
-        self.our_retry(|| self.client.node_info()).await
+        self.wrap(|| self.client.node_info()).await
     }
 
     pub async fn latest_gas_price(&self) -> RequestResult<LatestGasPrice> {
-        self.our_retry(|| self.client.latest_gas_price()).await
+        self.wrap(|| self.client.latest_gas_price()).await
     }
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> RequestResult<EstimateGasPrice> {
-        self.our_retry(|| self.client.estimate_gas_price(block_horizon))
+        self.wrap(|| self.client.estimate_gas_price(block_horizon))
             .await
             .map(Into::into)
     }
@@ -117,7 +155,7 @@ impl RetryableClient {
         &self,
         tx: &[Transaction],
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.our_retry(|| self.client.dry_run(tx)).await
+        self.wrap(|| self.client.dry_run(tx)).await
     }
 
     pub async fn dry_run_opt(
@@ -125,7 +163,7 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.our_retry(|| self.client.dry_run_opt(tx, utxo_validation))
+        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation))
             .await
     }
 
@@ -135,7 +173,7 @@ impl RetryableClient {
         asset_id: Option<&AssetId>,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<Coin, String>> {
-        self.our_retry(move || self.client.coins(owner, asset_id, request.clone()))
+        self.wrap(move || self.client.coins(owner, asset_id, request.clone()))
             .await
     }
 
@@ -145,7 +183,7 @@ impl RetryableClient {
         spend_query: Vec<(AssetId, u64, Option<u32>)>,
         excluded_ids: Option<(Vec<UtxoId>, Vec<Nonce>)>,
     ) -> RequestResult<Vec<Vec<CoinType>>> {
-        self.our_retry(move || {
+        self.wrap(move || {
             self.client
                 .coins_to_spend(owner, spend_query.clone(), excluded_ids.clone())
         })
@@ -153,8 +191,7 @@ impl RetryableClient {
     }
 
     pub async fn balance(&self, owner: &Address, asset_id: Option<&AssetId>) -> RequestResult<u64> {
-        self.our_retry(|| self.client.balance(owner, asset_id))
-            .await
+        self.wrap(|| self.client.balance(owner, asset_id)).await
     }
 
     pub async fn contract_balance(
@@ -162,8 +199,7 @@ impl RetryableClient {
         id: &ContractId,
         asset: Option<&AssetId>,
     ) -> RequestResult<u64> {
-        self.our_retry(|| self.client.contract_balance(id, asset))
-            .await
+        self.wrap(|| self.client.contract_balance(id, asset)).await
     }
 
     pub async fn contract_balances(
@@ -171,7 +207,7 @@ impl RetryableClient {
         contract: &ContractId,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<ContractBalance, String>> {
-        self.our_retry(|| self.client.contract_balances(contract, request.clone()))
+        self.wrap(|| self.client.contract_balances(contract, request.clone()))
             .await
     }
 
@@ -180,7 +216,7 @@ impl RetryableClient {
         owner: &Address,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<Balance, String>> {
-        self.our_retry(|| self.client.balances(owner, request.clone()))
+        self.wrap(|| self.client.balances(owner, request.clone()))
             .await
     }
 
@@ -188,7 +224,7 @@ impl RetryableClient {
         &self,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<TransactionResponse, String>> {
-        self.our_retry(|| self.client.transactions(request.clone()))
+        self.wrap(|| self.client.transactions(request.clone()))
             .await
     }
 
@@ -197,7 +233,7 @@ impl RetryableClient {
         owner: &Address,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<TransactionResponse, String>> {
-        self.our_retry(|| self.client.transactions_by_owner(owner, request.clone()))
+        self.wrap(|| self.client.transactions_by_owner(owner, request.clone()))
             .await
     }
 
@@ -206,7 +242,7 @@ impl RetryableClient {
         blocks_to_produce: u32,
         start_timestamp: Option<u64>,
     ) -> RequestResult<BlockHeight> {
-        self.our_retry(|| {
+        self.wrap(|| {
             self.client
                 .produce_blocks(blocks_to_produce, start_timestamp)
         })
@@ -214,18 +250,18 @@ impl RetryableClient {
     }
 
     pub async fn block(&self, id: &BlockId) -> RequestResult<Option<Block>> {
-        self.our_retry(|| self.client.block(id)).await
+        self.wrap(|| self.client.block(id)).await
     }
 
     pub async fn block_by_height(&self, height: BlockHeight) -> RequestResult<Option<Block>> {
-        self.our_retry(|| self.client.block_by_height(height)).await
+        self.wrap(|| self.client.block_by_height(height)).await
     }
 
     pub async fn blocks(
         &self,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<Block, String>> {
-        self.our_retry(|| self.client.blocks(request.clone())).await
+        self.wrap(|| self.client.blocks(request.clone())).await
     }
 
     pub async fn messages(
@@ -233,7 +269,7 @@ impl RetryableClient {
         owner: Option<&Address>,
         request: PaginationRequest<String>,
     ) -> RequestResult<PaginatedResult<Message, String>> {
-        self.our_retry(|| self.client.messages(owner, request.clone()))
+        self.wrap(|| self.client.messages(owner, request.clone()))
             .await
     }
 
@@ -245,7 +281,7 @@ impl RetryableClient {
         commit_block_id: Option<&BlockId>,
         commit_block_height: Option<BlockHeight>,
     ) -> RequestResult<Option<MessageProof>> {
-        self.our_retry(|| {
+        self.wrap(|| {
             self.client
                 .message_proof(transaction_id, nonce, commit_block_id, commit_block_height)
         })
