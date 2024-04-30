@@ -511,7 +511,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "provider: Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: io error: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
