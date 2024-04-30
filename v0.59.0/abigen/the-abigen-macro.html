@@ -1,0 +1,512 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>The abigen! macro - The Fuel Rust SDK</title>
+        <!-- Custom HTML head -->
+        <meta content="text/html; charset=utf-8" http-equiv="Content-Type">
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="icon" href="../favicon.svg">
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script type="text/javascript">
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script type="text/javascript">
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script type="text/javascript">
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script type="text/javascript">
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded affix "><a href="../index.html">The Fuel Rust SDK</a></li><li class="chapter-item expanded "><a href="../getting-started.html"><strong aria-hidden="true">1.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="../connecting/index.html"><strong aria-hidden="true">2.</strong> Connecting to a Fuel node</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../connecting/external-node.html"><strong aria-hidden="true">2.1.</strong> Connecting to the Testnet or an external node</a></li><li class="chapter-item expanded "><a href="../connecting/short-lived.html"><strong aria-hidden="true">2.2.</strong> Running a short-lived Fuel node with the SDK</a></li><li class="chapter-item expanded "><a href="../connecting/rocksdb.html"><strong aria-hidden="true">2.3.</strong> RocksDB</a></li><li class="chapter-item expanded "><a href="../connecting/querying.html"><strong aria-hidden="true">2.4.</strong> Querying the blockchain</a></li><li class="chapter-item expanded "><a href="../connecting/retrying.html"><strong aria-hidden="true">2.5.</strong> Retrying upon errors</a></li></ol></li><li class="chapter-item expanded "><a href="../accounts.html"><strong aria-hidden="true">3.</strong> Accounts</a></li><li class="chapter-item expanded "><a href="../wallets/index.html"><strong aria-hidden="true">4.</strong> Managing wallets</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../wallets/private-keys.html"><strong aria-hidden="true">4.1.</strong> Creating a wallet from a private key</a></li><li class="chapter-item expanded "><a href="../wallets/mnemonic-wallet.html"><strong aria-hidden="true">4.2.</strong> Creating a wallet from mnemonic phrases</a></li><li class="chapter-item expanded "><a href="../wallets/access.html"><strong aria-hidden="true">4.3.</strong> Wallet Access</a></li><li class="chapter-item expanded "><a href="../wallets/encrypting-and-storing.html"><strong aria-hidden="true">4.4.</strong> Encrypting and storing wallets</a></li><li class="chapter-item expanded "><a href="../wallets/checking-balances-and-coins.html"><strong aria-hidden="true">4.5.</strong> Checking balances and coins</a></li><li class="chapter-item expanded "><a href="../wallets/test-wallets.html"><strong aria-hidden="true">4.6.</strong> Setting up test wallets</a></li><li class="chapter-item expanded "><a href="../wallets/signing.html"><strong aria-hidden="true">4.7.</strong> Signing</a></li></ol></li><li class="chapter-item expanded "><a href="../abigen/index.html"><strong aria-hidden="true">5.</strong> Generating bindings with abigen!</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../abigen/the-json-abi-file.html"><strong aria-hidden="true">5.1.</strong> The JSON ABI file</a></li><li class="chapter-item expanded "><a href="../abigen/the-abigen-macro.html" class="active"><strong aria-hidden="true">5.2.</strong> The abigen! macro</a></li></ol></li><li class="chapter-item expanded "><a href="../deploying/index.html"><strong aria-hidden="true">6.</strong> Deploying contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../deploying/configurable-constants.html"><strong aria-hidden="true">6.1.</strong> Configurable constants</a></li><li class="chapter-item expanded "><a href="../deploying/storage-slots.html"><strong aria-hidden="true">6.2.</strong> Storage slots</a></li><li class="chapter-item expanded "><a href="../deploying/interacting-with-contracts.html"><strong aria-hidden="true">6.3.</strong> Interacting with contracts</a></li><li class="chapter-item expanded "><a href="../deploying/the-fuelvm-binary-file.html"><strong aria-hidden="true">6.4.</strong> The FuelVM Binary file</a></li></ol></li><li class="chapter-item expanded "><a href="../calling-contracts/index.html"><strong aria-hidden="true">7.</strong> Calling contracts</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../calling-contracts/calls-with-different-wallets.html"><strong aria-hidden="true">7.1.</strong> Connecting wallets</a></li><li class="chapter-item expanded "><a href="../calling-contracts/tx-policies.html"><strong aria-hidden="true">7.2.</strong> Transaction policies</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-params.html"><strong aria-hidden="true">7.3.</strong> Call parameters</a></li><li class="chapter-item expanded "><a href="../calling-contracts/custom-asset-transfer.html"><strong aria-hidden="true">7.4.</strong> Custom asset transfer</a></li><li class="chapter-item expanded "><a href="../calling-contracts/call-response.html"><strong aria-hidden="true">7.5.</strong> Call response</a></li><li class="chapter-item expanded "><a href="../calling-contracts/logs.html"><strong aria-hidden="true">7.6.</strong> Logs</a></li><li class="chapter-item expanded "><a href="../calling-contracts/variable-outputs.html"><strong aria-hidden="true">7.7.</strong> Variable outputs and messages</a></li><li class="chapter-item expanded "><a href="../calling-contracts/read-only.html"><strong aria-hidden="true">7.8.</strong> Read-only calls</a></li><li class="chapter-item expanded "><a href="../calling-contracts/other-contracts.html"><strong aria-hidden="true">7.9.</strong> Calling other contracts</a></li><li class="chapter-item expanded "><a href="../calling-contracts/multicalls.html"><strong aria-hidden="true">7.10.</strong> Multiple contract calls</a></li><li class="chapter-item expanded "><a href="../calling-contracts/tx-dependency-estimation.html"><strong aria-hidden="true">7.11.</strong> Transaction dependency estimation</a></li><li class="chapter-item expanded "><a href="../calling-contracts/cost-estimation.html"><strong aria-hidden="true">7.12.</strong> Estimating cost</a></li><li class="chapter-item expanded "><a href="../calling-contracts/low-level-calls.html"><strong aria-hidden="true">7.13.</strong> Low-level calls</a></li></ol></li><li class="chapter-item expanded "><a href="../running-scripts.html"><strong aria-hidden="true">8.</strong> Running scripts</a></li><li class="chapter-item expanded "><a href="../predicates/index.html"><strong aria-hidden="true">9.</strong> Predicates</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../predicates/send-spend-predicate.html"><strong aria-hidden="true">9.1.</strong> Signatures example</a></li></ol></li><li class="chapter-item expanded "><a href="../custom-transactions/index.html"><strong aria-hidden="true">10.</strong> Custom transactions</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../custom-transactions/transaction-builders.html"><strong aria-hidden="true">10.1.</strong> Transaction builders</a></li><li class="chapter-item expanded "><a href="../custom-transactions/custom-calls.html"><strong aria-hidden="true">10.2.</strong> Custom contract and script calls</a></li></ol></li><li class="chapter-item expanded "><a href="../types/index.html"><strong aria-hidden="true">11.</strong> Types</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../types/bytes32.html"><strong aria-hidden="true">11.1.</strong> Bytes32</a></li><li class="chapter-item expanded "><a href="../types/address.html"><strong aria-hidden="true">11.2.</strong> Address</a></li><li class="chapter-item expanded "><a href="../types/contract-id.html"><strong aria-hidden="true">11.3.</strong> ContractId</a></li><li class="chapter-item expanded "><a href="../types/asset-id.html"><strong aria-hidden="true">11.4.</strong> AssetId</a></li><li class="chapter-item expanded "><a href="../types/bech32.html"><strong aria-hidden="true">11.5.</strong> Bech32</a></li><li class="chapter-item expanded "><a href="../types/custom_types.html"><strong aria-hidden="true">11.6.</strong> Structs and enums</a></li><li class="chapter-item expanded "><a href="../types/string.html"><strong aria-hidden="true">11.7.</strong> String</a></li><li class="chapter-item expanded "><a href="../types/bits256.html"><strong aria-hidden="true">11.8.</strong> Bits256</a></li><li class="chapter-item expanded "><a href="../types/bytes.html"><strong aria-hidden="true">11.9.</strong> Bytes</a></li><li class="chapter-item expanded "><a href="../types/B512.html"><strong aria-hidden="true">11.10.</strong> B512</a></li><li class="chapter-item expanded "><a href="../types/evm_address.html"><strong aria-hidden="true">11.11.</strong> EvmAddress</a></li><li class="chapter-item expanded "><a href="../types/vectors.html"><strong aria-hidden="true">11.12.</strong> Vectors</a></li><li class="chapter-item expanded "><a href="../types/conversion.html"><strong aria-hidden="true">11.13.</strong> Converting types</a></li></ol></li><li class="chapter-item expanded "><a href="../codec/index.html"><strong aria-hidden="true">12.</strong> Codec</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../codec/encoding.html"><strong aria-hidden="true">12.1.</strong> Encoding</a></li><li class="chapter-item expanded "><a href="../codec/decoding.html"><strong aria-hidden="true">12.2.</strong> Decoding</a></li></ol></li><li class="chapter-item expanded "><a href="../reference.html"><strong aria-hidden="true">13.</strong> API Reference</a></li><li class="chapter-item expanded "><a href="../testing/index.html"><strong aria-hidden="true">14.</strong> Testing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../testing/basics.html"><strong aria-hidden="true">14.1.</strong> Testing basics</a></li><li class="chapter-item expanded "><a href="../testing/the-setup-program-test-macro.html"><strong aria-hidden="true">14.2.</strong> The setup_program_test! macro</a></li><li class="chapter-item expanded "><a href="../testing/chains.html"><strong aria-hidden="true">14.3.</strong> Tweaking the blockchain</a></li></ol></li><li class="chapter-item expanded "><a href="../cookbook/index.html"><strong aria-hidden="true">15.</strong> Cookbook</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../cookbook/custom-chain.html"><strong aria-hidden="true">15.1.</strong> Custom consensus parameters</a></li><li class="chapter-item expanded "><a href="../cookbook/deposit-and-withdraw.html"><strong aria-hidden="true">15.2.</strong> Deposit and Withdraw</a></li><li class="chapter-item expanded "><a href="../cookbook/transfer-all-assets.html"><strong aria-hidden="true">15.3.</strong> Transfer all assets</a></li></ol></li><li class="chapter-item expanded "><a href="../debugging/index.html"><strong aria-hidden="true">16.</strong> Debugging</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../debugging/function-selector.html"><strong aria-hidden="true">16.1.</strong> The Function selector</a></li></ol></li><li class="chapter-item expanded "><a href="../glossary.html"><strong aria-hidden="true">17.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../contributing/CONTRIBUTING.html"><strong aria-hidden="true">18.</strong> Contributing</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../contributing/tests-structure.html"><strong aria-hidden="true">18.1.</strong> Integration tests structure</a></li></ol></li><li class="chapter-item expanded "><a href="../cli/index.html"><strong aria-hidden="true">19.</strong> Command Line Interfaces</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../cli/fuels-abi-cli.html"><strong aria-hidden="true">19.1.</strong> fuels-abi-cli</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light (default)</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">The Fuel Rust SDK</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/FuelLabs/fuels-rs" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script type="text/javascript">
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="abigen"><a class="header" href="#abigen">abigen</a></h1>
+<!-- This section explain the `abigen!` macro -->
+<!-- abigen:example:start -->
+<p><code>abigen!</code> is a procedural macro -- it generates code. It accepts inputs in the format of:</p>
+<pre><code class="language-text">ProgramType(name=&quot;MyProgramType&quot;, abi=&quot;my_program-abi.json&quot;)...
+</code></pre>
+<p>where:</p>
+<ul>
+<li>
+<p><code>ProgramType</code> is one of: <code>Contract</code>, <code>Script</code> or <code>Predicate</code>,</p>
+</li>
+<li>
+<p><code>name</code> is the name that will be given to the generated bindings,</p>
+</li>
+<li>
+<p><code>abi</code> is either a path to the JSON ABI file or its actual contents.</p>
+</li>
+</ul>
+<!-- abigen:example:end -->
+<hr />
+<p>So, an <code>abigen!</code> which generates bindings for two contracts and one script looks like this:</p>
+<pre><code class="language-rust ignore">        abigen!(
+            Contract(name=&quot;ContractA&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_a/out/debug/contract_a-abi.json&quot;),
+            Contract(name=&quot;ContractB&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_b/out/debug/contract_b-abi.json&quot;),
+            Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json&quot;),
+            Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;),
+        );
+</code></pre>
+<h2 id="how-does-the-generated-code-look"><a class="header" href="#how-does-the-generated-code-look">How does the generated code look?</a></h2>
+<p>A rough overview:</p>
+<pre><code class="language-rust ignore">pub mod abigen_bindings {
+    pub mod contract_a_mod {
+        struct SomeCustomStruct{/*...*/};
+        // other custom types used in the contract
+
+        struct ContractA {/*...*/};
+        impl ContractA {/*...*/};
+        // ...
+    }
+    pub mod contract_b_mod {
+        // ...
+    }
+    pub mod my_script_mod {
+        // ...
+    }
+    pub mod my_predicate_mod{
+        // ...
+    }
+    pub mod shared_types{
+        // ...
+    }
+}
+
+pub use contract_a_mod::{/*..*/};
+pub use contract_b_mod::{/*..*/};
+pub use my_predicate_mod::{/*..*/};
+pub use shared_types::{/*..*/};
+</code></pre>
+<p>Each <code>ProgramType</code> gets its own <code>mod</code> based on the <code>name</code> given in the <code>abigen!</code>. Inside the respective mods, the custom types used by that program are generated, and the bindings through which the actual calls can be made.</p>
+<p>One extra <code>mod</code> called <code>shared_types</code> is generated if <code>abigen!</code> detects that the given programs share types. Instead of each <code>mod</code> regenerating the type for itself, the type is lifted out into the <code>shared_types</code> module, generated only once, and then shared between all program bindings that use it. Reexports are added to each mod so that even if a type is deemed shared, you can still access it as though each <code>mod</code> had generated the type for itself (i.e. <code>my_contract_mod::SharedType</code>).</p>
+<p>A type is deemed shared if its name and definition match up. This can happen either because you've used the same library (a custom one or a type from the <code>stdlib</code>) or because you've happened to define the exact same type.</p>
+<p>Finally, <code>pub use</code> statements are inserted, so you don't have to fully qualify the generated types. To avoid conflict, only types that have unique names will get a <code>pub use</code> statement. If you find <code>rustc</code> can't find your type, it might just be that there is another generated type with the same name. To fix the issue just qualify the path by doing <code>abigen_bindings::whatever_contract_mod::TheType</code>.</p>
+<blockquote>
+<p><strong>Note:</strong>
+It is <strong>highly</strong> encouraged that you generate all your bindings in one <code>abigen!</code> call. Doing it in this manner will allow type sharing and avoid name collisions you'd normally get when calling <code>abigen!</code> multiple times inside the same namespace. If you choose to proceed otherwise, keep in mind the generated code overview presented above and appropriately separate the <code>abigen!</code> calls into different modules to resolve the collision.</p>
+</blockquote>
+<h3 id="type-paths"><a class="header" href="#type-paths">Type paths</a></h3>
+<p>Normally when using types from libraries in your contract, script or predicate, they'll be generated directly under the main <code>mod</code> of your program bindings, i.e. a type in a contract binding <code>MyContract</code> imported from a library <code>some_library</code> would be generated under <code>abigen_bindings::my_contract_mod::SomeLibraryType</code>.</p>
+<p>This can cause problems if you happen to have two types with the same name in different libraries of your program.</p>
+<p>This behavior can be changed to include the library path by compiling your Sway project with the following:</p>
+<pre><code class="language-shell">forc build --json-abi-with-callpaths
+</code></pre>
+<p>Now the type from the previous example will be generated under <code>abigen_bindings::my_contract_mod::some_library::SomeLibraryType</code>.</p>
+<p>This might only become relevant if your type isn't reexported. This can happen, as explained previously, if your type does not have a unique name across all bindings inside one <code>abigen!</code> call. You'll then need to fully qualify the access to it.</p>
+<p>Including type paths will eventually become the default and the flag will be removed.</p>
+<h2 id="using-the-bindings"><a class="header" href="#using-the-bindings">Using the bindings</a></h2>
+<p>Let's look at a contract with two methods: <code>initialize_counter(arg: u64) -&gt; u64</code> and <code>increment_counter(arg: u64) -&gt; u64</code>, with the following JSON ABI:</p>
+<pre><code class="language-json ignore">{
+  &quot;types&quot;: [
+    {
+      &quot;typeId&quot;: 0,
+      &quot;type&quot;: &quot;u64&quot;,
+      &quot;components&quot;: null,
+      &quot;typeParameters&quot;: null
+    }
+  ],
+  &quot;functions&quot;: [
+    {
+      &quot;inputs&quot;: [
+        {
+          &quot;name&quot;: &quot;value&quot;,
+          &quot;type&quot;: 0,
+          &quot;typeArguments&quot;: null
+        }
+      ],
+      &quot;name&quot;: &quot;initialize_counter&quot;,
+      &quot;output&quot;: {
+        &quot;name&quot;: &quot;&quot;,
+        &quot;type&quot;: 0,
+        &quot;typeArguments&quot;: null
+      }
+    },
+    {
+      &quot;inputs&quot;: [
+        {
+          &quot;name&quot;: &quot;value&quot;,
+          &quot;type&quot;: 0,
+          &quot;typeArguments&quot;: null
+        }
+      ],
+      &quot;name&quot;: &quot;increment_counter&quot;,
+      &quot;output&quot;: {
+        &quot;name&quot;: &quot;&quot;,
+        &quot;type&quot;: 0,
+        &quot;typeArguments&quot;: null
+      }
+    }
+  ]
+}
+</code></pre>
+<p>By doing this:</p>
+<pre><code class="language-rust ignore">            use fuels::prelude::*;
+            // Replace with your own JSON abi path (relative to the root of your crate)
+            abigen!(Contract(
+                name = &quot;MyContractName&quot;,
+                abi = &quot;examples/rust_bindings/src/abi.json&quot;
+            ));
+</code></pre>
+<p>or this:</p>
+<pre><code class="language-rust ignore">            use fuels::prelude::*;
+            abigen!(Contract(
+                name = &quot;MyContract&quot;,
+                abi = r#&quot;
+            {
+                &quot;types&quot;: [
+                  {
+                    &quot;typeId&quot;: 0,
+                    &quot;type&quot;: &quot;u64&quot;,
+                    &quot;components&quot;: null,
+                    &quot;typeParameters&quot;: null
+                  }
+                ],
+                &quot;functions&quot;: [
+                  {
+                    &quot;inputs&quot;: [
+                      {
+                        &quot;name&quot;: &quot;value&quot;,
+                        &quot;type&quot;: 0,
+                        &quot;typeArguments&quot;: null
+                      }
+                    ],
+                    &quot;name&quot;: &quot;initialize_counter&quot;,
+                    &quot;output&quot;: {
+                      &quot;name&quot;: &quot;&quot;,
+                      &quot;type&quot;: 0,
+                      &quot;typeArguments&quot;: null
+                    }
+                  },
+                  {
+                    &quot;inputs&quot;: [
+                      {
+                        &quot;name&quot;: &quot;value&quot;,
+                        &quot;type&quot;: 0,
+                        &quot;typeArguments&quot;: null
+                      }
+                    ],
+                    &quot;name&quot;: &quot;increment_counter&quot;,
+                    &quot;output&quot;: {
+                      &quot;name&quot;: &quot;&quot;,
+                      &quot;type&quot;: 0,
+                      &quot;typeArguments&quot;: null
+                    }
+                  }
+                ]
+              }
+            &quot;#
+            ));
+</code></pre>
+<p>you'll generate this (shortened for brevity's sake):</p>
+<pre><code class="language-rust ignore">pub mod abigen_bindings {
+    pub mod my_contract_mod {
+        use ::fuels::{
+            accounts::{Account, ViewOnlyAccount},
+            core::{
+                codec,
+                traits::{Parameterize, Tokenizable},
+                Configurables,
+            },
+            programs::{
+                contract::{self, ContractCallHandler},
+                logs::{self, LogDecoder},
+            },
+            types::{bech32::Bech32ContractId, errors::Result, AssetId},
+        };
+
+        pub struct MyContract&lt;T: Account&gt; {
+            contract_id: Bech32ContractId,
+            account: T,
+            log_decoder: LogDecoder,
+        }
+        impl&lt;T: Account&gt; MyContract&lt;T&gt; {
+            pub fn new(
+                contract_id: impl ::core::convert::Into&lt;Bech32ContractId&gt;,
+                account: T,
+            ) -&gt; Self {
+                let contract_id: Bech32ContractId = contract_id.into();
+                let log_decoder = LogDecoder::new(logs::log_formatters_lookup(
+                    vec![],
+                    contract_id.clone().into(),
+                ));
+                Self {
+                    contract_id,
+                    account,
+                    log_decoder,
+                }
+            }
+            pub fn contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
+                &amp;self.contract_id
+            }
+            pub fn account(&amp;self) -&gt; T {
+                self.account.clone()
+            }
+            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; MyContract&lt;U&gt; {
+                MyContract {
+                    contract_id: self.contract_id.clone(),
+                    account,
+                    log_decoder: self.log_decoder.clone(),
+                }
+            }
+            pub async fn get_balances(&amp;self) -&gt; Result&lt;::std::collections::HashMap&lt;AssetId, u64&gt;&gt; {
+                ViewOnlyAccount::try_provider(&amp;self.account)?
+                    .get_contract_balances(&amp;self.contract_id)
+                    .await
+                    .map_err(::std::convert::Into::into)
+            }
+            pub fn methods(&amp;self) -&gt; MyContractMethods&lt;T&gt; {
+                MyContractMethods {
+                    contract_id: self.contract_id.clone(),
+                    account: self.account.clone(),
+                    log_decoder: self.log_decoder.clone(),
+                }
+            }
+        }
+        pub struct MyContractMethods&lt;T: Account&gt; {
+            contract_id: Bech32ContractId,
+            account: T,
+            log_decoder: LogDecoder,
+        }
+        impl&lt;T: Account&gt; MyContractMethods&lt;T&gt; {
+            #[doc = &quot;Calls the contract's `initialize_counter` function&quot;]
+            pub fn initialize_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
+                contract::method_hash(
+                    self.contract_id.clone(),
+                    self.account.clone(),
+                    codec::resolve_fn_selector(&quot;initialize_counter&quot;, &amp;[u64::param_type()]),
+                    &amp;[Tokenizable::into_token(value)],
+                    self.log_decoder.clone(),
+                    false,
+                    ABIEncoder::new(EncoderConfig::default()),
+                )
+            }
+            #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
+            pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
+                contract::method_hash(
+                    self.contract_id.clone(),
+                    self.account.clone(),
+                    codec::resolve_fn_selector(&quot;increment_counter&quot;, &amp;[u64::param_type()]),
+                    &amp;[value.into_token()],
+                    self.log_decoder.clone(),
+                    false,
+                    ABIEncoder::new(EncoderConfig::default()),
+                )
+            }
+        }
+        impl&lt;T: Account&gt; contract::SettableContract for MyContract&lt;T&gt; {
+            fn id(&amp;self) -&gt; Bech32ContractId {
+                self.contract_id.clone()
+            }
+            fn log_decoder(&amp;self) -&gt; LogDecoder {
+                self.log_decoder.clone()
+            }
+        }
+        #[derive(Clone, Debug, Default)]
+        pub struct MyContractConfigurables {
+            offsets_with_data: ::std::vec::Vec&lt;(u64, ::std::vec::Vec&lt;u8&gt;)&gt;,
+        }
+        impl MyContractConfigurables {
+            pub fn new() -&gt; Self {
+                ::std::default::Default::default()
+            }
+        }
+        impl From&lt;MyContractConfigurables&gt; for Configurables {
+            fn from(config: MyContractConfigurables) -&gt; Self {
+                Configurables::new(config.offsets_with_data)
+            }
+        }
+    }
+}
+pub use abigen_bindings::my_contract_mod::MyContract;
+pub use abigen_bindings::my_contract_mod::MyContractConfigurables;
+pub use abigen_bindings::my_contract_mod::MyContractMethods;
+</code></pre>
+<blockquote>
+<p><strong>Note:</strong> that is all <strong>generated</strong> code. No need to write any of that. Ever. The generated code might look different from one version to another, this is just an example to give you an idea of what it looks like.</p>
+</blockquote>
+<p>Then, you're able to use it to call the actual methods on the deployed contract:</p>
+<pre><code class="language-rust ignore">        // This will generate your contract's methods onto `MyContract`.
+        // This means an instance of `MyContract` will have access to all
+        // your contract's methods that are running on-chain!
+        abigen!(Contract(
+            name = &quot;MyContract&quot;,
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+        ));
+
+        // This is an instance of your contract which you can use to make calls to your functions
+        let contract_instance = MyContract::new(contract_id_2, wallet);
+
+        let response = contract_instance
+            .methods()
+            .initialize_counter(42) // Build the ABI call
+            .call() // Perform the network call
+            .await?;
+
+        assert_eq!(42, response.value);
+
+        let response = contract_instance
+            .methods()
+            .increment_counter(10)
+            .call()
+            .await?;
+
+        assert_eq!(52, response.value);
+</code></pre>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../abigen/the-json-abi-file.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+                            <a rel="next" href="../deploying/index.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../abigen/the-json-abi-file.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+                    <a rel="next" href="../deploying/index.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+        <script type="text/javascript">
+            window.playground_copyable = true;
+        </script>
+        <script src="../elasticlunr.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../mark.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../searcher.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../clipboard.min.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../highlight.js" type="text/javascript" charset="utf-8"></script>
+        <script src="../book.js" type="text/javascript" charset="utf-8"></script>
+
+        <!-- Custom JS scripts -->
+    </body>
+</html>
