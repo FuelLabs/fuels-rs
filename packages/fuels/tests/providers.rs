@@ -586,66 +586,6 @@ async fn test_get_gas_used() -> Result<()> {
 }
 
 #[tokio::test]
-async fn testnet_hello_world() -> Result<()> {
-    use rand::Rng;
-
-    // Note that this test might become flaky.
-    // This test depends on:
-    // 1. The testnet being up and running;
-    // 2. The testnet address being the same as the one in the test;
-    // 3. The hardcoded wallet having enough funds to pay for the transaction.
-    // This is a nice test to showcase the SDK interaction with
-    // the testnet. But, if it becomes too problematic, we should remove it.
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    ));
-
-    // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-5.fuel.network").await.unwrap();
-
-    // Setup the private key.
-    let secret =
-        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
-            .unwrap();
-
-    // Create the wallet.
-    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
-
-    let mut rng = rand::thread_rng();
-    let salt: [u8; 32] = rng.gen();
-    let configuration = LoadConfiguration::default().with_salt(salt);
-
-    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
-
-    let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        configuration,
-    )?
-    .deploy(&wallet, tx_policies)
-    .await?;
-
-    let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
-
-    let response = contract_methods
-        .initialize_counter(42)
-        .with_tx_policies(tx_policies)
-        .call()
-        .await?;
-
-    assert_eq!(42, response.value);
-
-    let response = contract_methods
-        .increment_counter(10)
-        .with_tx_policies(tx_policies)
-        .call()
-        .await?;
-
-    assert_eq!(52, response.value);
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
     let asset_id = AssetId::zeroed();
