@@ -1,20 +1,13 @@
-use fuel_tx::Output;
+use std::{default::Default, str::FromStr};
+
 use fuels::{
-    accounts::{predicate::Predicate, Account},
-    prelude::*,
-    types::{
-        coin::Coin,
-        message::Message,
-        transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+    core::{
+        codec::{ABIEncoder, EncoderConfig},
+        traits::Tokenizable,
     },
+    prelude::*,
+    types::{coin::Coin, coin_type::CoinType, input::Input, message::Message, output::Output},
 };
-use fuels_core::codec::EncoderConfig;
-use fuels_core::{
-    codec::ABIEncoder,
-    traits::Tokenizable,
-    types::{coin_type::CoinType, input::Input},
-};
-use std::default::Default;
 
 async fn assert_address_balance(
     address: &Bech32Address,
@@ -36,7 +29,7 @@ fn get_test_coins_and_messages(
     amount: u64,
     start_nonce: u64,
 ) -> (Vec<Coin>, Vec<Message>, AssetId) {
-    let asset_id = AssetId::default();
+    let asset_id = AssetId::zeroed();
     let coins = setup_single_asset_coins(address, asset_id, num_coins, amount);
     let messages = (0..num_messages)
         .map(|i| {
@@ -222,10 +215,15 @@ async fn pay_with_predicate() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
+        .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        192
+    );
 
     let response = contract_methods
         .initialize_counter(42) // Build the ABI call
@@ -234,7 +232,12 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 191);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        191
+    );
 
     Ok(())
 }
@@ -277,10 +280,15 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
 
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
     let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
+        .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 192);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        192
+    );
 
     let response = contract_methods
         .initialize_counter(42)
@@ -289,7 +297,12 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
-    assert_eq!(predicate.get_asset_balance(&BASE_ASSET_ID).await?, 191);
+    assert_eq!(
+        predicate
+            .get_asset_balance(provider.base_asset_id())
+            .await?,
+        191
+    );
 
     Ok(())
 }
@@ -332,7 +345,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         .force_transfer_to_contract(
             &contract_id,
             amount,
-            AssetId::default(),
+            AssetId::zeroed(),
             TxPolicies::default(),
         )
         .await?;
@@ -343,7 +356,7 @@ async fn predicate_contract_transfer() -> Result<()> {
         .await?;
     assert_eq!(contract_balances.len(), 1);
 
-    let random_asset_balance = contract_balances.get(&AssetId::default()).unwrap();
+    let random_asset_balance = contract_balances.get(&AssetId::zeroed()).unwrap();
     assert_eq!(*random_asset_balance, 300);
 
     Ok(())
@@ -376,8 +389,7 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
 
     let amount = 1000;
     let base_layer_address =
-        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
-            .expect("Invalid address.");
+        Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")?;
     let base_layer_address = Bech32Address::from(base_layer_address);
 
     let (tx_id, msg_nonce, _receipts) = predicate
@@ -391,10 +403,11 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
         .try_provider()?
         .get_message_proof(&tx_id, &msg_nonce, None, Some(2))
         .await?
-        .expect("Failed to retrieve message proof.");
+        .expect("failed to retrieve message proof");
 
     assert_eq!(proof.amount, amount);
     assert_eq!(proof.recipient, base_layer_address);
+
     Ok(())
 }
 
@@ -513,14 +526,15 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     .deploy(&predicate, TxPolicies::default())
     .await?;
     println!("Contract deployed @ {contract_id}");
+
     let contract_methods = MyContract::new(contract_id.clone(), predicate.clone()).methods();
 
-    let tx_policies = TxPolicies::default().with_gas_price(1);
+    let tx_policies = TxPolicies::default().with_tip(100);
 
     let call_params_amount = 100;
     let call_params = CallParameters::default()
         .with_amount(call_params_amount)
-        .with_asset_id(AssetId::default());
+        .with_asset_id(AssetId::zeroed());
 
     {
         let response = contract_methods
@@ -530,10 +544,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .call()
             .await?;
 
-        assert_eq!(
-            predicate.get_asset_balance(&AssetId::default()).await?,
-            1899
-        );
+        assert_eq!(predicate.get_asset_balance(&AssetId::zeroed()).await?, 1800);
     }
     {
         let custom_asset = AssetId::from([1u8; 32]);
@@ -679,7 +690,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
             .with_data(predicate_data);
 
     let amount = 1000;
-    let coins = setup_single_asset_coins(predicate.address(), BASE_ASSET_ID, 1, amount);
+    let coins = setup_single_asset_coins(predicate.address(), AssetId::zeroed(), 1, amount);
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
@@ -693,7 +704,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         vec![message_input.clone()],
         vec![],
-        TxPolicies::default().with_gas_price(1),
+        TxPolicies::default().with_tip(1),
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
     let tx = tb.build(&provider).await?;
@@ -723,7 +734,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     let non_base_asset_id = AssetId::new([1; 32]);
 
     // wallet has base and predicate non base asset
-    let mut coins = setup_single_asset_coins(wallet.address(), BASE_ASSET_ID, 1, amount);
+    let mut coins = setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, amount);
     coins.extend(setup_single_asset_coins(
         predicate.address(),
         non_base_asset_id,
@@ -740,13 +751,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
         .await?;
     let outputs = vec![
         Output::change(wallet.address().into(), 0, non_base_asset_id),
-        Output::change(wallet.address().into(), 0, BASE_ASSET_ID),
+        Output::change(wallet.address().into(), 0, *provider.base_asset_id()),
     ];
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(
         inputs,
         outputs,
-        TxPolicies::default().with_gas_price(1),
+        TxPolicies::default().with_tip(1),
     );
 
     tb.add_signer(wallet.clone())?;
@@ -803,9 +814,16 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
+    #[cfg(feature = "legacy_encoding")]
     let witness = ABIEncoder::default()
         .encode(&[64u8.into_token()])?
         .resolve(0);
+
+    #[cfg(not(feature = "legacy_encoding"))]
+    let witness = ABIEncoder::default()
+        .encode(&[64u64.into_token()])? // u64 because this is VM memory
+        .resolve(0);
+
     let witness2 = ABIEncoder::default()
         .encode(&[4096u64.into_token()])?
         .resolve(0);
@@ -875,9 +893,16 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
+    #[cfg(feature = "legacy_encoding")]
     let witness = ABIEncoder::default()
         .encode(&[64u8.into_token()])?
         .resolve(0);
+
+    #[cfg(not(feature = "legacy_encoding"))]
+    let witness = ABIEncoder::default()
+        .encode(&[64u64.into_token()])? // u64 because this is VM memory
+        .resolve(0);
+
     let witness2 = ABIEncoder::default()
         .encode(&[4096u64.into_token()])?
         .resolve(0);
@@ -895,23 +920,181 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_predicate_encoder_config_is_applied() -> Result<()> {
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
+async fn predicate_encoder_config_is_applied() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
     ));
-    let _encoding_ok = MyPredicateEncoder::default()
-        .encode_data(4097, 4097)
-        .expect("Should not fail as it uses the default encoder config");
-    let encoding_error = MyPredicateEncoder::new(encoder_config)
-        .encode_data(4097, 4097)
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Token limit (1) reached while encoding"));
+    {
+        let _encoding_ok = MyPredicateEncoder::default()
+            .encode_data(4097, 4097)
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let encoding_error = MyPredicateEncoder::new(encoder_config)
+            .encode_data(4097, 4097)
+            .expect_err("should fail");
+
+        assert!(encoding_error
+            .to_string()
+            .contains("token limit `1` reached while encoding"));
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_validation() -> Result<()> {
+    let default_asset_id = AssetId::zeroed();
+    let hex_str = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe";
+    let other_asset_id = AssetId::from_str(hex_str)?;
+    let begin_coin_amount = 1_000;
+
+    let tx_policies = TxPolicies::default();
+    let wallets_config = WalletsConfig::new_multiple_assets(
+        2,
+        vec![
+            AssetConfig {
+                id: default_asset_id,
+                num_coins: 1,
+                coin_amount: begin_coin_amount,
+            },
+            AssetConfig {
+                id: other_asset_id,
+                num_coins: 1,
+                coin_amount: begin_coin_amount,
+            },
+        ],
+    );
+
+    let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
+
+    let first_wallet = &wallets[0];
+    let second_wallet = &wallets[1];
+
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+    ));
+    let code_path =
+        "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+
+    // the predicate evaluates to true if the two arguments are equal
+    let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
+    let predicate_with_correct_data: Predicate = Predicate::load_from(code_path)?
+        .with_provider(first_wallet.try_provider()?.clone())
+        .with_data(correct_predicate_data);
+
+    let incorrect_predicate_data = MyPredicateEncoder::default().encode_data(1000, 0)?;
+    let predicate_with_incorrect_data: Predicate = Predicate::load_from(code_path)?
+        .with_provider(first_wallet.try_provider()?.clone())
+        .with_data(incorrect_predicate_data);
+
+    // The predicate needs to be funded with the target asset id, and the base asset id to pay for
+    // gas, even for just validation.
+    let amount_to_transfer_to_predicate = 1000;
+    first_wallet
+        .transfer(
+            // the data doesn't change the predicate's address
+            predicate_with_correct_data.address(),
+            amount_to_transfer_to_predicate,
+            other_asset_id,
+            tx_policies,
+        )
+        .await?;
+    first_wallet
+        .transfer(
+            predicate_with_correct_data.address(),
+            amount_to_transfer_to_predicate,
+            default_asset_id,
+            tx_policies,
+        )
+        .await?;
+
+    let amount_to_unlock = 500;
+    // Test with a non-default asset ID,to check that fee estimation works
+    {
+        // Check that a validated predicate => transfer can occur
+        predicate_with_correct_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                other_asset_id,
+                tx_policies,
+            )
+            .await?;
+        assert_eq!(
+            second_wallet.get_asset_balance(&other_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+
+        let error_string = predicate_with_incorrect_data
+            .transfer(second_wallet.address(), 10, other_asset_id, tx_policies)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))")
+        );
+        let transfer_error_string = predicate_with_incorrect_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                other_asset_id,
+                tx_policies,
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        // the transfer failed as expected
+        assert!(transfer_error_string
+            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+        // so the balance is not modified
+        assert_eq!(
+            second_wallet.get_asset_balance(&other_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+    }
+
+    // Test with default asset ID
+    {
+        // Check that a validated predicate => transfer can occur
+        predicate_with_correct_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                default_asset_id,
+                tx_policies,
+            )
+            .await?;
+        assert_eq!(
+            second_wallet.get_asset_balance(&default_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+
+        let transfer_error_string = predicate_with_incorrect_data
+            .transfer(
+                second_wallet.address(),
+                amount_to_unlock,
+                default_asset_id,
+                tx_policies,
+            )
+            .await
+            .unwrap_err()
+            .to_string();
+        // the transfer failed as expected
+        assert!(transfer_error_string
+            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+        // so the balance is not modified
+        assert_eq!(
+            second_wallet.get_asset_balance(&default_asset_id).await?,
+            amount_to_unlock + begin_coin_amount
+        );
+    }
+
     Ok(())
 }

@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
-        GasPrice, Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField,
-        ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField, ScriptData,
+        ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -13,20 +13,45 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
-    Buildable, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
-use fuel_vm::checked_transaction::EstimatePredicates;
+use fuel_vm::checked_transaction::{
+    CheckPredicateParams, CheckPredicates, EstimatePredicates, IntoChecked,
+};
 use itertools::Itertools;
 
 use crate::{
-    constants::BASE_ASSET_ID,
     traits::Signer,
-    types::{bech32::Bech32Address, errors::error, Result},
+    types::{
+        bech32::Bech32Address,
+        errors::{error_transaction, Result},
+    },
     utils::{calculate_witnesses_size, sealed},
 };
+
+#[derive(Default, Debug, Clone)]
+pub struct Transactions {
+    fuel_transactions: Vec<FuelTransaction>,
+}
+
+impl Transactions {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn insert(mut self, tx: impl Into<FuelTransaction>) -> Self {
+        self.fuel_transactions.push(tx.into());
+
+        self
+    }
+
+    pub fn as_slice(&self) -> &[FuelTransaction] {
+        &self.fuel_transactions
+    }
+}
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct MintTransaction {
@@ -80,7 +105,7 @@ impl MintTransaction {
 #[derive(Default, Debug, Copy, Clone)]
 //ANCHOR: tx_policies_struct
 pub struct TxPolicies {
-    gas_price: Option<u64>,
+    tip: Option<u64>,
     witness_limit: Option<u64>,
     maturity: Option<u64>,
     max_fee: Option<u64>,
@@ -90,14 +115,14 @@ pub struct TxPolicies {
 
 impl TxPolicies {
     pub fn new(
-        gas_price: Option<u64>,
+        tip: Option<u64>,
         witness_limit: Option<u64>,
         maturity: Option<u64>,
         max_fee: Option<u64>,
         script_gas_limit: Option<u64>,
     ) -> Self {
         Self {
-            gas_price,
+            tip,
             witness_limit,
             maturity,
             max_fee,
@@ -105,13 +130,13 @@ impl TxPolicies {
         }
     }
 
-    pub fn with_gas_price(mut self, gas_price: u64) -> Self {
-        self.gas_price = Some(gas_price);
+    pub fn with_tip(mut self, tip: u64) -> Self {
+        self.tip = Some(tip);
         self
     }
 
-    pub fn gas_price(&self) -> Option<u64> {
-        self.gas_price
+    pub fn tip(&self) -> Option<u64> {
+        self.tip
     }
 
     pub fn with_witness_limit(mut self, witness_limit: u64) -> Self {
@@ -151,7 +176,7 @@ impl TxPolicies {
     }
 }
 
-use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -170,17 +195,34 @@ pub trait EstimablePredicates: sealed::Sealed {
 }
 
 pub trait GasValidation: sealed::Sealed {
-    fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()>;
+    fn validate_gas(&self, _gas_used: u64) -> Result<()>;
+}
+
+pub trait ValidatablePredicates: sealed::Sealed {
+    /// If a transaction contains predicates, we can verify that these predicates validate, ie
+    /// that they return `true`
+    fn validate_predicates(
+        self,
+        consensus_parameters: &ConsensusParameters,
+        block_height: u32,
+    ) -> Result<()>;
 }
 
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction> + EstimablePredicates + GasValidation + Clone + Debug + sealed::Sealed
+    Into<FuelTransaction>
+    + EstimablePredicates
+    + ValidatablePredicates
+    + GasValidation
+    + Clone
+    + Debug
+    + sealed::Sealed
 {
     fn fee_checked_from_tx(
         &self,
         consensus_parameters: &ConsensusParameters,
+        gas_price: u64,
     ) -> Option<TransactionFee>;
 
     fn max_gas(&self, consensus_parameters: &ConsensusParameters) -> u64;
@@ -195,10 +237,6 @@ pub trait Transaction:
     fn maturity(&self) -> u32;
 
     fn with_maturity(self, maturity: u32) -> Self;
-
-    fn gas_price(&self) -> u64;
-
-    fn with_gas_price(self, gas_price: u64) -> Self;
 
     fn metered_bytes_size(&self) -> usize;
 
@@ -217,7 +255,10 @@ pub trait Transaction:
     /// Append witness and return the corresponding witness index
     fn append_witness(&mut self, witness: Witness) -> Result<usize>;
 
-    fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
+    fn used_coins(
+        &self,
+        base_asset_id: &AssetId,
+    ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>>;
 
     async fn sign_with(
         &mut self,
@@ -298,6 +339,22 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl ValidatablePredicates for $wrapper {
+            fn validate_predicates(
+                self,
+                consensus_parameters: &ConsensusParameters,
+                block_height: u32,
+            ) -> Result<()> {
+                let checked = self
+                    .tx
+                    .into_checked(block_height.into(), consensus_parameters)?;
+                let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
+                checked.check_predicates(&check_predicates_parameters)?;
+
+                Ok(())
+            }
+        }
+
         impl sealed::Sealed for $wrapper {}
 
         #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
@@ -313,11 +370,13 @@ macro_rules! impl_tx_wrapper {
             fn fee_checked_from_tx(
                 &self,
                 consensus_parameters: &ConsensusParameters,
+                gas_price: u64,
             ) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs,
+                    &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
                     &self.tx,
+                    gas_price,
                 )
             }
 
@@ -339,15 +398,6 @@ macro_rules! impl_tx_wrapper {
 
             fn with_maturity(mut self, maturity: u32) -> Self {
                 self.tx.set_maturity(maturity.into());
-                self
-            }
-
-            fn gas_price(&self) -> u64 {
-                self.tx.gas_price()
-            }
-
-            fn with_gas_price(mut self, gas_price: u64) -> Self {
-                self.tx.set_gas_price(gas_price);
                 self
             }
 
@@ -381,8 +431,8 @@ macro_rules! impl_tx_wrapper {
                 )) as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {
-                    Err(error!(
-                        ValidationError,
+                    Err(error_transaction!(
+                        Validation,
                         "Witness limit exceeded. Consider setting the limit manually with \
                         a transaction builder. The new limit should be: `{new_witnesses_size}`"
                     ))
@@ -394,7 +444,10 @@ macro_rules! impl_tx_wrapper {
                 }
             }
 
-            fn used_coins(&self) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
+            fn used_coins(
+                &self,
+                base_asset_id: &AssetId,
+            ) -> HashMap<(Bech32Address, AssetId), Vec<CoinTypeId>> {
                 self.inputs()
                     .iter()
                     .filter_map(|input| match input {
@@ -403,7 +456,7 @@ macro_rules! impl_tx_wrapper {
                             // Not a contract, it's safe to expect.
                             let owner = extract_owner_or_recipient(input).expect("has owner");
                             let asset_id = input
-                                .asset_id(&BASE_ASSET_ID)
+                                .asset_id(base_asset_id)
                                 .expect("has `asset_id`")
                                 .to_owned();
 
@@ -447,33 +500,12 @@ impl CreateTransaction {
         self.tx.salt()
     }
 
-    pub fn bytecode_witness_index(&self) -> u8 {
+    pub fn bytecode_witness_index(&self) -> u16 {
         *self.tx.bytecode_witness_index()
     }
 
     pub fn storage_slots(&self) -> &Vec<StorageSlot> {
         self.tx.storage_slots()
-    }
-
-    pub fn bytecode_length(&self) -> u64 {
-        *self.tx.bytecode_length()
-    }
-}
-
-impl GasValidation for CreateTransaction {
-    // We're not using `gas_used` in this implementation
-    // because `CreateTransaction` has no gas_limit`
-    fn validate_gas(&self, min_gas_price: u64, _: u64) -> Result<()> {
-        if min_gas_price > self.tx.gas_price() {
-            return Err(error!(
-                ValidationError,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                self.tx.gas_price(),
-                min_gas_price
-            ));
-        }
-
-        Ok(())
     }
 }
 
@@ -485,21 +517,20 @@ impl EstimablePredicates for ScriptTransaction {
     }
 }
 
+impl GasValidation for CreateTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
 impl GasValidation for ScriptTransaction {
-    fn validate_gas(&self, min_gas_price: u64, gas_used: u64) -> Result<()> {
+    fn validate_gas(&self, gas_used: u64) -> Result<()> {
         if gas_used > *self.tx.script_gas_limit() {
-            return Err(error!(
-                ValidationError,
+            return Err(error_transaction!(
+                Validation,
                 "script_gas_limit({}) is lower than the estimated gas_used({})",
                 self.tx.script_gas_limit(),
                 gas_used
-            ));
-        } else if min_gas_price > self.tx.gas_price() {
-            return Err(error!(
-                ValidationError,
-                "gas_price({}) is lower than the required min_gas_price({})",
-                self.tx.gas_price(),
-                min_gas_price
             ));
         }
 
@@ -521,7 +552,7 @@ impl ScriptTransaction {
     }
 
     pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-        self.tx.set_script_gas_limit(gas_limit);
+        *self.tx.script_gas_limit_mut() = gas_limit;
         self
     }
 }
@@ -551,7 +582,7 @@ mod test {
         let witness = vec![0, 1, 2].into();
         let err = tx.append_witness(witness).expect_err("should error");
 
-        let expected_err_str = "Validation error: Witness limit exceeded. \
+        let expected_err_str = "transaction validation: Witness limit exceeded. \
                                 Consider setting the limit manually with a transaction builder. \
                                 The new limit should be: `16`";
 

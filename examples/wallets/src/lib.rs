@@ -138,7 +138,7 @@ mod tests {
             .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
             .await?;
 
-        let wallet_2_final_coins = wallets[1].get_coins(BASE_ASSET_ID).await?;
+        let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;
 
         // Check that wallet 2 now has 2 coins
         assert_eq!(wallet_2_final_coins.len(), 2);
@@ -155,7 +155,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let base_asset = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 1,
             coin_amount: 1000,
         };
@@ -271,7 +271,7 @@ mod tests {
         let mut rng = rand::thread_rng();
 
         let asset_base = AssetConfig {
-            id: BASE_ASSET_ID,
+            id: AssetId::zeroed(),
             num_coins: 2,
             coin_amount: 4,
         };
@@ -303,6 +303,11 @@ mod tests {
         let wallet_config = WalletsConfig::new_multiple_assets(num_wallets, assets);
         let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
         // ANCHOR_END: custom_assets_wallet_short
+
+        // ANCHOR: wallet_to_address
+        let wallet_unlocked = WalletUnlocked::new_random(None);
+        let address: Address = wallet_unlocked.address().into();
+        // ANCHOR_END: wallet_to_address
         Ok(())
     }
 
@@ -312,16 +317,13 @@ mod tests {
         use std::collections::HashMap;
 
         use fuels::{
-            prelude::{
-                launch_provider_and_get_wallet, BASE_ASSET_ID, DEFAULT_COIN_AMOUNT,
-                DEFAULT_NUM_COINS,
-            },
+            prelude::{launch_provider_and_get_wallet, DEFAULT_COIN_AMOUNT, DEFAULT_NUM_COINS},
             types::AssetId,
         };
 
         let wallet = launch_provider_and_get_wallet().await?;
         // ANCHOR: get_asset_balance
-        let asset_id: AssetId = BASE_ASSET_ID;
+        let asset_id = AssetId::zeroed();
         let balance: u64 = wallet.get_asset_balance(&asset_id).await?;
         // ANCHOR_END: get_asset_balance
         // ANCHOR: get_balances
@@ -353,9 +355,9 @@ mod tests {
         let wallet = wallets.first().unwrap();
 
         let amount = 1000;
-        let base_layer_address =
-            Address::from_str("0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe")
-                .expect("Invalid address.");
+        let base_layer_address = Address::from_str(
+            "0x4710162c2e3a95a6faff05139150017c9e38e5e280432d546fae345d6ce6d8fe",
+        )?;
         let base_layer_address = Bech32Address::from(base_layer_address);
         // Transfer an amount of 1000 to the specified base layer address
         let (tx_id, msg_id, _receipts) = wallet
@@ -369,12 +371,13 @@ mod tests {
             .try_provider()?
             .get_message_proof(&tx_id, &msg_id, None, Some(2))
             .await?
-            .expect("Failed to retrieve message proof.");
+            .expect("failed to retrieve message proof");
 
         // Verify the amount and recipient
         assert_eq!(proof.amount, amount);
         assert_eq!(proof.recipient, base_layer_address);
         // ANCHOR_END: wallet_withdraw_to_base
+
         Ok(())
     }
 }

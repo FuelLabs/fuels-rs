@@ -1,4 +1,30 @@
-use fuels::{prelude::*, types::U256};
+use fuels::{
+    prelude::*,
+    types::{Bits256, U256},
+};
+
+#[tokio::test]
+async fn script_b256() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_b256"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let b256 = Bits256([1; 32]);
+    let response = script_instance.main(b256).call().await?;
+
+    assert_eq!(response.value, Bits256([2; 32]));
+
+    Ok(())
+}
 
 #[tokio::test]
 async fn main_function_generic_arguments() -> Result<()> {
@@ -21,10 +47,12 @@ async fn main_function_generic_arguments() -> Result<()> {
         twix: bam_comp,
         mars: 1000,
     };
+
     let result = script_instance
         .main(bim.clone(), bam.clone())
         .call()
         .await?;
+
     let expected = (
         GenericSnack {
             twix: GenericBimbam {
@@ -34,7 +62,9 @@ async fn main_function_generic_arguments() -> Result<()> {
         },
         GenericBimbam { val: 255_u8 },
     );
+
     assert_eq!(result.value, expected);
+
     Ok(())
 }
 
@@ -52,14 +82,23 @@ async fn main_function_option_result() -> Result<()> {
             wallet = "wallet"
         )
     );
+    {
+        let result = script_instance.main(Some(42), None).call().await?;
 
-    let result = script_instance.main(Some(42), None).call().await?;
-    assert_eq!(result.value, Ok(Some(true)));
-    let result = script_instance.main(Some(987), None).call().await?;
-    assert_eq!(result.value, Ok(None));
-    let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
-    let result = script_instance.main(None, Some(987)).call().await?;
-    assert_eq!(result.value, expected_error);
+        assert_eq!(result.value, Ok(Some(true)));
+    }
+    {
+        let result = script_instance.main(Some(987), None).call().await?;
+
+        assert_eq!(result.value, Ok(None));
+    }
+    {
+        let expected_error = Err(TestError::ZimZam("error".try_into().unwrap()));
+        let result = script_instance.main(None, Some(987)).call().await?;
+
+        assert_eq!(result.value, expected_error);
+    }
+
     Ok(())
 }
 
@@ -87,7 +126,7 @@ async fn main_function_tuple_types() -> Result<()> {
         .main(
             (bim, bam, boum),
             Bam {
-                bam: "secod".try_into()?,
+                bam: "twice".try_into()?,
             },
         )
         .call()
@@ -131,6 +170,7 @@ async fn main_function_vector_arguments() -> Result<()> {
     let vec_in_array = [vec![0, 1, 2], vec![0, 1, 2]];
     let vec_in_enum = SomeEnum::a(vec![0, 1, 2]);
     let enum_in_vec = vec![SomeEnum::a(0), SomeEnum::a(1)];
+    let b256_in_vec = vec![Bits256([2; 32]), Bits256([2; 32])];
 
     let tuple_in_vec = vec![(0, 0), (1, 1)];
     let vec_in_tuple = (vec![0, 1, 2], vec![0, 1, 2]);
@@ -153,6 +193,7 @@ async fn main_function_vector_arguments() -> Result<()> {
             vec_in_array,
             vec_in_enum,
             enum_in_vec,
+            b256_in_vec,
             tuple_in_vec,
             vec_in_tuple,
             vec_in_a_vec_in_a_struct_in_a_vec,
@@ -306,6 +347,39 @@ async fn script_handles_std_string() -> Result<()> {
 
     let arg = String::from("Hello World");
     script_instance.main(arg).call().await?;
+
+    Ok(())
+}
+
+#[cfg(not(feature = "legacy_encoding"))]
+#[tokio::test]
+async fn nested_heap_types() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "packages/fuels/tests/types/scripts/script_heap_types",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let arr = [2u8, 4, 8];
+    let struct_generics = StructGenerics {
+        one: Bytes(arr.to_vec()),
+        two: String::from("fuel"),
+        three: arr.to_vec(),
+    };
+
+    let enum_vec = [struct_generics.clone(), struct_generics].to_vec();
+    let expected = EnumGeneric::One(enum_vec);
+
+    let result = script_instance.main().call().await?;
+
+    assert_eq!(result.value, expected);
 
     Ok(())
 }

@@ -3,7 +3,7 @@
 use std::hash::Hash;
 
 use fuel_tx::{TxPointer, UtxoId};
-use fuel_types::{AssetId, Bytes32, ContractId};
+use fuel_types::{Bytes32, ContractId};
 
 use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
 
@@ -47,15 +47,6 @@ impl Input {
         match self {
             Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
                 Some(resource.amount())
-            }
-            _ => None,
-        }
-    }
-
-    pub fn asset_id(&self) -> Option<AssetId> {
-        match self {
-            Self::ResourceSigned { resource, .. } | Self::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id())
             }
             _ => None,
         }

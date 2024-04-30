@@ -36,8 +36,8 @@ impl CounterWithLimit {
         self.count += 1;
         if self.count > self.max {
             return Err(error!(
-                InvalidType,
-                "{} limit ({}) reached while {}. Try increasing it.",
+                Codec,
+                "{} limit `{}` reached while {}. Try increasing it",
                 self.name,
                 self.max,
                 self.direction

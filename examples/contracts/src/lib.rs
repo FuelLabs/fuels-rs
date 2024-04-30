@@ -1,10 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use fuels::core::codec::EncoderConfig;
     use fuels::{
-        core::codec::DecoderConfig,
-        prelude::{Config, LoadConfiguration, StorageConfiguration},
-        types::{errors::Result, Bits256},
+        core::codec::{DecoderConfig, EncoderConfig},
+        prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
+        test_helpers::{ChainConfig, StateConfig},
+        types::{
+            errors::{transaction::Reason, Result},
+            Bits256,
+        },
     };
 
     #[tokio::test]
@@ -13,7 +16,12 @@ mod tests {
         use fuels::prelude::{FuelService, Provider};
 
         // Run the fuel node.
-        let server = FuelService::start(Config::default()).await?;
+        let server = FuelService::start(
+            NodeConfig::default(),
+            ChainConfig::default(),
+            StateConfig::default(),
+        )
+        .await?;
 
         // Create a client that will talk to the node created above.
         let client = Provider::from(server.bound_address()).await?;
@@ -96,15 +104,22 @@ mod tests {
         // ANCHOR: contract_call_cost_estimation
         let contract_instance = MyContract::new(contract_id, wallet);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = contract_instance
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 841);
+        let expected_gas = if cfg!(feature = "legacy_encoding") {
+            796
+        } else {
+            2065
+        };
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -142,7 +157,7 @@ mod tests {
 
         // Optional: Configure deployment parameters
         let tx_policies = TxPolicies::default()
-            .with_gas_price(0)
+            .with_tip(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
@@ -279,7 +294,7 @@ mod tests {
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
 
         let tx_policies = TxPolicies::default()
-            .with_gas_price(1)
+            .with_tip(1)
             .with_script_gas_limit(1_000_000)
             .with_maturity(0);
 
@@ -403,7 +418,7 @@ mod tests {
 
         assert!(matches!(
             response,
-            Err(Error::RevertTransactionError { .. })
+            Err(Error::Transaction(Reason::Reverted { .. }))
         ));
         // ANCHOR_END: dependency_estimation_fail
 
@@ -438,80 +453,32 @@ mod tests {
     #[tokio::test]
     #[allow(unused_variables)]
     async fn get_contract_outputs() -> Result<()> {
-        use fuels::{prelude::*, tx::Receipt};
-        {
-            abigen!(Contract(
-                name = "TestContract",
-                abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-            ));
-            let wallet = launch_provider_and_get_wallet().await?;
+        use fuels::prelude::*;
 
-            let contract_id = Contract::load_from(
-                "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
-                LoadConfiguration::default(),
-            )?
-            .deploy(&wallet, TxPolicies::default())
-            .await?;
+        // ANCHOR: deployed_contracts
+        abigen!(Contract(
+            name = "MyContract",
+            // Replace with your contract ABI.json path
+            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        ));
+        let wallet_original = launch_provider_and_get_wallet().await?;
 
-            let contract_methods = TestContract::new(contract_id, wallet).methods();
+        let wallet = wallet_original.clone();
+        // Your bech32m encoded contract ID.
+        let contract_id: Bech32ContractId =
+            "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy".parse()?;
 
-            let response = contract_methods.increment_counter(162).call().await?;
-            let response = contract_methods.increment_counter(162).call().await;
-            match response {
-                // The transaction is valid and executes to completion
-                Ok(call_response) => {
-                    let receipts: Vec<Receipt> = call_response.receipts;
-                    // Do things with logs and receipts
-                }
-                // The transaction is malformed
-                Err(Error::ValidationError(e)) => {
-                    println!("Transaction is malformed (ValidationError): {e}");
-                }
-                // Failed request to provider
-                Err(Error::ProviderError(reason)) => {
-                    println!("Provider request failed with reason: {reason}");
-                }
-                // The transaction is valid but reverts
-                Err(Error::RevertTransactionError {
-                    reason, receipts, ..
-                }) => {
-                    println!("ContractCall failed with reason: {reason}");
-                    println!("Transaction receipts are: {receipts:?}");
-                }
-                Err(_) => {}
-            }
-        }
-        {
-            // ANCHOR: deployed_contracts
-            abigen!(Contract(
-                name = "MyContract",
-                // Replace with your contract ABI.json path
-                abi =
-                    "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-            ));
-            let wallet_original = launch_provider_and_get_wallet().await?;
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // You can now use the `connected_contract_instance` just as you did above!
+        // ANCHOR_END: deployed_contracts
 
-            let wallet = wallet_original.clone();
-            // Your bech32m encoded contract ID.
-            let contract_id: Bech32ContractId =
-                "fuel1vkm285ypjesypw7vhdlhnty3kjxxx4efckdycqh3ttna4xvmxtfs6murwy"
-                    .parse()
-                    .expect("Invalid ID");
+        let wallet = wallet_original;
+        // ANCHOR: deployed_contracts_hex
+        let contract_id: ContractId =
+            "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3".parse()?;
 
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // You can now use the `connected_contract_instance` just as you did above!
-            // ANCHOR_END: deployed_contracts
-
-            let wallet = wallet_original;
-            // ANCHOR: deployed_contracts_hex
-            let contract_id: ContractId =
-                "0x65b6a3d081966040bbccbb7f79ac91b48c635729c59a4c02f15ae7da999b32d3"
-                    .parse()
-                    .expect("Invalid ID");
-            let connected_contract_instance = MyContract::new(contract_id, wallet);
-            // ANCHOR_END: deployed_contracts_hex
-        }
+        let connected_contract_instance = MyContract::new(contract_id, wallet);
+        // ANCHOR_END: deployed_contracts_hex
 
         Ok(())
     }
@@ -640,13 +607,19 @@ mod tests {
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
-        let tolerance = 0.0;
+        let tolerance = Some(0.0);
+        let block_horizon = Some(1);
         let transaction_cost = multi_call_handler
-            .estimate_transaction_cost(Some(tolerance)) // Get estimated transaction cost
+            .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        assert_eq!(transaction_cost.gas_used, 1251);
+        #[cfg(feature = "legacy_encoding")]
+        let expected_gas = 1172;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let expected_gas = 3532;
+
+        assert_eq!(transaction_cost.gas_used, expected_gas);
 
         Ok(())
     }
@@ -712,7 +685,11 @@ mod tests {
         let _ = contract_instance
             .methods()
             .initialize_counter(42)
-            .add_custom_asset(BASE_ASSET_ID, amount, Some(other_wallet.address().clone()))
+            .add_custom_asset(
+                AssetId::zeroed(),
+                amount,
+                Some(other_wallet.address().clone()),
+            )
             .call()
             .await?;
         // ANCHOR_END: add_custom_assets
@@ -721,6 +698,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "legacy_encoding")]
     async fn low_level_call_example() -> Result<()> {
         use fuels::{
             core::codec::{calldata, fn_selector},

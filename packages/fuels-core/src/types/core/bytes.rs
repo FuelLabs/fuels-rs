@@ -1,4 +1,4 @@
-use crate::types::errors::{error, Result};
+use crate::types::errors::Result;
 
 #[derive(Debug, PartialEq, Clone, Eq)]
 pub struct Bytes(pub Vec<u8>);
@@ -12,21 +12,15 @@ impl Bytes {
         } else {
             hex
         };
-
-        let bytes = hex::decode(hex).map_err(|e| {
-            error!(
-                InvalidData,
-                "Could not convert hex str '{hex}' to Bytes! {e}"
-            )
-        })?;
+        let bytes = hex::decode(hex)?;
 
         Ok(Bytes(bytes))
     }
 }
 
 impl From<Bytes> for Vec<u8> {
-    fn from(raw_slice: Bytes) -> Vec<u8> {
-        raw_slice.0
+    fn from(bytes: Bytes) -> Vec<u8> {
+        bytes.0
     }
 }
 
@@ -56,9 +50,11 @@ mod tests {
         assert_eq!(bytes.0, vec![1u8; 32]);
 
         // With the `0x0` prefix
+        // ANCHOR: hex_string_to_bytes32
         let hex_str = "0x0101010101010101010101010101010101010101010101010101010101010101";
 
         let bytes = Bytes::from_hex_str(hex_str)?;
+        // ANCHOR_END: hex_string_to_bytes32
 
         assert_eq!(bytes.0, vec![1u8; 32]);
         // ANCHOR_END: bytes_from_hex_str

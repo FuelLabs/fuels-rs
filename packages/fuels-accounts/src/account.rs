@@ -1,24 +1,19 @@
-use std::{collections::HashMap, fmt::Display};
+use std::collections::HashMap;
 
 use async_trait::async_trait;
 use fuel_core_client::client::pagination::{PaginatedResult, PaginationRequest};
 use fuel_tx::{Output, Receipt, TxId, TxPointer, UtxoId};
 use fuel_types::{AssetId, Bytes32, ContractId, Nonce};
-use fuels_core::{
-    constants::BASE_ASSET_ID,
-    types::{
-        bech32::{Bech32Address, Bech32ContractId},
-        coin::Coin,
-        coin_type::CoinType,
-        errors::{Error, Result},
-        input::Input,
-        message::Message,
-        transaction::{Transaction, TxPolicies},
-        transaction_builders::{
-            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
-        },
-        transaction_response::TransactionResponse,
-    },
+use fuels_core::types::{
+    bech32::{Bech32Address, Bech32ContractId},
+    coin::Coin,
+    coin_type::CoinType,
+    errors::Result,
+    input::Input,
+    message::Message,
+    transaction::{Transaction, TxPolicies},
+    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
+    transaction_response::TransactionResponse,
 };
 
 use crate::{
@@ -26,36 +21,11 @@ use crate::{
     provider::{Provider, ResourceFilter},
 };
 
-#[derive(Debug)]
-pub struct AccountError(String);
-
-impl AccountError {
-    pub fn no_provider() -> Self {
-        Self("No provider was setup: make sure to set_provider in your account!".to_string())
-    }
-}
-
-impl Display for AccountError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{self:?}")
-    }
-}
-
-impl std::error::Error for AccountError {}
-
-impl From<AccountError> for Error {
-    fn from(e: AccountError) -> Self {
-        Error::AccountError(e.0)
-    }
-}
-
-pub type AccountResult<T> = std::result::Result<T, AccountError>;
-
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     fn address(&self) -> &Bech32Address;
 
-    fn try_provider(&self) -> AccountResult<&Provider>;
+    fn try_provider(&self) -> Result<&Provider>;
 
     async fn get_transactions(
         &self,
@@ -82,7 +52,6 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         self.try_provider()?
             .get_asset_balance(self.address(), *asset_id)
             .await
-            .map_err(Into::into)
     }
 
     /// Gets all unspent messages owned by the account.
@@ -94,10 +63,7 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     /// the coins because we are only returning the sum of UTXOs coins amount and not the UTXOs
     /// coins themselves.
     async fn get_balances(&self) -> Result<HashMap<String, u64>> {
-        self.try_provider()?
-            .get_balances(self.address())
-            .await
-            .map_err(Into::into)
+        self.try_provider()?.get_balances(self.address()).await
     }
 
     /// Get some spendable resources (coins and messages) of asset `asset_id` owned by the account
@@ -110,15 +76,12 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
     ) -> Result<Vec<CoinType>> {
         let filter = ResourceFilter {
             from: self.address().clone(),
-            asset_id,
+            asset_id: Some(asset_id),
             amount,
             ..Default::default()
         };
 
-        self.try_provider()?
-            .get_spendable_resources(filter)
-            .await
-            .map_err(Into::into)
+        self.try_provider()?.get_spendable_resources(filter).await
     }
 }
 
@@ -157,15 +120,21 @@ pub trait Account: ViewOnlyAccount {
         tb: &mut Tb,
         used_base_amount: u64,
     ) -> Result<()> {
+        let provider = self.try_provider()?;
         let missing_base_amount =
-            calculate_missing_base_amount(tb, used_base_amount, self.try_provider()?).await?;
+            calculate_missing_base_amount(tb, used_base_amount, provider).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
-                .get_asset_inputs_for_amount(BASE_ASSET_ID, missing_base_amount)
+                .get_asset_inputs_for_amount(*provider.base_asset_id(), missing_base_amount)
                 .await?;
 
-            adjust_inputs_outputs(tb, new_base_inputs, self.address());
+            adjust_inputs_outputs(
+                tb,
+                new_base_inputs,
+                self.address(),
+                provider.base_asset_id(),
+            );
         };
 
         Ok(())
@@ -196,7 +165,11 @@ pub trait Account: ViewOnlyAccount {
 
         self.add_witnesses(&mut tx_builder)?;
 
-        let used_base_amount = if asset_id == AssetId::BASE { amount } else { 0 };
+        let used_base_amount = if asset_id == *provider.base_asset_id() {
+            amount
+        } else {
+            0
+        };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
 
@@ -225,7 +198,7 @@ pub trait Account: ViewOnlyAccount {
         balance: u64,
         asset_id: AssetId,
         tx_policies: TxPolicies,
-    ) -> std::result::Result<(String, Vec<Receipt>), Error> {
+    ) -> Result<(String, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
         let zeroes = Bytes32::zeroed();
@@ -277,11 +250,11 @@ pub trait Account: ViewOnlyAccount {
         to: &Bech32Address,
         amount: u64,
         tx_policies: TxPolicies,
-    ) -> std::result::Result<(TxId, Nonce, Vec<Receipt>), Error> {
+    ) -> Result<(TxId, Nonce, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(
@@ -289,6 +262,7 @@ pub trait Account: ViewOnlyAccount {
             amount,
             inputs,
             tx_policies,
+            *provider.base_asset_id(),
         );
 
         self.add_witnesses(&mut tb)?;
@@ -324,16 +298,13 @@ mod tests {
     use crate::wallet::WalletUnlocked;
 
     #[tokio::test]
-    async fn sign_and_verify() -> std::result::Result<(), Box<dyn std::error::Error>> {
+    async fn sign_and_verify() -> Result<()> {
         // ANCHOR: sign_message
         let mut rng = StdRng::seed_from_u64(2322u64);
         let mut secret_seed = [0u8; 32];
         rng.fill_bytes(&mut secret_seed);
 
-        let secret = secret_seed
-            .as_slice()
-            .try_into()
-            .expect("The seed size is valid");
+        let secret = secret_seed.as_slice().try_into()?;
 
         // Create a wallet using the private key created above.
         let wallet = WalletUnlocked::new_from_private_key(secret, None);
@@ -366,10 +337,12 @@ mod tests {
         async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
             Ok(0)
         }
+
         fn consensus_parameters(&self) -> &ConsensusParameters {
             &self.c_param
         }
-        async fn min_gas_price(&self) -> Result<u64> {
+
+        async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
         }
     }
@@ -425,7 +398,7 @@ mod tests {
         assert_eq!(signature, tx_signature);
 
         // Check if the signature is what we expect it to be
-        assert_eq!(signature, Signature::from_str("a7446cb9703d3bc9e68677715fc7ef6ed72ff4eeac0c67bdb0d9b9c8ba38048e078e38fdd85bf988cefd3737005f1be97ed8b9662f002b0480d4404ebb397fed")?);
+        assert_eq!(signature, Signature::from_str("8afd30de7039faa07aac1cf2676970a77dc8ef3f779b44c1510ad7bf58ea56f43727b23142bd7252b79ae2c832e073927f84f6b0857fedf2f6d86e9535e48fd0")?);
 
         // Recover the address that signed the transaction
         let recovered_address = signature.recover(&message)?;

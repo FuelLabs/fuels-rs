@@ -1,5 +1,7 @@
-use fuels::{prelude::*, types::Bits256};
-use fuels_core::codec::{DecoderConfig, EncoderConfig};
+use fuels::{
+    core::codec::{DecoderConfig, EncoderConfig},
+    prelude::*,
+};
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -42,19 +44,21 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         )
     );
 
-    let tolerance = 0.0;
+    let tolerance = Some(0.0);
+    let block_horizon = Some(1);
 
     let a = 4u64;
     let b = 2u32;
     let estimated_gas_used = script_instance
         .main(a, b)
-        .estimate_transaction_cost(Some(tolerance))
+        .estimate_transaction_cost(tolerance, block_horizon)
         .await?
         .gas_used;
 
     let gas_used = script_instance.main(a, b).call().await?.gas_used;
 
     assert_eq!(estimated_gas_used, gas_used);
+
     Ok(())
 }
 
@@ -79,9 +83,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
     assert_eq!(result.value, "hello");
 
     // ANCHOR: script_with_tx_policies
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(1_000_000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
     let result = script_instance
         .main(a, b)
         .with_tx_policies(tx_policies)
@@ -94,6 +96,9 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 }
 
 #[tokio::test]
+// Remove this test once the new encoding lands as the max_input will be irrelevant
+// for direct script calls as all script_data is `inline`
+// TODO: https://github.com/FuelLabs/fuels-rs/issues/1317
 async fn test_script_call_with_non_default_max_input() -> Result<()> {
     use fuels::{
         test_helpers::ChainConfig,
@@ -101,10 +106,9 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
         types::coin::Coin,
     };
 
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(128),
-        ..Default::default()
-    };
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default().with_max_inputs(128);
+    consensus_parameters.set_tx_params(tx_params);
     let chain_config = ChainConfig {
         consensus_parameters: consensus_parameters.clone(),
         ..ChainConfig::default()
@@ -141,6 +145,7 @@ async fn test_script_call_with_non_default_max_input() -> Result<()> {
     let result = script_instance.main(a, b).call().await?;
 
     assert_eq!(result.value, "heyoo");
+
     Ok(())
 }
 
@@ -164,11 +169,9 @@ async fn test_output_variable_estimation() -> Result<()> {
     receiver.set_provider(provider);
 
     let amount = 1000;
-    let asset_id = BASE_ASSET_ID;
+    let asset_id = AssetId::zeroed();
     let script_call = script_instance.main(amount, asset_id, receiver.address());
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
-        .await?;
+    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
         .estimate_tx_dependencies(None)
@@ -176,7 +179,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         .call()
         .await?;
 
-    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    let receiver_balance = receiver.get_asset_balance(&asset_id).await?;
     assert_eq!(receiver_balance, amount);
 
     Ok(())
@@ -248,28 +251,6 @@ async fn test_script_array() -> Result<()> {
     let response = script_instance.main(my_array).call().await?;
 
     assert_eq!(response.value, 10);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_script_b256() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let my_b256 = Bits256([1; 32]);
-    let response = script_instance.main(my_b256).call().await?;
-
-    assert!(response.value);
     Ok(())
 }
 
@@ -389,7 +370,7 @@ async fn test_script_transaction_builder() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_script_encoder_config_is_applied() {
+async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
         abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
@@ -398,33 +379,40 @@ async fn test_script_encoder_config_is_applied() {
     let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
-    let _encoding_ok = script_instance_without_encoder_config
-        .main(1, 2)
-        .call()
-        .await
-        .expect("Should not fail as it uses the default encoder config");
+    {
+        let _encoding_ok = script_instance_without_encoder_config
+            .main(1, 2)
+            .call()
+            .await
+            .expect("should not fail as it uses the default encoder config");
+    }
+    {
+        let encoder_config = EncoderConfig {
+            max_tokens: 1,
+            ..Default::default()
+        };
+        let script_instance_with_encoder_config =
+            MyScript::new(wallet.clone(), bin_path).with_encoder_config(encoder_config);
 
-    let encoder_config = EncoderConfig {
-        max_tokens: 1,
-        ..Default::default()
-    };
-    let script_instance_with_encoder_config =
-        MyScript::new(wallet.clone(), bin_path).with_encoder_config(encoder_config);
-    // uses 2 tokens when 1 is the limit
-    let encoding_error = script_instance_with_encoder_config
-        .main(1, 2)
-        .call()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode script call arguments: Invalid type: Token limit (1) reached while encoding."));
-    let encoding_error = script_instance_with_encoder_config
-        .main(1, 2)
-        .simulate()
-        .await
-        .unwrap_err();
-    assert!(encoding_error
-        .to_string()
-        .contains("Cannot encode script call arguments: Invalid type: Token limit (1) reached while encoding."));
+        // uses 2 tokens when 1 is the limit
+        let encoding_error = script_instance_with_encoder_config
+            .main(1, 2)
+            .call()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode script call arguments: codec: token limit `1` reached while encoding"
+        ));
+
+        let encoding_error = script_instance_with_encoder_config
+            .main(1, 2)
+            .simulate()
+            .await
+            .expect_err("should error");
+
+        assert!(encoding_error.to_string().contains(
+            "cannot encode script call arguments: codec: token limit `1` reached while encoding"
+        ));
+    }
 }

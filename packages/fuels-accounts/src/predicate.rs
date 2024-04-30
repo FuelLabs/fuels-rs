@@ -8,7 +8,9 @@ use fuels_core::{
 };
 
 #[cfg(feature = "std")]
-use crate::{provider::Provider, Account, AccountError, AccountResult, ViewOnlyAccount};
+use crate::accounts_utils::try_provider_error;
+#[cfg(feature = "std")]
+use crate::{provider::Provider, Account, ViewOnlyAccount};
 
 #[derive(Debug, Clone)]
 pub struct Predicate {
@@ -98,8 +100,8 @@ impl ViewOnlyAccount for Predicate {
         self.address()
     }
 
-    fn try_provider(&self) -> AccountResult<&Provider> {
-        self.provider.as_ref().ok_or(AccountError::no_provider())
+    fn try_provider(&self) -> Result<&Provider> {
+        self.provider.as_ref().ok_or_else(try_provider_error)
     }
 }
 

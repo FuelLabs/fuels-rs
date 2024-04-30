@@ -1,6 +1,7 @@
-use std::{iter, ops::Add, str::FromStr, vec};
+use std::{ops::Add, str::FromStr};
 
-use chrono::{DateTime, Duration, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_core::chain_config::StateConfig;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -10,13 +11,13 @@ use fuels::{
     types::{
         block::Block,
         coin_type::CoinType,
+        errors::transaction::Reason,
         message::Message,
         transaction_builders::{BuildableTransaction, ScriptTransactionBuilder},
+        tx_status::TxStatus,
         Bits256,
     },
 };
-use rand::Rng;
-use tai64::Tai64;
 
 #[tokio::test]
 async fn test_provider_launch_and_connect() -> Result<()> {
@@ -29,7 +30,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 
     let coins = setup_single_asset_coins(
         wallet.address(),
-        BASE_ASSET_ID,
+        AssetId::zeroed(),
         DEFAULT_NUM_COINS,
         DEFAULT_COIN_AMOUNT,
     );
@@ -73,8 +74,10 @@ async fn test_network_error() -> Result<()> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let config = Config::default();
-    let service = FuelService::start(config).await?;
+    let node_config = NodeConfig::default();
+    let chain_config = ChainConfig::default();
+    let state_config = StateConfig::default();
+    let service = FuelService::start(node_config, chain_config, state_config).await?;
     let provider = Provider::connect(service.bound_address().to_string()).await?;
 
     wallet.set_provider(provider);
@@ -89,7 +92,7 @@ async fn test_network_error() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await;
 
-    assert!(matches!(response, Err(Error::ProviderError(_))));
+    assert!(matches!(response, Err(Error::Provider(_))));
     Ok(())
 }
 
@@ -97,7 +100,7 @@ async fn test_network_error() -> Result<()> {
 async fn test_input_message() -> Result<()> {
     let compare_messages =
         |messages_from_provider: Vec<Message>, used_messages: Vec<Message>| -> bool {
-            iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
+            std::iter::zip(&used_messages, &messages_from_provider).all(|(a, b)| {
                 a.sender == b.sender
                     && a.recipient == b.recipient
                     && a.nonce == b.nonce
@@ -107,8 +110,9 @@ async fn test_input_message() -> Result<()> {
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    // Coin to pay transaction fee.
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
+    // coin to pay transaction fee
+    let coins =
+        setup_single_asset_coins(wallet.address(), AssetId::zeroed(), 1, DEFAULT_COIN_AMOUNT);
 
     let messages = vec![setup_single_message(
         &Bech32Address::default(),
@@ -139,11 +143,12 @@ async fn test_input_message() -> Result<()> {
 
     let response = contract_instance
         .methods()
-        .initialize_counter(42) // Build the ABI call
+        .initialize_counter(42)
         .call()
         .await?;
 
     assert_eq!(42, response.value);
+
     Ok(())
 }
 
@@ -163,6 +168,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
     );
 
     let provider = setup_test_provider(vec![], vec![messages], None, None).await?;
+    let base_asset_id = *provider.base_asset_id();
     wallet.set_provider(provider);
 
     abigen!(Contract(
@@ -187,7 +193,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     assert_eq!(42, response.value);
 
-    let balance = wallet.get_asset_balance(&BASE_ASSET_ID).await?;
+    let balance = wallet.get_asset_balance(&base_asset_id).await?;
     // expect the initial amount because gas cost defaults to 0
     assert_eq!(balance, DEFAULT_COIN_AMOUNT);
 
@@ -215,12 +221,12 @@ async fn can_increase_block_height() -> Result<()> {
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
     let block_time = 20u32; // seconds
-    let config = Config {
+    let config = NodeConfig {
         // This is how you specify the time between blocks
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
@@ -235,7 +241,7 @@ async fn can_set_custom_block_time() -> Result<()> {
     provider.produce_blocks(blocks_to_produce, None).await?;
     assert_eq!(provider.latest_block_height().await?, blocks_to_produce);
     let expected_latest_block_time = origin_block_time
-        .checked_add_signed(Duration::seconds((blocks_to_produce * block_time) as i64))
+        .checked_add_signed(Duration::try_seconds((blocks_to_produce * block_time) as i64).unwrap())
         .unwrap();
     assert_eq!(
         provider.latest_block_time().await?.unwrap(),
@@ -292,18 +298,18 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
     };
 
     let err = deploy_w_maturity(1)?.await.expect_err(
-        "Should not deploy contract since block height (0) is less than the requested maturity (1)",
+        "should not deploy contract since block height `0` is less than the requested maturity `1`",
     );
 
-    let Error::ValidationError(s) = err else {
-        panic!("Expected a ValidationError, got: {err}");
+    let Error::Transaction(Reason::Validation(s)) = err else {
+        panic!("expected `Validation`, got: `{err}`");
     };
     assert_eq!(s, "TransactionMaturity");
 
     provider.produce_blocks(1, None).await?;
     deploy_w_maturity(1)?
         .await
-        .expect("Should deploy contract since maturity (1) is <= than the block height (1)");
+        .expect("Should deploy contract since maturity `1` is <= than the block height `1`");
 
     Ok(())
 }
@@ -324,7 +330,10 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 398;
+    #[cfg(feature = "legacy_encoding")]
+    let gas_used_by_script = 364;
+    #[cfg(not(feature = "legacy_encoding"))]
+    let gas_used_by_script = 856;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -400,7 +409,10 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
     assert!(call_response.is_some());
 
     assert_eq!(call_response.unwrap().amount().unwrap(), 1_000_000);
-    assert_eq!(call_response.unwrap().asset_id().unwrap(), &BASE_ASSET_ID);
+    assert_eq!(
+        call_response.unwrap().asset_id().unwrap(),
+        &AssetId::zeroed()
+    );
 
     let address = wallet.address();
 
@@ -448,7 +460,7 @@ async fn test_gas_errors() -> Result<()> {
     let amount_per_coin = 1_000_000;
     let coins = setup_single_asset_coins(
         wallet.address(),
-        BASE_ASSET_ID,
+        AssetId::zeroed(),
         number_of_coins,
         amount_per_coin,
     );
@@ -477,7 +489,7 @@ async fn test_gas_errors() -> Result<()> {
 
     //  Test that the call will use more gas than the gas limit
     let gas_used = contract_instance_call
-        .estimate_transaction_cost(None)
+        .estimate_transaction_cost(None, None)
         .await?
         .gas_used;
     assert!(gas_used > gas_limit);
@@ -487,19 +499,19 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
     assert!(response.to_string().starts_with(expected));
 
     // Test for insufficient base asset amount to pay for the transaction fee
     let response = contract_instance
         .methods()
         .initialize_counter(42) // Build the ABI call
-        .with_tx_policies(TxPolicies::default().with_gas_price(100_000_000_000))
+        .with_tx_policies(TxPolicies::default().with_tip(100_000_000_000))
         .call()
         .await
         .expect_err("should error");
 
-    let expected = "Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: io error: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -530,7 +542,8 @@ async fn test_call_param_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "Revert transaction error: OutOfGas";
+    let expected = "transaction reverted: OutOfGas";
+    dbg!(&response.to_string());
     assert!(response.to_string().starts_with(expected));
 
     // Call params gas_forwarded exceeds transaction limit
@@ -574,6 +587,8 @@ async fn test_get_gas_used() -> Result<()> {
 
 #[tokio::test]
 async fn testnet_hello_world() -> Result<()> {
+    use rand::Rng;
+
     // Note that this test might become flaky.
     // This test depends on:
     // 1. The testnet being up and running;
@@ -601,7 +616,7 @@ async fn testnet_hello_world() -> Result<()> {
     let salt: [u8; 32] = rng.gen();
     let configuration = LoadConfiguration::default().with_salt(salt);
 
-    let tx_policies = TxPolicies::default();
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let contract_id = Contract::load_from(
         "tests/contracts/contract_test/out/debug/contract_test.bin",
@@ -633,30 +648,27 @@ async fn testnet_hello_world() -> Result<()> {
 #[tokio::test]
 async fn test_parse_block_time() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
-    let coins = setup_single_asset_coins(wallet.address(), AssetId::BASE, 1, DEFAULT_COIN_AMOUNT);
+    let asset_id = AssetId::zeroed();
+    let coins = setup_single_asset_coins(wallet.address(), asset_id, 1, DEFAULT_COIN_AMOUNT);
     let provider = setup_test_provider(coins.clone(), vec![], None, None).await?;
     wallet.set_provider(provider);
-    let tx_policies = TxPolicies::default()
-        .with_gas_price(1)
-        .with_script_gas_limit(2000);
+    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
 
     let wallet_2 = WalletUnlocked::new_random(None).lock();
     let (tx_id, _) = wallet
-        .transfer(wallet_2.address(), 100, BASE_ASSET_ID, tx_policies)
+        .transfer(wallet_2.address(), 100, asset_id, tx_policies)
         .await?;
 
     let tx_response = wallet
-        .try_provider()
-        .unwrap()
+        .try_provider()?
         .get_transaction_by_id(&tx_id)
         .await?
         .unwrap();
     assert!(tx_response.time.is_some());
 
     let block = wallet
-        .try_provider()
-        .unwrap()
-        .block(&tx_response.block_id.unwrap())
+        .try_provider()?
+        .block_by_height(tx_response.block_height.unwrap())
         .await?
         .unwrap();
     assert!(block.header.time.is_some());
@@ -674,7 +686,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
 
     let coins = [coin_amount_1, coin_amount_2]
         .into_iter()
-        .flat_map(|amount| setup_single_asset_coins(address, BASE_ASSET_ID, 1, amount))
+        .flat_map(|amount| setup_single_asset_coins(address, AssetId::zeroed(), 1, amount))
         .collect::<Vec<_>>();
 
     let message_amount = 200;
@@ -692,7 +704,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {
         let resources = wallet
-            .get_spendable_resources(BASE_ASSET_ID, requested_amount)
+            .get_spendable_resources(*provider.base_asset_id(), requested_amount)
             .await
             .unwrap();
         assert_eq!(resources.len(), 3);
@@ -732,11 +744,8 @@ fn given_a_message(address: Bech32Address, message_amount: u64) -> Message {
 }
 
 fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
-    let unix = Tai64(timestamp).to_unix();
-    NaiveDateTime::from_timestamp_opt(unix, 0)
-        .unwrap()
-        .and_local_timezone(Utc)
-        .unwrap()
+    let unix = tai64::Tai64(timestamp).to_unix();
+    DateTime::from_timestamp(unix, 0).unwrap()
 }
 
 /// This test is here in addition to `can_set_custom_block_time` because even though this test
@@ -745,11 +754,11 @@ fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
 #[tokio::test]
 async fn test_sway_timestamp() -> Result<()> {
     let block_time = 1u32; // seconds
-    let provider_config = Config {
+    let provider_config = NodeConfig {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
@@ -776,7 +785,8 @@ async fn test_sway_timestamp() -> Result<()> {
     let methods = contract_instance.methods();
 
     let response = methods.return_timestamp().call().await?;
-    let mut expected_datetime = origin_timestamp.add(Duration::seconds(block_time as i64));
+    let mut expected_datetime =
+        origin_timestamp.add(Duration::try_seconds(block_time as i64).unwrap());
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
 
     let blocks_to_produce = 600;
@@ -785,10 +795,10 @@ async fn test_sway_timestamp() -> Result<()> {
     let response = methods.return_timestamp().call().await?;
 
     // `produce_blocks` call
-    expected_datetime =
-        expected_datetime.add(Duration::seconds((block_time * blocks_to_produce) as i64));
+    expected_datetime = expected_datetime
+        .add(Duration::try_seconds((block_time * blocks_to_produce) as i64).unwrap());
     // method call
-    expected_datetime = expected_datetime.add(Duration::seconds(block_time as i64));
+    expected_datetime = expected_datetime.add(Duration::try_seconds(block_time as i64).unwrap());
 
     assert_eq!(convert_to_datetime(response.value), expected_datetime);
     assert_eq!(
@@ -804,10 +814,9 @@ async fn create_transfer(
     amount: u64,
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
-        .await?;
-    let outputs = wallet.get_asset_outputs_for_amount(to, BASE_ASSET_ID, amount);
+    let asset_id = AssetId::zeroed();
+    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
@@ -826,7 +835,7 @@ async fn test_caching() -> Result<()> {
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
-        Some(Config::default()),
+        Some(NodeConfig::default()),
         None,
     )
     .await?;
@@ -852,8 +861,8 @@ async fn test_caching() -> Result<()> {
         assert!(matches!(status, TxStatus::Success { .. }));
     }
 
-    // Verify the transfers were succesful
-    assert_eq!(wallet_2.get_asset_balance(&BASE_ASSET_ID).await?, 1000);
+    // Verify the transfers were successful
+    assert_eq!(wallet_2.get_asset_balance(&AssetId::zeroed()).await?, 1000);
 
     Ok(())
 }
@@ -863,11 +872,9 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
     use fuel_core_types::fuel_asm::Opcode;
 
     let amount = 1;
-    let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, amount)
-        .await?;
-    let outputs =
-        wallet.get_asset_outputs_for_amount(&Bech32Address::default(), BASE_ASSET_ID, amount);
+    let asset_id = AssetId::zeroed();
+    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
         .with_script(vec![Opcode::RVRT.into()]);
@@ -884,11 +891,11 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     use fuels_core::types::tx_status::TxStatus;
 
     let block_time = 1u32;
-    let provider_config = Config {
+    let provider_config = NodeConfig {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
 
     // create wallet with 1 coin so that the cache prevents further
@@ -912,7 +919,9 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
 
     assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
-    let coins = wallet.get_spendable_resources(BASE_ASSET_ID, 1).await?;
+    let coins = wallet
+        .get_spendable_resources(*provider.base_asset_id(), 1)
+        .await?;
     assert_eq!(coins.len(), 1);
 
     Ok(())
@@ -965,9 +974,10 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
     let inputs = wallet
-        .get_asset_inputs_for_amount(BASE_ASSET_ID, 100)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
         .await?;
-    let outputs = wallet.get_asset_outputs_for_amount(receiver.address(), BASE_ASSET_ID, 100);
+    let outputs =
+        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 100);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
@@ -976,9 +986,44 @@ async fn test_build_with_provider() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
-    let receiver_balance = receiver.get_asset_balance(&BASE_ASSET_ID).await?;
+    let receiver_balance = receiver.get_asset_balance(provider.base_asset_id()).await?;
 
     assert_eq!(receiver_balance, 100);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_produce_blocks_with_trig_never() -> Result<()> {
+    let config = NodeConfig {
+        block_production: Trigger::Never,
+        ..NodeConfig::default()
+    };
+    let wallets =
+        launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
+            .await?;
+    let wallet = &wallets[0];
+    let provider = wallet.try_provider()?;
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .await?;
+    let outputs = wallet.get_asset_outputs_for_amount(
+        &Bech32Address::default(),
+        *provider.base_asset_id(),
+        100,
+    );
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+    let tx = tb.build(provider).await?;
+    let tx_id = tx.id(provider.chain_id());
+
+    provider.send_transaction(tx).await?;
+    provider.produce_blocks(1, None).await?;
+
+    let status = provider.tx_status(&tx_id).await?;
+    assert!(matches!(status, TxStatus::Success { .. }));
 
     Ok(())
 }

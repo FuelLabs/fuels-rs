@@ -11,7 +11,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{Error as FuelsError, Result},
+        errors::{transaction::Reason, Error, Result},
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -91,7 +91,7 @@ pub trait TxDependencyExtension: Sized + sealed::Sealed {
             match self.simulate().await {
                 Ok(_) => return Ok(self),
 
-                Err(FuelsError::RevertTransactionError { ref receipts, .. }) => {
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     self = self.append_missing_dependencies(receipts);
                 }
 
@@ -110,14 +110,15 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
-    let consensus_parameters = account.try_provider()?.consensus_parameters();
+    let provider = account.try_provider()?;
+    let consensus_parameters = provider.consensus_parameters();
     let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
 
     let (script_data, call_param_offsets) =
-        build_script_data_from_contract_calls(calls, data_offset)?;
+        build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
     let script = get_instructions(calls, call_param_offsets)?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let required_asset_amounts = calculate_required_asset_amounts(calls, *provider.base_asset_id());
 
     // Find the spendable resources required for those calls
     let mut asset_inputs = vec![];
@@ -128,7 +129,12 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         asset_inputs.extend(resources);
     }
 
-    let (inputs, outputs) = get_transaction_inputs_outputs(calls, asset_inputs, account);
+    let (inputs, outputs) = get_transaction_inputs_outputs(
+        calls,
+        asset_inputs,
+        account.address(),
+        *provider.base_asset_id(),
+    );
 
     Ok(ScriptTransactionBuilder::default()
         .with_tx_policies(tx_policies)
@@ -148,11 +154,13 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account).await?;
 
-    let required_asset_amounts = calculate_required_asset_amounts(calls);
+    let base_asset_id = *account.try_provider()?.base_asset_id();
+    let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
 
+    let base_asset_id = account.try_provider()?.base_asset_id();
     let used_base_amount = required_asset_amounts
         .iter()
-        .find_map(|(asset_id, amount)| (*asset_id == AssetId::default()).then_some(*amount))
+        .find_map(|(asset_id, amount)| (asset_id == base_asset_id).then_some(*amount))
         .unwrap_or_default();
 
     account.add_witnesses(&mut tb)?;
@@ -184,12 +192,15 @@ fn compute_calls_instructions_len(calls: &[ContractCall]) -> Result<usize> {
 }
 
 /// Compute how much of each asset is required based on all `CallParameters` of the `ContractCalls`
-pub(crate) fn calculate_required_asset_amounts(calls: &[ContractCall]) -> Vec<(AssetId, u64)> {
+pub(crate) fn calculate_required_asset_amounts(
+    calls: &[ContractCall],
+    base_asset_id: AssetId,
+) -> Vec<(AssetId, u64)> {
     let call_param_assets = calls
         .iter()
         .map(|call| {
             (
-                call.call_parameters.asset_id(),
+                call.call_parameters.asset_id().unwrap_or(base_asset_id),
                 call.call_parameters.amount(),
             )
         })
@@ -244,6 +255,7 @@ pub(crate) fn get_instructions(
         })
 }
 
+#[cfg(feature = "legacy_encoding")]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -255,6 +267,7 @@ pub(crate) fn get_instructions(
 pub(crate) fn build_script_data_from_contract_calls(
     calls: &[ContractCall],
     data_offset: usize,
+    base_asset_id: AssetId,
 ) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
     let mut script_data = vec![];
     let mut param_offsets = vec![];
@@ -266,7 +279,12 @@ pub(crate) fn build_script_data_from_contract_calls(
         let gas_forwarded = call.call_parameters.gas_forwarded();
 
         script_data.extend(call.call_parameters.amount().to_be_bytes());
-        script_data.extend(call.call_parameters.asset_id().iter());
+        script_data.extend(
+            call.call_parameters
+                .asset_id()
+                .unwrap_or(base_asset_id)
+                .iter(),
+        );
 
         let gas_forwarded_size = gas_forwarded
             .map(|gf| {
@@ -312,8 +330,74 @@ pub(crate) fn build_script_data_from_contract_calls(
             .encoded_args
             .as_ref()
             .map(|ub| ub.resolve(encoded_args_start_offset as Word))
-            .map_err(|e| error!(InvalidData, "Cannot encode contract call arguments: {e}"))?;
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         script_data.extend(bytes);
+
+        // the data segment that holds the parameters for the next call
+        // begins at the original offset + the data we added so far
+        segment_offset = data_offset + script_data.len();
+    }
+
+    Ok((script_data, param_offsets))
+}
+
+#[cfg(not(feature = "legacy_encoding"))]
+/// Returns script data, consisting of the following items in the given order:
+/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
+/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
+/// 3. Contract ID ([`ContractId::LEN`]);
+/// 4. Function selector offset `(1 * `[`WORD_SIZE`]`)`
+/// 5. Calldata offset `(1 * `[`WORD_SIZE`]`)`
+/// 6. Encoded function selector - method name
+/// 7. Encoded arguments
+/// 8. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
+pub(crate) fn build_script_data_from_contract_calls(
+    calls: &[ContractCall],
+    data_offset: usize,
+    base_asset_id: AssetId,
+) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
+    let mut script_data = vec![];
+    let mut param_offsets = vec![];
+
+    // The data for each call is ordered into segments
+    let mut segment_offset = data_offset;
+
+    for call in calls {
+        let amount_offset = segment_offset;
+        let asset_id_offset = amount_offset + WORD_SIZE;
+        let call_data_offset = asset_id_offset + AssetId::LEN;
+        let encoded_selector_offset = call_data_offset + ContractId::LEN + 2 * WORD_SIZE;
+        let encoded_args_offset = encoded_selector_offset + call.encoded_selector.len();
+
+        script_data.extend(call.call_parameters.amount().to_be_bytes()); // 1. Amount
+        let asset_id = call.call_parameters.asset_id().unwrap_or(base_asset_id);
+        script_data.extend(asset_id.iter()); // 2. Asset ID
+        script_data.extend(call.contract_id.hash().as_ref()); // 3. Contract ID
+        script_data.extend((encoded_selector_offset as Word).to_be_bytes()); // 4. Fun. selector offset
+        script_data.extend((encoded_args_offset as Word).to_be_bytes()); // 5. Calldata offset
+        script_data.extend(call.encoded_selector.clone()); // 6. Encoded function selector
+
+        let encoded_args = call
+            .encoded_args
+            .as_ref()
+            .map(|ub| ub.resolve(encoded_args_offset as Word))
+            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
+        let encoded_args_len = encoded_args.len();
+
+        script_data.extend(encoded_args); // 7. Encoded arguments
+
+        let gas_forwarded_offset = call.call_parameters.gas_forwarded().map(|gf| {
+            script_data.extend((gf as Word).to_be_bytes()); // 8. Gas to be forwarded - Optional
+
+            encoded_args_offset + encoded_args_len
+        });
+
+        param_offsets.push(CallOpcodeParamsOffset {
+            amount_offset,
+            asset_id_offset,
+            gas_forwarded_offset,
+            call_data_offset,
+        });
 
         // the data segment that holds the parameters for the next call
         // begins at the original offset + the data we added so far
@@ -336,7 +420,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 /// non-reserved register.
 pub(crate) fn get_single_call_instructions(
     offsets: &CallOpcodeParamsOffset,
-    output_param_type: &ParamType,
+    _output_param_type: &ParamType,
 ) -> Result<Vec<u8>> {
     let call_data_offset = offsets
         .call_data_offset
@@ -371,20 +455,22 @@ pub(crate) fn get_single_call_instructions(
                 op::call(0x10, 0x11, 0x12, 0x13),
             ]);
         }
-        // If `gas_forwarded` was not set use `REG_CGAS`
+        // if `gas_forwarded` was not set use `REG_CGAS`
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    instructions.extend(extract_heap_data(output_param_type)?);
+    #[cfg(feature = "legacy_encoding")]
+    instructions.extend(extract_heap_data(_output_param_type)?);
 
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
 }
 
+#[cfg(feature = "legacy_encoding")]
 fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
     match param_type {
-        ParamType::Enum { variants, .. } => {
-            let Some((discriminant, heap_type)) = variants.heap_type_variant() else {
+        ParamType::Enum { enum_variants, .. } => {
+            let Some((discriminant, heap_type)) = enum_variants.heap_type_variant() else {
                 return Ok(vec![]);
             };
 
@@ -416,6 +502,7 @@ fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction
     }
 }
 
+#[cfg(feature = "legacy_encoding")]
 fn extract_data_receipt(
     ptr_offset: u16,
     top_level_type: bool,
@@ -446,9 +533,10 @@ fn extract_data_receipt(
 pub(crate) fn get_transaction_inputs_outputs(
     calls: &[ContractCall],
     asset_inputs: Vec<Input>,
-    account: &impl Account,
+    address: &Bech32Address,
+    base_asset_id: AssetId,
 ) -> (Vec<Input>, Vec<Output>) {
-    let asset_ids = extract_unique_asset_ids(&asset_inputs);
+    let asset_ids = extract_unique_asset_ids(&asset_inputs, base_asset_id);
     let contract_ids = extract_unique_contract_ids(calls);
     let num_of_contracts = contract_ids.len();
 
@@ -460,11 +548,12 @@ pub(crate) fn get_transaction_inputs_outputs(
     // `inputs` array we've sent over.
     let outputs = chain!(
         generate_contract_outputs(num_of_contracts),
-        generate_asset_change_outputs(account.address(), asset_ids),
+        generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
         extract_variable_outputs(calls)
     )
     .collect();
+
     (inputs, outputs)
 }
 
@@ -490,12 +579,12 @@ fn generate_custom_outputs(calls: &[ContractCall]) -> Vec<Output> {
         .collect::<Vec<_>>()
 }
 
-fn extract_unique_asset_ids(asset_inputs: &[Input]) -> HashSet<AssetId> {
+fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> HashSet<AssetId> {
     asset_inputs
         .iter()
         .filter_map(|input| match input {
             Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
-                Some(resource.asset_id())
+                Some(resource.coin_asset_id().unwrap_or(base_asset_id))
             }
             _ => None,
         })
@@ -521,7 +610,7 @@ fn generate_asset_change_outputs(
 
 pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
     (0..num_of_contracts)
-        .map(|idx| Output::contract(idx as u8, Bytes32::zeroed(), Bytes32::zeroed()))
+        .map(|idx| Output::contract(idx as u16, Bytes32::zeroed(), Bytes32::zeroed()))
         .collect()
 }
 
@@ -531,7 +620,7 @@ pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec
         .enumerate()
         .map(|(idx, contract_id)| {
             Input::contract(
-                UtxoId::new(Bytes32::zeroed(), idx as u8),
+                UtxoId::new(Bytes32::zeroed(), idx as u16),
                 Bytes32::zeroed(),
                 Bytes32::zeroed(),
                 TxPointer::default(),
@@ -579,7 +668,7 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
         Output::Variable {
             amount: 0,
             to: Address::zeroed(),
-            asset_id: AssetId::default(),
+            asset_id: AssetId::zeroed(),
         };
         num
     ]
@@ -589,16 +678,16 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
+    #[cfg(feature = "legacy_encoding")]
+    use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
-    use fuels_core::{
-        codec::ABIEncoder,
-        types::{
-            bech32::Bech32ContractId,
-            coin::{Coin, CoinStatus},
-            coin_type::CoinType,
-            Token,
-        },
+    use fuels_core::types::{
+        bech32::Bech32ContractId,
+        coin::{Coin, CoinStatus},
+        coin_type::CoinType,
     };
+    #[cfg(feature = "legacy_encoding")]
+    use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
     use super::*;
@@ -609,7 +698,10 @@ mod test {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
+                #[cfg(feature = "legacy_encoding")]
                 encoded_selector: [0; 8],
+                #[cfg(not(feature = "legacy_encoding"))]
+                encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
                 variable_outputs: vec![],
@@ -629,13 +721,14 @@ mod test {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
+    #[cfg(feature = "legacy_encoding")]
     #[tokio::test]
     async fn test_script_data() {
         // Arrange
         const SELECTOR_LEN: usize = WORD_SIZE;
         const NUM_CALLS: usize = 3;
 
-        let contract_ids = vec![
+        let contract_ids = [
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
             Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
@@ -658,7 +751,10 @@ mod test {
         let calls: Vec<ContractCall> = (0..NUM_CALLS)
             .map(|i| ContractCall {
                 contract_id: contract_ids[i].clone(),
+                #[cfg(feature = "legacy_encoding")]
                 encoded_selector: selectors[i],
+                #[cfg(not(feature = "legacy_encoding"))]
+                encoded_selector: selectors[i].to_vec(),
                 encoded_args: Ok(args[i].clone()),
                 call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
                 compute_custom_input_offset: i == 1,
@@ -672,7 +768,7 @@ mod test {
 
         // Act
         let (script_data, param_offsets) =
-            build_script_data_from_contract_calls(&calls, 0).unwrap();
+            build_script_data_from_contract_calls(&calls, 0, AssetId::zeroed()).unwrap();
 
         // Assert
         assert_eq!(param_offsets.len(), NUM_CALLS);
@@ -732,8 +828,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             inputs,
@@ -757,7 +857,12 @@ mod test {
 
         let calls = [call, call_w_same_contract];
 
-        let (inputs, _) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             inputs,
@@ -777,7 +882,12 @@ mod test {
 
         let wallet = WalletUnlocked::new_random(None);
 
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         assert_eq!(
             outputs,
@@ -795,8 +905,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (inputs, _) =
-            get_transaction_inputs_outputs(slice::from_ref(&call), Default::default(), &wallet);
+        let (inputs, _) = get_transaction_inputs_outputs(
+            slice::from_ref(&call),
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let mut expected_contract_ids: HashSet<ContractId> =
@@ -811,7 +925,7 @@ mod test {
                     tx_pointer,
                     contract_id,
                 } => {
-                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u8));
+                    assert_eq!(utxo_id, UtxoId::new(Bytes32::zeroed(), index as u16));
                     assert_eq!(balance_root, Bytes32::zeroed());
                     assert_eq!(state_root, Bytes32::zeroed());
                     assert_eq!(tx_pointer, TxPointer::default());
@@ -819,7 +933,7 @@ mod test {
                     expected_contract_ids.remove(&contract_id);
                 }
                 _ => {
-                    panic!("Expected only inputs of type Input::Contract");
+                    panic!("expected only inputs of type `Input::Contract`");
                 }
             }
         }
@@ -835,7 +949,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &[call],
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let expected_outputs = (0..=1)
@@ -848,7 +967,7 @@ mod test {
     #[test]
     fn change_per_asset_id_added() {
         // given
-        let asset_ids = [AssetId::default(), AssetId::from([1; 32])];
+        let asset_ids = [AssetId::zeroed(), AssetId::from([1; 32])];
 
         let coins = asset_ids
             .into_iter()
@@ -858,7 +977,6 @@ mod test {
                     block_created: 0u32,
                     asset_id,
                     utxo_id: Default::default(),
-                    maturity: 0u32,
                     owner: Default::default(),
                     status: CoinStatus::Unspent,
                 });
@@ -870,7 +988,8 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&[call], coins, &wallet);
+        let (_, outputs) =
+            get_transaction_inputs_outputs(&[call], coins, wallet.address(), AssetId::zeroed());
 
         // then
         let change_outputs: HashSet<Output> = outputs[1..].iter().cloned().collect();
@@ -905,7 +1024,12 @@ mod test {
         let wallet = WalletUnlocked::new_random(None);
 
         // when
-        let (_, outputs) = get_transaction_inputs_outputs(&calls, Default::default(), &wallet);
+        let (_, outputs) = get_transaction_inputs_outputs(
+            &calls,
+            Default::default(),
+            wallet.address(),
+            AssetId::zeroed(),
+        );
 
         // then
         let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
@@ -934,7 +1058,7 @@ mod test {
             ContractCall::new_with_random_id().with_call_parameters(call_parameters)
         });
 
-        let asset_id_amounts = calculate_required_asset_amounts(&calls);
+        let asset_id_amounts = calculate_required_asset_amounts(&calls, AssetId::zeroed());
 
         let expected_asset_id_amounts = [(asset_id_1, 400), (asset_id_2, 600)].into();
 
@@ -946,7 +1070,7 @@ mod test {
 
     mod compute_calls_instructions_len {
         use fuel_asm::Instruction;
-        use fuels_core::types::{enum_variants::EnumVariants, param_types::ParamType};
+        use fuels_core::types::param_types::{EnumVariants, ParamType};
 
         use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
 
@@ -954,8 +1078,10 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
+        #[cfg(feature = "legacy_encoding")]
         // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
         const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
+        #[cfg(feature = "legacy_encoding")]
         // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
         const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
@@ -977,6 +1103,7 @@ mod test {
             );
         }
 
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_heap_type() {
             let output_params = vec![
@@ -996,6 +1123,7 @@ mod test {
             }
         }
 
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_gas_offset_and_heap_type() {
             let mut call = ContractCall::new_with_random_id();
@@ -1012,6 +1140,7 @@ mod test {
             );
         }
 
+        #[cfg(feature = "legacy_encoding")]
         #[test]
         fn test_with_enum_with_heap_and_non_heap_variant() {
             let variant_sets = vec![
@@ -1022,7 +1151,14 @@ mod test {
             for variant_set in variant_sets {
                 let mut call = ContractCall::new_with_random_id();
                 call.output_param = ParamType::Enum {
-                    variants: EnumVariants::new(variant_set).unwrap(),
+                    name: "".to_string(),
+                    enum_variants: EnumVariants::new(
+                        variant_set
+                            .into_iter()
+                            .map(|pt| ("".to_string(), pt))
+                            .collect(),
+                    )
+                    .unwrap(),
                     generics: Vec::new(),
                 };
                 let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
@@ -1040,7 +1176,12 @@ mod test {
         fn test_with_enum_with_only_non_heap_variants() {
             let mut call = ContractCall::new_with_random_id();
             call.output_param = ParamType::Enum {
-                variants: EnumVariants::new(vec![ParamType::Bool, ParamType::U8]).unwrap(),
+                name: "".to_string(),
+                enum_variants: EnumVariants::new(vec![
+                    ("".to_string(), ParamType::Bool),
+                    ("".to_string(), ParamType::U8),
+                ])
+                .unwrap(),
                 generics: Vec::new(),
             };
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
