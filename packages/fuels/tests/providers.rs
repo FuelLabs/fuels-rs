@@ -1,11 +1,10 @@
-use std::{ops::Add, str::FromStr};
+use std::ops::Add;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuel_core::chain_config::StateConfig;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
-    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
     types::{
