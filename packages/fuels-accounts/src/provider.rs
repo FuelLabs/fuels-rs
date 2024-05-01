@@ -31,7 +31,7 @@ use fuels_core::{
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error, Result},
+        errors::Result,
         message::Message,
         message_proof::MessageProof,
         node_info::NodeInfo,
@@ -42,7 +42,7 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
-use supported_versions::{check_fuel_core_version_compatibility, VersionCompatibility};
+
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
@@ -131,11 +131,8 @@ impl Provider {
 
     /// Connects to an existing node at the given address.
     pub async fn connect(url: impl AsRef<str>) -> Result<Provider> {
-        let client = RetryableClient::new(&url, Default::default())?;
+        let client = RetryableClient::connect(&url, Default::default()).await?;
         let consensus_parameters = client.chain_info().await?.consensus_parameters;
-        let node_info = client.node_info().await?.into();
-
-        Self::ensure_client_version_is_supported(&node_info)?;
 
         Ok(Self {
             client,
@@ -241,38 +238,6 @@ impl Provider {
 
     pub fn base_asset_id(&self) -> &AssetId {
         self.consensus_parameters.base_asset_id()
-    }
-
-    fn ensure_client_version_is_supported(node_info: &NodeInfo) -> Result<()> {
-        let node_version = node_info
-            .node_version
-            .parse::<semver::Version>()
-            .map_err(|e| error!(Provider, "could not parse Fuel client version: {}", e))?;
-
-        let VersionCompatibility {
-            supported_version,
-            is_major_supported,
-            is_minor_supported,
-            is_patch_supported,
-        } = check_fuel_core_version_compatibility(node_version.clone());
-
-        if !is_major_supported || !is_minor_supported {
-            return Err(error!(
-                Provider,
-                "unsupported Fuel client version. \\
-                Current version: {}, supported version: {}",
-                node_version,
-                supported_version
-            ));
-        } else if !is_patch_supported {
-            tracing::warn!(
-                fuel_client_version = %node_version,
-                supported_version = %supported_version,
-                "the patch versions of the client and SDK differ",
-            );
-        };
-
-        Ok(())
     }
 
     pub fn chain_id(&self) -> ChainId {

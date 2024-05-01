@@ -649,10 +649,17 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
+        #[cfg(feature = "legacy_encoding")]
         let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
             Some(&self.contract_call.contract_id),
             &self.contract_call.output_param,
         )?;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
+            &self.contract_call.contract_id,
+            &self.contract_call.output_param,
+        )?;
+
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
@@ -726,9 +733,9 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
-    #[cfg(not(feature = "experimental"))]
+    #[cfg(feature = "legacy_encoding")]
     let compute_custom_input_offset = should_compute_custom_input_offset(args);
-    #[cfg(feature = "experimental")]
+    #[cfg(not(feature = "legacy_encoding"))]
     let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
@@ -759,7 +766,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 // If the data passed into the contract method is an integer or a
 // boolean, then the data itself should be passed. Otherwise, it
 // should simply pass a pointer to the data in memory.
-#[cfg(not(feature = "experimental"))]
+#[cfg(feature = "legacy_encoding")]
 fn should_compute_custom_input_offset(args: &[Token]) -> bool {
     args.len() > 1
         || args.iter().any(|t| {
@@ -966,10 +973,17 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
+        #[cfg(feature = "legacy_encoding")]
         let final_tokens = self
             .contract_calls
             .iter()
             .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .collect::<Result<Vec<_>>>()?;
+        #[cfg(not(feature = "legacy_encoding"))]
+        let final_tokens = self
+            .contract_calls
+            .iter()
+            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);

@@ -330,10 +330,10 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    #[cfg(not(feature = "experimental"))]
-    let gas_used_by_script = 209;
-    #[cfg(feature = "experimental")]
-    let gas_used_by_script = 242;
+    #[cfg(feature = "legacy_encoding")]
+    let gas_used_by_script = 364;
+    #[cfg(not(feature = "legacy_encoding"))]
+    let gas_used_by_script = 856;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -511,7 +511,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "provider: Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: io error: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())

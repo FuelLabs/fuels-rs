@@ -12,6 +12,7 @@ abi ContractCaller {
     ) -> u64;
     fn mint_then_increment_from_contract(contract_id: ContractId, amount: u64, address: Address);
     fn require_from_contract(contract_id: ContractId);
+    fn re_entrant(contract_id: ContractId, re_enter: bool) -> u64;
 }
 
 impl ContractCaller for Contract {
@@ -43,5 +44,16 @@ impl ContractCaller for Contract {
         let contract_instance = abi(LibContract, contract_id.into());
 
         contract_instance.require();
+    }
+
+    fn re_entrant(contract_id: ContractId, re_enter: bool) -> u64 {
+        if !re_enter {
+            return 101
+        }
+
+        let contract_instance = abi(ContractCaller, contract_id.into());
+        let _ = contract_instance.re_entrant(contract_id, false);
+
+        42
     }
 }
