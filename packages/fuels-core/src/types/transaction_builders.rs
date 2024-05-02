@@ -263,21 +263,19 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(&self) -> Policies {
-                let mut policies = Policies::default();
-
-                let mut witness_limit = self.tx_policies.witness_limit();
-                if witness_limit.is_none() {
-                    witness_limit = self.calculate_witnesses_size().ok();
-                }
-                policies.set(PolicyType::WitnessLimit, witness_limit);
+            fn generate_fuel_policies(&self) -> Result<Policies> {
+                let witness_limit = match self.tx_policies.witness_limit() {
+                    Some(limit) => limit,
+                    None => self.calculate_witnesses_size()?,
+                };
+                let mut policies = Policies::default().with_witness_limit(witness_limit);
 
                 // `MaxFee` set to `tip` or `0` for `dry_run`
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
 
-                policies
+                Ok(policies)
             }
 
             fn is_using_predicates(&self) -> bool {
@@ -474,7 +472,7 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, base_offset: usize, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -692,7 +690,7 @@ impl CreateTransactionBuilder {
         provider: impl DryRunner,
     ) -> Result<Create> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
         base_offset += storage_slots_offset + policies.size_dynamic();
