@@ -370,7 +370,7 @@ async fn predicate_handles_u128() -> Result<()> {
 async fn predicate_handles_b256() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/types/predicates/predicate_b256/out/debug/predicate_b256-abi.json"
+        abi = "packages/fuels/tests/types/predicates/predicate_b256/out/release/predicate_b256-abi.json"
     ));
 
     let data = MyPredicateEncoder::default().encode_data(Bits256([1; 32]))?;
