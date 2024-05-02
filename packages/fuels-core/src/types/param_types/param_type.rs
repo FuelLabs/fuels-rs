@@ -4,7 +4,7 @@ use crate::{
     checked_round_up_to_word_alignment,
     types::{
         errors::{error, Result},
-        param_types::{debug_with_depth::DebugWithDepth, EnumVariants},
+        param_types::EnumVariants,
     },
 };
 
@@ -47,22 +47,6 @@ pub enum ReturnLocation {
 }
 
 impl ParamType {
-    // Depending on the type, the returned value will be stored
-    // either in `Return` or `ReturnData`.
-    pub fn get_return_location(&self) -> ReturnLocation {
-        #[cfg(feature = "legacy_encoding")]
-        match self {
-            Self::Unit | Self::U8 | Self::U16 | Self::U32 | Self::U64 | Self::Bool => {
-                ReturnLocation::Return
-            }
-
-            _ => ReturnLocation::ReturnData,
-        }
-
-        #[cfg(not(feature = "legacy_encoding"))]
-        ReturnLocation::ReturnData
-    }
-
     /// Given a [ParamType], return the number of elements of that [ParamType] that can fit in
     /// `available_bytes`: it is the length of the corresponding heap type.
     pub fn calculate_num_of_elements(
@@ -107,42 +91,6 @@ impl ParamType {
                 .any(|param_type| param_type.is_extra_receipt_needed(false)),
             _ => false,
         }
-    }
-
-    pub fn validate_is_decodable(&self, max_depth: usize) -> Result<()> {
-        if let ParamType::Enum { enum_variants, .. } = self {
-            let grandchildren_need_receipts = enum_variants
-                .param_types()
-                .any(|child| child.children_need_extra_receipts());
-            if grandchildren_need_receipts {
-                return Err(error!(
-                    Codec,
-                    "enums currently support only one level deep heap types"
-                ));
-            }
-
-            let num_of_children_needing_receipts = enum_variants
-                .param_types()
-                .filter(|param_type| param_type.is_extra_receipt_needed(false))
-                .count();
-            if num_of_children_needing_receipts > 1 {
-                return Err(error!(
-                    Codec,
-                    "enums currently support only one heap-type variant. Found: \
-                        {num_of_children_needing_receipts}"
-                ));
-            }
-        } else if self.children_need_extra_receipts() {
-            return Err(error!(
-                Codec,
-                "type `{:?}` is not decodable: nested heap types are currently not \
-                    supported except in enums",
-                DebugWithDepth::new(self, max_depth)
-            ));
-        }
-        self.compute_encoding_in_bytes()?;
-
-        Ok(())
     }
 
     pub fn is_extra_receipt_needed(&self, top_level_type: bool) -> bool {
@@ -232,7 +180,7 @@ impl ParamType {
 mod tests {
     use super::*;
     use crate::{
-        checked_round_up_to_word_alignment, codec::DecoderConfig, constants::WORD_SIZE, to_named,
+        checked_round_up_to_word_alignment, constants::WORD_SIZE, to_named,
         types::param_types::ParamType,
     };
 
@@ -379,234 +327,6 @@ mod tests {
 
         let string_array_too_big = ParamType::StringArray(usize::MAX);
         overflows(string_array_too_big);
-        Ok(())
-    }
-
-    #[test]
-    fn validate_is_decodable_simple_types() -> Result<()> {
-        let max_depth = DecoderConfig::default().max_depth;
-        assert!(ParamType::U8.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::U16.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::U32.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::U64.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::U128.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::U256.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::Bool.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::B256.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::Unit.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::StringSlice
-            .validate_is_decodable(max_depth)
-            .is_ok());
-        assert!(ParamType::StringArray(10)
-            .validate_is_decodable(max_depth)
-            .is_ok());
-        assert!(ParamType::RawSlice.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::Bytes.validate_is_decodable(max_depth).is_ok());
-        assert!(ParamType::String.validate_is_decodable(max_depth).is_ok());
-        Ok(())
-    }
-
-    #[test]
-    fn validate_is_decodable_enum_containing_bytes() -> Result<()> {
-        let max_depth = DecoderConfig::default().max_depth;
-        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
-        let param_types_containing_bytes = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
-        let param_types_no_bytes = vec![ParamType::U64, ParamType::U32];
-        let variants_no_bytes_type = EnumVariants::new(to_named(&param_types_no_bytes))?;
-        let variants_one_bytes_type = EnumVariants::new(to_named(&param_types_containing_bytes))?;
-        let variants_two_bytes_type =
-            EnumVariants::new(to_named(&[ParamType::Bytes, ParamType::Bytes]))?;
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_bytes_type.clone(),
-            generics: param_types_no_bytes.clone(),
-        });
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_bytes_type.clone(),
-            generics: param_types_no_bytes.clone(),
-        });
-
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_bytes_type.clone(),
-                generics: param_types_no_bytes.clone(),
-            }
-            .validate_is_decodable(max_depth)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_bytes_type,
-            generics: param_types_containing_bytes.clone(),
-        });
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_bytes_type,
-            generics: param_types_containing_bytes.clone(),
-        });
-
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_bytes_type.clone(),
-                generics: param_types_containing_bytes.clone(),
-            }
-            .validate_is_decodable(max_depth)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn validate_is_decodable_enum_containing_string() -> Result<()> {
-        let max_depth = DecoderConfig::default().max_depth;
-        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
-        let param_types_containing_string = vec![ParamType::Bytes, ParamType::U64, ParamType::Bool];
-        let param_types_no_string = vec![ParamType::U64, ParamType::U32];
-        let variants_no_string_type = EnumVariants::new(to_named(&param_types_no_string))?;
-        let variants_one_string_type = EnumVariants::new(to_named(&param_types_containing_string))?;
-        let variants_two_string_type =
-            EnumVariants::new(to_named(&[ParamType::Bytes, ParamType::Bytes]))?;
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_string_type.clone(),
-            generics: param_types_no_string.clone(),
-        });
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_string_type.clone(),
-            generics: param_types_no_string.clone(),
-        });
-
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_string_type.clone(),
-                generics: param_types_no_string.clone(),
-            }
-            .validate_is_decodable(1)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_string_type,
-            generics: param_types_containing_string.clone(),
-        });
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_string_type,
-            generics: param_types_containing_string.clone(),
-        });
-
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_string_type.clone(),
-                generics: param_types_containing_string.clone(),
-            }
-            .validate_is_decodable(1)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-
-        Ok(())
-    }
-
-    #[test]
-    fn validate_is_decodable_enum_containing_vector() -> Result<()> {
-        let max_depth = DecoderConfig::default().max_depth;
-        let can_be_decoded = |p: ParamType| p.validate_is_decodable(max_depth).is_ok();
-        let param_types_containing_vector = vec![
-            ParamType::Vector(Box::new(ParamType::Bool)),
-            ParamType::U64,
-            ParamType::Bool,
-        ];
-        let param_types_no_vector = vec![ParamType::U64, ParamType::U32];
-        let variants_no_vector_type = EnumVariants::new(to_named(&param_types_no_vector))?;
-        let variants_one_vector_type = EnumVariants::new(to_named(&param_types_containing_vector))?;
-        let variants_two_vector_type = EnumVariants::new(to_named(&[
-            ParamType::Vector(Box::new(ParamType::U8)),
-            ParamType::Vector(Box::new(ParamType::U16)),
-        ]))?;
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_vector_type.clone(),
-            generics: param_types_no_vector.clone(),
-        });
-
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_vector_type.clone(),
-            generics: param_types_no_vector.clone(),
-        });
-
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_vector_type.clone(),
-                generics: param_types_no_vector.clone(),
-            }
-            .validate_is_decodable(max_depth)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_no_vector_type,
-            generics: param_types_containing_vector.clone(),
-        });
-        can_be_decoded(ParamType::Enum {
-            name: "".to_string(),
-            enum_variants: variants_one_vector_type,
-            generics: param_types_containing_vector.clone(),
-        });
-        let expected =
-            "codec: enums currently support only one heap-type variant. Found: 2".to_string();
-        assert_eq!(
-            ParamType::Enum {
-                name: "".to_string(),
-                enum_variants: variants_two_vector_type.clone(),
-                generics: param_types_containing_vector.clone(),
-            }
-            .validate_is_decodable(max_depth)
-            .expect_err("should not be decodable")
-            .to_string(),
-            expected
-        );
-
         Ok(())
     }
 }

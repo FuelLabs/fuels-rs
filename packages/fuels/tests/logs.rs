@@ -1450,43 +1450,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
     Ok(())
 }
 
-// String slices cannot be decoded from logs as they are encoded as ptr, len
-// TODO: Once https://github.com/FuelLabs/sway/issues/5110 is resolved we can remove this
 #[tokio::test]
-#[cfg(feature = "legacy_encoding")]
-async fn string_slice_log() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Contract(
-            name = "MyContract",
-            project = "packages/fuels/tests/logs/contract_logs"
-        ),),
-        Deploy(
-            contract = "MyContract",
-            name = "contract_instance",
-            wallet = "wallet"
-        )
-    );
-
-    let response = contract_instance
-        .methods()
-        .produce_string_slice_log()
-        .call()
-        .await?;
-
-    let log = response.decode_logs();
-
-    let expected_err =
-        "codec: string slices cannot be decoded from logs. Convert the slice to `str[N]` with `__to_str_array`".to_string();
-
-    let failed = log.filter_failed();
-    assert_eq!(failed.first().unwrap().to_string(), expected_err);
-
-    Ok(())
-}
-
-#[tokio::test]
-#[cfg(not(feature = "legacy_encoding"))]
 async fn contract_experimental_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
@@ -1545,7 +1509,6 @@ async fn contract_experimental_log() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(not(feature = "legacy_encoding"))]
 async fn script_experimental_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 

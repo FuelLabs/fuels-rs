@@ -42,7 +42,6 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
-
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
