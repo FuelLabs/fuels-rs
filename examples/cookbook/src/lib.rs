@@ -68,7 +68,7 @@ mod tests {
             .with_asset_id(base_asset_id);
 
         contract_methods
-            .deposit(wallet.address())
+            .deposit(wallet.address().into())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
@@ -84,7 +84,7 @@ mod tests {
             .with_asset_id(lp_asset_id);
 
         contract_methods
-            .withdraw(wallet.address())
+            .withdraw(wallet.address().into())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
