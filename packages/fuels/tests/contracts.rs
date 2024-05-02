@@ -1,10 +1,9 @@
 use fuel_tx::ContractParameters;
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    types::{errors::transaction::Reason, Bits256},
+    types::{errors::transaction::Reason, Bits256, Identity},
 };
-use fuels_core::{calldata, codec::encode_fn_selector};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -648,8 +647,12 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test() -> Result<(
+    Vec<WalletUnlocked>,
+    [Identity; 3],
+    AssetId,
+    Bech32ContractId,
+)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -661,10 +664,10 @@ async fn setup_output_variable_estimation_test(
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
-    let addresses: [Address; 3] = wallets
+    let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
-        .collect::<Vec<Address>>()
+        .collect::<Vec<_>>()
         .try_into()
         .unwrap();
 

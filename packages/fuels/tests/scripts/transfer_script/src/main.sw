@@ -1,7 +1,7 @@
 script;
 
-use std::asset::transfer_to_address;
+use std::asset::transfer;
 
-fn main(amount: u64, asset: AssetId, receiver: Address) -> () {
-    transfer_to_address(receiver, asset, amount);
+fn main(amount: u64, asset: AssetId, receiver: Identity) -> () {
+    transfer(receiver, asset, amount);
 }

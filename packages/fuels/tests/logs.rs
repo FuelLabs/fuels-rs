@@ -1257,7 +1257,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         let address = wallet.address();
 
         let error = contract_methods
-            .transfer_coins_to_output(1_000_000, asset_id, address)
+            .transfer(1_000_000, asset_id, address.into())
             .call()
             .await
             .expect_err("should return a revert error");
