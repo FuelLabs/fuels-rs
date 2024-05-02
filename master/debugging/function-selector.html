@@ -143,38 +143,13 @@ used by the node to identify which method we wish to execute.</p>
 <p>If, for whatever reason, you wish to generate the function selector yourself you can do so:</p>
 <pre><code class="language-rust ignore">        // fn some_fn_name(arg1: Vec&lt;str[3]&gt;, arg2: u8)
         let fn_name = &quot;some_fn_name&quot;;
-        let inputs = [Vec::&lt;SizedAsciiString&lt;3&gt;&gt;::param_type(), u8::param_type()];
 
-        let selector = resolve_fn_selector(fn_name, &amp;inputs);
+        let selector = encode_fn_selector(fn_name);
 
-        assert_eq!(selector, [0, 0, 0, 0, 7, 161, 3, 203]);
-</code></pre>
-<h2 id="if-you-dont-have-the-paramtype"><a class="header" href="#if-you-dont-have-the-paramtype">If you don't have the <code>ParamType</code></a></h2>
-<p>If you won't or can't run the <code>abigen!</code> macro and all you have is the JSON ABI of you contract, you can still get the function
-selector, but you have to jump through an extra hoop to get the <code>ParamTypes</code>:</p>
-<pre><code class="language-rust ignore">        let abi: ProgramABI = serde_json::from_str(&amp;abi_file_contents)?;
-
-        let type_lookup = abi
-            .types
-            .into_iter()
-            .map(|a_type| (a_type.type_id, a_type))
-            .collect::&lt;HashMap&lt;_, _&gt;&gt;();
-
-        let a_fun = abi
-            .functions
-            .into_iter()
-            .find(|fun| fun.name == &quot;array_of_structs&quot;)
-            .unwrap();
-
-        let inputs = a_fun
-            .inputs
-            .into_iter()
-            .map(|type_appl| ParamType::try_from_type_application(&amp;type_appl, &amp;type_lookup))
-            .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
-
-        let selector = resolve_fn_selector(&amp;a_fun.name, &amp;inputs);
-
-        assert_eq!(selector, [0, 0, 0, 0, 39, 152, 108, 146,]);
+        assert_eq!(
+            selector,
+            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+        );
 </code></pre>
 
                     </main>

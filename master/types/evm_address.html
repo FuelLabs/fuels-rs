@@ -145,10 +145,14 @@
 }
 </code></pre>
 <p>Here's an example:</p>
-<pre><code class="language-rust ignore">    let b256 = Bits256(hasher.finalize().into());
-    let arg = EvmAddress::from(b256);
+<pre><code class="language-rust ignore">        let b256 = Bits256::from_hex_str(
+            &quot;0x1616060606060606060606060606060606060606060606060606060606060606&quot;,
+        )?;
+        let evm_address = EvmAddress::from(b256);
 
-    let call_handler = contract_instance.methods().takes_evm_address(arg);
+        let call_handler = contract_instance
+            .methods()
+            .evm_address_as_input(evm_address);
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> when creating an <code>EvmAddress</code> from <code>Bits256</code>, the first 12 bytes will be cleared because an EVM address is only 20 bytes long.</p>

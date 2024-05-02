@@ -1238,7 +1238,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                 contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::resolve_fn_selector(&quot;initialize_counter&quot;, &amp;[u64::param_type()]),
+                    codec::encode_fn_selector(&quot;initialize_counter&quot;),
                     &amp;[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
@@ -1250,7 +1250,7 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
                 contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::resolve_fn_selector(&quot;increment_counter&quot;, &amp;[u64::param_type()]),
+                    codec::encode_fn_selector(&quot;increment_counter&quot;),
                     &amp;[value.into_token()],
                     self.log_decoder.clone(),
                     false,
@@ -2058,7 +2058,6 @@ let is_error = response.is_err();
         target: ContractId,
         function_selector: Bytes,
         calldata: Bytes,
-        single_value_type_arg: bool,
     ) {
         let call_params = CallParams {
             coins: 0,
@@ -2066,13 +2065,7 @@ let is_error = response.is_err();
             gas: 10_000,
         };
 
-        call_with_function_selector(
-            target,
-            function_selector,
-            calldata,
-            single_value_type_arg,
-            call_params,
-        );
+        call_with_function_selector(target, function_selector, calldata, call_params);
     }
 </code></pre>
 <p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
@@ -2081,8 +2074,7 @@ let is_error = response.is_err();
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
 </code></pre>
 <p>you would construct the function selector and the calldata as such, and provide them to the caller contract (like the one above):</p>
-<pre><code class="language-rust ignore">        let function_selector =
-            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::&lt;4&gt;));
+<pre><code class="language-rust ignore">        let function_selector = encode_fn_selector(&quot;set_value_multiple_complex&quot;);
         let call_data = calldata!(
             MyStruct {
                 a: true,
@@ -2097,7 +2089,6 @@ let is_error = response.is_err();
                 target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
-                false,
             )
             .estimate_tx_dependencies(None)
             .await?
@@ -2883,8 +2874,8 @@ enum SomeEnum&lt;T, K&gt; {
     }
 </code></pre>
 <p>If your contract's method takes and returns, for instance, a Sway's <code>str[23]</code>. When using the SDK, this method will take and return a <code>SizedAsciiString&lt;23&gt;</code>, and you can pass a string to it like this:</p>
-<pre><code class="language-rust ignore">    let call_handler = contract_instance.methods().takes_string(
-        &quot;This is a full sentence&quot;
+<pre><code class="language-rust ignore">    let _ = contract_instance.methods().takes_string(
+        &quot;fuell&quot;
             .try_into()
             .expect(&quot;failed to convert string into SizedAsciiString&quot;),
     );
@@ -2953,10 +2944,14 @@ enum SomeEnum&lt;T, K&gt; {
 }
 </code></pre>
 <p>Here's an example:</p>
-<pre><code class="language-rust ignore">    let b256 = Bits256(hasher.finalize().into());
-    let arg = EvmAddress::from(b256);
+<pre><code class="language-rust ignore">        let b256 = Bits256::from_hex_str(
+            &quot;0x1616060606060606060606060606060606060606060606060606060606060606&quot;,
+        )?;
+        let evm_address = EvmAddress::from(b256);
 
-    let call_handler = contract_instance.methods().takes_evm_address(arg);
+        let call_handler = contract_instance
+            .methods()
+            .evm_address_as_input(evm_address);
 </code></pre>
 <blockquote>
 <p><strong>Note:</strong> when creating an <code>EvmAddress</code> from <code>Bits256</code>, the first 12 bytes will be cleared because an EVM address is only 20 bytes long.</p>
@@ -3664,7 +3659,6 @@ use std::{
         transfer_to_address,
     },
     call_frames::{
-        contract_id,
         msg_asset_id,
     },
     constants::ZERO_B256,
@@ -3838,38 +3832,13 @@ used by the node to identify which method we wish to execute.</p>
 <p>If, for whatever reason, you wish to generate the function selector yourself you can do so:</p>
 <pre><code class="language-rust ignore">        // fn some_fn_name(arg1: Vec&lt;str[3]&gt;, arg2: u8)
         let fn_name = &quot;some_fn_name&quot;;
-        let inputs = [Vec::&lt;SizedAsciiString&lt;3&gt;&gt;::param_type(), u8::param_type()];
 
-        let selector = resolve_fn_selector(fn_name, &amp;inputs);
+        let selector = encode_fn_selector(fn_name);
 
-        assert_eq!(selector, [0, 0, 0, 0, 7, 161, 3, 203]);
-</code></pre>
-<h2 id="if-you-dont-have-the-paramtype"><a class="header" href="#if-you-dont-have-the-paramtype">If you don't have the <code>ParamType</code></a></h2>
-<p>If you won't or can't run the <code>abigen!</code> macro and all you have is the JSON ABI of you contract, you can still get the function
-selector, but you have to jump through an extra hoop to get the <code>ParamTypes</code>:</p>
-<pre><code class="language-rust ignore">        let abi: ProgramABI = serde_json::from_str(&amp;abi_file_contents)?;
-
-        let type_lookup = abi
-            .types
-            .into_iter()
-            .map(|a_type| (a_type.type_id, a_type))
-            .collect::&lt;HashMap&lt;_, _&gt;&gt;();
-
-        let a_fun = abi
-            .functions
-            .into_iter()
-            .find(|fun| fun.name == &quot;array_of_structs&quot;)
-            .unwrap();
-
-        let inputs = a_fun
-            .inputs
-            .into_iter()
-            .map(|type_appl| ParamType::try_from_type_application(&amp;type_appl, &amp;type_lookup))
-            .collect::&lt;Result&lt;Vec&lt;_&gt;&gt;&gt;()?;
-
-        let selector = resolve_fn_selector(&amp;a_fun.name, &amp;inputs);
-
-        assert_eq!(selector, [0, 0, 0, 0, 39, 152, 108, 146,]);
+        assert_eq!(
+            selector,
+            [0, 0, 0, 0, 0, 0, 0, 12, 115, 111, 109, 101, 95, 102, 110, 95, 110, 97, 109, 101]
+        );
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="glossary"><a class="header" href="#glossary">Glossary</a></h1>
 <h2 id="contract"><a class="header" href="#contract">Contract</a></h2>

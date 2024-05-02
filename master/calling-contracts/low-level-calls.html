@@ -152,7 +152,6 @@
         target: ContractId,
         function_selector: Bytes,
         calldata: Bytes,
-        single_value_type_arg: bool,
     ) {
         let call_params = CallParams {
             coins: 0,
@@ -160,13 +159,7 @@
             gas: 10_000,
         };
 
-        call_with_function_selector(
-            target,
-            function_selector,
-            calldata,
-            single_value_type_arg,
-            call_params,
-        );
+        call_with_function_selector(target, function_selector, calldata, call_params);
     }
 </code></pre>
 <p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
@@ -175,8 +168,7 @@
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
 </code></pre>
 <p>you would construct the function selector and the calldata as such, and provide them to the caller contract (like the one above):</p>
-<pre><code class="language-rust ignore">        let function_selector =
-            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::&lt;4&gt;));
+<pre><code class="language-rust ignore">        let function_selector = encode_fn_selector(&quot;set_value_multiple_complex&quot;);
         let call_data = calldata!(
             MyStruct {
                 a: true,
@@ -191,7 +183,6 @@
                 target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
-                false,
             )
             .estimate_tx_dependencies(None)
             .await?
