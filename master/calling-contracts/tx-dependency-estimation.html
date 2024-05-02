@@ -144,7 +144,7 @@
         let amount = 100;
 
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .call()
             .await;
 
@@ -155,7 +155,7 @@
 </code></pre>
 <p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .append_variable_outputs(1)
             .with_contract_ids(&amp;[called_contract_id.into()])
             .call()
@@ -163,7 +163,7 @@
 </code></pre>
 <p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()

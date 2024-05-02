@@ -143,8 +143,8 @@
 
 use std::{
     asset::{
-        mint_to_address,
-        transfer_to_address,
+        mint_to,
+        transfer,
     },
     call_frames::{
         msg_asset_id,
@@ -155,16 +155,16 @@ use std::{
 
 abi LiquidityPool {
     #[payable]
-    fn deposit(recipient: Address);
+    fn deposit(recipient: Identity);
     #[payable]
-    fn withdraw(recipient: Address);
+    fn withdraw(recipient: Identity);
 }
 
 const BASE_TOKEN: AssetId = AssetId::from(0x9ae5b658754e096e4d681c548daf46354495a437cc61492599e33fc64dcdc30c);
 
 impl LiquidityPool for Contract {
     #[payable]
-    fn deposit(recipient: Address) {
+    fn deposit(recipient: Identity) {
         assert(BASE_TOKEN == msg_asset_id());
         assert(0 &lt; msg_amount());
 
@@ -172,18 +172,18 @@ impl LiquidityPool for Contract {
         let amount_to_mint = msg_amount() * 2;
 
         // Mint some LP token based upon the amount of the base token.
-        mint_to_address(recipient, ZERO_B256, amount_to_mint);
+        mint_to(recipient, ZERO_B256, amount_to_mint);
     }
 
     #[payable]
-    fn withdraw(recipient: Address) {
+    fn withdraw(recipient: Identity) {
         assert(0 &lt; msg_amount());
 
         // Amount to withdraw.
         let amount_to_transfer = msg_amount() / 2;
 
         // Transfer base token to recipient.
-        transfer_to_address(recipient, BASE_TOKEN, amount_to_transfer);
+        transfer(recipient, BASE_TOKEN, amount_to_transfer);
     }
 }
 </code></pre>
@@ -228,7 +228,7 @@ impl LiquidityPool for Contract {
             .with_asset_id(base_asset_id);
 
         contract_methods
-            .deposit(wallet.address())
+            .deposit(wallet.address().into())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
@@ -243,7 +243,7 @@ impl LiquidityPool for Contract {
             .with_asset_id(lp_asset_id);
 
         contract_methods
-            .withdraw(wallet.address())
+            .withdraw(wallet.address().into())
             .call_params(call_params)?
             .append_variable_outputs(1)
             .call()
