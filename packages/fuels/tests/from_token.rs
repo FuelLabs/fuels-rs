@@ -1,8 +1,6 @@
 use std::str::FromStr;
 
-use fuels::prelude::*;
-#[cfg(feature = "legacy_encoding")]
-use fuels::{core::traits::Tokenizable, types::Token};
+use fuels::{core::traits::Tokenizable, prelude::*, types::Token};
 
 pub fn null_contract_id() -> Bech32ContractId {
     // a bech32 contract address that decodes to [0u8;32]
@@ -10,7 +8,6 @@ pub fn null_contract_id() -> Bech32ContractId {
         .unwrap()
 }
 
-#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn create_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from an ABI definition inline.
@@ -88,24 +85,9 @@ async fn create_struct_from_decoded_tokens() -> Result<()> {
     assert_eq!(10, struct_from_tokens.foo);
     assert!(struct_from_tokens.bar);
 
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let call_handler = contract_instance.methods().takes_struct(struct_from_tokens);
-
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
-    let encoded = format!(
-        "{}{}",
-        hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(encoded_args)
-    );
-
-    assert_eq!("00000000cb0b2f050a000000000000000100000000000000", encoded);
     Ok(())
 }
 
-#[cfg(feature = "legacy_encoding")]
 #[tokio::test]
 async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     // Generates the bindings from the an ABI definition inline.
@@ -202,21 +184,5 @@ async fn create_nested_struct_from_decoded_tokens() -> Result<()> {
     assert_eq!(10, nested_struct_from_tokens.x);
     assert!(nested_struct_from_tokens.foo.a);
 
-    let wallet = launch_provider_and_get_wallet().await?;
-
-    let contract_instance = SimpleContract::new(null_contract_id(), wallet);
-
-    let call_handler = contract_instance
-        .methods()
-        .takes_nested_struct(nested_struct_from_tokens);
-
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap().resolve(0);
-    let encoded = format!(
-        "{}{}",
-        hex::encode(call_handler.contract_call.encoded_selector),
-        hex::encode(encoded_args)
-    );
-
-    assert_eq!("0000000088bf8a1b000000000000000a0100000000000000", encoded);
     Ok(())
 }

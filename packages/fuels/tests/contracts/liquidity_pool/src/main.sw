@@ -6,7 +6,6 @@ use std::{
         transfer_to_address,
     },
     call_frames::{
-        contract_id,
         msg_asset_id,
     },
     constants::ZERO_B256,
