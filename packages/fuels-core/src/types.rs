@@ -36,7 +36,8 @@ pub fn pad_u32(value: u32) -> ByteArray {
 
 pub fn pad_string(s: &str) -> Result<Vec<u8>> {
     let padded_len =
-        padded_len(s.as_bytes()).ok_or(error!(Codec, "string is too long to be padded"))?;
+        padded_len(s.as_bytes()).ok_or_else(|| error!(Codec, "string is too long to be padded"))?;
+;
     let pad = padded_len - s.len();
 
     let mut padded = s.as_bytes().to_owned();
