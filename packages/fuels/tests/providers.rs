@@ -347,8 +347,6 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         .gas()
         .unwrap();
 
-    dbg!(gas_forwarded);
-
     assert_eq!(gas_limit, gas_forwarded + gas_used_by_script);
 
     Ok(())
