@@ -3,9 +3,10 @@ mod configurables_bounded_encoder;
 
 use std::default::Default;
 
-use crate::codec::abi_encoder::bounded_encoder::BoundedEncoder;
 use crate::{
-    codec::abi_encoder::configurables_bounded_encoder::ConfigurablesBoundedEncoder,
+    codec::abi_encoder::{
+        bounded_encoder::BoundedEncoder, configurables_bounded_encoder::ConfigurablesBoundedEncoder,
+    },
     types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
 };
 
@@ -75,8 +76,8 @@ mod tests {
     use itertools::chain;
 
     use super::*;
-    use crate::constants::WORD_SIZE;
     use crate::{
+        constants::WORD_SIZE,
         to_named,
         types::{
             errors::Error,

@@ -1,9 +1,10 @@
 mod bounded_decoder;
 mod decode_as_debug_str;
 
-use crate::codec::abi_decoder::bounded_decoder::BoundedDecoder;
 use crate::{
-    codec::abi_decoder::decode_as_debug_str::decode_as_debug_str,
+    codec::abi_decoder::{
+        bounded_decoder::BoundedDecoder, decode_as_debug_str::decode_as_debug_str,
+    },
     types::{errors::Result, param_types::ParamType, Token},
 };
 
