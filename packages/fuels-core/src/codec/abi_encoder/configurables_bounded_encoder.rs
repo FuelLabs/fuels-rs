@@ -283,7 +283,7 @@ impl ConfigurablesBoundedEncoder {
 
 fn zeropad_to_word_alignment(data: &mut Vec<u8>) -> Result<()> {
     let padded_length = padded_len_usize(data.len())
-        .ok_or(error!(Codec, "data length exceeds maximum allowed length"))?;
+        .ok_or_else(|| error!(Codec, "data length exceeds maximum allowed length"))?;
 
     data.resize(padded_length, 0);
 
