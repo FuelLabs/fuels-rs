@@ -62,7 +62,7 @@ fn parse_abigen_targets(
     project_lookup
         .iter()
         .map(|(name, project)| {
-            let source = Abi::parse(&project.abi_path())
+            let source = Abi::load_from(project.abi_path())
                 .map_err(|e| syn::Error::new(project.path_span, e.to_string()))?;
 
             Ok(AbigenTarget::new(

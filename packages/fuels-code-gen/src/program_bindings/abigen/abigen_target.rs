@@ -1,12 +1,14 @@
-use std::{convert::TryFrom, path::PathBuf, str::FromStr};
+use std::{
+    convert::TryFrom,
+    env, fs,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::Ident;
 
-use crate::{
-    error::{error, Error, Result},
-    utils::Source,
-};
+use crate::error::{error, Error, Result};
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {
@@ -44,16 +46,57 @@ pub struct Abi {
 }
 
 impl Abi {
-    pub fn parse(abi: &str) -> Result<Abi> {
-        let source = Source::parse(abi)?;
+    pub fn load_from(path: impl AsRef<Path>) -> Result<Abi> {
+        let path = Self::canonicalize_path(path.as_ref())?;
 
-        let json_abi_str = source.get()?;
-        let abi = FullProgramABI::from_json_abi(&json_abi_str).map_err(|e| {
-            error!("malformed `abi`. Did you use `forc` to create it?: ").combine(e)
+        let json_abi = fs::read_to_string(&path).map_err(|e| {
+            error!(
+                "failed to read `abi` file with path {}: {}",
+                path.display(),
+                e
+            )
         })?;
-        let path = source.path();
+        let abi = Self::parse_from_json(&json_abi)?;
 
-        Ok(Abi { path, abi })
+        Ok(Abi {
+            path: Some(path),
+            abi,
+        })
+    }
+
+    fn canonicalize_path(path: &Path) -> Result<PathBuf> {
+        let current_dir = env::current_dir()
+            .map_err(|e| error!("unable to get current directory: ").combine(e))?;
+
+        let root = current_dir.canonicalize().map_err(|e| {
+            error!(
+                "unable to canonicalize current directory {}: ",
+                current_dir.display()
+            )
+            .combine(e)
+        })?;
+
+        let path = root.join(path);
+
+        if path.is_relative() {
+            path.canonicalize().map_err(|e| {
+                error!(
+                    "unable to canonicalize file from working dir {} with path {}: {}",
+                    env::current_dir()
+                        .map(|cwd| cwd.display().to_string())
+                        .unwrap_or_else(|err| format!("??? ({err})")),
+                    path.display(),
+                    e
+                )
+            })
+        } else {
+            Ok(path)
+        }
+    }
+
+    fn parse_from_json(json_abi: &str) -> Result<FullProgramABI> {
+        FullProgramABI::from_json_abi(json_abi)
+            .map_err(|e| error!("malformed `abi`. Did you use `forc` to create it?: ").combine(e))
     }
 
     pub fn path(&self) -> Option<&PathBuf> {
@@ -62,6 +105,16 @@ impl Abi {
 
     pub fn abi(&self) -> &FullProgramABI {
         &self.abi
+    }
+}
+
+impl FromStr for Abi {
+    type Err = Error;
+
+    fn from_str(json_abi: &str) -> Result<Self> {
+        let abi = Abi::parse_from_json(json_abi)?;
+
+        Ok(Abi { path: None, abi })
     }
 }
 

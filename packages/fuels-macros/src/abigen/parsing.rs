@@ -1,7 +1,7 @@
 use fuels_code_gen::{Abi, AbigenTarget, ProgramType};
 use syn::{
     parse::{Parse, ParseStream},
-    Result,
+    LitStr, Result,
 };
 
 use crate::parse_utils::{Command, UniqueNameValues};
@@ -55,14 +55,24 @@ impl MacroAbigenTarget {
 
         let name = name_values.get_as_lit_str("name")?.value();
         let abi_lit_str = name_values.get_as_lit_str("abi")?;
-
-        let source = Abi::parse(&abi_lit_str.value())
-            .map_err(|e| syn::Error::new(abi_lit_str.span(), e.to_string()))?;
+        let source = Self::parse_inline_or_load_abi(abi_lit_str)?;
 
         Ok(Self {
             name,
             source,
             program_type,
         })
+    }
+
+    fn parse_inline_or_load_abi(abi_lit_str: &LitStr) -> Result<Abi> {
+        let abi_string = abi_lit_str.value();
+        let abi_str = abi_string.trim();
+
+        if abi_str.starts_with('{') || abi_str.starts_with('[') || abi_str.starts_with('\n') {
+            abi_str.parse()
+        } else {
+            Abi::load_from(abi_str)
+        }
+        .map_err(|e| syn::Error::new(abi_lit_str.span(), e.to_string()))
     }
 }
