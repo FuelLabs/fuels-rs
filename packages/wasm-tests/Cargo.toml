@@ -21,6 +21,3 @@ fuels = { path = "../fuels", default-features = false }
 fuels-core = { path = "../fuels-core", default-features = false }
 getrandom = { version = "0.2.11", features = ["js"] }
 wasm-bindgen-test = "0.3.39"
-
-[features]
-legacy_encoding = ["fuels-core/legacy_encoding"]

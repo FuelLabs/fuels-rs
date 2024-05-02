@@ -15,14 +15,14 @@ use crate::{
     },
 };
 
-pub(crate) struct LegacyBoundedEncoder {
+pub(crate) struct ConfigurablesBoundedEncoder {
     used_for_configurables: bool,
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
     max_total_enum_width: usize,
 }
 
-impl LegacyBoundedEncoder {
+impl ConfigurablesBoundedEncoder {
     pub(crate) fn new(config: EncoderConfig, used_for_configurables: bool) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);

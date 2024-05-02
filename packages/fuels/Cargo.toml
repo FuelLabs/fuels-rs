@@ -40,7 +40,6 @@ tai64 = { workspace = true }
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]
 coin-cache = ["fuels-accounts/coin-cache"]
-legacy_encoding = ["fuels-core/legacy_encoding", "fuels-programs/legacy_encoding"]
 
 # The crates enabled via `dep:` below are not currently wasm compatible, as
 # such they are only available if `std` is enabled. The `dep:` syntax was

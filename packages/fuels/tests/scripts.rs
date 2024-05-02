@@ -2,6 +2,7 @@ use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
 };
+use fuels_core::types::Identity;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -170,7 +171,11 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
-    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let script_call = script_instance.main(
+        amount,
+        asset_id,
+        Identity::Address(receiver.address().into()),
+    );
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)

@@ -284,11 +284,6 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        #[cfg(feature = "legacy_encoding")]
-        let token =
-            ReceiptParser::new(&receipts, self.decoder_config).parse(None, &D::param_type())?;
-
-        #[cfg(not(feature = "legacy_encoding"))]
         let token =
             ReceiptParser::new(&receipts, self.decoder_config).parse_script(&D::param_type())?;
 
