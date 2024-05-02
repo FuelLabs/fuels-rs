@@ -255,93 +255,6 @@ pub(crate) fn get_instructions(
         })
 }
 
-#[cfg(feature = "legacy_encoding")]
-/// Returns script data, consisting of the following items in the given order:
-/// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
-/// 2. Asset ID to be forwarded ([`AssetId::LEN`])
-/// 3. Gas to be forwarded `(1 * `[`WORD_SIZE`]`)` - Optional
-/// 4. Contract ID ([`ContractId::LEN`]);
-/// 5. Function selector `(1 * `[`WORD_SIZE`]`)`
-/// 6. Calldata offset (optional) `(1 * `[`WORD_SIZE`]`)`
-/// 7. Encoded arguments (optional) (variable length)
-pub(crate) fn build_script_data_from_contract_calls(
-    calls: &[ContractCall],
-    data_offset: usize,
-    base_asset_id: AssetId,
-) -> Result<(Vec<u8>, Vec<CallOpcodeParamsOffset>)> {
-    let mut script_data = vec![];
-    let mut param_offsets = vec![];
-
-    // The data for each call is ordered into segments
-    let mut segment_offset = data_offset;
-
-    for call in calls {
-        let gas_forwarded = call.call_parameters.gas_forwarded();
-
-        script_data.extend(call.call_parameters.amount().to_be_bytes());
-        script_data.extend(
-            call.call_parameters
-                .asset_id()
-                .unwrap_or(base_asset_id)
-                .iter(),
-        );
-
-        let gas_forwarded_size = gas_forwarded
-            .map(|gf| {
-                script_data.extend((gf as Word).to_be_bytes());
-
-                WORD_SIZE
-            })
-            .unwrap_or_default();
-
-        script_data.extend(call.contract_id.hash().as_ref());
-        script_data.extend(call.encoded_selector);
-
-        let call_param_offsets = CallOpcodeParamsOffset {
-            amount_offset: segment_offset,
-            asset_id_offset: segment_offset + WORD_SIZE,
-            gas_forwarded_offset: gas_forwarded.map(|_| segment_offset + WORD_SIZE + AssetId::LEN),
-            call_data_offset: segment_offset + WORD_SIZE + AssetId::LEN + gas_forwarded_size,
-        };
-        param_offsets.push(call_param_offsets);
-
-        // If the method call takes custom inputs or has more than
-        // one argument, we need to calculate the `call_data_offset`,
-        // which points to where the data for the custom types start in the
-        // transaction. If it doesn't take any custom inputs, this isn't necessary.
-        let encoded_args_start_offset = if call.compute_custom_input_offset {
-            // Custom inputs are stored after the previously added parameters,
-            // including custom_input_offset
-            let custom_input_offset = segment_offset
-                + WORD_SIZE // amount size
-                + AssetId::LEN
-                + gas_forwarded_size
-                + ContractId::LEN
-                + WORD_SIZE // encoded_selector size
-                + WORD_SIZE; // custom_input_offset size
-            script_data.extend((custom_input_offset as Word).to_be_bytes());
-
-            custom_input_offset
-        } else {
-            segment_offset
-        };
-
-        let bytes = call
-            .encoded_args
-            .as_ref()
-            .map(|ub| ub.resolve(encoded_args_start_offset as Word))
-            .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
-        script_data.extend(bytes);
-
-        // the data segment that holds the parameters for the next call
-        // begins at the original offset + the data we added so far
-        segment_offset = data_offset + script_data.len();
-    }
-
-    Ok((script_data, param_offsets))
-}
-
-#[cfg(not(feature = "legacy_encoding"))]
 /// Returns script data, consisting of the following items in the given order:
 /// 1. Amount to be forwarded `(1 * `[`WORD_SIZE`]`)`
 /// 2. Asset ID to be forwarded ([`AssetId::LEN`])
@@ -459,73 +372,8 @@ pub(crate) fn get_single_call_instructions(
         None => instructions.push(op::call(0x10, 0x11, 0x12, RegId::CGAS)),
     };
 
-    #[cfg(feature = "legacy_encoding")]
-    instructions.extend(extract_heap_data(_output_param_type)?);
-
     #[allow(clippy::iter_cloned_collect)]
     Ok(instructions.into_iter().collect::<Vec<u8>>())
-}
-
-#[cfg(feature = "legacy_encoding")]
-fn extract_heap_data(param_type: &ParamType) -> Result<Vec<fuel_asm::Instruction>> {
-    match param_type {
-        ParamType::Enum { enum_variants, .. } => {
-            let Some((discriminant, heap_type)) = enum_variants.heap_type_variant() else {
-                return Ok(vec![]);
-            };
-
-            let param_type_width = param_type.compute_encoding_in_bytes()?;
-            let heap_type_width = heap_type.compute_encoding_in_bytes()?;
-            let ptr_offset = ((param_type_width - heap_type_width) / 8) as u16;
-
-            Ok([
-                vec![
-                    // All the registers 0x15-0x18 are free
-                    // Load the selected discriminant to a free register
-                    op::movi(0x17, discriminant as u32),
-                    // the first word of the CALL return is the enum discriminant. It is safe to load
-                    // because the offset is 0.
-                    op::lw(0x18, RegId::RET, 0),
-                    // If the discriminant is not the one from the heap type, then jump ahead and
-                    // return an empty receipt. Otherwise return heap data with the right length.
-                    // Jump by (last argument + 1) instructions according to specs
-                    op::jnef(0x17, 0x18, RegId::ZERO, 3),
-                ],
-                // ================= EXECUTED IF THE DISCRIMINANT POINTS TO A HEAP TYPE
-                extract_data_receipt(ptr_offset, false, heap_type)?,
-                // ================= EXECUTED IF THE DISCRIMINANT DOESN'T POINT TO A HEAP TYPE
-                vec![op::retd(0x15, RegId::ZERO)],
-            ]
-            .concat())
-        }
-        _ => extract_data_receipt(0, true, param_type),
-    }
-}
-
-#[cfg(feature = "legacy_encoding")]
-fn extract_data_receipt(
-    ptr_offset: u16,
-    top_level_type: bool,
-    param_type: &ParamType,
-) -> Result<Vec<fuel_asm::Instruction>> {
-    let Some(inner_type_byte_size) = param_type.heap_inner_element_size(top_level_type)? else {
-        return Ok(vec![]);
-    };
-
-    let len_offset = match (top_level_type, param_type) {
-        // Nested `RawSlice` or `str` show up as ptr, len
-        (false, ParamType::RawSlice) => 1,
-        (false, ParamType::StringSlice) => 1,
-        // Every other heap type (currently) shows up as ptr, cap, len
-        _ => 2,
-    };
-
-    Ok(vec![
-        op::lw(0x15, RegId::RET, ptr_offset),
-        op::lw(0x16, RegId::RET, ptr_offset + len_offset),
-        op::muli(0x16, 0x16, inner_type_byte_size as u16),
-        op::retd(0x15, 0x16),
-    ])
 }
 
 /// Returns the assets and contracts that will be consumed ([`Input`]s)
@@ -678,16 +526,11 @@ pub fn new_variable_outputs(num: usize) -> Vec<Output> {
 mod test {
     use std::slice;
 
-    #[cfg(feature = "legacy_encoding")]
-    use fuel_types::bytes::WORD_SIZE;
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::{
-        bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
     };
-    #[cfg(feature = "legacy_encoding")]
-    use fuels_core::{codec::ABIEncoder, types::Token};
     use rand::Rng;
 
     use super::*;
@@ -698,9 +541,6 @@ mod test {
             ContractCall {
                 contract_id: random_bech32_contract_id(),
                 encoded_args: Ok(Default::default()),
-                #[cfg(feature = "legacy_encoding")]
-                encoded_selector: [0; 8],
-                #[cfg(not(feature = "legacy_encoding"))]
                 encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
                 compute_custom_input_offset: false,
@@ -719,107 +559,6 @@ mod test {
 
     fn random_bech32_contract_id() -> Bech32ContractId {
         Bech32ContractId::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
-    }
-
-    #[cfg(feature = "legacy_encoding")]
-    #[tokio::test]
-    async fn test_script_data() {
-        // Arrange
-        const SELECTOR_LEN: usize = WORD_SIZE;
-        const NUM_CALLS: usize = 3;
-
-        let contract_ids = [
-            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
-            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
-            Bech32ContractId::new("test", Bytes32::new([1u8; 32])),
-        ];
-
-        let asset_ids = [
-            AssetId::from([4u8; 32]),
-            AssetId::from([5u8; 32]),
-            AssetId::from([6u8; 32]),
-        ];
-
-        let selectors = [[7u8; 8], [8u8; 8], [9u8; 8]];
-
-        // Call 2 has multiple inputs, compute_custom_input_offset will be true
-
-        let args = [Token::U8(1), Token::U16(2), Token::U8(3)]
-            .map(|token| ABIEncoder::default().encode(&[token]).unwrap())
-            .to_vec();
-
-        let calls: Vec<ContractCall> = (0..NUM_CALLS)
-            .map(|i| ContractCall {
-                contract_id: contract_ids[i].clone(),
-                #[cfg(feature = "legacy_encoding")]
-                encoded_selector: selectors[i],
-                #[cfg(not(feature = "legacy_encoding"))]
-                encoded_selector: selectors[i].to_vec(),
-                encoded_args: Ok(args[i].clone()),
-                call_parameters: CallParameters::new(i as u64, asset_ids[i], i as u64),
-                compute_custom_input_offset: i == 1,
-                variable_outputs: vec![],
-                external_contracts: vec![],
-                output_param: ParamType::Unit,
-                is_payable: false,
-                custom_assets: Default::default(),
-            })
-            .collect();
-
-        // Act
-        let (script_data, param_offsets) =
-            build_script_data_from_contract_calls(&calls, 0, AssetId::zeroed()).unwrap();
-
-        // Assert
-        assert_eq!(param_offsets.len(), NUM_CALLS);
-        for (idx, offsets) in param_offsets.iter().enumerate() {
-            let asset_id = script_data
-                [offsets.asset_id_offset..offsets.asset_id_offset + AssetId::LEN]
-                .to_vec();
-            assert_eq!(asset_id, asset_ids[idx].to_vec());
-
-            let amount =
-                script_data[offsets.amount_offset..offsets.amount_offset + WORD_SIZE].to_vec();
-            assert_eq!(amount, idx.to_be_bytes());
-
-            let gas_forwarded_offset = offsets.gas_forwarded_offset.expect("is set");
-
-            let gas = script_data[gas_forwarded_offset..gas_forwarded_offset + WORD_SIZE].to_vec();
-            assert_eq!(gas, idx.to_be_bytes().to_vec());
-
-            let contract_id =
-                &script_data[offsets.call_data_offset..offsets.call_data_offset + ContractId::LEN];
-            let expected_contract_id = contract_ids[idx].hash();
-            assert_eq!(contract_id, expected_contract_id.as_slice());
-
-            let selector_offset = offsets.call_data_offset + ContractId::LEN;
-            let selector = script_data[selector_offset..selector_offset + SELECTOR_LEN].to_vec();
-            assert_eq!(selector, selectors[idx].to_vec());
-        }
-
-        // Calls 1 and 3 have their input arguments after the selector
-        let call_1_arg_offset = param_offsets[0].call_data_offset + ContractId::LEN + SELECTOR_LEN;
-        let call_1_arg = script_data[call_1_arg_offset..call_1_arg_offset + WORD_SIZE].to_vec();
-        assert_eq!(call_1_arg, args[0].resolve(0));
-
-        let call_3_arg_offset = param_offsets[2].call_data_offset + ContractId::LEN + SELECTOR_LEN;
-        let call_3_arg = script_data[call_3_arg_offset..call_3_arg_offset + WORD_SIZE].to_vec();
-        assert_eq!(call_3_arg, args[2].resolve(0));
-
-        // Call 2 has custom inputs and custom_input_offset
-        let call_2_arg_offset = param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN;
-        let custom_input_offset =
-            script_data[call_2_arg_offset..call_2_arg_offset + WORD_SIZE].to_vec();
-        assert_eq!(
-            custom_input_offset,
-            (call_2_arg_offset + WORD_SIZE).to_be_bytes()
-        );
-
-        let custom_input_offset =
-            param_offsets[1].call_data_offset + ContractId::LEN + SELECTOR_LEN + WORD_SIZE;
-        let custom_input =
-            script_data[custom_input_offset..custom_input_offset + WORD_SIZE].to_vec();
-        assert_eq!(custom_input, args[1].resolve(0));
     }
 
     #[test]
@@ -1078,12 +817,6 @@ mod test {
         const BASE_INSTRUCTION_COUNT: usize = 5;
         // 2 instructions (movi and lw) added in get_single_call_instructions when gas_offset is set
         const GAS_OFFSET_INSTRUCTION_COUNT: usize = 2;
-        #[cfg(feature = "legacy_encoding")]
-        // 4 instructions (lw, lw, muli, retd) added by extract_data_receipt
-        const EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT: usize = 4;
-        #[cfg(feature = "legacy_encoding")]
-        // 4 instructions (movi, lw, jnef, retd) added by extract_heap_data
-        const EXTRACT_HEAP_DATA_INSTRUCTION_COUNT: usize = 4;
 
         #[test]
         fn test_simple() {
@@ -1101,75 +834,6 @@ mod test {
                 instructions_len,
                 Instruction::SIZE * (BASE_INSTRUCTION_COUNT + GAS_OFFSET_INSTRUCTION_COUNT)
             );
-        }
-
-        #[cfg(feature = "legacy_encoding")]
-        #[test]
-        fn test_with_heap_type() {
-            let output_params = vec![
-                ParamType::Vector(Box::new(ParamType::U8)),
-                ParamType::String,
-                ParamType::Bytes,
-            ];
-            for output_param in output_params {
-                let mut call = ContractCall::new_with_random_id();
-                call.output_param = output_param;
-                let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-                assert_eq!(
-                    instructions_len,
-                    Instruction::SIZE
-                        * (BASE_INSTRUCTION_COUNT + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT)
-                );
-            }
-        }
-
-        #[cfg(feature = "legacy_encoding")]
-        #[test]
-        fn test_with_gas_offset_and_heap_type() {
-            let mut call = ContractCall::new_with_random_id();
-            call.call_parameters = call.call_parameters.with_gas_forwarded(0);
-            call.output_param = ParamType::Vector(Box::new(ParamType::U8));
-            let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-            assert_eq!(
-                instructions_len,
-                // combines extra instructions from two above tests
-                Instruction::SIZE
-                    * (BASE_INSTRUCTION_COUNT
-                        + GAS_OFFSET_INSTRUCTION_COUNT
-                        + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT)
-            );
-        }
-
-        #[cfg(feature = "legacy_encoding")]
-        #[test]
-        fn test_with_enum_with_heap_and_non_heap_variant() {
-            let variant_sets = vec![
-                vec![ParamType::Vector(Box::new(ParamType::U8)), ParamType::U8],
-                vec![ParamType::String, ParamType::U8],
-                vec![ParamType::Bytes, ParamType::U8],
-            ];
-            for variant_set in variant_sets {
-                let mut call = ContractCall::new_with_random_id();
-                call.output_param = ParamType::Enum {
-                    name: "".to_string(),
-                    enum_variants: EnumVariants::new(
-                        variant_set
-                            .into_iter()
-                            .map(|pt| ("".to_string(), pt))
-                            .collect(),
-                    )
-                    .unwrap(),
-                    generics: Vec::new(),
-                };
-                let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
-                assert_eq!(
-                    instructions_len,
-                    Instruction::SIZE
-                        * (BASE_INSTRUCTION_COUNT
-                            + EXTRACT_DATA_RECEIPT_INSTRUCTION_COUNT
-                            + EXTRACT_HEAP_DATA_INSTRUCTION_COUNT)
-                );
-            }
         }
 
         #[test]

@@ -15,9 +15,8 @@ use fuel_tx::{Transaction, TxId, UtxoId};
 use fuel_types::{Address, AssetId, BlockHeight, ContractId, Nonce};
 use fuels_core::types::errors::{error, Error, Result};
 
-use crate::provider::{retry_util, RetryConfig};
-
 use super::supported_versions::{self, VersionCompatibility};
+use crate::provider::{retry_util, RetryConfig};
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum RequestError {

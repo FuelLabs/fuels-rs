@@ -26,7 +26,6 @@ hex = { workspace = true, features = ["std"] }
 itertools = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, default-features = true }
-sha2 = { workspace = true }
 thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
 
@@ -37,4 +36,3 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 [features]
 default = ["std"]
 std = ["dep:fuel-core-client"]
-legacy_encoding = []
