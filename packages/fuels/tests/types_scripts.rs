@@ -351,7 +351,6 @@ async fn script_handles_std_string() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn nested_heap_types() -> Result<()> {
     setup_program_test!(

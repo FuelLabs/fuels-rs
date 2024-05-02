@@ -9,7 +9,7 @@ In the Rust SDK, Ethereum Virtual Machine (EVM) addresses can be represented wit
 Here's an example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/bindings.rs:evm_address_arg}}
+{{#include ../../../packages/fuels/tests/types_contracts.rs:evm_address_arg}}
 ```
 
 > **Note:** when creating an `EvmAddress` from `Bits256`, the first 12 bytes will be cleared because an EVM address is only 20 bytes long.

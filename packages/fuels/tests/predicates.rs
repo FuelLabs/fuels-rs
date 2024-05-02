@@ -814,12 +814,6 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    #[cfg(feature = "legacy_encoding")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
-
-    #[cfg(not(feature = "legacy_encoding"))]
     let witness = ABIEncoder::default()
         .encode(&[64u64.into_token()])? // u64 because this is VM memory
         .resolve(0);
@@ -893,12 +887,6 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
-    #[cfg(feature = "legacy_encoding")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
-
-    #[cfg(not(feature = "legacy_encoding"))]
     let witness = ABIEncoder::default()
         .encode(&[64u64.into_token()])? // u64 because this is VM memory
         .resolve(0);

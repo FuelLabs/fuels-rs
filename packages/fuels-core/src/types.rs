@@ -17,9 +17,6 @@ pub mod unresolved_bytes;
 mod wrappers;
 
 pub type ByteArray = [u8; 8];
-#[cfg(feature = "legacy_encoding")]
-pub type Selector = ByteArray;
-#[cfg(not(feature = "legacy_encoding"))]
 pub type Selector = Vec<u8>;
 
 /// Converts a u16 to a right aligned array of 8 bytes.

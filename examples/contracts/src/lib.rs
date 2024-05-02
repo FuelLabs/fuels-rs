@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::codec::{DecoderConfig, EncoderConfig},
+        core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         test_helpers::{ChainConfig, StateConfig},
         types::{
@@ -113,11 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = if cfg!(feature = "legacy_encoding") {
-            796
-        } else {
-            2065
-        };
+        let expected_gas = 2065;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -614,9 +610,6 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        #[cfg(feature = "legacy_encoding")]
-        let expected_gas = 1172;
-        #[cfg(not(feature = "legacy_encoding"))]
         let expected_gas = 3532;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
@@ -698,13 +691,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "legacy_encoding")]
     async fn low_level_call_example() -> Result<()> {
-        use fuels::{
-            core::codec::{calldata, fn_selector},
-            prelude::*,
-            types::SizedAsciiString,
-        };
+        use fuels::{core::codec::calldata, prelude::*, types::SizedAsciiString};
 
         setup_program_test!(
             Wallets("wallet"),
@@ -731,8 +719,7 @@ mod tests {
         );
 
         // ANCHOR: low_level_call
-        let function_selector =
-            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+        let function_selector = encode_fn_selector("set_value_multiple_complex");
         let call_data = calldata!(
             MyStruct {
                 a: true,
@@ -747,7 +734,6 @@ mod tests {
                 target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
-                false,
             )
             .estimate_tx_dependencies(None)
             .await?
