@@ -53,8 +53,7 @@ Abigen(
 )
 ```
 
-Description: Generates the program bindings under the name `name`. `project`
-should point to root of the `forc` project.
+Description: Generates the program bindings under the name `name`. `project` should point to root of the `forc` project. The project must be compiled in `release` mode (`--release` flag) for `Abigen` command to work.
 
 Cardinality: 0 or N.
 
