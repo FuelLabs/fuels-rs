@@ -1,4 +1,4 @@
-use fuels_code_gen::{utils::parse_program_abi, Abi, AbigenTarget, ProgramType};
+use fuels_code_gen::{Abi, AbigenTarget, ProgramType};
 use syn::{
     parse::{Parse, ParseStream},
     Result,
@@ -14,11 +14,11 @@ impl From<MacroAbigenTargets> for Vec<AbigenTarget> {
 
 impl From<MacroAbigenTarget> for AbigenTarget {
     fn from(macro_target: MacroAbigenTarget) -> Self {
-        AbigenTarget {
-            name: macro_target.name,
-            source: macro_target.source,
-            program_type: macro_target.program_type,
-        }
+        AbigenTarget::new(
+            macro_target.name,
+            macro_target.source,
+            macro_target.program_type,
+        )
     }
 }
 
@@ -56,7 +56,7 @@ impl MacroAbigenTarget {
         let name = name_values.get_as_lit_str("name")?.value();
         let abi_lit_str = name_values.get_as_lit_str("abi")?;
 
-        let source = parse_program_abi(&abi_lit_str.value())
+        let source = Abi::parse(&abi_lit_str.value())
             .map_err(|e| syn::Error::new(abi_lit_str.span(), e.to_string()))?;
 
         Ok(Self {

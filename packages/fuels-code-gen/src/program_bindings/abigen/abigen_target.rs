@@ -3,19 +3,66 @@ use std::{convert::TryFrom, path::PathBuf, str::FromStr};
 use fuel_abi_types::abi::full_program::FullProgramABI;
 use proc_macro2::Ident;
 
-use crate::{error, error::Error};
+use crate::{
+    error::{error, Error, Result},
+    utils::Source,
+};
 
 #[derive(Debug, Clone)]
 pub struct AbigenTarget {
-    pub name: String,
-    pub source: Abi,
-    pub program_type: ProgramType,
+    pub(crate) name: String,
+    pub(crate) source: Abi,
+    pub(crate) program_type: ProgramType,
+}
+
+impl AbigenTarget {
+    pub fn new(name: String, source: Abi, program_type: ProgramType) -> Self {
+        Self {
+            name,
+            source,
+            program_type,
+        }
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn source(&self) -> &Abi {
+        &self.source
+    }
+
+    pub fn program_type(&self) -> ProgramType {
+        self.program_type
+    }
 }
 
 #[derive(Debug, Clone)]
 pub struct Abi {
-    pub path: Option<PathBuf>,
-    pub abi: FullProgramABI,
+    pub(crate) path: Option<PathBuf>,
+    pub(crate) abi: FullProgramABI,
+}
+
+impl Abi {
+    pub fn parse(abi: &str) -> Result<Abi> {
+        let source = Source::parse(abi)?;
+
+        let json_abi_str = source.get()?;
+        let abi = FullProgramABI::from_json_abi(&json_abi_str).map_err(|e| {
+            error!("malformed `abi`. Did you use `forc` to create it?: ").combine(e)
+        })?;
+        let path = source.path();
+
+        Ok(Abi { path, abi })
+    }
+
+    pub fn path(&self) -> Option<&PathBuf> {
+        self.path.as_ref()
+    }
+
+    pub fn abi(&self) -> &FullProgramABI {
+        &self.abi
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

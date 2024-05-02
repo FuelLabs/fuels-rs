@@ -3,10 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuels_code_gen::{
-    utils::{ident, parse_program_abi},
-    Abigen, AbigenTarget, ProgramType,
-};
+use fuels_code_gen::{utils::ident, Abi, Abigen, AbigenTarget, ProgramType};
 use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::LitStr;
@@ -65,14 +62,14 @@ fn parse_abigen_targets(
     project_lookup
         .iter()
         .map(|(name, project)| {
-            let source = parse_program_abi(&project.abi_path())
+            let source = Abi::parse(&project.abi_path())
                 .map_err(|e| syn::Error::new(project.path_span, e.to_string()))?;
 
-            Ok(AbigenTarget {
-                name: name.clone(),
+            Ok(AbigenTarget::new(
+                name.clone(),
                 source,
-                program_type: project.program_type,
-            })
+                project.program_type,
+            ))
         })
         .collect()
 }
