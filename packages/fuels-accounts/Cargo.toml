@@ -25,7 +25,6 @@ semver = { workspace = true }
 tai64 = { workspace = true, features = ["serde"] }
 thiserror = { workspace = true, default-features = false }
 tokio = { workspace = true, features = ["full"], optional = true }
-tracing = { workspace = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
