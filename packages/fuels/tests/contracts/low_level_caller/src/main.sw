@@ -14,7 +14,6 @@ abi MyCallerContract {
         target: ContractId,
         function_selector: Bytes,
         calldata: Bytes,
-        single_value_type_arg: bool,
     );
 }
 
@@ -24,7 +23,6 @@ impl MyCallerContract for Contract {
         target: ContractId,
         function_selector: Bytes,
         calldata: Bytes,
-        single_value_type_arg: bool,
     ) {
         let call_params = CallParams {
             coins: 0,
@@ -32,13 +30,7 @@ impl MyCallerContract for Contract {
             gas: 10_000,
         };
 
-        call_with_function_selector(
-            target,
-            function_selector,
-            calldata,
-            single_value_type_arg,
-            call_params,
-        );
+        call_with_function_selector(target, function_selector, calldata, call_params);
     }
     // ANCHOR_END: low_level_call_contract
 }

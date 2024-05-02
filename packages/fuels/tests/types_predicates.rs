@@ -234,6 +234,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     let array_in_vec = vec![[0u64, 1u64], [32u64, 1u64]];
     let vec_in_enum = SomeEnum::A(vec![0, 1, 128]);
     let enum_in_vec = vec![SomeEnum::A(0), SomeEnum::A(16)];
+    let b256_in_vec = vec![Bits256([2; 32]), Bits256([2; 32])];
     let tuple_in_vec = vec![(0, 0), (128, 1)];
     let vec_in_tuple = (vec![0, 64, 2], vec![0, 1, 2]);
     let vec_in_a_vec_in_a_struct_in_a_vec = vec![
@@ -256,6 +257,7 @@ async fn spend_predicate_coins_messages_vectors() -> Result<()> {
         vec_in_array,
         vec_in_enum,
         enum_in_vec,
+        b256_in_vec,
         tuple_in_vec,
         vec_in_tuple,
         vec_in_a_vec_in_a_struct_in_a_vec,
@@ -360,6 +362,19 @@ async fn predicate_handles_u128() -> Result<()> {
 
     let data = MyPredicateEncoder::default().encode_data(u128_from((8, 2)))?;
     assert_predicate_spendable(data, "tests/types/predicates/predicate_u128").await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_handles_b256() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/types/predicates/predicate_b256/out/debug/predicate_b256-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::default().encode_data(Bits256([1; 32]))?;
+    assert_predicate_spendable(data, "tests/types/predicates/predicate_b256").await?;
 
     Ok(())
 }

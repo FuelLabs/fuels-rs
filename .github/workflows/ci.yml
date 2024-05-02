@@ -16,12 +16,14 @@ env:
   CARGO_TERM_COLOR: always
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
-  FUEL_CORE_VERSION: 0.23.0
+  FUEL_CORE_VERSION: 0.24.3
   FUEL_CORE_PATCH_BRANCH:
   RUST_VERSION: 1.76.0
-  FORC_VERSION: 0.52.1
+  FORC_VERSION: 0.56.0
   FORC_PATCH_BRANCH: ""
   FORC_PATCH_REVISION: ""
+  NEXTEST_HIDE_PROGRESS_BAR: "true"
+  NEXTEST_STATUS_LEVEL: "fail"
 
 jobs:
   setup-test-projects:
@@ -87,25 +89,6 @@ jobs:
         with:
           retention-days: 2
           name: sway-examples-w-type-paths
-          # cache only the sway build artifacts, skip all src files
-          path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
-
-      # TODO: To be removed once experimental encoding is the default
-      - name: Build Sway test projects w experimental encoding
-        run: forc build --terse --error-on-warnings --json-abi-with-callpaths --experimental-new-encoding
-        working-directory: packages/fuels
-
-      - uses: actions/upload-artifact@v2
-        with:
-          retention-days: 2
-          name: sway-examples-w-experimental-encoding
           # cache only the sway build artifacts, skip all src files
           path: |
             packages/fuels/tests
@@ -184,11 +167,11 @@ jobs:
             args: --all-targets --features "default fuel-core-lib test-type-paths"
             download_sway_artifacts: sway-examples-w-type-paths
           - cargo_command: nextest
-            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace
+            args: run --all-targets --features "default fuel-core-lib test-type-paths coin-cache" --workspace --cargo-quiet
             download_sway_artifacts: sway-examples-w-type-paths
             install_fuel_core: true
           - cargo_command: nextest
-            args: run --all-targets --workspace
+            args: run --all-targets --workspace --cargo-quiet
             download_sway_artifacts: sway-examples
             install_fuel_core: true
           - cargo_command: test
@@ -205,11 +188,6 @@ jobs:
             args:
           - command: check_typos
             args:
-          # TODO: To be removed once experimental encoding is the default
-          - cargo_command: nextest
-            args: run --all-targets --features "experimental" --workspace
-            download_sway_artifacts: sway-examples-w-experimental-encoding
-            install_fuel_core: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
@@ -275,7 +253,6 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd packages/wasm-tests
           wasm-pack test --node
-          wasm-pack test --node --features experimental
 
       - name: Check that fuel_core version.rs file is up to date
         if: ${{ matrix.command == 'check_fuel_core_version' }}

@@ -1,9 +1,8 @@
-#[cfg(not(feature = "experimental"))]
-use fuels::core::codec::{calldata, fn_selector};
+use fuel_tx::ContractParameters;
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    types::{errors::transaction::Reason, Bits256},
+    types::{errors::transaction::Reason, Bits256, Identity},
 };
 
 #[tokio::test]
@@ -276,14 +275,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    #[cfg(not(feature = "experimental"))]
-    let expected_gas_used = 955;
-    #[cfg(feature = "experimental")]
     let expected_gas_used = 960;
 
-    #[cfg(not(feature = "experimental"))]
-    let expected_metered_bytes_size = 784;
-    #[cfg(feature = "experimental")]
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -654,8 +647,12 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test() -> Result<(
+    Vec<WalletUnlocked>,
+    [Identity; 3],
+    AssetId,
+    Bech32ContractId,
+)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -667,10 +664,10 @@ async fn setup_output_variable_estimation_test(
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
-    let addresses: [Address; 3] = wallets
+    let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
-        .collect::<Vec<Address>>()
+        .collect::<Vec<_>>()
         .try_into()
         .unwrap();
 
@@ -1017,10 +1014,13 @@ async fn test_contract_call_with_non_default_max_input() -> Result<()> {
         types::coin::Coin,
     };
 
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(123),
-        ..Default::default()
-    };
+    let mut consensus_parameters = ConsensusParameters::default();
+    let tx_params = TxParameters::default()
+        .with_max_inputs(123)
+        .with_max_size(1_000_000);
+    consensus_parameters.set_tx_params(tx_params);
+    let contract_params = ContractParameters::default().with_contract_max_size(1_000_000);
+    consensus_parameters.set_contract_params(contract_params);
 
     let mut wallet = WalletUnlocked::new_random(None);
 
@@ -1227,7 +1227,6 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(not(feature = "experimental"))]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1255,7 +1254,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
-    let function_selector = fn_selector!(initialize_counter(u64));
+    let function_selector = encode_fn_selector("initialize_counter");
     let call_data = calldata!(42u64)?;
 
     caller_contract_instance
@@ -1264,7 +1263,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            true,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1278,8 +1276,7 @@ async fn low_level_call() -> Result<()> {
         .await?;
     assert_eq!(response.value, 42);
 
-    let function_selector =
-        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let function_selector = encode_fn_selector("set_value_multiple_complex");
     let call_data = calldata!(
         MyStruct {
             a: true,
@@ -1294,7 +1291,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            false,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1344,19 +1340,19 @@ fn db_rocksdb() {
         prelude::{setup_test_provider, DbType, Error, ViewOnlyAccount, DEFAULT_COIN_AMOUNT},
     };
 
-    let temp_dir = tempfile::tempdir()
-        .expect("failed to make tempdir")
-        .into_path();
+    let temp_dir = tempfile::tempdir().expect("failed to make tempdir");
     let temp_dir_name = temp_dir
+        .path()
         .file_name()
         .expect("failed to get file name")
         .to_string_lossy()
         .to_string();
-    let temp_database_path = temp_dir.join("db");
+    let temp_database_path = temp_dir.path().join("db");
 
     tokio::runtime::Runtime::new()
         .expect("tokio runtime failed")
         .block_on(async {
+            let _ = temp_dir;
             let wallet = WalletUnlocked::new_from_private_key(
                 SecretKey::from_str(
                     "0x4433d156e8c53bf5b50af07aa95a29436f29a94e0ccc5d58df8e57bdc8583c32",
@@ -1365,14 +1361,13 @@ fn db_rocksdb() {
             );
 
             const NUMBER_OF_ASSETS: u64 = 2;
-            let node_config = Config {
+            let node_config = NodeConfig {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::default()
+                ..NodeConfig::default()
             };
 
             let chain_config = ChainConfig {
                 chain_name: temp_dir_name.clone(),
-                initial_state: None,
                 consensus_parameters: Default::default(),
                 ..ChainConfig::local_testnet()
             };
@@ -1399,9 +1394,9 @@ fn db_rocksdb() {
     tokio::runtime::Runtime::new()
         .expect("tokio runtime failed")
         .block_on(async {
-            let node_config = Config {
+            let node_config = NodeConfig {
                 database_type: DbType::RocksDb(Some(temp_database_path.clone())),
-                ..Config::default()
+                ..NodeConfig::default()
             };
 
             let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
@@ -1838,6 +1833,33 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
             "cannot encode contract call arguments: codec: token limit `1` reached while encoding."
         ));
     }
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_reentrant_calls() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "LibContractCaller",
+            project = "packages/fuels/tests/contracts/lib_contract_caller"
+        ),),
+        Deploy(
+            name = "contract_caller_instance",
+            contract = "LibContractCaller",
+            wallet = "wallet"
+        ),
+    );
+
+    let contract_id = contract_caller_instance.contract_id();
+    let response = contract_caller_instance
+        .methods()
+        .re_entrant(contract_id, true)
+        .call()
+        .await?;
+
+    assert_eq!(42, response.value);
 
     Ok(())
 }
