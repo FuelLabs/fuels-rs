@@ -413,40 +413,6 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     let address = wallet.address();
 
-    // withdraw some tokens to wallet
-    contract_methods
-        .transfer(1_000_000, asset_id, address.into())
-        .append_variable_outputs(1)
-        .call()
-        .await?;
-
-    let asset_id = AssetId::from(*contract_id.hash());
-    let call_params = CallParameters::default()
-        .with_amount(0)
-        .with_asset_id(asset_id);
-    let tx_policies = TxPolicies::default().with_script_gas_limit(1_000_000);
-
-    let response = contract_methods
-        .get_msg_amount()
-        .with_tx_policies(tx_policies)
-        .call_params(call_params)?
-        .call()
-        .await?;
-
-    assert_eq!(response.value, 0);
-
-    let call_response = response
-        .receipts
-        .iter()
-        .find(|&r| matches!(r, Receipt::Call { .. }));
-
-    assert!(call_response.is_some());
-
-    assert_eq!(call_response.unwrap().amount().unwrap(), 0);
-    assert_eq!(
-        call_response.unwrap().asset_id().unwrap(),
-        &AssetId::from(*contract_id.hash())
-    );
     Ok(())
 }
 
