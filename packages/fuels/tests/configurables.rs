@@ -77,7 +77,7 @@ async fn script_default_configurables() -> Result<()> {
         U256::from(8),
         "fuel".try_into()?,
         (8, true),
-        [252, 253, 254],
+        [253, 254, 255],
         StructWithGeneric {
             field_1: 8u8,
             field_2: 16,
