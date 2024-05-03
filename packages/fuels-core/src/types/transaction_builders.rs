@@ -21,7 +21,7 @@ use itertools::Itertools;
 
 use crate::{
     constants::{SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
-    offsets,
+    error, offsets,
     traits::Signer,
     types::{
         bech32::Bech32Address,
@@ -263,22 +263,19 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(&self) -> Policies {
-                let mut policies = Policies::default();
+            fn generate_fuel_policies(&self) -> Result<Policies> {
+                let witness_limit = match self.tx_policies.witness_limit() {
+                    Some(limit) => limit,
+                    None => self.calculate_witnesses_size()?,
+                };
+                let mut policies = Policies::default().with_witness_limit(witness_limit);
+
                 // `MaxFee` set to `tip` or `0` for `dry_run`
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
-
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
-
-                let witness_limit = self
-                    .tx_policies
-                    .witness_limit()
-                    .or_else(|| self.calculate_witnesses_size());
-                policies.set(PolicyType::WitnessLimit, witness_limit);
-
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
 
-                policies
+                Ok(policies)
             }
 
             fn is_using_predicates(&self) -> bool {
@@ -300,12 +297,14 @@ macro_rules! impl_tx_trait {
                 Ok(num_witnesses as u16)
             }
 
-            fn calculate_witnesses_size(&self) -> Option<u64> {
+            fn calculate_witnesses_size(&self) -> Result<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
                 let signature_size = SIGNATURE_WITNESS_SIZE
                     * self.unresolved_witness_indexes.owner_to_idx_offset.len();
 
-                Some(padded_len_usize(witnesses_size + signature_size) as u64)
+                let padded_len = padded_len_usize(witnesses_size + signature_size)
+                    .ok_or_else(|| error!(Other, "witnesses size overflow"))?;
+                Ok(padded_len as u64)
             }
 
             async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
@@ -380,7 +379,7 @@ impl ScriptTransactionBuilder {
     async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
         let base_offset = if is_using_predicates {
-            self.base_offset(provider.consensus_parameters())
+            self.base_offset(provider.consensus_parameters())?
         } else {
             0
         };
@@ -473,7 +472,7 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, base_offset: usize, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -523,10 +522,15 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_data.len())
-            + padded_len_usize(self.script.len())
+    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> Result<usize> {
+        let padded_script_data_len = padded_len_usize(self.script_data.len())
+            .ok_or_else(|| error!(Other, "script data len overflow {}", self.script_data.len()))?;
+        let padded_script_len = padded_len_usize(self.script.len())
+            .ok_or_else(|| error!(Other, "script len overflow {}", self.script.len()))?;
+
+        Ok(offsets::base_offset_script(consensus_parameters)
+            + padded_script_data_len
+            + padded_script_len)
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
@@ -680,7 +684,7 @@ impl CreateTransactionBuilder {
         provider: impl DryRunner,
     ) -> Result<Create> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
         base_offset += storage_slots_offset + policies.size_dynamic();
@@ -840,7 +844,7 @@ fn resolve_signed_resource(
                 })
         }
         CoinType::Message(message) => {
-            *data_offset += offsets::message_signed_data_offset(message.data.len());
+            *data_offset += offsets::message_signed_data_offset(message.data.len())?;
             let recipient = &message.recipient;
 
             unresolved_witness_indexes
@@ -865,7 +869,7 @@ fn resolve_predicate_resource(
 ) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
-            *data_offset += offsets::coin_predicate_data_offset(code.len());
+            *data_offset += offsets::coin_predicate_data_offset(code.len())?;
 
             let data = data.resolve(*data_offset as u64);
             *data_offset += data.len();
@@ -874,7 +878,7 @@ fn resolve_predicate_resource(
             Ok(create_coin_predicate(coin, asset_id, code, data))
         }
         CoinType::Message(message) => {
-            *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len());
+            *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len())?;
 
             let data = data.resolve(*data_offset as u64);
             *data_offset += data.len();

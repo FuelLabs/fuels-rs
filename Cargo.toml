@@ -53,7 +53,10 @@ itertools = "0.12.0"
 portpicker = "0.1.1"
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
-rand = { version = "0.8.5", default-features = false, features = ["std_rng", "getrandom"] }
+rand = { version = "0.8.5", default-features = false, features = [
+  "std_rng",
+  "getrandom",
+] }
 regex = "1.10.2"
 semver = "1.0.20"
 serde = { version = "1.0.193", default-features = false }
@@ -72,21 +75,21 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.24.3", default-features = false }
-fuel-core-chain-config = { version = "0.24.3", default-features = false }
-fuel-core-client = { version = "0.24.3", default-features = false }
-fuel-core-poa = { version = "0.24.3", default-features = false }
-fuel-core-services = { version = "0.24.3", default-features = false }
-fuel-core-types = { version = "0.24.3", default-features = false }
+fuel-core = { version = "0.26.0", default-features = false }
+fuel-core-chain-config = { version = "0.26.0", default-features = false }
+fuel-core-client = { version = "0.26.0", default-features = false }
+fuel-core-poa = { version = "0.26.0", default-features = false }
+fuel-core-services = { version = "0.26.0", default-features = false }
+fuel-core-types = { version = "0.26.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.48.0" }
-fuel-crypto = { version = "0.48.0" }
-fuel-merkle = { version = "0.48.0" }
-fuel-storage = { version = "0.48.0" }
-fuel-tx = { version = "0.48.0" }
-fuel-types = { version = "0.48.0" }
-fuel-vm = { version = "0.48.0" }
+fuel-asm = { version = "0.49.0" }
+fuel-crypto = { version = "0.49.0" }
+fuel-merkle = { version = "0.49.0" }
+fuel-storage = { version = "0.49.0" }
+fuel-tx = { version = "0.49.0" }
+fuel-types = { version = "0.49.0" }
+fuel-vm = { version = "0.49.0" }
 
 # Workspace projects
 fuels = { version = "0.59.0", path = "./packages/fuels" }
