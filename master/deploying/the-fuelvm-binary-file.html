@@ -152,12 +152,12 @@ impl MyContract for Contract {
 }
 </code></pre>
 <p>After <code>forc build</code>, will have a binary file that contains:</p>
-<pre><code class="language-terminal">$ cat out/debug/my-test.bin
+<pre><code class="language-terminal">$ cat out/release/my-test.bin
 G4]�]D`I]C�As@
            6]C�$@!QK%
 </code></pre>
 <p>This seems very unreadable! But, <code>forc</code> has a nice interpreter for this bytecode: <code>forc parse-bytecode</code>, which will interpret that binary data and output the equivalent FuelVM assembly:</p>
-<pre><code class="language-terminal">$ forc parse-bytecode out/debug/my-test.bin
+<pre><code class="language-terminal">$ forc parse-bytecode out/release/my-test.bin
 half-word   byte   op                raw           notes
         0   0      JI(4)             90 00 00 04   jump to byte 16
         1   4      NOOP              47 00 00 00

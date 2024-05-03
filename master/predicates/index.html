@@ -171,12 +171,12 @@ fn main(a: u32, b: u64) -&gt; bool {
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];
 
-        abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json&quot;));
+        abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json&quot;));
 </code></pre>
 <p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
 <pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
-            &quot;../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin&quot;;
+            &quot;../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(first_wallet.try_provider()?.clone())
@@ -249,7 +249,7 @@ fn main(
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>with_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and update the predicate with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Predicate(
         name = &quot;MyPredicate&quot;,
-        abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json&quot;
+        abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/release/predicate_configurables-abi.json&quot;
     ));
 
     let new_struct = StructWithGeneric {
@@ -266,7 +266,7 @@ fn main(
         MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        &quot;tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin&quot;,
+        &quot;tests/predicates/predicate_configurables/out/release/predicate_configurables.bin&quot;,
     )?
     .with_data(predicate_data)
     .with_configurables(configurables);

@@ -178,8 +178,7 @@ of <code>COMMAND(ARG...)...</code></p>
     ),
 )
 </code></pre>
-<p>Description: Generates the program bindings under the name <code>name</code>. <code>project</code>
-should point to root of the <code>forc</code> project.</p>
+<p>Description: Generates the program bindings under the name <code>name</code>. <code>project</code> should point to root of the <code>forc</code> project. The project must be compiled in <code>release</code> mode (<code>--release</code> flag) for <code>Abigen</code> command to work.</p>
 <p>Cardinality: 0 or N.</p>
 <h2 id="deploy"><a class="header" href="#deploy">Deploy</a></h2>
 <p>Example: <code>Deploy(name=&quot;instance_name&quot;, contract=&quot;MyContract&quot;, wallet=&quot;a_wallet&quot;)</code></p>

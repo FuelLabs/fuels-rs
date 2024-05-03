@@ -158,7 +158,7 @@
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::load_from(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
+            &quot;../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin&quot;,
             LoadConfiguration::default(),
         )?
         .deploy(&amp;wallet, TxPolicies::default())
@@ -198,7 +198,7 @@
             .with_maturity(0);
 
         let contract_id_2 = Contract::load_from(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin&quot;,
+            &quot;../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin&quot;,
             configuration,
         )?
         .deploy(&amp;wallet, tx_policies)
@@ -212,7 +212,7 @@
         // your contract's methods that are running on-chain!
         abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json&quot;
+            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
 
         // This is an instance of your contract which you can use to make calls to your functions

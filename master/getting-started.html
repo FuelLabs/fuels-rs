@@ -207,7 +207,7 @@ If <code>cargo generate</code> is not already installed, you can install it with
 <p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The file <code>packages/fuels/Forc.toml</code> contains a `[workspace], which members are the paths to all integration tests.
 To build these tests, run the following command:</p>
 </blockquote>
-<pre><code class="language-shell">forc build --path packages/fuels
+<pre><code class="language-shell">forc build --release --path packages/fuels
 </code></pre>
 <blockquote>
 <p><code>forc</code> can also be used to clean and format the test projects. Check the <code>help</code> output for more info.</p>
