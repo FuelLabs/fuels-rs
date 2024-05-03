@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
 use fuels::prelude::*;
 
 pub fn null_contract_id() -> Bech32ContractId {
-    // a bech32 contract address that decodes to [0u8;32]
-    Bech32ContractId::from_str("fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2")
+    // bech32 contract address that decodes to [0u8;32]
+    "fuel1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqsx2mt2"
+        .parse()
         .unwrap()
 }
 

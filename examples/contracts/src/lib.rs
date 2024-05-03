@@ -113,7 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2635;
+        let expected_gas = 2662;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -610,11 +610,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-<<<<<<< HEAD
-        let expected_gas = 4079;
-=======
         let expected_gas = 4152;
->>>>>>> 0ddb7e8e (chore: adapt to forc `0.56.0` again (CI got stuck) (#1358))
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 

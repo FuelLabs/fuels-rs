@@ -45,24 +45,6 @@ impl ABIEncoder {
     }
 }
 
-// TODO: Remove once issue https://github.com/FuelLabs/sway/issues/5727 is resolved
-#[derive(Default, Clone, Debug)]
-pub struct ConfigurablesEncoder {
-    pub config: EncoderConfig,
-}
-
-impl ConfigurablesEncoder {
-    pub fn new(config: EncoderConfig) -> Self {
-        Self { config }
-    }
-
-    /// Encodes `Token`s in `args` following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(&self, tokens: &[Token]) -> Result<Vec<u8>> {
-        BoundedEncoder::new(self.config).encode(tokens)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use std::slice;
@@ -495,30 +477,6 @@ mod tests {
             .for_each(|token| {
                 assert_encoding_failed(config, token, &msg);
             });
-    }
-
-    #[test]
-    fn encoder_for_configurables_optimizes_top_level_u8() {
-        // given
-        let encoder = ConfigurablesEncoder::default();
-
-        // when
-        let encoded = encoder.encode(&[Token::U8(255)]).unwrap();
-
-        // then
-        assert_eq!(encoded, vec![255]);
-    }
-
-    #[test]
-    fn encoder_for_configurables_optimizes_top_level_bool() {
-        // given
-        let encoder = ConfigurablesEncoder::default();
-
-        // when
-        let encoded = encoder.encode(&[Token::Bool(true)]).unwrap();
-
-        // then
-        assert_eq!(encoded, vec![1]);
     }
 
     fn assert_encoding_failed(config: EncoderConfig, token: Token, msg: &str) {
