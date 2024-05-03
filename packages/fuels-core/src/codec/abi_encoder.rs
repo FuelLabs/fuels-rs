@@ -112,7 +112,9 @@ mod tests {
 
         let result = ABIEncoder::default().encode(&[token])?;
 
-        assert_eq!(result, [1]);
+        let expected = [1];
+
+        assert_eq!(result, expected);
 
         Ok(())
     }

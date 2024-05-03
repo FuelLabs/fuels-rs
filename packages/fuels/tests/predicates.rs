@@ -695,8 +695,8 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
-        predicate.code().to_owned(),
-        predicate.data().to_owned(),
+        predicate.code().to_vec(),
+        predicate.data().to_vec(),
     );
 
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
@@ -816,7 +816,6 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .await?;
 
     let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
-
     let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
@@ -885,7 +884,6 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     let tx_id = tx.id(provider.chain_id());
 
     let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
-
     let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;

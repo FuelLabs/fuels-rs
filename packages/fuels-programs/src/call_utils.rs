@@ -527,7 +527,6 @@ mod test {
 
     use fuels_accounts::wallet::WalletUnlocked;
     use fuels_core::types::{
-        bech32::Bech32ContractId,
         coin::{Coin, CoinStatus},
         coin_type::CoinType,
     };
