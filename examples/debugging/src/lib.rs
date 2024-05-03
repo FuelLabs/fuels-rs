@@ -30,11 +30,11 @@ mod tests {
     fn decoded_debug_matches_rust_debug() -> Result<()> {
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/types/contracts/generics/out/debug/generics-abi.json"
+            abi = "packages/fuels/tests/types/contracts/generics/out/release/generics-abi.json"
         ));
 
         let json_abi_file =
-            "../../packages/fuels/tests/types/contracts/generics/out/debug/generics-abi.json";
+            "../../packages/fuels/tests/types/contracts/generics/out/release/generics-abi.json";
         let abi_file_contents = std::fs::read_to_string(json_abi_file)?;
 
         let parsed_abi: ProgramABI = serde_json::from_str(&abi_file_contents)?;

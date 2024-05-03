@@ -63,7 +63,7 @@ jobs:
         working-directory: packages/fuels
 
       - name: Build Sway test projects
-        run: forc build --terse --error-on-warnings
+        run: forc build --release --terse --error-on-warnings
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2
@@ -82,7 +82,7 @@ jobs:
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
-        run: forc build --terse --error-on-warnings --json-abi-with-callpaths
+        run: forc build --release --terse --error-on-warnings --json-abi-with-callpaths
         working-directory: packages/fuels
 
       - uses: actions/upload-artifact@v2

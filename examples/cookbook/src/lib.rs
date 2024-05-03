@@ -28,7 +28,8 @@ mod tests {
         // ANCHOR: liquidity_abigen
         abigen!(Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool-abi.json"
+            abi =
+                "packages/fuels/tests/contracts/liquidity_pool/out/release/liquidity_pool-abi.json"
         ));
         // ANCHOR_END: liquidity_abigen
 
@@ -52,7 +53,7 @@ mod tests {
 
         // ANCHOR: liquidity_deploy
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/liquidity_pool/out/debug/liquidity_pool.bin",
+            "../../packages/fuels/tests/contracts/liquidity_pool/out/release/liquidity_pool.bin",
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())
@@ -225,7 +226,7 @@ mod tests {
         let mut hot_wallet = WalletUnlocked::new_random(None);
         let mut cold_wallet = WalletUnlocked::new_random(None);
 
-        let code_path = "../../packages/fuels/tests/predicates/swap/out/debug/swap.bin";
+        let code_path = "../../packages/fuels/tests/predicates/swap/out/release/swap.bin";
         let mut predicate = Predicate::load_from(code_path)?;
 
         let num_coins = 5;
