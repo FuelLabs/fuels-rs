@@ -77,11 +77,11 @@ impl Abigen {
     }
 
     fn generate_all_bindings(
-        parsed_targets: Vec<AbigenTarget>,
+        targets: Vec<AbigenTarget>,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
-        parsed_targets
+        targets
             .into_iter()
             .map(|target| Self::generate_binding(target, no_std, shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
