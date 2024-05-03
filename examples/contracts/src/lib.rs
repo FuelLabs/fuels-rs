@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use fuels::{
-        core::codec::{DecoderConfig, EncoderConfig},
+        core::codec::{encode_fn_selector, DecoderConfig, EncoderConfig},
         prelude::{LoadConfiguration, NodeConfig, StorageConfiguration},
         test_helpers::{ChainConfig, StateConfig},
         types::{
@@ -113,11 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = if cfg!(feature = "legacy_encoding") {
-            796
-        } else {
-            2065
-        };
+        let expected_gas = 2662;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -372,7 +368,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, asset_id, address)
+            .transfer(1_000_000, asset_id, address.into())
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -412,7 +408,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .call()
             .await;
 
@@ -424,7 +420,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .append_variable_outputs(1)
             .with_contract_ids(&[called_contract_id.into()])
             .call()
@@ -437,7 +433,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -614,10 +610,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        #[cfg(feature = "legacy_encoding")]
-        let expected_gas = 1172;
-        #[cfg(not(feature = "legacy_encoding"))]
-        let expected_gas = 3532;
+        let expected_gas = 4152;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -698,13 +691,8 @@ mod tests {
     }
 
     #[tokio::test]
-    #[cfg(feature = "legacy_encoding")]
     async fn low_level_call_example() -> Result<()> {
-        use fuels::{
-            core::codec::{calldata, fn_selector},
-            prelude::*,
-            types::SizedAsciiString,
-        };
+        use fuels::{core::codec::calldata, prelude::*, types::SizedAsciiString};
 
         setup_program_test!(
             Wallets("wallet"),
@@ -731,8 +719,7 @@ mod tests {
         );
 
         // ANCHOR: low_level_call
-        let function_selector =
-            fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+        let function_selector = encode_fn_selector("set_value_multiple_complex");
         let call_data = calldata!(
             MyStruct {
                 a: true,
@@ -747,7 +734,6 @@ mod tests {
                 target_contract_instance.id(),
                 Bytes(function_selector),
                 Bytes(call_data),
-                false,
             )
             .estimate_tx_dependencies(None)
             .await?

@@ -56,10 +56,8 @@ impl FunctionGenerator {
     }
 
     pub fn fn_selector(&self) -> TokenStream {
-        let param_type_calls = self.args.param_type_calls();
-
         let name = &self.name;
-        quote! {::fuels::core::codec::resolve_fn_selector(#name, &[#(#param_type_calls),*])}
+        quote! {::fuels::core::codec::encode_fn_selector(#name)}
     }
 
     pub fn tokenized_args(&self) -> TokenStream {
@@ -129,9 +127,7 @@ mod tests {
         let fn_selector_code = sut.fn_selector();
 
         let expected = quote! {
-            ::fuels::core::codec::resolve_fn_selector(
-                "test_function",
-                &[<self::CustomStruct<::core::primitive::u8> as::fuels::core::traits::Parameterize>::param_type()])
+            ::fuels::core::codec::encode_fn_selector("test_function")
         };
         assert_eq!(fn_selector_code.to_string(), expected.to_string());
 

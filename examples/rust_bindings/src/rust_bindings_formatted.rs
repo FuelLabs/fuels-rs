@@ -73,7 +73,7 @@ pub mod abigen_bindings {
                 contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::resolve_fn_selector("initialize_counter", &[u64::param_type()]),
+                    codec::encode_fn_selector("initialize_counter"),
                     &[Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
@@ -85,7 +85,7 @@ pub mod abigen_bindings {
                 contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::resolve_fn_selector("increment_counter", &[u64::param_type()]),
+                    codec::encode_fn_selector("increment_counter"),
                     &[value.into_token()],
                     self.log_decoder.clone(),
                     false,

@@ -1,10 +1,8 @@
 use fuel_tx::ContractParameters;
-#[cfg(feature = "legacy_encoding")]
-use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    types::{errors::transaction::Reason, Bits256},
+    types::{errors::transaction::Reason, Bits256, Identity},
 };
 
 #[tokio::test]
@@ -277,14 +275,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    #[cfg(feature = "legacy_encoding")]
-    let expected_gas_used = 955;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_gas_used = 960;
 
-    #[cfg(feature = "legacy_encoding")]
-    let expected_metered_bytes_size = 784;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -655,8 +647,12 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test() -> Result<(
+    Vec<WalletUnlocked>,
+    [Identity; 3],
+    AssetId,
+    Bech32ContractId,
+)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
@@ -668,10 +664,10 @@ async fn setup_output_variable_estimation_test(
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
-    let addresses: [Address; 3] = wallets
+    let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
-        .collect::<Vec<Address>>()
+        .collect::<Vec<_>>()
         .try_into()
         .unwrap();
 
@@ -1231,7 +1227,6 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(feature = "legacy_encoding")]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1259,7 +1254,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
-    let function_selector = fn_selector!(initialize_counter(u64));
+    let function_selector = encode_fn_selector("initialize_counter");
     let call_data = calldata!(42u64)?;
 
     caller_contract_instance
@@ -1268,7 +1263,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            true,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1282,8 +1276,7 @@ async fn low_level_call() -> Result<()> {
         .await?;
     assert_eq!(response.value, 42);
 
-    let function_selector =
-        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let function_selector = encode_fn_selector("set_value_multiple_complex");
     let call_data = calldata!(
         MyStruct {
             a: true,
@@ -1298,7 +1291,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            false,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1845,7 +1837,6 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn test_reentrant_calls() -> Result<()> {
     setup_program_test!(
