@@ -113,7 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2065;
+        let expected_gas = 2662;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -368,7 +368,7 @@ mod tests {
 
         // withdraw some tokens to wallet
         let response = contract_methods
-            .transfer_coins_to_output(1_000_000, asset_id, address)
+            .transfer(1_000_000, asset_id, address.into())
             .append_variable_outputs(1)
             .call()
             .await?;
@@ -408,7 +408,7 @@ mod tests {
         let amount = 100;
 
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .call()
             .await;
 
@@ -420,7 +420,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .append_variable_outputs(1)
             .with_contract_ids(&[called_contract_id.into()])
             .call()
@@ -433,7 +433,7 @@ mod tests {
 
         // ANCHOR: dependency_estimation
         let response = contract_methods
-            .mint_then_increment_from_contract(called_contract_id, amount, address)
+            .mint_then_increment_from_contract(called_contract_id, amount, address.into())
             .estimate_tx_dependencies(Some(2))
             .await?
             .call()
@@ -610,7 +610,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 3532;
+        let expected_gas = 4152;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 

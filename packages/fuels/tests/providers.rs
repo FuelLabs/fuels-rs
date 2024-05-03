@@ -330,7 +330,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    let gas_used_by_script = 856;
+    let gas_used_by_script = 305;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -415,7 +415,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, asset_id, address)
+        .transfer(1_000_000, asset_id, address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
