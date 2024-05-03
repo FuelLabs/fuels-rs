@@ -5,13 +5,13 @@ use fuels_core::codec::EncoderConfig;
 async fn contract_uses_default_configurables() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
+        abi = "packages/fuels/tests/contracts/configurables/out/release/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/configurables/out/debug/configurables.bin",
+        "tests/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -81,7 +81,7 @@ async fn contract_configurables() -> Result<()> {
     // ANCHOR: contract_configurables
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/configurables/out/debug/configurables-abi.json"
+        abi = "packages/fuels/tests/contracts/configurables/out/release/configurables-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -100,7 +100,7 @@ async fn contract_configurables() -> Result<()> {
         .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/configurables/out/debug/configurables.bin",
+        "tests/contracts/configurables/out/release/configurables.bin",
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -132,10 +132,11 @@ async fn contract_configurables() -> Result<()> {
 #[tokio::test]
 async fn script_configurables() -> Result<()> {
     // ANCHOR: script_configurables
-    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/release/script_configurables-abi.json"));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/scripts/script_configurables/out/debug/script_configurables.bin";
+    let bin_path =
+        "../fuels/tests/scripts/script_configurables/out/release/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 
     let new_str: SizedAsciiString<4> = "FUEL".try_into()?;
@@ -176,7 +177,7 @@ async fn script_configurables() -> Result<()> {
 
 #[tokio::test]
 async fn configurable_encoder_config_is_applied() {
-    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/debug/script_configurables-abi.json"));
+    abigen!(Script(name="MyScript", abi="packages/fuels/tests/scripts/script_configurables/out/release/script_configurables-abi.json"));
 
     let new_struct = StructWithGeneric {
         field_1: 16u8,

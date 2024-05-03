@@ -175,7 +175,7 @@ mod tests {
             .unwrap();
 
         let contract_id = Contract::load_from(
-            "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+            "../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin",
             LoadConfiguration::default(),
         )?
         .deploy(&wallet, TxPolicies::default())
