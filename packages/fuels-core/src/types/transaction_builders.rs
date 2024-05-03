@@ -523,16 +523,10 @@ impl ScriptTransactionBuilder {
     }
 
     fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> Result<usize> {
-        let padded_script_data_len = padded_len_usize(self.script_data.len()).ok_or_else(|| error!(
-            Other,
-            "script data len overflow {}",
-            self.script_data.len()
-        ))?;
-        let padded_script_len = padded_len_usize(self.script.len()).ok_or_else(|| error!(
-            Other,
-            "script len overflow {}",
-            self.script.len()
-        ))?;
+        let padded_script_data_len = padded_len_usize(self.script_data.len())
+            .ok_or_else(|| error!(Other, "script data len overflow {}", self.script_data.len()))?;
+        let padded_script_len = padded_len_usize(self.script.len())
+            .ok_or_else(|| error!(Other, "script len overflow {}", self.script.len()))?;
 
         Ok(offsets::base_offset_script(consensus_parameters)
             + padded_script_data_len

@@ -74,10 +74,12 @@ pub fn coin_signed_data_offset() -> usize {
 }
 
 pub fn message_signed_data_offset(message_data_len: usize) -> Result<usize> {
-    let padded_len = padded_len_usize(message_data_len).ok_or(error!(
-        Other,
-        "signed message data len overflow: {message_data_len}"
-    ))?;
+    let padded_len = padded_len_usize(message_data_len).ok_or_else(|| {
+        error!(
+            Other,
+            "signed message data len overflow: {message_data_len}"
+        )
+    })?;
 
     Ok(InputRepr::Message
         .data_offset()
