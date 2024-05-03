@@ -415,7 +415,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, asset_id, address)
+        .transfer(1_000_000, asset_id, address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
