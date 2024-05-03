@@ -56,11 +56,12 @@ mod tests {
         // ANCHOR: predicate_load
         abigen!(Predicate(
             name = "MyPredicate",
-            abi = "packages/fuels/tests/predicates/signatures/out/debug/signatures-abi.json"
+            abi = "packages/fuels/tests/predicates/signatures/out/release/signatures-abi.json"
         ));
 
         let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
-        let code_path = "../../packages/fuels/tests/predicates/signatures/out/debug/signatures.bin";
+        let code_path =
+            "../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(provider)
@@ -124,13 +125,13 @@ mod tests {
         let first_wallet = &wallets[0];
         let second_wallet = &wallets[1];
 
-        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"));
+        abigen!(Predicate(name="MyPredicate", abi="packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"));
         // ANCHOR_END: predicate_data_setup
 
         // ANCHOR: with_predicate_data
         let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
         let code_path =
-            "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+            "../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin";
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(first_wallet.try_provider()?.clone())

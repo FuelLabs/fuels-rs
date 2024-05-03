@@ -27,7 +27,7 @@ mod setup_program_test;
 ///```text
 /// abigen!(Contract(
 ///         name = "MyContract",
-///         abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+///         abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
 ///     ));
 ///```
 ///
