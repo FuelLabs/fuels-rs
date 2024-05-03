@@ -44,6 +44,6 @@ fn main(
     some_struct: StructWithGeneric<u8>,
     some_enum: EnumWithGeneric<bool>,
 ) -> bool {
-     switch == BOOL && u_8 == U8 && some_struct == STRUCT && some_enum == ENUM
+    switch == BOOL && u_8 == U8 && some_struct == STRUCT && some_enum == ENUM
 }
 // ANCHOR_END: predicate_configurables
