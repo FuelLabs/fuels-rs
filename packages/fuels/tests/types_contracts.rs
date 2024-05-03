@@ -2072,6 +2072,7 @@ async fn test_contract_std_lib_string() -> Result<()> {
             .await?;
     }
     {
+        // confirm encoding/decoding a string wasn't faulty and led to too high gas consumption
         let _resp = contract_methods
             .echoes_dynamic_string(String::from("Hello Fuel"))
             .with_tx_policies(TxPolicies::default().with_script_gas_limit(2000))
