@@ -379,7 +379,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        "../../packages/fuels/tests/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -613,11 +613,11 @@ async fn test_script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "log_script",
-        abi = "packages/fuels/tests/logs/script_logs/out/debug/script_logs-abi.json"
+        abi = "packages/fuels/tests/logs/script_logs/out/release/script_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/logs/script_logs/out/debug/script_logs.bin";
+    let bin_path = "../fuels/tests/logs/script_logs/out/release/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
@@ -697,7 +697,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/debug/contract_logs.bin",
+        "../../packages/fuels/tests/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -959,7 +959,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        "../../packages/fuels/tests/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -1011,7 +1011,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/debug/lib_contract.bin",
+        "../../packages/fuels/tests/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
