@@ -31,18 +31,18 @@ pub fn call_script_data_offset(
     // from the script. This doesn't happen in the predicate.
     let opcode_len = Instruction::SIZE;
 
-    let padded_len = padded_len_usize(calls_instructions_len + opcode_len).ok_or(error!(
-        Other,
-        "call script data len overflow: {calls_instructions_len}"
-    ))?;
+    let padded_len = padded_len_usize(calls_instructions_len + opcode_len).ok_or_else(|| {
+        error!(
+            Other,
+            "call script data len overflow: {calls_instructions_len}"
+        )
+    })?;
     Ok(base_offset_script(consensus_parameters) + padded_len)
 }
 
 pub fn coin_predicate_data_offset(code_len: usize) -> Result<usize> {
-    let code_len_padded = padded_len_usize(code_len).ok_or(error!(
-        Other,
-        "coin predicate code len overflow: {code_len}"
-    ))?;
+    let code_len_padded = padded_len_usize(code_len)
+        .ok_or_else(|| error!(Other, "coin predicate code len overflow: {code_len}"))?;
 
     Ok(InputRepr::Coin
         .coin_predicate_offset()
@@ -51,14 +51,14 @@ pub fn coin_predicate_data_offset(code_len: usize) -> Result<usize> {
 }
 
 pub fn message_predicate_data_offset(message_data_len: usize, code_len: usize) -> Result<usize> {
-    let data_len_padded = padded_len_usize(message_data_len).ok_or(error!(
-        Other,
-        "message predicate data len overflow: {message_data_len}"
-    ))?;
-    let code_len_padded = padded_len_usize(code_len).ok_or(error!(
-        Other,
-        "message predicate code len overflow: {code_len}"
-    ))?;
+    let data_len_padded = padded_len_usize(message_data_len).ok_or_else(|| {
+        error!(
+            Other,
+            "message predicate data len overflow: {message_data_len}"
+        )
+    })?;
+    let code_len_padded = padded_len_usize(code_len)
+        .ok_or_else(|| error!(Other, "message predicate code len overflow: {code_len}"))?;
 
     Ok(InputRepr::Message
         .data_offset()

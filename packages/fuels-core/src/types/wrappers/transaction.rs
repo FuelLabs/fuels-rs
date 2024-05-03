@@ -143,24 +143,24 @@ impl UploadTransaction {
 
 #[derive(Default, Debug, Clone, PartialEq, Eq)]
 pub struct UpgradeTransaction {
-    tx: Box<Upgrade>,
+    tx: Upgrade,
 }
 
 impl From<UpgradeTransaction> for FuelTransaction {
     fn from(upload: UpgradeTransaction) -> Self {
-        (*upload.tx).into()
+        upload.tx.into()
     }
 }
 
 impl From<UpgradeTransaction> for Upgrade {
     fn from(tx: UpgradeTransaction) -> Self {
-        *tx.tx
+        tx.tx
     }
 }
 
 impl From<Upgrade> for UpgradeTransaction {
     fn from(tx: Upgrade) -> Self {
-        Self { tx: Box::new(tx) }
+        Self { tx }
     }
 }
 
@@ -512,7 +512,7 @@ macro_rules! impl_tx_wrapper {
                     self.tx.witnesses().iter().chain(std::iter::once(&witness)),
                 );
                 let new_witnesses_size = padded_len_usize(witness_size)
-                    .ok_or(error!(Other, "witness size overflow: {witness_size}"))?
+                    .ok_or_else(|| error!(Other, "witness size overflow: {witness_size}"))?
                     as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {

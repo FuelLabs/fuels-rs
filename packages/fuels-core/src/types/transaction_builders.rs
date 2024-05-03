@@ -303,7 +303,7 @@ macro_rules! impl_tx_trait {
                     * self.unresolved_witness_indexes.owner_to_idx_offset.len();
 
                 let padded_len = padded_len_usize(witnesses_size + signature_size)
-                    .ok_or(error!(Other, "witnesses size overflow"))?;
+                    .ok_or_else(|| error!(Other, "witnesses size overflow"))?;
                 Ok(padded_len as u64)
             }
 
