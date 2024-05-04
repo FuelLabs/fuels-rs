@@ -291,7 +291,9 @@ impl Provider {
                 TransactionExecutionResult::Success { receipts, .. } => {
                     TxStatus::Success { receipts }
                 }
-                TransactionExecutionResult::Failed { receipts, result } => TxStatus::Revert {
+                TransactionExecutionResult::Failed {
+                    receipts, result, ..
+                } => TxStatus::Revert {
                     reason: TransactionExecutionResult::reason(&receipts, &result),
                     receipts,
                     revert_id: 0,
