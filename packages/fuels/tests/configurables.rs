@@ -1,6 +1,6 @@
 use fuels::{
     prelude::*,
-    types::{AsciiString, SizedAsciiString, U256},
+    types::{SizedAsciiString, U256},
 };
 use fuels_core::codec::EncoderConfig;
 
@@ -36,9 +36,8 @@ async fn contract_default_configurables() -> Result<()> {
         63,
         U256::from(8),
         "fuel".try_into()?,
-        "fuel".try_into()?,
         (8, true),
-        [252, 253, 254],
+        [253, 254, 255],
         StructWithGeneric {
             field_1: 8u8,
             field_2: 16,
@@ -101,7 +100,6 @@ async fn contract_configurables() -> Result<()> {
     let wallet = launch_provider_and_get_wallet().await?;
 
     let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
-    let str: AsciiString = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -116,7 +114,6 @@ async fn contract_configurables() -> Result<()> {
         .with_U64(63)?
         .with_U256(U256::from(8))?
         .with_STR_4(str_4.clone())?
-        .with_STR(str.clone())?
         .with_TUPLE((7, false))?
         .with_ARRAY([252, 253, 254])?
         .with_STRUCT(new_struct.clone())?
@@ -146,7 +143,6 @@ async fn contract_configurables() -> Result<()> {
         63,
         U256::from(8),
         str_4,
-        str,
         (7, false),
         [252, 253, 254],
         new_struct,

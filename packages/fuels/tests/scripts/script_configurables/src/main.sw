@@ -6,14 +6,12 @@ enum EnumWithGeneric<D> {
     VariantTwo: (),
 }
 
-#[allow(dead_code)]
 struct StructWithGeneric<D> {
     field_1: D,
     field_2: u64,
 }
 
 //U128: u128 = 128, //TODO: add once https://github.com/FuelLabs/sway/issues/5356 is done
-//STR: str = "fuel",//TODO: add once https://github.com/FuelLabs/sway/issues/5727 is done
 configurable {
     BOOL: bool = true,
     U8: u8 = 8,
