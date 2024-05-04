@@ -16,7 +16,7 @@ pub(crate) fn extract_main_fn(abi: &[FullABIFunction]) -> Result<&FullABIFunctio
                 .map(|candidate| candidate.name())
                 .collect::<Vec<_>>();
             Err(error!(
-                "ABI must have one and only one function with the name 'main'. Got: {fn_names:?}"
+                "`abi` must have only one function with the name 'main'. Got: {fn_names:?}"
             ))
         }
     }
@@ -45,7 +45,7 @@ mod tests {
 
         assert_eq!(
             err.to_string(),
-            r#"ABI must have one and only one function with the name 'main'. Got: ["main", "another", "main"]"#
+            r#"`abi` must have only one function with the name 'main'. Got: ["main", "another", "main"]"#
         );
     }
 

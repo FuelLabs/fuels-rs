@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuels_code_gen::{utils::ident, Abigen, AbigenTarget, ProgramType};
-use proc_macro2::{Ident, TokenStream};
+use fuels_code_gen::{utils::ident, Abi, Abigen, AbigenTarget, ProgramType};
+use proc_macro2::{Ident, Span, TokenStream};
 use quote::quote;
 use syn::LitStr;
 
@@ -24,7 +24,7 @@ pub(crate) fn generate_setup_program_test_code(
     } = commands;
 
     let project_lookup = generate_project_lookup(&generate_bindings)?;
-    let abigen_code = abigen_code(&project_lookup);
+    let abigen_code = abigen_code(&project_lookup)?;
     let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
     let script_code = script_loading_code(&load_scripts, &project_lookup);
@@ -50,18 +50,26 @@ fn generate_project_lookup(commands: &AbigenCommand) -> syn::Result<HashMap<Stri
     Ok(pairs.into_iter().collect())
 }
 
-fn abigen_code(project_lookup: &HashMap<String, Project>) -> TokenStream {
-    let targets = generate_abigen_targets(project_lookup);
-    Abigen::generate(targets, false).expect("Failed to generate abigen")
+fn abigen_code(project_lookup: &HashMap<String, Project>) -> syn::Result<TokenStream> {
+    let targets = parse_abigen_targets(project_lookup)?;
+
+    Ok(Abigen::generate(targets, false).expect("abigen generation failed"))
 }
 
-fn generate_abigen_targets(project_lookup: &HashMap<String, Project>) -> Vec<AbigenTarget> {
+fn parse_abigen_targets(
+    project_lookup: &HashMap<String, Project>,
+) -> syn::Result<Vec<AbigenTarget>> {
     project_lookup
         .iter()
-        .map(|(name, project)| AbigenTarget {
-            name: name.clone(),
-            abi: project.abi_path(),
-            program_type: project.program_type,
+        .map(|(name, project)| {
+            let source = Abi::load_from(project.abi_path())
+                .map_err(|e| syn::Error::new(project.path_span, e.to_string()))?;
+
+            Ok(AbigenTarget::new(
+                name.clone(),
+                source,
+                project.program_type,
+            ))
         })
         .collect()
 }
@@ -181,6 +189,7 @@ fn script_loading_code(
 struct Project {
     program_type: ProgramType,
     path: PathBuf,
+    path_span: Span,
 }
 
 impl Project {
@@ -188,11 +197,15 @@ impl Project {
         let path = Path::new(&dir.value()).canonicalize().map_err(|_| {
             syn::Error::new_spanned(
                 dir.clone(),
-                "Unable to canonicalize forc project path. Make sure the path is valid!",
+                "unable to canonicalize forc project path. Make sure the path is valid!",
             )
         })?;
 
-        Ok(Self { program_type, path })
+        Ok(Self {
+            program_type,
+            path,
+            path_span: dir.span(),
+        })
     }
 
     fn compile_file_path(&self, suffix: &str, description: &str) -> String {
