@@ -42,6 +42,8 @@ impl From<ClientTransactionResponse> for TransactionResponse {
             Transaction::Script(tx) => TransactionType::Script(ScriptTransaction::from(tx)),
             Transaction::Create(tx) => TransactionType::Create(CreateTransaction::from(tx)),
             Transaction::Mint(tx) => TransactionType::Mint(tx.into()),
+            Transaction::Upgrade(tx) => TransactionType::Upgrade(tx.into()),
+            Transaction::Upload(tx) => TransactionType::Upload(tx.into()),
         };
 
         Self {

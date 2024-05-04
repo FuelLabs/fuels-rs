@@ -165,8 +165,9 @@ where
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters();
-        let script_offset = base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_call.script_binary.len());
+        let padded_script_len = padded_len_usize(self.script_call.script_binary.len())
+            .ok_or_else(|| error!(Other, "script is too long"))?;
+        let script_offset = base_offset_script(consensus_parameters) + padded_script_len;
         self.script_call
             .encoded_args
             .as_ref()

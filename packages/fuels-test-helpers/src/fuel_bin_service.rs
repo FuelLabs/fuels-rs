@@ -91,12 +91,9 @@ impl ExtendedConfig {
     }
 
     pub fn write_temp_snapshot_files(self) -> FuelResult<TempDir> {
-        let mut writer = SnapshotWriter::json(self.snapshot_dir.path());
+        let writer = SnapshotWriter::json(self.snapshot_dir.path());
         writer
-            .write_chain_config(&self.chain_config)
-            .map_err(|e| error!(Other, "could not write chain config: {}", e))?;
-        writer
-            .write_state_config(self.state_config)
+            .write_state_config(self.state_config, &self.chain_config)
             .map_err(|e| error!(Other, "could not write state config: {}", e))?;
 
         Ok(self.snapshot_dir)
