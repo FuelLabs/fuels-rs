@@ -1,1 +1,1 @@
-Version::new(0, 24, 3)
+Version::new(0, 26, 0)
