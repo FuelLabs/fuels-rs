@@ -1,0 +1,5 @@
+error: failed to read `abi` file with path $WORKSPACE/target/tests/trybuild/fuels-macros/out/release/fuels-macros-abi.json: No such file or directory (os error 2)
+ --> tests/ui/setup_program_test/invalid_project_path.rs:3:68
+  |
+3 | setup_program_test!(Abigen(Contract(name = "MyContract", project = ".")));
+  |                                                                    ^^^

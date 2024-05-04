@@ -112,7 +112,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
     let provider = account.try_provider()?;
     let consensus_parameters = provider.consensus_parameters();
-    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
+    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len)?;
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;

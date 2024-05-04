@@ -241,7 +241,7 @@ impl ConfigurablesBoundedEncoder {
     fn encode_raw_slice(mut data: Vec<u8>) -> Result<Vec<Data>> {
         let len = data.len();
 
-        zeropad_to_word_alignment(&mut data);
+        zeropad_to_word_alignment(&mut data)?;
 
         let encoded_data = vec![Data::Inline(data)];
 
@@ -261,15 +261,14 @@ impl ConfigurablesBoundedEncoder {
     }
 
     fn encode_string_array(arg_string: &StaticStringToken) -> Result<Data> {
-        Ok(Data::Inline(crate::types::pad_string(
-            arg_string.get_encodable_str()?,
-        )))
+        let padded = crate::types::pad_string(arg_string.get_encodable_str()?)?;
+        Ok(Data::Inline(padded))
     }
 
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
         let len = data.len();
 
-        zeropad_to_word_alignment(&mut data);
+        zeropad_to_word_alignment(&mut data)?;
 
         let cap = data.len() as u64;
         let encoded_data = vec![Data::Inline(data)];
@@ -282,7 +281,11 @@ impl ConfigurablesBoundedEncoder {
     }
 }
 
-fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
-    let padded_length = padded_len_usize(data.len());
+fn zeropad_to_word_alignment(data: &mut Vec<u8>) -> Result<()> {
+    let padded_length = padded_len_usize(data.len())
+        .ok_or_else(|| error!(Codec, "data length exceeds maximum allowed length"))?;
+
     data.resize(padded_length, 0);
+
+    Ok(())
 }

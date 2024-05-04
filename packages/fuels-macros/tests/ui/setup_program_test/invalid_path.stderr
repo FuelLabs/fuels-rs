@@ -1,0 +1,5 @@
+error: unable to canonicalize forc project path. Make sure the path is valid!
+ --> tests/ui/setup_program_test/invalid_path.rs:5:15
+  |
+5 |     project = "some_project"
+  |               ^^^^^^^^^^^^^^
