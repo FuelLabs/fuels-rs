@@ -1,6 +1,4 @@
 #[derive(Debug, PartialEq, Clone, Eq)]
-// `RawSlice` is a mapping of the contract type "untyped raw slice" -- currently the only way of
-// returning dynamically sized data from a script.
 pub struct RawSlice(pub Vec<u8>);
 
 impl From<RawSlice> for Vec<u8> {

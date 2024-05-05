@@ -2,7 +2,7 @@ use crate::{
     error::Result,
     program_bindings::{
         abigen::{
-            abigen_target::ParsedAbigenTarget,
+            abigen_target::AbigenTarget,
             bindings::{
                 contract::contract_bindings, predicate::predicate_bindings, script::script_bindings,
             },
@@ -19,7 +19,7 @@ mod predicate;
 mod script;
 mod utils;
 
-pub(crate) fn generate_bindings(target: ParsedAbigenTarget, no_std: bool) -> Result<GeneratedCode> {
+pub(crate) fn generate_bindings(target: AbigenTarget, no_std: bool) -> Result<GeneratedCode> {
     let bindings_generator = match target.program_type {
         ProgramType::Script => script_bindings,
         ProgramType::Contract => contract_bindings,

@@ -26,7 +26,7 @@ use crate::{
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error_transaction, Result},
+        errors::{error, error_transaction, Result},
         input::Input,
         message::Message,
         transaction::{
@@ -261,22 +261,19 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(&self) -> Policies {
-                let mut policies = Policies::default();
+            fn generate_fuel_policies(&self) -> Result<Policies> {
+                let witness_limit = match self.tx_policies.witness_limit() {
+                    Some(limit) => limit,
+                    None => self.calculate_witnesses_size()?,
+                };
+                let mut policies = Policies::default().with_witness_limit(witness_limit);
+
                 // `MaxFee` set to `tip` or `0` for `dry_run`
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
-
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
-
-                let witness_limit = self
-                    .tx_policies
-                    .witness_limit()
-                    .or_else(|| self.calculate_witnesses_size());
-                policies.set(PolicyType::WitnessLimit, witness_limit);
-
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
 
-                policies
+                Ok(policies)
             }
 
             fn is_using_predicates(&self) -> bool {
@@ -298,12 +295,14 @@ macro_rules! impl_tx_trait {
                 Ok(num_witnesses as u16)
             }
 
-            fn calculate_witnesses_size(&self) -> Option<u64> {
+            fn calculate_witnesses_size(&self) -> Result<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
                 let signature_size = SIGNATURE_WITNESS_SIZE
                     * self.unresolved_witness_indexes.owner_to_idx_offset.len();
 
-                Some(padded_len_usize(witnesses_size + signature_size) as u64)
+                let padded_len = padded_len_usize(witnesses_size + signature_size)
+                    .ok_or_else(|| error!(Other, "witnesses size overflow"))?;
+                Ok(padded_len as u64)
             }
 
             async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
@@ -462,7 +461,7 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -641,7 +640,7 @@ impl CreateTransactionBuilder {
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,

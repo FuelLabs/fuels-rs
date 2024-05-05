@@ -447,6 +447,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(*contract_id.hash())
     );
+
     Ok(())
 }
 

@@ -1,3 +1,4 @@
+use crate::{error, types::errors::Result};
 use fuel_asm::Instruction;
 use fuel_tx::{field::Script, ConsensusParameters};
 use fuel_types::bytes::padded_len_usize;
@@ -13,10 +14,16 @@ pub fn base_offset_script(consensus_parameters: &ConsensusParameters) -> usize {
 pub fn call_script_data_offset(
     consensus_parameters: &ConsensusParameters,
     calls_instructions_len: usize,
-) -> usize {
+) -> Result<usize> {
     // Instruction::SIZE is a placeholder for the RET instruction which is added later for returning
     // from the script. This doesn't happen in the predicate.
     let opcode_len = Instruction::SIZE;
 
-    base_offset_script(consensus_parameters) + padded_len_usize(calls_instructions_len + opcode_len)
+    let padded_len = padded_len_usize(calls_instructions_len + opcode_len).ok_or_else(|| {
+        error!(
+            Other,
+            "call script data len overflow: {calls_instructions_len}"
+        )
+    })?;
+    Ok(base_offset_script(consensus_parameters) + padded_len)
 }
