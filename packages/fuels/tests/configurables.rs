@@ -1,6 +1,6 @@
 use fuels::{
     prelude::*,
-    types::{SizedAsciiString, U256},
+    types::{Bits256, SizedAsciiString, U256},
 };
 use fuels_core::codec::EncoderConfig;
 
@@ -35,6 +35,7 @@ async fn contract_default_configurables() -> Result<()> {
         32,
         63,
         U256::from(8),
+        Bits256([1; 32]),
         "fuel".try_into()?,
         (8, true),
         [253, 254, 255],
@@ -74,6 +75,7 @@ async fn script_default_configurables() -> Result<()> {
         32,
         63,
         U256::from(8),
+        Bits256([1; 32]),
         "fuel".try_into()?,
         (8, true),
         [253, 254, 255],
@@ -113,6 +115,7 @@ async fn contract_configurables() -> Result<()> {
         .with_U32(31)?
         .with_U64(63)?
         .with_U256(U256::from(8))?
+        .with_B256(Bits256([2; 32]))?
         .with_STR_4(str_4.clone())?
         .with_TUPLE((7, false))?
         .with_ARRAY([252, 253, 254])?
@@ -142,6 +145,7 @@ async fn contract_configurables() -> Result<()> {
         31,
         63,
         U256::from(8),
+        Bits256([2; 32]),
         str_4,
         (7, false),
         [252, 253, 254],
@@ -181,6 +185,7 @@ async fn script_configurables() -> Result<()> {
     .with_U32(31)?
     .with_U64(63)?
     .with_U256(U256::from(8))?
+    .with_B256(Bits256([2; 32]))?
     .with_STR_4(str_4.clone())?
     .with_TUPLE((7, false))?
     .with_ARRAY([252, 253, 254])?
@@ -201,6 +206,7 @@ async fn script_configurables() -> Result<()> {
         31,
         63,
         U256::from(8),
+        Bits256([2; 32]),
         str_4,
         (7, false),
         [252, 253, 254],
