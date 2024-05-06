@@ -1,10 +1,8 @@
 use fuel_tx::ContractParameters;
-#[cfg(feature = "legacy_encoding")]
-use fuels::core::codec::{calldata, fn_selector};
 use fuels::{
-    core::codec::{DecoderConfig, EncoderConfig},
+    core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
-    types::{errors::transaction::Reason, Bits256},
+    types::{errors::transaction::Reason, Bits256, Identity},
 };
 
 #[tokio::test]
@@ -277,14 +275,8 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
 
-    #[cfg(feature = "legacy_encoding")]
-    let expected_gas_used = 955;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_gas_used = 960;
 
-    #[cfg(feature = "legacy_encoding")]
-    let expected_metered_bytes_size = 784;
-    #[cfg(not(feature = "legacy_encoding"))]
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -655,23 +647,27 @@ async fn test_connect_wallet() -> Result<()> {
     Ok(())
 }
 
-async fn setup_output_variable_estimation_test(
-) -> Result<(Vec<WalletUnlocked>, [Address; 3], AssetId, Bech32ContractId)> {
+async fn setup_output_variable_estimation_test() -> Result<(
+    Vec<WalletUnlocked>,
+    [Identity; 3],
+    AssetId,
+    Bech32ContractId,
+)> {
     let wallet_config = WalletsConfig::new(Some(3), None, None);
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/token_ops/out/debug/token_ops.bin",
+        "tests/contracts/token_ops/out/release/token_ops.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallets[0], TxPolicies::default())
     .await?;
 
     let mint_asset_id = contract_id.asset_id(&Bits256::zeroed());
-    let addresses: [Address; 3] = wallets
+    let addresses = wallets
         .iter()
         .map(|wallet| wallet.address().into())
-        .collect::<Vec<Address>>()
+        .collect::<Vec<_>>()
         .try_into()
         .unwrap();
 
@@ -682,7 +678,7 @@ async fn setup_output_variable_estimation_test(
 async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -740,7 +736,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -769,7 +765,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<()> {
 async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -1133,7 +1129,7 @@ async fn test_add_custom_assets() -> Result<()> {
 #[tokio::test]
 async fn contract_load_error_messages() {
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let binary_path = "tests/contracts/contract_test/out/release/no_file_on_path.bin";
         let expected_error = format!("io: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
@@ -1142,7 +1138,7 @@ async fn contract_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let binary_path = "tests/contracts/contract_test/out/release/contract_test-abi.json";
         let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
@@ -1207,7 +1203,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = WalletUnlocked::new_random(None);
@@ -1231,7 +1227,6 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[cfg(feature = "legacy_encoding")]
 async fn low_level_call() -> Result<()> {
     use fuels::types::SizedAsciiString;
 
@@ -1259,7 +1254,7 @@ async fn low_level_call() -> Result<()> {
         ),
     );
 
-    let function_selector = fn_selector!(initialize_counter(u64));
+    let function_selector = encode_fn_selector("initialize_counter");
     let call_data = calldata!(42u64)?;
 
     caller_contract_instance
@@ -1268,7 +1263,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            true,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1282,8 +1276,7 @@ async fn low_level_call() -> Result<()> {
         .await?;
     assert_eq!(response.value, 42);
 
-    let function_selector =
-        fn_selector!(set_value_multiple_complex(MyStruct, SizedAsciiString::<4>));
+    let function_selector = encode_fn_selector("set_value_multiple_complex");
     let call_data = calldata!(
         MyStruct {
             a: true,
@@ -1298,7 +1291,6 @@ async fn low_level_call() -> Result<()> {
             target_contract_instance.id(),
             Bytes(function_selector),
             Bytes(call_data),
-            false,
         )
         .estimate_tx_dependencies(None)
         .await?
@@ -1650,7 +1642,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     let provider = wallet.try_provider()?.clone();
     let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(data)
     .with_provider(provider);
@@ -1668,7 +1660,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     // the offsets were setup correctly since the predicate uses heap types in its arguments.
     // Storage slots were loaded automatically by default
     Contract::load_from(
-        "tests/contracts/storage/out/debug/storage.bin",
+        "tests/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -1795,7 +1787,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         Wallets("wallet")
     );
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -1845,7 +1837,6 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
     Ok(())
 }
 
-#[cfg(not(feature = "legacy_encoding"))]
 #[tokio::test]
 async fn test_reentrant_calls() -> Result<()> {
     setup_program_test!(

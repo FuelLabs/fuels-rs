@@ -2,6 +2,7 @@ use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
 };
+use fuels_core::types::Identity;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -9,10 +10,10 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
+        abi = "packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
+    let bin_path = "../fuels/tests/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -170,7 +171,11 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
-    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let script_call = script_instance.main(
+        amount,
+        asset_id,
+        Identity::Address(receiver.address().into()),
+    );
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
@@ -373,10 +378,10 @@ async fn test_script_transaction_builder() -> Result<()> {
 async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+        abi = "packages/fuels/tests/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
-    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let bin_path = "../fuels/tests/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
     {

@@ -22,7 +22,7 @@ use fuels::{
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -37,7 +37,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -68,7 +68,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -85,7 +85,7 @@ async fn test_network_error() -> Result<()> {
     service.stop().await.unwrap();
 
     let response = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -172,11 +172,11 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -279,7 +279,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
@@ -288,7 +288,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
     let deploy_w_maturity = |maturity| {
         Contract::load_from(
-            "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
+            "tests/contracts/transaction_block_height/out/release/transaction_block_height.bin",
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
@@ -329,10 +329,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    #[cfg(feature = "legacy_encoding")]
-    let gas_used_by_script = 364;
-    #[cfg(not(feature = "legacy_encoding"))]
-    let gas_used_by_script = 856;
+    let gas_used_by_script = 253;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -417,7 +414,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, asset_id, address)
+        .transfer(1_000_000, asset_id, address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
@@ -449,6 +446,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(*contract_id.hash())
     );
+
     Ok(())
 }
 

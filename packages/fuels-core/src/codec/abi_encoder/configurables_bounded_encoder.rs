@@ -15,14 +15,14 @@ use crate::{
     },
 };
 
-pub(crate) struct LegacyBoundedEncoder {
+pub(crate) struct ConfigurablesBoundedEncoder {
     used_for_configurables: bool,
     depth_tracker: CounterWithLimit,
     token_tracker: CounterWithLimit,
     max_total_enum_width: usize,
 }
 
-impl LegacyBoundedEncoder {
+impl ConfigurablesBoundedEncoder {
     pub(crate) fn new(config: EncoderConfig, used_for_configurables: bool) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);
@@ -241,7 +241,7 @@ impl LegacyBoundedEncoder {
     fn encode_raw_slice(mut data: Vec<u8>) -> Result<Vec<Data>> {
         let len = data.len();
 
-        zeropad_to_word_alignment(&mut data);
+        zeropad_to_word_alignment(&mut data)?;
 
         let encoded_data = vec![Data::Inline(data)];
 
@@ -261,15 +261,14 @@ impl LegacyBoundedEncoder {
     }
 
     fn encode_string_array(arg_string: &StaticStringToken) -> Result<Data> {
-        Ok(Data::Inline(crate::types::pad_string(
-            arg_string.get_encodable_str()?,
-        )))
+        let padded = crate::types::pad_string(arg_string.get_encodable_str()?)?;
+        Ok(Data::Inline(padded))
     }
 
     fn encode_bytes(mut data: Vec<u8>) -> Result<Vec<Data>> {
         let len = data.len();
 
-        zeropad_to_word_alignment(&mut data);
+        zeropad_to_word_alignment(&mut data)?;
 
         let cap = data.len() as u64;
         let encoded_data = vec![Data::Inline(data)];
@@ -282,7 +281,11 @@ impl LegacyBoundedEncoder {
     }
 }
 
-fn zeropad_to_word_alignment(data: &mut Vec<u8>) {
-    let padded_length = padded_len_usize(data.len());
+fn zeropad_to_word_alignment(data: &mut Vec<u8>) -> Result<()> {
+    let padded_length = padded_len_usize(data.len())
+        .ok_or_else(|| error!(Codec, "data length exceeds maximum allowed length"))?;
+
     data.resize(padded_length, 0);
+
+    Ok(())
 }

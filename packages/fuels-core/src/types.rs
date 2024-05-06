@@ -5,6 +5,7 @@ pub use fuel_types::{
 };
 
 pub use crate::types::{core::*, token::*, wrappers::*};
+use crate::{error, types::errors::Result};
 
 pub mod bech32;
 mod core;
@@ -17,9 +18,6 @@ pub mod unresolved_bytes;
 mod wrappers;
 
 pub type ByteArray = [u8; 8];
-#[cfg(feature = "legacy_encoding")]
-pub type Selector = ByteArray;
-#[cfg(not(feature = "legacy_encoding"))]
 pub type Selector = Vec<u8>;
 
 /// Converts a u16 to a right aligned array of 8 bytes.
@@ -36,12 +34,14 @@ pub fn pad_u32(value: u32) -> ByteArray {
     padded
 }
 
-pub fn pad_string(s: &str) -> Vec<u8> {
-    let pad = padded_len(s.as_bytes()) - s.len();
+pub fn pad_string(s: &str) -> Result<Vec<u8>> {
+    let padded_len =
+        padded_len(s.as_bytes()).ok_or_else(|| error!(Codec, "string is too long to be padded"))?;
+    let pad = padded_len - s.len();
 
     let mut padded = s.as_bytes().to_owned();
 
     padded.extend_from_slice(&vec![0; pad]);
 
-    padded
+    Ok(padded)
 }

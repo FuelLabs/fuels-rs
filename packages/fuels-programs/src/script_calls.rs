@@ -165,8 +165,9 @@ where
     /// Compute the script data by calculating the script offset and resolving the encoded arguments
     async fn compute_script_data(&self) -> Result<Vec<u8>> {
         let consensus_parameters = self.provider.consensus_parameters();
-        let script_offset = base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_call.script_binary.len());
+        let padded_script_len = padded_len_usize(self.script_call.script_binary.len())
+            .ok_or_else(|| error!(Other, "script is too long"))?;
+        let script_offset = base_offset_script(consensus_parameters) + padded_script_len;
         self.script_call
             .encoded_args
             .as_ref()
@@ -284,11 +285,6 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        #[cfg(feature = "legacy_encoding")]
-        let token =
-            ReceiptParser::new(&receipts, self.decoder_config).parse(None, &D::param_type())?;
-
-        #[cfg(not(feature = "legacy_encoding"))]
         let token =
             ReceiptParser::new(&receipts, self.decoder_config).parse_script(&D::param_type())?;
 

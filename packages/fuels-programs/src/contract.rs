@@ -649,12 +649,6 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        #[cfg(feature = "legacy_encoding")]
-        let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
-            Some(&self.contract_call.contract_id),
-            &self.contract_call.output_param,
-        )?;
-        #[cfg(not(feature = "legacy_encoding"))]
         let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
             &self.contract_call.contract_id,
             &self.contract_call.output_param,
@@ -733,9 +727,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     let tx_policies = TxPolicies::default();
     let call_parameters = CallParameters::default();
 
-    #[cfg(feature = "legacy_encoding")]
-    let compute_custom_input_offset = should_compute_custom_input_offset(args);
-    #[cfg(not(feature = "legacy_encoding"))]
     let compute_custom_input_offset = true;
 
     let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
@@ -761,32 +752,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         log_decoder,
         decoder_config: Default::default(),
     }
-}
-
-// If the data passed into the contract method is an integer or a
-// boolean, then the data itself should be passed. Otherwise, it
-// should simply pass a pointer to the data in memory.
-#[cfg(feature = "legacy_encoding")]
-fn should_compute_custom_input_offset(args: &[Token]) -> bool {
-    args.len() > 1
-        || args.iter().any(|t| {
-            matches!(
-                t,
-                Token::Array(_)
-                    | Token::B256(_)
-                    | Token::Bytes(_)
-                    | Token::Enum(_)
-                    | Token::RawSlice(_)
-                    | Token::Struct(_)
-                    | Token::Tuple(_)
-                    | Token::U128(_)
-                    | Token::U256(_)
-                    | Token::Vector(_)
-                    | Token::StringArray(_)
-                    | Token::StringSlice(_)
-                    | Token::String(_)
-            )
-        })
 }
 
 #[derive(Debug)]
@@ -973,13 +938,6 @@ impl<T: Account> MultiContractCallHandler<T> {
     ) -> Result<FuelCallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
-        #[cfg(feature = "legacy_encoding")]
-        let final_tokens = self
-            .contract_calls
-            .iter()
-            .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
-            .collect::<Result<Vec<_>>>()?;
-        #[cfg(not(feature = "legacy_encoding"))]
         let final_tokens = self
             .contract_calls
             .iter()

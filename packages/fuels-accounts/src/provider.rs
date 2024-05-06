@@ -42,7 +42,6 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
-
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
@@ -292,7 +291,9 @@ impl Provider {
                 TransactionExecutionResult::Success { receipts, .. } => {
                     TxStatus::Success { receipts }
                 }
-                TransactionExecutionResult::Failed { receipts, result } => TxStatus::Revert {
+                TransactionExecutionResult::Failed {
+                    receipts, result, ..
+                } => TxStatus::Revert {
                     reason: TransactionExecutionResult::reason(&receipts, &result),
                     receipts,
                     revert_id: 0,

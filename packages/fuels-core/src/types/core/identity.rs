@@ -5,7 +5,17 @@ use serde::{Deserialize, Serialize};
 use crate::types::bech32::{Bech32Address, Bech32ContractId};
 
 #[derive(
-    Debug, Clone, PartialEq, Eq, Hash, Parameterize, Tokenizable, TryFrom, Serialize, Deserialize,
+    Debug,
+    Copy,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Parameterize,
+    Tokenizable,
+    TryFrom,
+    Serialize,
+    Deserialize,
 )]
 #[FuelsCorePath = "crate"]
 #[FuelsTypesPath = "crate::types"]
