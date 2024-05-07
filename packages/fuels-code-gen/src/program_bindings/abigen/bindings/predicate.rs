@@ -63,7 +63,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
         self.encoder.encode(&#arg_tokens)
     };
     let output_type = quote! {
-        ::fuels::types::errors::Result<::fuels::types::unresolved_bytes::UnresolvedBytes>
+        ::fuels::types::errors::Result<::std::vec::Vec<u8>>
     };
 
     generator

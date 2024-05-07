@@ -11,7 +11,6 @@ mod tests {
         use fuels::{
             core::{codec::ABIEncoder, traits::Tokenizable},
             macros::Tokenizable,
-            types::unresolved_bytes::UnresolvedBytes,
         };
 
         #[derive(Tokenizable)]
@@ -20,9 +19,7 @@ mod tests {
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&[instance.into_token()])?;
-        let load_memory_address: u64 = 0x100;
-        let _: Vec<u8> = encoded.resolve(load_memory_address);
+        let _encoded: Vec<u8> = ABIEncoder::default().encode(&[instance.into_token()])?;
         //ANCHOR_END: encoding_example
 
         Ok(())
@@ -110,7 +107,6 @@ mod tests {
         ABIEncoder::new(EncoderConfig {
             max_depth: 5,
             max_tokens: 100,
-            max_total_enum_width: 10_000,
         });
         // ANCHOR_END: configuring_the_encoder
 

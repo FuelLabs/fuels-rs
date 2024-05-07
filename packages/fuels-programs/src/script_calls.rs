@@ -1,7 +1,6 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{Bytes32, ContractId, Output, Receipt};
-use fuel_types::bytes::padded_len_usize;
 use fuels_accounts::{
     provider::{Provider, TransactionCost},
     Account,
@@ -9,7 +8,6 @@ use fuels_accounts::{
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
     error,
-    offsets::base_offset_script,
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::Bech32ContractId,
@@ -20,7 +18,6 @@ use fuels_core::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
         },
         tx_status::TxStatus,
-        unresolved_bytes::UnresolvedBytes,
     },
 };
 use itertools::chain;
@@ -40,7 +37,7 @@ use crate::{
 /// Contains all data relevant to a single script call
 pub struct ScriptCall {
     pub script_binary: Vec<u8>,
-    pub encoded_args: Result<UnresolvedBytes>,
+    pub encoded_args: Result<Vec<u8>>,
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
@@ -96,7 +93,7 @@ where
 {
     pub fn new(
         script_binary: Vec<u8>,
-        encoded_args: Result<UnresolvedBytes>,
+        encoded_args: Result<Vec<u8>>,
         account: T,
         provider: Provider,
         log_decoder: LogDecoder,
@@ -162,16 +159,11 @@ where
         self
     }
 
-    /// Compute the script data by calculating the script offset and resolving the encoded arguments
-    async fn compute_script_data(&self) -> Result<Vec<u8>> {
-        let consensus_parameters = self.provider.consensus_parameters();
-        let padded_script_len = padded_len_usize(self.script_call.script_binary.len())
-            .ok_or_else(|| error!(Other, "script is too long"))?;
-        let script_offset = base_offset_script(consensus_parameters) + padded_script_len;
+    fn compute_script_data(&self) -> Result<Vec<u8>> {
         self.script_call
             .encoded_args
             .as_ref()
-            .map(|ub| ub.resolve(script_offset as u64))
+            .map(|b| b.to_owned())
             .map_err(|e| error!(Codec, "cannot encode script call arguments: {e}"))
     }
 
@@ -210,7 +202,7 @@ where
         Ok(ScriptTransactionBuilder::default()
             .with_tx_policies(self.tx_policies)
             .with_script(self.script_call.script_binary.clone())
-            .with_script_data(self.compute_script_data().await?)
+            .with_script_data(self.compute_script_data()?)
             .with_inputs(inputs)
             .with_outputs(outputs))
     }

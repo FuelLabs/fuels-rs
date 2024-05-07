@@ -30,7 +30,6 @@ thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
 
 [dev-dependencies]
-fuels-macros = { workspace = true }
 tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]

@@ -33,19 +33,8 @@ mod tests {
     };
 
     #[test]
-    fn can_convert_bytes_into_tuple() -> Result<()> {
-        let tuple_in_bytes: Vec<u8> = vec![0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2];
-
-        let the_tuple: (u64, u32) = try_from_bytes(&tuple_in_bytes, DecoderConfig::default())?;
-
-        assert_eq!(the_tuple, (1, 2));
-
-        Ok(())
-    }
-
-    #[test]
-    fn can_convert_all_from_bool_to_u64() -> Result<()> {
-        let bytes: Vec<u8> = vec![0xFF; WORD_SIZE];
+    fn convert_all_from_bool_to_u64() -> Result<()> {
+        let bytes = [255; WORD_SIZE];
 
         macro_rules! test_decode {
             ($($for_type: ident),*) => {
@@ -57,14 +46,26 @@ mod tests {
         }
 
         assert!(try_from_bytes::<bool>(&bytes, DecoderConfig::default())?);
+
         test_decode!(u8, u16, u32, u64);
 
         Ok(())
     }
 
     #[test]
-    fn can_convert_native_types() -> Result<()> {
-        let bytes = [0xFF; 32];
+    fn convert_bytes_into_tuple() -> Result<()> {
+        let tuple_in_bytes = [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2];
+
+        let the_tuple: (u64, u32) = try_from_bytes(&tuple_in_bytes, DecoderConfig::default())?;
+
+        assert_eq!(the_tuple, (1, 2));
+
+        Ok(())
+    }
+
+    #[test]
+    fn convert_native_types() -> Result<()> {
+        let bytes = [255; 32];
 
         macro_rules! test_decode {
             ($($for_type: ident),*) => {

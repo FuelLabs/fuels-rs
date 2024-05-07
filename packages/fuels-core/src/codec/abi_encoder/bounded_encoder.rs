@@ -3,11 +3,7 @@ use crate::{
         utils::{CodecDirection, CounterWithLimit},
         EncoderConfig,
     },
-    types::{
-        errors::Result,
-        unresolved_bytes::{Data, UnresolvedBytes},
-        EnumSelector, StaticStringToken, Token, U256,
-    },
+    types::{errors::Result, EnumSelector, StaticStringToken, Token, U256},
 };
 
 pub(crate) struct BoundedEncoder {
@@ -16,7 +12,7 @@ pub(crate) struct BoundedEncoder {
 }
 
 impl BoundedEncoder {
-    pub(crate) fn new(config: EncoderConfig, _unused: bool) -> Self {
+    pub(crate) fn new(config: EncoderConfig) -> Self {
         let depth_tracker =
             CounterWithLimit::new(config.max_depth, "depth", CodecDirection::Encoding);
         let token_tracker =
@@ -27,13 +23,7 @@ impl BoundedEncoder {
         }
     }
 
-    pub fn encode(&mut self, args: &[Token]) -> Result<UnresolvedBytes> {
-        let data = vec![Data::Inline(self.encode_tokens(args)?)];
-
-        Ok(UnresolvedBytes::new(data))
-    }
-
-    fn encode_tokens(&mut self, tokens: &[Token]) -> Result<Vec<u8>> {
+    pub fn encode(&mut self, tokens: &[Token]) -> Result<Vec<u8>> {
         let mut data = vec![];
 
         for token in tokens.iter() {
@@ -72,16 +62,10 @@ impl BoundedEncoder {
             Token::RawSlice(data) => Self::encode_bytes(data.clone())?,
             Token::StringArray(arg_string) => Self::encode_string_array(arg_string)?,
             Token::StringSlice(arg_string) => Self::encode_string_slice(arg_string)?,
-            Token::Tuple(arg_tuple) => {
-                self.run_w_depth_tracking(|ctx| ctx.encode_tokens(arg_tuple))?
-            }
-            Token::Array(arg_array) => {
-                self.run_w_depth_tracking(|ctx| ctx.encode_tokens(arg_array))?
-            }
+            Token::Tuple(arg_tuple) => self.run_w_depth_tracking(|ctx| ctx.encode(arg_tuple))?,
+            Token::Array(arg_array) => self.run_w_depth_tracking(|ctx| ctx.encode(arg_array))?,
             Token::Vector(data) => self.run_w_depth_tracking(|ctx| ctx.encode_vector(data))?,
-            Token::Struct(arg_struct) => {
-                self.run_w_depth_tracking(|ctx| ctx.encode_tokens(arg_struct))?
-            }
+            Token::Struct(arg_struct) => self.run_w_depth_tracking(|ctx| ctx.encode(arg_struct))?,
             Token::Enum(arg_enum) => self.run_w_depth_tracking(|ctx| ctx.encode_enum(arg_enum))?,
         };
 
@@ -110,7 +94,7 @@ impl BoundedEncoder {
     }
 
     fn encode_vector(&mut self, data: &[Token]) -> Result<Vec<u8>> {
-        let encoded_data = self.encode_tokens(data)?;
+        let encoded_data = self.encode(data)?;
 
         Ok([Self::encode_length(data.len() as u64), encoded_data].concat())
     }

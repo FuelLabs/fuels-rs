@@ -1,8 +1,11 @@
-use fuels::{prelude::*, types::SizedAsciiString};
+use fuels::{
+    prelude::*,
+    types::{Bits256, SizedAsciiString, U256},
+};
 use fuels_core::codec::EncoderConfig;
 
 #[tokio::test]
-async fn contract_uses_default_configurables() -> Result<()> {
+async fn contract_default_configurables() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
         abi = "packages/fuels/tests/contracts/configurables/out/release/configurables-abi.json"
@@ -26,10 +29,16 @@ async fn contract_uses_default_configurables() -> Result<()> {
         .await?;
 
     let expected_value = (
-        8u8,
         true,
-        [253u32, 254u32, 255u32],
+        8,
+        16,
+        32,
+        63,
+        U256::from(8),
+        Bits256([1; 32]),
         "fuel".try_into()?,
+        (8, true),
+        [253, 254, 255],
         StructWithGeneric {
             field_1: 8u8,
             field_2: 16,
@@ -43,7 +52,7 @@ async fn contract_uses_default_configurables() -> Result<()> {
 }
 
 #[tokio::test]
-async fn script_uses_default_configurables() -> Result<()> {
+async fn script_default_configurables() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -60,10 +69,16 @@ async fn script_uses_default_configurables() -> Result<()> {
     let response = script_instance.main().call().await?;
 
     let expected_value = (
-        8u8,
         true,
-        [253u32, 254u32, 255u32],
+        8,
+        16,
+        32,
+        63,
+        U256::from(8),
+        Bits256([1; 32]),
         "fuel".try_into()?,
+        (8, true),
+        [253, 254, 255],
         StructWithGeneric {
             field_1: 8u8,
             field_2: 16,
@@ -86,7 +101,7 @@ async fn contract_configurables() -> Result<()> {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let new_str: SizedAsciiString<4> = "FUEL".try_into()?;
+    let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -94,8 +109,16 @@ async fn contract_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::default()
+        .with_BOOL(false)?
         .with_U8(7)?
-        .with_STR_4(new_str.clone())?
+        .with_U16(15)?
+        .with_U32(31)?
+        .with_U64(63)?
+        .with_U256(U256::from(8))?
+        .with_B256(Bits256([2; 32]))?
+        .with_STR_4(str_4.clone())?
+        .with_TUPLE((7, false))?
+        .with_ARRAY([252, 253, 254])?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
@@ -116,10 +139,16 @@ async fn contract_configurables() -> Result<()> {
         .await?;
 
     let expected_value = (
-        7u8,
-        true,
-        [253u32, 254u32, 255u32],
-        new_str,
+        false,
+        7,
+        15,
+        31,
+        63,
+        U256::from(8),
+        Bits256([2; 32]),
+        str_4,
+        (7, false),
+        [252, 253, 254],
         new_struct,
         new_enum,
     );
@@ -139,7 +168,7 @@ async fn script_configurables() -> Result<()> {
         "../fuels/tests/scripts/script_configurables/out/release/script_configurables.bin";
     let instance = MyScript::new(wallet, bin_path);
 
-    let new_str: SizedAsciiString<4> = "FUEL".try_into()?;
+    let str_4: SizedAsciiString<4> = "FUEL".try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -150,7 +179,16 @@ async fn script_configurables() -> Result<()> {
         max_tokens: 5,
         ..Default::default()
     })
-    .with_STR_4(new_str.clone())?
+    .with_BOOL(false)?
+    .with_U8(7)?
+    .with_U16(15)?
+    .with_U32(31)?
+    .with_U64(63)?
+    .with_U256(U256::from(8))?
+    .with_B256(Bits256([2; 32]))?
+    .with_STR_4(str_4.clone())?
+    .with_TUPLE((7, false))?
+    .with_ARRAY([252, 253, 254])?
     .with_STRUCT(new_struct.clone())?
     .with_ENUM(new_enum.clone())?;
 
@@ -162,10 +200,16 @@ async fn script_configurables() -> Result<()> {
     // ANCHOR_END: script_configurables
 
     let expected_value = (
-        8u8,
-        true,
-        [253u32, 254u32, 255u32],
-        new_str,
+        false,
+        7,
+        15,
+        31,
+        63,
+        U256::from(8),
+        Bits256([2; 32]),
+        str_4,
+        (7, false),
+        [252, 253, 254],
         new_struct,
         new_enum,
     );

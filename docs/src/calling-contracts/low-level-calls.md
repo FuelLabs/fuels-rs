@@ -15,7 +15,7 @@ Your caller contract should call `std::low_level_call::call_with_function_select
 {{#include ../../../packages/fuels/tests/contracts/low_level_caller/src/main.sw:low_level_call_contract}}
 ```
 
-On the SDK side, you can construct an encoded function selector using the `fuels::core::fn_selector!` macro, and encoded calldata using the `fuels::core::calldata!` macro.
+On the SDK side, you can construct an encoded function selector using `fuels::core::encode_fn_selector`, and encoded calldata using the `fuels::core::calldata!` macro.
 
 E.g. to call the following function on the target contract:
 
