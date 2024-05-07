@@ -625,15 +625,10 @@ fn needs_fake_base_input(inputs: &[FuelInput], base_asset_id: &AssetId) -> Optio
 
     let unique_owners = inputs
         .iter()
-        .filter_map(|input| {
-            match input {
-                FuelInput::CoinSigned(CoinSigned { owner, .. })
-                | FuelInput::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
-                // TODO:
-                // FuelInput::MessageCoinSigned(Message { recipient, .. })
-                // | FuelInput::MessageCoinPredicate(Message { recipient, .. }) => Some(recipient.clone()),
-                _ => None,
-            }
+        .filter_map(|input| match input {
+            FuelInput::CoinSigned(CoinSigned { owner, .. })
+            | FuelInput::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+            _ => None,
         })
         .unique()
         .collect::<Vec<_>>();
