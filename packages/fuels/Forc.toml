@@ -30,7 +30,7 @@ members = [
   'tests/logs/contract_logs',
   'tests/logs/contract_logs_abi',
   'tests/logs/contract_with_contract_logs',
-  'tests/logs/script_experimental_logs',
+  'tests/logs/script_heap_logs',
   'tests/logs/script_logs',
   'tests/logs/script_needs_custom_decoder_logging',
   'tests/logs/script_with_contract_logs',
@@ -100,7 +100,7 @@ members = [
   'tests/types/scripts/script_generics',
   'tests/types/scripts/script_heap_types',
   #TODO: Decide what to do with this test project once
-  # https://github.com/FuelLabs/sway/issues/5145 is resolved
+  # https://github.com/FuelLabs/sway/issues/5727 is resolved
   # 'tests/types/scripts/script_raw_slice',
   'tests/types/scripts/script_std_lib_string',
   'tests/types/scripts/script_tuples',
@@ -108,3 +108,6 @@ members = [
   'tests/types/scripts/script_u256',
   'tests/types/scripts/script_vectors',
 ]
+
+[patch.'https://github.com/fuellabs/sway']
+std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/new-encoding-configurables" }

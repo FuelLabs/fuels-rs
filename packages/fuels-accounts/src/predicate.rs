@@ -3,7 +3,7 @@ use std::{fmt::Debug, fs};
 #[cfg(feature = "std")]
 use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
-    types::{bech32::Bech32Address, errors::Result, unresolved_bytes::UnresolvedBytes},
+    types::{bech32::Bech32Address, errors::Result},
     Configurables,
 };
 
@@ -16,7 +16,7 @@ use crate::{provider::Provider, Account, ViewOnlyAccount};
 pub struct Predicate {
     address: Bech32Address,
     code: Vec<u8>,
-    data: UnresolvedBytes,
+    data: Vec<u8>,
     #[cfg(feature = "std")]
     provider: Option<Provider>,
 }
@@ -26,11 +26,11 @@ impl Predicate {
         &self.address
     }
 
-    pub fn code(&self) -> &Vec<u8> {
+    pub fn code(&self) -> &[u8] {
         &self.code
     }
 
-    pub fn data(&self) -> &UnresolvedBytes {
+    pub fn data(&self) -> &[u8] {
         &self.data
     }
 
@@ -53,7 +53,7 @@ impl Predicate {
         }
     }
 
-    pub fn with_data(mut self, data: UnresolvedBytes) -> Self {
+    pub fn with_data(mut self, data: Vec<u8>) -> Self {
         self.data = data;
         self
     }

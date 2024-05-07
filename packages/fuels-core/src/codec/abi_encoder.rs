@@ -1,13 +1,10 @@
 mod bounded_encoder;
-mod configurables_bounded_encoder;
 
 use std::default::Default;
 
 use crate::{
-    codec::abi_encoder::{
-        bounded_encoder::BoundedEncoder, configurables_bounded_encoder::ConfigurablesBoundedEncoder,
-    },
-    types::{errors::Result, unresolved_bytes::UnresolvedBytes, Token},
+    codec::abi_encoder::bounded_encoder::BoundedEncoder,
+    types::{errors::Result, Token},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -18,9 +15,6 @@ pub struct EncoderConfig {
     /// Every encoded argument will increase the token count. Encoding will fail if the current
     /// token count becomes greater than `max_tokens` configured here.
     pub max_tokens: usize,
-    /// The total memory size of the top-level token must fit in the available memory of the
-    /// system.
-    pub max_total_enum_width: usize,
 }
 
 // ANCHOR: default_encoder_config
@@ -29,7 +23,6 @@ impl Default for EncoderConfig {
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_total_enum_width: 10_000,
         }
     }
 }
@@ -45,27 +38,10 @@ impl ABIEncoder {
         Self { config }
     }
 
-    /// Encodes `Token`s in `args` following the ABI specs defined
+    /// Encodes `Token`s following the ABI specs defined
     /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        BoundedEncoder::new(self.config, false).encode(args)
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct ConfigurablesEncoder {
-    pub config: EncoderConfig,
-}
-
-impl ConfigurablesEncoder {
-    pub fn new(config: EncoderConfig) -> Self {
-        Self { config }
-    }
-
-    /// Encodes `Token`s in `args` following the ABI specs defined
-    /// [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    pub fn encode(&self, args: &[Token]) -> Result<UnresolvedBytes> {
-        ConfigurablesBoundedEncoder::new(self.config, true).encode(args)
+    pub fn encode(&self, tokens: &[Token]) -> Result<Vec<u8>> {
+        BoundedEncoder::new(self.config).encode(tokens)
     }
 }
 
@@ -73,11 +49,8 @@ impl ConfigurablesEncoder {
 mod tests {
     use std::slice;
 
-    use itertools::chain;
-
     use super::*;
     use crate::{
-        constants::WORD_SIZE,
         to_named,
         types::{
             errors::Error,
@@ -97,7 +70,7 @@ mod tests {
             Token::U256(U256::MAX),
         ];
 
-        let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
+        let result = ABIEncoder::default().encode(&tokens)?;
 
         let expected = [
             255, // u8
@@ -119,7 +92,7 @@ mod tests {
     fn encode_bool() -> Result<()> {
         let token = Token::Bool(true);
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [1];
 
@@ -136,7 +109,7 @@ mod tests {
         ];
         let token = Token::B256(data);
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         assert_eq!(result, data);
 
@@ -147,7 +120,7 @@ mod tests {
     fn encode_bytes() -> Result<()> {
         let token = Token::Bytes([255, 0, 1, 2, 3, 4, 5].to_vec());
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 7, // len
@@ -163,7 +136,7 @@ mod tests {
     fn encode_string() -> Result<()> {
         let token = Token::String("This is a full sentence".to_string());
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 23, // len
@@ -180,7 +153,7 @@ mod tests {
     fn encode_raw_slice() -> Result<()> {
         let token = Token::RawSlice([255, 0, 1, 2, 3, 4, 5].to_vec());
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 7, // len
@@ -199,7 +172,7 @@ mod tests {
             Some(23),
         ));
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             84, 104, 105, 115, 32, 105, 115, 32, 97, 32, 102, 117, 108, 108, 32, 115, 101, 110,
@@ -218,7 +191,7 @@ mod tests {
             None,
         ));
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 23, // len
@@ -235,7 +208,7 @@ mod tests {
     fn encode_tuple() -> Result<()> {
         let token = Token::Tuple(vec![Token::U32(255), Token::Bool(true)]);
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 255, //u32
@@ -251,7 +224,7 @@ mod tests {
     fn encode_array() -> Result<()> {
         let token = Token::Tuple(vec![Token::U32(255), Token::U32(128)]);
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 0, 0, 255, //u32
@@ -260,35 +233,6 @@ mod tests {
 
         assert_eq!(result, expected);
 
-        Ok(())
-    }
-
-    // The encoding follows the ABI specs defined  [here](https://github.com/FuelLabs/fuel-specs/blob/master/specs/protocol/abi.md)
-    #[test]
-    fn enums_are_sized_to_fit_the_biggest_variant() -> Result<()> {
-        // Our enum has two variants: B256, and U64. So the enum will set aside
-        // 256b of space or 4 WORDS because that is the space needed to fit the
-        // largest variant(B256).
-        let types = to_named(&[ParamType::B256, ParamType::U64]);
-        let enum_variants = EnumVariants::new(types)?;
-        let enum_selector = Box::new((1, Token::U64(42), enum_variants));
-
-        let encoded = ConfigurablesEncoder::default()
-            .encode(slice::from_ref(&Token::Enum(enum_selector)))?
-            .resolve(0);
-
-        let enum_discriminant_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1];
-        let u64_enc = vec![0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2a];
-        let enum_padding = vec![0x0; 24];
-
-        // notice the ordering, first the discriminant, then the necessary
-        // padding and then the value itself.
-        let expected: Vec<u8> = [enum_discriminant_enc, enum_padding, u64_enc]
-            .into_iter()
-            .flatten()
-            .collect();
-
-        assert_eq!(hex::encode(expected), hex::encode(encoded));
         Ok(())
     }
 
@@ -344,9 +288,7 @@ mod tests {
         let top_level_enum_token =
             Token::Enum(Box::new((0, struct_a_token, top_level_enum_variants)));
 
-        let result = ABIEncoder::default()
-            .encode(slice::from_ref(&top_level_enum_token))?
-            .resolve(0);
+        let result = ABIEncoder::default().encode(slice::from_ref(&top_level_enum_token))?;
 
         let expected = [
             0, 0, 0, 0, 0, 0, 0, 0, // TopLevelEnum::v1 discriminant
@@ -370,7 +312,7 @@ mod tests {
             ]),
         ]);
 
-        let result = ABIEncoder::default().encode(&[token])?.resolve(0);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         let expected = [
             0, 10, // u16
@@ -400,7 +342,7 @@ mod tests {
         ));
         let tokens = vec![foo, arr_u8, b256, str_arr];
 
-        let result = ABIEncoder::default().encode(&tokens)?.resolve(0);
+        let result = ABIEncoder::default().encode(&tokens)?;
 
         let expected = [
             0, 10, // foo.x == 10u16
@@ -429,99 +371,9 @@ mod tests {
         let types = to_named(&[ParamType::Unit, ParamType::Unit]);
         let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
 
-        let actual = ABIEncoder::default()
-            .encode(&[Token::Enum(enum_selector)])?
-            .resolve(0);
+        let actual = ABIEncoder::default().encode(&[Token::Enum(enum_selector)])?;
 
         assert_eq!(actual, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn units_in_composite_types_are_encoded_in_one_word() -> Result<()> {
-        let expected = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5];
-
-        let actual = ConfigurablesEncoder::default()
-            .encode(&[Token::Struct(vec![Token::Unit, Token::U32(5)])])?
-            .resolve(0);
-
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn enums_with_units_are_correctly_padded() -> Result<()> {
-        let discriminant = vec![0, 0, 0, 0, 0, 0, 0, 1];
-        let padding = vec![0; 32];
-        let expected: Vec<u8> = [discriminant, padding].into_iter().flatten().collect();
-
-        let types = to_named(&[ParamType::B256, ParamType::Unit]);
-        let enum_selector = Box::new((1, Token::Unit, EnumVariants::new(types)?));
-
-        let actual = ConfigurablesEncoder::default()
-            .encode(&[Token::Enum(enum_selector)])?
-            .resolve(0);
-
-        assert_eq!(actual, expected);
-        Ok(())
-    }
-
-    #[test]
-    fn vector_has_ptr_cap_len_and_then_data() -> Result<()> {
-        // arrange
-        let offset: u8 = 150;
-        let token = Token::Vector(vec![Token::U64(5)]);
-
-        // act
-        let result = ConfigurablesEncoder::default()
-            .encode(&[token])?
-            .resolve(offset as u64);
-
-        // assert
-        let ptr = [0, 0, 0, 0, 0, 0, 0, 3 * WORD_SIZE as u8 + offset];
-        let cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let data = [0, 0, 0, 0, 0, 0, 0, 5];
-
-        let expected = chain!(ptr, cap, len, data).collect::<Vec<_>>();
-
-        assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn data_from_two_vectors_aggregated_at_the_end() -> Result<()> {
-        // arrange
-        let offset: u8 = 40;
-        let vec_1 = Token::Vector(vec![Token::U64(5)]);
-        let vec_2 = Token::Vector(vec![Token::U64(6)]);
-
-        // act
-        let result = ConfigurablesEncoder::default()
-            .encode(&[vec_1, vec_2])?
-            .resolve(offset as u64);
-
-        // assert
-        let vec1_data_offset = 6 * WORD_SIZE as u8 + offset;
-        let vec1_ptr = [0, 0, 0, 0, 0, 0, 0, vec1_data_offset];
-        let vec1_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec1_data = [0, 0, 0, 0, 0, 0, 0, 5];
-
-        let vec2_data_offset = vec1_data_offset + vec1_data.len() as u8;
-        let vec2_ptr = [0, 0, 0, 0, 0, 0, 0, vec2_data_offset];
-        let vec2_cap = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec2_len = [0, 0, 0, 0, 0, 0, 0, 1];
-        let vec2_data = [0, 0, 0, 0, 0, 0, 0, 6];
-
-        let expected = chain!(
-            vec1_ptr, vec1_cap, vec1_len, vec2_ptr, vec2_cap, vec2_len, vec1_data, vec2_data,
-        )
-        .collect::<Vec<_>>();
-
-        assert_eq!(result, expected);
 
         Ok(())
     }
@@ -529,16 +381,13 @@ mod tests {
     #[test]
     fn vec_in_enum() -> Result<()> {
         // arrange
-        let offset = 40;
         let types = to_named(&[ParamType::B256, ParamType::Vector(Box::new(ParamType::U64))]);
         let variants = EnumVariants::new(types)?;
         let selector = (1, Token::Vector(vec![Token::U64(5)]), variants);
         let token = Token::Enum(Box::new(selector));
 
         // act
-        let result = ABIEncoder::default()
-            .encode(&[token])?
-            .resolve(offset as u64);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         // assert
         let expected = [
@@ -554,7 +403,6 @@ mod tests {
     #[test]
     fn enum_in_vec() -> Result<()> {
         // arrange
-        let offset = 40;
         let types = to_named(&[ParamType::B256, ParamType::U8]);
         let variants = EnumVariants::new(types)?;
         let selector = (1, Token::U8(8), variants);
@@ -563,9 +411,7 @@ mod tests {
         let vec_token = Token::Vector(vec![enum_token]);
 
         // act
-        let result = ABIEncoder::default()
-            .encode(&[vec_token])?
-            .resolve(offset as u64);
+        let result = ABIEncoder::default().encode(&[vec_token])?;
 
         // assert
         let expected = [
@@ -581,13 +427,10 @@ mod tests {
     #[test]
     fn vec_in_struct() -> Result<()> {
         // arrange
-        let offset = 40;
         let token = Token::Struct(vec![Token::Vector(vec![Token::U64(5)]), Token::U8(9)]);
 
         // act
-        let result = ABIEncoder::default()
-            .encode(&[token])?
-            .resolve(offset as u64);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         // assert
         let expected = [
@@ -603,13 +446,10 @@ mod tests {
     #[test]
     fn vec_in_vec() -> Result<()> {
         // arrange
-        let offset = 40;
         let token = Token::Vector(vec![Token::Vector(vec![Token::U8(5), Token::U8(6)])]);
 
         // act
-        let result = ABIEncoder::default()
-            .encode(&[token])?
-            .resolve(offset as u64);
+        let result = ABIEncoder::default().encode(&[token])?;
 
         // assert
         let expected = [
@@ -618,27 +458,6 @@ mod tests {
         ];
 
         assert_eq!(result, expected);
-
-        Ok(())
-    }
-
-    #[test]
-    fn capacity_overflow_is_caught() -> Result<()> {
-        let token = Token::Enum(Box::new((
-            1,
-            Token::String("".to_string()),
-            EnumVariants::new(to_named(&[
-                ParamType::StringArray(18446742977385549567),
-                ParamType::U8,
-            ]))?,
-        )));
-        let capacity_overflow_error = ConfigurablesEncoder::default()
-            .encode(&[token])
-            .unwrap_err();
-
-        assert!(capacity_overflow_error
-            .to_string()
-            .contains("Try increasing maximum total enum width"));
 
         Ok(())
     }
@@ -658,30 +477,6 @@ mod tests {
             .for_each(|token| {
                 assert_encoding_failed(config, token, &msg);
             });
-    }
-
-    #[test]
-    fn encoder_for_configurables_optimizes_top_level_u8() {
-        // given
-        let encoder = ConfigurablesEncoder::default();
-
-        // when
-        let encoded = encoder.encode(&[Token::U8(255)]).unwrap().resolve(0);
-
-        // then
-        assert_eq!(encoded, vec![255]);
-    }
-
-    #[test]
-    fn encoder_for_configurables_optimizes_top_level_bool() {
-        // given
-        let encoder = ConfigurablesEncoder::default();
-
-        // when
-        let encoded = encoder.encode(&[Token::Bool(true)]).unwrap().resolve(0);
-
-        // then
-        assert_eq!(encoded, vec![1]);
     }
 
     fn assert_encoding_failed(config: EncoderConfig, token: Token, msg: &str) {

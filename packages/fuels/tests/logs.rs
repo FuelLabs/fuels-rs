@@ -1451,7 +1451,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_experimental_log() -> Result<()> {
+async fn contract_heap_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
     setup_program_test!(
@@ -1509,14 +1509,14 @@ async fn contract_experimental_log() -> Result<()> {
 }
 
 #[tokio::test]
-async fn script_experimental_log() -> Result<()> {
+async fn script_heap_log() -> Result<()> {
     use fuels_core::types::AsciiString;
 
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/logs/script_experimental_logs"
+            project = "packages/fuels/tests/logs/script_heap_logs"
         )),
         LoadScript(
             name = "script_instance",

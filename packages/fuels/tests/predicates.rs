@@ -618,6 +618,59 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 }
 
 #[tokio::test]
+async fn predicate_default_configurables() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+    ));
+
+    let new_struct = StructWithGeneric {
+        field_1: 8u8,
+        field_2: 16,
+    };
+    let new_enum = EnumWithGeneric::VariantOne(true);
+
+    let predicate_data =
+        MyPredicateEncoder::default().encode_data(true, 8, new_struct, new_enum)?;
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/predicates/predicate_configurables/out/release/predicate_configurables.bin",
+    )?
+    .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn predicate_configurables() -> Result<()> {
     // ANCHOR: predicate_configurables
     abigen!(Predicate(
@@ -632,11 +685,12 @@ async fn predicate_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::default()
+        .with_U8(8)?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
     let predicate_data =
-        MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
+        MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         "tests/predicates/predicate_configurables/out/release/predicate_configurables.bin",
@@ -696,8 +750,8 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
-        predicate.code().clone(),
-        predicate.data().clone(),
+        predicate.code().to_vec(),
+        predicate.data().to_vec(),
     );
 
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
@@ -817,13 +871,8 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
@@ -890,13 +939,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
