@@ -143,7 +143,6 @@
 <pre><code class="language-rust ignore">        use fuels::{
             core::{codec::ABIEncoder, traits::Tokenizable},
             macros::Tokenizable,
-            types::unresolved_bytes::UnresolvedBytes,
         };
 
         #[derive(Tokenizable)]
@@ -152,11 +151,8 @@
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
-        let load_memory_address: u64 = 0x100;
-        let _: Vec&lt;u8&gt; = encoded.resolve(load_memory_address);
+        let _encoded: Vec&lt;u8&gt; = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
 </code></pre>
-<p>Note that the return type of <code>encode</code> is <code>UnresolvedBytes</code>. The encoding cannot be finished until we know at which memory address this data is to be loaded. If you don't use heap types (<code>::std::vec::Vec</code>, <code>::fuels::types::Bytes</code>, <code>::std::string::String</code>), then you can safely <code>.resolve(0)</code> to get the encoded bytes.</p>
 <p>There is also a shortcut-macro that can encode multiple types which implement <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html"><code>Tokenizable</code></a>:</p>
 <pre><code class="language-rust ignore">        use fuels::{core::codec::calldata, macros::Tokenizable};
 
@@ -166,10 +162,6 @@
         }
         let _: Vec&lt;u8&gt; = calldata!(MyStruct { field: 101 }, MyStruct { field: 102 })?;
 </code></pre>
-<blockquote>
-<p>Note:
-The above example will call <code>.resolve(0)</code>. Don't use it if you're encoding heap types.</p>
-</blockquote>
 <h2 id="configuring-the-encoder"><a class="header" href="#configuring-the-encoder">Configuring the encoder</a></h2>
 <p>The encoder can be configured to limit its resource expenditure:</p>
 <pre><code class="language-rust ignore">        use fuels::core::codec::ABIEncoder;
@@ -177,7 +169,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
         ABIEncoder::new(EncoderConfig {
             max_depth: 5,
             max_tokens: 100,
-            max_total_enum_width: 10_000,
         });
 </code></pre>
 <p>The default values for the <code>EncoderConfig</code> are:</p>
@@ -186,7 +177,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_total_enum_width: 10_000,
         }
     }
 }
@@ -197,7 +187,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
             .with_encoder_config(EncoderConfig {
                 max_depth: 10,
                 max_tokens: 2_000,
-                max_total_enum_width: 10_000,
             })
             .methods()
             .initialize_counter(42)

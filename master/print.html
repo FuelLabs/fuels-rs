@@ -1428,24 +1428,31 @@ struct StructWithGeneric&lt;D&gt; {
 }
 
 configurable {
-    U8: u8 = 8u8,
     BOOL: bool = true,
-    ARRAY: [u32; 3] = [253u32, 254u32, 255u32],
+    U8: u8 = 8,
+    U16: u16 = 16,
+    U32: u32 = 32,
+    U64: u64 = 63,
+    U256: u256 = 0x0000000000000000000000000000000000000000000000000000000000000008u256,
+    B256: b256 = 0x0101010101010101010101010101010101010101010101010101010101010101,
     STR_4: str[4] = __to_str_array(&quot;fuel&quot;),
+    TUPLE: (u8, bool) = (8, true),
+    ARRAY: [u32; 3] = [253, 254, 255],
     STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
-        field_1: 8u8,
+        field_1: 8,
         field_2: 16,
     },
     ENUM: EnumWithGeneric&lt;bool&gt; = EnumWithGeneric::VariantOne(true),
 }
+//U128: u128 = 128, //TODO: add once https://github.com/FuelLabs/sway/issues/5356 is done
 
 abi TestContract {
-    fn return_configurables() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;);
+    fn return_configurables() -&gt; (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 3], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;);
 }
 
 impl TestContract for Contract {
-    fn return_configurables() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
-        (U8, BOOL, ARRAY, STR_4, STRUCT, ENUM)
+    fn return_configurables() -&gt; (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 3], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
+        (BOOL, U8, U16, U32, U64, U256, B256, STR_4, TUPLE, ARRAY, STRUCT, ENUM)
     }
 }
 </code></pre>
@@ -1457,7 +1464,7 @@ impl TestContract for Contract {
 
     let wallet = launch_provider_and_get_wallet().await?;
 
-    let new_str: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
+    let str_4: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -1465,8 +1472,16 @@ impl TestContract for Contract {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyContractConfigurables::default()
+        .with_BOOL(false)?
         .with_U8(7)?
-        .with_STR_4(new_str.clone())?
+        .with_U16(15)?
+        .with_U32(31)?
+        .with_U64(63)?
+        .with_U256(U256::from(8))?
+        .with_B256(Bits256([2; 32]))?
+        .with_STR_4(str_4.clone())?
+        .with_TUPLE((7, false))?
+        .with_ARRAY([252, 253, 254])?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
@@ -2066,7 +2081,7 @@ let is_error = response.is_err();
         call_with_function_selector(target, function_selector, calldata, call_params);
     }
 </code></pre>
-<p>On the SDK side, you can construct an encoded function selector using the <code>fuels::core::fn_selector!</code> macro, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
+<p>On the SDK side, you can construct an encoded function selector using <code>fuels::core::encode_fn_selector</code>, and encoded calldata using the <code>fuels::core::calldata!</code> macro.</p>
 <p>E.g. to call the following function on the target contract:</p>
 <pre><code class="language-rust ignore">    #[storage(write)]
     fn set_value_multiple_complex(a: MyStruct, b: str[4]);
@@ -2173,26 +2188,32 @@ enum EnumWithGeneric&lt;D&gt; {
     VariantTwo: (),
 }
 
-#[allow(dead_code)]
 struct StructWithGeneric&lt;D&gt; {
     field_1: D,
     field_2: u64,
 }
 
 configurable {
-    U8: u8 = 8u8,
     BOOL: bool = true,
-    ARRAY: [u32; 3] = [253u32, 254u32, 255u32],
+    U8: u8 = 8,
+    U16: u16 = 16,
+    U32: u32 = 32,
+    U64: u64 = 63,
+    U256: u256 = 0x0000000000000000000000000000000000000000000000000000000000000008u256,
+    B256: b256 = 0x0101010101010101010101010101010101010101010101010101010101010101,
     STR_4: str[4] = __to_str_array(&quot;fuel&quot;),
+    TUPLE: (u8, bool) = (8, true),
+    ARRAY: [u32; 3] = [253, 254, 255],
     STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
-        field_1: 8u8,
+        field_1: 8,
         field_2: 16,
     },
     ENUM: EnumWithGeneric&lt;bool&gt; = EnumWithGeneric::VariantOne(true),
 }
+//U128: u128 = 128, //TODO: add once https://github.com/FuelLabs/sway/issues/5356 is done
 
-fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
-    (U8, BOOL, ARRAY, STR_4, STRUCT, ENUM)
+fn main() -&gt; (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 3], StructWithGeneric&lt;u8&gt;, EnumWithGeneric&lt;bool&gt;) {
+    (BOOL, U8, U16, U32, U64, U256, B256, STR_4, TUPLE, ARRAY, STRUCT, ENUM)
 }
 </code></pre>
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
@@ -2203,7 +2224,7 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
         &quot;../fuels/tests/scripts/script_configurables/out/release/script_configurables.bin&quot;;
     let instance = MyScript::new(wallet, bin_path);
 
-    let new_str: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
+    let str_4: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
     let new_struct = StructWithGeneric {
         field_1: 16u8,
         field_2: 32,
@@ -2214,7 +2235,16 @@ fn main() -&gt; (u8, bool, [u32; 3], str[4], StructWithGeneric&lt;u8&gt;, EnumWi
         max_tokens: 5,
         ..Default::default()
     })
-    .with_STR_4(new_str.clone())?
+    .with_BOOL(false)?
+    .with_U8(7)?
+    .with_U16(15)?
+    .with_U32(31)?
+    .with_U64(63)?
+    .with_U256(U256::from(8))?
+    .with_B256(Bits256([2; 32]))?
+    .with_STR_4(str_4.clone())?
+    .with_TUPLE((7, false))?
+    .with_ARRAY([252, 253, 254])?
     .with_STRUCT(new_struct.clone())?
     .with_ENUM(new_enum.clone())?;
 
@@ -2315,22 +2345,22 @@ struct StructWithGeneric&lt;D&gt; {
 }
 
 configurable {
-    U8: u8 = 8u8,
     BOOL: bool = true,
+    U8: u8 = 8,
     STRUCT: StructWithGeneric&lt;u8&gt; = StructWithGeneric {
-        field_1: 8u8,
+        field_1: 8,
         field_2: 16,
     },
     ENUM: EnumWithGeneric&lt;bool&gt; = EnumWithGeneric::VariantOne(true),
 }
 
 fn main(
-    u_8: u8,
     switch: bool,
+    u_8: u8,
     some_struct: StructWithGeneric&lt;u8&gt;,
     some_enum: EnumWithGeneric&lt;bool&gt;,
 ) -&gt; bool {
-    u_8 == U8 &amp;&amp; switch == BOOL &amp;&amp; some_struct == STRUCT &amp;&amp; some_enum == ENUM
+    switch == BOOL &amp;&amp; u_8 == U8 &amp;&amp; some_struct == STRUCT &amp;&amp; some_enum == ENUM
 }
 </code></pre>
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>with_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and update the predicate with the new constants.</p>
@@ -2346,11 +2376,12 @@ fn main(
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::default()
+        .with_U8(8)?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
     let predicate_data =
-        MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
+        MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
         &quot;tests/predicates/predicate_configurables/out/release/predicate_configurables.bin&quot;,
@@ -3171,7 +3202,6 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
 <pre><code class="language-rust ignore">        use fuels::{
             core::{codec::ABIEncoder, traits::Tokenizable},
             macros::Tokenizable,
-            types::unresolved_bytes::UnresolvedBytes,
         };
 
         #[derive(Tokenizable)]
@@ -3180,11 +3210,8 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
         }
 
         let instance = MyStruct { field: 101 };
-        let encoded: UnresolvedBytes = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
-        let load_memory_address: u64 = 0x100;
-        let _: Vec&lt;u8&gt; = encoded.resolve(load_memory_address);
+        let _encoded: Vec&lt;u8&gt; = ABIEncoder::default().encode(&amp;[instance.into_token()])?;
 </code></pre>
-<p>Note that the return type of <code>encode</code> is <code>UnresolvedBytes</code>. The encoding cannot be finished until we know at which memory address this data is to be loaded. If you don't use heap types (<code>::std::vec::Vec</code>, <code>::fuels::types::Bytes</code>, <code>::std::string::String</code>), then you can safely <code>.resolve(0)</code> to get the encoded bytes.</p>
 <p>There is also a shortcut-macro that can encode multiple types which implement <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizable.html"><code>Tokenizable</code></a>:</p>
 <pre><code class="language-rust ignore">        use fuels::{core::codec::calldata, macros::Tokenizable};
 
@@ -3194,10 +3221,6 @@ Deriving <a href="https://docs.rs/fuels/latest/fuels/core/traits/trait.Tokenizab
         }
         let _: Vec&lt;u8&gt; = calldata!(MyStruct { field: 101 }, MyStruct { field: 102 })?;
 </code></pre>
-<blockquote>
-<p>Note:
-The above example will call <code>.resolve(0)</code>. Don't use it if you're encoding heap types.</p>
-</blockquote>
 <h2 id="configuring-the-encoder"><a class="header" href="#configuring-the-encoder">Configuring the encoder</a></h2>
 <p>The encoder can be configured to limit its resource expenditure:</p>
 <pre><code class="language-rust ignore">        use fuels::core::codec::ABIEncoder;
@@ -3205,7 +3228,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
         ABIEncoder::new(EncoderConfig {
             max_depth: 5,
             max_tokens: 100,
-            max_total_enum_width: 10_000,
         });
 </code></pre>
 <p>The default values for the <code>EncoderConfig</code> are:</p>
@@ -3214,7 +3236,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
         Self {
             max_depth: 45,
             max_tokens: 10_000,
-            max_total_enum_width: 10_000,
         }
     }
 }
@@ -3225,7 +3246,6 @@ The above example will call <code>.resolve(0)</code>. Don't use it if you're enc
             .with_encoder_config(EncoderConfig {
                 max_depth: 10,
                 max_tokens: 2_000,
-                max_total_enum_width: 10_000,
             })
             .methods()
             .initialize_counter(42)
