@@ -18,7 +18,7 @@ members = [
   'tests/contracts/library_test',
   'tests/contracts/liquidity_pool',
   'tests/contracts/low_level_caller',
-  'tests/contracts/msg_amount',
+  'tests/contracts/msg_methods',
   'tests/contracts/multiple_read_calls',
   'tests/contracts/needs_custom_decoder',
   'tests/contracts/payable_annotation',
@@ -99,9 +99,9 @@ members = [
   'tests/types/scripts/script_bytes',
   'tests/types/scripts/script_generics',
   'tests/types/scripts/script_heap_types',
-  #TODO: Decide what to do with this test project once
-  # https://github.com/FuelLabs/sway/issues/5145 is resolved
-  # 'tests/types/scripts/script_raw_slice',
+  # TODO: Decide what to do with this test project once 
+  # https://github.com/FuelLabs/sway/issues/5145 is resolved 
+  #'tests/types/scripts/script_raw_slice',
   'tests/types/scripts/script_std_lib_string',
   'tests/types/scripts/script_tuples',
   'tests/types/scripts/script_u128',
