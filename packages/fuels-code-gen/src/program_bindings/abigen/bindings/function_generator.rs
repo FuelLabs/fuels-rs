@@ -127,7 +127,7 @@ mod tests {
         let fn_selector_code = sut.fn_selector();
 
         let expected = quote! {
-            ::fuels::core::codec::encode_fn_selector( "test_function")
+            ::fuels::core::codec::encode_fn_selector("test_function")
         };
         assert_eq!(fn_selector_code.to_string(), expected.to_string());
 
