@@ -40,4 +40,4 @@ After the contract is deployed, you can use the contract's methods like this:
 {{#include ../../../examples/contracts/src/lib.rs:use_deployed_contract}}
 ```
 
-> Note: If you want to redeploy an existing `Contract`, you should first create a new instance using the `with_salt` method.
+> Note: When redeploying an existing `Contract`, ensure that you initialize it with a unique salt to prevent deployment failures caused by a contract ID collision. To accomplish this, utilize the `with_salt` method to clone the existing `Contract` with a new salt.
