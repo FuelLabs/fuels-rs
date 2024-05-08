@@ -18,7 +18,7 @@ members = [
   'tests/contracts/library_test',
   'tests/contracts/liquidity_pool',
   'tests/contracts/low_level_caller',
-  'tests/contracts/msg_amount',
+  'tests/contracts/msg_methods',
   'tests/contracts/multiple_read_calls',
   'tests/contracts/needs_custom_decoder',
   'tests/contracts/payable_annotation',

@@ -393,72 +393,6 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_base_asset_input<'a>(
-        inputs: impl IntoIterator<Item = &'a FuelInput>,
-        base_asset_id: &AssetId,
-    ) -> bool {
-        let has_base_asset = inputs.into_iter().any(|i| match i {
-            FuelInput::CoinSigned(CoinSigned { asset_id, .. })
-            | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                if asset_id == base_asset_id =>
-            {
-                true
-            }
-            FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
-            _ => false,
-        });
-
-        !has_base_asset
-    }
-
-    async fn set_script_gas_limit_to_gas_used(
-        tx: &mut Script,
-        provider: impl DryRunner,
-        tolerance: f32,
-    ) -> Result<()> {
-        let consensus_params = provider.consensus_parameters();
-        let base_asset_id = provider.consensus_parameters().base_asset_id();
-
-        // The dry-run validation will check if there is any base asset input.
-        // If we are dry-running without inputs we have to add a temporary one.
-        let no_base_asset_input = Self::no_base_asset_input(tx.inputs(), base_asset_id);
-        if no_base_asset_input {
-            tx.inputs_mut().push(FuelInput::coin_signed(
-                Default::default(),
-                Default::default(),
-                1_000_000_000,
-                Default::default(),
-                TxPointer::default(),
-                0,
-            ));
-
-            // Add an empty `Witness` for the `coin_signed` we just added
-            // and increase the witness limit
-            tx.witnesses_mut().push(Default::default());
-            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
-        }
-
-        // Get `max_gas` used by everything except the script execution. Add `1` because of rounding.
-        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
-        // Increase `script_gas_limit` to the maximum allowed value.
-        *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
-
-        let gas_used = provider
-            .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
-            .await?;
-
-        // Remove dry-run input and witness.
-        if no_base_asset_input {
-            tx.inputs_mut().pop();
-            tx.witnesses_mut().pop();
-            tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
-        }
-
-        *tx.script_gas_limit_mut() = gas_used;
-
-        Ok(())
-    }
-
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
@@ -475,23 +409,16 @@ impl ScriptTransactionBuilder {
             dry_run_witnesses,
         );
 
-        if has_no_code {
-            *tx.script_gas_limit_mut() = 0;
-
-        // Use the user defined value even if it makes the transaction revert.
+        let script_gas_limit = if has_no_code {
+            0
         } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
-            *tx.script_gas_limit_mut() = gas_limit;
-
-        // If the `script_gas_limit` was not set by the user,
-        // dry-run the tx to get the `gas_used`
+            // Use the user defined value even if it makes the transaction revert.
+            gas_limit
         } else {
-            Self::set_script_gas_limit_to_gas_used(
-                &mut tx,
-                &provider,
-                self.gas_estimation_tolerance,
-            )
-            .await?
+            Self::run_estimation(tx.clone(), &provider, self.gas_estimation_tolerance).await?
         };
+
+        *tx.script_gas_limit_mut() = script_gas_limit;
 
         Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
             .await?;
@@ -504,6 +431,30 @@ impl ScriptTransactionBuilder {
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
+    }
+
+    async fn run_estimation(
+        mut tx: fuel_tx::Script,
+        provider: impl DryRunner,
+        tolerance: f32,
+    ) -> Result<u64> {
+        let consensus_params = provider.consensus_parameters();
+        if let Some(fake_input) =
+            needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
+        {
+            tx.inputs_mut().push(fake_input);
+
+            // Add an empty `Witness` for the `coin_signed` we just added
+            tx.witnesses_mut().push(Default::default());
+            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
+        }
+
+        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+        *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
+
+        provider
+            .dry_run_and_get_used_gas(tx.into(), tolerance)
+            .await
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
@@ -627,6 +578,48 @@ impl ScriptTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
         }
     }
+}
+
+fn needs_fake_base_input(inputs: &[FuelInput], base_asset_id: &AssetId) -> Option<fuel_tx::Input> {
+    let has_base_asset = inputs.iter().any(|i| match i {
+        FuelInput::CoinSigned(CoinSigned { asset_id, .. })
+        | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
+            if asset_id == base_asset_id =>
+        {
+            true
+        }
+        FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
+        _ => false,
+    });
+
+    if has_base_asset {
+        return None;
+    }
+
+    let unique_owners = inputs
+        .iter()
+        .filter_map(|input| match input {
+            FuelInput::CoinSigned(CoinSigned { owner, .. })
+            | FuelInput::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+            _ => None,
+        })
+        .unique()
+        .collect::<Vec<_>>();
+
+    let fake_owner = if let [single_owner] = unique_owners.as_slice() {
+        **single_owner
+    } else {
+        Default::default()
+    };
+
+    Some(FuelInput::coin_signed(
+        Default::default(),
+        fake_owner,
+        1_000_000_000,
+        Default::default(),
+        TxPointer::default(),
+        0,
+    ))
 }
 
 impl CreateTransactionBuilder {
