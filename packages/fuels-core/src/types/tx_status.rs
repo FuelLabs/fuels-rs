@@ -125,14 +125,9 @@ impl From<ClientTransactionStatus> for TxStatus {
 impl From<TransactionExecutionStatus> for TxStatus {
     fn from(value: TransactionExecutionStatus) -> Self {
         match value.result {
-            fuel_core_types::services::executor::TransactionExecutionResult::Success {
-                receipts,
-                ..
-            } => Self::Success { receipts },
-            fuel_core_types::services::executor::TransactionExecutionResult::Failed {
-                result,
-                receipts,
-                ..
+            TransactionExecutionResult::Success { receipts, .. } => Self::Success { receipts },
+            TransactionExecutionResult::Failed {
+                result, receipts, ..
             } => {
                 let revert_id = result
                     .and_then(|result| match result {
