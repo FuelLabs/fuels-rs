@@ -22,7 +22,6 @@ use fuels_core::{
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
         tx_status::TxStatus,
-        unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
     Configurables,
@@ -406,10 +405,9 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: Result<UnresolvedBytes>,
+    pub encoded_args: Result<Vec<u8>>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub compute_custom_input_offset: bool,
     pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
@@ -716,26 +714,17 @@ where
 pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     contract_id: Bech32ContractId,
     account: T,
-    signature: Selector,
+    encoded_selector: Selector,
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
     encoder_config: EncoderConfig,
 ) -> ContractCallHandler<T, D> {
-    let encoded_selector = signature;
-
-    let tx_policies = TxPolicies::default();
-    let call_parameters = CallParameters::default();
-
-    let compute_custom_input_offset = true;
-
-    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
-        encoded_args: unresolved_bytes,
-        call_parameters,
-        compute_custom_input_offset,
+        encoded_args: ABIEncoder::new(encoder_config).encode(args),
+        call_parameters: CallParameters::default(),
         variable_outputs: vec![],
         external_contracts: vec![],
         output_param: D::param_type(),
@@ -745,12 +734,12 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     ContractCallHandler {
         contract_call,
-        tx_policies,
+        tx_policies: TxPolicies::default(),
         cached_tx_id: None,
         account,
         datatype: PhantomData,
         log_decoder,
-        decoder_config: Default::default(),
+        decoder_config: DecoderConfig::default(),
     }
 }
 
@@ -811,35 +800,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             ));
         }
 
-        let number_of_heap_type_calls = self
-            .contract_calls
-            .iter()
-            .filter(|cc| cc.output_param.is_extra_receipt_needed(true))
-            .count();
-
-        match number_of_heap_type_calls {
-            0 => Ok(()),
-            1 => {
-                if self
-                    .contract_calls
-                    .last()
-                    .expect("is not empty")
-                    .output_param
-                    .is_extra_receipt_needed(true)
-                {
-                    Ok(())
-                } else {
-                    Err(error!(
-                        Other,
-                        "the contract call with the heap type return must be at the last position"
-                    ))
-                }
-            }
-            _ => Err(error!(
-                Other,
-                "`MultiContractCallHandler` can have only one call that returns a heap type"
-            )),
-        }
+        Ok(())
     }
 
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
