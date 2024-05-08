@@ -1825,3 +1825,50 @@ async fn test_reentrant_calls() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn msg_sender_gas_estimation_issue() {
+    // Gas estimation requires an input of the base asset. If absent, a fake input is
+    // added. However, if a non-base coin is present and the fake input introduces a
+    // second owner, it causes the `msg_sender` sway fn to fail. This leads
+    // to a premature failure in gas estimation, risking transaction failure due to
+    // a low gas limit.
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let (coins, ids) =
+        setup_multiple_assets_coins(wallet.address(), 2, DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+
+    let provider = setup_test_provider(coins, vec![], None, None)
+        .await
+        .unwrap();
+    wallet.set_provider(provider.clone());
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/msg_methods"
+        )),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let asset_id = ids[0];
+
+    // The fake coin won't be added if we add a base asset, so let's not do that
+    assert!(asset_id != *provider.base_asset_id());
+    let call_params = CallParameters::default()
+        .with_amount(100)
+        .with_asset_id(asset_id);
+
+    contract_instance
+        .methods()
+        .message_sender()
+        .call_params(call_params)
+        .unwrap()
+        .call()
+        .await
+        .unwrap();
+}
