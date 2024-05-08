@@ -113,7 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2206;
+        let expected_gas = 2229;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -610,7 +610,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 3378;
+        let expected_gas = 3413;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -898,7 +898,6 @@ mod tests {
             .with_encoder_config(EncoderConfig {
                 max_depth: 10,
                 max_tokens: 2_000,
-                max_total_enum_width: 10_000,
             })
             .methods()
             .initialize_counter(42)

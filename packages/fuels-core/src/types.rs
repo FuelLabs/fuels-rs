@@ -14,7 +14,6 @@ pub mod param_types;
 mod token;
 pub mod transaction_builders;
 pub mod tx_status;
-pub mod unresolved_bytes;
 mod wrappers;
 
 pub type ByteArray = [u8; 8];

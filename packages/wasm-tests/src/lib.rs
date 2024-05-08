@@ -112,9 +112,7 @@ mod tests {
 
         let original = SomeEnum::V2(SomeStruct { a: 123, b: false });
 
-        let bytes = ABIEncoder::default()
-            .encode(&[original.clone().into_token()])?
-            .resolve(0);
+        let bytes = ABIEncoder::default().encode(&[original.clone().into_token()])?;
 
         let expected_bytes = [
             0, 0, 0, 0, 0, 0, 0, 1, // enum discriminant
