@@ -393,7 +393,7 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    async fn resolve_fuel_tx(self, base_offset: usize, provider: impl DryRunner) -> Result<Script> {
+    async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
 
@@ -455,17 +455,6 @@ impl ScriptTransactionBuilder {
         provider
             .dry_run_and_get_used_gas(tx.into(), tolerance)
             .await
-    }
-
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> Result<usize> {
-        let padded_script_data_len = padded_len_usize(self.script_data.len())
-            .ok_or_else(|| error!(Other, "script data len overflow {}", self.script_data.len()))?;
-        let padded_script_len = padded_len_usize(self.script.len())
-            .ok_or_else(|| error!(Other, "script len overflow {}", self.script.len()))?;
-
-        Ok(offsets::base_offset_script(consensus_parameters)
-            + padded_script_data_len
-            + padded_script_len)
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
