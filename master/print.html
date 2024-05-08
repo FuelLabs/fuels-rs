@@ -1348,12 +1348,11 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 <ul>
 <li>Load the same contract binary with <code>Salt</code> to get a new <code>contract_id</code></li>
 <li>Change the contract's storage slots</li>
-<li>Update the contract's configurables
+<li>Update the contract's configurables</li>
+</ul>
 <blockquote>
 <p>Note: The next section will give more information on how <code>configurables</code> can be used.</p>
 </blockquote>
-</li>
-</ul>
 <p>Additionally, you can set custom <code>TxParameters</code> when deploying the loaded contract.</p>
 <pre><code class="language-rust ignore">        // Optional: Add `Salt`
         let rng = &amp;mut StdRng::seed_from_u64(2322u64);
@@ -1412,6 +1411,9 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
 
         assert_eq!(52, response.value);
 </code></pre>
+<blockquote>
+<p>Note: When redeploying an existing <code>Contract</code>, ensure that you initialize it with a unique salt to prevent deployment failures caused by a contract ID collision. To accomplish this, utilize the <code>with_salt</code> method to clone the existing <code>Contract</code> with a new salt.</p>
+</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h1>
 <p>In Sway, you can define <code>configurable</code> constants which can be changed during the contract deployment in the SDK. Here is an example how the constants are defined.</p>
 <pre><code class="language-rust ignore">contract;
