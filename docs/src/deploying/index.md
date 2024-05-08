@@ -26,7 +26,7 @@ Alternatively, you can use `LoadConfiguration` to configure how the contract is 
 - Load the same contract binary with `Salt` to get a new `contract_id`
 - Change the contract's storage slots
 - Update the contract's configurables
-> Note: The next section will give more information on how `configurables` can be used.
+    > Note: The next section will give more information on how `configurables` can be used.
 
 Additionally, you can set custom `TxParameters` when deploying the loaded contract.
 
