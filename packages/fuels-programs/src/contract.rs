@@ -239,7 +239,7 @@ impl LoadConfiguration {
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Contract {
     binary: Vec<u8>,
     salt: Salt,
