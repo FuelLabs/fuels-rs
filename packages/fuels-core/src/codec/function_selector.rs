@@ -10,7 +10,6 @@ pub fn encode_fn_selector(name: &str) -> Vec<u8> {
 macro_rules! calldata {
     ( $($arg: expr),* ) => {
         ::fuels::core::codec::ABIEncoder::default().encode(&[$(::fuels::core::traits::Tokenizable::into_token($arg)),*])
-            .map(|ub| ub.resolve(0))
     }
 }
 

@@ -10,8 +10,8 @@ use fuel_core_client::client::types::{
 pub struct Header {
     pub id: Bytes32,
     pub da_height: u64,
-    pub transactions_count: u64,
-    pub message_receipt_count: u64,
+    pub transactions_count: u16,
+    pub message_receipt_count: u32,
     pub transactions_root: Bytes32,
     pub message_outbox_root: Bytes32,
     pub event_inbox_root: Bytes32,

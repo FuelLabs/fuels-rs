@@ -10,7 +10,7 @@ use fuels::{
 async fn test_storage_initialization() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+        abi = "packages/fuels/tests/contracts/storage/out/release/storage-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -22,7 +22,7 @@ async fn test_storage_initialization() -> Result<()> {
     let storage_configuration = StorageConfiguration::default().add_slot_overrides(storage_vec);
 
     let contract_id = Contract::load_from(
-        "tests/contracts/storage/out/debug/storage.bin",
+        "tests/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default().with_storage_configuration(storage_configuration),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -45,13 +45,13 @@ async fn test_storage_initialization() -> Result<()> {
 async fn test_init_storage_automatically() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/storage/out/debug/storage-abi.json"
+        abi = "packages/fuels/tests/contracts/storage/out/release/storage-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/storage/out/debug/storage.bin",
+        "tests/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -85,7 +85,7 @@ async fn test_init_storage_automatically() -> Result<()> {
 #[tokio::test]
 async fn storage_load_error_messages() {
     {
-        let json_path = "tests/contracts/storage/out/debug/no_file_on_path.json";
+        let json_path = "tests/contracts/storage/out/release/no_file_on_path.json";
         let expected_error = format!("io: file \"{json_path}\" does not exist");
 
         let error = StorageConfiguration::default()
@@ -95,7 +95,7 @@ async fn storage_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let json_path = "tests/contracts/storage/out/debug/storage.bin";
+        let json_path = "tests/contracts/storage/out/release/storage.bin";
         let expected_error = format!("expected \"{json_path}\" to have '.json' extension");
 
         let error = StorageConfiguration::default()

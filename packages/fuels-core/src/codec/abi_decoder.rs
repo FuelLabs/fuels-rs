@@ -343,8 +343,10 @@ mod tests {
             generics: vec![],
         }];
 
-        // "0" discriminant and 42 enum value
-        let data = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 42];
+        let data = [
+            0, 0, 0, 0, 0, 0, 0, 0, // discriminant
+            0, 0, 0, 42, // u32
+        ];
 
         let decoded = ABIDecoder::default().decode_multiple(&types, &data)?;
 

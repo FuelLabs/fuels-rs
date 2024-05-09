@@ -1,12 +1,15 @@
 contract;
 
 impl AbiEncode for [u8; 1000] {
-    fn abi_encode(self, ref mut buffer: Buffer) {
+    fn abi_encode(self, buffer: Buffer) -> Buffer {
+        let mut buffer = buffer;
         let mut i = 0;
         while i < 1000 {
-            self[i].abi_encode(buffer);
+            buffer = self[i].abi_encode(buffer);
             i += 1;
-        }
+        };
+
+        buffer
     }
 }
 

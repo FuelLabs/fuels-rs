@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::PathBuf};
 
-pub use abigen_target::{AbigenTarget, ProgramType};
+pub use abigen_target::{Abi, AbigenTarget, ProgramType};
 use fuel_abi_types::abi::full_program::FullTypeDeclaration;
 use inflector::Inflector;
 use itertools::Itertools;
@@ -11,8 +11,7 @@ use regex::Regex;
 use crate::{
     error::Result,
     program_bindings::{
-        abigen::{abigen_target::ParsedAbigenTarget, bindings::generate_bindings},
-        custom_types::generate_types,
+        abigen::bindings::generate_bindings, custom_types::generate_types,
         generated_code::GeneratedCode,
     },
     utils::ident,
@@ -35,9 +34,7 @@ impl Abigen {
     /// for, and of what nature (Contract, Script or Predicate).
     /// * `no_std`: don't use the Rust std library.
     pub fn generate(targets: Vec<AbigenTarget>, no_std: bool) -> Result<TokenStream> {
-        let parsed_targets = Self::parse_targets(targets)?;
-
-        let generated_code = Self::generate_code(no_std, parsed_targets)?;
+        let generated_code = Self::generate_code(no_std, targets)?;
 
         let use_statements = generated_code.use_statements_for_uniquely_named_types();
 
@@ -68,10 +65,7 @@ impl Abigen {
         .expect("Wasm hotfix failed!")
     }
 
-    fn generate_code(
-        no_std: bool,
-        parsed_targets: Vec<ParsedAbigenTarget>,
-    ) -> Result<GeneratedCode> {
+    fn generate_code(no_std: bool, parsed_targets: Vec<AbigenTarget>) -> Result<GeneratedCode> {
         let custom_types = Self::filter_custom_types(&parsed_targets);
         let shared_types = Self::filter_shared_types(custom_types);
 
@@ -83,11 +77,11 @@ impl Abigen {
     }
 
     fn generate_all_bindings(
-        parsed_targets: Vec<ParsedAbigenTarget>,
+        targets: Vec<AbigenTarget>,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
-        parsed_targets
+        targets
             .into_iter()
             .map(|target| Self::generate_binding(target, no_std, shared_types))
             .fold_ok(GeneratedCode::default(), |acc, generated_code| {
@@ -96,7 +90,7 @@ impl Abigen {
     }
 
     fn generate_binding(
-        target: ParsedAbigenTarget,
+        target: AbigenTarget,
         no_std: bool,
         shared_types: &HashSet<FullTypeDeclaration>,
     ) -> Result<GeneratedCode> {
@@ -128,13 +122,6 @@ impl Abigen {
         GeneratedCode::new(code, Default::default(), no_std)
     }
 
-    fn parse_targets(targets: Vec<AbigenTarget>) -> Result<Vec<ParsedAbigenTarget>> {
-        targets
-            .into_iter()
-            .map(|target| target.try_into())
-            .collect()
-    }
-
     fn generate_shared_types(
         shared_types: HashSet<FullTypeDeclaration>,
         no_std: bool,
@@ -150,7 +137,7 @@ impl Abigen {
     }
 
     fn filter_custom_types(
-        all_types: &[ParsedAbigenTarget],
+        all_types: &[AbigenTarget],
     ) -> impl Iterator<Item = &FullTypeDeclaration> {
         all_types
             .iter()

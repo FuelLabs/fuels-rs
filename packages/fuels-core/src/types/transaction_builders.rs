@@ -16,24 +16,22 @@ use fuel_tx::{
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, canonical::Serialize, Bytes32, ChainId, Salt};
+use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use itertools::Itertools;
 
 use crate::{
     constants::{SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
-    offsets,
     traits::Signer,
     types::{
         bech32::Bech32Address,
         coin::Coin,
         coin_type::CoinType,
-        errors::{error_transaction, Result},
+        errors::{error, error_transaction, Result},
         input::Input,
         message::Message,
         transaction::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
         },
-        unresolved_bytes::UnresolvedBytes,
         Address, AssetId, ContractId,
     },
     utils::{calculate_witnesses_size, sealed},
@@ -263,22 +261,19 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(&self) -> Policies {
-                let mut policies = Policies::default();
+            fn generate_fuel_policies(&self) -> Result<Policies> {
+                let witness_limit = match self.tx_policies.witness_limit() {
+                    Some(limit) => limit,
+                    None => self.calculate_witnesses_size()?,
+                };
+                let mut policies = Policies::default().with_witness_limit(witness_limit);
+
                 // `MaxFee` set to `tip` or `0` for `dry_run`
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
-
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
-
-                let witness_limit = self
-                    .tx_policies
-                    .witness_limit()
-                    .or_else(|| self.calculate_witnesses_size());
-                policies.set(PolicyType::WitnessLimit, witness_limit);
-
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
 
-                policies
+                Ok(policies)
             }
 
             fn is_using_predicates(&self) -> bool {
@@ -300,12 +295,14 @@ macro_rules! impl_tx_trait {
                 Ok(num_witnesses as u16)
             }
 
-            fn calculate_witnesses_size(&self) -> Option<u64> {
+            fn calculate_witnesses_size(&self) -> Result<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
                 let signature_size = SIGNATURE_WITNESS_SIZE
                     * self.unresolved_witness_indexes.owner_to_idx_offset.len();
 
-                Some(padded_len_usize(witnesses_size + signature_size) as u64)
+                let padded_len = padded_len_usize(witnesses_size + signature_size)
+                    .ok_or_else(|| error!(Other, "witnesses size overflow"))?;
+                Ok(padded_len as u64)
             }
 
             async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
@@ -378,18 +375,9 @@ impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
-        let is_using_predicates = self.is_using_predicates();
-        let base_offset = if is_using_predicates {
-            self.base_offset(provider.consensus_parameters())
-        } else {
-            0
-        };
-
-        let tx = self.resolve_fuel_tx(base_offset, &provider).await?;
-
         Ok(ScriptTransaction {
-            tx,
-            is_using_predicates,
+            is_using_predicates: self.is_using_predicates(),
+            tx: self.resolve_fuel_tx(&provider).await?,
         })
     }
 
@@ -405,75 +393,9 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn no_base_asset_input<'a>(
-        inputs: impl IntoIterator<Item = &'a FuelInput>,
-        base_asset_id: &AssetId,
-    ) -> bool {
-        let has_base_asset = inputs.into_iter().any(|i| match i {
-            FuelInput::CoinSigned(CoinSigned { asset_id, .. })
-            | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                if asset_id == base_asset_id =>
-            {
-                true
-            }
-            FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
-            _ => false,
-        });
-
-        !has_base_asset
-    }
-
-    async fn set_script_gas_limit_to_gas_used(
-        tx: &mut Script,
-        provider: impl DryRunner,
-        tolerance: f32,
-    ) -> Result<()> {
-        let consensus_params = provider.consensus_parameters();
-        let base_asset_id = provider.consensus_parameters().base_asset_id();
-
-        // The dry-run validation will check if there is any base asset input.
-        // If we are dry-running without inputs we have to add a temporary one.
-        let no_base_asset_input = Self::no_base_asset_input(tx.inputs(), base_asset_id);
-        if no_base_asset_input {
-            tx.inputs_mut().push(FuelInput::coin_signed(
-                Default::default(),
-                Default::default(),
-                1_000_000_000,
-                Default::default(),
-                TxPointer::default(),
-                0,
-            ));
-
-            // Add an empty `Witness` for the `coin_signed` we just added
-            // and increase the witness limit
-            tx.witnesses_mut().push(Default::default());
-            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
-        }
-
-        // Get `max_gas` used by everything except the script execution. Add `1` because of rounding.
-        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
-        // Increase `script_gas_limit` to the maximum allowed value.
-        *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
-
-        let gas_used = provider
-            .dry_run_and_get_used_gas(tx.clone().into(), tolerance)
-            .await?;
-
-        // Remove dry-run input and witness.
-        if no_base_asset_input {
-            tx.inputs_mut().pop();
-            tx.witnesses_mut().pop();
-            tx.set_witness_limit(tx.witness_limit() - WITNESS_STATIC_SIZE as u64);
-        }
-
-        *tx.script_gas_limit_mut() = gas_used;
-
-        Ok(())
-    }
-
-    async fn resolve_fuel_tx(self, base_offset: usize, provider: impl DryRunner) -> Result<Script> {
+    async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
+        let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -482,33 +404,21 @@ impl ScriptTransactionBuilder {
             self.script,
             self.script_data,
             policies,
-            resolve_fuel_inputs(
-                self.inputs,
-                base_offset + policies.size_dynamic(),
-                num_witnesses,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             dry_run_witnesses,
         );
 
-        if has_no_code {
-            *tx.script_gas_limit_mut() = 0;
-
-        // Use the user defined value even if it makes the transaction revert.
+        let script_gas_limit = if has_no_code {
+            0
         } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
-            *tx.script_gas_limit_mut() = gas_limit;
-
-        // If the `script_gas_limit` was not set by the user,
-        // dry-run the tx to get the `gas_used`
+            // Use the user defined value even if it makes the transaction revert.
+            gas_limit
         } else {
-            Self::set_script_gas_limit_to_gas_used(
-                &mut tx,
-                &provider,
-                self.gas_estimation_tolerance,
-            )
-            .await?
+            Self::run_estimation(tx.clone(), &provider, self.gas_estimation_tolerance).await?
         };
+
+        *tx.script_gas_limit_mut() = script_gas_limit;
 
         Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
             .await?;
@@ -523,10 +433,28 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_script(consensus_parameters)
-            + padded_len_usize(self.script_data.len())
-            + padded_len_usize(self.script.len())
+    async fn run_estimation(
+        mut tx: fuel_tx::Script,
+        provider: impl DryRunner,
+        tolerance: f32,
+    ) -> Result<u64> {
+        let consensus_params = provider.consensus_parameters();
+        if let Some(fake_input) =
+            needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
+        {
+            tx.inputs_mut().push(fake_input);
+
+            // Add an empty `Witness` for the `coin_signed` we just added
+            tx.witnesses_mut().push(Default::default());
+            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
+        }
+
+        let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
+        *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
+
+        provider
+            .dry_run_and_get_used_gas(tx.into(), tolerance)
+            .await
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
@@ -652,50 +580,67 @@ impl ScriptTransactionBuilder {
     }
 }
 
+fn needs_fake_base_input(inputs: &[FuelInput], base_asset_id: &AssetId) -> Option<fuel_tx::Input> {
+    let has_base_asset = inputs.iter().any(|i| match i {
+        FuelInput::CoinSigned(CoinSigned { asset_id, .. })
+        | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
+            if asset_id == base_asset_id =>
+        {
+            true
+        }
+        FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
+        _ => false,
+    });
+
+    if has_base_asset {
+        return None;
+    }
+
+    let unique_owners = inputs
+        .iter()
+        .filter_map(|input| match input {
+            FuelInput::CoinSigned(CoinSigned { owner, .. })
+            | FuelInput::CoinPredicate(CoinPredicate { owner, .. }) => Some(owner),
+            _ => None,
+        })
+        .unique()
+        .collect::<Vec<_>>();
+
+    let fake_owner = if let [single_owner] = unique_owners.as_slice() {
+        **single_owner
+    } else {
+        Default::default()
+    };
+
+    Some(FuelInput::coin_signed(
+        Default::default(),
+        fake_owner,
+        1_000_000_000,
+        Default::default(),
+        TxPointer::default(),
+        0,
+    ))
+}
+
 impl CreateTransactionBuilder {
     pub async fn build(self, provider: impl DryRunner) -> Result<CreateTransaction> {
-        let consensus_parameters = provider.consensus_parameters();
-
-        let is_using_predicates = self.is_using_predicates();
-        let base_offset = if is_using_predicates {
-            self.base_offset(consensus_parameters)
-        } else {
-            0
-        };
-
-        let tx = self
-            .resolve_fuel_tx(base_offset, &consensus_parameters.chain_id(), &provider)
-            .await?;
-
         Ok(CreateTransaction {
-            tx,
-            is_using_predicates,
+            is_using_predicates: self.is_using_predicates(),
+            tx: self.resolve_fuel_tx(&provider).await?,
         })
     }
 
-    async fn resolve_fuel_tx(
-        self,
-        mut base_offset: usize,
-        chain_id: &ChainId,
-        provider: impl DryRunner,
-    ) -> Result<Create> {
+    async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
+        let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies();
-
-        let storage_slots_offset = self.storage_slots.len() * StorageSlot::SLOT_SIZE;
-        base_offset += storage_slots_offset + policies.size_dynamic();
+        let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
             policies,
             self.salt,
             self.storage_slots,
-            resolve_fuel_inputs(
-                self.inputs,
-                base_offset,
-                num_witnesses,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -704,14 +649,10 @@ impl CreateTransactionBuilder {
             .await?;
 
         let missing_witnesses =
-            generate_missing_witnesses(tx.id(chain_id), &self.unresolved_signers).await?;
+            generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
         tx.witnesses_mut().extend(missing_witnesses);
 
         Ok(tx)
-    }
-
-    fn base_offset(&self, consensus_parameters: &ConsensusParameters) -> usize {
-        offsets::base_offset_create(consensus_parameters)
     }
 
     pub fn with_bytecode_length(mut self, bytecode_length: u64) -> Self {
@@ -779,53 +720,44 @@ impl CreateTransactionBuilder {
 /// data offsets for predicates and set witness indexes for signed coins.
 fn resolve_fuel_inputs(
     inputs: Vec<Input>,
-    mut data_offset: usize,
     num_witnesses: u16,
     unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<Vec<FuelInput>> {
     inputs
         .into_iter()
         .map(|input| match input {
-            Input::ResourceSigned { resource } => resolve_signed_resource(
-                resource,
-                &mut data_offset,
-                num_witnesses,
-                unresolved_witness_indexes,
-            ),
+            Input::ResourceSigned { resource } => {
+                resolve_signed_resource(resource, num_witnesses, unresolved_witness_indexes)
+            }
             Input::ResourcePredicate {
                 resource,
                 code,
                 data,
-            } => resolve_predicate_resource(resource, code, data, &mut data_offset),
+            } => Ok(resolve_predicate_resource(resource, code, data)),
             Input::Contract {
                 utxo_id,
                 balance_root,
                 state_root,
                 tx_pointer,
                 contract_id,
-            } => {
-                data_offset += offsets::contract_input_offset();
-                Ok(FuelInput::contract(
-                    utxo_id,
-                    balance_root,
-                    state_root,
-                    tx_pointer,
-                    contract_id,
-                ))
-            }
+            } => Ok(FuelInput::contract(
+                utxo_id,
+                balance_root,
+                state_root,
+                tx_pointer,
+                contract_id,
+            )),
         })
         .collect()
 }
 
 fn resolve_signed_resource(
     resource: CoinType,
-    data_offset: &mut usize,
     num_witnesses: u16,
     unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<FuelInput> {
     match resource {
         CoinType::Coin(coin) => {
-            *data_offset += offsets::coin_signed_data_offset();
             let owner = &coin.owner;
 
             unresolved_witness_indexes
@@ -840,7 +772,6 @@ fn resolve_signed_resource(
                 })
         }
         CoinType::Message(message) => {
-            *data_offset += offsets::message_signed_data_offset(message.data.len());
             let recipient = &message.recipient;
 
             unresolved_witness_indexes
@@ -857,30 +788,10 @@ fn resolve_signed_resource(
     }
 }
 
-fn resolve_predicate_resource(
-    resource: CoinType,
-    code: Vec<u8>,
-    data: UnresolvedBytes,
-    data_offset: &mut usize,
-) -> Result<FuelInput> {
+fn resolve_predicate_resource(resource: CoinType, code: Vec<u8>, data: Vec<u8>) -> FuelInput {
     match resource {
-        CoinType::Coin(coin) => {
-            *data_offset += offsets::coin_predicate_data_offset(code.len());
-
-            let data = data.resolve(*data_offset as u64);
-            *data_offset += data.len();
-
-            let asset_id = coin.asset_id;
-            Ok(create_coin_predicate(coin, asset_id, code, data))
-        }
-        CoinType::Message(message) => {
-            *data_offset += offsets::message_predicate_data_offset(message.data.len(), code.len());
-
-            let data = data.resolve(*data_offset as u64);
-            *data_offset += data.len();
-
-            Ok(create_coin_message_predicate(message, code, data))
-        }
+        CoinType::Coin(coin) => create_coin_predicate(coin.asset_id, coin, code, data),
+        CoinType::Message(message) => create_coin_message_predicate(message, code, data),
     }
 }
 
@@ -917,8 +828,8 @@ pub fn create_coin_message_input(message: Message, witness_index: u16) -> FuelIn
 }
 
 pub fn create_coin_predicate(
-    coin: Coin,
     asset_id: AssetId,
+    coin: Coin,
     code: Vec<u8>,
     predicate_data: Vec<u8>,
 ) -> FuelInput {

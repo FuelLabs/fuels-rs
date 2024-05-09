@@ -112,7 +112,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
     let provider = account.try_provider()?;
     let consensus_parameters = provider.consensus_parameters();
-    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len);
+    let data_offset = call_script_data_offset(consensus_parameters, calls_instructions_len)?;
 
     let (script_data, call_param_offsets) =
         build_script_data_from_contract_calls(calls, data_offset, *provider.base_asset_id())?;
@@ -293,7 +293,6 @@ pub(crate) fn build_script_data_from_contract_calls(
         let encoded_args = call
             .encoded_args
             .as_ref()
-            .map(|ub| ub.resolve(encoded_args_offset as Word))
             .map_err(|e| error!(Codec, "cannot encode contract call arguments: {e}"))?;
         let encoded_args_len = encoded_args.len();
 
@@ -543,7 +542,6 @@ mod test {
                 encoded_args: Ok(Default::default()),
                 encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
-                compute_custom_input_offset: false,
                 variable_outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,

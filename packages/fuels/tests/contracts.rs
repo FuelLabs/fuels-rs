@@ -274,9 +274,7 @@ async fn test_contract_call_fee_estimation() -> Result<()> {
     let gas_limit = 800;
     let tolerance = Some(0.2);
     let block_horizon = Some(1);
-
     let expected_gas_used = 960;
-
     let expected_metered_bytes_size = 824;
 
     let estimated_transaction_cost = contract_instance
@@ -657,7 +655,7 @@ async fn setup_output_variable_estimation_test() -> Result<(
     let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, None).await?;
 
     let contract_id = Contract::load_from(
-        "tests/contracts/token_ops/out/debug/token_ops.bin",
+        "tests/contracts/token_ops/out/release/token_ops.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallets[0], TxPolicies::default())
@@ -678,7 +676,7 @@ async fn setup_output_variable_estimation_test() -> Result<(
 async fn test_output_variable_estimation() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -736,7 +734,7 @@ async fn test_output_variable_estimation() -> Result<()> {
 async fn test_output_variable_estimation_default_attempts() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -765,7 +763,7 @@ async fn test_output_variable_estimation_default_attempts() -> Result<()> {
 async fn test_output_variable_estimation_multicall() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/token_ops/out/debug/token_ops-abi.json"
+        abi = "packages/fuels/tests/contracts/token_ops/out/release/token_ops-abi.json"
     ));
 
     let (wallets, addresses, mint_asset_id, contract_id) =
@@ -1129,7 +1127,7 @@ async fn test_add_custom_assets() -> Result<()> {
 #[tokio::test]
 async fn contract_load_error_messages() {
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/no_file_on_path.bin";
+        let binary_path = "tests/contracts/contract_test/out/release/no_file_on_path.bin";
         let expected_error = format!("io: file \"{binary_path}\" does not exist");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
@@ -1138,7 +1136,7 @@ async fn contract_load_error_messages() {
         assert_eq!(error.to_string(), expected_error);
     }
     {
-        let binary_path = "tests/contracts/contract_test/out/debug/contract_test-abi.json";
+        let binary_path = "tests/contracts/contract_test/out/release/contract_test-abi.json";
         let expected_error = format!("expected \"{binary_path}\" to have '.bin' extension");
 
         let error = Contract::load_from(binary_path, LoadConfiguration::default())
@@ -1203,7 +1201,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let wallet = WalletUnlocked::new_random(None);
@@ -1590,42 +1588,6 @@ async fn test_heap_type_multicall() -> Result<()> {
         assert_eq!(val_3, vec![0, 1, 2]);
     }
 
-    {
-        let call_handler_1 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_2 = contract_instance.methods().get_single(7);
-        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
-
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
-
-        let error = multi_call_handler.submit().await.expect_err("should error");
-        assert!(error.to_string().contains(
-            "`MultiContractCallHandler` can have only one call that returns a heap type"
-        ));
-    }
-
-    {
-        let call_handler_1 = contract_instance.methods().get_single(7);
-        let call_handler_2 = contract_instance_2.methods().u8_in_vec(3);
-        let call_handler_3 = contract_instance.methods().get_single(42);
-
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
-            .add_call(call_handler_1)
-            .add_call(call_handler_2)
-            .add_call(call_handler_3);
-
-        let error = multi_call_handler.submit().await.expect_err("should error");
-        assert!(error
-            .to_string()
-            .contains("the contract call with the heap type return must be at the last position"));
-    }
-
     Ok(())
 }
 
@@ -1642,7 +1604,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     let provider = wallet.try_provider()?.clone();
     let data = MyPredicateEncoder::default().encode_data(18, 24, vec![2, 4, 42])?;
     let predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(data)
     .with_provider(provider);
@@ -1660,7 +1622,7 @@ async fn heap_types_correctly_offset_in_create_transactions_w_storage_slots() ->
     // the offsets were setup correctly since the predicate uses heap types in its arguments.
     // Storage slots were loaded automatically by default
     Contract::load_from(
-        "tests/contracts/storage/out/debug/storage.bin",
+        "tests/contracts/storage/out/release/storage.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -1787,7 +1749,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         Wallets("wallet")
     );
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -1862,4 +1824,51 @@ async fn test_reentrant_calls() -> Result<()> {
     assert_eq!(42, response.value);
 
     Ok(())
+}
+
+#[tokio::test]
+async fn msg_sender_gas_estimation_issue() {
+    // Gas estimation requires an input of the base asset. If absent, a fake input is
+    // added. However, if a non-base coin is present and the fake input introduces a
+    // second owner, it causes the `msg_sender` sway fn to fail. This leads
+    // to a premature failure in gas estimation, risking transaction failure due to
+    // a low gas limit.
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    let (coins, ids) =
+        setup_multiple_assets_coins(wallet.address(), 2, DEFAULT_NUM_COINS, DEFAULT_COIN_AMOUNT);
+
+    let provider = setup_test_provider(coins, vec![], None, None)
+        .await
+        .unwrap();
+    wallet.set_provider(provider.clone());
+
+    setup_program_test!(
+        Abigen(Contract(
+            name = "MyContract",
+            project = "packages/fuels/tests/contracts/msg_methods"
+        )),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let asset_id = ids[0];
+
+    // The fake coin won't be added if we add a base asset, so let's not do that
+    assert!(asset_id != *provider.base_asset_id());
+    let call_params = CallParameters::default()
+        .with_amount(100)
+        .with_asset_id(asset_id);
+
+    contract_instance
+        .methods()
+        .message_sender()
+        .call_params(call_params)
+        .unwrap()
+        .call()
+        .await
+        .unwrap();
 }
