@@ -1,0 +1,5 @@
+error: malformed `abi`. Did you use `forc` to create it?:  missing field `types` at line 1 column 2
+ --> tests/ui/abigen/malformed_abi.rs:3:43
+  |
+3 | abigen!(Contract(name = "SomeName", abi = r#"{}"#));
+  |                                           ^^^^^^^

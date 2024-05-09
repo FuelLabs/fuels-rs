@@ -117,7 +117,7 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+        Predicate::load_from("tests/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_provider(provider.clone());
 
     wallet
@@ -138,13 +138,14 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
 async fn spend_predicate_coins_messages_basic() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
 
     let mut predicate: Predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+        Predicate::load_from("tests/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
     let num_coins = 4;
@@ -184,18 +185,18 @@ async fn pay_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
             name = "MyPredicate",
-            abi = "packages/fuels/tests/types/predicates/u64/out/debug/u64-abi.json"
+            abi = "packages/fuels/tests/types/predicates/u64/out/release/u64-abi.json"
         )
     );
 
     let predicate_data = MyPredicateEncoder::default().encode_data(32768)?;
 
     let mut predicate: Predicate =
-        Predicate::load_from("tests/types/predicates/u64/out/debug/u64.bin")?
+        Predicate::load_from("tests/types/predicates/u64/out/release/u64.bin")?
             .with_data(predicate_data);
 
     let num_coins = 4;
@@ -207,7 +208,7 @@ async fn pay_with_predicate() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -247,19 +248,19 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
     let predicate_data = MyPredicateEncoder::default().encode_data(12, 30, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -272,7 +273,7 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -312,13 +313,13 @@ async fn predicate_contract_transfer() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(2, 40, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -331,7 +332,7 @@ async fn predicate_contract_transfer() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -369,13 +370,13 @@ async fn predicate_transfer_to_base_layer() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(22, 20, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -416,13 +417,13 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(2, 40, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -495,19 +496,19 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
     let predicate_data = MyPredicateEncoder::default().encode_data(22, 20, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -520,7 +521,7 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -570,19 +571,19 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     abigen!(
         Contract(
             name = "MyContract",
-            abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+            abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
         ),
         Predicate(
         name = "MyPredicate",
         abi =
-            "packages/fuels/tests/types/predicates/predicate_vector/out/debug/predicate_vector-abi.json"
+            "packages/fuels/tests/types/predicates/predicate_vector/out/release/predicate_vector-abi.json"
         )
     );
 
     let predicate_data = MyPredicateEncoder::default().encode_data(28, 14, vec![2, 4, 42])?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/types/predicates/predicate_vector/out/debug/predicate_vector.bin",
+        "tests/types/predicates/predicate_vector/out/release/predicate_vector.bin",
     )?
     .with_data(predicate_data);
 
@@ -595,7 +596,7 @@ async fn diff_asset_predicate_payment() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/contract_test/out/debug/contract_test.bin",
+        "../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&predicate, TxPolicies::default())
@@ -617,11 +618,64 @@ async fn diff_asset_predicate_payment() -> Result<()> {
 }
 
 #[tokio::test]
+async fn predicate_default_configurables() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "packages/fuels/tests/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
+    ));
+
+    let new_struct = StructWithGeneric {
+        field_1: 8u8,
+        field_2: 16,
+    };
+    let new_enum = EnumWithGeneric::VariantOne(true);
+
+    let predicate_data =
+        MyPredicateEncoder::default().encode_data(true, 8, new_struct, new_enum)?;
+
+    let mut predicate: Predicate = Predicate::load_from(
+        "tests/predicates/predicate_configurables/out/release/predicate_configurables.bin",
+    )?
+    .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_messages = 8;
+    let amount = 16;
+    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+
+    predicate.set_provider(provider.clone());
+
+    predicate
+        .transfer(
+            receiver.address(),
+            predicate_balance,
+            asset_id,
+            TxPolicies::default(),
+        )
+        .await?;
+
+    // The predicate has spent the funds
+    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
+
+    // Funds were transferred
+    assert_address_balance(
+        receiver.address(),
+        &provider,
+        asset_id,
+        receiver_balance + predicate_balance,
+    )
+    .await;
+
+    Ok(())
+}
+
+#[tokio::test]
 async fn predicate_configurables() -> Result<()> {
     // ANCHOR: predicate_configurables
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/predicate_configurables/out/debug/predicate_configurables-abi.json"
+        abi = "packages/fuels/tests/predicates/predicate_configurables/out/release/predicate_configurables-abi.json"
     ));
 
     let new_struct = StructWithGeneric {
@@ -631,14 +685,15 @@ async fn predicate_configurables() -> Result<()> {
     let new_enum = EnumWithGeneric::VariantTwo;
 
     let configurables = MyPredicateConfigurables::default()
+        .with_U8(8)?
         .with_STRUCT(new_struct.clone())?
         .with_ENUM(new_enum.clone())?;
 
     let predicate_data =
-        MyPredicateEncoder::default().encode_data(8u8, true, new_struct, new_enum)?;
+        MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/predicates/predicate_configurables/out/debug/predicate_configurables.bin",
+        "tests/predicates/predicate_configurables/out/release/predicate_configurables.bin",
     )?
     .with_data(predicate_data)
     .with_configurables(configurables);
@@ -680,13 +735,14 @@ async fn predicate_configurables() -> Result<()> {
 async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
 
     let mut predicate: Predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+        Predicate::load_from("tests/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
     let amount = 1000;
@@ -694,8 +750,8 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
     let message = get_test_message_w_data(predicate.address(), amount, Default::default());
     let message_input = Input::resource_predicate(
         CoinType::Message(message.clone()),
-        predicate.code().clone(),
-        predicate.data().clone(),
+        predicate.code().to_vec(),
+        predicate.data().to_vec(),
     );
 
     let provider = setup_test_provider(coins, vec![message.clone()], None, None).await?;
@@ -719,13 +775,14 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
 async fn predicate_transfer_non_base_asset() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(32, 32)?;
 
     let mut predicate: Predicate =
-        Predicate::load_from("tests/predicates/basic_predicate/out/debug/basic_predicate.bin")?
+        Predicate::load_from("tests/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -781,13 +838,13 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
 async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/predicate_witnesses/out/debug/predicate_witnesses-abi.json"
+        abi = "packages/fuels/tests/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 1)?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/predicates/predicate_witnesses/out/debug/predicate_witnesses.bin",
+        "tests/predicates/predicate_witnesses/out/release/predicate_witnesses.bin",
     )?
     .with_data(predicate_data);
 
@@ -814,19 +871,8 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
     .build(&provider)
     .await?;
 
-    #[cfg(not(feature = "experimental"))]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
-
-    #[cfg(feature = "experimental")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
@@ -858,13 +904,13 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/predicate_witnesses/out/debug/predicate_witnesses-abi.json"
+        abi = "packages/fuels/tests/predicates/predicate_witnesses/out/release/predicate_witnesses-abi.json"
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 1)?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        "tests/predicates/predicate_witnesses/out/debug/predicate_witnesses.bin",
+        "tests/predicates/predicate_witnesses/out/release/predicate_witnesses.bin",
     )?
     .with_data(predicate_data);
 
@@ -893,19 +939,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let tx_id = tx.id(provider.chain_id());
 
-    #[cfg(not(feature = "experimental"))]
-    let witness = ABIEncoder::default()
-        .encode(&[64u8.into_token()])?
-        .resolve(0);
-
-    #[cfg(feature = "experimental")]
-    let witness = ABIEncoder::default()
-        .encode(&[64u64.into_token()])? // u64 because this is VM memory
-        .resolve(0);
-
-    let witness2 = ABIEncoder::default()
-        .encode(&[4096u64.into_token()])?
-        .resolve(0);
+    let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
+    let witness2 = ABIEncoder::default().encode(&[4096u64.into_token()])?;
 
     tx.append_witness(witness.into())?;
     tx.append_witness(witness2.into())?;
@@ -923,7 +958,8 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 async fn predicate_encoder_config_is_applied() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
     {
         let _encoding_ok = MyPredicateEncoder::default()
@@ -978,10 +1014,11 @@ async fn predicate_validation() -> Result<()> {
 
     abigen!(Predicate(
         name = "MyPredicate",
-        abi = "packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate-abi.json"
+        abi =
+            "packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
     let code_path =
-        "../../packages/fuels/tests/predicates/basic_predicate/out/debug/basic_predicate.bin";
+        "../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin";
 
     // the predicate evaluates to true if the two arguments are equal
     let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;

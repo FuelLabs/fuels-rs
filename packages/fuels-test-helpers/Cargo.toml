@@ -10,8 +10,8 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK test helpers."
 
 [dependencies]
-fuel-core = { workspace = true, default-features = false, optional = true }
-fuel-core-chain-config = { workspace = true }
+fuel-core = { workspace = true, default-features = false, features = ["test-helpers"], optional = true }
+fuel-core-chain-config = { workspace = true, features = ["test-helpers"] }
 fuel-core-client = { workspace = true }
 fuel-core-poa = { workspace = true }
 fuel-core-services = { workspace = true }
@@ -21,17 +21,13 @@ fuel-types = { workspace = true, features = ["random"] }
 fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
 futures = { workspace = true }
-hex = { workspace = true, default-features = false, features = ["std", "serde"] }
 portpicker = { workspace = true }
 rand = { workspace = true, default-features = false }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true, features = ["raw_value"] }
-serde_with = { workspace = true }
 tempfile = { workspace = true, default-features = false }
 tokio = { workspace = true, default-features = false }
 which = { workspace = true, default-features = false }
 
 [features]
 default = ["fuels-accounts", "std"]
-std = ["fuels-accounts?/std", "fuels-core/std"]
-fuel-core-lib = ["fuel-core"]
+std = ["fuels-accounts?/std", "fuels-core/std", "fuel-core-chain-config/std"]
+fuel-core-lib = ["dep:fuel-core"]

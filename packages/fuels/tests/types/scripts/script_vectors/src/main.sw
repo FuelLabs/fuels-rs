@@ -17,6 +17,7 @@ fn main(
     vec_in_array: [Vec<u32>; 2],
     vec_in_enum: SomeEnum<Vec<u32>>,
     enum_in_vec: Vec<SomeEnum<u32>>,
+    b256_in_vec: Vec<b256>,
     tuple_in_vec: Vec<(u32, u32)>,
     vec_in_tuple: (Vec<u32>, Vec<u32>),
     vec_in_a_vec_in_a_struct_in_a_vec: Vec<SomeStruct<Vec<Vec<u32>>>>,
@@ -71,6 +72,13 @@ fn main(
         exp_enum_in_vec.push(SomeEnum::a(1u32));
 
         require(enum_in_vec == exp_enum_in_vec, "enum_in_vec err");
+    }
+    {
+        let mut exp_b256_in_vec = Vec::new();
+        exp_b256_in_vec.push(0x0202020202020202020202020202020202020202020202020202020202020202);
+        exp_b256_in_vec.push(0x0202020202020202020202020202020202020202020202020202020202020202);
+
+        require(b256_in_vec == exp_b256_in_vec, "b256_in_vec err");
     }
     {
         let mut exp_tuple_in_vec = Vec::new();

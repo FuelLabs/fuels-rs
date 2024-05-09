@@ -5,7 +5,7 @@ use std::hash::Hash;
 use fuel_tx::{TxPointer, UtxoId};
 use fuel_types::{Bytes32, ContractId};
 
-use crate::types::{coin_type::CoinType, unresolved_bytes::UnresolvedBytes};
+use crate::types::coin_type::CoinType;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Input {
@@ -15,7 +15,7 @@ pub enum Input {
     ResourcePredicate {
         resource: CoinType,
         code: Vec<u8>,
-        data: UnresolvedBytes,
+        data: Vec<u8>,
     },
     Contract {
         utxo_id: UtxoId,
@@ -31,11 +31,7 @@ impl Input {
         Self::ResourceSigned { resource }
     }
 
-    pub const fn resource_predicate(
-        resource: CoinType,
-        code: Vec<u8>,
-        data: UnresolvedBytes,
-    ) -> Self {
+    pub const fn resource_predicate(resource: CoinType, code: Vec<u8>, data: Vec<u8>) -> Self {
         Self::ResourcePredicate {
             resource,
             code,

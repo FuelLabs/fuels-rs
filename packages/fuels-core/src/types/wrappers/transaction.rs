@@ -13,9 +13,9 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
-    Buildable, Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks,
-    Input, Mint, Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction,
-    TransactionFee, UniqueIdentifier, Witness,
+    Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
+    Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
+    UniqueIdentifier, Upgrade, Upload, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, AssetId, ChainId};
 use fuel_vm::checked_transaction::{
@@ -27,7 +27,7 @@ use crate::{
     traits::Signer,
     types::{
         bech32::Bech32Address,
-        errors::{error_transaction, Result},
+        errors::{error, error_transaction, Result},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -99,6 +99,84 @@ impl MintTransaction {
     #[must_use]
     pub fn mint_amount(&self) -> u64 {
         *self.tx.mint_amount()
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct UploadTransaction {
+    tx: Box<Upload>,
+}
+
+impl From<UploadTransaction> for FuelTransaction {
+    fn from(upload: UploadTransaction) -> Self {
+        (*upload.tx).into()
+    }
+}
+
+impl From<UploadTransaction> for Upload {
+    fn from(tx: UploadTransaction) -> Self {
+        *tx.tx
+    }
+}
+
+impl From<Upload> for UploadTransaction {
+    fn from(tx: Upload) -> Self {
+        Self { tx: Box::new(tx) }
+    }
+}
+
+impl UploadTransaction {
+    pub fn check_without_signatures(
+        &self,
+        block_height: u32,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()> {
+        Ok(self
+            .tx
+            .check_without_signatures(block_height.into(), consensus_parameters)?)
+    }
+    #[must_use]
+    pub fn id(&self, chain_id: ChainId) -> Bytes32 {
+        self.tx.id(&chain_id)
+    }
+}
+
+#[derive(Default, Debug, Clone, PartialEq, Eq)]
+pub struct UpgradeTransaction {
+    tx: Upgrade,
+}
+
+impl From<UpgradeTransaction> for FuelTransaction {
+    fn from(upload: UpgradeTransaction) -> Self {
+        upload.tx.into()
+    }
+}
+
+impl From<UpgradeTransaction> for Upgrade {
+    fn from(tx: UpgradeTransaction) -> Self {
+        tx.tx
+    }
+}
+
+impl From<Upgrade> for UpgradeTransaction {
+    fn from(tx: Upgrade) -> Self {
+        Self { tx }
+    }
+}
+
+impl UpgradeTransaction {
+    pub fn check_without_signatures(
+        &self,
+        block_height: u32,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<()> {
+        Ok(self
+            .tx
+            .check_without_signatures(block_height.into(), consensus_parameters)?)
+    }
+    #[must_use]
+    pub fn id(&self, chain_id: ChainId) -> Bytes32 {
+        self.tx.id(&chain_id)
     }
 }
 
@@ -176,7 +254,7 @@ impl TxPolicies {
     }
 }
 
-use fuel_tx::field::{BytecodeLength, BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -185,6 +263,8 @@ pub enum TransactionType {
     Script(ScriptTransaction),
     Create(CreateTransaction),
     Mint(MintTransaction),
+    Upload(UploadTransaction),
+    Upgrade(UpgradeTransaction),
 }
 
 pub trait EstimablePredicates: sealed::Sealed {
@@ -273,6 +353,8 @@ impl From<TransactionType> for FuelTransaction {
             TransactionType::Script(tx) => tx.into(),
             TransactionType::Create(tx) => tx.into(),
             TransactionType::Mint(tx) => tx.into(),
+            TransactionType::Upload(tx) => tx.into(),
+            TransactionType::Upgrade(tx) => tx.into(),
         }
     }
 }
@@ -373,7 +455,7 @@ macro_rules! impl_tx_wrapper {
                 gas_price: u64,
             ) -> Option<TransactionFee> {
                 TransactionFee::checked_from_tx(
-                    &consensus_parameters.gas_costs,
+                    &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
                     &self.tx,
                     gas_price,
@@ -426,9 +508,12 @@ macro_rules! impl_tx_wrapper {
             }
 
             fn append_witness(&mut self, witness: Witness) -> Result<usize> {
-                let new_witnesses_size = padded_len_usize(calculate_witnesses_size(
+                let witness_size = calculate_witnesses_size(
                     self.tx.witnesses().iter().chain(std::iter::once(&witness)),
-                )) as u64;
+                );
+                let new_witnesses_size = padded_len_usize(witness_size)
+                    .ok_or_else(|| error!(Other, "witness size overflow: {witness_size}"))?
+                    as u64;
 
                 if new_witnesses_size > self.tx.witness_limit() {
                     Err(error_transaction!(
@@ -500,16 +585,12 @@ impl CreateTransaction {
         self.tx.salt()
     }
 
-    pub fn bytecode_witness_index(&self) -> u8 {
+    pub fn bytecode_witness_index(&self) -> u16 {
         *self.tx.bytecode_witness_index()
     }
 
     pub fn storage_slots(&self) -> &Vec<StorageSlot> {
         self.tx.storage_slots()
-    }
-
-    pub fn bytecode_length(&self) -> u64 {
-        *self.tx.bytecode_length()
     }
 }
 
@@ -556,7 +637,7 @@ impl ScriptTransaction {
     }
 
     pub fn with_gas_limit(mut self, gas_limit: u64) -> Self {
-        self.tx.set_script_gas_limit(gas_limit);
+        *self.tx.script_gas_limit_mut() = gas_limit;
         self
     }
 }

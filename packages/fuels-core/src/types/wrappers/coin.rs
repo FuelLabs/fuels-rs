@@ -41,10 +41,10 @@ impl From<ClientCoin> for Coin {
 impl From<Coin> for CoinConfig {
     fn from(coin: Coin) -> CoinConfig {
         Self {
-            tx_id: Some(*coin.utxo_id.tx_id()),
-            output_index: Some(coin.utxo_id.output_index()),
-            tx_pointer_block_height: Some(coin.block_created.into()),
-            tx_pointer_tx_idx: None,
+            tx_id: *coin.utxo_id.tx_id(),
+            output_index: coin.utxo_id.output_index(),
+            tx_pointer_block_height: coin.block_created.into(),
+            tx_pointer_tx_idx: Default::default(),
             owner: coin.owner.into(),
             amount: coin.amount,
             asset_id: coin.asset_id,

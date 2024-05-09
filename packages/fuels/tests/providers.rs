@@ -1,10 +1,10 @@
-use std::{ops::Add, str::FromStr};
+use std::ops::Add;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_core::chain_config::StateConfig;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
-    crypto::SecretKey,
     prelude::*,
     tx::Receipt,
     types::{
@@ -22,7 +22,7 @@ use fuels::{
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -37,7 +37,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -68,13 +68,15 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
 
-    let config = Config::default();
-    let service = FuelService::start(config).await?;
+    let node_config = NodeConfig::default();
+    let chain_config = ChainConfig::default();
+    let state_config = StateConfig::default();
+    let service = FuelService::start(node_config, chain_config, state_config).await?;
     let provider = Provider::connect(service.bound_address().to_string()).await?;
 
     wallet.set_provider(provider);
@@ -83,7 +85,7 @@ async fn test_network_error() -> Result<()> {
     service.stop().await.unwrap();
 
     let response = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -170,11 +172,11 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
+        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
+        "tests/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -218,12 +220,12 @@ async fn can_increase_block_height() -> Result<()> {
 async fn can_set_custom_block_time() -> Result<()> {
     // ANCHOR: use_produce_blocks_custom_time
     let block_time = 20u32; // seconds
-    let config = Config {
+    let config = NodeConfig {
         // This is how you specify the time between blocks
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)
@@ -277,7 +279,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/debug/transaction_block_height-abi.json"));
+    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
@@ -286,7 +288,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
     let deploy_w_maturity = |maturity| {
         Contract::load_from(
-            "tests/contracts/transaction_block_height/out/debug/transaction_block_height.bin",
+            "tests/contracts/transaction_block_height/out/release/transaction_block_height.bin",
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
@@ -327,10 +329,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
     );
 
     // The gas used by the script to call a contract and forward remaining gas limit.
-    #[cfg(not(feature = "experimental"))]
-    let gas_used_by_script = 364;
-    #[cfg(feature = "experimental")]
-    let gas_used_by_script = 876;
+    let gas_used_by_script = 252;
     let gas_limit = 225_883;
     let response = contract_instance
         .methods()
@@ -415,7 +414,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
 
     // withdraw some tokens to wallet
     contract_methods
-        .transfer_coins_to_output(1_000_000, asset_id, address)
+        .transfer(1_000_000, asset_id, address.into())
         .append_variable_outputs(1)
         .call()
         .await?;
@@ -447,6 +446,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         call_response.unwrap().asset_id().unwrap(),
         &AssetId::from(*contract_id.hash())
     );
+
     Ok(())
 }
 
@@ -508,7 +508,7 @@ async fn test_gas_errors() -> Result<()> {
         .await
         .expect_err("should error");
 
-    let expected = "provider: Response errors; Validity(InsufficientFeeAmount";
+    let expected = "provider: io error: Response errors; Validity(InsufficientFeeAmount";
     assert!(response.to_string().contains(expected));
 
     Ok(())
@@ -579,67 +579,6 @@ async fn test_get_gas_used() -> Result<()> {
         .gas_used;
 
     assert!(gas_used > 0);
-    Ok(())
-}
-
-#[tokio::test]
-#[ignore]
-async fn testnet_hello_world() -> Result<()> {
-    use rand::Rng;
-
-    // Note that this test might become flaky.
-    // This test depends on:
-    // 1. The testnet being up and running;
-    // 2. The testnet address being the same as the one in the test;
-    // 3. The hardcoded wallet having enough funds to pay for the transaction.
-    // This is a nice test to showcase the SDK interaction with
-    // the testnet. But, if it becomes too problematic, we should remove it.
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/debug/contract_test-abi.json"
-    ));
-
-    // Create a provider pointing to the testnet.
-    let provider = Provider::connect("beta-4.fuel.network").await.unwrap();
-
-    // Setup the private key.
-    let secret =
-        SecretKey::from_str("a0447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")
-            .unwrap();
-
-    // Create the wallet.
-    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider));
-
-    let mut rng = rand::thread_rng();
-    let salt: [u8; 32] = rng.gen();
-    let configuration = LoadConfiguration::default().with_salt(salt);
-
-    let tx_policies = TxPolicies::default().with_script_gas_limit(2000);
-
-    let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/debug/contract_test.bin",
-        configuration,
-    )?
-    .deploy(&wallet, tx_policies)
-    .await?;
-
-    let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
-
-    let response = contract_methods
-        .initialize_counter(42)
-        .with_tx_policies(tx_policies)
-        .call()
-        .await?;
-
-    assert_eq!(42, response.value);
-
-    let response = contract_methods
-        .increment_counter(10)
-        .with_tx_policies(tx_policies)
-        .call()
-        .await?;
-
-    assert_eq!(52, response.value);
     Ok(())
 }
 
@@ -752,11 +691,11 @@ fn convert_to_datetime(timestamp: u64) -> DateTime<Utc> {
 #[tokio::test]
 async fn test_sway_timestamp() -> Result<()> {
     let block_time = 1u32; // seconds
-    let provider_config = Config {
+    let provider_config = NodeConfig {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(1), Some(100)),
@@ -833,7 +772,7 @@ async fn test_caching() -> Result<()> {
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
         WalletsConfig::new(Some(1), Some(num_coins), Some(amount)),
-        Some(Config::default()),
+        Some(NodeConfig::default()),
         None,
     )
     .await?;
@@ -889,11 +828,11 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     use fuels_core::types::tx_status::TxStatus;
 
     let block_time = 1u32;
-    let provider_config = Config {
+    let provider_config = NodeConfig {
         block_production: Trigger::Interval {
             block_time: std::time::Duration::from_secs(block_time.into()),
         },
-        ..Config::default()
+        ..NodeConfig::default()
     };
 
     // create wallet with 1 coin so that the cache prevents further
@@ -1036,9 +975,9 @@ async fn test_build_with_provider() -> Result<()> {
 
 #[tokio::test]
 async fn can_produce_blocks_with_trig_never() -> Result<()> {
-    let config = Config {
+    let config = NodeConfig {
         block_production: Trigger::Never,
-        ..Config::default()
+        ..NodeConfig::default()
     };
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), Some(config), None)

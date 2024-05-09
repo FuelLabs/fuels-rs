@@ -1,27 +1,26 @@
+use std::collections::VecDeque;
+
 use fuel_tx::{ContractId, Receipt};
 use fuels_core::{
     codec::{ABIDecoder, DecoderConfig},
     types::{
         bech32::Bech32ContractId,
         errors::{error, Error, Result},
-        param_types::{ParamType, ReturnLocation},
+        param_types::ParamType,
         Token,
     },
 };
-use itertools::Itertools;
 
 pub struct ReceiptParser {
-    receipts: Vec<Receipt>,
+    receipts: VecDeque<Receipt>,
     decoder: ABIDecoder,
 }
 
 impl ReceiptParser {
     pub fn new(receipts: &[Receipt], decoder_config: DecoderConfig) -> Self {
-        let relevant_receipts: Vec<Receipt> = receipts
+        let relevant_receipts = receipts
             .iter()
-            .filter(|receipt| {
-                matches!(receipt, Receipt::ReturnData { .. } | Receipt::Return { .. })
-            })
+            .filter(|receipt| matches!(receipt, Receipt::ReturnData { .. } | Receipt::Call { .. }))
             .cloned()
             .collect();
 
@@ -31,23 +30,23 @@ impl ReceiptParser {
         }
     }
 
-    /// Based on receipts returned by a script transaction, the contract ID (in the case of a contract call),
+    /// Based on receipts returned by a script transaction, the contract ID,
     /// and the output param, parse the values and return them as Token.
-    pub fn parse(
+    pub fn parse_call(
         &mut self,
-        contract_id: Option<&Bech32ContractId>,
+        contract_id: &Bech32ContractId,
         output_param: &ParamType,
     ) -> Result<Token> {
-        let contract_id = contract_id
-            .map(Into::into)
-            // During a script execution, the script's contract id is the **null** contract id
-            .unwrap_or_else(ContractId::zeroed);
-
-        #[cfg(not(feature = "experimental"))]
-        output_param.validate_is_decodable(self.decoder.config.max_depth)?;
-
         let data = self
-            .extract_raw_data(output_param, &contract_id)
+            .extract_contract_call_data(contract_id.into())
+            .ok_or_else(|| Self::missing_receipts_error(output_param))?;
+
+        self.decoder.decode(output_param, &data)
+    }
+
+    pub fn parse_script(self, output_param: &ParamType) -> Result<Token> {
+        let data = self
+            .extract_script_data()
             .ok_or_else(|| Self::missing_receipts_error(output_param))?;
 
         self.decoder.decode(output_param, &data)
@@ -60,129 +59,45 @@ impl ReceiptParser {
         )
     }
 
-    fn extract_raw_data(
-        &mut self,
-        output_param: &ParamType,
-        contract_id: &ContractId,
-    ) -> Option<Vec<u8>> {
-        #[cfg(not(feature = "experimental"))]
-        let extra_receipts_needed = output_param.is_extra_receipt_needed(true);
-        #[cfg(feature = "experimental")]
-        let extra_receipts_needed = false;
+    fn extract_contract_call_data(&mut self, target_contract: ContractId) -> Option<Vec<u8>> {
+        // If the script contains nested calls, we need to extract the data of the top-level call
+        let mut nested_calls_stack = vec![];
 
-        match output_param.get_return_location() {
-            ReturnLocation::ReturnData
-                if extra_receipts_needed && matches!(output_param, ParamType::Enum { .. }) =>
-            {
-                self.extract_enum_heap_type_data(contract_id)
-            }
-            ReturnLocation::ReturnData if extra_receipts_needed => {
-                self.extract_return_data_heap(contract_id)
-            }
-            ReturnLocation::ReturnData => self.extract_return_data(contract_id),
-            ReturnLocation::Return => self.extract_return(contract_id),
-        }
-    }
-
-    fn extract_enum_heap_type_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, (current_receipt, next_receipt)) in
-            self.receipts.iter().tuple_windows().enumerate()
-        {
-            if let (Some(first_data), Some(second_data)) =
-                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
-            {
-                let mut first_data = first_data.clone();
-                let mut second_data = second_data.clone();
-                self.receipts.drain(index..=index + 1);
-                first_data.append(&mut second_data);
-
-                return Some(first_data);
-            }
-        }
-        None
-    }
-
-    fn extract_return_data(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, receipt) in self.receipts.iter_mut().enumerate() {
-            if let Receipt::ReturnData {
-                id,
-                data: Some(data),
+        while let Some(receipt) = self.receipts.pop_front() {
+            if let Receipt::Call { to, .. } = receipt {
+                nested_calls_stack.push(to);
+            } else if let Receipt::ReturnData {
+                data,
+                id: return_id,
                 ..
             } = receipt
             {
-                if id == contract_id {
-                    let data = std::mem::take(data);
-                    self.receipts.remove(index);
-                    return Some(data);
+                let call_id = nested_calls_stack.pop();
+
+                // Somethings off if there is a mismatch between the call and return ids
+                debug_assert_eq!(call_id.unwrap(), return_id);
+
+                if nested_calls_stack.is_empty() {
+                    // The top-level call return should match our target contract
+                    debug_assert_eq!(target_contract, return_id);
+
+                    return data.clone();
                 }
             }
         }
+
         None
     }
 
-    fn extract_return(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        for (index, receipt) in self.receipts.iter_mut().enumerate() {
-            if let Receipt::Return { id, val, .. } = receipt {
-                if *id == *contract_id {
-                    let data = val.to_be_bytes().to_vec();
-                    self.receipts.remove(index);
-                    return Some(data);
-                }
-            }
-        }
-        None
-    }
-
-    fn extract_return_data_heap(&mut self, contract_id: &ContractId) -> Option<Vec<u8>> {
-        // If the output of the function is a vector, then there are 2 consecutive ReturnData
-        // receipts. The first one is the one that returns the pointer to the vec struct in the
-        // VM memory, the second one contains the actual vector bytes (that the previous receipt
-        // points to).
-        // We ensure to take the right "first" ReturnData receipt by checking for the
-        // contract_id. There are no receipts in between the two ReturnData receipts because of
-        // the way the scripts are built (the calling script adds a RETD just after the CALL
-        // opcode, see `get_single_call_instructions`).
-        for (index, (current_receipt, next_receipt)) in
-            self.receipts.iter().tuple_windows().enumerate()
-        {
-            if let (_stack_data, Some(heap_data)) =
-                Self::extract_heap_data_from_receipts(current_receipt, next_receipt, contract_id)
-            {
-                let data = heap_data.clone();
-                self.receipts.drain(index..=index + 1);
-                return Some(data);
-            }
-        }
-        None
-    }
-
-    fn extract_heap_data_from_receipts<'a>(
-        current_receipt: &'a Receipt,
-        next_receipt: &'a Receipt,
-        contract_id: &ContractId,
-    ) -> (Option<&'a Vec<u8>>, Option<&'a Vec<u8>>) {
-        match (current_receipt, next_receipt) {
-            (
-                Receipt::ReturnData {
-                    id: first_id,
-                    data: first_data,
-                    ..
-                },
-                Receipt::ReturnData {
-                    id: second_id,
-                    data: vec_data,
-                    ..
-                },
-            ) if *first_id == *contract_id
-                && first_data.is_some()
-                // The second ReturnData receipt was added by a script instruction, its contract id
-                // is null
-                && *second_id == ContractId::zeroed() =>
-            {
-                (first_data.as_ref(), vec_data.as_ref())
-            }
-            _ => (None, None),
-        }
+    fn extract_script_data(&self) -> Option<Vec<u8>> {
+        self.receipts.iter().find_map(|receipt| match receipt {
+            Receipt::ReturnData {
+                id,
+                data: Some(data),
+                ..
+            } if *id == ContractId::zeroed() => Some(data.clone()),
+            _ => None,
+        })
     }
 }
 
@@ -193,21 +108,11 @@ mod tests {
 
     use super::*;
 
-    const RECEIPT_VAL: u64 = 225;
     const RECEIPT_DATA: &[u8; 3] = &[8, 8, 3];
     const DECODED_DATA: &[u8; 3] = &[8, 8, 3];
 
     fn target_contract() -> ContractId {
         ContractId::from([1u8; 32])
-    }
-
-    fn get_return_receipt(id: ContractId, val: u64) -> Receipt {
-        Receipt::Return {
-            id,
-            val,
-            pc: Default::default(),
-            is: Default::default(),
-        }
     }
 
     fn get_return_data_receipt(id: ContractId, data: &[u8]) -> Receipt {
@@ -222,27 +127,31 @@ mod tests {
         }
     }
 
+    fn get_call_receipt(to: ContractId) -> Receipt {
+        Receipt::Call {
+            id: Default::default(),
+            to,
+            amount: Default::default(),
+            asset_id: Default::default(),
+            gas: Default::default(),
+            param1: Default::default(),
+            param2: Default::default(),
+            pc: Default::default(),
+            is: Default::default(),
+        }
+    }
+
     fn get_relevant_receipts() -> Vec<Receipt> {
+        let id = target_contract();
         vec![
-            get_return_receipt(Default::default(), Default::default()),
-            get_return_data_receipt(Default::default(), Default::default()),
+            get_call_receipt(id),
+            get_return_data_receipt(id, RECEIPT_DATA),
         ]
     }
 
     #[tokio::test]
     async fn receipt_parser_filters_receipts() -> Result<()> {
         let mut receipts = vec![
-            Receipt::Call {
-                id: Default::default(),
-                to: Default::default(),
-                amount: Default::default(),
-                asset_id: Default::default(),
-                gas: Default::default(),
-                param1: Default::default(),
-                param2: Default::default(),
-                pc: Default::default(),
-                is: Default::default(),
-            },
             Receipt::Revert {
                 id: Default::default(),
                 ra: Default::default(),
@@ -287,10 +196,10 @@ mod tests {
     #[tokio::test]
     async fn receipt_parser_empty_receipts() -> Result<()> {
         let receipts = [];
-        let output_param = ParamType::Unit;
+        let output_param = ParamType::U8;
 
         let error = ReceiptParser::new(&receipts, Default::default())
-            .parse(Default::default(), &output_param)
+            .parse_call(&target_contract().into(), &output_param)
             .expect_err("should error");
 
         let expected_error = ReceiptParser::missing_receipts_error(&output_param);
@@ -301,65 +210,50 @@ mod tests {
 
     #[tokio::test]
     async fn receipt_parser_extract_return_data() -> Result<()> {
-        let expected_receipts = get_relevant_receipts();
+        let receipts = get_relevant_receipts();
         let contract_id = target_contract();
 
-        let mut receipts = expected_receipts.clone();
-        receipts.push(get_return_data_receipt(contract_id, RECEIPT_DATA));
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
         let token = parser
-            .parse(Some(&contract_id.into()), &<[u8; 3]>::param_type())
+            .parse_call(&contract_id.into(), &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
 
         assert_eq!(&<[u8; 3]>::from_token(token)?, DECODED_DATA);
-        assert_eq!(parser.receipts, expected_receipts);
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn receipt_parser_extract_return() -> Result<()> {
-        let expected_receipts = get_relevant_receipts();
-        let contract_id = target_contract();
+    async fn receipt_parser_extracts_top_level_call_receipts() -> Result<()> {
+        const CORRECT_DATA_1: [u8; 3] = [1, 2, 3];
+        const CORRECT_DATA_2: [u8; 3] = [5, 6, 7];
 
-        let mut receipts = expected_receipts.clone();
-        #[cfg(not(feature = "experimental"))]
-        receipts.push(get_return_receipt(contract_id, RECEIPT_VAL));
-        #[cfg(feature = "experimental")] // all data is returned as RETD
-        receipts.push(get_return_data_receipt(
-            contract_id,
-            &RECEIPT_VAL.to_be_bytes(),
-        ));
+        let contract_top_lvl = target_contract();
+        let contract_nested = ContractId::from([9u8; 32]);
+
+        let receipts = vec![
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_nested, &[9, 9, 9]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA_1),
+            get_call_receipt(contract_top_lvl),
+            get_call_receipt(contract_nested),
+            get_return_data_receipt(contract_nested, &[7, 7, 7]),
+            get_return_data_receipt(contract_top_lvl, &CORRECT_DATA_2),
+        ];
+
         let mut parser = ReceiptParser::new(&receipts, Default::default());
 
-        let token = parser
-            .parse(Some(&contract_id.into()), &u64::param_type())
+        let token_1 = parser
+            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
+            .expect("parsing should succeed");
+        let token_2 = parser
+            .parse_call(&contract_top_lvl.into(), &<[u8; 3]>::param_type())
             .expect("parsing should succeed");
 
-        assert_eq!(u64::from_token(token)?, RECEIPT_VAL);
-        assert_eq!(parser.receipts, expected_receipts);
-
-        Ok(())
-    }
-
-    #[cfg(not(feature = "experimental"))]
-    #[tokio::test]
-    async fn receipt_parser_extract_return_data_heap() -> Result<()> {
-        let expected_receipts = get_relevant_receipts();
-        let contract_id = target_contract();
-
-        let mut receipts = expected_receipts.clone();
-        receipts.push(get_return_data_receipt(target_contract(), &[9, 9, 9]));
-        receipts.push(get_return_data_receipt(Default::default(), RECEIPT_DATA));
-        let mut parser = ReceiptParser::new(&receipts, Default::default());
-
-        let token = parser
-            .parse(Some(&contract_id.into()), &<Vec<u8>>::param_type())
-            .expect("parsing should succeed");
-
-        assert_eq!(&<Vec<u8>>::from_token(token)?, DECODED_DATA);
-        assert_eq!(parser.receipts, expected_receipts);
+        assert_eq!(&<[u8; 3]>::from_token(token_1)?, &CORRECT_DATA_1);
+        assert_eq!(&<[u8; 3]>::from_token(token_2)?, &CORRECT_DATA_2);
 
         Ok(())
     }

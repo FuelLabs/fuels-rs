@@ -1,8 +1,8 @@
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
-    types::Bits256,
 };
+use fuels_core::types::Identity;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -10,10 +10,10 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/debug/arguments-abi.json"
+        abi = "packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/scripts/arguments/out/debug/arguments.bin";
+    let bin_path = "../fuels/tests/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -97,61 +97,6 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
 }
 
 #[tokio::test]
-// Remove this test once the new encoding lands as the max_input will be irrelevant
-// for direct script calls as all script_data is `inline`
-// TODO: https://github.com/FuelLabs/fuels-rs/issues/1317
-async fn test_script_call_with_non_default_max_input() -> Result<()> {
-    use fuels::{
-        test_helpers::ChainConfig,
-        tx::{ConsensusParameters, TxParameters},
-        types::coin::Coin,
-    };
-
-    let consensus_parameters = ConsensusParameters {
-        tx_params: TxParameters::default().with_max_inputs(128),
-        ..Default::default()
-    };
-    let chain_config = ChainConfig {
-        consensus_parameters: consensus_parameters.clone(),
-        ..ChainConfig::default()
-    };
-
-    let mut wallet = WalletUnlocked::new_random(None);
-
-    let coins: Vec<Coin> = setup_single_asset_coins(
-        wallet.address(),
-        Default::default(),
-        DEFAULT_NUM_COINS,
-        DEFAULT_COIN_AMOUNT,
-    );
-
-    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
-    assert_eq!(*provider.consensus_parameters(), consensus_parameters);
-    wallet.set_provider(provider.clone());
-
-    setup_program_test!(
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let a = 4u64;
-    let b = 2u32;
-
-    let result = script_instance.main(a, b).call().await?;
-
-    assert_eq!(result.value, "heyoo");
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_output_variable_estimation() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
@@ -172,7 +117,11 @@ async fn test_output_variable_estimation() -> Result<()> {
 
     let amount = 1000;
     let asset_id = AssetId::zeroed();
-    let script_call = script_instance.main(amount, asset_id, receiver.address());
+    let script_call = script_instance.main(
+        amount,
+        asset_id,
+        Identity::Address(receiver.address().into()),
+    );
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
@@ -253,28 +202,6 @@ async fn test_script_array() -> Result<()> {
     let response = script_instance.main(my_array).call().await?;
 
     assert_eq!(response.value, 10);
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_script_b256() -> Result<()> {
-    setup_program_test!(
-        Wallets("wallet"),
-        Abigen(Script(
-            name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_b256"
-        )),
-        LoadScript(
-            name = "script_instance",
-            script = "MyScript",
-            wallet = "wallet"
-        )
-    );
-
-    let my_b256 = Bits256([1; 32]);
-    let response = script_instance.main(my_b256).call().await?;
-
-    assert!(response.value);
     Ok(())
 }
 
@@ -397,10 +324,10 @@ async fn test_script_transaction_builder() -> Result<()> {
 async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/basic_script/out/debug/basic_script-abi.json"
+        abi = "packages/fuels/tests/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
-    let bin_path = "../fuels/tests/scripts/basic_script/out/debug/basic_script.bin";
+    let bin_path = "../fuels/tests/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
     {

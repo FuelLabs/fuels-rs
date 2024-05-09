@@ -18,6 +18,7 @@ fn main(
     vec_in_array: [Vec<u32>; 2],
     vec_in_enum: SomeEnum<Vec<u32>>,
     enum_in_vec: Vec<SomeEnum<u32>>,
+    b256_in_vec: Vec<b256>,
     tuple_in_vec: Vec<(u32, u32)>,
     vec_in_tuple: (Vec<u32>, Vec<u32>),
     vec_in_a_vec_in_a_struct_in_a_vec: Vec<SomeStruct<Vec<Vec<u32>>>>,
@@ -49,6 +50,11 @@ fn main(
     } else {
         result = false;
     }
+
+    result = result
+        && (b256_in_vec
+                .get(1)
+                .unwrap() == 0x0202020202020202020202020202020202020202020202020202020202020202);
 
     result = result && (tuple_in_vec.get(1).unwrap().0 == 128u32);
 

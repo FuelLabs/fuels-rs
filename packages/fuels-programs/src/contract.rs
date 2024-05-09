@@ -22,7 +22,6 @@ use fuels_core::{
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
         tx_status::TxStatus,
-        unresolved_bytes::UnresolvedBytes,
         Selector, Token,
     },
     Configurables,
@@ -240,7 +239,7 @@ impl LoadConfiguration {
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Contract {
     binary: Vec<u8>,
     salt: Salt,
@@ -406,10 +405,9 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 /// Contains all data relevant to a single contract call
 pub struct ContractCall {
     pub contract_id: Bech32ContractId,
-    pub encoded_args: Result<UnresolvedBytes>,
+    pub encoded_args: Result<Vec<u8>>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub compute_custom_input_offset: bool,
     pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
@@ -649,10 +647,11 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts, self.decoder_config).parse(
-            Some(&self.contract_call.contract_id),
+        let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
+            &self.contract_call.contract_id,
             &self.contract_call.output_param,
         )?;
+
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
             receipts,
@@ -715,29 +714,17 @@ where
 pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
     contract_id: Bech32ContractId,
     account: T,
-    signature: Selector,
+    encoded_selector: Selector,
     args: &[Token],
     log_decoder: LogDecoder,
     is_payable: bool,
     encoder_config: EncoderConfig,
 ) -> ContractCallHandler<T, D> {
-    let encoded_selector = signature;
-
-    let tx_policies = TxPolicies::default();
-    let call_parameters = CallParameters::default();
-
-    #[cfg(not(feature = "experimental"))]
-    let compute_custom_input_offset = should_compute_custom_input_offset(args);
-    #[cfg(feature = "experimental")]
-    let compute_custom_input_offset = true;
-
-    let unresolved_bytes = ABIEncoder::new(encoder_config).encode(args);
     let contract_call = ContractCall {
         contract_id,
         encoded_selector,
-        encoded_args: unresolved_bytes,
-        call_parameters,
-        compute_custom_input_offset,
+        encoded_args: ABIEncoder::new(encoder_config).encode(args),
+        call_parameters: CallParameters::default(),
         variable_outputs: vec![],
         external_contracts: vec![],
         output_param: D::param_type(),
@@ -747,39 +734,13 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
 
     ContractCallHandler {
         contract_call,
-        tx_policies,
+        tx_policies: TxPolicies::default(),
         cached_tx_id: None,
         account,
         datatype: PhantomData,
         log_decoder,
-        decoder_config: Default::default(),
+        decoder_config: DecoderConfig::default(),
     }
-}
-
-// If the data passed into the contract method is an integer or a
-// boolean, then the data itself should be passed. Otherwise, it
-// should simply pass a pointer to the data in memory.
-#[cfg(not(feature = "experimental"))]
-fn should_compute_custom_input_offset(args: &[Token]) -> bool {
-    args.len() > 1
-        || args.iter().any(|t| {
-            matches!(
-                t,
-                Token::Array(_)
-                    | Token::B256(_)
-                    | Token::Bytes(_)
-                    | Token::Enum(_)
-                    | Token::RawSlice(_)
-                    | Token::Struct(_)
-                    | Token::Tuple(_)
-                    | Token::U128(_)
-                    | Token::U256(_)
-                    | Token::Vector(_)
-                    | Token::StringArray(_)
-                    | Token::StringSlice(_)
-                    | Token::String(_)
-            )
-        })
 }
 
 #[derive(Debug)]
@@ -839,35 +800,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             ));
         }
 
-        let number_of_heap_type_calls = self
-            .contract_calls
-            .iter()
-            .filter(|cc| cc.output_param.is_extra_receipt_needed(true))
-            .count();
-
-        match number_of_heap_type_calls {
-            0 => Ok(()),
-            1 => {
-                if self
-                    .contract_calls
-                    .last()
-                    .expect("is not empty")
-                    .output_param
-                    .is_extra_receipt_needed(true)
-                {
-                    Ok(())
-                } else {
-                    Err(error!(
-                        Other,
-                        "the contract call with the heap type return must be at the last position"
-                    ))
-                }
-            }
-            _ => Err(error!(
-                Other,
-                "`MultiContractCallHandler` can have only one call that returns a heap type"
-            )),
-        }
+        Ok(())
     }
 
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
@@ -969,7 +902,7 @@ impl<T: Account> MultiContractCallHandler<T> {
         let final_tokens = self
             .contract_calls
             .iter()
-            .map(|call| receipt_parser.parse(Some(&call.contract_id), &call.output_param))
+            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);

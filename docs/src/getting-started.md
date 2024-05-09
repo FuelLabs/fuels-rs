@@ -28,7 +28,7 @@ forc init
 ### Adding a Rust integration test to the Sway project
 
 Now that we have a new project, we can add a Rust integration test using a `cargo generate` template.
-If `cargo generate` is not already installed, you can instal it with:
+If `cargo generate` is not already installed, you can install it with:
 
 <!-- This section should have the command to install cargo generate -->
 <!-- cargo_gen_install:example:start -->
@@ -101,7 +101,7 @@ Another way to experience the SDK is to look at the source code. The `packages/f
 > To build these tests, run the following command:
 
 ```shell
-forc build --path packages/fuels
+forc build --release --path packages/fuels
 ```
 
 > `forc` can also be used to clean and format the test projects. Check the `help` output for more info.

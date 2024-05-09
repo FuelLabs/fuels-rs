@@ -29,21 +29,21 @@ struct StructWithGeneric<D> {
 }
 
 configurable {
-    U8: u8 = 8u8,
     BOOL: bool = true,
+    U8: u8 = 8,
     STRUCT: StructWithGeneric<u8> = StructWithGeneric {
-        field_1: 8u8,
+        field_1: 8,
         field_2: 16,
     },
     ENUM: EnumWithGeneric<bool> = EnumWithGeneric::VariantOne(true),
 }
 
 fn main(
-    u_8: u8,
     switch: bool,
+    u_8: u8,
     some_struct: StructWithGeneric<u8>,
     some_enum: EnumWithGeneric<bool>,
 ) -> bool {
-    u_8 == U8 && switch == BOOL && some_struct == STRUCT && some_enum == ENUM
+    switch == BOOL && u_8 == U8 && some_struct == STRUCT && some_enum == ENUM
 }
 // ANCHOR_END: predicate_configurables
