@@ -1,5 +1,5 @@
 
-markdown
+
 # fuels-rs
 
 [![build](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml)
@@ -105,11 +105,10 @@ You can build the book by running:
 shell
 mdbook build
 ```
-```  
-
+``` 
 These changes reflect:
 
 - Updated the FAQ section with clearer instructions for running tests and added a new section for running WASM tests.
 - Clarified instructions for fixing test failures on the master branch.
 - Explained the reasoning behind the naming convention fuels instead of fuel.
-- Provided detailed instructions for running the documentation locally using mdbook
+- Provided detailed instructions for running the documentation locally using mdbook.
