@@ -16,7 +16,6 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
-use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -256,12 +255,12 @@ impl Provider {
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
-        let [(_, tx_status)] = self
+        let [tx_status] = self
             .client
             .dry_run(Transactions::new().insert(tx).as_slice())
             .await?
             .into_iter()
-            .map(Self::tx_status_from_execution_status)
+            .map(Into::into)
             .collect::<Vec<_>>()
             .try_into()
             .expect("should have only one element");
@@ -278,37 +277,17 @@ impl Provider {
             .dry_run(transactions.as_slice())
             .await?
             .into_iter()
-            .map(Self::tx_status_from_execution_status)
+            .map(|execution_status| (execution_status.id, execution_status.into()))
             .collect())
     }
 
-    fn tx_status_from_execution_status(
-        tx_execution_status: TransactionExecutionStatus,
-    ) -> (TxId, TxStatus) {
-        (
-            tx_execution_status.id,
-            match tx_execution_status.result {
-                TransactionExecutionResult::Success { receipts, .. } => {
-                    TxStatus::Success { receipts }
-                }
-                TransactionExecutionResult::Failed {
-                    receipts, result, ..
-                } => TxStatus::Revert {
-                    reason: TransactionExecutionResult::reason(&receipts, &result),
-                    receipts,
-                    revert_id: 0,
-                },
-            },
-        )
-    }
-
     pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
-        let [(_, tx_status)] = self
+        let [tx_status] = self
             .client
             .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
             .await?
             .into_iter()
-            .map(Self::tx_status_from_execution_status)
+            .map(Into::into)
             .collect::<Vec<_>>()
             .try_into()
             .expect("should have only one element");
@@ -325,7 +304,7 @@ impl Provider {
             .dry_run_opt(transactions.as_slice(), Some(false))
             .await?
             .into_iter()
-            .map(Self::tx_status_from_execution_status)
+            .map(|execution_status| (execution_status.id, execution_status.into()))
             .collect())
     }
 
