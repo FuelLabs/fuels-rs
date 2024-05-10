@@ -446,43 +446,34 @@ async fn test_require_log() -> Result<()> {
         ),
     );
 
-    let contract_methods = contract_instance.methods();
-    {
-        let error = contract_methods
-            .require_primitive()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    macro_rules! reverts_with_msg {
+        ($method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("42", error);
+            assert_revert_containing_msg($msg, error);
+        };
     }
-    {
-        let error = contract_methods
-            .require_string()
-            .call()
-            .await
-            .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("fuel", error);
-    }
-    {
-        let error = contract_methods
-            .require_custom_generic()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(require_primitive, call, "42");
+    reverts_with_msg!(require_primitive, simulate, "42");
 
-        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
-    }
-    {
-        let error = contract_methods
-            .require_with_additional_logs()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(require_string, call, "fuel");
+    reverts_with_msg!(require_string, simulate, "fuel");
 
-        assert_revert_containing_msg("64", error);
-    }
+    reverts_with_msg!(require_custom_generic, call, "StructDeeplyNestedGeneric");
+    reverts_with_msg!(
+        require_custom_generic,
+        simulate,
+        "StructDeeplyNestedGeneric"
+    );
+
+    reverts_with_msg!(require_with_additional_logs, call, "64");
+    reverts_with_msg!(require_with_additional_logs, simulate, "64");
 
     Ok(())
 }
@@ -517,6 +508,13 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("fuel", error);
+
+        let error = multi_call_handler
             .call::<((), ())>()
             .await
             .expect_err("should return a revert error");
@@ -532,6 +530,13 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         multi_call_handler
             .add_call(call_handler_1)
             .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
 
         let error = multi_call_handler
             .call::<((), ())>()
@@ -580,6 +585,13 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("fuel", error);
+
+        let error = multi_call_handler
             .call::<((), ())>()
             .await
             .expect_err("should return a revert error");
@@ -595,6 +607,13 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         multi_call_handler
             .add_call(call_handler_1)
             .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
 
         let error = multi_call_handler
             .call::<((), ())>()
@@ -897,42 +916,36 @@ async fn test_script_require_log() -> Result<()> {
         )
     );
 
-    {
-        let error = script_instance
-            .main(MatchEnum::RequirePrimitive)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_revert_containing_msg("42", error);
+    macro_rules! reverts_with_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireString)
-            .call()
-            .await
-            .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("fuel", error);
-    }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireCustomGeneric)
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(MatchEnum::RequirePrimitive, call, "42");
+    reverts_with_msg!(MatchEnum::RequirePrimitive, simulate, "42");
 
-        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
-    }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireWithAdditionalLogs)
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(MatchEnum::RequireString, call, "fuel");
+    reverts_with_msg!(MatchEnum::RequireString, simulate, "fuel");
 
-        assert_revert_containing_msg("64", error);
-    }
+    reverts_with_msg!(
+        MatchEnum::RequireCustomGeneric,
+        call,
+        "StructDeeplyNestedGeneric"
+    );
+    reverts_with_msg!(
+        MatchEnum::RequireCustomGeneric,
+        simulate,
+        "StructDeeplyNestedGeneric"
+    );
+
+    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, call, "64");
+    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, simulate, "64");
 
     Ok(())
 }
@@ -1099,28 +1112,38 @@ async fn test_contract_asserts_log() -> Result<()> {
             wallet = "wallet"
         ),
     );
-    let contract_methods = contract_instance.methods();
-    {
-        let a = 32;
-        let b = 64;
 
-        let error = contract_methods
-            .assert_primitive(a, b)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_revert_containing_msg("assertion failed", error);
+    macro_rules! reverts_with_msg {
+        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
     {
-        let a = 32;
-        let b = 64;
+        reverts_with_msg!((32, 64,), assert_primitive, call, "assertion failed");
+        reverts_with_msg!((32, 64,), assert_primitive, simulate, "assertion failed");
+    }
 
-        let error = contract_methods
-            .assert_eq_primitive(a, b)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_assert_eq_containing_msg(a, b, error);
+    macro_rules! reverts_with_assert_eq_msg {
+        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_assert_eq_containing_msg($($arg,)* error);
+        }
+    }
+
+    {
+        reverts_with_assert_eq_msg!((32, 64,), assert_eq_primitive, call, "assertion failed");
+        reverts_with_assert_eq_msg!((32, 64,), assert_eq_primitive, simulate, "assertion failed");
     }
     {
         let test_struct = TestStruct {
@@ -1133,24 +1156,36 @@ async fn test_contract_asserts_log() -> Result<()> {
             field_2: 32,
         };
 
-        let error = contract_methods
-            .assert_eq_struct(test_struct.clone(), test_struct2.clone())
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+        reverts_with_assert_eq_msg!(
+            (test_struct.clone(), test_struct2.clone(),),
+            assert_eq_struct,
+            call,
+            "assertion failed"
+        );
+
+        reverts_with_assert_eq_msg!(
+            (test_struct.clone(), test_struct2.clone(),),
+            assert_eq_struct,
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
+        reverts_with_assert_eq_msg!(
+            (test_enum.clone(), test_enum2.clone(),),
+            assert_eq_enum,
+            call,
+            "assertion failed"
+        );
 
-        let error = contract_methods
-            .assert_eq_enum(test_enum.clone(), test_enum2.clone())
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+        reverts_with_assert_eq_msg!(
+            (test_enum.clone(), test_enum2.clone(),),
+            assert_eq_enum,
+            simulate,
+            "assertion failed"
+        );
     }
 
     Ok(())
@@ -1170,29 +1205,50 @@ async fn test_script_asserts_log() -> Result<()> {
             wallet = "wallet"
         )
     );
-    {
-        let a = 32;
-        let b = 64;
+    macro_rules! reverts_with_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+    }
 
-        let error = script_instance
-            .main(MatchEnum::AssertPrimitive((a, b)))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_revert_containing_msg("assertion failed", error);
+    macro_rules! reverts_with_assert_eq_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
     {
-        let a = 32;
-        let b = 64;
-
-        let error = script_instance
-            .main(MatchEnum::AssertEqPrimitive((a, b)))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(a, b, error);
+        reverts_with_msg!(
+            MatchEnum::AssertPrimitive((32, 64)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_msg!(
+            MatchEnum::AssertPrimitive((32, 64)),
+            simulate,
+            "assertion failed"
+        );
+    }
+    {
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqPrimitive((32, 64)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqPrimitive((32, 64)),
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_struct = TestStruct {
@@ -1204,32 +1260,31 @@ async fn test_script_asserts_log() -> Result<()> {
             field_1: false,
             field_2: 32,
         };
-
-        let error = script_instance
-            .main(MatchEnum::AssertEqStruct((
-                test_struct.clone(),
-                test_struct2.clone(),
-            )))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
 
-        let error = script_instance
-            .main(MatchEnum::AssertEqEnum((
-                test_enum.clone(),
-                test_enum2.clone(),
-            )))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
+            simulate,
+            "assertion failed"
+        );
     }
 
     Ok(())
@@ -1255,6 +1310,13 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         let contract_id = contract_instance.contract_id();
         let asset_id = contract_id.asset_id(&Bits256::zeroed());
         let address = wallet.address();
+
+        let error = contract_methods
+            .transfer(1_000_000, asset_id, address.into())
+            .simulate()
+            .await
+            .expect_err("should return a revert error");
+        assert_revert_containing_msg("failed transfer to address", error);
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())

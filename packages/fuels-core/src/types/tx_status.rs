@@ -4,6 +4,8 @@ use fuel_abi_types::error_codes::{
 };
 #[cfg(feature = "std")]
 use fuel_core_client::client::types::TransactionStatus as ClientTransactionStatus;
+#[cfg(feature = "std")]
+use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
 use fuel_tx::Receipt;
 #[cfg(feature = "std")]
 use fuel_vm::state::ProgramState;
@@ -115,6 +117,31 @@ impl From<ClientTransactionStatus> for TxStatus {
                 }
             }
             ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
+        }
+    }
+}
+
+#[cfg(feature = "std")]
+impl From<TransactionExecutionStatus> for TxStatus {
+    fn from(value: TransactionExecutionStatus) -> Self {
+        match value.result {
+            TransactionExecutionResult::Success { receipts, .. } => Self::Success { receipts },
+            TransactionExecutionResult::Failed {
+                result, receipts, ..
+            } => {
+                let revert_id = result
+                    .and_then(|result| match result {
+                        ProgramState::Revert(revert_id) => Some(revert_id),
+                        _ => None,
+                    })
+                    .expect("Transaction failed without a `revert_id`");
+                let reason = TransactionExecutionResult::reason(&receipts, &result);
+                Self::Revert {
+                    receipts,
+                    reason,
+                    revert_id,
+                }
+            }
         }
     }
 }
