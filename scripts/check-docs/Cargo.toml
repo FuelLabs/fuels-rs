@@ -1,15 +1,15 @@
 [package]
 name = "check-docs"
-version = { workspace = true }
-authors = { workspace = true }
-edition = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
+version = "v0.61.0"
+authors = [" Ali sher"]
+edition = "2024"
+homepage = "https://github.com/freelancer5728"
+license = "Null"
 publish = false
-repository = { workspace = true }
-rust-version = { workspace = true }
+repository = "https://github.com/freelancer5728/fuels-rs"
+rust-version = "1.54.0"
 
 [dependencies]
 anyhow = "1.0.75"
-itertools = { workspace = true }
-regex = { workspace = true }
+itertools = "0.10.0"  # Update with the desired version
+regex = "1.5.4"        # Update with the desired version

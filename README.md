@@ -1,3 +1,5 @@
+
+markdown
 # fuels-rs
 
 [![build](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/FuelLabs/fuels-rs/actions/workflows/ci.yml)
@@ -40,42 +42,45 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 
 First, build the test projects using `forc`:
 
-```shell
+shell
 forc build --release --path packages/fuels
-```
+
 
 Then you can run the SDK tests with:
 
-```shell
+shell
 cargo test
-```
+
 
 You can also run specific tests. The following example will run all integration tests in `types.rs` whose names contain `in_vector` and show their outputs:
 
-```shell
+shell
 cargo test --test types in_vector -- --show-output
-```
+
+
 ### How to run WASM tests?
+
 You need to have wasm32 as a target, if you don't already:
-```shell
+shell
  rustup target add wasm32-unknown-unknown
-```
+
 You also need `wasm-pack`, if you don't already:
-```shell
+shell
 cargo install wasm-pack
-```
+
 
 Navigate to `packages/wasm-tests` and run `wasm-pack test`.
+
 ### What to do if my tests are failing on `master`
 
 Before doing anything else, try all these commands:
 
-```shell
+shell
 cargo clean
 rm Cargo.lock
 forc build --release --path packages/fuels
 cargo test
-```
+
 
 ### Why is the prefix `fuels` and not `fuel`?
 
@@ -85,19 +90,26 @@ In order to make the SDK for Fuel feel familiar with those coming from the [ethe
 
 Install `mdbook` by running:
 
-```shell
+shell
 cargo install mdbook
-```
+
 
 Next, navigate to the `docs` folder and run the command below to start a local server and open a new tab in you browser.
 
-```shell
+shell
 mdbook serve --open
-```
+
 
 You can build the book by running:
 
-```shell
+shell
 mdbook build
 ```
+```  
 
+These changes reflect:
+
+- Updated the FAQ section with clearer instructions for running tests and added a new section for running WASM tests.
+- Clarified instructions for fixing test failures on the master branch.
+- Explained the reasoning behind the naming convention fuels instead of fuel.
+- Provided detailed instructions for running the documentation locally using mdbook

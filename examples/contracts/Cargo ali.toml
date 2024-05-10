@@ -1,0 +1,18 @@
+[package]
+name = "fuels-example-contracts"
+version = "0.1.0"
+authors = ["Ali sher"]
+edition = "2024"
+homepage = "https://github.com/freelancer5728"
+license = "Nill"
+repository = "https://github.com/freelancer5728/fuels-rs"
+description = "Fuel Rust SDK contract examples."
+
+[dev-dependencies]
+fuels = "0.1.0"
+rand = "0.8.4"
+tokio = { version = "1.15", features = ["full"] }
+
+[features]
+fuel-core-lib = ["fuels/fuel-core-lib"]
+rocksdb = ["fuels/rocksdb"]
