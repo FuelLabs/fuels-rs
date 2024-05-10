@@ -27,7 +27,7 @@ let wallet = launch_provider_and_get_wallet().await?;
 The `fuel-core-lib` feature allows us to run a `fuel-core` node without installing the `fuel-core` binary on the local machine. Using the `fuel-core-lib` feature flag entails downloading all the dependencies needed to run the fuel-core node.
 
 ```rust,ignore
-fuels = { version = "0.60.0", features = ["fuel-core-lib"] }
+fuels = { version = "0.61.0", features = ["fuel-core-lib"] }
 ```
 
 ### RocksDB
@@ -35,5 +35,5 @@ fuels = { version = "0.60.0", features = ["fuel-core-lib"] }
 The `rocksdb` is an additional feature that, when combined with `fuel-core-lib`, provides persistent storage capabilities while using `fuel-core` as a library.
 
 ```rust,ignore
-fuels = { version = "0.60.0", features = ["rocksdb"] }
+fuels = { version = "0.61.0", features = ["rocksdb"] }
 ```
