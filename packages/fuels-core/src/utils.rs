@@ -1,8 +1,7 @@
 pub mod constants;
 pub mod offsets;
 
-use constants::{WITNESS_STATIC_SIZE, WORD_SIZE};
-use fuel_tx::Witness;
+use constants::WORD_SIZE;
 
 use crate::{error, types::errors::Result};
 
@@ -26,15 +25,18 @@ pub fn checked_round_up_to_word_alignment(bytes_len: usize) -> Result<usize> {
         )
     })
 }
-pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a Witness>>(
+
+#[cfg(feature = "std")]
+pub(crate) fn calculate_witnesses_size<'a, I: IntoIterator<Item = &'a fuel_tx::Witness>>(
     witnesses: I,
 ) -> usize {
     witnesses
         .into_iter()
-        .map(|w| w.as_ref().len() + WITNESS_STATIC_SIZE)
+        .map(|w| w.as_ref().len() + constants::WITNESS_STATIC_SIZE)
         .sum()
 }
 
+#[cfg(feature = "std")]
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
