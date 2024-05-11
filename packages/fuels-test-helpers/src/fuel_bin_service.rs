@@ -7,10 +7,7 @@ use std::{
 use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
-use fuels_core::{
-    error,
-    types::errors::{Error, Result as FuelResult},
-};
+use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
 use tempfile::{tempdir, TempDir};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
