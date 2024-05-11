@@ -455,13 +455,14 @@ fn generate_asset_change_outputs(
         .collect()
 }
 
-pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> Vec<Output> {
+pub(crate) fn generate_contract_outputs(num_of_contracts: usize) -> impl Iterator<Item = Output> {
     (0..num_of_contracts)
         .map(|idx| Output::contract(idx as u16, Bytes32::zeroed(), Bytes32::zeroed()))
-        .collect()
 }
 
-pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec<Input> {
+pub(crate) fn generate_contract_inputs(
+    contract_ids: HashSet<ContractId>,
+) -> impl Iterator<Item = Input> {
     contract_ids
         .into_iter()
         .enumerate()
@@ -474,7 +475,6 @@ pub(crate) fn generate_contract_inputs(contract_ids: HashSet<ContractId>) -> Vec
                 contract_id,
             )
         })
-        .collect()
 }
 
 fn extract_unique_contract_ids(calls: &[ContractCall]) -> HashSet<ContractId> {

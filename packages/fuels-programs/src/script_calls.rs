@@ -20,7 +20,6 @@ use fuels_core::{
         tx_status::TxStatus,
     },
 };
-use itertools::chain;
 
 use crate::{
     call_response::FuelCallResponse,
@@ -176,22 +175,18 @@ where
             .collect();
         let num_of_contracts = contract_ids.len();
 
-        let inputs = chain!(
-            generate_contract_inputs(contract_ids),
-            self.script_call.inputs.clone(),
-        )
-        .collect();
+        let inputs = generate_contract_inputs(contract_ids)
+            .chain(self.script_call.inputs.clone())
+            .collect();
 
         // Note the contract_outputs need to come first since the
         // contract_inputs are referencing them via `output_index`. The node
         // will, upon receiving our request, use `output_index` to index the
         // `inputs` array we've sent over.
-        let outputs = chain!(
-            generate_contract_outputs(num_of_contracts),
-            self.script_call.outputs.clone(),
-            self.script_call.variable_outputs.clone(),
-        )
-        .collect();
+        let outputs = generate_contract_outputs(num_of_contracts)
+            .chain(self.script_call.outputs.clone())
+            .chain(self.script_call.variable_outputs.clone())
+            .collect();
 
         Ok((inputs, outputs))
     }

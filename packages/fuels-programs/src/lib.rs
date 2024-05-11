@@ -1,3 +1,4 @@
+#![deny(unused_crate_dependencies)]
 pub mod call_response;
 #[cfg(feature = "std")]
 pub mod call_utils;
@@ -8,3 +9,8 @@ pub mod receipt_parser;
 pub mod script_calls;
 #[cfg(feature = "std")]
 mod submit_response;
+
+#[cfg(test)]
+mod tests {
+    use fuels_programs as _;
+}

@@ -10,22 +10,31 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK contracts."
 
 [dependencies]
-async-trait = { workspace = true }
-fuel-abi-types = { workspace = true }
-fuel-asm = { workspace = true }
+async-trait = { workspace = true, optional = true }
+fuel-abi-types = { workspace = true, optional = true }
+fuel-asm = { workspace = true, optional = true }
 fuel-tx = { workspace = true }
-fuel-types = { workspace = true }
-fuels-accounts = { workspace = true }
+fuel-types = { workspace = true, optional = true }
+fuels-accounts = { workspace = true, optional = true }
 fuels-core = { workspace = true }
-itertools = { workspace = true }
-rand = { workspace = true }
-serde_json = { workspace = true }
-tokio = { workspace = true }
+itertools = { workspace = true, features = ["use_std"], optional = true }
+serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
+fuels-programs = { workspace = true, features = ["std"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "test-util"] }
+rand = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["fuels-core/std", "fuels-accounts/std"]
+std = [
+  "fuels-core/std",
+  "fuels-accounts/std",
+  "dep:itertools",
+  "dep:serde_json",
+  "dep:async-trait",
+  "dep:fuel-abi-types",
+  "dep:fuel-asm",
+  "dep:fuel-types",
+]
