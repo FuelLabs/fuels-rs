@@ -80,7 +80,7 @@ Convert a hex string to a `ContractId`:
 Convert a contract instance to a `ContractId`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/logs.rs:instance_to_contract_id}}
+{{#include ../../../e2e/tests/logs.rs:instance_to_contract_id}}
 ```
 
 ## Convert to `Identity`
@@ -202,7 +202,7 @@ Convert a string to `Bytes`:
 Convert two hex strings to `B512`:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:b512_example}}
+{{#include ../../../e2e/tests/types_contracts.rs:b512_example}}
 ```
 
 ## Convert to `EvmAddress`
