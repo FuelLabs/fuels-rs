@@ -116,7 +116,12 @@ impl FuelService {
         let bound_address = match requested_port {
             0 => get_socket_address()?,
             _ if is_free(requested_port) => node_config.addr,
-            _ => return Err(Error::IO(std::io::ErrorKind::AddrInUse.into())),
+            _ => {
+                return Err(error!(
+                    IO,
+                    "could not find a free port to start a fuel node"
+                ))
+            }
         };
 
         let node_config = NodeConfig {
