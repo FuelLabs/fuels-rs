@@ -10,5 +10,7 @@ repository = { workspace = true }
 description = "Fuel Rust SDK codec examples."
 
 [dev-dependencies]
-fuels = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
+fuels = { workspace = true, features = [
+  "std",
+] }
+tokio = { workspace = true, features = ["macros"] }

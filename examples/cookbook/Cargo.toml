@@ -10,7 +10,11 @@ repository = { workspace = true }
 description = "Fuel Rust SDK cookbook examples."
 
 [dev-dependencies]
-fuels = { workspace = true }
+fuels = { workspace = true, features = [
+  "std",
+  "test-helpers",
+  "fuel-core-lib",
+] }
 rand = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 

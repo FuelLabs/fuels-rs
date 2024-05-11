@@ -53,13 +53,15 @@ pub mod types {
     pub use fuels_core::types::*;
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "test-helpers")]
 pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
 #[doc(hidden)]
 pub mod prelude {
+    #[cfg(feature = "test-helpers")]
+    pub use super::test_helpers::*;
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{
@@ -79,7 +81,6 @@ pub mod prelude {
                 SettableContract, StorageConfiguration,
             },
         },
-        test_helpers::*,
         types::{transaction::*, transaction_builders::*},
     };
     pub use super::{

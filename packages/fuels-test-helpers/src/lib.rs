@@ -1,5 +1,5 @@
 //! Testing helpers/utilities for Fuel SDK.
-#[cfg(feature = "fuels-accounts")]
+#[cfg(feature = "std")]
 pub use accounts::*;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
@@ -20,7 +20,7 @@ mod node_types;
 #[cfg(all(not(feature = "fuel-core-lib"), feature = "std"))]
 pub(crate) mod fuel_bin_service;
 
-#[cfg(feature = "fuels-accounts")]
+#[cfg(feature = "std")]
 mod accounts;
 
 #[cfg(feature = "std")]

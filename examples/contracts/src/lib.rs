@@ -36,7 +36,7 @@ mod tests {
 
         // ANCHOR: deploy_contract
         // This helper will launch a local node and provide a test wallet linked to it
-        let wallet = launch_provider_and_get_wallet().await?;
+        let wallet = fuels::test_helpers::launch_provider_and_get_wallet().await?;
 
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance

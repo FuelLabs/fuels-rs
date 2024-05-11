@@ -36,9 +36,10 @@ std = [
   "dep:fuels-programs",
   "dep:fuels-test-helpers",
   "fuels-accounts/std",
-  "fuels-programs?/std",
+  "fuels-programs/std",
   "fuels-core/std",
   "fuels-test-helpers?/std",
 ]
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
+test-helpers = ["dep:fuels-test-helpers"]
 rocksdb = ["fuel-core?/rocksdb"]
