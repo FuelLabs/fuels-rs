@@ -1461,6 +1461,23 @@ async fn generics_test() -> Result<()> {
     }
     {
         // struct that has the generic in an array
+        let inner = [ 
+            StructWTwoGenerics { a: Bits256([1u8; 32]), b: 1 },
+            StructWTwoGenerics { a: Bits256([2u8; 32]), b: 2 },
+            StructWTwoGenerics { a: Bits256([3u8; 32]), b: 3 },
+        ];
+        let arg1 = StructWArrWGenericStruct { a: inner };
+
+        let result = contract_methods
+            .array_with_generic_struct(arg1.clone())
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(result, arg1);
+    }
+    {
+        // struct that has a generic struct in an array
         let arg1 = StructWArrayGeneric { a: [1u32, 2u32] };
 
         let result = contract_methods
