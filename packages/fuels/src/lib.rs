@@ -80,7 +80,7 @@ pub mod prelude {
             },
         },
         test_helpers::*,
-        types::transaction_builders::*,
+        types::{transaction::*, transaction_builders::*},
     };
     pub use super::{
         core::constants::*,
@@ -89,7 +89,6 @@ pub mod prelude {
         types::{
             bech32::{Bech32Address, Bech32ContractId},
             errors::{Error, Result},
-            transaction::*,
             Address, AssetId, Bytes, ContractId, RawSlice, Salt,
         },
     };

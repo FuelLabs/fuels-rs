@@ -3,31 +3,36 @@
 pub use accounts::*;
 use fuel_tx::{Bytes32, ConsensusParameters, ContractParameters, TxParameters, UtxoId};
 use fuel_types::{AssetId, Nonce};
+#[cfg(feature = "std")]
 use fuels_accounts::provider::Provider;
-use fuels_core::types::{
-    bech32::Bech32Address,
-    coin::{Coin, CoinStatus},
-    errors::Result,
-    message::{Message, MessageStatus},
-};
+#[cfg(feature = "std")]
+use fuels_core::types::coin::{Coin, CoinStatus};
+#[cfg(feature = "std")]
+use fuels_core::types::message::{Message, MessageStatus};
+use fuels_core::types::{bech32::Bech32Address, errors::Result};
 pub use node_types::*;
 use rand::Fill;
+#[cfg(feature = "std")]
 use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 mod node_types;
 
-#[cfg(not(feature = "fuel-core-lib"))]
+#[cfg(all(not(feature = "fuel-core-lib"), feature = "std"))]
 pub(crate) mod fuel_bin_service;
 
 #[cfg(feature = "fuels-accounts")]
 mod accounts;
 
+#[cfg(feature = "std")]
 pub use service::*;
+#[cfg(feature = "std")]
 mod service;
 
+#[cfg(feature = "std")]
 mod utils;
 mod wallets_config;
 
+#[cfg(feature = "std")]
 /// Create a vector of `num_asset`*`coins_per_asset` UTXOs and a vector of the unique corresponding
 /// asset IDs. `AssetId`. Each UTXO (=coin) contains `amount_per_coin` amount of a random asset. The
 /// output of this function can be used with `setup_test_provider` to get a client with some
@@ -60,6 +65,7 @@ pub fn setup_multiple_assets_coins(
     (coins, asset_ids)
 }
 
+#[cfg(feature = "std")]
 /// Create a vector of UTXOs with the provided AssetIds, num_coins, and amount_per_coin
 pub fn setup_custom_assets_coins(owner: &Bech32Address, assets: &[AssetConfig]) -> Vec<Coin> {
     let coins = assets
@@ -71,6 +77,7 @@ pub fn setup_custom_assets_coins(owner: &Bech32Address, assets: &[AssetConfig]) 
     coins
 }
 
+#[cfg(feature = "std")]
 /// Create a vector of `num_coins` UTXOs containing `amount_per_coin` amount of asset `asset_id`.
 /// The output of this function can be used with `setup_test_provider` to get a client with some
 /// pre-existing coins, but with only one asset ID.
@@ -103,6 +110,7 @@ pub fn setup_single_asset_coins(
     coins
 }
 
+#[cfg(feature = "std")]
 pub fn setup_single_message(
     sender: &Bech32Address,
     recipient: &Bech32Address,
@@ -121,6 +129,7 @@ pub fn setup_single_message(
     }
 }
 
+#[cfg(feature = "std")]
 pub async fn setup_test_provider(
     coins: Vec<Coin>,
     messages: Vec<Message>,

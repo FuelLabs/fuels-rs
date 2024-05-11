@@ -16,7 +16,7 @@ elliptic-curve = { workspace = true }
 eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
-fuel-crypto = { workspace = true, features = ["std", "random"] }
+fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true }
 fuels-core = { workspace = true }
@@ -35,4 +35,10 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 [features]
 default = ["std"]
 coin-cache = ["tokio/time"]
-std = ["fuels-core/std", "fuel-core-client/default", "dep:eth-keystore"]
+std = [
+  "fuels-core/std",
+  "fuel-core-client/default",
+  "dep:eth-keystore",
+  "fuel-crypto/std",
+  "fuel-crypto/random",
+]

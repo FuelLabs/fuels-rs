@@ -7,6 +7,7 @@ pub mod input;
 pub mod message;
 pub mod message_proof;
 pub mod node_info;
+#[cfg(feature = "std")]
 pub mod transaction;
 pub mod transaction_response;
 pub mod output {

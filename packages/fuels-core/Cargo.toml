@@ -10,7 +10,7 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK core."
 
 [dependencies]
-async-trait = { workspace = true, default-features = false }
+async-trait = { workspace = true }
 bech32 = { workspace = true }
 chrono = { workspace = true }
 fuel-abi-types = { workspace = true }
@@ -18,17 +18,17 @@ fuel-asm = { workspace = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
-fuel-crypto = { workspace = true, features = ["std"] }
+fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
-fuel-types = { workspace = true, features = ["default"] }
+fuel-types = { workspace = true }
 fuel-vm = { workspace = true }
 fuels-macros = { workspace = true }
-hex = { workspace = true, features = ["std"] }
-itertools = { workspace = true, features = ["use_std"] }
+hex = { workspace = true }
+itertools = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true, default-features = true }
-thiserror = { workspace = true, default-features = false }
-uint = { workspace = true, default-features = false }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+uint = { workspace = true }
 
 [dev-dependencies]
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
@@ -36,4 +36,9 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
 default = ["std"]
-std = ["dep:fuel-core-client"]
+std = [
+  "dep:fuel-core-client",
+  "fuel-crypto/std",
+  "hex/std",
+  "itertools/use_std",
+]
