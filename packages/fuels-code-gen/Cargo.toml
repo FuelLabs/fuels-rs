@@ -12,7 +12,7 @@ description = "Used for code generation in the Fuel Rust SDK"
 [dependencies]
 Inflector = { workspace = true }
 fuel-abi-types = { workspace = true }
-itertools = { workspace = true }
+itertools = { workspace = true, features = ["use_std"] }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
 regex = { workspace = true }
@@ -20,7 +20,7 @@ serde_json = { workspace = true }
 syn = { workspace = true }
 
 [dev-dependencies]
-pretty_assertions = "1.4.0"
+pretty_assertions = { workspace = true, features = ["alloc"] }
 
 [package.metadata.cargo-machete]
 ignored = ["Inflector"]

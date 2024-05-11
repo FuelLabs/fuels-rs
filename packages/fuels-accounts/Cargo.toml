@@ -10,34 +10,29 @@ rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
 [dependencies]
-async-trait = { workspace = true, default-features = false }
+async-trait = { workspace = true }
 chrono = { workspace = true }
-elliptic-curve = { workspace = true, default-features = false }
+elliptic-curve = { workspace = true }
 eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true }
-fuel-crypto = { workspace = true, features = ["random"] }
+fuel-crypto = { workspace = true, features = ["std", "random"] }
 fuel-tx = { workspace = true }
-fuel-types = { workspace = true, features = ["random"] }
-fuels-core = { workspace = true, default-features = false }
-rand = { workspace = true, default-features = false }
+fuel-types = { workspace = true }
+fuels-core = { workspace = true }
+rand = { workspace = true }
 semver = { workspace = true }
-tai64 = { workspace = true, features = ["serde"] }
-thiserror = { workspace = true, default-features = false }
-tokio = { workspace = true, features = ["full"], optional = true }
-zeroize = { workspace = true, features = ["derive"] }
+tai64 = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+zeroize = { workspace = true }
 
 [dev-dependencies]
 fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tempfile = { workspace = true }
-tokio = { workspace = true, features = ["test-util"] }
+tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
 default = ["std"]
-coin-cache = ["tokio?/time"]
-std = [
-  "fuels-core/std",
-  "dep:tokio",
-  "fuel-core-client/default",
-  "dep:eth-keystore",
-]
+coin-cache = ["tokio/time"]
+std = ["fuels-core/std", "fuel-core-client/default", "dep:eth-keystore"]

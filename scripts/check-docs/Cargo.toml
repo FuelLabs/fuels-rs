@@ -10,6 +10,6 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = { workspace = true, features = ["std"] }
 itertools = { workspace = true }
-regex = { workspace = true }
+regex = { workspace = true, features = ["std"] }
