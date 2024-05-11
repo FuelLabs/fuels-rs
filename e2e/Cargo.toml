@@ -25,3 +25,5 @@ tokio = { workspace = true }
 
 [features]
 fuel-core-lib = ["fuels/fuel-core-lib"]
+# TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
+test-type-paths = []
