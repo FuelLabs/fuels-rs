@@ -1,3 +1,4 @@
+#![deny(unused_crate_dependencies)]
 #[cfg(feature = "std")]
 mod account;
 #[cfg(feature = "std")]
@@ -15,3 +16,8 @@ mod coin_cache;
 
 #[cfg(feature = "std")]
 pub mod predicate;
+
+#[cfg(test)]
+mod tests {
+    use fuels_accounts as _;
+}
