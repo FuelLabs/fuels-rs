@@ -1,3 +1,4 @@
+#![deny(unused_crate_dependencies)]
 pub mod codec;
 pub mod traits;
 pub mod types;
@@ -21,4 +22,8 @@ impl Configurables {
             binary[offset..offset + data.len()].copy_from_slice(data)
         }
     }
+}
+#[cfg(test)]
+mod tests {
+    use fuels_core as _;
 }
