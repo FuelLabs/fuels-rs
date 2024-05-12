@@ -1,10 +1,11 @@
-crates:
-  - name: fuels
-    path: packages/fuels
-    fmt: true
-    check:
-      - features: ["fuel-core-lib"]
-      - features: ["default"]
-      - features: ["coin-cache"]
-      - features: ["std"]
-
+- working_dir: packages/fuels
+  name: "fuels"
+  commands:
+  - !Custom ["cargo", "check", "--features", "fuel-core-lib"]
+  - !Custom ["cargo", "check", "--features", "default"]
+  - !Custom ["cargo", "check", "--features", "coin-cache"]
+  - !Custom ["cargo", "check", "--features", "std"]
+  - !Custom ["cargo", "test", "--features", "fuel-core-lib"]
+  - !Custom ["cargo", "clippy", "--features", "fuel-core-lib"]
+  - !Custom ["cargo", "clippy", "--features", "default"]
+  - !Custom ["cargo", "hack", "--feature-powerset", "check"]

@@ -12,13 +12,7 @@ publish = false
 
 [dependencies]
 clap = { workspace = true, features = ["default", "derive"] }
-tokio = { workspace = true, features = [
-  "rt-multi-thread",
-  "process",
-  "macros",
-] }
-async-trait = { workspace = true }
-which = { workspace = true }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 anyhow = { workspace = true, features = ["std"] }
 serde = { workspace = true, features = ["derive"] }
 serde_yaml = { workspace = true }
