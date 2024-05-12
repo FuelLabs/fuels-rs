@@ -1,0 +1,10 @@
+crates:
+  - name: fuels
+    path: packages/fuels
+    fmt: true
+    check:
+      - features: ["fuel-core-lib"]
+      - features: ["default"]
+      - features: ["coin-cache"]
+      - features: ["std"]
+
