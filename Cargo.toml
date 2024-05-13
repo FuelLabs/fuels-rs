@@ -24,7 +24,6 @@ members = [
   "packages/fuels-macros",
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
-  "scripts/check-docs",
   "scripts/checks",
   "scripts/versions-replacer",
   "wasm-tests",

@@ -9,3 +9,9 @@
   - !Custom ["cargo", "clippy", "--features", "fuel-core-lib"]
   - !Custom ["cargo", "clippy", "--features", "default"]
   - !Custom ["cargo", "hack", "--feature-powerset", "check"]
+
+- working_dir: .
+  name: "workspace"
+  commands:
+  - !MdCheck
+      ignore: ["./scripts/checks/test_data"]

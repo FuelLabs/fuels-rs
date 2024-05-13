@@ -8,7 +8,7 @@ use duct::cmd;
 use itertools::Itertools;
 use tokio::task::JoinSet;
 
-use crate::config;
+use crate::{config, md_check};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Task {
@@ -20,7 +20,7 @@ pub struct Task {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Command {
     Custom { program: String, args: Vec<String> },
-    DocCheck,
+    MdCheck { ignore: Vec<PathBuf> },
 }
 
 impl From<config::Command> for Command {
@@ -31,7 +31,7 @@ impl From<config::Command> for Command {
                 let args = parts.into_iter().skip(1).map(|s| s.to_string()).collect();
                 Self::Custom { program, args }
             }
-            config::Command::DocCheck => Self::DocCheck,
+            config::Command::MdCheck { ignore } => Self::MdCheck { ignore },
         }
     }
 }
@@ -43,7 +43,7 @@ impl Display for Command {
                 let args = args.iter().join(" ");
                 write!(f, "{program} {args}")
             }
-            Command::DocCheck => write!(f, "DocCheck"),
+            Command::MdCheck { .. } => write!(f, "MdCheck"),
         }
     }
 }
@@ -62,6 +62,14 @@ pub struct Execution {
 
 impl From<std::io::Error> for ExecutionStatus {
     fn from(value: std::io::Error) -> Self {
+        Self::Failed {
+            reason: value.to_string(),
+        }
+    }
+}
+
+impl From<anyhow::Error> for ExecutionStatus {
+    fn from(value: anyhow::Error) -> Self {
         Self::Failed {
             reason: value.to_string(),
         }
@@ -99,12 +107,24 @@ impl Task {
     pub fn run(self) -> Execution {
         match &self.cmd {
             Command::Custom { program, args } => self.run_custom(program, args),
-            Command::DocCheck => self.run_doc_check(),
+            Command::MdCheck { ignore } => self.run_md_check(ignore),
         }
     }
 
-    fn run_doc_check(&self) -> Execution {
-        todo!()
+    fn run_md_check(&self, ignore: &[PathBuf]) -> Execution {
+        let ignore = ignore
+            .iter()
+            .map(|path| self.cwd.join(path))
+            .collect::<Vec<_>>();
+        let status = if let Err(e) = md_check::run(&self.cwd, ignore) {
+            e.into()
+        } else {
+            ExecutionStatus::Success {
+                out: "".to_string(),
+            }
+        };
+
+        self.execution_report(status)
     }
 
     fn run_custom(&self, program: &String, args: &Vec<String>) -> Execution {

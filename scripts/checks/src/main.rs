@@ -3,6 +3,8 @@ use std::io::IsTerminal;
 use clap::Parser;
 mod cli;
 mod config;
+mod md_check;
+mod new_md_check;
 mod task;
 mod util;
 

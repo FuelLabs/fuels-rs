@@ -12,6 +12,6 @@ pub struct Group {
 
 #[derive(Debug, serde::Deserialize)]
 pub enum Command {
-    DocCheck,
+    MdCheck { ignore: Vec<PathBuf> },
     Custom(Vec<String>),
 }
