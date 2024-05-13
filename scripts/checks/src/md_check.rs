@@ -8,17 +8,16 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub fn run(dir: &Path, ignore: Vec<PathBuf>) -> anyhow::Result<(), Error> {
-    eprintln!("Running md check..., ignore: {ignore:?}");
-    let text_w_anchors = search_for_pattern("ANCHOR", dir, &ignore)?;
+pub fn run(dir: &Path) -> anyhow::Result<(), Error> {
+    let text_w_anchors = search_for_pattern("ANCHOR", dir)?;
     let (starts, ends) = extract_starts_and_ends(&text_w_anchors)?;
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
-    let text_mentioning_include = search_for_pattern("{{#include", dir, &ignore)?;
+    let text_mentioning_include = search_for_pattern("{{#include", dir)?;
     let (includes, include_path_errors) = parse_includes(text_mentioning_include);
     let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
-    let text_with_md_files = search_for_pattern(".md", dir.join("./docs/src/SUMMARY.md"), &ignore)?;
+    let text_with_md_files = search_for_pattern(".md", dir.join("./docs/src/SUMMARY.md"))?;
     let md_files_in_summary = parse_md_files(text_with_md_files, dir.join("./docs/src/"));
     let md_files_in_src = find_files("*.md", dir.join("./docs/src/"), "SUMMARY.md")?;
     let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
@@ -46,15 +45,6 @@ fn report_errors(error_type: &str, errors: &[Error]) {
         eprintln!("\nInvalid {error_type} detected!\n");
         for error in errors {
             eprintln!("{error}\n")
-        }
-    }
-}
-
-pub fn report_warnings(warnings: &[Error]) {
-    if !warnings.is_empty() {
-        eprintln!("\nWarnings detected!\n");
-        for warning in warnings {
-            eprintln!("{warning}\n")
         }
     }
 }
@@ -260,31 +250,20 @@ pub fn validate_md_files(
         .collect()
 }
 
-pub fn search_for_pattern(
-    pattern: &str,
-    location: impl AsRef<Path>,
-    ignore: &[PathBuf],
-) -> anyhow::Result<String> {
-    let ignored_files = ignore
-        .iter()
-        .flat_map(|path| ["--exclude-dir", path.to_str().unwrap()]);
-    let args = [
+pub fn search_for_pattern(pattern: &str, location: impl AsRef<Path>) -> anyhow::Result<String> {
+    cmd!(
+        "grep",
         "-H",
         "-n",
         "-r",
         "--binary-files=without-match",
         pattern,
-        location.as_ref().as_os_str().to_str().unwrap(),
-    ]
-    .into_iter()
-    .chain(ignored_files)
-    .collect_vec();
-
-    eprintln!("Running grep with args: {:?}", args);
-
-    duct::cmd("grep", args)
-        .read()
-        .map_err(|err| anyhow!("Failed running `grep` command for pattern '{pattern}': {err}"))
+        location.as_ref().to_str().unwrap()
+    )
+    .stdin_null()
+    .stderr_null()
+    .read()
+    .map_err(|err| anyhow!("Failed running `grep` command for pattern '{pattern}': {err}"))
 }
 
 pub fn find_files(
@@ -303,16 +282,13 @@ pub fn find_files(
         "-name",
         exclude,
     )
+    .stdin_null()
+    .stderr_null()
     .read()?)
 }
 
 #[cfg(test)]
 mod tests {
-    fn test_data_path(join: impl AsRef<Path>) -> PathBuf {
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("test_data")
-            .join(join.as_ref())
-    }
 
     use super::*;
 
@@ -336,7 +312,10 @@ mod tests {
 
     #[test]
     fn test_anchors() -> anyhow::Result<()> {
-        let data = search_for_pattern("ANCHOR", test_data_path("."), &[])?;
+        let test_data = generate_test_data()?;
+        let path = test_data.path();
+
+        let data = search_for_pattern("ANCHOR", path)?;
 
         let (starts, ends) = extract_starts_and_ends(&data)?;
         let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
@@ -351,24 +330,24 @@ mod tests {
 
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 10, name: \"test_no_anchor_beginning\""
+            "Missing anchor start for Anchor { line_no: 11, name: \"test_no_anchor_beginning\""
         ));
-        assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 12, name: \"test_no_anchor_end\""));
-        assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 14, name: \"test_end_before_beginning\""));
+        assert!(contains_any(&anchor_err_vec, "Couldn't find a matching end anchor for Anchor { line_no: 13, name: \"test_no_anchor_end\""));
+        assert!(contains_any(&anchor_err_vec, "The end of the anchor appears before the beginning. End anchor: Anchor { line_no: 15, name: \"test_end_before_beginning\""));
 
-        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 17, name: \"test_same_name_multiple_time\""));
-        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 20, name: \"test_same_name_multiple_time\""));
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 18, name: \"test_same_name_multiple_time\""));
+        assert!(contains_any(&anchor_err_vec, "Found too many matching anchor ends for anchor: Anchor { line_no: 21, name: \"test_same_name_multiple_time\""));
         // Caused by too many matching anchors
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 18, name: \"test_same_name_multiple_time\""
+            "Missing anchor start for Anchor { line_no: 19, name: \"test_same_name_multiple_time\""
         ));
         assert!(contains_any(
             &anchor_err_vec,
-            "Missing anchor start for Anchor { line_no: 21, name: \"test_same_name_multiple_time\""
+            "Missing anchor start for Anchor { line_no: 22, name: \"test_same_name_multiple_time\""
         ));
 
-        let text_mentioning_include = search_for_pattern("{{#include", test_data_path("."), &[])?;
+        let text_mentioning_include = search_for_pattern("{{#include", path)?;
 
         let (includes, include_path_errors) = parse_includes(text_mentioning_include);
 
@@ -408,16 +387,102 @@ mod tests {
 
     #[test]
     fn test_unused_md() -> anyhow::Result<()> {
-        let text_with_md_files =
-            search_for_pattern(".md", test_data_path("docs/src/SUMMARY.md"), &[])?;
-        let md_files_in_summary = parse_md_files(text_with_md_files, test_data_path("docs/src/"));
-        let md_files_in_src = find_files("*.md", test_data_path("docs/src/"), "SUMMARY.md")?;
+        let test_data = generate_test_data()?;
+        let path = test_data.path();
+
+        let text_with_md_files = search_for_pattern(".md", path.join("docs/src/SUMMARY.md"))?;
+        let md_files_in_summary = parse_md_files(text_with_md_files, path.join("docs/src/"));
+        let md_files_in_src = find_files("*.md", path.join("docs/src/"), "SUMMARY.md")?;
         let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
 
         let error_msg = md_files_errors.first().unwrap().to_string();
 
+        eprintln!("{error_msg}");
         assert!(error_msg.contains("test-not-there.md` not in SUMMARY.md"));
 
         Ok(())
+    }
+
+    fn generate_test_data() -> anyhow::Result<tempfile::TempDir> {
+        // Data is generated each time to avoid having the CI detect the errors in these test-only
+        // MDs. It was either that or rewrite the md_check to have an ignore list but that turned
+        // out to be problematic because grep excludes are finicky. The whole logic would have to
+        // be rewritten without grep for excludes to work reliably.
+        let temp_dir = tempfile::tempdir()?;
+
+        let anchor_data = r#"
+// ANCHOR: test_anchor_line_comment
+///// ANCHOR_END: test_anchor_line_comment
+
+/* ANCHOR: test_anchor_block_comment */
+/* ANCHOR_END: test_anchor_block_comment */
+
+// ANCHOR: test_with_more_forward_slashes
+///// ANCHOR_END: test_with_more_forward_slashes
+
+// ANCHOR_END: test_no_anchor_beginning
+
+// ANCHOR: test_no_anchor_end
+
+// ANCHOR_END: test_end_before_beginning
+// ANCHOR: test_end_before_beginning
+
+// ANCHOR: test_same_name_multiple_time
+// ANCHOR_END: test_same_name_multiple_time
+
+// ANCHOR: test_same_name_multiple_time
+// ANCHOR_END: test_same_name_multiple_time
+"#;
+        let path = temp_dir.path();
+        std::fs::write(path.join("test_anchor_data.rs"), anchor_data)?;
+
+        let include_data = r#"
+```rust,ignore
+{{#include ./test_anchor_data.rs:test_anchor_line_comment}}
+```
+
+```rust,ignore
+{{#include ./test_anchor_data.rs:test_anchor_block_comment}}
+```
+
+```rust,ignore
+{{#include ./test_anchor_data.rs:test_with_more_forward_slashes}}
+```
+
+```rust,ignore
+{{#include ./test_anchor_data.rs:no_existing_anchor}}
+```
+
+Include file with correct path
+
+```rust,ignore
+{{#include ./test_anchor_data.rs}}
+```
+
+Include file with wrong path
+
+```rust,ignore
+{{#include ./test_anchor_data2.rs}}
+```
+
+Another include file with wrong path
+
+```rust,ignore
+{{#include ./test_anchor_data3.rs}}
+```
+"#;
+
+        std::fs::write(path.join("test_include_data.md"), include_data)?;
+
+        let src = path.join("docs/src");
+        std::fs::create_dir_all(&src)?;
+
+        let summary = r#"- [Test](./test.md)"#;
+        std::fs::write(src.join("SUMMARY.md"), summary)?;
+
+        std::fs::write(src.join("test.md"), "")?;
+        std::fs::write(src.join("test-not-there.md"), "")?;
+
+        Ok(temp_dir)
     }
 }

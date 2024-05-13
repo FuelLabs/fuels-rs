@@ -20,7 +20,7 @@ pub struct Task {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Command {
     Custom { program: String, args: Vec<String> },
-    MdCheck { ignore: Vec<PathBuf> },
+    MdCheck,
 }
 
 impl From<config::Command> for Command {
@@ -31,7 +31,7 @@ impl From<config::Command> for Command {
                 let args = parts.into_iter().skip(1).map(|s| s.to_string()).collect();
                 Self::Custom { program, args }
             }
-            config::Command::MdCheck { ignore } => Self::MdCheck { ignore },
+            config::Command::MdCheck => Self::MdCheck,
         }
     }
 }
@@ -107,16 +107,12 @@ impl Task {
     pub fn run(self) -> Execution {
         match &self.cmd {
             Command::Custom { program, args } => self.run_custom(program, args),
-            Command::MdCheck { ignore } => self.run_md_check(ignore),
+            Command::MdCheck => self.run_md_check(),
         }
     }
 
-    fn run_md_check(&self, ignore: &[PathBuf]) -> Execution {
-        let ignore = ignore
-            .iter()
-            .map(|path| self.cwd.join(path))
-            .collect::<Vec<_>>();
-        let status = if let Err(e) = md_check::run(&self.cwd, ignore) {
+    fn run_md_check(&self) -> Execution {
+        let status = if let Err(e) = md_check::run(&self.cwd) {
             e.into()
         } else {
             ExecutionStatus::Success {

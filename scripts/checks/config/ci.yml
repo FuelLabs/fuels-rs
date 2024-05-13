@@ -14,4 +14,3 @@
   name: "workspace"
   commands:
   - !MdCheck
-      ignore: ["./scripts/checks/test_data"]
