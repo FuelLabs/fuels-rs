@@ -73,6 +73,7 @@ uint = { version = "0.9.5", default-features = false }
 which = { version = "6.0.0", default-features = false }
 zeroize = { version = "1.7.0", default-features = false }
 pretty_assertions = { version = "1.4.0", default-features = false }
+walkdir = { version = "2.5", default-features = false }
 anyhow = { version = "1.0", default-features = false }
 getrandom = { version = "0.2", default-features = false }
 wasm-bindgen-test = { version = "0.3", default-features = false }

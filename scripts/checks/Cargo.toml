@@ -20,7 +20,9 @@ itertools = { workspace = true, features = ["use_alloc"] }
 colored = { workspace = true }
 duct = { workspace = true }
 regex = { workspace = true, features = ["std", "unicode-perl"] }
+walkdir = { workspace = true }
 
 [dev-dependencies]
-tempfile = { version = "3.10" }
+tempfile = { workspace = true }
+thiserror = { workspace = true }
 pretty_assertions = { workspace = true, features = ["std"] }
