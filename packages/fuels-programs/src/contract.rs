@@ -17,7 +17,7 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{error, Error, Result},
+        errors::{error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
@@ -381,10 +381,7 @@ fn expected_storage_slots_filepath(contract_binary: &Path) -> Option<PathBuf> {
 
 fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> {
     if !file_path.exists() {
-        return Err(Error::IO(io::Error::new(
-            io::ErrorKind::NotFound,
-            format!("file {file_path:?} does not exist"),
-        )));
+        return Err(error!(IO, "file {file_path:?} does not exist"));
     }
 
     let path_extension = file_path
@@ -951,6 +948,7 @@ where
 mod tests {
     use std::collections::HashSet;
 
+    use fuels_core::types::errors::Error;
     use tempfile::tempdir;
 
     use super::*;
