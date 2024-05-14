@@ -42,6 +42,7 @@ members = [
   'sway/scripts/arguments',
   'sway/scripts/basic_script',
   'sway/scripts/require_from_contract',
+  'sway/scripts/reverting',
   'sway/scripts/script_array',
   'sway/scripts/script_asserts',
   'sway/scripts/script_configurables',

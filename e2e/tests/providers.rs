@@ -765,8 +765,6 @@ async fn create_transfer(
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
 async fn test_caching() -> Result<()> {
-    use fuels_core::types::tx_status::TxStatus;
-
     let amount = 1000;
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
@@ -805,7 +803,7 @@ async fn test_caching() -> Result<()> {
 
 #[cfg(feature = "coin-cache")]
 async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> {
-    use fuel_core_types::fuel_asm::Opcode;
+    let script = std::fs::read("sway/scripts/reverting/out/release/reverting.bin")?;
 
     let amount = 1;
     let asset_id = AssetId::zeroed();
@@ -813,7 +811,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
-        .with_script(vec![Opcode::RVRT.into()]);
+        .with_script(script);
     tb.add_signer(wallet.clone())?;
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
@@ -824,8 +822,6 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
 async fn test_cache_invalidation_on_await() -> Result<()> {
-    use fuels_core::types::tx_status::TxStatus;
-
     let block_time = 1u32;
     let provider_config = NodeConfig {
         block_production: Trigger::Interval {
