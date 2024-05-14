@@ -194,7 +194,7 @@ of <code>COMMAND(ARG...)...</code></p>
             Wallets(&quot;wallet&quot;),
             Abigen(Contract(
                 name = &quot;TestContract&quot;,
-                project = &quot;packages/fuels/tests/contracts/contract_test&quot;
+                project = &quot;e2e/sway/contracts/contract_test&quot;
             )),
             Deploy(
                 name = &quot;contract_instance&quot;,
@@ -219,11 +219,11 @@ of <code>COMMAND(ARG...)...</code></p>
         Abigen(
             Contract(
                 name = &quot;LibContract&quot;,
-                project = &quot;packages/fuels/tests/contracts/lib_contract&quot;
+                project = &quot;e2e/sway/contracts/lib_contract&quot;
             ),
             Contract(
                 name = &quot;LibContractCaller&quot;,
-                project = &quot;packages/fuels/tests/contracts/lib_contract_caller&quot;
+                project = &quot;e2e/sway/contracts/lib_contract_caller&quot;
             ),
         ),
         Deploy(
@@ -281,7 +281,7 @@ of <code>COMMAND(ARG...)...</code></p>
     setup_program_test!(
         Abigen(Contract(
             name = &quot;TestContract&quot;,
-            project = &quot;packages/fuels/tests/contracts/contract_test&quot;
+            project = &quot;e2e/sway/contracts/contract_test&quot;
         )),
         Deploy(
             name = &quot;contract_instance&quot;,

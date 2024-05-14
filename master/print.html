@@ -215,7 +215,7 @@ If <code>cargo generate</code> is not already installed, you can install it with
 <pre><code class="language-rust ignore">use fuels::prelude::*;
 </code></pre>
 <h2 id="the-fuel-rust-sdk-source-code"><a class="header" href="#the-fuel-rust-sdk-source-code">The Fuel Rust SDK source code</a></h2>
-<p>Another way to experience the SDK is to look at the source code. The <code>packages/fuels/tests/</code> folder is full of integration tests that go through almost all aspects of the SDK.</p>
+<p>Another way to experience the SDK is to look at the source code. The <code>e2e/tests/</code> folder is full of integration tests that go through almost all aspects of the SDK.</p>
 <blockquote>
 <p><strong>Note</strong> Before running the tests, we need to build all the Sway test projects. The file <code>packages/fuels/Forc.toml</code> contains a `[workspace], which members are the paths to all integration tests.
 To build these tests, run the following command:</p>
@@ -937,7 +937,7 @@ coins and coin amount</p>
 <p>You might have noticed this snippet in the previous sections:</p>
 <pre><code class="language-rust ignore">        abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
 </code></pre>
 <!-- This section should explain the purpose of the abigen -->
@@ -1004,10 +1004,22 @@ impl MyContract for Contract {
 <hr />
 <p>So, an <code>abigen!</code> which generates bindings for two contracts and one script looks like this:</p>
 <pre><code class="language-rust ignore">        abigen!(
-            Contract(name=&quot;ContractA&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_a/out/release/contract_a-abi.json&quot;),
-            Contract(name=&quot;ContractB&quot;, abi=&quot;packages/fuels/tests/bindings/sharing_types/contract_b/out/release/contract_b-abi.json&quot;),
-            Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json&quot;),
-            Predicate(name=&quot;MyPredicateEncoder&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json&quot;),
+            Contract(
+                name = &quot;ContractA&quot;,
+                abi = &quot;e2e/sway/bindings/sharing_types/contract_a/out/release/contract_a-abi.json&quot;
+            ),
+            Contract(
+                name = &quot;ContractB&quot;,
+                abi = &quot;e2e/sway/bindings/sharing_types/contract_b/out/release/contract_b-abi.json&quot;
+            ),
+            Script(
+                name = &quot;MyScript&quot;,
+                abi = &quot;e2e/sway/scripts/arguments/out/release/arguments-abi.json&quot;
+            ),
+            Predicate(
+                name = &quot;MyPredicateEncoder&quot;,
+                abi = &quot;e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json&quot;
+            ),
         );
 </code></pre>
 <h2 id="how-does-the-generated-code-look"><a class="header" href="#how-does-the-generated-code-look">How does the generated code look?</a></h2>
@@ -1293,7 +1305,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
         // your contract's methods that are running on-chain!
         abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
 
         // This is an instance of your contract which you can use to make calls to your functions
@@ -1336,7 +1348,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
         // This will load and deploy your contract binary to the chain so that its ID can
         // be used to initialize the instance
         let contract_id = Contract::load_from(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin&quot;,
+            &quot;../../e2e/sway/contracts/contract_test/out/release/contract_test.bin&quot;,
             LoadConfiguration::default(),
         )?
         .deploy(&amp;wallet, TxPolicies::default())
@@ -1375,7 +1387,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
             .with_maturity(0);
 
         let contract_id_2 = Contract::load_from(
-            &quot;../../packages/fuels/tests/contracts/contract_test/out/release/contract_test.bin&quot;,
+            &quot;../../e2e/sway/contracts/contract_test/out/release/contract_test.bin&quot;,
             configuration,
         )?
         .deploy(&amp;wallet, tx_policies)
@@ -1389,7 +1401,7 @@ pub use abigen_bindings::my_contract_mod::MyContractMethods;
         // your contract's methods that are running on-chain!
         abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
 
         // This is an instance of your contract which you can use to make calls to your functions
@@ -1461,7 +1473,7 @@ impl TestContract for Contract {
 <p>Each of the configurable constants will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>with</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
-        abi = &quot;packages/fuels/tests/contracts/configurables/out/release/configurables-abi.json&quot;
+        abi = &quot;e2e/sway/contracts/configurables/out/release/configurables-abi.json&quot;
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -1488,7 +1500,7 @@ impl TestContract for Contract {
         .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
-        &quot;tests/contracts/configurables/out/release/configurables.bin&quot;,
+        &quot;sway/contracts/configurables/out/release/configurables.bin&quot;,
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&amp;wallet, TxPolicies::default())
@@ -1520,7 +1532,7 @@ impl TestContract for Contract {
 <pre><code class="language-rust ignore">        abigen!(Contract(
             name = &quot;MyContract&quot;,
             // Replace with your contract ABI.json path
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
         let wallet_original = launch_provider_and_get_wallet().await?;
 
@@ -1594,7 +1606,7 @@ half-word   byte   op                raw           notes
         // your contract's methods that are running on-chain!
         abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi = &quot;packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/contract_test/out/release/contract_test-abi.json&quot;
         ));
 
         // This is an instance of your contract which you can use to make calls to your functions
@@ -2118,10 +2130,10 @@ let is_error = response.is_err();
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = &quot;MyScript&quot;,
-        abi = &quot;packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json&quot;
+        abi = &quot;e2e/sway/scripts/arguments/out/release/arguments-abi.json&quot;
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = &quot;../fuels/tests/scripts/arguments/out/release/arguments.bin&quot;;
+    let bin_path = &quot;sway/scripts/arguments/out/release/arguments.bin&quot;;
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -2152,11 +2164,11 @@ let is_error = response.is_err();
 <p>Script calls provide the same logging functions, <code>decode_logs()</code> and <code>decode_logs_with_type&lt;T&gt;()</code>, as contract calls. As a reminder, the workflow looks like this:</p>
 <pre><code class="language-rust ignore">    abigen!(Script(
         name = &quot;log_script&quot;,
-        abi = &quot;packages/fuels/tests/logs/script_logs/out/release/script_logs-abi.json&quot;
+        abi = &quot;e2e/sway/logs/script_logs/out/release/script_logs-abi.json&quot;
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = &quot;../fuels/tests/logs/script_logs/out/release/script_logs.bin&quot;;
+    let bin_path = &quot;sway/logs/script_logs/out/release/script_logs.bin&quot;;
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
@@ -2219,11 +2231,13 @@ fn main() -&gt; (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 
 }
 </code></pre>
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
-<pre><code class="language-rust ignore">    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_configurables/out/release/script_configurables-abi.json&quot;));
+<pre><code class="language-rust ignore">    abigen!(Script(
+        name = &quot;MyScript&quot;,
+        abi = &quot;e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json&quot;
+    ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path =
-        &quot;../fuels/tests/scripts/script_configurables/out/release/script_configurables.bin&quot;;
+    let bin_path = &quot;sway/scripts/script_configurables/out/release/script_configurables.bin&quot;;
     let instance = MyScript::new(wallet, bin_path);
 
     let str_4: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
@@ -2290,12 +2304,14 @@ fn main(a: u32, b: u64) -&gt; bool {
         let first_wallet = &amp;wallets[0];
         let second_wallet = &amp;wallets[1];
 
-        abigen!(Predicate(name=&quot;MyPredicate&quot;, abi=&quot;packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json&quot;));
+        abigen!(Predicate(
+            name = &quot;MyPredicate&quot;,
+            abi = &quot;e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json&quot;
+        ));
 </code></pre>
 <p>Once we've compiled our predicate with <code>forc build</code>, we can create a <code>Predicate</code> instance via <code>Predicate::load_from</code>. The resulting data from <code>encode_data</code> can then be set on the loaded predicate.</p>
 <pre><code class="language-rust ignore">        let predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
-        let code_path =
-            &quot;../../packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate.bin&quot;;
+        let code_path = &quot;../../e2e/sway/predicates/basic_predicate/out/release/basic_predicate.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(first_wallet.try_provider()?.clone())
@@ -2368,7 +2384,7 @@ fn main(
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>U8</code> will get the <code>with_U8</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and update the predicate with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Predicate(
         name = &quot;MyPredicate&quot;,
-        abi = &quot;packages/fuels/tests/predicates/predicate_configurables/out/release/predicate_configurables-abi.json&quot;
+        abi = &quot;e2e/sway/predicates/predicate_configurables/out/release/predicate_configurables-abi.json&quot;
     ));
 
     let new_struct = StructWithGeneric {
@@ -2386,7 +2402,7 @@ fn main(
         MyPredicateEncoder::default().encode_data(true, 8u8, new_struct, new_enum)?;
 
     let mut predicate: Predicate = Predicate::load_from(
-        &quot;tests/predicates/predicate_configurables/out/release/predicate_configurables.bin&quot;,
+        &quot;sway/predicates/predicate_configurables/out/release/predicate_configurables.bin&quot;,
     )?
     .with_data(predicate_data)
     .with_configurables(configurables);
@@ -2462,12 +2478,11 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p>Now we can use the predicate abigen to create a predicate encoder instance for us. To spend the funds now locked in the predicate, we must provide two out of three signatures whose public keys match the ones we defined in the predicate. In this example, the signatures are generated from an array of zeros.</p>
 <pre><code class="language-rust ignore">        abigen!(Predicate(
             name = &quot;MyPredicate&quot;,
-            abi = &quot;packages/fuels/tests/predicates/signatures/out/release/signatures-abi.json&quot;
+            abi = &quot;e2e/sway/predicates/signatures/out/release/signatures-abi.json&quot;
         ));
 
         let predicate_data = MyPredicateEncoder::default().encode_data(signatures)?;
-        let code_path =
-            &quot;../../packages/fuels/tests/predicates/signatures/out/release/signatures.bin&quot;;
+        let code_path = &quot;../../e2e/sway/predicates/signatures/out/release/signatures.bin&quot;;
 
         let predicate: Predicate = Predicate::load_from(code_path)?
             .with_provider(provider)
@@ -2788,7 +2803,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 </code></pre>
 <p>After using the <code>abigen!</code> macro, <code>CounterConfig</code> will be accessible in your Rust file! Here's an example:</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(name=&quot;MyContract&quot;,
-                     abi=&quot;packages/fuels/tests/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;));
+                     abi=&quot;e2e/sway/types/contracts/complex_types_contract/out/release/complex_types_contract-abi.json&quot;));
 
     // Here we can use `CounterConfig`, a struct originally
     // defined in the contract.
@@ -3486,7 +3501,7 @@ of <code>COMMAND(ARG...)...</code></p>
             Wallets(&quot;wallet&quot;),
             Abigen(Contract(
                 name = &quot;TestContract&quot;,
-                project = &quot;packages/fuels/tests/contracts/contract_test&quot;
+                project = &quot;e2e/sway/contracts/contract_test&quot;
             )),
             Deploy(
                 name = &quot;contract_instance&quot;,
@@ -3511,11 +3526,11 @@ of <code>COMMAND(ARG...)...</code></p>
         Abigen(
             Contract(
                 name = &quot;LibContract&quot;,
-                project = &quot;packages/fuels/tests/contracts/lib_contract&quot;
+                project = &quot;e2e/sway/contracts/lib_contract&quot;
             ),
             Contract(
                 name = &quot;LibContractCaller&quot;,
-                project = &quot;packages/fuels/tests/contracts/lib_contract_caller&quot;
+                project = &quot;e2e/sway/contracts/lib_contract_caller&quot;
             ),
         ),
         Deploy(
@@ -3573,7 +3588,7 @@ of <code>COMMAND(ARG...)...</code></p>
     setup_program_test!(
         Abigen(Contract(
             name = &quot;TestContract&quot;,
-            project = &quot;packages/fuels/tests/contracts/contract_test&quot;
+            project = &quot;e2e/sway/contracts/contract_test&quot;
         )),
         Deploy(
             name = &quot;contract_instance&quot;,
@@ -3724,8 +3739,7 @@ impl LiquidityPool for Contract {
 <p>The first step towards interacting with any contract in the Rust SDK is calling the <code>abigen!</code> macro to generate type-safe Rust bindings for the contract methods:</p>
 <pre><code class="language-rust ignore">        abigen!(Contract(
             name = &quot;MyContract&quot;,
-            abi =
-                &quot;packages/fuels/tests/contracts/liquidity_pool/out/release/liquidity_pool-abi.json&quot;
+            abi = &quot;e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool-abi.json&quot;
         ));
 </code></pre>
 <p>Next, we set up a wallet with custom-defined assets. We give our wallet some of the contracts <code>BASE_TOKEN</code> and the default asset (required for contract deployment):</p>
@@ -3747,7 +3761,7 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>Having launched a provider and created the wallet, we can deploy our contract and create an instance of its methods:</p>
 <pre><code class="language-rust ignore">        let contract_id = Contract::load_from(
-            &quot;../../packages/fuels/tests/contracts/liquidity_pool/out/release/liquidity_pool.bin&quot;,
+            &quot;../../e2e/sway/contracts/liquidity_pool/out/release/liquidity_pool.bin&quot;,
             LoadConfiguration::default(),
         )?
         .deploy(wallet, TxPolicies::default())

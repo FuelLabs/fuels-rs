@@ -184,7 +184,7 @@ impl TestContract for Contract {
 <p>Each of the configurable constants will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type as defined in the contract code. Below is an example where we chain several <code>with</code> methods and deploy the contract with the new constants.</p>
 <pre><code class="language-rust ignore">    abigen!(Contract(
         name = &quot;MyContract&quot;,
-        abi = &quot;packages/fuels/tests/contracts/configurables/out/release/configurables-abi.json&quot;
+        abi = &quot;e2e/sway/contracts/configurables/out/release/configurables-abi.json&quot;
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
@@ -211,7 +211,7 @@ impl TestContract for Contract {
         .with_ENUM(new_enum.clone())?;
 
     let contract_id = Contract::load_from(
-        &quot;tests/contracts/configurables/out/release/configurables.bin&quot;,
+        &quot;sway/contracts/configurables/out/release/configurables.bin&quot;,
         LoadConfiguration::default().with_configurables(configurables),
     )?
     .deploy(&amp;wallet, TxPolicies::default())

@@ -142,10 +142,10 @@
 <pre><code class="language-rust ignore">    // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = &quot;MyScript&quot;,
-        abi = &quot;packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json&quot;
+        abi = &quot;e2e/sway/scripts/arguments/out/release/arguments-abi.json&quot;
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = &quot;../fuels/tests/scripts/arguments/out/release/arguments.bin&quot;;
+    let bin_path = &quot;sway/scripts/arguments/out/release/arguments.bin&quot;;
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -176,11 +176,11 @@
 <p>Script calls provide the same logging functions, <code>decode_logs()</code> and <code>decode_logs_with_type&lt;T&gt;()</code>, as contract calls. As a reminder, the workflow looks like this:</p>
 <pre><code class="language-rust ignore">    abigen!(Script(
         name = &quot;log_script&quot;,
-        abi = &quot;packages/fuels/tests/logs/script_logs/out/release/script_logs-abi.json&quot;
+        abi = &quot;e2e/sway/logs/script_logs/out/release/script_logs-abi.json&quot;
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = &quot;../fuels/tests/logs/script_logs/out/release/script_logs.bin&quot;;
+    let bin_path = &quot;sway/logs/script_logs/out/release/script_logs.bin&quot;;
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
@@ -243,11 +243,13 @@ fn main() -&gt; (bool, u8, u16, u32, u64, u256, b256, str[4], (u8, bool), [u32; 
 }
 </code></pre>
 <p>Each configurable constant will get a dedicated <code>with</code> method in the SDK. For example, the constant <code>STR_4</code> will get the <code>with_STR_4</code> method which accepts the same type defined in sway. Below is an example where we chain several <code>with</code> methods and execute the script with the new constants.</p>
-<pre><code class="language-rust ignore">    abigen!(Script(name=&quot;MyScript&quot;, abi=&quot;packages/fuels/tests/scripts/script_configurables/out/release/script_configurables-abi.json&quot;));
+<pre><code class="language-rust ignore">    abigen!(Script(
+        name = &quot;MyScript&quot;,
+        abi = &quot;e2e/sway/scripts/script_configurables/out/release/script_configurables-abi.json&quot;
+    ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path =
-        &quot;../fuels/tests/scripts/script_configurables/out/release/script_configurables.bin&quot;;
+    let bin_path = &quot;sway/scripts/script_configurables/out/release/script_configurables.bin&quot;;
     let instance = MyScript::new(wallet, bin_path);
 
     let str_4: SizedAsciiString&lt;4&gt; = &quot;FUEL&quot;.try_into()?;
