@@ -24,19 +24,6 @@ fuels-macros = { workspace = true }
 fuels-programs = { workspace = true, optional = true }
 fuels-test-helpers = { workspace = true, optional = true }
 
-[dev-dependencies]
-chrono = { workspace = true }
-fuel-core = { workspace = true, default-features = false }
-fuel-core-types = { workspace = true }
-fuels-code-gen = { workspace = true }
-fuels-test-helpers = { workspace = true }
-hex = { workspace = true, default-features = false }
-rand = { workspace = true }
-sha2 = { workspace = true }
-tempfile = { workspace = true }
-tokio = { workspace = true, features = ["time", "test-util"] }
-tai64 = { workspace = true }
-
 [features]
 default = ["std", "fuels-test-helpers?/fuels-accounts", "coin-cache"]
 coin-cache = ["fuels-accounts/coin-cache"]
@@ -53,7 +40,5 @@ std = [
   "fuels-core/std",
   "fuels-test-helpers?/std",
 ]
-# TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
-test-type-paths = []
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
 rocksdb = ["fuel-core?/rocksdb"]

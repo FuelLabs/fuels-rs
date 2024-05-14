@@ -28,6 +28,7 @@ tokio = { workspace = true, features = ["full"], optional = true }
 zeroize = { workspace = true, features = ["derive"] }
 
 [dev-dependencies]
+fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
 

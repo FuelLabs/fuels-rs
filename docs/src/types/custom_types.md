@@ -17,7 +17,7 @@ struct CounterConfig {
 After using the `abigen!` macro, `CounterConfig` will be accessible in your Rust file! Here's an example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:struct_generation}}
+{{#include ../../../e2e/tests/types_contracts.rs:struct_generation}}
 ```
 
 You can freely use your custom types (structs or enums) within this scope. That also means passing custom types to functions and receiving custom types from function calls.
@@ -57,7 +57,7 @@ impl MyContract for Contract {
 Your Rust code would look like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:generic}}
+{{#include ../../../e2e/tests/types_contracts.rs:generic}}
 ```
 
 ### Unused generic type parameters

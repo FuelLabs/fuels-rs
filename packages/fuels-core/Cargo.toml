@@ -17,10 +17,10 @@ fuel-abi-types = { workspace = true }
 fuel-asm = { workspace = true }
 fuel-core-chain-config = { workspace = true }
 fuel-core-client = { workspace = true, optional = true }
+fuel-core-types = { workspace = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["default"] }
-fuel-core-types = { workspace = true }
 fuel-vm = { workspace = true }
 fuels-macros = { workspace = true }
 hex = { workspace = true, features = ["std"] }
@@ -31,6 +31,7 @@ thiserror = { workspace = true, default-features = false }
 uint = { workspace = true, default-features = false }
 
 [dev-dependencies]
+fuel-tx = { workspace = true, features = ["test-helpers", "random"] }
 tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
