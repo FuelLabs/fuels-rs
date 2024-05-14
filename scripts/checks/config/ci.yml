@@ -12,6 +12,8 @@
   commands:
   - !Custom 
       cmd: [cargo, fmt, --verbose, --check]
+  - !Custom 
+      cmd: [typos]
   # - !Custom 
   #     cmd: [cargo, clippy, --all-targets, --all-features, --no-deps]
   # - !Custom 
