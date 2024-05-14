@@ -1,7 +1,6 @@
 use std::ops::Add;
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
-use fuel_core::chain_config::StateConfig;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -22,7 +21,7 @@ use fuels::{
 async fn test_provider_launch_and_connect() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -37,7 +36,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/release/contract_test.bin",
+        "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -68,7 +67,7 @@ async fn test_provider_launch_and_connect() -> Result<()> {
 async fn test_network_error() -> Result<()> {
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let mut wallet = WalletUnlocked::new_random(None);
@@ -85,7 +84,7 @@ async fn test_network_error() -> Result<()> {
     service.stop().await.unwrap();
 
     let response = Contract::load_from(
-        "tests/contracts/contract_test/out/release/contract_test.bin",
+        "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -127,7 +126,7 @@ async fn test_input_message() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -172,11 +171,11 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     abigen!(Contract(
         name = "MyContract",
-        abi = "packages/fuels/tests/contracts/contract_test/out/release/contract_test-abi.json"
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
     ));
 
     let contract_id = Contract::load_from(
-        "tests/contracts/contract_test/out/release/contract_test.bin",
+        "sway/contracts/contract_test/out/release/contract_test.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -279,7 +278,7 @@ async fn can_retrieve_latest_block_time() -> Result<()> {
 
 #[tokio::test]
 async fn contract_deployment_respects_maturity() -> Result<()> {
-    abigen!(Contract(name="MyContract", abi="packages/fuels/tests/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
+    abigen!(Contract(name="MyContract", abi="e2e/sway/contracts/transaction_block_height/out/release/transaction_block_height-abi.json"));
 
     let wallets =
         launch_custom_provider_and_get_wallets(WalletsConfig::default(), None, None).await?;
@@ -288,7 +287,7 @@ async fn contract_deployment_respects_maturity() -> Result<()> {
 
     let deploy_w_maturity = |maturity| {
         Contract::load_from(
-            "tests/contracts/transaction_block_height/out/release/transaction_block_height.bin",
+            "sway/contracts/transaction_block_height/out/release/transaction_block_height.bin",
             LoadConfiguration::default(),
         )
         .map(|loaded_contract| {
@@ -319,7 +318,7 @@ async fn test_gas_forwarded_defaults_to_tx_limit() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -357,7 +356,7 @@ async fn test_amount_and_asset_forwarding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TokenContract",
-            project = "packages/fuels/tests/contracts/token_ops"
+            project = "e2e/sway/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",
@@ -468,7 +467,7 @@ async fn test_gas_errors() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -520,7 +519,7 @@ async fn test_call_param_gas_errors() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -562,7 +561,7 @@ async fn test_get_gas_used() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -709,7 +708,7 @@ async fn test_sway_timestamp() -> Result<()> {
     setup_program_test!(
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/block_timestamp"
+            project = "e2e/sway/contracts/block_timestamp"
         )),
         Deploy(
             name = "contract_instance",
@@ -766,8 +765,6 @@ async fn create_transfer(
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
 async fn test_caching() -> Result<()> {
-    use fuels_core::types::tx_status::TxStatus;
-
     let amount = 1000;
     let num_coins = 10;
     let mut wallets = launch_custom_provider_and_get_wallets(
@@ -806,7 +803,7 @@ async fn test_caching() -> Result<()> {
 
 #[cfg(feature = "coin-cache")]
 async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> {
-    use fuel_core_types::fuel_asm::Opcode;
+    let script = std::fs::read("sway/scripts/reverting/out/release/reverting.bin")?;
 
     let amount = 1;
     let asset_id = AssetId::zeroed();
@@ -814,7 +811,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
-        .with_script(vec![Opcode::RVRT.into()]);
+        .with_script(script);
     tb.add_signer(wallet.clone())?;
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
@@ -825,8 +822,6 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 #[cfg(feature = "coin-cache")]
 #[tokio::test]
 async fn test_cache_invalidation_on_await() -> Result<()> {
-    use fuels_core::types::tx_status::TxStatus;
-
     let block_time = 1u32;
     let provider_config = NodeConfig {
         block_production: Trigger::Interval {
@@ -870,7 +865,7 @@ async fn can_fetch_mint_transactions() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",

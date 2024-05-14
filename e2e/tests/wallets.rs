@@ -1,7 +1,11 @@
 use std::iter::repeat;
 
-use fuel_tx::{input::coin::CoinSigned, Bytes32, Input, Output, TxPointer, UtxoId};
-use fuels::prelude::*;
+use fuel_tx::{input::coin::CoinSigned, Input};
+use fuels::{
+    prelude::*,
+    tx::{TxPointer, UtxoId},
+    types::{output::Output, Bytes32},
+};
 
 #[tokio::test]
 async fn test_wallet_balance_api_multi_asset() -> Result<()> {

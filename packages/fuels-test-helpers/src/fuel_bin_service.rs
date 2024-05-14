@@ -7,10 +7,7 @@ use std::{
 use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
-use fuels_core::{
-    error,
-    types::errors::{Error, Result as FuelResult},
-};
+use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
 use tempfile::{tempdir, TempDir};
 use tokio::{process::Command, spawn, task::JoinHandle, time::sleep};
@@ -116,7 +113,12 @@ impl FuelService {
         let bound_address = match requested_port {
             0 => get_socket_address()?,
             _ if is_free(requested_port) => node_config.addr,
-            _ => return Err(Error::IO(std::io::ErrorKind::AddrInUse.into())),
+            _ => {
+                return Err(error!(
+                    IO,
+                    "could not find a free port to start a fuel node"
+                ))
+            }
         };
 
         let node_config = NodeConfig {

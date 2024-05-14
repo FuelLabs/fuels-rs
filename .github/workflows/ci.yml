@@ -59,45 +59,28 @@ jobs:
           fi
 
       - name: Check format of Sway test projects
-        run: forc fmt --check
-        working-directory: packages/fuels
+        run: forc fmt --check --path e2e
 
       - name: Build Sway test projects
-        run: forc build --release --terse --error-on-warnings
-        working-directory: packages/fuels
+        run: forc build --release --terse --error-on-warnings --path e2e
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           retention-days: 2
           name: sway-examples
-          # cache only the sway build artifacts, skip all src files
           path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+            e2e/sway/**/out/*
 
       # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
       - name: Build Sway test projects w type paths
-        run: forc build --release --terse --error-on-warnings --json-abi-with-callpaths
-        working-directory: packages/fuels
+        run: forc build --release --terse --error-on-warnings --json-abi-with-callpaths --path e2e
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           retention-days: 2
           name: sway-examples-w-type-paths
-          # cache only the sway build artifacts, skip all src files
           path: |
-            packages/fuels/tests
-            !packages/fuels/tests/*.rs
-            !packages/fuels/tests/**/*.rs
-            !packages/fuels/tests/**/*.sw
-            !packages/fuels/tests/**/Forc.toml
-            !packages/fuels/tests/**/Forc.lock
-            !packages/fuels/tests/.gitignore
+            e2e/sway/**/out/*
 
   get-workspace-members:
     runs-on: ubuntu-latest
@@ -217,10 +200,11 @@ jobs:
 
       - name: Download sway example artifacts
         if: ${{ matrix.download_sway_artifacts }}
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: ${{ matrix.download_sway_artifacts }}
-          path: packages/fuels/tests/
+          # Needed because `upload-artifact` will remove 'e2e/sway' because it is shared between all matched files
+          path: e2e/sway/
 
       - name: Install nextest
         if: ${{ matrix.cargo_command == 'nextest' }}
@@ -249,7 +233,7 @@ jobs:
         run: |
           rustup target add wasm32-unknown-unknown
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          cd packages/wasm-tests
+          cd wasm-tests
           wasm-pack test --node
 
       - name: Check for invalid documentation anchors
