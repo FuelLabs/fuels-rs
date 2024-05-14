@@ -24,6 +24,9 @@ tempfile = { workspace = true }
 tokio = { workspace = true }
 
 [features]
+default = ["fuels/default"]
 fuel-core-lib = ["fuels/fuel-core-lib"]
+rocksdb = ["fuels/rocksdb"]
+coin-cache = ["fuels/coin-cache"]
 # TODO: To be removed once https://github.com/FuelLabs/fuels-rs/issues/881 is unblocked.
 test-type-paths = []
