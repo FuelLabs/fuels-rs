@@ -1,17 +1,22 @@
-use std::path::PathBuf;
+use std::{collections::HashMap, path::PathBuf};
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Config(pub Vec<Group>);
 
 #[derive(Debug, serde::Deserialize)]
 pub struct Group {
-    pub working_dir: PathBuf,
-    pub name: String,
+    pub run_for_dirs: Vec<PathBuf>,
     pub commands: Vec<Command>,
 }
 
-#[derive(Debug, serde::Deserialize)]
+#[derive(Debug, Clone, serde::Deserialize)]
 pub enum Command {
-    MdCheck,
-    Custom(Vec<String>),
+    MdCheck {
+        ignore_if_in_dir: Option<Vec<String>>,
+    },
+    Custom {
+        ignore_if_cwd_ends_with: Option<Vec<String>>,
+        cmd: Vec<String>,
+        env: Option<HashMap<String, String>>,
+    },
 }

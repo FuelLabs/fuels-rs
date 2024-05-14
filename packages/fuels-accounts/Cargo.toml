@@ -17,9 +17,9 @@ eth-keystore = { workspace = true, optional = true }
 fuel-core-client = { workspace = true, optional = true }
 fuel-core-types = { workspace = true, optional = true }
 fuel-crypto = { workspace = true, optional = true }
-fuel-tx = { workspace = true, optional = true }
+fuel-tx = { workspace = true }
 fuel-types = { workspace = true, optional = true }
-fuels-core = { workspace = true, optional = true }
+fuels-core = { workspace = true }
 rand = { workspace = true, optional = true }
 semver = { workspace = true, optional = true }
 tai64 = { workspace = true, optional = true }
@@ -35,7 +35,7 @@ tokio = { workspace = true, features = ["test-util", "macros"] }
 
 [features]
 default = ["std"]
-coin-cache = ["tokio/time", "dep:fuels-core", "dep:fuel-types"]
+coin-cache = ["tokio/time", "dep:fuel-types"]
 std = [
   "fuels-core/std",
   "fuel-core-client/default",
@@ -48,9 +48,7 @@ std = [
   "dep:fuel-core-client",
   "dep:fuel-core-types",
   "dep:fuel-crypto",
-  "dep:fuel-tx",
   "dep:fuel-types",
-  "dep:fuels-core",
   "dep:rand",
   "dep:semver",
   "dep:tai64",

@@ -9,44 +9,35 @@ use std::{
 };
 
 pub fn run(dir: &Path) -> anyhow::Result<(), Error> {
-    let text_w_anchors = search_for_pattern("ANCHOR", dir)?;
+    let sources = ["packages", "e2e", "examples"].map(|source| dir.join(source));
+    let text_w_anchors = search_for_pattern("ANCHOR", &sources)?;
     let (starts, ends) = extract_starts_and_ends(&text_w_anchors)?;
     let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
 
-    let text_mentioning_include = search_for_pattern("{{#include", dir)?;
+    let text_mentioning_include = search_for_pattern("{{#include", &[dir.join("docs")])?;
     let (includes, include_path_errors) = parse_includes(text_mentioning_include);
     let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
 
-    let text_with_md_files = search_for_pattern(".md", dir.join("./docs/src/SUMMARY.md"))?;
+    let text_with_md_files = search_for_pattern(".md", &[dir.join("./docs/src/SUMMARY.md")])?;
     let md_files_in_summary = parse_md_files(text_with_md_files, dir.join("./docs/src/"));
     let md_files_in_src = find_files("*.md", dir.join("./docs/src/"), "SUMMARY.md")?;
     let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
 
-    report_errors("warning", &additional_warnings);
-    report_errors("include paths", &include_path_errors);
-    report_errors("anchors", &anchor_errors);
-    report_errors("includes", &include_errors);
-    report_errors("md files", &md_files_errors);
+    let errors = chain!(
+        additional_warnings,
+        anchor_errors,
+        include_path_errors,
+        include_errors,
+        md_files_errors
+    )
+    .collect_vec();
 
-    if !anchor_errors.is_empty()
-        || !include_errors.is_empty()
-        || !include_path_errors.is_empty()
-        || !additional_warnings.is_empty()
-        || !md_files_errors.is_empty()
-    {
-        bail!("Finished with errors");
+    if !errors.is_empty() {
+        let err_str = errors.iter().map(|err| err.to_string()).join("\n");
+        bail!("Errors: {err_str}")
     }
 
     Ok(())
-}
-
-fn report_errors(error_type: &str, errors: &[Error]) {
-    if !errors.is_empty() {
-        eprintln!("\nInvalid {error_type} detected!\n");
-        for error in errors {
-            eprintln!("{error}\n")
-        }
-    }
 }
 
 pub fn validate_includes(
@@ -250,20 +241,15 @@ pub fn validate_md_files(
         .collect()
 }
 
-pub fn search_for_pattern(pattern: &str, location: impl AsRef<Path>) -> anyhow::Result<String> {
-    cmd!(
-        "grep",
-        "-H",
-        "-n",
-        "-r",
-        "--binary-files=without-match",
-        pattern,
-        location.as_ref().to_str().unwrap()
-    )
-    .stdin_null()
-    .stderr_null()
-    .read()
-    .map_err(|err| anyhow!("Failed running `grep` command for pattern '{pattern}': {err}"))
+pub fn search_for_pattern(pattern: &str, location: &[PathBuf]) -> anyhow::Result<String> {
+    let mut args = vec!["-H", "-n", "-r", "--binary-files=without-match", pattern];
+    args.extend(location.iter().map(|path| path.to_str().unwrap()));
+
+    duct::cmd("grep", args)
+        .stdin_null()
+        .stderr_null()
+        .read()
+        .map_err(|err| anyhow!("Failed running `grep` command for pattern '{pattern}': {err}"))
 }
 
 pub fn find_files(
@@ -315,7 +301,7 @@ mod tests {
         let test_data = generate_test_data()?;
         let path = test_data.path();
 
-        let data = search_for_pattern("ANCHOR", path)?;
+        let data = search_for_pattern("ANCHOR", &[path.to_owned()])?;
 
         let (starts, ends) = extract_starts_and_ends(&data)?;
         let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
@@ -347,7 +333,7 @@ mod tests {
             "Missing anchor start for Anchor { line_no: 22, name: \"test_same_name_multiple_time\""
         ));
 
-        let text_mentioning_include = search_for_pattern("{{#include", path)?;
+        let text_mentioning_include = search_for_pattern("{{#include", &[path.to_owned()])?;
 
         let (includes, include_path_errors) = parse_includes(text_mentioning_include);
 
@@ -390,7 +376,7 @@ mod tests {
         let test_data = generate_test_data()?;
         let path = test_data.path();
 
-        let text_with_md_files = search_for_pattern(".md", path.join("docs/src/SUMMARY.md"))?;
+        let text_with_md_files = search_for_pattern(".md", &[path.join("docs/src/SUMMARY.md")])?;
         let md_files_in_summary = parse_md_files(text_with_md_files, path.join("docs/src/"));
         let md_files_in_src = find_files("*.md", path.join("docs/src/"), "SUMMARY.md")?;
         let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
@@ -404,10 +390,6 @@ mod tests {
     }
 
     fn generate_test_data() -> anyhow::Result<tempfile::TempDir> {
-        // Data is generated each time to avoid having the CI detect the errors in these test-only
-        // MDs. It was either that or rewrite the md_check to have an ignore list but that turned
-        // out to be problematic because grep excludes are finicky. The whole logic would have to
-        // be rewritten without grep for excludes to work reliably.
         let temp_dir = tempfile::tempdir()?;
 
         let anchor_data = r#"

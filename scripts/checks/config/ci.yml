@@ -1,9 +1,51 @@
-- working_dir: packages/fuels
-  name: "fuels"
+- run_for_dirs:
+  - packages/fuels
+  - packages/fuels-accounts
+  - packages/fuels-code-gen
+  - packages/fuels-core
+  - packages/fuels-macros
+  - packages/fuels-programs
+  - packages/fuels-test-helpers
+  - e2e
+  - wasm-tests
+  - scripts/checks
   commands:
-  - !Custom ["cargo", "fmt", "--verbose", "--check"]
+  - !Custom 
+      cmd: [cargo, fmt, --verbose, --check]
+  # - !Custom 
+  #     cmd: [cargo, clippy, --all-targets, --all-features, --no-deps]
+  # - !Custom 
+  #     # because those tests need to be run with wasm-pack
+  #     ignore_if_cwd_ends_with: [wasm-tests]
+  #     cmd: [cargo, nextest, run, --all-features]
+  - !Custom 
+      # because these don't have libs
+      ignore_if_cwd_ends_with: [e2e, scripts/checks, wasm-tests]
+      cmd: [cargo, test, --doc]
+  - !Custom 
+      # because these don't have libs
+      ignore_if_cwd_ends_with: [e2e, scripts/checks, wasm-tests]
+      cmd: [cargo, doc, --document-private-items]
+      env: 
+        RUSTDOCFLAGS: "-D warnings"
 
-- working_dir: .
-  name: "workspace"
+
+
+- run_for_dirs: [wasm-tests]
   commands:
-  - !MdCheck
+  - !Custom 
+      cmd: [wasm-pack, test, --node]
+
+- run_for_dirs: [.]
+  commands:
+    - !MdCheck 
+      dont_search: [scripts/checks, target/]
+    - !Custom 
+      cmd: [cargo, clippy, --workspace, --all-features]
+    # For some reason only works in the workspace dir
+    - !Custom 
+      cmd: [cargo-machete, --skip-target-dir]
+
+
+# - command: check_typos
+#   args:

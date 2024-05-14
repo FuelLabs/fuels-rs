@@ -1,12 +1,8 @@
-use std::{fmt::Debug, fs};
+use std::fmt::Debug;
 
 #[cfg(feature = "std")]
-use fuels_core::types::{input::Input, AssetId};
-use fuels_core::{
-    error,
-    types::{bech32::Bech32Address, errors::Result},
-    Configurables,
-};
+use fuels_core::types::{errors::Result, input::Input, AssetId};
+use fuels_core::{types::bech32::Bech32Address, Configurables};
 
 #[cfg(feature = "std")]
 use crate::accounts_utils::try_provider_error;
@@ -39,9 +35,10 @@ impl Predicate {
         fuel_tx::Input::predicate_owner(code).into()
     }
 
+    #[cfg(feature = "std")]
     pub fn load_from(file_path: &str) -> Result<Self> {
-        let code = fs::read(file_path).map_err(|e| {
-            error!(
+        let code = std::fs::read(file_path).map_err(|e| {
+            fuels_core::error!(
                 IO,
                 "could not read predicate binary {file_path:?}. Reason: {e}"
             )

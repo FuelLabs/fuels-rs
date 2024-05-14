@@ -14,7 +14,7 @@ use crate::{
 /// The provider and the wallets are instantiated with the default configs.
 /// For more configurable options, see the `launch_custom_provider_and_get_wallets` function.
 /// # Examples
-/// ```
+/// ```rust
 /// use fuels_test_helpers::launch_provider_and_get_wallet;
 ///
 /// async fn single_wallet() -> Result<(), Box<dyn std::error::Error>> {
@@ -34,7 +34,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// Launches a custom node and provider, along with a configurable number of wallets.
 ///
 /// # Examples
-/// ```
+/// ```rust
 /// use fuels_test_helpers::launch_custom_provider_and_get_wallets;
 /// use fuels_test_helpers::WalletsConfig;
 ///
