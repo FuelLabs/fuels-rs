@@ -82,6 +82,11 @@ wasm-bindgen-test = { version = "0.3", default-features = false }
 serde_yaml = { version = "0.9", default-features = false }
 colored = { version = "2.1", default-features = false }
 duct = { version = "0.13", default-features = false }
+toml = { version = "0.8", default-features = false }
+once_cell = { version = "1.19", default-features = false }
+color-eyre = { version = "0.6", default-features = false }
+cargo_metadata = { version = "0.18", default-features = false }
+argh = { version = "0.1", default-features = false }
 
 # Dependencies from the `fuel-core` repository:
 fuel-core = { version = "0.26.0", default-features = false }

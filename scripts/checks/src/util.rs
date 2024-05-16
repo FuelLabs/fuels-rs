@@ -6,7 +6,9 @@ use crate::{cli, config, task::Tasks};
 
 pub fn read_tasks_from_config(cli: &cli::Cli) -> Tasks {
     let config = match cli.flavor {
-        cli::Flavor::Ci => config::ci::ci_config(Path::new(&cli.root), cli.sway_with_type_paths),
+        cli::Flavor::Ci => {
+            config::description::ci_config(Path::new(&cli.root), cli.sway_with_type_paths)
+        }
         cli::Flavor::Max => todo!(),
     };
 

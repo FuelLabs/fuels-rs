@@ -10,6 +10,8 @@ rust-version.workspace = true
 version.workspace = true
 publish = false
 
+build = "build.rs"
+
 [dependencies]
 clap = { workspace = true, features = ["default", "derive"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
@@ -30,3 +32,8 @@ rand = { workspace = true, features = ["std", "std_rng"] }
 tempfile = { workspace = true }
 thiserror = { workspace = true }
 pretty_assertions = { workspace = true, features = ["std"] }
+
+[build-dependencies]
+toml = { workspace = true, features = ["parse"] }
+serde = { workspace = true, features = ["derive"] }
+itertools = { workspace = true, features = ["use_alloc"] }

@@ -15,6 +15,11 @@ pub fn ci_config(workspace: &Path, sway_type_paths: bool) -> Vec<TasksDescriptio
     ]
 }
 
+pub fn max(workspace: &Path, sway_type_paths: bool) -> Vec<TasksDescription> {
+    let ci = ci_config(workspace, sway_type_paths);
+    todo!()
+}
+
 fn paths(workspace: &Path, paths: &[&str]) -> Vec<PathBuf> {
     paths
         .iter()
@@ -73,21 +78,7 @@ fn cwd_doesnt_end_with(suffixes: &[&str]) -> RunIf {
 
 fn common(workspace: &Path) -> TasksDescription {
     TasksDescription {
-        run_for_dirs: paths(
-            workspace,
-            &[
-                "packages/fuels",
-                "packages/fuels-accounts",
-                "packages/fuels-code-gen",
-                "packages/fuels-core",
-                "packages/fuels-macros",
-                "packages/fuels-programs",
-                "packages/fuels-test-helpers",
-                "e2e",
-                "wasm-tests",
-                "scripts/checks",
-            ],
-        ),
+        run_for_dirs: all_workspace_paths(workspace),
         commands: vec![
             custom!("cargo fmt --verbose --check"),
             custom!("typos"),
@@ -106,7 +97,6 @@ fn common(workspace: &Path) -> TasksDescription {
                 "cargo test --doc",
                 // because these don't have libs
                 cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
-                "RUSTDOCFLAGS" = "-D warnings"
             ),
             custom!(
                 "cargo doc --document-private-items",
@@ -116,6 +106,14 @@ fn common(workspace: &Path) -> TasksDescription {
             ),
         ],
     }
+}
+
+include!(concat!(env!("OUT_DIR"), "/workspace_members.rs"));
+fn all_workspace_paths(workspace: &Path) -> Vec<PathBuf> {
+    self::WORKSPACE_MEMBERS
+        .iter()
+        .map(|member| workspace.join(member).canonicalize().unwrap())
+        .collect()
 }
 
 fn e2e_specific(workspace: &Path, sway_type_paths: bool) -> TasksDescription {

@@ -10,10 +10,10 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-argh = "0.1.12"
-cargo_metadata = "0.18.1"
-color-eyre = "0.6.2"
-once_cell = "1.18.0"
-regex = { workspace = true }
+argh = { workspace = true }
+cargo_metadata = { workspace = true }
+color-eyre = { workspace = true }
+once_cell = { workspace = true }
+regex = { workspace = true, features = ["unicode-perl"] }
 serde = { workspace = true, features = ["derive"] }
-walkdir = "2.4.0"
+walkdir = { workspace = true }

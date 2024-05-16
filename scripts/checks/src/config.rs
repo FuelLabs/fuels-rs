@@ -1,4 +1,4 @@
-pub mod ci;
+pub mod description;
 
 use std::{
     collections::HashMap,
