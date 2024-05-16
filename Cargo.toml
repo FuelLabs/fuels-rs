@@ -37,7 +37,7 @@ readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
 rust-version = "1.76.0"
-version = "0.61.0"
+version = "0.62.0"
 
 [workspace.dependencies]
 Inflector = { version = "0.11.4", default-features = false }
@@ -48,7 +48,7 @@ chrono = { version = "0.4.31", default-features = false }
 clap = { version = "4.5", default-features = false }
 elliptic-curve = { version = "0.13.8", default-features = false }
 eth-keystore = { version = "0.5.0", default-features = false }
-fuel-abi-types = { version = "0.4.0", default-features = false }
+fuel-abi-types = { version = "0.5.0", default-features = false }
 futures = { version = "0.3.29", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 itertools = { version = "0.12.0", default-features = false }
@@ -106,10 +106,10 @@ fuel-types = { version = "0.49.0", default-features = false }
 fuel-vm = { version = "0.49.0", default-features = false }
 
 # Workspace projects
-fuels = { version = "0.61.0", path = "./packages/fuels", default-features = false }
-fuels-accounts = { version = "0.61.0", path = "./packages/fuels-accounts", default-features = false }
-fuels-code-gen = { version = "0.61.0", path = "./packages/fuels-code-gen", default-features = false }
-fuels-core = { version = "0.61.0", path = "./packages/fuels-core", default-features = false }
-fuels-macros = { version = "0.61.0", path = "./packages/fuels-macros", default-features = false }
-fuels-programs = { version = "0.61.0", path = "./packages/fuels-programs", default-features = false }
-fuels-test-helpers = { version = "0.61.0", path = "./packages/fuels-test-helpers", default-features = false }
+fuels = { version = "0.62.0", path = "./packages/fuels", default-features = false }
+fuels-accounts = { version = "0.62.0", path = "./packages/fuels-accounts", default-features = false }
+fuels-code-gen = { version = "0.62.0", path = "./packages/fuels-code-gen", default-features = false }
+fuels-core = { version = "0.62.0", path = "./packages/fuels-core", default-features = false }
+fuels-macros = { version = "0.62.0", path = "./packages/fuels-macros", default-features = false }
+fuels-programs = { version = "0.62.0", path = "./packages/fuels-programs", default-features = false }
+fuels-test-helpers = { version = "0.62.0", path = "./packages/fuels-test-helpers", default-features = false }

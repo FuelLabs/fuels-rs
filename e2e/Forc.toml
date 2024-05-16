@@ -111,4 +111,4 @@ members = [
 ]
 
 [patch.'https://github.com/fuellabs/sway']
-std = { git = "https://github.com/fuellabs/sway", branch = "xunilrj/new-encoding-configurables" }
+std = { git = "https://github.com/fuellabs/sway", branch = "esdrubal/abi_hash_ids" }
