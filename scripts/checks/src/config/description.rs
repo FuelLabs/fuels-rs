@@ -67,15 +67,17 @@ impl TaskDescriptionBuilder {
 
     fn hack_e2e(&self) -> TasksDescription {
         let exclude_features = if self.sway_type_paths {
-            "--exclude-features test-type-paths"
-        } else {
             ""
+        } else {
+            "--exclude-features test-type-paths"
         };
         TasksDescription {
             run_for_dirs: self.workspace_path(&["e2e"]),
             commands: vec![
                 self.cargo(format!("hack --feature-powerset {exclude_features} check ")),
-                self.cargo("hack --feature-powerset {exclude-features} check --tests"),
+                self.cargo(format!(
+                    "hack --feature-powerset {exclude_features} check --tests"
+                )),
             ],
         }
     }

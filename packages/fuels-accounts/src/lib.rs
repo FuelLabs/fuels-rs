@@ -1,4 +1,3 @@
-#![deny(unused_crate_dependencies)]
 #[cfg(feature = "std")]
 mod account;
 #[cfg(feature = "std")]
@@ -11,12 +10,7 @@ pub mod wallet;
 #[cfg(feature = "std")]
 pub use account::*;
 
-#[cfg(feature = "coin-cache")]
+#[cfg(all(feature = "std", feature = "coin-cache"))]
 mod coin_cache;
 
 pub mod predicate;
-
-#[cfg(test)]
-mod tests {
-    use fuels_accounts as _;
-}
