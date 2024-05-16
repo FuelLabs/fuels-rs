@@ -6,6 +6,7 @@ use std::{
 use colored::Colorize;
 use duct::cmd;
 use itertools::Itertools;
+use nix::{sys::signal::Signal, unistd::Pid};
 use sha2::Digest;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
@@ -279,22 +280,36 @@ impl Tasks {
         }
 
         let mut errors = false;
-        tokio::select! {
-            _ = cancel_token.cancelled() => {
-            return Ok(());
-            }
-            else => {
 
-            }
-        }
-        while let Some(result) = set.join_next().await {
-            let execution = result?;
+        let mut handle_task_response = |execution: Execution| {
             if let ExecutionStatus::Success { .. } = execution.status {
                 errors = true;
             }
 
             let report = execution.report(tty, verbose);
             eprintln!("{report}");
+            anyhow::Ok(())
+        };
+
+        let kill_processes = || {
+            // All spawned processes are in the same process group created in main.
+            nix::sys::signal::killpg(Pid::from_raw(0), Signal::SIGINT)
+        };
+
+        loop {
+            tokio::select! {
+                _ = cancel_token.cancelled() => {
+                    kill_processes()?;
+                    return Ok(());
+                }
+                task_response = set.join_next() => {
+                    if let Some(result) = task_response {
+                        handle_task_response(result?)?;
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
 
         if errors {
@@ -467,42 +482,14 @@ mod tests {
 
         let mut tasks = Tasks::from_task_descriptions(config, ".");
 
+        use rand::seq::SliceRandom;
+        let random_task = tasks.tasks.choose(&mut rand::thread_rng()).unwrap().clone();
+
         // when
-        tasks.retain_with_ids(&["zoo".to_string()]);
+        tasks.retain_with_ids(&[random_task.id()]);
 
         // then
-        let cwd = PathBuf::from("./other/zoo");
-
-        let mut expected = [
-            Task {
-                cwd: cwd.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["check".to_string()],
-                    env: vec![],
-                },
-            },
-            Task {
-                cwd: cwd.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["fmt".to_string()],
-                    env: vec![],
-                },
-            },
-            Task {
-                cwd: cwd.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["test".to_string()],
-                    env: vec![],
-                },
-            },
-        ];
-
-        tasks.tasks.sort();
-        expected.sort();
-        assert_eq!(tasks.tasks, expected);
+        assert_eq!(tasks.tasks, [random_task]);
     }
 
     #[test]

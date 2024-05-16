@@ -1,3 +1,4 @@
+use std::path::Path;
 use std::path::PathBuf;
 
 use crate::config::RunIf;
@@ -5,24 +6,23 @@ use crate::config::TasksDescription;
 
 use super::Command;
 
-pub fn ci_config(sway_type_paths: bool) -> Vec<TasksDescription> {
+pub fn ci_config(workspace: &Path, sway_type_paths: bool) -> Vec<TasksDescription> {
     vec![
-        common(),
-        e2e_specific(sway_type_paths),
-        wasm_specific(),
-        workspace_level(),
+        common(workspace),
+        e2e_specific(workspace, sway_type_paths),
+        wasm_specific(workspace),
+        workspace_level(workspace),
     ]
 }
 
-fn paths(paths: &[&str]) -> Vec<PathBuf> {
-    let workspace = PathBuf::from(file!())
-        .parent()
-        .unwrap()
-        .join("../../../../");
-
+fn paths(workspace: &Path, paths: &[&str]) -> Vec<PathBuf> {
     paths
         .iter()
-        .map(|path| workspace.join(path).canonicalize().unwrap())
+        .map(|path| {
+            let path = workspace.join(path);
+            path.canonicalize()
+                .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
+        })
         .collect()
 }
 
@@ -71,20 +71,23 @@ fn cwd_doesnt_end_with(suffixes: &[&str]) -> RunIf {
     RunIf::CwdDoesntEndWith(suffixes.iter().map(|s| s.to_string()).collect())
 }
 
-fn common() -> TasksDescription {
+fn common(workspace: &Path) -> TasksDescription {
     TasksDescription {
-        run_for_dirs: paths(&[
-            "packages/fuels",
-            "packages/fuels-accounts",
-            "packages/fuels-code-gen",
-            "packages/fuels-core",
-            "packages/fuels-macros",
-            "packages/fuels-programs",
-            "packages/fuels-test-helpers",
-            "e2e",
-            "wasm-tests",
-            "scripts/checks",
-        ]),
+        run_for_dirs: paths(
+            workspace,
+            &[
+                "packages/fuels",
+                "packages/fuels-accounts",
+                "packages/fuels-code-gen",
+                "packages/fuels-core",
+                "packages/fuels-macros",
+                "packages/fuels-programs",
+                "packages/fuels-test-helpers",
+                "e2e",
+                "wasm-tests",
+                "scripts/checks",
+            ],
+        ),
         commands: vec![
             custom!("cargo fmt --verbose --check"),
             custom!("typos"),
@@ -111,7 +114,7 @@ fn common() -> TasksDescription {
     }
 }
 
-fn e2e_specific(sway_type_paths: bool) -> TasksDescription {
+fn e2e_specific(workspace: &Path, sway_type_paths: bool) -> TasksDescription {
     let commands = if sway_type_paths {
         vec![custom!(
             "cargo nextest run --features default,fuel-core-lib,test-type-paths"
@@ -123,24 +126,24 @@ fn e2e_specific(sway_type_paths: bool) -> TasksDescription {
         ]
     };
     TasksDescription {
-        run_for_dirs: paths(&["e2e"]),
+        run_for_dirs: paths(workspace, &["e2e"]),
         commands,
     }
 }
 
-fn wasm_specific() -> TasksDescription {
+fn wasm_specific(workspace: &Path) -> TasksDescription {
     TasksDescription {
-        run_for_dirs: paths(&["wasm-tests"]),
+        run_for_dirs: paths(workspace, &["wasm-tests"]),
         commands: vec![custom!("wasm-pack test --node")],
     }
 }
 
-fn workspace_level() -> TasksDescription {
+fn workspace_level(workspace: &Path) -> TasksDescription {
     TasksDescription {
-        run_for_dirs: paths(&["."]),
+        run_for_dirs: paths(workspace, &["."]),
         commands: vec![
             Command::MdCheck { run_if: None },
-            custom!("cargo machete --skip-target-dir"),
+            custom!("cargo-machete --skip-target-dir"),
             custom!("cargo clippy --workspace --all-features"),
             custom!("typos"),
         ],

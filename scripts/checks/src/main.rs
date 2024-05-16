@@ -10,6 +10,7 @@ mod util;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
+    util::configure_child_process_cleanup()?;
 
     let tasks = util::read_tasks_from_config(&cli);
 

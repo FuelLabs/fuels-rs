@@ -46,21 +46,8 @@ pub struct Cli {
 
     /// If ran as a binary from elsewhere the workspace_root needs to be pointed to where the
     /// project workspace root is
-    #[arg(default_value_t = default_workspace_root())]
-    pub workspace_root: String,
-}
-
-fn default_workspace_root() -> String {
-    // This will bake in the current path of the project as the default workspace_root. Makes it so that the checks can be run from anywhere in the project.
-    // Would usually be a bad idea, but in this case it's fine since it's utility code.
-    PathBuf::from(file!())
-        .parent()
-        .unwrap()
-        .join("../../../")
-        .canonicalize()
-        .unwrap()
-        .to_string_lossy()
-        .to_string()
+    #[arg(short, long = "root", required = true)]
+    pub root: PathBuf,
 }
 
 #[derive(Debug, Copy, Clone, ValueEnum, PartialEq)]
@@ -76,10 +63,10 @@ mod tests {
     #[test]
     fn tasks_can_be_selected() {
         // given
-        let cli = "foo --tasks one,two";
+        let cli = "foo --only-tasks-with-ids one,two -r .";
 
         // when
-        let cli = Cli::parse_from(cli.split_whitespace());
+        let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
         assert_eq!(cli.only_tasks_with_ids, vec!["one", "two"]);
@@ -88,10 +75,10 @@ mod tests {
     #[test]
     fn tasks_can_be_listed() {
         // given
-        let cli = "foo --list-tasks";
+        let cli = "foo --list-tasks -r .";
 
         // when
-        let cli = Cli::parse_from(cli.split_whitespace());
+        let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
         assert!(cli.list_tasks);
@@ -100,10 +87,10 @@ mod tests {
     #[test]
     fn flavor_can_be_chosen() {
         // given
-        let cli = "foo --flavor max";
+        let cli = "foo --flavor max -r .";
 
         // when
-        let cli = Cli::parse_from(cli.split_whitespace());
+        let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
         assert_eq!(cli.flavor, Flavor::Max);
@@ -112,10 +99,10 @@ mod tests {
     #[test]
     fn default_flavor_is_ci() {
         // given
-        let cli = "foo";
+        let cli = "foo -r .";
 
         // when
-        let cli = Cli::parse_from(cli.split_whitespace());
+        let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
         assert_eq!(cli.flavor, Flavor::Ci);
