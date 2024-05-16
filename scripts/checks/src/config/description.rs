@@ -19,7 +19,11 @@ pub fn ci(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
 }
 
 pub fn other(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
-    let desc = TaskDescriptionBuilder::new(workspace, sway_type_paths, &["-Dwarnings"]);
+    let desc = TaskDescriptionBuilder::new(
+        workspace,
+        sway_type_paths,
+        &["-Dwarnings", "-Dunused_crate_dependencies"],
+    );
     vec![desc.hack_common(), desc.hack_e2e()]
 }
 
