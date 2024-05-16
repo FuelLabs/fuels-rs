@@ -1,5 +1,3 @@
-use std::path::Path;
-
 use nix::unistd::Pid;
 
 use crate::{cli, config, task::Tasks};

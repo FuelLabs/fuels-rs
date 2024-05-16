@@ -1,3 +1,4 @@
+use itertools::Itertools;
 use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
@@ -79,46 +80,43 @@ impl TaskDescriptionBuilder {
         }
     }
 
-    fn cargo_if(&self, cmd: impl Into<String>, run_if: Option<RunIf>) -> Command {
-        let flags = self.rust_flags.join(",");
-        let env = HashMap::from_iter([("RUSTFLAGS".to_owned(), flags)]);
-        Command::Custom {
-            cmd: parse_cmd("cargo", &cmd.into()),
-            env: Some(env),
-            run_if,
-        }
+    fn cargo(&self, cmd: impl Into<String>) -> Command {
+        self.cargo_full(cmd, None, None)
     }
 
-    fn cargo_env(
+    fn cargo_if(&self, cmd: impl Into<String>, run_if: Option<RunIf>) -> Command {
+        self.cargo_full(cmd, None, run_if)
+    }
+
+    fn cargo_full(
         &self,
         cmd: impl Into<String>,
-        env: (impl Into<String>, impl Into<String>),
+        env: Option<(&str, &str)>,
+        run_if: Option<RunIf>,
     ) -> Command {
+        let mut envs = self.rust_flags_env();
+
+        if let Some(env) = env {
+            envs.insert(env.0.into(), env.1.into());
+        }
+
         Command::Custom {
             cmd: parse_cmd("cargo", &cmd.into()),
-            env: Some(env),
-            run_if: None,
+            env: Some(envs),
+            run_if,
         }
     }
 
-    fn cargo(&self, cmd: impl Into<String>) -> Command {
-        self.cargo_if(cmd, None)
+    fn rust_flags_env(&self) -> HashMap<String, String> {
+        let value = self.rust_flags.iter().join(",");
+        HashMap::from_iter(vec![("RUSTFLAGS".to_owned(), value)])
     }
 
-    fn custom(&self, cmd: &str, env: Option<(&str, &str)>, run_if: Option<RunIf>) -> Command {
-        let env = if let Some((key, value)) = env {
-            Some(std::collections::HashMap::from_iter(vec![(
-                key.to_owned(),
-                value.to_owned(),
-            )]))
-        } else {
-            None
-        };
-
+    fn custom(&self, cmd: &str) -> Command {
         Command::Custom {
             cmd: parse_cmd("", cmd),
-            env,
-            run_if,
+            env: None,
+            run_if: None,
         }
     }
 
@@ -143,7 +141,7 @@ impl TaskDescriptionBuilder {
     fn wasm_specific(&self) -> TasksDescription {
         TasksDescription {
             run_for_dirs: self.workspace_path(&["wasm-tests"]),
-            commands: vec![self.custom("wasm-pack test --node", None, None)],
+            commands: vec![self.custom("wasm-pack test --node")],
         }
     }
 
@@ -152,9 +150,9 @@ impl TaskDescriptionBuilder {
             run_for_dirs: self.workspace_path(&["."]),
             commands: vec![
                 Command::MdCheck { run_if: None },
-                self.custom("cargo-machete --skip-target-dir", None, None),
+                self.custom("cargo-machete --skip-target-dir"),
                 self.cargo("clippy --workspace --all-features"),
-                self.custom("typos", None, None),
+                self.custom("typos"),
             ],
         }
     }
@@ -165,7 +163,7 @@ impl TaskDescriptionBuilder {
             run_for_dirs: all_workspace_members(workspace),
             commands: vec![
                 self.cargo("fmt --verbose --check"),
-                self.custom("typos", None, None),
+                self.custom("typos"),
                 self.cargo_if(
                     "clippy --all-targets --all-features --no-deps",
                     // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
@@ -182,8 +180,9 @@ impl TaskDescriptionBuilder {
                     // because these don't have libs
                     cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
                 ),
-                self.cargo_if(
+                self.cargo_full(
                     "doc --document-private-items",
+                    Some(("RUSTDOCFLAGS", "-Dwarnings")),
                     // because these don't have libs
                     cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
                 ),
