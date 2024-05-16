@@ -102,45 +102,6 @@ impl MintTransaction {
     }
 }
 
-#[derive(Default, Debug, Clone, PartialEq, Eq)]
-pub struct UpgradeTransaction {
-    tx: Upgrade,
-}
-
-impl From<UpgradeTransaction> for FuelTransaction {
-    fn from(upload: UpgradeTransaction) -> Self {
-        upload.tx.into()
-    }
-}
-
-impl From<UpgradeTransaction> for Upgrade {
-    fn from(tx: UpgradeTransaction) -> Self {
-        tx.tx
-    }
-}
-
-impl From<Upgrade> for UpgradeTransaction {
-    fn from(tx: Upgrade) -> Self {
-        Self { tx }
-    }
-}
-
-impl UpgradeTransaction {
-    pub fn check_without_signatures(
-        &self,
-        block_height: u32,
-        consensus_parameters: &ConsensusParameters,
-    ) -> Result<()> {
-        Ok(self
-            .tx
-            .check_without_signatures(block_height.into(), consensus_parameters)?)
-    }
-    #[must_use]
-    pub fn id(&self, chain_id: ChainId) -> Bytes32 {
-        self.tx.id(&chain_id)
-    }
-}
-
 #[derive(Default, Debug, Copy, Clone)]
 //ANCHOR: tx_policies_struct
 pub struct TxPolicies {
@@ -533,8 +494,17 @@ macro_rules! impl_tx_wrapper {
 impl_tx_wrapper!(ScriptTransaction, Script);
 impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
+impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
 impl EstimablePredicates for UploadTransaction {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
+        self.tx.estimate_predicates(&consensus_parameters.into())?;
+
+        Ok(())
+    }
+}
+
+impl EstimablePredicates for UpgradeTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
         self.tx.estimate_predicates(&consensus_parameters.into())?;
 
@@ -579,6 +549,12 @@ impl GasValidation for CreateTransaction {
 }
 
 impl GasValidation for UploadTransaction {
+    fn validate_gas(&self, _gas_used: u64) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl GasValidation for UpgradeTransaction {
     fn validate_gas(&self, _gas_used: u64) -> Result<()> {
         Ok(())
     }

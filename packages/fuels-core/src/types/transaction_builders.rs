@@ -8,14 +8,14 @@ use std::{
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_crypto::{Message as CryptoMessage, Signature};
+use fuel_crypto::{Hasher, Message as CryptoMessage, Signature};
 use fuel_tx::{
     field::{Inputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
     policies::{Policies, PolicyType},
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upload,
-    UploadBody, UploadSubsection, Witness,
+    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade,
+    UpgradePurpose, Upload, UploadBody, UploadSubsection, Witness,
 };
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use itertools::Itertools;
@@ -32,7 +32,7 @@ use crate::{
         message::Message,
         transaction::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
-            UploadTransaction,
+            UpgradeTransaction, UploadTransaction,
         },
         Address, AssetId, ContractId,
     },
@@ -119,6 +119,24 @@ impl sealed::Sealed for UploadTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UploadTransactionBuilder {
     type TxType = UploadTransaction;
+
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
+    }
+
+    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.set_witness_indexes();
+        self.unresolved_signers = Default::default();
+
+        self.build(provider).await
+    }
+}
+
+impl sealed::Sealed for UpgradeTransactionBuilder {}
+
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl BuildableTransaction for UpgradeTransactionBuilder {
+    type TxType = UpgradeTransaction;
 
     async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
         self.build(provider).await
@@ -411,9 +429,39 @@ pub struct UploadTransactionBuilder {
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
 
+pub struct UpgradeTransactionBuilder {
+    /// The purpose of the upgrade.
+    pub purpose: UpgradePurpose,
+    pub inputs: Vec<Input>,
+    pub outputs: Vec<Output>,
+    pub witnesses: Vec<Witness>,
+    pub tx_policies: TxPolicies,
+    pub gas_price_estimation_block_horizon: u32,
+    unresolved_witness_indexes: UnresolvedWitnessIndexes,
+    unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
+}
+
+impl Default for UpgradeTransactionBuilder {
+    fn default() -> Self {
+        Self {
+            purpose: UpgradePurpose::StateTransition {
+                root: Default::default(),
+            },
+            inputs: Default::default(),
+            outputs: Default::default(),
+            witnesses: Default::default(),
+            tx_policies: Default::default(),
+            gas_price_estimation_block_horizon: Default::default(),
+            unresolved_witness_indexes: Default::default(),
+            unresolved_signers: Default::default(),
+        }
+    }
+}
+
 impl_tx_trait!(ScriptTransactionBuilder, ScriptTransaction);
 impl_tx_trait!(CreateTransactionBuilder, CreateTransaction);
 impl_tx_trait!(UploadTransactionBuilder, UploadTransaction);
+impl_tx_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
     async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
@@ -860,6 +908,83 @@ impl UploadTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             proof_set: vec![],
+        }
+    }
+}
+
+impl UpgradeTransactionBuilder {
+    pub async fn build(self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
+        Ok(UpgradeTransaction {
+            is_using_predicates: self.is_using_predicates(),
+            tx: self.resolve_fuel_tx(&provider).await?,
+        })
+    }
+
+    async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
+        let chain_id = provider.consensus_parameters().chain_id();
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies()?;
+
+        let mut tx = FuelTransaction::upgrade(
+            self.purpose,
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            self.witnesses,
+        );
+
+        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
+            .await?;
+
+        let missing_witnesses =
+            generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
+        tx.witnesses_mut().extend(missing_witnesses);
+
+        Ok(tx)
+    }
+
+    pub fn with_purpose(mut self, upgrade_purpose: UpgradePurpose) -> Self {
+        self.purpose = upgrade_purpose;
+        self
+    }
+
+    pub fn prepare_state_transition_upgrade(root: Bytes32, tx_policies: TxPolicies) -> Self {
+        Self::default()
+            .with_tx_policies(tx_policies)
+            .with_purpose(UpgradePurpose::StateTransition { root })
+    }
+
+    pub fn prepare_consensus_parameters_upgrade(
+        consensus_parameters: &ConsensusParameters,
+        tx_policies: TxPolicies,
+    ) -> Self {
+        let serialized_consensus_parameters = postcard::to_allocvec(consensus_parameters)
+            .expect("Impossible to fail unless it not enough memory");
+        let checksum = Hasher::hash(&serialized_consensus_parameters);
+        let witness_index = 0;
+        let outputs = vec![];
+        let witnesses = vec![serialized_consensus_parameters.into()];
+
+        Self::default()
+            .with_tx_policies(tx_policies)
+            .with_purpose(UpgradePurpose::ConsensusParameters {
+                witness_index,
+                checksum,
+            })
+            .with_outputs(outputs)
+            .with_witnesses(witnesses)
+    }
+
+    fn clone_without_signers(&self) -> Self {
+        Self {
+            purpose: self.purpose,
+            inputs: self.inputs.clone(),
+            outputs: self.outputs.clone(),
+            witnesses: self.witnesses.clone(),
+            tx_policies: self.tx_policies,
+            unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
+            unresolved_signers: Default::default(),
+            gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
         }
     }
 }
