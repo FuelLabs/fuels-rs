@@ -5,12 +5,11 @@ use nix::unistd::Pid;
 use crate::{cli, config, task::Tasks};
 
 pub fn read_tasks_from_config(cli: &cli::Cli) -> Tasks {
-    let config = match cli.flavor {
-        cli::Flavor::Ci => {
-            config::description::ci_config(Path::new(&cli.root), cli.sway_with_type_paths)
-        }
-        cli::Flavor::Max => todo!(),
+    let config_fn = match cli.flavor {
+        cli::Flavor::Ci => config::description::ci,
+        cli::Flavor::Other => config::description::other,
     };
+    let config = config_fn(cli.root.clone(), cli.sway_with_type_paths);
 
     let mut tasks = Tasks::from_task_descriptions(config, cli.root.clone());
 

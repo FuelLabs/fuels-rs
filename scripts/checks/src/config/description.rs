@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -6,150 +7,210 @@ use crate::config::TasksDescription;
 
 use super::Command;
 
-pub fn ci_config(workspace: &Path, sway_type_paths: bool) -> Vec<TasksDescription> {
+pub fn ci(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
+    let desc = TaskDescriptionBuilder::new(workspace, sway_type_paths, &["-Dwarnings"]);
     vec![
-        common(workspace),
-        e2e_specific(workspace, sway_type_paths),
-        wasm_specific(workspace),
-        workspace_level(workspace),
+        desc.common(),
+        desc.e2e_specific(),
+        desc.wasm_specific(),
+        desc.workspace_level(),
     ]
 }
 
-pub fn max(workspace: &Path, sway_type_paths: bool) -> Vec<TasksDescription> {
-    let ci = ci_config(workspace, sway_type_paths);
-    todo!()
+pub fn other(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
+    let desc = TaskDescriptionBuilder::new(workspace, sway_type_paths, &["-Dwarnings"]);
+    vec![desc.hack_common(), desc.hack_e2e()]
 }
 
-fn paths(workspace: &Path, paths: &[&str]) -> Vec<PathBuf> {
-    paths
-        .iter()
-        .map(|path| {
-            let path = workspace.join(path);
-            path.canonicalize()
-                .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
-        })
-        .collect()
+struct TaskDescriptionBuilder {
+    workspace: PathBuf,
+    sway_type_paths: bool,
+    rust_flags: Vec<String>,
 }
 
-fn split(string: &str) -> Vec<String> {
-    string
-        .split_whitespace()
-        .map(|word| word.to_owned())
-        .collect()
-}
+impl TaskDescriptionBuilder {
+    fn new(workspace: PathBuf, sway_type_paths: bool, rust_flags: &[&str]) -> Self {
+        Self {
+            workspace,
+            sway_type_paths,
+            rust_flags: rust_flags.iter().map(|s| s.to_string()).collect(),
+        }
+    }
 
-macro_rules! custom {
-    ($cmd: literal) => {
-        crate::config::Command::Custom {
-            cmd: self::split($cmd),
-            env: None,
+    fn workspace_path(&self, paths: &[&str]) -> Vec<PathBuf> {
+        paths
+            .iter()
+            .map(|path| {
+                let path = self.workspace.join(path);
+                path.canonicalize()
+                    .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
+            })
+            .collect()
+    }
+
+    fn hack_common(&self) -> TasksDescription {
+        TasksDescription {
+            run_for_dirs: all_workspace_members(&self.workspace),
+            commands: vec![
+                self.cargo_if(
+                    "hack --feature-powerset check",
+                    cwd_doesnt_end_with(&["e2e"]),
+                ),
+                self.cargo_if(
+                    "hack --feature-powerset check --tests",
+                    cwd_doesnt_end_with(&["e2e"]),
+                ),
+            ],
+        }
+    }
+
+    fn hack_e2e(&self) -> TasksDescription {
+        let exclude_features = if self.sway_type_paths {
+            "--exclude-features test-type-paths"
+        } else {
+            ""
+        };
+        TasksDescription {
+            run_for_dirs: self.workspace_path(&["e2e"]),
+            commands: vec![
+                self.cargo(format!("hack --feature-powerset {exclude_features} check ")),
+                self.cargo("hack --feature-powerset {exclude-features} check --tests"),
+            ],
+        }
+    }
+
+    fn cargo_if(&self, cmd: impl Into<String>, run_if: Option<RunIf>) -> Command {
+        let flags = self.rust_flags.join(",");
+        let env = HashMap::from_iter([("RUSTFLAGS".to_owned(), flags)]);
+        Command::Custom {
+            cmd: parse_cmd("cargo", &cmd.into()),
+            env: Some(env),
+            run_if,
+        }
+    }
+
+    fn cargo_env(
+        &self,
+        cmd: impl Into<String>,
+        env: (impl Into<String>, impl Into<String>),
+    ) -> Command {
+        Command::Custom {
+            cmd: parse_cmd("cargo", &cmd.into()),
+            env: Some(env),
             run_if: None,
         }
-    };
-    ($cmd: literal, $run_if: expr) => {
-        crate::config::Command::Custom {
-            cmd: self::split($cmd),
-            env: None,
-            run_if: Some($run_if),
+    }
+
+    fn cargo(&self, cmd: impl Into<String>) -> Command {
+        self.cargo_if(cmd, None)
+    }
+
+    fn custom(&self, cmd: &str, env: Option<(&str, &str)>, run_if: Option<RunIf>) -> Command {
+        let env = if let Some((key, value)) = env {
+            Some(std::collections::HashMap::from_iter(vec![(
+                key.to_owned(),
+                value.to_owned(),
+            )]))
+        } else {
+            None
+        };
+
+        Command::Custom {
+            cmd: parse_cmd("", cmd),
+            env,
+            run_if,
         }
-    };
-    ($cmd: literal, $env: literal) => {
-        crate::config::Command::Custom {
-            cmd: self::split($cmd),
-            env: Some($env),
-            run_if: None,
+    }
+
+    fn e2e_specific(&self) -> TasksDescription {
+        let commands = if self.sway_type_paths {
+            vec![
+                self.cargo("nextest run --features default,fuel-core-lib,test-type-paths"),
+                self.cargo("clippy --all-features --all-targets --no-deps"),
+            ]
+        } else {
+            vec![
+                self.cargo("nextest run --features default"),
+                self.cargo("clippy --features default,fuel-core-lib --all-targets --no-deps"),
+            ]
+        };
+        TasksDescription {
+            run_for_dirs: self.workspace_path(&["e2e"]),
+            commands,
         }
-    };
-    ($cmd: literal , $run_if: expr,  $($env_key:literal = $env_value:literal),*) => {
-        crate::config::Command::Custom {
-            cmd: self::split($cmd),
-            env: Some(
-            std::collections::HashMap::from_iter([
-                $(($env_key.to_owned(), $env_value.to_owned()),)*
-            ])),
-            run_if: Some($run_if),
+    }
+
+    fn wasm_specific(&self) -> TasksDescription {
+        TasksDescription {
+            run_for_dirs: self.workspace_path(&["wasm-tests"]),
+            commands: vec![self.custom("wasm-pack test --node", None, None)],
         }
-    };
+    }
+
+    fn workspace_level(&self) -> TasksDescription {
+        TasksDescription {
+            run_for_dirs: self.workspace_path(&["."]),
+            commands: vec![
+                Command::MdCheck { run_if: None },
+                self.custom("cargo-machete --skip-target-dir", None, None),
+                self.cargo("clippy --workspace --all-features"),
+                self.custom("typos", None, None),
+            ],
+        }
+    }
+
+    fn common(&self) -> TasksDescription {
+        let workspace = &self.workspace;
+        TasksDescription {
+            run_for_dirs: all_workspace_members(workspace),
+            commands: vec![
+                self.cargo("fmt --verbose --check"),
+                self.custom("typos", None, None),
+                self.cargo_if(
+                    "clippy --all-targets --all-features --no-deps",
+                    // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
+                    cwd_doesnt_end_with(&["e2e"]),
+                ),
+                self.cargo_if(
+                    "nextest run --all-features",
+                    // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
+                    // wasm ignored because wasm tests need to be run with wasm-pack
+                    cwd_doesnt_end_with(&["wasm-tests", "e2e"]),
+                ),
+                self.cargo_if(
+                    "test --doc",
+                    // because these don't have libs
+                    cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
+                ),
+                self.cargo_if(
+                    "doc --document-private-items",
+                    // because these don't have libs
+                    cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
+                ),
+            ],
+        }
+    }
 }
 
-fn cwd_doesnt_end_with(suffixes: &[&str]) -> RunIf {
-    RunIf::CwdDoesntEndWith(suffixes.iter().map(|s| s.to_string()).collect())
+fn cwd_doesnt_end_with(suffixes: &[&str]) -> Option<RunIf> {
+    Some(RunIf::CwdDoesntEndWith(
+        suffixes.iter().map(|s| s.to_string()).collect(),
+    ))
 }
 
-fn common(workspace: &Path) -> TasksDescription {
-    TasksDescription {
-        run_for_dirs: all_workspace_paths(workspace),
-        commands: vec![
-            custom!("cargo fmt --verbose --check"),
-            custom!("typos"),
-            custom!(
-                "cargo clippy --all-targets --all-features --no-deps",
-                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
-                cwd_doesnt_end_with(&["e2e"])
-            ),
-            custom!(
-                "cargo nextest run --all-features",
-                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
-                // wasm ignored because wasm tests need to be run with wasm-pack
-                cwd_doesnt_end_with(&["wasm-tests", "e2e"])
-            ),
-            custom!(
-                "cargo test --doc",
-                // because these don't have libs
-                cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
-            ),
-            custom!(
-                "cargo doc --document-private-items",
-                // because these don't have libs
-                cwd_doesnt_end_with(&["e2e", "scripts/checks", "wasm-tests"]),
-                "RUSTDOCFLAGS" = "-D warnings"
-            ),
-        ],
+fn parse_cmd(prepend: &str, string: &str) -> Vec<String> {
+    let parts = string.split_whitespace().map(|s| s.to_string()).collect();
+    if prepend.is_empty() {
+        parts
+    } else {
+        [vec![prepend.to_owned()], parts].concat()
     }
 }
 
 include!(concat!(env!("OUT_DIR"), "/workspace_members.rs"));
-fn all_workspace_paths(workspace: &Path) -> Vec<PathBuf> {
+fn all_workspace_members(workspace: &Path) -> Vec<PathBuf> {
     self::WORKSPACE_MEMBERS
         .iter()
         .map(|member| workspace.join(member).canonicalize().unwrap())
         .collect()
-}
-
-fn e2e_specific(workspace: &Path, sway_type_paths: bool) -> TasksDescription {
-    let commands = if sway_type_paths {
-        vec![
-            custom!("cargo nextest run --features default,fuel-core-lib,test-type-paths"),
-            custom!("cargo clippy --all-features --all-targets --no-deps"),
-        ]
-    } else {
-        vec![
-            custom!("cargo nextest run --features default,fuel-core-lib"),
-            custom!("cargo nextest run --features default"),
-            custom!("cargo clippy --features default,fuel-core-lib --all-targets --no-deps"),
-        ]
-    };
-    TasksDescription {
-        run_for_dirs: paths(workspace, &["e2e"]),
-        commands,
-    }
-}
-
-fn wasm_specific(workspace: &Path) -> TasksDescription {
-    TasksDescription {
-        run_for_dirs: paths(workspace, &["wasm-tests"]),
-        commands: vec![custom!("wasm-pack test --node")],
-    }
-}
-
-fn workspace_level(workspace: &Path) -> TasksDescription {
-    TasksDescription {
-        run_for_dirs: paths(workspace, &["."]),
-        commands: vec![
-            Command::MdCheck { run_if: None },
-            custom!("cargo-machete --skip-target-dir"),
-            custom!("cargo clippy --workspace --all-features"),
-            custom!("typos"),
-        ],
-    }
 }

@@ -53,7 +53,7 @@ pub struct Cli {
 #[derive(Debug, Copy, Clone, ValueEnum, PartialEq)]
 pub enum Flavor {
     Ci,
-    Max,
+    Other,
 }
 
 #[cfg(test)]
@@ -87,13 +87,13 @@ mod tests {
     #[test]
     fn flavor_can_be_chosen() {
         // given
-        let cli = "foo --flavor max -r .";
+        let cli = "foo --flavor other -r .";
 
         // when
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.flavor, Flavor::Max);
+        assert_eq!(cli.flavor, Flavor::Other);
     }
 
     #[test]
