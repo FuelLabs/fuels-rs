@@ -15,11 +15,14 @@ clap = { workspace = true, features = ["default", "derive"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
 anyhow = { workspace = true, features = ["std"] }
 serde = { workspace = true, features = ["derive"] }
-serde_yaml = { workspace = true }
-itertools = { workspace = true, features = ["use_alloc"] }
+serde_json = { workspace = true, features = ["std"] }
+itertools = { workspace = true, features = ["use_std"] }
+tokio-util = { workspace = true }
 colored = { workspace = true }
 duct = { workspace = true }
 regex = { workspace = true, features = ["std", "unicode-perl"] }
+sha2 = { workspace = true, features = ["std"] }
+hex = { workspace = true, features = ["std"] }
 
 [dev-dependencies]
 tempfile = { workspace = true }

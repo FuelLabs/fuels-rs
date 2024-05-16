@@ -1,17 +1,27 @@
 use crate::{cli, config, task::Tasks};
 
-pub fn read_tasks_from_config(cli: cli::Cli) -> anyhow::Result<Tasks> {
-    let yml = match cli.flavor {
-        cli::Flavor::Ci => include_str!("../config/ci.yml"),
-        cli::Flavor::Max => include_str!("../config/max.yml"),
+pub fn read_tasks_from_config(cli: &cli::Cli) -> Tasks {
+    let config = match cli.flavor {
+        cli::Flavor::Ci => config::ci::ci_config(cli.sway_with_type_paths),
+        cli::Flavor::Max => todo!(),
     };
-    let config = serde_yaml::from_str::<config::Config>(yml)?;
 
-    let mut tasks = Tasks::from_config(config, cli.workspace_root);
+    let mut tasks = Tasks::from_task_descriptions(config, cli.workspace_root.clone());
 
-    if !cli.crates.is_empty() {
-        tasks.retain(&cli.crates);
+    if !cli.only_tasks_with_ids.is_empty() {
+        tasks.retain_with_ids(&cli.only_tasks_with_ids);
     }
 
-    Ok(tasks)
+    if !cli.only_tasks_in_dir.is_empty() {
+        tasks.retain_with_dirs(&cli.only_tasks_in_dir);
+    }
+
+    tasks
+}
+
+pub fn watch_for_cancel(cancel_token: tokio_util::sync::CancellationToken) {
+    tokio::task::spawn(async move {
+        tokio::signal::ctrl_c().await.unwrap();
+        cancel_token.cancel();
+    });
 }

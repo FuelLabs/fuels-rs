@@ -6,17 +6,22 @@ use std::{
 use colored::Colorize;
 use duct::cmd;
 use itertools::Itertools;
+use sha2::Digest;
 use tokio::task::JoinSet;
+use tokio_util::sync::CancellationToken;
 
-use crate::{config, md_check};
+use crate::{
+    config::{self, RunIf, TasksDescription},
+    md_check,
+};
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Task {
-    cwd: PathBuf,
-    cmd: Action,
+    pub cwd: PathBuf,
+    pub cmd: Action,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Action {
     Custom {
         program: String,
@@ -27,7 +32,7 @@ pub enum Action {
 }
 
 pub struct Command {
-    ignore_if_cwd_ends_with: Vec<String>,
+    run_if: Option<RunIf>,
     action: Action,
 }
 
@@ -36,13 +41,13 @@ impl From<config::Command> for Command {
         match value {
             config::Command::Custom {
                 cmd: parts,
-                ignore_if_cwd_ends_with,
                 env,
+                run_if,
             } => {
                 let program = parts.first().unwrap().to_string();
                 let args = parts.into_iter().skip(1).map(|s| s.to_string()).collect();
                 Self {
-                    ignore_if_cwd_ends_with: ignore_if_cwd_ends_with.unwrap_or_default(),
+                    run_if,
                     action: Action::Custom {
                         program,
                         args,
@@ -50,9 +55,9 @@ impl From<config::Command> for Command {
                     },
                 }
             }
-            config::Command::MdCheck { ignore_if_in_dir } => Self {
-                ignore_if_cwd_ends_with: ignore_if_in_dir.unwrap_or_default(),
+            config::Command::MdCheck { run_if } => Self {
                 action: Action::MdCheck,
+                run_if,
             },
         }
     }
@@ -80,7 +85,7 @@ impl Display for Action {
 
 impl Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "({:?}) {}", self.cwd, self.cmd)
+        write!(f, "Task {}, dir: {:?}, {}", self.id(), self.cwd, self.cmd)
     }
 }
 
@@ -134,6 +139,12 @@ impl Execution {
 }
 
 impl Task {
+    pub fn id(&self) -> String {
+        let mut hasher = sha2::Sha256::default();
+        hasher.update(format!("{:?}", self).as_bytes());
+        hex::encode(&hasher.finalize()[..8])
+    }
+
     pub fn run(self) -> Execution {
         match &self.cmd {
             Action::Custom { program, args, env } => {
@@ -199,10 +210,34 @@ pub struct Tasks {
 }
 
 impl Tasks {
-    pub fn from_config(config: config::Config, workspace_root: impl AsRef<Path>) -> Self {
+    pub fn used_dirs(&self) -> Vec<PathBuf> {
+        self.tasks
+            .iter()
+            .map(|task| &task.cwd)
+            .unique()
+            .cloned()
+            .collect()
+    }
+    pub fn verify_no_duplicates(&self) -> anyhow::Result<()> {
+        let duplicates = self
+            .tasks
+            .iter()
+            .duplicates_by(|task| task.id())
+            .collect_vec();
+
+        if !duplicates.is_empty() {
+            anyhow::bail!("Found duplicate tasks: {:#?}", duplicates);
+        }
+
+        Ok(())
+    }
+
+    pub fn from_task_descriptions(
+        groups: Vec<TasksDescription>,
+        workspace_root: impl AsRef<Path>,
+    ) -> Self {
         let workspace_root = workspace_root.as_ref();
-        let tasks = config
-            .0
+        let tasks = groups
             .into_iter()
             .flat_map(|entry| {
                 entry.run_for_dirs.into_iter().flat_map(move |dir| {
@@ -213,9 +248,11 @@ impl Tasks {
                         .cloned()
                         .map(Command::from)
                         .filter(|cmd| {
-                            cmd.ignore_if_cwd_ends_with
-                                .iter()
-                                .all(|ignored_dir| !cwd.ends_with(ignored_dir))
+                            if let Some(condition) = &cmd.run_if {
+                                condition.should_run(&cwd)
+                            } else {
+                                true
+                            }
                         })
                         .map(|cmd| Task {
                             cwd: cwd.clone(),
@@ -229,13 +266,27 @@ impl Tasks {
         Self { tasks }
     }
 
-    pub async fn run(self, tty: bool, verbose: bool) -> anyhow::Result<()> {
+    pub async fn run(
+        self,
+        tty: bool,
+        verbose: bool,
+        cancel_token: CancellationToken,
+    ) -> anyhow::Result<()> {
+        self.verify_no_duplicates()?;
         let mut set = JoinSet::new();
         for task in self.tasks {
             set.spawn_blocking(|| task.run());
         }
 
         let mut errors = false;
+        tokio::select! {
+            _ = cancel_token.cancelled() => {
+            return Ok(());
+            }
+            else => {
+
+            }
+        }
         while let Some(result) = set.join_next().await {
             let execution = result?;
             if let ExecutionStatus::Success { .. } = execution.status {
@@ -253,15 +304,20 @@ impl Tasks {
         Ok(())
     }
 
-    pub fn retain(&mut self, dir_names: &[String]) {
+    pub fn retain_with_ids(&mut self, ids: &[String]) {
+        self.tasks.retain(|task| ids.contains(&task.id()));
+    }
+
+    pub fn retain_with_dirs(&mut self, dirs: &[String]) {
         self.tasks.retain(|task| {
-            let var = &task
-                .cwd
-                .file_name()
-                .unwrap_or_default()
-                .to_string_lossy()
-                .into_owned();
-            dir_names.contains(var)
+            dirs.contains(
+                &task
+                    .cwd
+                    .canonicalize()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string(),
+            )
         });
     }
 }
@@ -277,40 +333,38 @@ mod tests {
     #[test]
     fn tasks_correctly_generated() {
         // given
-        let first = config::Group {
+        let first = config::TasksDescription {
             run_for_dirs: vec![PathBuf::from("some/foo1"), PathBuf::from("some/foo2")],
             commands: vec![
                 config::Command::Custom {
-                    ignore_if_cwd_ends_with: None,
                     cmd: vec!["cargo".to_string(), "check".to_string()],
                     env: Some(HashMap::from_iter(vec![(
                         "FOO".to_string(),
                         "BAR".to_string(),
                     )])),
+                    run_if: None,
                 },
-                config::Command::MdCheck {
-                    ignore_if_in_dir: None,
-                },
+                config::Command::MdCheck { run_if: None },
             ],
         };
-        let second = config::Group {
+        let second = config::TasksDescription {
             run_for_dirs: vec![PathBuf::from("some/boo")],
             commands: vec![
                 config::Command::Custom {
-                    ignore_if_cwd_ends_with: None,
                     cmd: vec!["cargo".to_string(), "test".to_string()],
                     env: None,
+                    run_if: None,
                 },
                 config::Command::Custom {
-                    ignore_if_cwd_ends_with: None,
                     cmd: vec!["cargo".to_string(), "fmt".to_string()],
                     env: None,
+                    run_if: None,
                 },
             ],
         };
 
         // when
-        let mut tasks = Tasks::from_config(config::Config(vec![first, second]), ".");
+        let mut tasks = Tasks::from_task_descriptions(vec![first, second], ".");
 
         // then
         let group1_path1 = PathBuf::from("./some/foo1");
@@ -368,53 +422,53 @@ mod tests {
     #[test]
     fn selection_respected() {
         // given
-        let config = config::Config(vec![
-            config::Group {
+        let config = vec![
+            config::TasksDescription {
                 run_for_dirs: vec![PathBuf::from("some/foo"), PathBuf::from("other/zoo")],
                 commands: vec![
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "check".to_string()],
                         env: None,
+                        run_if: None,
                     },
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "fmt".to_string()],
                         env: None,
+                        run_if: None,
                     },
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "test".to_string()],
                         env: None,
+                        run_if: None,
                     },
                 ],
             },
-            config::Group {
+            config::TasksDescription {
                 run_for_dirs: vec![PathBuf::from("some/boo")],
                 commands: vec![
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "check".to_string()],
                         env: None,
+                        run_if: None,
                     },
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "fmt".to_string()],
                         env: None,
+                        run_if: None,
                     },
                     config::Command::Custom {
-                        ignore_if_cwd_ends_with: None,
                         cmd: vec!["cargo".to_string(), "test".to_string()],
                         env: None,
+                        run_if: None,
                     },
                 ],
             },
-        ]);
+        ];
 
-        let mut tasks = Tasks::from_config(config, ".");
+        let mut tasks = Tasks::from_task_descriptions(config, ".");
 
         // when
-        tasks.retain(&["zoo".to_string()]);
+        tasks.retain_with_ids(&["zoo".to_string()]);
 
         // then
         let cwd = PathBuf::from("./other/zoo");
@@ -454,17 +508,17 @@ mod tests {
     #[test]
     fn workspace_root_respected() {
         // given
-        let config = config::Config(vec![config::Group {
+        let config = vec![config::TasksDescription {
             run_for_dirs: vec![PathBuf::from("some/foo")],
             commands: vec![config::Command::Custom {
-                ignore_if_cwd_ends_with: None,
                 cmd: vec!["cargo".to_string(), "check".to_string()],
                 env: None,
+                run_if: None,
             }],
-        }]);
+        }];
 
         // when
-        let mut tasks = Tasks::from_config(config, "workspace");
+        let mut tasks = Tasks::from_task_descriptions(config, "workspace");
 
         // then
         let mut expected = [Task {
@@ -484,17 +538,17 @@ mod tests {
     #[test]
     fn ignore_if_in_dir_respected() {
         // given
-        let config = config::Config(vec![config::Group {
+        let config = vec![config::TasksDescription {
             run_for_dirs: vec![PathBuf::from("boom/some/foo")],
             commands: vec![config::Command::Custom {
-                ignore_if_cwd_ends_with: Some(vec!["some/foo".to_string()]),
                 cmd: vec!["cargo".to_string(), "check".to_string()],
                 env: None,
+                run_if: Some(RunIf::CwdDoesntEndWith(vec!["some/foo".to_string()])),
             }],
-        }]);
+        }];
 
         // when
-        let tasks = Tasks::from_config(config, ".");
+        let tasks = Tasks::from_task_descriptions(config, ".");
 
         // then
         assert_eq!(tasks.tasks, []);

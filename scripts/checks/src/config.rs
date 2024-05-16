@@ -1,22 +1,39 @@
-use std::{collections::HashMap, path::PathBuf};
+pub mod ci;
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Config(pub Vec<Group>);
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
-#[derive(Debug, serde::Deserialize)]
-pub struct Group {
+#[derive(Debug, Clone, serde::Deserialize)]
+pub struct TasksDescription {
     pub run_for_dirs: Vec<PathBuf>,
     pub commands: Vec<Command>,
 }
 
 #[derive(Debug, Clone, serde::Deserialize)]
+pub enum RunIf {
+    CwdDoesntEndWith(Vec<String>),
+}
+
+impl RunIf {
+    pub fn should_run(&self, cwd: &Path) -> bool {
+        match self {
+            RunIf::CwdDoesntEndWith(suffixes) => {
+                !suffixes.iter().any(|suffix| cwd.ends_with(suffix))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Deserialize)]
 pub enum Command {
     MdCheck {
-        ignore_if_in_dir: Option<Vec<String>>,
+        run_if: Option<RunIf>,
     },
     Custom {
-        ignore_if_cwd_ends_with: Option<Vec<String>>,
         cmd: Vec<String>,
         env: Option<HashMap<String, String>>,
+        run_if: Option<RunIf>,
     },
 }
