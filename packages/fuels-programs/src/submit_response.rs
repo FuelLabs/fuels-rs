@@ -30,8 +30,6 @@ use crate::{
 /// - `retry_config`: The retry configuration for the transaction.
 /// - `tx_id`: The optional transaction ID of the submitted transaction.
 /// - `call_handler`: The call handler that manages the type of call.
-///
-/// ```
 #[derive(Debug)]
 pub struct SubmitResponse<T: Account, D> {
     tx_id: Bytes32,

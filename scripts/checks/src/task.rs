@@ -282,7 +282,7 @@ impl Tasks {
         let mut errors = false;
 
         let mut handle_task_response = |execution: Execution| {
-            if let ExecutionStatus::Success { .. } = execution.status {
+            if let ExecutionStatus::Failed { .. } = execution.status {
                 errors = true;
             }
 

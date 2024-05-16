@@ -148,9 +148,6 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 /// Transforms a function defined in [`FullABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
-///
-/// The generated function prepares the necessary data and proceeds to call
-/// [::fuels_contract::contract::method_hash] for the actual call.
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 

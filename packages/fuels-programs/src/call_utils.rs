@@ -144,7 +144,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_outputs(outputs))
 }
 
-/// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is
+/// Creates a [`ScriptTransaction`] from contract calls. The internal [`fuel_tx::Transaction`] is
 /// initialized with the actual script instructions, script data needed to perform the call and
 /// transaction inputs/outputs consisting of assets and contracts.
 pub(crate) async fn build_tx_from_contract_calls(
@@ -320,7 +320,7 @@ pub(crate) fn build_script_data_from_contract_calls(
 }
 
 /// Returns the VM instructions for calling a contract method
-/// We use the [`Opcode`] to call a contract: [`CALL`](Opcode::CALL)
+/// We use the [`fuel_asm::Opcode`] to call a contract: [`CALL`](fuel_asm::Opcode::CALL)
 /// pointing at the following registers:
 ///
 /// 0x10 Script data offset

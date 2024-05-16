@@ -135,7 +135,7 @@ impl StorageConfiguration {
         self.autoload_storage
     }
 
-    /// Slots added via [`add_slot_overrides`] will override any
+    /// Slots added via [`Self::add_slot_overrides`] will override any
     /// existing slots with matching keys.
     pub fn add_slot_overrides(
         mut self,
@@ -145,7 +145,7 @@ impl StorageConfiguration {
         self
     }
 
-    /// Slots added via [`add_slot_overrides_from_file`] will override any
+    /// Slots added via [`Self::add_slot_overrides_from_file`] will override any
     /// existing slots with matching keys.
     ///
     /// `path` - path to a JSON file containing the storage slots.

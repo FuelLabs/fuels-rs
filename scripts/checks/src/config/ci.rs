@@ -91,7 +91,11 @@ fn common(workspace: &Path) -> TasksDescription {
         commands: vec![
             custom!("cargo fmt --verbose --check"),
             custom!("typos"),
-            custom!("cargo clippy --all-targets --all-features --no-deps"),
+            custom!(
+                "cargo clippy --all-targets --all-features --no-deps",
+                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
+                cwd_doesnt_end_with(&["e2e"])
+            ),
             custom!(
                 "cargo nextest run --all-features",
                 // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
@@ -116,13 +120,15 @@ fn common(workspace: &Path) -> TasksDescription {
 
 fn e2e_specific(workspace: &Path, sway_type_paths: bool) -> TasksDescription {
     let commands = if sway_type_paths {
-        vec![custom!(
-            "cargo nextest run --features default,fuel-core-lib,test-type-paths"
-        )]
+        vec![
+            custom!("cargo nextest run --features default,fuel-core-lib,test-type-paths"),
+            custom!("cargo clippy --all-features --all-targets --no-deps"),
+        ]
     } else {
         vec![
             custom!("cargo nextest run --features default,fuel-core-lib"),
             custom!("cargo nextest run --features default"),
+            custom!("cargo clippy --features default,fuel-core-lib --all-targets --no-deps"),
         ]
     };
     TasksDescription {
