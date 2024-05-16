@@ -1345,7 +1345,7 @@ async fn test_log_results() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err = format!(
-        "codec: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
+        "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
          Consider adding external contracts using `with_contracts()`",
         contract_instance.id().hash,
         [0u8; 8]
