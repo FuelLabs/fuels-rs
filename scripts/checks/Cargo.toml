@@ -30,7 +30,6 @@ hex = { workspace = true, features = ["std"] }
 [dev-dependencies]
 rand = { workspace = true, features = ["std", "std_rng"] }
 tempfile = { workspace = true }
-thiserror = { workspace = true }
 pretty_assertions = { workspace = true, features = ["std"] }
 
 [build-dependencies]

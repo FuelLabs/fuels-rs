@@ -1,4 +1,3 @@
-#![deny(unused_crate_dependencies)]
 pub mod call_response;
 #[cfg(feature = "std")]
 pub mod call_utils;

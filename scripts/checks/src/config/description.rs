@@ -18,13 +18,14 @@ pub fn ci(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
     ]
 }
 
-pub fn other(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
-    let desc = TaskDescriptionBuilder::new(
-        workspace,
-        sway_type_paths,
-        &["-Dwarnings", "-Dunused_crate_dependencies"],
-    );
-    vec![desc.hack_common(), desc.hack_e2e()]
+pub fn hack_features(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
+    let desc = TaskDescriptionBuilder::new(workspace, sway_type_paths, &["-Dwarnings"]);
+    vec![desc.hack_features_common(), desc.hack_features_e2e()]
+}
+
+pub fn hack_deps(workspace: PathBuf, sway_type_paths: bool) -> Vec<TasksDescription> {
+    let desc = TaskDescriptionBuilder::new(workspace, sway_type_paths, &["-Dwarnings"]);
+    vec![desc.hack_deps_common()]
 }
 
 struct TaskDescriptionBuilder {
@@ -53,7 +54,7 @@ impl TaskDescriptionBuilder {
             .collect()
     }
 
-    fn hack_common(&self) -> TasksDescription {
+    fn hack_features_common(&self) -> TasksDescription {
         TasksDescription {
             run_for_dirs: all_workspace_members(&self.workspace),
             commands: vec![
@@ -69,7 +70,20 @@ impl TaskDescriptionBuilder {
         }
     }
 
-    fn hack_e2e(&self) -> TasksDescription {
+    fn hack_deps_common(&self) -> TasksDescription {
+        TasksDescription {
+            run_for_dirs: all_workspace_members(&self.workspace),
+            commands: vec![
+                self.cargo_if("+nightly hack --deps udeps", cwd_doesnt_end_with(&["e2e"])),
+                self.cargo_if(
+                    "+nightly hack --deps udeps --tests",
+                    cwd_doesnt_end_with(&["e2e"]),
+                ),
+            ],
+        }
+    }
+
+    fn hack_features_e2e(&self) -> TasksDescription {
         let exclude_features = if self.sway_type_paths {
             ""
         } else {
@@ -81,6 +95,12 @@ impl TaskDescriptionBuilder {
                 self.cargo(format!("hack --feature-powerset {exclude_features} check ")),
                 self.cargo(format!(
                     "hack --feature-powerset {exclude_features} check --tests"
+                )),
+                self.cargo(format!(
+                    "+nightly hack --feature-powerset {exclude_features} udeps"
+                )),
+                self.cargo(format!(
+                    "+nightly hack --feature-powerset {exclude_features} udeps --tests"
                 )),
             ],
         }
@@ -114,7 +134,7 @@ impl TaskDescriptionBuilder {
     }
 
     fn rust_flags_env(&self) -> HashMap<String, String> {
-        let value = self.rust_flags.iter().join(",");
+        let value = self.rust_flags.iter().join(" ");
         HashMap::from_iter(vec![("RUSTFLAGS".to_owned(), value)])
     }
 

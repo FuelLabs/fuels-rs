@@ -13,7 +13,7 @@ description = "Fuel Rust SDK test helpers."
 fuel-core = { workspace = true, features = ["test-helpers"], optional = true }
 fuel-core-chain-config = { workspace = true, features = ["test-helpers"] }
 fuel-core-client = { workspace = true }
-fuel-core-poa = { workspace = true }
+fuel-core-poa = { workspace = true, optional = true }
 fuel-core-services = { workspace = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
@@ -39,4 +39,4 @@ std = [
   "fuel-types/random",
   "fuel-core-chain-config/std",
 ]
-fuel-core-lib = ["dep:fuel-core"]
+fuel-core-lib = ["dep:fuel-core", "dep:fuel-core-poa"]

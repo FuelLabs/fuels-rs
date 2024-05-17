@@ -9,6 +9,9 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 description = "Fuel Rust SDK accounts."
 
+[package.metadata.cargo-udeps.ignore]
+development = ["fuels-accounts", "tokio"]
+
 [dependencies]
 async-trait = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }

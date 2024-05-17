@@ -1,4 +1,3 @@
-#![deny(unused_crate_dependencies)]
 pub mod codec;
 pub mod traits;
 pub mod types;

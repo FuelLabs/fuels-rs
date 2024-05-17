@@ -5,7 +5,8 @@ use crate::{cli, config, task::Tasks};
 pub fn read_tasks_from_config(cli: &cli::Cli) -> Tasks {
     let config_fn = match cli.flavor {
         cli::Flavor::Ci => config::description::ci,
-        cli::Flavor::Other => config::description::other,
+        cli::Flavor::HackFeatures => config::description::hack_features,
+        cli::Flavor::HackDeps => config::description::hack_deps,
     };
     let config = config_fn(cli.root.clone(), cli.sway_with_type_paths);
 

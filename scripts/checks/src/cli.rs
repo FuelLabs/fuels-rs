@@ -53,7 +53,8 @@ pub struct Cli {
 #[derive(Debug, Copy, Clone, ValueEnum, PartialEq)]
 pub enum Flavor {
     Ci,
-    Other,
+    HackFeatures,
+    HackDeps,
 }
 
 #[cfg(test)]
@@ -87,13 +88,13 @@ mod tests {
     #[test]
     fn flavor_can_be_chosen() {
         // given
-        let cli = "foo --flavor other -r .";
+        let cli = "foo --flavor hack-features -r .";
 
         // when
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.flavor, Flavor::Other);
+        assert_eq!(cli.flavor, Flavor::HackFeatures);
     }
 
     #[test]
