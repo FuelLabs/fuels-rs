@@ -19,9 +19,9 @@ pub struct Cli {
     #[arg(short, long, action)]
     pub list_tasks: bool,
 
-    /// List directories that are used by the tasks in JSON format.
+    /// Print json job description to be used for the CI
     #[arg(long)]
-    pub list_used_dirs: bool,
+    pub print_ci_jobs_desc: bool,
 
     /// Only run tasks in the given directory
     #[arg(
@@ -36,7 +36,7 @@ pub struct Cli {
     #[arg(short, long, default_value = "ci")]
     pub flavor: Flavor,
 
-    /// Sway project compiled with type path support
+    /// Run only tasks that require sway type paths
     #[arg(short, long, action)]
     pub sway_with_type_paths: bool,
 

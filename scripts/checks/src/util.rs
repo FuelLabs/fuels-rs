@@ -1,16 +1,18 @@
 use nix::unistd::Pid;
 
-use crate::{cli, config, task::Tasks};
+use crate::{cli, task::Tasks};
 
-pub fn read_tasks_from_config(cli: &cli::Cli) -> Tasks {
-    let config_fn = match cli.flavor {
-        cli::Flavor::Ci => config::description::ci,
-        cli::Flavor::HackFeatures => config::description::hack_features,
-        cli::Flavor::HackDeps => config::description::hack_deps,
+pub fn generate_tasks(cli: &cli::Cli) -> Tasks {
+    let tasks_gen = match cli.flavor {
+        cli::Flavor::Ci => crate::description::ci,
+        cli::Flavor::HackFeatures => crate::description::hack_features,
+        cli::Flavor::HackDeps => crate::description::hack_deps,
     };
-    let config = config_fn(cli.root.clone(), cli.sway_with_type_paths);
-
-    let mut tasks = Tasks::from_task_descriptions(config, cli.root.clone());
+    let mut tasks = Tasks {
+        tasks: tasks_gen(cli.root.clone(), cli.sway_with_type_paths)
+            .into_iter()
+            .collect(),
+    };
 
     if !cli.only_tasks_with_ids.is_empty() {
         tasks.retain_with_ids(&cli.only_tasks_with_ids);

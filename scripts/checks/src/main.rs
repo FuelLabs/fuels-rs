@@ -2,7 +2,7 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 mod cli;
-mod config;
+mod description;
 mod md_check;
 mod task;
 mod util;
@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
     util::configure_child_process_cleanup()?;
 
-    let tasks = util::read_tasks_from_config(&cli);
+    let tasks = util::generate_tasks(&cli);
 
     if cli.list_tasks {
         for task in &tasks.tasks {
@@ -21,10 +21,11 @@ async fn main() -> anyhow::Result<()> {
         return Ok(());
     }
 
-    if cli.list_used_dirs {
-        let dirs = tasks.used_dirs();
+    if cli.print_ci_jobs_desc {
+        let desc = tasks.ci_jobs();
         // Json used because the CI needs it as such
-        println!("{}", serde_json::json!({ "dirs": dirs }));
+        let jsonified = serde_json::to_string_pretty(&desc)?;
+        println!("{jsonified}");
         return Ok(());
     }
 

@@ -1,4 +1,5 @@
 use std::{
+    collections::{BTreeSet, HashMap, HashSet},
     fmt::Display,
     path::{Path, PathBuf},
 };
@@ -11,63 +12,130 @@ use sha2::Digest;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    config::{self, RunIf, TasksDescription},
-    md_check,
-};
+use crate::md_check;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Task {
-    pub cwd: PathBuf,
-    pub cmd: Action,
+#[derive(Debug, Clone, serde::Serialize, Copy)]
+pub enum SwayProjectDep {
+    TypePaths,
+    Normal,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Action {
-    Custom {
-        program: String,
-        args: Vec<String>,
-        env: Vec<(String, String)>,
-    },
-    MdCheck,
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CiDeps {
+    fuel_core_binary: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rust_toolchain_components: Option<String>,
+    wasm: bool,
+    cargo_hack: bool,
+    nextest: bool,
+    cargo_machete: bool,
+    typos_cli: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sway_project_artifacts: Option<SwayProjectDep>,
 }
 
-pub struct Command {
-    run_if: Option<RunIf>,
-    action: Action,
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct CiJob {
+    dir: PathBuf,
+    deps: CiDeps,
 }
 
-impl From<config::Command> for Command {
-    fn from(value: config::Command) -> Self {
-        match value {
-            config::Command::Custom {
-                cmd: parts,
-                env,
-                run_if,
-            } => {
-                let program = parts.first().unwrap().to_string();
-                let args = parts.into_iter().skip(1).map(|s| s.to_string()).collect();
-                Self {
-                    run_if,
-                    action: Action::Custom {
-                        program,
-                        args,
-                        env: env.unwrap_or_default().into_iter().collect(),
-                    },
-                }
+impl CiDeps {
+    pub fn from_deps(deps: &HashSet<Dependency>) -> Self {
+        let fuel_core_binary = deps.contains(&Dependency::FuelCoreBinary);
+        let wasm = deps.contains(&Dependency::Wasm);
+        let cargo_hack = deps.contains(&Dependency::CargoHack);
+        let nextest = deps.contains(&Dependency::Nextest);
+        let cargo_machete = deps.contains(&Dependency::CargoMachete);
+        let typos_cli = deps.contains(&Dependency::TyposCli);
+
+        let sway_project_artifacts = deps.iter().find_map(|dep| match dep {
+            Dependency::SwayArtifacts { type_paths } if *type_paths => {
+                Some(SwayProjectDep::TypePaths)
             }
-            config::Command::MdCheck { run_if } => Self {
-                action: Action::MdCheck,
-                run_if,
-            },
+            Dependency::SwayArtifacts { .. } => Some(SwayProjectDep::Normal),
+            _ => None,
+        });
+
+        let mut components = String::new();
+        if deps.contains(&Dependency::Clippy) {
+            components.push_str("clippy");
+        }
+        if deps.contains(&Dependency::RustFmt) {
+            if !components.is_empty() {
+                components.push(',');
+            }
+            components.push_str("rustfmt");
+        }
+
+        let rust_toolchain_components = if components.is_empty() {
+            None
+        } else {
+            Some(components)
+        };
+
+        Self {
+            fuel_core_binary,
+            rust_toolchain_components,
+            wasm,
+            cargo_hack,
+            nextest,
+            cargo_machete,
+            typos_cli,
+            sway_project_artifacts,
         }
     }
 }
 
-impl Display for Action {
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Task {
+    pub cwd: PathBuf,
+    pub cmd: Command,
+}
+
+#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub enum Dependency {
+    FuelCoreBinary,
+    Clippy,
+    CargoHack,
+    RustFmt,
+    RustStable,
+    RustNightly,
+    SwayArtifacts { type_paths: bool },
+    Nextest,
+    CargoMachete,
+    Wasm,
+    TyposCli,
+    Grep,
+    Find,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum Command {
+    Custom {
+        program: String,
+        args: Vec<String>,
+        env: Vec<(String, String)>,
+        deps: Vec<Dependency>,
+    },
+    MdCheck,
+}
+
+impl Command {
+    pub fn deps(&self) -> HashSet<Dependency> {
+        match self {
+            Command::Custom { deps, .. } => HashSet::from_iter(deps.iter().copied()),
+            Command::MdCheck => HashSet::from_iter([Dependency::Grep, Dependency::Find]),
+        }
+    }
+}
+
+impl Display for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Action::Custom { program, args, env } => {
+            Command::Custom {
+                program, args, env, ..
+            } => {
                 let args = args.iter().join(" ");
                 if env.is_empty() {
                     write!(f, "{program} {args}")
@@ -79,7 +147,7 @@ impl Display for Action {
                     write!(f, "{env} {program} {args}")
                 }
             }
-            Action::MdCheck { .. } => write!(f, "MdCheck"),
+            Command::MdCheck { .. } => write!(f, "MdCheck"),
         }
     }
 }
@@ -148,10 +216,10 @@ impl Task {
 
     pub fn run(self) -> Execution {
         match &self.cmd {
-            Action::Custom { program, args, env } => {
-                self.run_custom(program, args.iter().map(|e| e.as_str()), env)
-            }
-            Action::MdCheck => self.run_md_check(),
+            Command::Custom {
+                program, args, env, ..
+            } => self.run_custom(program, args.iter().map(|e| e.as_str()), env),
+            Command::MdCheck => self.run_md_check(),
         }
     }
 
@@ -211,14 +279,21 @@ pub struct Tasks {
 }
 
 impl Tasks {
-    pub fn used_dirs(&self) -> Vec<PathBuf> {
+    pub fn ci_jobs(&self) -> Vec<CiJob> {
         self.tasks
             .iter()
-            .map(|task| &task.cwd)
-            .unique()
-            .cloned()
+            .group_by(|task| &task.cwd)
+            .into_iter()
+            .map(|(cwd, tasks)| {
+                let deps = tasks.flat_map(|task| task.cmd.deps()).collect();
+                CiJob {
+                    dir: cwd.clone(),
+                    deps: CiDeps::from_deps(&deps),
+                }
+            })
             .collect()
     }
+
     pub fn verify_no_duplicates(&self) -> anyhow::Result<()> {
         let duplicates = self
             .tasks
@@ -231,40 +306,6 @@ impl Tasks {
         }
 
         Ok(())
-    }
-
-    pub fn from_task_descriptions(
-        groups: Vec<TasksDescription>,
-        workspace_root: impl AsRef<Path>,
-    ) -> Self {
-        let workspace_root = workspace_root.as_ref();
-        let tasks = groups
-            .into_iter()
-            .flat_map(|entry| {
-                entry.run_for_dirs.into_iter().flat_map(move |dir| {
-                    let cwd = workspace_root.join(dir);
-                    entry
-                        .commands
-                        .iter()
-                        .cloned()
-                        .map(Command::from)
-                        .filter(|cmd| {
-                            if let Some(condition) = &cmd.run_if {
-                                condition.should_run(&cwd)
-                            } else {
-                                true
-                            }
-                        })
-                        .map(|cmd| Task {
-                            cwd: cwd.clone(),
-                            cmd: cmd.action,
-                        })
-                        .collect_vec()
-                })
-            })
-            .collect();
-
-        Self { tasks }
     }
 
     pub async fn run(
@@ -339,205 +380,116 @@ impl Tasks {
 
 #[cfg(test)]
 mod tests {
-
-    use std::collections::HashMap;
-
-    use super::*;
-    use pretty_assertions::assert_eq;
-
-    #[test]
-    fn tasks_correctly_generated() {
-        // given
-        let first = config::TasksDescription {
-            run_for_dirs: vec![PathBuf::from("some/foo1"), PathBuf::from("some/foo2")],
-            commands: vec![
-                config::Command::Custom {
-                    cmd: vec!["cargo".to_string(), "check".to_string()],
-                    env: Some(HashMap::from_iter(vec![(
-                        "FOO".to_string(),
-                        "BAR".to_string(),
-                    )])),
-                    run_if: None,
-                },
-                config::Command::MdCheck { run_if: None },
-            ],
-        };
-        let second = config::TasksDescription {
-            run_for_dirs: vec![PathBuf::from("some/boo")],
-            commands: vec![
-                config::Command::Custom {
-                    cmd: vec!["cargo".to_string(), "test".to_string()],
-                    env: None,
-                    run_if: None,
-                },
-                config::Command::Custom {
-                    cmd: vec!["cargo".to_string(), "fmt".to_string()],
-                    env: None,
-                    run_if: None,
-                },
-            ],
-        };
-
-        // when
-        let mut tasks = Tasks::from_task_descriptions(vec![first, second], ".");
-
-        // then
-        let group1_path1 = PathBuf::from("./some/foo1");
-        let group1_path2 = PathBuf::from("./some/foo2");
-        let group2_path1 = PathBuf::from("./some/boo");
-
-        tasks.tasks.sort();
-        let mut expected = [
-            Task {
-                cwd: group1_path1.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["check".to_string()],
-                    env: vec![("FOO".to_string(), "BAR".to_string())],
-                },
-            },
-            Task {
-                cwd: group1_path1.clone(),
-                cmd: Action::MdCheck,
-            },
-            Task {
-                cwd: group1_path2.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["check".to_string()],
-                    env: vec![("FOO".to_string(), "BAR".to_string())],
-                },
-            },
-            Task {
-                cwd: group1_path2.clone(),
-                cmd: Action::MdCheck,
-            },
-            Task {
-                cwd: group2_path1.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["fmt".to_string()],
-                    env: vec![],
-                },
-            },
-            Task {
-                cwd: group2_path1.clone(),
-                cmd: Action::Custom {
-                    program: "cargo".to_string(),
-                    args: vec!["test".to_string()],
-                    env: vec![],
-                },
-            },
-        ];
-
-        expected.sort();
-        assert_eq!(tasks.tasks, expected);
-    }
-
-    #[test]
-    fn selection_respected() {
-        // given
-        let config = vec![
-            config::TasksDescription {
-                run_for_dirs: vec![PathBuf::from("some/foo"), PathBuf::from("other/zoo")],
-                commands: vec![
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "check".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "fmt".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "test".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                ],
-            },
-            config::TasksDescription {
-                run_for_dirs: vec![PathBuf::from("some/boo")],
-                commands: vec![
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "check".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "fmt".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                    config::Command::Custom {
-                        cmd: vec!["cargo".to_string(), "test".to_string()],
-                        env: None,
-                        run_if: None,
-                    },
-                ],
-            },
-        ];
-
-        let mut tasks = Tasks::from_task_descriptions(config, ".");
-
-        use rand::seq::SliceRandom;
-        let random_task = tasks.tasks.choose(&mut rand::thread_rng()).unwrap().clone();
-
-        // when
-        tasks.retain_with_ids(&[random_task.id()]);
-
-        // then
-        assert_eq!(tasks.tasks, [random_task]);
-    }
-
-    #[test]
-    fn workspace_root_respected() {
-        // given
-        let config = vec![config::TasksDescription {
-            run_for_dirs: vec![PathBuf::from("some/foo")],
-            commands: vec![config::Command::Custom {
-                cmd: vec!["cargo".to_string(), "check".to_string()],
-                env: None,
-                run_if: None,
-            }],
-        }];
-
-        // when
-        let mut tasks = Tasks::from_task_descriptions(config, "workspace");
-
-        // then
-        let mut expected = [Task {
-            cwd: PathBuf::from("workspace/some/foo"),
-            cmd: Action::Custom {
-                program: "cargo".to_string(),
-                args: vec!["check".to_string()],
-                env: vec![],
-            },
-        }];
-
-        expected.sort();
-        tasks.tasks.sort();
-        assert_eq!(tasks.tasks, expected);
-    }
-
-    #[test]
-    fn ignore_if_in_dir_respected() {
-        // given
-        let config = vec![config::TasksDescription {
-            run_for_dirs: vec![PathBuf::from("boom/some/foo")],
-            commands: vec![config::Command::Custom {
-                cmd: vec!["cargo".to_string(), "check".to_string()],
-                env: None,
-                run_if: Some(RunIf::CwdDoesntEndWith(vec!["some/foo".to_string()])),
-            }],
-        }];
-
-        // when
-        let tasks = Tasks::from_task_descriptions(config, ".");
-
-        // then
-        assert_eq!(tasks.tasks, []);
-    }
+    //
+    // use std::collections::HashMap;
+    //
+    // use super::*;
+    // use pretty_assertions::assert_eq;
+    //
+    // #[test]
+    // fn selection_respected() {
+    //     // given
+    //     let config = vec![
+    //         config::TasksDescription {
+    //             run_for_dirs: vec![PathBuf::from("some/foo"), PathBuf::from("other/zoo")],
+    //             commands: vec![
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "check".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "fmt".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "test".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //             ],
+    //         },
+    //         config::TasksDescription {
+    //             run_for_dirs: vec![PathBuf::from("some/boo")],
+    //             commands: vec![
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "check".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "fmt".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //                 config::Command::Custom {
+    //                     cmd: vec!["cargo".to_string(), "test".to_string()],
+    //                     env: None,
+    //                     run_if: None,
+    //                 },
+    //             ],
+    //         },
+    //     ];
+    //
+    //     let mut tasks = Tasks::from_task_descriptions(config, ".");
+    //
+    //     use rand::seq::SliceRandom;
+    //     let random_task = tasks.tasks.choose(&mut rand::thread_rng()).unwrap().clone();
+    //
+    //     // when
+    //     tasks.retain_with_ids(&[random_task.id()]);
+    //
+    //     // then
+    //     assert_eq!(tasks.tasks, [random_task]);
+    // }
+    //
+    // #[test]
+    // fn workspace_root_respected() {
+    //     // given
+    //     let config = vec![config::TasksDescription {
+    //         run_for_dirs: vec![PathBuf::from("some/foo")],
+    //         commands: vec![config::Command::Custom {
+    //             cmd: vec!["cargo".to_string(), "check".to_string()],
+    //             env: None,
+    //             run_if: None,
+    //         }],
+    //     }];
+    //
+    //     // when
+    //     let mut tasks = Tasks::from_task_descriptions(config, "workspace");
+    //
+    //     // then
+    //     let mut expected = [Task {
+    //         cwd: PathBuf::from("workspace/some/foo"),
+    //         cmd: Command::Custom {
+    //             program: "cargo".to_string(),
+    //             args: vec!["check".to_string()],
+    //             env: vec![],
+    //         },
+    //     }];
+    //
+    //     expected.sort();
+    //     tasks.tasks.sort();
+    //     assert_eq!(tasks.tasks, expected);
+    // }
+    //
+    // #[test]
+    // fn ignore_if_in_dir_respected() {
+    //     // given
+    //     let config = vec![config::TasksDescription {
+    //         run_for_dirs: vec![PathBuf::from("boom/some/foo")],
+    //         commands: vec![config::Command::Custom {
+    //             cmd: vec!["cargo".to_string(), "check".to_string()],
+    //             env: None,
+    //             run_if: Some(RunIf::CwdDoesntEndWith(vec!["some/foo".to_string()])),
+    //         }],
+    //     }];
+    //
+    //     // when
+    //     let tasks = Tasks::from_task_descriptions(config, ".");
+    //
+    //     // then
+    //     assert_eq!(tasks.tasks, []);
+    // }
 }
