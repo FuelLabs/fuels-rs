@@ -1,8 +1,8 @@
 use fuels::{
     core::codec::{DecoderConfig, EncoderConfig},
     prelude::*,
+    types::Identity,
 };
-use fuels_core::types::Identity;
 
 #[tokio::test]
 async fn main_function_arguments() -> Result<()> {
@@ -10,10 +10,10 @@ async fn main_function_arguments() -> Result<()> {
     // The abigen is used for the same purpose as with contracts (Rust bindings)
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json"
+        abi = "e2e/sway/scripts/arguments/out/release/arguments-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/scripts/arguments/out/release/arguments.bin";
+    let bin_path = "sway/scripts/arguments/out/release/arguments.bin";
     let script_instance = MyScript::new(wallet, bin_path);
 
     let bim = Bimbam { val: 90 };
@@ -36,7 +36,7 @@ async fn script_call_has_same_estimated_and_used_gas() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "e2e/sway/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -69,7 +69,7 @@ async fn test_basic_script_with_tx_policies() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "bimbam_script",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "e2e/sway/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -102,7 +102,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "transfer_script",
-            project = "packages/fuels/tests/scripts/transfer_script"
+            project = "e2e/sway/scripts/transfer_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -142,7 +142,7 @@ async fn test_script_struct() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "e2e/sway/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",
@@ -167,7 +167,7 @@ async fn test_script_enum() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_enum"
+            project = "e2e/sway/scripts/script_enum"
         )),
         LoadScript(
             name = "script_instance",
@@ -189,7 +189,7 @@ async fn test_script_array() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_array"
+            project = "e2e/sway/scripts/script_array"
         )),
         LoadScript(
             name = "script_instance",
@@ -211,7 +211,7 @@ async fn can_configure_decoder_on_script_call() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_needs_custom_decoder"
+            project = "e2e/sway/scripts/script_needs_custom_decoder"
         )),
         LoadScript(
             name = "script_instance",
@@ -258,7 +258,7 @@ async fn test_script_submit_and_response() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/script_struct"
+            project = "e2e/sway/scripts/script_struct"
         )),
         LoadScript(
             name = "script_instance",
@@ -287,7 +287,7 @@ async fn test_script_transaction_builder() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "MyScript",
-            project = "packages/fuels/tests/scripts/basic_script"
+            project = "e2e/sway/scripts/basic_script"
         )),
         LoadScript(
             name = "script_instance",
@@ -324,10 +324,10 @@ async fn test_script_transaction_builder() -> Result<()> {
 async fn script_encoder_config_is_applied() {
     abigen!(Script(
         name = "MyScript",
-        abi = "packages/fuels/tests/scripts/basic_script/out/release/basic_script-abi.json"
+        abi = "e2e/sway/scripts/basic_script/out/release/basic_script-abi.json"
     ));
     let wallet = launch_provider_and_get_wallet().await.expect("");
-    let bin_path = "../fuels/tests/scripts/basic_script/out/release/basic_script.bin";
+    let bin_path = "sway/scripts/basic_script/out/release/basic_script.bin";
 
     let script_instance_without_encoder_config = MyScript::new(wallet.clone(), bin_path);
     {

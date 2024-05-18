@@ -5,7 +5,7 @@ In Fuel, a type called `b256` represents hashes and holds a 256-bit value. The R
 Here's an example:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:256_arg}}
+{{#include ../../../e2e/tests/types_contracts.rs:256_arg}}
 ```
 
 If you have a hexadecimal value as a string and wish to convert it to `Bits256`, you may do so with `from_hex_str`:

@@ -13,7 +13,7 @@ async fn compile_bindings_from_contract_file() {
         Wallets("wallet"),
         Abigen(Contract(
             name = "SimpleContract",
-            project = "packages/fuels/tests/bindings/simple_contract"
+            project = "e2e/sway/bindings/simple_contract"
         )),
         Deploy(
             name = "simple_contract_instance",
@@ -91,11 +91,11 @@ async fn shared_types() -> Result<()> {
         Abigen(
             Contract(
                 name = "ContractA",
-                project = "packages/fuels/tests/bindings/sharing_types/contract_a"
+                project = "e2e/sway/bindings/sharing_types/contract_a"
             ),
             Contract(
                 name = "ContractB",
-                project = "packages/fuels/tests/bindings/sharing_types/contract_b"
+                project = "e2e/sway/bindings/sharing_types/contract_b"
             ),
         ),
         Deploy(
@@ -208,7 +208,7 @@ async fn type_paths_respected() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "ContractA",
-            project = "packages/fuels/tests/bindings/type_paths"
+            project = "e2e/sway/bindings/type_paths"
         )),
         Deploy(
             name = "contract_a_instance",

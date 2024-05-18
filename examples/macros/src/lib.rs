@@ -8,10 +8,22 @@ mod tests {
     fn example_of_abigen_usage() {
         // ANCHOR: multiple_abigen_program_types
         abigen!(
-            Contract(name="ContractA", abi="packages/fuels/tests/bindings/sharing_types/contract_a/out/release/contract_a-abi.json"),
-            Contract(name="ContractB", abi="packages/fuels/tests/bindings/sharing_types/contract_b/out/release/contract_b-abi.json"),
-            Script(name="MyScript", abi="packages/fuels/tests/scripts/arguments/out/release/arguments-abi.json"),
-            Predicate(name="MyPredicateEncoder", abi="packages/fuels/tests/predicates/basic_predicate/out/release/basic_predicate-abi.json"),
+            Contract(
+                name = "ContractA",
+                abi = "e2e/sway/bindings/sharing_types/contract_a/out/release/contract_a-abi.json"
+            ),
+            Contract(
+                name = "ContractB",
+                abi = "e2e/sway/bindings/sharing_types/contract_b/out/release/contract_b-abi.json"
+            ),
+            Script(
+                name = "MyScript",
+                abi = "e2e/sway/scripts/arguments/out/release/arguments-abi.json"
+            ),
+            Predicate(
+                name = "MyPredicateEncoder",
+                abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+            ),
         );
         // ANCHOR_END: multiple_abigen_program_types
     }

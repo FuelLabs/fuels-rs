@@ -1,7 +1,7 @@
 use fuels::{
     core::codec::DecoderConfig,
     prelude::*,
-    types::{errors::transaction::Reason, Bits256, SizedAsciiString},
+    types::{errors::transaction::Reason, AsciiString, Bits256, SizedAsciiString},
 };
 
 #[tokio::test]
@@ -10,7 +10,7 @@ async fn test_parse_logged_variables() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -48,7 +48,7 @@ async fn test_parse_logs_values() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -82,7 +82,7 @@ async fn test_parse_logs_custom_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -122,7 +122,7 @@ async fn test_parse_logs_generic_types() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -174,7 +174,7 @@ async fn test_decode_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -228,7 +228,7 @@ async fn test_decode_logs_with_no_logs() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/contract_test"
+            project = "e2e/sway/contracts/contract_test"
         )),
         Deploy(
             name = "contract_instance",
@@ -255,7 +255,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -305,7 +305,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         )),
         Deploy(
             name = "contract_instance",
@@ -357,13 +357,10 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
-            Contract(
-                name = "MyContract",
-                project = "packages/fuels/tests/logs/contract_logs"
-            ),
+            Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs"),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/logs/contract_with_contract_logs"
+                project = "e2e/sway/logs/contract_with_contract_logs"
             )
         ),
         Deploy(
@@ -379,7 +376,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/release/contract_logs.bin",
+        "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -437,7 +434,7 @@ async fn test_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "e2e/sway/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -446,43 +443,34 @@ async fn test_require_log() -> Result<()> {
         ),
     );
 
-    let contract_methods = contract_instance.methods();
-    {
-        let error = contract_methods
-            .require_primitive()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    macro_rules! reverts_with_msg {
+        ($method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method()
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("42", error);
+            assert_revert_containing_msg($msg, error);
+        };
     }
-    {
-        let error = contract_methods
-            .require_string()
-            .call()
-            .await
-            .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("fuel", error);
-    }
-    {
-        let error = contract_methods
-            .require_custom_generic()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(require_primitive, call, "42");
+    reverts_with_msg!(require_primitive, simulate, "42");
 
-        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
-    }
-    {
-        let error = contract_methods
-            .require_with_additional_logs()
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(require_string, call, "fuel");
+    reverts_with_msg!(require_string, simulate, "fuel");
 
-        assert_revert_containing_msg("64", error);
-    }
+    reverts_with_msg!(require_custom_generic, call, "StructDeeplyNestedGeneric");
+    reverts_with_msg!(
+        require_custom_generic,
+        simulate,
+        "StructDeeplyNestedGeneric"
+    );
+
+    reverts_with_msg!(require_with_additional_logs, call, "64");
+    reverts_with_msg!(require_with_additional_logs, simulate, "64");
 
     Ok(())
 }
@@ -493,7 +481,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "e2e/sway/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -517,6 +505,13 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("fuel", error);
+
+        let error = multi_call_handler
             .call::<((), ())>()
             .await
             .expect_err("should return a revert error");
@@ -532,6 +527,13 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         multi_call_handler
             .add_call(call_handler_1)
             .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
 
         let error = multi_call_handler
             .call::<((), ())>()
@@ -550,7 +552,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "RequireContract",
-            project = "packages/fuels/tests/contracts/require"
+            project = "e2e/sway/contracts/require"
         )),
         Deploy(
             name = "contract_instance",
@@ -580,6 +582,13 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("fuel", error);
+
+        let error = multi_call_handler
             .call::<((), ())>()
             .await
             .expect_err("should return a revert error");
@@ -595,6 +604,13 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         multi_call_handler
             .add_call(call_handler_1)
             .add_call(call_handler_2);
+
+        let error = multi_call_handler
+            .simulate::<((), ())>()
+            .await
+            .expect_err("should return a revert error");
+
+        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
 
         let error = multi_call_handler
             .call::<((), ())>()
@@ -613,11 +629,11 @@ async fn test_script_decode_logs() -> Result<()> {
     // ANCHOR: script_logs
     abigen!(Script(
         name = "log_script",
-        abi = "packages/fuels/tests/logs/script_logs/out/release/script_logs-abi.json"
+        abi = "e2e/sway/logs/script_logs/out/release/script_logs-abi.json"
     ));
 
     let wallet = launch_provider_and_get_wallet().await?;
-    let bin_path = "../fuels/tests/logs/script_logs/out/release/script_logs.bin";
+    let bin_path = "sway/logs/script_logs/out/release/script_logs.bin";
     let instance = log_script::new(wallet.clone(), bin_path);
 
     let response = instance.main().call().await?;
@@ -680,13 +696,10 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
-            Contract(
-                name = "MyContract",
-                project = "packages/fuels/tests/logs/contract_logs",
-            ),
+            Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/logs/contract_with_contract_logs",
+                project = "e2e/sway/logs/contract_with_contract_logs",
             )
         ),
         Deploy(
@@ -697,7 +710,7 @@ async fn test_contract_with_contract_logs() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/logs/contract_logs/out/release/contract_logs.bin",
+        "./sway/logs/contract_logs/out/release/contract_logs.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -731,13 +744,10 @@ async fn test_script_logs_with_contract_logs() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(
-            Contract(
-                name = "MyContract",
-                project = "packages/fuels/tests/logs/contract_logs",
-            ),
+            Contract(name = "MyContract", project = "e2e/sway/logs/contract_logs",),
             Script(
                 name = "LogScript",
-                project = "packages/fuels/tests/logs/script_with_contract_logs"
+                project = "e2e/sway/logs/script_with_contract_logs"
             )
         ),
         Deploy(
@@ -811,7 +821,7 @@ async fn test_script_decode_logs_with_type() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/logs/script_logs"
+            project = "e2e/sway/logs/script_logs"
         )),
         LoadScript(
             name = "script_instance",
@@ -888,7 +898,7 @@ async fn test_script_require_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/scripts/script_require"
+            project = "e2e/sway/scripts/script_require"
         )),
         LoadScript(
             name = "script_instance",
@@ -897,42 +907,36 @@ async fn test_script_require_log() -> Result<()> {
         )
     );
 
-    {
-        let error = script_instance
-            .main(MatchEnum::RequirePrimitive)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_revert_containing_msg("42", error);
+    macro_rules! reverts_with_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireString)
-            .call()
-            .await
-            .expect_err("should return a revert error");
 
-        assert_revert_containing_msg("fuel", error);
-    }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireCustomGeneric)
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(MatchEnum::RequirePrimitive, call, "42");
+    reverts_with_msg!(MatchEnum::RequirePrimitive, simulate, "42");
 
-        assert_revert_containing_msg("StructDeeplyNestedGeneric", error);
-    }
-    {
-        let error = script_instance
-            .main(MatchEnum::RequireWithAdditionalLogs)
-            .call()
-            .await
-            .expect_err("should return a revert error");
+    reverts_with_msg!(MatchEnum::RequireString, call, "fuel");
+    reverts_with_msg!(MatchEnum::RequireString, simulate, "fuel");
 
-        assert_revert_containing_msg("64", error);
-    }
+    reverts_with_msg!(
+        MatchEnum::RequireCustomGeneric,
+        call,
+        "StructDeeplyNestedGeneric"
+    );
+    reverts_with_msg!(
+        MatchEnum::RequireCustomGeneric,
+        simulate,
+        "StructDeeplyNestedGeneric"
+    );
+
+    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, call, "64");
+    reverts_with_msg!(MatchEnum::RequireWithAdditionalLogs, simulate, "64");
 
     Ok(())
 }
@@ -944,11 +948,11 @@ async fn test_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/lib_contract",
+                project = "e2e/sway/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "e2e/sway/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -959,7 +963,7 @@ async fn test_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/release/lib_contract.bin",
+        "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -987,15 +991,15 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/lib_contract",
+                project = "e2e/sway/contracts/lib_contract",
             ),
             Contract(
                 name = "ContractLogs",
-                project = "packages/fuels/tests/logs/contract_logs",
+                project = "e2e/sway/logs/contract_logs",
             ),
             Contract(
                 name = "ContractCaller",
-                project = "packages/fuels/tests/contracts/lib_contract_caller",
+                project = "e2e/sway/contracts/lib_contract_caller",
             )
         ),
         Deploy(
@@ -1011,7 +1015,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
     );
 
     let contract_id = Contract::load_from(
-        "../../packages/fuels/tests/contracts/lib_contract/out/release/lib_contract.bin",
+        "./sway/contracts/lib_contract/out/release/lib_contract.bin",
         LoadConfiguration::default(),
     )?
     .deploy(&wallet, TxPolicies::default())
@@ -1049,11 +1053,11 @@ async fn test_script_require_from_contract() -> Result<()> {
         Abigen(
             Contract(
                 name = "MyContract",
-                project = "packages/fuels/tests/contracts/lib_contract",
+                project = "e2e/sway/contracts/lib_contract",
             ),
             Script(
                 name = "LogScript",
-                project = "packages/fuels/tests/scripts/require_from_contract"
+                project = "e2e/sway/scripts/require_from_contract"
             )
         ),
         Deploy(
@@ -1091,7 +1095,7 @@ async fn test_contract_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "LogContract",
-            project = "packages/fuels/tests/contracts/asserts"
+            project = "e2e/sway/contracts/asserts"
         )),
         Deploy(
             name = "contract_instance",
@@ -1099,28 +1103,38 @@ async fn test_contract_asserts_log() -> Result<()> {
             wallet = "wallet"
         ),
     );
-    let contract_methods = contract_instance.methods();
-    {
-        let a = 32;
-        let b = 64;
 
-        let error = contract_methods
-            .assert_primitive(a, b)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_revert_containing_msg("assertion failed", error);
+    macro_rules! reverts_with_msg {
+        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
     {
-        let a = 32;
-        let b = 64;
+        reverts_with_msg!((32, 64,), assert_primitive, call, "assertion failed");
+        reverts_with_msg!((32, 64,), assert_primitive, simulate, "assertion failed");
+    }
 
-        let error = contract_methods
-            .assert_eq_primitive(a, b)
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_assert_eq_containing_msg(a, b, error);
+    macro_rules! reverts_with_assert_eq_msg {
+        (($($arg: expr,)*), $method:ident, $execution: ident, $msg:expr) => {
+            let error = contract_instance
+                .methods()
+                .$method($($arg,)*)
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_assert_eq_containing_msg($($arg,)* error);
+        }
+    }
+
+    {
+        reverts_with_assert_eq_msg!((32, 64,), assert_eq_primitive, call, "assertion failed");
+        reverts_with_assert_eq_msg!((32, 64,), assert_eq_primitive, simulate, "assertion failed");
     }
     {
         let test_struct = TestStruct {
@@ -1133,24 +1147,36 @@ async fn test_contract_asserts_log() -> Result<()> {
             field_2: 32,
         };
 
-        let error = contract_methods
-            .assert_eq_struct(test_struct.clone(), test_struct2.clone())
-            .call()
-            .await
-            .expect_err("should return a revert error");
-        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+        reverts_with_assert_eq_msg!(
+            (test_struct.clone(), test_struct2.clone(),),
+            assert_eq_struct,
+            call,
+            "assertion failed"
+        );
+
+        reverts_with_assert_eq_msg!(
+            (test_struct.clone(), test_struct2.clone(),),
+            assert_eq_struct,
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
+        reverts_with_assert_eq_msg!(
+            (test_enum.clone(), test_enum2.clone(),),
+            assert_eq_enum,
+            call,
+            "assertion failed"
+        );
 
-        let error = contract_methods
-            .assert_eq_enum(test_enum.clone(), test_enum2.clone())
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+        reverts_with_assert_eq_msg!(
+            (test_enum.clone(), test_enum2.clone(),),
+            assert_eq_enum,
+            simulate,
+            "assertion failed"
+        );
     }
 
     Ok(())
@@ -1162,7 +1188,7 @@ async fn test_script_asserts_log() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/scripts/script_asserts"
+            project = "e2e/sway/scripts/script_asserts"
         )),
         LoadScript(
             name = "script_instance",
@@ -1170,29 +1196,50 @@ async fn test_script_asserts_log() -> Result<()> {
             wallet = "wallet"
         )
     );
-    {
-        let a = 32;
-        let b = 64;
+    macro_rules! reverts_with_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+    }
 
-        let error = script_instance
-            .main(MatchEnum::AssertPrimitive((a, b)))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_revert_containing_msg("assertion failed", error);
+    macro_rules! reverts_with_assert_eq_msg {
+        ($arg:expr, $execution:ident, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .$execution()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
     }
     {
-        let a = 32;
-        let b = 64;
-
-        let error = script_instance
-            .main(MatchEnum::AssertEqPrimitive((a, b)))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(a, b, error);
+        reverts_with_msg!(
+            MatchEnum::AssertPrimitive((32, 64)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_msg!(
+            MatchEnum::AssertPrimitive((32, 64)),
+            simulate,
+            "assertion failed"
+        );
+    }
+    {
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqPrimitive((32, 64)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqPrimitive((32, 64)),
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_struct = TestStruct {
@@ -1204,32 +1251,31 @@ async fn test_script_asserts_log() -> Result<()> {
             field_1: false,
             field_2: 32,
         };
-
-        let error = script_instance
-            .main(MatchEnum::AssertEqStruct((
-                test_struct.clone(),
-                test_struct2.clone(),
-            )))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_struct, test_struct2, error);
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqStruct((test_struct.clone(), test_struct2.clone(),)),
+            simulate,
+            "assertion failed"
+        );
     }
     {
         let test_enum = TestEnum::VariantOne;
         let test_enum2 = TestEnum::VariantTwo;
 
-        let error = script_instance
-            .main(MatchEnum::AssertEqEnum((
-                test_enum.clone(),
-                test_enum2.clone(),
-            )))
-            .call()
-            .await
-            .expect_err("should return a revert error");
-
-        assert_assert_eq_containing_msg(test_enum, test_enum2, error);
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
+            call,
+            "assertion failed"
+        );
+        reverts_with_assert_eq_msg!(
+            MatchEnum::AssertEqEnum((test_enum.clone(), test_enum2.clone(),)),
+            simulate,
+            "assertion failed"
+        );
     }
 
     Ok(())
@@ -1241,7 +1287,7 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "TestContract",
-            project = "packages/fuels/tests/contracts/token_ops"
+            project = "e2e/sway/contracts/token_ops"
         )),
         Deploy(
             name = "contract_instance",
@@ -1255,6 +1301,13 @@ async fn contract_token_ops_error_messages() -> Result<()> {
         let contract_id = contract_instance.contract_id();
         let asset_id = contract_id.asset_id(&Bits256::zeroed());
         let address = wallet.address();
+
+        let error = contract_methods
+            .transfer(1_000_000, asset_id, address.into())
+            .simulate()
+            .await
+            .expect_err("should return a revert error");
+        assert_revert_containing_msg("failed transfer to address", error);
 
         let error = contract_methods
             .transfer(1_000_000, asset_id, address.into())
@@ -1274,7 +1327,7 @@ async fn test_log_results() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         ),),
         Deploy(
             contract = "MyContract",
@@ -1292,7 +1345,7 @@ async fn test_log_results() -> Result<()> {
     let log = response.decode_logs();
 
     let expected_err = format!(
-        "codec: missing log formatter for log_id: `LogId({:?}, 128)`, data: `{:?}`. \
+        "codec: missing log formatter for log_id: `LogId({:?}, \"128\")`, data: `{:?}`. \
          Consider adding external contracts using `with_contracts()`",
         contract_instance.id().hash,
         [0u8; 8]
@@ -1312,7 +1365,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
-            project = "packages/fuels/tests/contracts/needs_custom_decoder"
+            project = "e2e/sway/contracts/needs_custom_decoder"
         ),),
         Deploy(
             contract = "MyContract",
@@ -1402,7 +1455,7 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/logs/script_needs_custom_decoder_logging"
+            project = "e2e/sway/logs/script_needs_custom_decoder_logging"
         )),
         LoadScript(
             name = "script_instance",
@@ -1452,13 +1505,11 @@ async fn can_configure_decoder_for_script_log_decoding() -> Result<()> {
 
 #[tokio::test]
 async fn contract_heap_log() -> Result<()> {
-    use fuels_core::types::AsciiString;
-
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
             name = "MyContract",
-            project = "packages/fuels/tests/logs/contract_logs"
+            project = "e2e/sway/logs/contract_logs"
         ),),
         Deploy(
             contract = "MyContract",
@@ -1510,13 +1561,11 @@ async fn contract_heap_log() -> Result<()> {
 
 #[tokio::test]
 async fn script_heap_log() -> Result<()> {
-    use fuels_core::types::AsciiString;
-
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
             name = "LogScript",
-            project = "packages/fuels/tests/logs/script_heap_logs"
+            project = "e2e/sway/logs/script_heap_logs"
         )),
         LoadScript(
             name = "script_instance",
