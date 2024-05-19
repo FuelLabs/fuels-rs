@@ -106,12 +106,12 @@ jobs:
           uses: actions/upload-artifact@v4
           with:
             name: checks-binary
-            path: target/release/checks
+            path: target/debug/checks
 
         - name: Generate config
           id: generate-config
           run: |
-            ./target/release/checks -r . --print-ci-jobs-desc > config.json
+            ./target/debug/checks -r . --print-ci-jobs-desc > config.json
             echo "::set-output name=config::$(cat config.json)"
 
   verify-rust-version:
@@ -238,10 +238,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: checks-binary
-          path: target/release/checks
+          path: target/debug/checks
 
       - name: Run checks
-        run: ./target/release/checks --only-tasks-with-ids ${{ matrix.config.tasks }}
+        run: ./target/debug/checks --only-tasks-with-ids ${{ matrix.config.tasks }}
 
 
   publish:
