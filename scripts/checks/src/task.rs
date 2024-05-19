@@ -120,17 +120,23 @@ impl std::ops::AddAssign for CiDeps {
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CiJob {
     deps: CiDeps,
-    #[serde(serialize_with = "serialize_as_ids")]
-    tasks: Vec<Task>,
+    // Comma separated task ids
+    task_ids: String,
     name: String,
+    // Must not contain commas, rust-cache complains
+    cache_key: String,
 }
 
-fn serialize_as_ids<S>(tasks: &[Task], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let ids = tasks.iter().map(|task| task.id()).join(",");
-    ids.serialize(serializer)
+impl CiJob {
+    pub fn new(deps: CiDeps, tasks: &[&Task], name: String) -> Self {
+        let ids = tasks.iter().map(|t| t.id()).join(",");
+        Self {
+            deps,
+            cache_key: short_sha256(&ids),
+            task_ids: ids,
+            name,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -236,11 +242,15 @@ impl Execution {
     }
 }
 
+fn short_sha256(input: &str) -> String {
+    let mut hasher = sha2::Sha256::default();
+    hasher.update(input.as_bytes());
+    hex::encode(&hasher.finalize()[..8])
+}
+
 impl Task {
     pub fn id(&self) -> String {
-        let mut hasher = sha2::Sha256::default();
-        hasher.update(format!("{:?}", self).as_bytes());
-        hex::encode(&hasher.finalize()[..8])
+        short_sha256(&format!("{:?}", self))
     }
 
     pub fn run(self) -> Execution {
@@ -363,19 +373,11 @@ impl Tasks {
                 };
 
                 if let Some(deps) = type_paths_deps {
-                    jobs.push(CiJob {
-                        name: name.clone(),
-                        deps,
-                        tasks: tasks_requiring_type_paths.into_iter().cloned().collect(),
-                    });
+                    jobs.push(CiJob::new(deps, &tasks_requiring_type_paths, name.clone()));
                 }
 
                 if let Some(deps) = normal_deps {
-                    jobs.push(CiJob {
-                        name,
-                        deps,
-                        tasks: normal_tasks.into_iter().cloned().collect(),
-                    });
+                    jobs.push(CiJob::new(deps, &normal_tasks, name));
                 }
 
                 jobs

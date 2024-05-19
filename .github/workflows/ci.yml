@@ -186,7 +186,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2.0.1
         continue-on-error: true
         with:
-          key: "${{ matrix.config.tasks }}"
+          key: "${{ matrix.config.cache_key }}"
 
       - name: Install Fuel Core
         if: ${{ matrix.config.deps.fuel_core_binary }}
