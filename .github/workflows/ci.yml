@@ -100,7 +100,7 @@ jobs:
             prefix-key: "v1-rust"
 
         - name: Build checks binary
-          run: cargo build --release --package checks --bin checks
+          run: cargo build --package checks --bin checks
 
         - name: Upload checks binary
           uses: actions/upload-artifact@v4
@@ -111,7 +111,7 @@ jobs:
         - name: Generate config
           id: generate-config
           run: |
-            ./target/release/checks generate-config > config.json
+            ./target/release/checks -r . --print-ci-jobs-desc > config.json
             echo "::set-output name=config::$(cat config.json)"
 
   verify-rust-version:
