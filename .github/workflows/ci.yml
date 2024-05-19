@@ -26,7 +26,7 @@ env:
   NEXTEST_STATUS_LEVEL: "fail"
 
 jobs:
-  setup-test-projects:
+  compile_sway_projects:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -147,32 +147,43 @@ jobs:
 
   cargo-verifications:
     needs:
-      - setup-test-projects
+      - compile_sway_projects
       - verify-rust-version
-      - generate-job-config
+      - build-checks-binary
       - publish-crates-check
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        config: ${{fromJSON(needs.generate-job-config.outputs.config)}}
+        config: ${{fromJSON(needs.build-checks-binary.outputs.config)}}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - uses: dtolnay/rust-toolchain@master
+
+      - name: Install Rust toolchain
+        if: ${{ matrix.config.deps.rust && matrix.config.deps.rust.nightly == false }}
+        uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ env.RUST_VERSION }}
-          components: clippy,rustfmt
-        # selecting a toolchain either by action or manual `rustup` calls should happen
-        # before the cache plugin, as it uses the current rustc version as its cache key
+          components: ${{ matrix.config.deps.rust.components || '' }}
+
+      - name: Install Rust nightly toolchain
+        if: ${{ matrix.config.deps.rust && matrix.config.deps.rust.nightly == true }}
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly
+          components: ${{ matrix.config.deps.rust.components || '' }}
+
+      # selecting a toolchain either by action or manual `rustup` calls should happen
+      # before the cache plugin, as it uses the current rustc version as its cache key
       - uses: Swatinem/rust-cache@v2.0.1
         continue-on-error: true
         with:
-          key: "${{ matrix.dir }}"
+          key: "${{ matrix.config.tasks }}"
 
       - name: Install Fuel Core
-        if: ${{ matrix.install_fuel_core }}
+        if: ${{ matrix.config.deps.fuel_core_binary }}
         run: |
           if [[ -n $FUEL_CORE_PATCH_BRANCH ]]; then
             cargo install --locked fuel-core-bin --git https://github.com/FuelLabs/fuel-core --branch "$FUEL_CORE_PATCH_BRANCH"
@@ -183,34 +194,54 @@ jobs:
             mv fuel-core-${{ env.FUEL_CORE_VERSION }}-x86_64-unknown-linux-gnu/fuel-core /usr/local/bin/fuel-core
           fi
 
-      - name: Download sway example artifacts
-        if: ${{ matrix.download_sway_artifacts }}
+      - name: Download sway example artifacts (Normal)
+        if: ${{ matrix.config.deps.sway_artifacts == 'Normal' }}
         uses: actions/download-artifact@v4
         with:
-          name: ${{ matrix.download_sway_artifacts }}
+          name: sway-examples
+          # Needed because `upload-artifact` will remove 'e2e/sway' because it is shared between all matched files
+          path: e2e/sway/
+
+      - name: Download sway example artifacts (TypePaths)
+        if: ${{ matrix.config.deps.sway_artifacts == 'TypePaths' }}
+        uses: actions/download-artifact@v4
+        with:
+          name: sway-examples-w-type-paths
           # Needed because `upload-artifact` will remove 'e2e/sway' because it is shared between all matched files
           path: e2e/sway/
 
       - name: Install nextest
-        if: ${{ matrix.cargo_command == 'nextest' }}
+        if: ${{ matrix.config.deps.cargo.nextest }}
         uses: taiki-e/install-action@nextest
 
       - name: Install cargo-machete
-        if: ${{ matrix.cargo_command == 'machete' }}
+        if: ${{ matrix.config.deps.cargo.machete }}
         uses: taiki-e/install-action@cargo-machete
 
       - name: Install NodeJS for WASM testing
+        if: ${{ matrix.config.deps.wasm }}
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install typos tool
-        uses: crate-ci/typos@v1.20.3
-
       - name: Install wasm toolchain
+        if: ${{ matrix.config.deps.wasm }}
         run: |
           rustup target add wasm32-unknown-unknown
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+      - name: Install typos tool
+        if: ${{ matrix.config.deps.typos_cli }}
+        uses: crate-ci/typos@v1.20.3
+
+      - name: Download checks binary
+        uses: actions/download-artifact@v4
+        with:
+          name: checks-binary
+          path: target/release/checks
+
+      - name: Run checks
+        run: ./target/release/checks --only-tasks-with-ids ${{ matrix.config.tasks }}
 
 
   publish:
