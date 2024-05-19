@@ -240,11 +240,10 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: checks-binary
-          path: target/debug/checks
+          path: ./checks
 
       - name: Run checks
-        run: ./target/debug/checks --only-tasks-with-ids ${{ matrix.config.tasks }}
-
+        run: ./checks --only-tasks-with-ids ${{ matrix.config.tasks }}
 
   publish:
     needs:
