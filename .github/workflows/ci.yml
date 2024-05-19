@@ -252,7 +252,7 @@ jobs:
       - name: Run checks
         run: |
           chmod +x checks
-          ./checks --only-tasks-with-ids ${{ matrix.config.tasks }} --root . --sway-type-paths
+          ./checks --only-tasks-with-ids ${{ matrix.config.task_ids }} --root . --sway-type-paths
 
   publish:
     needs:
