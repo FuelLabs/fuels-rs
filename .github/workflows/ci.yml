@@ -242,7 +242,9 @@ jobs:
           name: checks-binary
 
       - name: Run checks
-        run: ./checks --only-tasks-with-ids ${{ matrix.config.tasks }}
+        run: |
+          chmod +x checks
+          ./checks --only-tasks-with-ids ${{ matrix.config.tasks }}
 
   publish:
     needs:
