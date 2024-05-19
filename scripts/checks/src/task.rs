@@ -3,7 +3,7 @@ use std::{collections::BTreeSet, fmt::Display, path::PathBuf};
 use colored::Colorize;
 use duct::cmd;
 use itertools::Itertools;
-use nix::{sys::signal::Signal, unistd::Pid};
+use nix::{sys::signal::Signal, unistd::Pid, NixPath};
 use serde::{Serialize, Serializer};
 use sha2::Digest;
 use tokio::task::JoinSet;
@@ -352,15 +352,15 @@ impl Tasks {
 
                 let mut jobs = vec![];
 
-                let name = format!(
-                    "{}",
-                    cwd.strip_prefix(&self.workspace_root)
-                        .unwrap_or_else(|_| panic!(
-                            "{cwd:?} is a prefix of {}",
-                            self.workspace_root.display()
-                        ))
-                        .display()
-                );
+                let relative_path = cwd.strip_prefix(&self.workspace_root).unwrap_or_else(|_| {
+                    panic!("{cwd:?} is a prefix of {}", self.workspace_root.display())
+                });
+
+                let name = if relative_path.is_empty() {
+                    "workspace".to_string()
+                } else {
+                    format!("{}", relative_path.display())
+                };
 
                 if let Some(deps) = type_paths_deps {
                     jobs.push(CiJob {
