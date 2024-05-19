@@ -17,6 +17,10 @@ pub fn generate_tasks(cli: &cli::Cli) -> Tasks {
         tasks.retain_with_dirs(dirs);
     }
 
+    if !cli.sway_compiled_with_type_paths {
+        tasks.retain_without_type_paths();
+    }
+
     tasks
 }
 

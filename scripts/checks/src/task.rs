@@ -423,15 +423,22 @@ impl Tasks {
         self.tasks.retain(|task| ids.contains(&task.id()));
     }
 
-    pub fn retain_with_dirs(&mut self, dirs: &[String]) {
+    pub fn retain_with_dirs(&mut self, dirs: &[PathBuf]) {
+        let dirs = dirs
+            .iter()
+            .map(|dir| {
+                dir.canonicalize()
+                    .unwrap_or_else(|_| panic!("unable to canonicalize path {dir:?}"))
+            })
+            .collect_vec();
+        self.tasks.retain(|task| dirs.contains(&task.cwd));
+    }
+
+    pub fn retain_without_type_paths(&mut self) {
         self.tasks.retain(|task| {
-            dirs.contains(
-                &task
-                    .cwd
-                    .canonicalize()
-                    .unwrap()
-                    .to_string_lossy()
-                    .to_string(),
+            matches!(
+                task.cmd.deps().sway_artifacts,
+                Some(SwayArtifacts::Normal) | None
             )
         });
     }

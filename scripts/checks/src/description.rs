@@ -65,10 +65,147 @@ impl TasksBuilder {
         self.hack_deps_common().collect()
     }
 
-    fn workspace_path(&self, path: &str) -> PathBuf {
-        let path = self.workspace.join(path);
-        path.canonicalize()
-            .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
+    fn common(&self) -> impl Iterator<Item = Task> + '_ {
+        self.all_workspace_members(None)
+            .into_iter()
+            .flat_map(|member| {
+                let mut commands = vec![
+                    self.cargo_fmt("--verbose --check", Default::default()),
+                    self.custom(
+                        "typos",
+                        "",
+                        &CiDeps {
+                            typos_cli: true,
+                            ..Default::default()
+                        },
+                    ),
+                ];
+                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
+                if member != self.workspace_path("e2e") {
+                    let cmd = self
+                        .cargo_clippy("--all-targets --all-features --no-deps", Default::default());
+                    commands.push(cmd);
+                }
+
+                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
+                // wasm ignored because wasm tests need to be run with wasm-pack
+                if member != self.workspace_path("wasm-tests")
+                    && member != self.workspace_path("e2e")
+                {
+                    let cmd = self.cargo_nextest("run --all-features", Default::default());
+                    commands.push(cmd);
+                }
+
+                // because these don't have libs
+                if member != self.workspace_path("e2e")
+                    && member != self.workspace_path("wasm-tests")
+                    && member != self.workspace_path("scripts/checks")
+                {
+                    let cmd = self.cargo("test --doc", None, CiDeps::default());
+                    commands.push(cmd);
+
+                    let cmd = self.cargo(
+                        "doc --document-private-items",
+                        Some(("RUSTDOCFLAGS", "-Dwarnings")),
+                        CiDeps::default(),
+                    );
+                    commands.push(cmd);
+                }
+                commands.into_iter().map(move |cmd| Task {
+                    cwd: member.clone(),
+                    cmd,
+                })
+            })
+    }
+
+    fn e2e_specific(&self) -> impl Iterator<Item = Task> + '_ {
+        [
+            self.cargo_nextest(
+                "run --features default,fuel-core-lib,test-type-paths",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    ..Default::default()
+                },
+            ),
+            self.cargo_nextest(
+                "run --features default,fuel-core-lib",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    ..Default::default()
+                },
+            ),
+            self.cargo_nextest(
+                "run --features default,test-type-paths",
+                CiDeps {
+                    fuel_core_binary: true,
+                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    ..Default::default()
+                },
+            ),
+            self.cargo_clippy(
+                "--all-targets --no-deps --features default,test-type-paths",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .map(|cmd| Task {
+            cwd: self.workspace_path("e2e"),
+            cmd,
+        })
+        .into_iter()
+    }
+
+    fn wasm_specific(&self) -> impl Iterator<Item = Task> {
+        std::iter::once(Task {
+            cwd: self.workspace_path("wasm-tests"),
+            cmd: self.custom(
+                "wasm-pack",
+                "test --node",
+                &CiDeps {
+                    wasm: true,
+                    ..Default::default()
+                },
+            ),
+        })
+    }
+
+    fn workspace_level(&self) -> impl Iterator<Item = Task> {
+        [
+            Command::MdCheck,
+            self.custom(
+                "cargo-machete",
+                "--skip-target-dir",
+                &CiDeps {
+                    cargo: CargoDeps {
+                        machete: true,
+                        ..Default::default()
+                    },
+                    ..Default::default()
+                },
+            ),
+            self.cargo_clippy(
+                "--workspace --all-features",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    ..Default::default()
+                },
+            ),
+            self.custom(
+                "typos",
+                "",
+                &CiDeps {
+                    typos_cli: true,
+                    ..Default::default()
+                },
+            ),
+        ]
+        .map(|cmd| Task {
+            cwd: self.workspace_path("."),
+            cmd,
+        })
+        .into_iter()
     }
 
     fn hack_features_common(&self) -> Vec<Task> {
@@ -87,6 +224,30 @@ impl TasksBuilder {
                 })
             })
             .collect()
+    }
+
+    fn hack_features_e2e(&self) -> Vec<Task> {
+        [
+            self.cargo_hack(
+                "--feature-powerset check --tests",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    ..Default::default()
+                },
+            ),
+            self.cargo_hack(
+                "--feature-powerset --exclude-features test-type-paths check --tests",
+                CiDeps {
+                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .map(|cmd| Task {
+            cwd: self.workspace_path("e2e"),
+            cmd,
+        })
+        .to_vec()
     }
 
     fn hack_deps_common(&self) -> impl Iterator<Item = Task> + '_ {
@@ -115,30 +276,6 @@ impl TasksBuilder {
                     cmd,
                 })
             })
-    }
-
-    fn hack_features_e2e(&self) -> Vec<Task> {
-        [
-            self.cargo_hack(
-                "--feature-powerset check --tests",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
-                    ..Default::default()
-                },
-            ),
-            self.cargo_hack(
-                "--feature-powerset --exclude-features test-type-paths check --tests",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .map(|cmd| Task {
-            cwd: self.workspace_path("e2e"),
-            cmd,
-        })
-        .to_vec()
     }
 
     fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
@@ -229,147 +366,10 @@ impl TasksBuilder {
         }
     }
 
-    fn e2e_specific(&self) -> impl Iterator<Item = Task> + '_ {
-        [
-            self.cargo_nextest(
-                "run --features default,fuel-core-lib,test-type-paths",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
-                    ..Default::default()
-                },
-            ),
-            self.cargo_nextest(
-                "run --features default,fuel-core-lib",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
-                    ..Default::default()
-                },
-            ),
-            self.cargo_nextest(
-                "run --features default,test-type-paths",
-                CiDeps {
-                    fuel_core_binary: true,
-                    sway_artifacts: Some(SwayArtifacts::Normal),
-                    ..Default::default()
-                },
-            ),
-            self.cargo_clippy(
-                "--all-targets --no-deps --features default,test-type-paths",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
-                    ..Default::default()
-                },
-            ),
-        ]
-        .map(|cmd| Task {
-            cwd: self.workspace_path("e2e"),
-            cmd,
-        })
-        .into_iter()
-    }
-
-    fn wasm_specific(&self) -> impl Iterator<Item = Task> {
-        std::iter::once(Task {
-            cwd: self.workspace_path("wasm-tests"),
-            cmd: self.custom(
-                "wasm-pack test --node",
-                "",
-                &CiDeps {
-                    wasm: true,
-                    ..Default::default()
-                },
-            ),
-        })
-    }
-
-    fn workspace_level(&self) -> impl Iterator<Item = Task> {
-        [
-            Command::MdCheck,
-            self.custom(
-                "cargo-machete --skip-target-dir",
-                "",
-                &CiDeps {
-                    cargo: CargoDeps {
-                        machete: true,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-            ),
-            self.cargo_clippy(
-                "--workspace --all-features",
-                CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
-                    ..Default::default()
-                },
-            ),
-            self.custom(
-                "typos",
-                "",
-                &CiDeps {
-                    typos_cli: true,
-                    ..Default::default()
-                },
-            ),
-        ]
-        .map(|cmd| Task {
-            cwd: self.workspace_path("."),
-            cmd,
-        })
-        .into_iter()
-    }
-
-    fn common(&self) -> impl Iterator<Item = Task> + '_ {
-        self.all_workspace_members(None)
-            .into_iter()
-            .flat_map(|member| {
-                let mut commands = vec![
-                    self.cargo_fmt("--verbose --check", Default::default()),
-                    self.custom(
-                        "typos",
-                        "",
-                        &CiDeps {
-                            typos_cli: true,
-                            ..Default::default()
-                        },
-                    ),
-                ];
-                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
-                if member != self.workspace_path("e2e") {
-                    let cmd = self
-                        .cargo_clippy("--all-targets --all-features --no-deps", Default::default());
-                    commands.push(cmd);
-                }
-
-                // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
-                // wasm ignored because wasm tests need to be run with wasm-pack
-                if member != self.workspace_path("wasm-tests")
-                    && member != self.workspace_path("e2e")
-                {
-                    let cmd = self.cargo_nextest("run --all-features", Default::default());
-                    commands.push(cmd);
-                }
-
-                // because these don't have libs
-                if member != self.workspace_path("e2e")
-                    && member != self.workspace_path("wasm-tests")
-                    && member != self.workspace_path("scripts/checks")
-                {
-                    let cmd = self.cargo("test --doc", None, CiDeps::default());
-                    commands.push(cmd);
-
-                    let cmd = self.cargo(
-                        "doc --document-private-items",
-                        Some(("RUSTDOCFLAGS", "-Dwarnings")),
-                        CiDeps::default(),
-                    );
-                    commands.push(cmd);
-                }
-                commands.into_iter().map(move |cmd| Task {
-                    cwd: member.clone(),
-                    cmd,
-                })
-            })
+    fn workspace_path(&self, path: &str) -> PathBuf {
+        let path = self.workspace.join(path);
+        path.canonicalize()
+            .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
     }
 
     fn all_workspace_members(&self, ignore: Option<&Path>) -> Vec<PathBuf> {

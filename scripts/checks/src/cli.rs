@@ -30,7 +30,7 @@ pub struct Cli {
         num_args = 0..
 
     )]
-    pub only_tasks_in_dir: Option<Vec<String>>,
+    pub only_tasks_in_dir: Option<Vec<PathBuf>>,
 
     /// Used to enable/disable tests that take too long/are too resource intense.
     #[arg(short, long, default_value = "normal")]
@@ -71,7 +71,10 @@ mod tests {
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.only_tasks_with_ids, vec!["one", "two"]);
+        assert_eq!(
+            cli.only_tasks_with_ids,
+            Some(vec!["one".to_string(), "two".to_string()])
+        );
     }
 
     #[test]
@@ -99,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn default_flavor_is_ci() {
+    fn default_flavor_is_normal() {
         // given
         let cli = "foo -r .";
 
@@ -107,6 +110,6 @@ mod tests {
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.flavor, Flavor::Ci);
+        assert_eq!(cli.flavor, Flavor::Normal);
     }
 }
