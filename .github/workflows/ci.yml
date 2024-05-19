@@ -111,8 +111,7 @@ jobs:
         - name: Generate config
           id: generate-config
           run: |
-            ./target/debug/checks -r . --print-ci-jobs-desc > config.json
-            echo "::set-output name=config::$(cat config.json)"
+            ./target/debug/checks -r . --print-ci-jobs-desc >> "$GITHUB_OUTPUT"
 
   verify-rust-version:
     runs-on: ubuntu-latest
