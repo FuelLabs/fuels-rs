@@ -63,21 +63,33 @@ impl TasksBuilder {
         self.all_workspace_members(None)
             .into_iter()
             .flat_map(|member| {
+                let deps = {
+                    // Some examples run abigen! on sway projects in e2e
+                    let sway_artifacts = member
+                        .starts_with(self.workspace_path("examples"))
+                        .then_some(SwayArtifacts::Normal);
+
+                    CiDeps {
+                        sway_artifacts,
+                        ..Default::default()
+                    }
+                };
+
                 let mut commands = vec![
-                    self.cargo_fmt("--verbose --check", Default::default()),
+                    self.cargo_fmt("--verbose --check", deps.clone()),
                     self.custom(
                         "typos",
                         "",
                         &CiDeps {
                             typos_cli: true,
-                            ..Default::default()
+                            ..deps.clone()
                         },
                     ),
                 ];
                 // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
                 if member != self.workspace_path("e2e") {
-                    let cmd = self
-                        .cargo_clippy("--all-targets --all-features --no-deps", Default::default());
+                    let cmd =
+                        self.cargo_clippy("--all-targets --all-features --no-deps", deps.clone());
                     commands.push(cmd);
                 }
 
@@ -86,7 +98,7 @@ impl TasksBuilder {
                 if member != self.workspace_path("wasm-tests")
                     && member != self.workspace_path("e2e")
                 {
-                    let cmd = self.cargo_nextest("run --all-features", Default::default());
+                    let cmd = self.cargo_nextest("run --all-features", deps.clone());
                     commands.push(cmd);
                 }
 
@@ -95,16 +107,17 @@ impl TasksBuilder {
                     && member != self.workspace_path("wasm-tests")
                     && member != self.workspace_path("scripts/checks")
                 {
-                    let cmd = self.cargo("test --doc", None, CiDeps::default());
+                    let cmd = self.cargo("test --doc", None, deps.clone());
                     commands.push(cmd);
 
                     let cmd = self.cargo(
                         "doc --document-private-items",
                         Some(("RUSTDOCFLAGS", "-Dwarnings")),
-                        CiDeps::default(),
+                        deps.clone(),
                     );
                     commands.push(cmd);
                 }
+
                 commands.into_iter().map(move |cmd| Task {
                     cwd: member.clone(),
                     cmd,
