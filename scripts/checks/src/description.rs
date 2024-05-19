@@ -12,26 +12,20 @@ use crate::task::SwayArtifacts;
 use crate::task::Task;
 use crate::task::Tasks;
 
-pub fn normal(workspace: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace.clone(), &["-Dwarnings"]);
-    Tasks {
-        tasks: builder.local(),
-    }
+pub fn normal(workspace_root: PathBuf) -> Tasks {
+    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
+    Tasks::new(builder.local(), workspace_root)
 }
 
-pub fn hack_features(workspace: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace.clone(), &["-Dwarnings"]);
+pub fn hack_features(workspace_root: PathBuf) -> Tasks {
+    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
 
-    Tasks {
-        tasks: builder.hack_features(),
-    }
+    Tasks::new(builder.hack_features(), workspace_root)
 }
 
-pub fn hack_deps(workspace: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace.clone(), &["-Dwarnings"]);
-    Tasks {
-        tasks: builder.hack_deps(),
-    }
+pub fn hack_deps(workspace_root: PathBuf) -> Tasks {
+    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
+    Tasks::new(builder.hack_deps(), workspace_root)
 }
 
 struct TasksBuilder {

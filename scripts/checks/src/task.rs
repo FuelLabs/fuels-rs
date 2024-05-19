@@ -122,6 +122,7 @@ pub struct CiJob {
     deps: CiDeps,
     #[serde(serialize_with = "serialize_as_ids")]
     tasks: Vec<Task>,
+    name: String,
 }
 
 fn serialize_as_ids<S>(tasks: &[Task], serializer: S) -> Result<S::Ok, S::Error>
@@ -303,17 +304,34 @@ impl Task {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Tasks {
-    pub tasks: BTreeSet<Task>,
+    tasks: BTreeSet<Task>,
+    workspace_root: PathBuf,
+}
+
+impl Display for Tasks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for task in &self.tasks {
+            writeln!(f, "{}", task)?;
+        }
+        Ok(())
+    }
 }
 
 impl Tasks {
+    pub fn new(tasks: BTreeSet<Task>, workspace_root: PathBuf) -> Self {
+        Self {
+            tasks,
+            workspace_root: workspace_root.canonicalize().unwrap(),
+        }
+    }
+
     pub fn ci_jobs(&self) -> Vec<CiJob> {
         self.tasks
             .iter()
             .sorted_by_key(|task| task.cwd.clone())
             .group_by(|task| task.cwd.clone())
             .into_iter()
-            .flat_map(|(_, tasks)| {
+            .flat_map(|(cwd, tasks)| {
                 let (tasks_requiring_type_paths, normal_tasks): (Vec<_>, Vec<_>) =
                     tasks.into_iter().partition(|task| {
                         task.cmd
@@ -334,8 +352,19 @@ impl Tasks {
 
                 let mut jobs = vec![];
 
+                let name = format!(
+                    "{}",
+                    cwd.strip_prefix(&self.workspace_root)
+                        .unwrap_or_else(|_| panic!(
+                            "{cwd:?} is a prefix of {}",
+                            self.workspace_root.display()
+                        ))
+                        .display()
+                );
+
                 if let Some(deps) = type_paths_deps {
                     jobs.push(CiJob {
+                        name: name.clone(),
                         deps,
                         tasks: tasks_requiring_type_paths.into_iter().cloned().collect(),
                     });
@@ -343,6 +372,7 @@ impl Tasks {
 
                 if let Some(deps) = normal_deps {
                     jobs.push(CiJob {
+                        name,
                         deps,
                         tasks: normal_tasks.into_iter().cloned().collect(),
                     });

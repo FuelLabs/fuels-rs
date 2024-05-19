@@ -24,9 +24,7 @@ async fn main() -> anyhow::Result<()> {
     let tasks = util::generate_tasks(&cli);
 
     if cli.list_tasks {
-        for task in &tasks.tasks {
-            println!("{task}");
-        }
+        println!("{tasks}");
         return Ok(());
     }
 

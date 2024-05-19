@@ -157,6 +157,7 @@ jobs:
     strategy:
       matrix:
         config: ${{fromJSON(needs.build-checks-binary.outputs.config)}}
+    name: Cargo Verification [${{ matrix.config.name }}]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
