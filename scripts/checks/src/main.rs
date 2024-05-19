@@ -12,20 +12,21 @@ async fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
     util::configure_child_process_cleanup()?;
 
+    if cli.print_ci_jobs_desc {
+        let tasks = description::normal(cli.root.clone());
+        let jobs = tasks.ci_jobs();
+        // Json used because the CI needs it as such
+        let jsonified = serde_json::to_string_pretty(&jobs)?;
+        println!("{jsonified}");
+        return Ok(());
+    }
+
     let tasks = util::generate_tasks(&cli);
 
     if cli.list_tasks {
         for task in &tasks.tasks {
             println!("{task}");
         }
-        return Ok(());
-    }
-
-    if cli.print_ci_jobs_desc {
-        let desc = tasks.ci_jobs();
-        // Json used because the CI needs it as such
-        let jsonified = serde_json::to_string_pretty(&desc)?;
-        println!("{jsonified}");
         return Ok(());
     }
 

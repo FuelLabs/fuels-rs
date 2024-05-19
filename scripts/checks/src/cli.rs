@@ -13,7 +13,7 @@ pub struct Cli {
         num_args = 0..
 
     )]
-    pub only_tasks_with_ids: Vec<String>,
+    pub only_tasks_with_ids: Option<Vec<String>>,
 
     /// Prints out all tasks available (depends on what `flavor` is enabled)
     #[arg(short, long, action)]
@@ -23,22 +23,23 @@ pub struct Cli {
     #[arg(long)]
     pub print_ci_jobs_desc: bool,
 
-    /// Only run tasks in the given directory
+    /// Only run tasks in the given directories
     #[arg(
         long,
         value_delimiter = ',',
         num_args = 0..
 
     )]
-    pub only_tasks_in_dir: Vec<String>,
+    pub only_tasks_in_dir: Option<Vec<String>>,
 
     /// Used to enable/disable tests that take too long/are too resource intense.
-    #[arg(short, long, default_value = "ci")]
+    #[arg(short, long, default_value = "normal")]
     pub flavor: Flavor,
 
-    /// Run only tasks that require sway type paths
+    /// Enables some tests that need the sway artifacts to be built with the type paths enabled.
+    /// Has no effect for CI job generation since, in Ci, we can download the correct artifacts as needed.
     #[arg(short, long, action)]
-    pub sway_with_type_paths: bool,
+    pub sway_compiled_with_type_paths: bool,
 
     /// Enable verbose output.
     #[arg(short, long, default_value = "false")]
@@ -52,7 +53,7 @@ pub struct Cli {
 
 #[derive(Debug, Copy, Clone, ValueEnum, PartialEq)]
 pub enum Flavor {
-    Ci,
+    Normal,
     HackFeatures,
     HackDeps,
 }

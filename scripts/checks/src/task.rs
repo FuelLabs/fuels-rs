@@ -1,90 +1,135 @@
-use std::{
-    collections::{BTreeSet, HashMap, HashSet},
-    fmt::Display,
-    path::{Path, PathBuf},
-};
+use std::{collections::BTreeSet, fmt::Display, path::PathBuf};
 
 use colored::Colorize;
 use duct::cmd;
 use itertools::Itertools;
 use nix::{sys::signal::Signal, unistd::Pid};
+use serde::{Serialize, Serializer};
 use sha2::Digest;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
 use crate::md_check;
 
-#[derive(Debug, Clone, serde::Serialize, Copy)]
-pub enum SwayProjectDep {
+#[derive(Debug, Clone, serde::Serialize, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum SwayArtifacts {
     TypePaths,
     Normal,
 }
 
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RustDeps {
+    pub nightly: bool,
+    #[serde(serialize_with = "comma_separated")]
+    pub components: BTreeSet<String>,
+}
+
+fn comma_separated<S>(components: &BTreeSet<String>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let components = components.iter().join(",");
+    components.serialize(serializer)
+}
+
+#[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct CargoDeps {
+    pub hack: bool,
+    pub nextest: bool,
+    pub machete: bool,
+    pub udeps: bool,
+}
+
+impl std::ops::Add for CargoDeps {
+    type Output = Self;
+    fn add(mut self, other: Self) -> Self {
+        self += other;
+        self
+    }
+}
+
+impl std::ops::AddAssign for CargoDeps {
+    fn add_assign(&mut self, other: Self) {
+        self.hack |= other.hack;
+        self.nextest |= other.nextest;
+        self.machete |= other.machete;
+    }
+}
+
+#[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct CiDeps {
-    fuel_core_binary: bool,
+    pub fuel_core_binary: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    rust_toolchain_components: Option<String>,
-    wasm: bool,
-    cargo_hack: bool,
-    nextest: bool,
-    cargo_machete: bool,
-    typos_cli: bool,
+    pub rust: Option<RustDeps>,
+    pub wasm: bool,
+    pub cargo: CargoDeps,
+    pub typos_cli: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    sway_project_artifacts: Option<SwayProjectDep>,
+    pub sway_artifacts: Option<SwayArtifacts>,
+}
+
+impl std::ops::Add for CiDeps {
+    type Output = Self;
+    fn add(mut self, other: Self) -> Self {
+        self += other;
+        self
+    }
+}
+
+impl std::ops::AddAssign for CiDeps {
+    fn add_assign(&mut self, other: Self) {
+        self.fuel_core_binary |= other.fuel_core_binary;
+
+        let rust = match (self.rust.take(), other.rust) {
+            (Some(mut self_rust), Some(other_rust)) => {
+                self_rust.nightly |= other_rust.nightly;
+                self_rust.components = self_rust
+                    .components
+                    .union(&other_rust.components)
+                    .cloned()
+                    .collect();
+                Some(self_rust)
+            }
+            (Some(self_rust), None) => Some(self_rust),
+            (None, Some(other_rust)) => Some(other_rust),
+            (None, None) => None,
+        };
+        self.rust = rust;
+
+        self.wasm |= other.wasm;
+        self.cargo += other.cargo;
+        self.typos_cli |= other.typos_cli;
+
+        let sway_artifacts = match (self.sway_artifacts, other.sway_artifacts) {
+            (Some(self_sway), Some(other_sway)) => {
+                if self_sway != other_sway {
+                    panic!(
+                        "Deps cannot be unified. Cannot have type paths and normal artifacts at once! {self_sway:?} != {other_sway:?}",
+                    );
+                }
+                Some(self_sway)
+            }
+            (Some(self_sway), None) => Some(self_sway),
+            (None, Some(other_sway)) => Some(other_sway),
+            (None, None) => None,
+        };
+        self.sway_artifacts = sway_artifacts;
+    }
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CiJob {
-    dir: PathBuf,
     deps: CiDeps,
+    #[serde(serialize_with = "serialize_as_ids")]
+    tasks: Vec<Task>,
 }
 
-impl CiDeps {
-    pub fn from_deps(deps: &HashSet<Dependency>) -> Self {
-        let fuel_core_binary = deps.contains(&Dependency::FuelCoreBinary);
-        let wasm = deps.contains(&Dependency::Wasm);
-        let cargo_hack = deps.contains(&Dependency::CargoHack);
-        let nextest = deps.contains(&Dependency::Nextest);
-        let cargo_machete = deps.contains(&Dependency::CargoMachete);
-        let typos_cli = deps.contains(&Dependency::TyposCli);
-
-        let sway_project_artifacts = deps.iter().find_map(|dep| match dep {
-            Dependency::SwayArtifacts { type_paths } if *type_paths => {
-                Some(SwayProjectDep::TypePaths)
-            }
-            Dependency::SwayArtifacts { .. } => Some(SwayProjectDep::Normal),
-            _ => None,
-        });
-
-        let mut components = String::new();
-        if deps.contains(&Dependency::Clippy) {
-            components.push_str("clippy");
-        }
-        if deps.contains(&Dependency::RustFmt) {
-            if !components.is_empty() {
-                components.push(',');
-            }
-            components.push_str("rustfmt");
-        }
-
-        let rust_toolchain_components = if components.is_empty() {
-            None
-        } else {
-            Some(components)
-        };
-
-        Self {
-            fuel_core_binary,
-            rust_toolchain_components,
-            wasm,
-            cargo_hack,
-            nextest,
-            cargo_machete,
-            typos_cli,
-            sway_project_artifacts,
-        }
-    }
+fn serialize_as_ids<S>(tasks: &[Task], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let ids = tasks.iter().map(|task| task.id()).join(",");
+    ids.serialize(serializer)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -93,39 +138,22 @@ pub struct Task {
     pub cmd: Command,
 }
 
-#[derive(Debug, Hash, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum Dependency {
-    FuelCoreBinary,
-    Clippy,
-    CargoHack,
-    RustFmt,
-    RustStable,
-    RustNightly,
-    SwayArtifacts { type_paths: bool },
-    Nextest,
-    CargoMachete,
-    Wasm,
-    TyposCli,
-    Grep,
-    Find,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Command {
     Custom {
         program: String,
         args: Vec<String>,
         env: Vec<(String, String)>,
-        deps: Vec<Dependency>,
+        deps: CiDeps,
     },
     MdCheck,
 }
 
 impl Command {
-    pub fn deps(&self) -> HashSet<Dependency> {
+    pub fn deps(&self) -> CiDeps {
         match self {
-            Command::Custom { deps, .. } => HashSet::from_iter(deps.iter().copied()),
-            Command::MdCheck => HashSet::from_iter([Dependency::Grep, Dependency::Find]),
+            Command::Custom { deps, .. } => deps.clone(),
+            Command::MdCheck => CiDeps::default(),
         }
     }
 }
@@ -275,21 +303,52 @@ impl Task {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Tasks {
-    pub tasks: Vec<Task>,
+    pub tasks: BTreeSet<Task>,
 }
 
 impl Tasks {
     pub fn ci_jobs(&self) -> Vec<CiJob> {
         self.tasks
             .iter()
-            .group_by(|task| &task.cwd)
+            .sorted_by_key(|task| task.cwd.clone())
+            .group_by(|task| task.cwd.clone())
             .into_iter()
-            .map(|(cwd, tasks)| {
-                let deps = tasks.flat_map(|task| task.cmd.deps()).collect();
-                CiJob {
-                    dir: cwd.clone(),
-                    deps: CiDeps::from_deps(&deps),
+            .flat_map(|(_, tasks)| {
+                let (tasks_requiring_type_paths, normal_tasks): (Vec<_>, Vec<_>) =
+                    tasks.into_iter().partition(|task| {
+                        task.cmd
+                            .deps()
+                            .sway_artifacts
+                            .is_some_and(|dep| matches!(dep, SwayArtifacts::TypePaths))
+                    });
+
+                let type_paths_deps = tasks_requiring_type_paths
+                    .iter()
+                    .map(|ty| ty.cmd.deps())
+                    .reduce(|acc, next| acc + next);
+
+                let normal_deps = normal_tasks
+                    .iter()
+                    .map(|ty| ty.cmd.deps())
+                    .reduce(|acc, next| acc + next);
+
+                let mut jobs = vec![];
+
+                if let Some(deps) = type_paths_deps {
+                    jobs.push(CiJob {
+                        deps,
+                        tasks: tasks_requiring_type_paths.into_iter().cloned().collect(),
+                    });
                 }
+
+                if let Some(deps) = normal_deps {
+                    jobs.push(CiJob {
+                        deps,
+                        tasks: normal_tasks.into_iter().cloned().collect(),
+                    });
+                }
+
+                jobs
             })
             .collect()
     }
