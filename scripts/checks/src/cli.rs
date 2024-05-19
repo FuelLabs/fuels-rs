@@ -36,10 +36,9 @@ pub struct Cli {
     #[arg(short, long, default_value = "normal")]
     pub flavor: Flavor,
 
-    /// Disables tests that need the sway artifacts to be built with the type paths enabled.
-    /// Enabled by default.
-    #[arg(short, long, default_value_t = true)]
-    pub disable_type_paths: bool,
+    /// Enables tests that need the sway artifacts to be built with the type paths enabled.
+    #[arg(short, long, action)]
+    pub sway_type_paths: bool,
 
     /// Enable verbose output.
     #[arg(short, long, default_value = "false")]
