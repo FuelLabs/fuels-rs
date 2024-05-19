@@ -236,7 +236,7 @@ jobs:
         if: ${{ matrix.config.deps.typos_cli }}
         run: |
           curl -sSLf 'https://github.com/crate-ci/typos/releases/download/v1.21.0/typos-v1.21.0-x86_64-unknown-linux-musl.tar.gz' > typos.tar.gz
-          tar -xzf typos.tar.gz
+          tar xf typos.tar.gz --wildcards "./typos"  && rm typos.tar.gz
           chmod +x typos
           mv typos /usr/local/bin/typos
 
