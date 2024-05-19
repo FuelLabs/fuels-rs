@@ -111,7 +111,10 @@ jobs:
         - name: Generate config
           id: generate-config
           run: |
+            EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
+            echo "config<<$EOF" >> "$GITHUB_OUTPUT"
             ./target/debug/checks -r . --print-ci-jobs-desc >> "$GITHUB_OUTPUT"
+            echo "$EOF" >> "$GITHUB_OUTPUT"
 
   verify-rust-version:
     runs-on: ubuntu-latest
