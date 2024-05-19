@@ -145,7 +145,7 @@ impl TasksBuilder {
                 "run --features default,test-type-paths",
                 CiDeps {
                     fuel_core_binary: true,
-                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    sway_artifacts: Some(SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
