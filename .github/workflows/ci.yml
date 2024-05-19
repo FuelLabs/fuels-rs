@@ -240,7 +240,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: checks-binary
-          path: ./checks
 
       - name: Run checks
         run: ./checks --only-tasks-with-ids ${{ matrix.config.tasks }}
