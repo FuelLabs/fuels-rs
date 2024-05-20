@@ -6,6 +6,7 @@ use sha2::Digest;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
+pub mod builder;
 pub mod command;
 pub mod deps;
 pub mod report;
@@ -35,9 +36,9 @@ impl Display for Tasks {
 }
 
 impl Tasks {
-    pub fn new(tasks: BTreeSet<task::Task>, workspace_root: PathBuf) -> Self {
+    pub fn new(tasks: impl IntoIterator<Item = task::Task>, workspace_root: PathBuf) -> Self {
         Self {
-            tasks,
+            tasks: BTreeSet::from_iter(tasks),
             workspace_root: workspace_root.canonicalize().unwrap(),
         }
     }
@@ -170,120 +171,4 @@ impl Tasks {
             )
         });
     }
-}
-
-#[cfg(test)]
-mod tests {
-    //
-    // use std::collections::HashMap;
-    //
-    // use super::*;
-    // use pretty_assertions::assert_eq;
-    //
-    // #[test]
-    // fn selection_respected() {
-    //     // given
-    //     let config = vec![
-    //         config::TasksDescription {
-    //             run_for_dirs: vec![PathBuf::from("some/foo"), PathBuf::from("other/zoo")],
-    //             commands: vec![
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "check".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "fmt".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "test".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //             ],
-    //         },
-    //         config::TasksDescription {
-    //             run_for_dirs: vec![PathBuf::from("some/boo")],
-    //             commands: vec![
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "check".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "fmt".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //                 config::Command::Custom {
-    //                     cmd: vec!["cargo".to_string(), "test".to_string()],
-    //                     env: None,
-    //                     run_if: None,
-    //                 },
-    //             ],
-    //         },
-    //     ];
-    //
-    //     let mut tasks = Tasks::from_task_descriptions(config, ".");
-    //
-    //     use rand::seq::SliceRandom;
-    //     let random_task = tasks.tasks.choose(&mut rand::thread_rng()).unwrap().clone();
-    //
-    //     // when
-    //     tasks.retain_with_ids(&[random_task.id()]);
-    //
-    //     // then
-    //     assert_eq!(tasks.tasks, [random_task]);
-    // }
-    //
-    // #[test]
-    // fn workspace_root_respected() {
-    //     // given
-    //     let config = vec![config::TasksDescription {
-    //         run_for_dirs: vec![PathBuf::from("some/foo")],
-    //         commands: vec![config::Command::Custom {
-    //             cmd: vec!["cargo".to_string(), "check".to_string()],
-    //             env: None,
-    //             run_if: None,
-    //         }],
-    //     }];
-    //
-    //     // when
-    //     let mut tasks = Tasks::from_task_descriptions(config, "workspace");
-    //
-    //     // then
-    //     let mut expected = [Task {
-    //         cwd: PathBuf::from("workspace/some/foo"),
-    //         cmd: Command::Custom {
-    //             program: "cargo".to_string(),
-    //             args: vec!["check".to_string()],
-    //             env: vec![],
-    //         },
-    //     }];
-    //
-    //     expected.sort();
-    //     tasks.tasks.sort();
-    //     assert_eq!(tasks.tasks, expected);
-    // }
-    //
-    // #[test]
-    // fn ignore_if_in_dir_respected() {
-    //     // given
-    //     let config = vec![config::TasksDescription {
-    //         run_for_dirs: vec![PathBuf::from("boom/some/foo")],
-    //         commands: vec![config::Command::Custom {
-    //             cmd: vec!["cargo".to_string(), "check".to_string()],
-    //             env: None,
-    //             run_if: Some(RunIf::CwdDoesntEndWith(vec!["some/foo".to_string()])),
-    //         }],
-    //     }];
-    //
-    //     // when
-    //     let tasks = Tasks::from_task_descriptions(config, ".");
-    //
-    //     // then
-    //     assert_eq!(tasks.tasks, []);
-    // }
 }

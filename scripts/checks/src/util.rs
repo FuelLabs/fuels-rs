@@ -1,29 +1,5 @@
 use nix::unistd::Pid;
 
-use crate::{cli, config, tasks::Tasks};
-
-pub fn generate_tasks(cli: &cli::Cli) -> Tasks {
-    let mut tasks = match cli.flavor {
-        cli::Flavor::Normal => config::normal(cli.root.clone()),
-        cli::Flavor::HackFeatures => config::hack_features(cli.root.clone()),
-        cli::Flavor::HackDeps => config::hack_deps(cli.root.clone()),
-    };
-
-    if let Some(ids) = &cli.only_tasks_with_ids {
-        tasks.retain_with_ids(ids);
-    }
-
-    if let Some(dirs) = &cli.only_tasks_in_dir {
-        tasks.retain_with_dirs(dirs);
-    }
-
-    if !cli.sway_type_paths {
-        tasks.retain_without_type_paths();
-    }
-
-    tasks
-}
-
 pub fn watch_for_cancel(cancel_token: tokio_util::sync::CancellationToken) {
     tokio::task::spawn(async move {
         tokio::signal::ctrl_c().await.unwrap();

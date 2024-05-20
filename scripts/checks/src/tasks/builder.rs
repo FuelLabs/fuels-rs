@@ -1,4 +1,3 @@
-use itertools::chain;
 use itertools::Itertools;
 use std::collections::BTreeSet;
 use std::path::Path;
@@ -10,56 +9,24 @@ use crate::tasks::deps::CiDeps;
 use crate::tasks::deps::SwayArtifacts;
 use crate::tasks::task::Task;
 use crate::tasks::Tasks;
-
-pub fn normal(workspace_root: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
-    Tasks::new(builder.local(), workspace_root)
-}
-
-pub fn hack_features(workspace_root: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
-
-    Tasks::new(builder.hack_features(), workspace_root)
-}
-
-pub fn hack_deps(workspace_root: PathBuf) -> Tasks {
-    let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
-    Tasks::new(builder.hack_deps(), workspace_root)
-}
-
-struct TasksBuilder {
+pub struct TasksBuilder {
     workspace: PathBuf,
     rust_flags: Vec<String>,
+    tasks: Vec<Task>,
 }
 
 impl TasksBuilder {
-    fn new(workspace: PathBuf, rust_flags: &[&str]) -> Self {
+    pub fn new(workspace: PathBuf, rust_flags: &[&str]) -> Self {
         Self {
             workspace,
             rust_flags: rust_flags.iter().map(|s| s.to_string()).collect(),
+            tasks: vec![],
         }
     }
 
-    pub fn local(&self) -> BTreeSet<Task> {
-        chain!(
-            self.common(),
-            self.e2e_specific(),
-            self.wasm_specific(),
-            self.workspace_level(),
-        )
-        .collect()
-    }
-
-    pub fn hack_features(&self) -> BTreeSet<Task> {
-        chain!(self.hack_features_common(), self.hack_features_e2e()).collect()
-    }
-
-    pub fn hack_deps(&self) -> BTreeSet<Task> {
-        self.hack_deps_common().collect()
-    }
-
-    fn common(&self) -> impl Iterator<Item = Task> + '_ {
-        self.all_workspace_members(None)
+    pub fn common(&mut self) {
+        let tasks = self
+            .all_workspace_members(None)
             .into_iter()
             .flat_map(|member| {
                 let deps = {
@@ -85,6 +52,7 @@ impl TasksBuilder {
                         },
                     ),
                 ];
+
                 // e2e ignored because we have to control the features carefully (e.g. rocksdb, test-type-paths, etc)
                 if member != self.workspace_path("e2e") {
                     let cmd =
@@ -122,10 +90,13 @@ impl TasksBuilder {
                     cmd,
                 })
             })
+            .collect_vec();
+
+        self.tasks.extend(tasks);
     }
 
-    fn e2e_specific(&self) -> impl Iterator<Item = Task> + '_ {
-        [
+    pub fn e2e_specific(&mut self) {
+        let tasks = [
             self.cargo_nextest(
                 "run --features default,fuel-core-lib,test-type-paths",
                 CiDeps {
@@ -159,12 +130,13 @@ impl TasksBuilder {
         .map(|cmd| Task {
             cwd: self.workspace_path("e2e"),
             cmd,
-        })
-        .into_iter()
+        });
+
+        self.tasks.extend(tasks);
     }
 
-    fn wasm_specific(&self) -> impl Iterator<Item = Task> {
-        std::iter::once(Task {
+    pub fn wasm_specific(&mut self) {
+        let task = Task {
             cwd: self.workspace_path("wasm-tests"),
             cmd: self.custom(
                 "wasm-pack",
@@ -174,11 +146,12 @@ impl TasksBuilder {
                     ..Default::default()
                 },
             ),
-        })
+        };
+        self.tasks.push(task)
     }
 
-    fn workspace_level(&self) -> impl Iterator<Item = Task> {
-        [
+    pub fn workspace_level(&mut self) {
+        let tasks = [
             Command::MdCheck,
             self.custom(
                 "cargo-machete",
@@ -210,13 +183,15 @@ impl TasksBuilder {
         .map(|cmd| Task {
             cwd: self.workspace_path("."),
             cmd,
-        })
-        .into_iter()
+        });
+
+        self.tasks.extend(tasks);
     }
 
-    fn hack_features_common(&self) -> Vec<Task> {
+    pub fn hack_features_common(&mut self) {
         let ignore = self.workspace_path("e2e");
-        self.all_workspace_members(Some(&ignore))
+        let tasks = self
+            .all_workspace_members(Some(&ignore))
             .into_iter()
             .flat_map(|member| {
                 [
@@ -229,11 +204,13 @@ impl TasksBuilder {
                     cmd,
                 })
             })
-            .collect()
+            .collect_vec();
+
+        self.tasks.extend(tasks);
     }
 
-    fn hack_features_e2e(&self) -> Vec<Task> {
-        [
+    pub fn hack_features_e2e(&mut self) {
+        let tasks = [
             self.cargo_hack(
                 "--feature-powerset check --tests",
                 CiDeps {
@@ -253,12 +230,15 @@ impl TasksBuilder {
             cwd: self.workspace_path("e2e"),
             cmd,
         })
-        .to_vec()
+        .to_vec();
+
+        self.tasks.extend(tasks);
     }
 
-    fn hack_deps_common(&self) -> impl Iterator<Item = Task> + '_ {
+    pub fn hack_deps_common(&mut self) {
         let ignore = self.workspace_path("e2e");
-        self.all_workspace_members(Some(&ignore))
+        let tasks = self
+            .all_workspace_members(Some(&ignore))
             .into_iter()
             .flat_map(|member| {
                 let deps = CiDeps {
@@ -282,6 +262,9 @@ impl TasksBuilder {
                     cmd,
                 })
             })
+            .collect_vec();
+
+        self.tasks.extend(tasks);
     }
 
     fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
@@ -384,6 +367,10 @@ impl TasksBuilder {
             .map(|member| self.workspace_path(member))
             .filter(|member| ignore.map_or(true, |ignore| !member.starts_with(ignore)))
             .collect()
+    }
+
+    pub fn build(self) -> Tasks {
+        Tasks::new(self.tasks, self.workspace)
     }
 }
 
