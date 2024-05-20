@@ -3,6 +3,7 @@ use std::{fmt::Debug, fs};
 #[cfg(feature = "std")]
 use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
+    error,
     types::{bech32::Bech32Address, errors::Result},
     Configurables,
 };
@@ -39,7 +40,12 @@ impl Predicate {
     }
 
     pub fn load_from(file_path: &str) -> Result<Self> {
-        let code = fs::read(file_path)?;
+        let code = fs::read(file_path).map_err(|e| {
+            error!(
+                IO,
+                "could not read predicate binary {file_path:?}. Reason: {e}"
+            )
+        })?;
         Ok(Self::from_code(code))
     }
 

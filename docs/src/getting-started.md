@@ -95,7 +95,7 @@ use fuels::prelude::*;
 
 ## The Fuel Rust SDK source code
 
-Another way to experience the SDK is to look at the source code. The `packages/fuels/tests/` folder is full of integration tests that go through almost all aspects of the SDK.
+Another way to experience the SDK is to look at the source code. The `e2e/tests/` folder is full of integration tests that go through almost all aspects of the SDK.
 
 > **Note** Before running the tests, we need to build all the Sway test projects. The file `packages/fuels/Forc.toml` contains a `[workspace], which members are the paths to all integration tests.
 > To build these tests, run the following command:

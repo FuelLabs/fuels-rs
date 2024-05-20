@@ -17,5 +17,5 @@ To make working with `SizedAsciiString`s easier, you can use `try_into()` to con
 If your contract's method takes and returns, for instance, a Sway's `str[23]`. When using the SDK, this method will take and return a `SizedAsciiString<23>`, and you can pass a string to it like this:
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/types_contracts.rs:contract_takes_string}}
+{{#include ../../../e2e/tests/types_contracts.rs:contract_takes_string}}
 ```

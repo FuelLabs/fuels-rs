@@ -31,7 +31,7 @@ use transaction::Reason;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("io: {0}")]
-    IO(#[from] std::io::Error),
+    IO(String),
     #[error("codec: {0}")]
     Codec(String),
     #[error("transaction {0}")]
@@ -40,6 +40,12 @@ pub enum Error {
     Provider(String),
     #[error("{0}")]
     Other(String),
+}
+
+impl From<std::io::Error> for Error {
+    fn from(value: std::io::Error) -> Self {
+        Self::IO(value.to_string())
+    }
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

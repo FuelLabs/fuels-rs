@@ -91,7 +91,7 @@ Finally, we verify the transaction succeeded and that the cold storage indeed ho
 If you need to build the transaction without signatures, which is useful when estimating transaction costs or simulations, you can use the `build_without_signatures(&provider)` method and later sign the built transaction.
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/contracts.rs:tb_build_without_signatures}}
+{{#include ../../../e2e/tests/contracts.rs:tb_build_without_signatures}}
 ```
 
 > **Note** In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs. Multiple signed inputs with the same owner will have the same witness index.

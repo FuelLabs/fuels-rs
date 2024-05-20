@@ -125,7 +125,7 @@ impl WalletUnlocked {
     }
 
     /// Creates a new wallet from a mnemonic phrase.
-    /// It takes a path to a BIP32 derivation path.
+    /// It takes a derivation path such as BIP32 or BIP44.
     pub fn new_from_mnemonic_phrase_with_path(
         phrase: &str,
         provider: Option<Provider>,

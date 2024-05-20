@@ -11,5 +11,5 @@ When preparing a contract call via `ContractCallHandler` or a script call via `S
 ## Custom script call
 
 ```rust,ignore
-{{#include ../../../packages/fuels/tests/scripts.rs:script_call_tb}}
+{{#include ../../../e2e/tests/scripts.rs:script_call_tb}}
 ```

@@ -50,7 +50,7 @@ pub(crate) fn script_bindings(
         {
             pub fn new(account: T, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)
-                                            .expect("Could not read from binary filepath");
+                                            .expect(&format!("could not read script binary {binary_filepath:?}"));
                 Self {
                     account,
                     binary,

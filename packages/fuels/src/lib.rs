@@ -42,7 +42,7 @@ pub mod core {
 }
 
 pub mod crypto {
-    pub use fuel_crypto::{Message, PublicKey, SecretKey, Signature};
+    pub use fuel_crypto::{Hasher, Message, PublicKey, SecretKey, Signature};
 }
 
 pub mod accounts {
@@ -58,17 +58,8 @@ pub mod test_helpers {
     pub use fuels_test_helpers::*;
 }
 
-/// Easy imports of frequently used
 #[doc(hidden)]
 pub mod prelude {
-    //! The fuels-rs prelude
-    //!
-    //! The purpose of this module is to alleviate imports of many common types:
-    //!
-    //! ```
-    //! # #![allow(unused_imports)]
-    //! use fuels::prelude::*;
-    //! ```
     #[cfg(feature = "std")]
     pub use super::{
         accounts::{

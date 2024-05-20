@@ -55,7 +55,7 @@ impl Debug for LogFormatter {
 
 /// Holds a unique log ID
 #[derive(Debug, Clone, Default, PartialEq, Eq, Hash)]
-pub struct LogId(ContractId, u64);
+pub struct LogId(ContractId, String);
 
 /// Struct used to pass the log mappings from the Abigen
 #[derive(Debug, Clone, Default)]
@@ -201,15 +201,17 @@ impl<'a, I: Iterator<Item = &'a Receipt>> ExtractLogIdData for I {
                 data: Some(data),
                 id,
                 ..
-            } => Some((LogId(*id, *rb), data.clone())),
-            Receipt::Log { ra, rb, id, .. } => Some((LogId(*id, *rb), ra.to_be_bytes().to_vec())),
+            } => Some((LogId(*id, (*rb).to_string()), data.clone())),
+            Receipt::Log { ra, rb, id, .. } => {
+                Some((LogId(*id, (*rb).to_string()), ra.to_be_bytes().to_vec()))
+            }
             _ => None,
         })
     }
 }
 
 pub fn log_formatters_lookup(
-    log_id_log_formatter_pairs: Vec<(u64, LogFormatter)>,
+    log_id_log_formatter_pairs: Vec<(String, LogFormatter)>,
     contract_id: ContractId,
 ) -> HashMap<LogId, LogFormatter> {
     log_id_log_formatter_pairs
