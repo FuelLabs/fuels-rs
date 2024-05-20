@@ -2,9 +2,9 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 mod cli;
-mod description;
+mod config;
 mod md_check;
-mod task;
+mod tasks;
 mod util;
 
 #[tokio::main]
@@ -13,7 +13,7 @@ async fn main() -> anyhow::Result<()> {
     util::configure_child_process_cleanup()?;
 
     if cli.print_ci_jobs_desc {
-        let tasks = description::normal(cli.root.clone());
+        let tasks = config::normal(cli.root.clone());
         let jobs = tasks.ci_jobs();
         // Json used because the CI needs it as such
         let jsonified = serde_json::to_string_pretty(&jobs)?;

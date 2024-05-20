@@ -4,13 +4,12 @@ use std::collections::BTreeSet;
 use std::path::Path;
 use std::path::PathBuf;
 
-use crate::task::CargoDeps;
-use crate::task::CiDeps;
-use crate::task::Command;
-use crate::task::RustDeps;
-use crate::task::SwayArtifacts;
-use crate::task::Task;
-use crate::task::Tasks;
+use crate::tasks::command::Command;
+use crate::tasks::deps;
+use crate::tasks::deps::CiDeps;
+use crate::tasks::deps::SwayArtifacts;
+use crate::tasks::task::Task;
+use crate::tasks::Tasks;
 
 pub fn normal(workspace_root: PathBuf) -> Tasks {
     let builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
@@ -130,14 +129,14 @@ impl TasksBuilder {
             self.cargo_nextest(
                 "run --features default,fuel-core-lib,test-type-paths",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_nextest(
                 "run --features default,fuel-core-lib",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
             ),
@@ -145,14 +144,14 @@ impl TasksBuilder {
                 "run --features default,test-type-paths",
                 CiDeps {
                     fuel_core_binary: true,
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_clippy(
                 "--all-targets --no-deps --features default,test-type-paths",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
@@ -185,7 +184,7 @@ impl TasksBuilder {
                 "cargo-machete",
                 "--skip-target-dir",
                 &CiDeps {
-                    cargo: CargoDeps {
+                    cargo: deps::CargoDeps {
                         machete: true,
                         ..Default::default()
                     },
@@ -195,7 +194,7 @@ impl TasksBuilder {
             self.cargo_clippy(
                 "--workspace --all-features",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
             ),
@@ -238,14 +237,14 @@ impl TasksBuilder {
             self.cargo_hack(
                 "--feature-powerset check --tests",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::TypePaths),
+                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_hack(
                 "--feature-powerset --exclude-features test-type-paths check --tests",
                 CiDeps {
-                    sway_artifacts: Some(SwayArtifacts::Normal),
+                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
             ),
@@ -263,11 +262,11 @@ impl TasksBuilder {
             .into_iter()
             .flat_map(|member| {
                 let deps = CiDeps {
-                    cargo: CargoDeps {
+                    cargo: deps::CargoDeps {
                         udeps: true,
                         ..Default::default()
                     },
-                    rust: Some(RustDeps {
+                    rust: Some(deps::RustDeps {
                         nightly: true,
                         ..Default::default()
                     }),
@@ -287,7 +286,7 @@ impl TasksBuilder {
 
     fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
         deps += CiDeps {
-            rust: Some(RustDeps {
+            rust: Some(deps::RustDeps {
                 components: BTreeSet::from_iter(["rustfmt".to_string()]),
                 ..Default::default()
             }),
@@ -301,7 +300,7 @@ impl TasksBuilder {
 
     fn cargo_clippy(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
         deps += CiDeps {
-            rust: Some(RustDeps {
+            rust: Some(deps::RustDeps {
                 components: BTreeSet::from_iter(["clippy".to_string()]),
                 ..Default::default()
             }),
@@ -314,7 +313,7 @@ impl TasksBuilder {
 
     fn cargo_hack(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
         deps += CiDeps {
-            cargo: CargoDeps {
+            cargo: deps::CargoDeps {
                 hack: true,
                 ..Default::default()
             },
@@ -327,7 +326,7 @@ impl TasksBuilder {
 
     fn cargo_nextest(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
         deps += CiDeps {
-            cargo: CargoDeps {
+            cargo: deps::CargoDeps {
                 nextest: true,
                 ..Default::default()
             },

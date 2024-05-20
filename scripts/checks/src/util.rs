@@ -1,12 +1,12 @@
 use nix::unistd::Pid;
 
-use crate::{cli, description, task::Tasks};
+use crate::{cli, config, tasks::Tasks};
 
 pub fn generate_tasks(cli: &cli::Cli) -> Tasks {
     let mut tasks = match cli.flavor {
-        cli::Flavor::Normal => description::normal(cli.root.clone()),
-        cli::Flavor::HackFeatures => description::hack_features(cli.root.clone()),
-        cli::Flavor::HackDeps => description::hack_deps(cli.root.clone()),
+        cli::Flavor::Normal => config::normal(cli.root.clone()),
+        cli::Flavor::HackFeatures => config::hack_features(cli.root.clone()),
+        cli::Flavor::HackDeps => config::hack_deps(cli.root.clone()),
     };
 
     if let Some(ids) = &cli.only_tasks_with_ids {
