@@ -98,7 +98,7 @@ impl std::ops::AddAssign for All {
 
         let sway_artifacts = match (self.sway_artifacts, other.sway_artifacts) {
             (Some(self_sway), Some(other_sway)) => {
-                assert_ne!(self_sway,other_sway, "Deps cannot be unified. Cannot have type paths and normal artifacts at once! {self_sway:?} != {other_sway:?}");
+                assert_eq!(self_sway, other_sway, "Deps cannot be unified. Cannot have type paths and normal artifacts at once! {self_sway:?} != {other_sway:?}");
                 Some(self_sway)
             }
             (Some(self_sway), None) => Some(self_sway),
