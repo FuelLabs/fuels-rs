@@ -5,7 +5,7 @@ use clap::{arg, Parser, ValueEnum};
 #[derive(Parser)]
 #[command(about = "Runs pre-release checks deemed to heavy for CI.")]
 pub struct Cli {
-    ///Comma separated list of tasks to run
+    /// Comma separated list of tasks to run
     #[arg(
         short,
         long,
@@ -44,13 +44,13 @@ pub struct Cli {
     #[arg(short, long, default_value = "false")]
     pub verbose: bool,
 
-    /// If ran as a binary from elsewhere the workspace_root needs to be pointed to where the
+    /// If ran as a binary from elsewhere the [`Self::root`] needs to be pointed to where the
     /// project workspace root is
     #[arg(short, long = "root", required = true)]
     pub root: PathBuf,
 }
 
-#[derive(Debug, Copy, Clone, ValueEnum, PartialEq)]
+#[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum Flavor {
     Normal,
     HackFeatures,
@@ -97,7 +97,7 @@ mod tests {
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.flavor, Flavor::HackFeatures);
+        assert!(matches!(cli.flavor, Flavor::HackFeatures));
     }
 
     #[test]
@@ -109,6 +109,6 @@ mod tests {
         let cli = Cli::try_parse_from(cli.split_whitespace()).unwrap();
 
         // then
-        assert_eq!(cli.flavor, Flavor::Normal);
+        assert!(matches!(cli.flavor, Flavor::Normal));
     }
 }

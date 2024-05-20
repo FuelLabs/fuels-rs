@@ -1,8 +1,10 @@
 use crate::md_check;
 
-use super::command::Command;
-use super::report::{Report, Status};
-use super::short_sha256;
+use super::{
+    command::Command,
+    report::{Report, Status},
+    short_sha256,
+};
 
 use std::fmt::Display;
 
@@ -22,14 +24,14 @@ impl Display for Task {
 
 impl Task {
     pub fn id(&self) -> String {
-        short_sha256(&format!("{:?}", self))
+        short_sha256(&format!("{self:?}"))
     }
 
     pub fn run(self) -> Report {
         match &self.cmd {
             Command::Custom {
                 program, args, env, ..
-            } => self.run_custom(program, args.iter().map(|e| e.as_str()), env),
+            } => self.run_custom(program, args.iter().map(String::as_str), env),
             Command::MdCheck => self.run_md_check(),
         }
     }
@@ -38,9 +40,7 @@ impl Task {
         let status = if let Err(e) = md_check::run(&self.cwd) {
             e.into()
         } else {
-            Status::Success {
-                out: "".to_string(),
-            }
+            Status::Success { out: String::new() }
         };
 
         self.report(status)

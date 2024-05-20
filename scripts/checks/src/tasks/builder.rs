@@ -1,25 +1,27 @@
 use itertools::Itertools;
-use std::collections::BTreeSet;
-use std::path::Path;
-use std::path::PathBuf;
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
-use crate::tasks::command::Command;
-use crate::tasks::deps;
-use crate::tasks::deps::CiDeps;
-use crate::tasks::deps::SwayArtifacts;
-use crate::tasks::task::Task;
-use crate::tasks::Tasks;
-pub struct TasksBuilder {
+use crate::tasks::{
+    command::Command,
+    deps,
+    deps::{All, SwayArtifacts},
+    task::Task,
+    Tasks,
+};
+pub struct Builder {
     workspace: PathBuf,
     rust_flags: Vec<String>,
     tasks: Vec<Task>,
 }
 
-impl TasksBuilder {
+impl Builder {
     pub fn new(workspace: PathBuf, rust_flags: &[&str]) -> Self {
         Self {
             workspace,
-            rust_flags: rust_flags.iter().map(|s| s.to_string()).collect(),
+            rust_flags: rust_flags.iter().map(|s| (*s).to_string()).collect(),
             tasks: vec![],
         }
     }
@@ -35,7 +37,7 @@ impl TasksBuilder {
                         .starts_with(self.workspace_path("examples"))
                         .then_some(SwayArtifacts::Normal);
 
-                    CiDeps {
+                    All {
                         sway_artifacts,
                         ..Default::default()
                     }
@@ -43,10 +45,10 @@ impl TasksBuilder {
 
                 let mut commands = vec![
                     self.cargo_fmt("--verbose --check", deps.clone()),
-                    self.custom(
+                    Self::custom(
                         "typos",
                         "",
-                        &CiDeps {
+                        &All {
                             typos_cli: true,
                             ..deps.clone()
                         },
@@ -80,7 +82,7 @@ impl TasksBuilder {
                     let cmd = self.cargo(
                         "doc --document-private-items",
                         Some(("RUSTDOCFLAGS", "-Dwarnings")),
-                        deps.clone(),
+                        deps,
                     );
                     commands.push(cmd);
                 }
@@ -99,21 +101,21 @@ impl TasksBuilder {
         let tasks = [
             self.cargo_nextest(
                 "run --features default,fuel-core-lib,test-type-paths",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_nextest(
                 "run --features default,fuel-core-lib",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
             ),
             self.cargo_nextest(
                 "run --features default,test-type-paths",
-                CiDeps {
+                All {
                     fuel_core_binary: true,
                     sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
@@ -121,7 +123,7 @@ impl TasksBuilder {
             ),
             self.cargo_clippy(
                 "--all-targets --no-deps --features default,test-type-paths",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
@@ -138,26 +140,26 @@ impl TasksBuilder {
     pub fn wasm_specific(&mut self) {
         let task = Task {
             cwd: self.workspace_path("wasm-tests"),
-            cmd: self.custom(
+            cmd: Self::custom(
                 "wasm-pack",
                 "test --node",
-                &CiDeps {
+                &All {
                     wasm: true,
                     ..Default::default()
                 },
             ),
         };
-        self.tasks.push(task)
+        self.tasks.push(task);
     }
 
     pub fn workspace_level(&mut self) {
         let tasks = [
             Command::MdCheck,
-            self.custom(
+            Self::custom(
                 "cargo-machete",
                 "--skip-target-dir",
-                &CiDeps {
-                    cargo: deps::CargoDeps {
+                &All {
+                    cargo: deps::Cargo {
                         machete: true,
                         ..Default::default()
                     },
@@ -166,15 +168,15 @@ impl TasksBuilder {
             ),
             self.cargo_clippy(
                 "--workspace --all-features",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
             ),
-            self.custom(
+            Self::custom(
                 "typos",
                 "",
-                &CiDeps {
+                &All {
                     typos_cli: true,
                     ..Default::default()
                 },
@@ -195,8 +197,8 @@ impl TasksBuilder {
             .into_iter()
             .flat_map(|member| {
                 [
-                    self.cargo_hack("--feature-powerset check", CiDeps::default()),
-                    self.cargo_hack("--feature-powerset check --tests", CiDeps::default()),
+                    self.cargo_hack("--feature-powerset check", All::default()),
+                    self.cargo_hack("--feature-powerset check --tests", All::default()),
                 ]
                 .into_iter()
                 .map(move |cmd| Task {
@@ -213,14 +215,14 @@ impl TasksBuilder {
         let tasks = [
             self.cargo_hack(
                 "--feature-powerset check --tests",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_hack(
                 "--feature-powerset --exclude-features test-type-paths check --tests",
-                CiDeps {
+                All {
                     sway_artifacts: Some(deps::SwayArtifacts::Normal),
                     ..Default::default()
                 },
@@ -241,12 +243,12 @@ impl TasksBuilder {
             .all_workspace_members(Some(&ignore))
             .into_iter()
             .flat_map(|member| {
-                let deps = CiDeps {
-                    cargo: deps::CargoDeps {
+                let deps = All {
+                    cargo: deps::Cargo {
                         udeps: true,
                         ..Default::default()
                     },
-                    rust: Some(deps::RustDeps {
+                    rust: Some(deps::Rust {
                         nightly: true,
                         ..Default::default()
                     }),
@@ -267,9 +269,9 @@ impl TasksBuilder {
         self.tasks.extend(tasks);
     }
 
-    fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
-        deps += CiDeps {
-            rust: Some(deps::RustDeps {
+    fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: All) -> Command {
+        deps += All {
+            rust: Some(deps::Rust {
                 components: BTreeSet::from_iter(["rustfmt".to_string()]),
                 ..Default::default()
             }),
@@ -281,9 +283,9 @@ impl TasksBuilder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_clippy(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
-        deps += CiDeps {
-            rust: Some(deps::RustDeps {
+    fn cargo_clippy(&self, cmd: impl Into<String>, mut deps: All) -> Command {
+        deps += All {
+            rust: Some(deps::Rust {
                 components: BTreeSet::from_iter(["clippy".to_string()]),
                 ..Default::default()
             }),
@@ -294,9 +296,9 @@ impl TasksBuilder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_hack(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
-        deps += CiDeps {
-            cargo: deps::CargoDeps {
+    fn cargo_hack(&self, cmd: impl Into<String>, mut deps: All) -> Command {
+        deps += All {
+            cargo: deps::Cargo {
                 hack: true,
                 ..Default::default()
             },
@@ -307,9 +309,9 @@ impl TasksBuilder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_nextest(&self, cmd: impl Into<String>, mut deps: CiDeps) -> Command {
-        deps += CiDeps {
-            cargo: deps::CargoDeps {
+    fn cargo_nextest(&self, cmd: impl Into<String>, mut deps: All) -> Command {
+        deps += All {
+            cargo: deps::Cargo {
                 nextest: true,
                 ..Default::default()
             },
@@ -321,7 +323,7 @@ impl TasksBuilder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo(&self, cmd: impl Into<String>, env: Option<(&str, &str)>, deps: CiDeps) -> Command {
+    fn cargo(&self, cmd: impl Into<String>, env: Option<(&str, &str)>, deps: All) -> Command {
         let envs = {
             let flags = self.rust_flags.iter().join(" ");
             let mut envs = vec![("RUSTFLAGS".to_owned(), flags)];
@@ -342,11 +344,11 @@ impl TasksBuilder {
             program: "cargo".to_string(),
             args: parse_cmd(nightly, &cmd.into()),
             env: envs,
-            deps: deps.clone(),
+            deps,
         }
     }
 
-    fn custom(&self, program: &str, args: &str, deps: &CiDeps) -> Command {
+    fn custom(program: &str, args: &str, deps: &All) -> Command {
         Command::Custom {
             program: program.to_owned(),
             args: parse_cmd("", args),
@@ -358,7 +360,7 @@ impl TasksBuilder {
     fn workspace_path(&self, path: &str) -> PathBuf {
         let path = self.workspace.join(path);
         path.canonicalize()
-            .unwrap_or_else(|_| panic!("Path not found: {:?}", path))
+            .unwrap_or_else(|_| panic!("Path not found: {path:?}"))
     }
 
     fn all_workspace_members(&self, ignore: Option<&Path>) -> Vec<PathBuf> {
@@ -375,7 +377,7 @@ impl TasksBuilder {
 }
 
 fn parse_cmd(prepend: &str, string: &str) -> Vec<String> {
-    let parts = string.split_whitespace().map(|s| s.to_string()).collect();
+    let parts = string.split_whitespace().map(ToString::to_string).collect();
     if prepend.is_empty() {
         parts
     } else {

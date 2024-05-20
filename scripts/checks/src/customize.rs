@@ -1,6 +1,7 @@
-use crate::tasks::builder::TasksBuilder;
-use crate::tasks::deps::CiJob;
-use crate::{cli, tasks::Tasks};
+use crate::{
+    cli,
+    tasks::{builder::Builder, deps::CiJob, Tasks},
+};
 use std::path::PathBuf;
 
 pub fn ci_jobs(workspace_root: PathBuf) -> Vec<CiJob> {
@@ -31,7 +32,7 @@ pub fn choose_tasks(cli: &cli::Cli) -> Tasks {
 }
 
 fn normal(workspace_root: PathBuf) -> Tasks {
-    let mut builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
+    let mut builder = Builder::new(workspace_root, &["-Dwarnings"]);
 
     builder.common();
     builder.e2e_specific();
@@ -42,7 +43,7 @@ fn normal(workspace_root: PathBuf) -> Tasks {
 }
 
 fn hack_features(workspace_root: PathBuf) -> Tasks {
-    let mut builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
+    let mut builder = Builder::new(workspace_root, &["-Dwarnings"]);
 
     builder.hack_features_common();
     builder.hack_features_e2e();
@@ -51,7 +52,7 @@ fn hack_features(workspace_root: PathBuf) -> Tasks {
 }
 
 fn hack_deps(workspace_root: PathBuf) -> Tasks {
-    let mut builder = TasksBuilder::new(workspace_root.clone(), &["-Dwarnings"]);
+    let mut builder = Builder::new(workspace_root, &["-Dwarnings"]);
 
     builder.hack_deps_common();
 

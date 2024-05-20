@@ -1,4 +1,8 @@
-use std::{collections::BTreeSet, fmt::Display, path::PathBuf};
+use std::{
+    collections::BTreeSet,
+    fmt::Display,
+    path::{Path, PathBuf},
+};
 
 use itertools::Itertools;
 use nix::{sys::signal::Signal, unistd::Pid, NixPath};
@@ -29,17 +33,20 @@ pub struct Tasks {
 impl Display for Tasks {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for task in &self.tasks {
-            writeln!(f, "{}", task)?;
+            writeln!(f, "{task}")?;
         }
         Ok(())
     }
 }
 
 impl Tasks {
-    pub fn new(tasks: impl IntoIterator<Item = task::Task>, workspace_root: PathBuf) -> Self {
+    pub fn new(
+        tasks: impl IntoIterator<Item = task::Task>,
+        workspace_root: impl AsRef<Path>,
+    ) -> Self {
         Self {
             tasks: BTreeSet::from_iter(tasks),
-            workspace_root: workspace_root.canonicalize().unwrap(),
+            workspace_root: workspace_root.as_ref().canonicalize().unwrap(),
         }
     }
 
@@ -127,7 +134,7 @@ impl Tasks {
 
         loop {
             tokio::select! {
-                _ = cancel_token.cancelled() => {
+                () = cancel_token.cancelled() => {
                     kill_processes()?;
                     return Ok(());
                 }

@@ -1,5 +1,4 @@
-use anyhow::anyhow;
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use duct::cmd;
 use itertools::{chain, Itertools};
 use regex::Regex;
@@ -12,16 +11,16 @@ pub fn run(dir: &Path) -> anyhow::Result<(), Error> {
     let sources = ["packages", "e2e", "examples"].map(|source| dir.join(source));
     let text_w_anchors = search_for_pattern("ANCHOR", &sources)?;
     let (starts, ends) = extract_starts_and_ends(&text_w_anchors)?;
-    let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
+    let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, &ends);
 
     let text_mentioning_include = search_for_pattern("{{#include", &[dir.join("docs")])?;
-    let (includes, include_path_errors) = parse_includes(text_mentioning_include);
-    let (include_errors, additional_warnings) = validate_includes(includes, valid_anchors);
+    let (includes, include_path_errors) = parse_includes(&text_mentioning_include);
+    let (include_errors, additional_warnings) = validate_includes(includes, &valid_anchors);
 
     let text_with_md_files = search_for_pattern(".md", &[dir.join("./docs/src/SUMMARY.md")])?;
-    let md_files_in_summary = parse_md_files(text_with_md_files, dir.join("./docs/src/"));
+    let md_files_in_summary = parse_md_files(&text_with_md_files, dir.join("./docs/src/"));
     let md_files_in_src = find_files("*.md", dir.join("./docs/src/"), "SUMMARY.md")?;
-    let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
+    let md_files_errors = validate_md_files(&md_files_in_summary, &md_files_in_src);
 
     let errors = chain!(
         additional_warnings,
@@ -33,7 +32,7 @@ pub fn run(dir: &Path) -> anyhow::Result<(), Error> {
     .collect_vec();
 
     if !errors.is_empty() {
-        let err_str = errors.iter().map(|err| err.to_string()).join("\n");
+        let err_str = errors.iter().map(ToString::to_string).join("\n");
         bail!("Errors: {err_str}")
     }
 
@@ -42,7 +41,7 @@ pub fn run(dir: &Path) -> anyhow::Result<(), Error> {
 
 pub fn validate_includes(
     includes: Vec<Include>,
-    valid_anchors: Vec<Anchor>,
+    valid_anchors: &[Anchor],
 ) -> (Vec<Error>, Vec<Error>) {
     let (pairs, errors): (Vec<_>, Vec<_>) = includes
         .into_iter()
@@ -52,12 +51,14 @@ pub fn validate_includes(
                 anchor.file == include.anchor_file && anchor.name == include.anchor_name
             });
 
-            match maybe_anchor.take() {
-                Some(anchor) => Ok(anchor.clone()),
-                None => Err(anyhow!(
-                    "No anchor available to satisfy include {include:?}"
-                )),
-            }
+            maybe_anchor.take().map_or_else(
+                || {
+                    Err(anyhow!(
+                        "No anchor available to satisfy include {include:?}"
+                    ))
+                },
+                |anchor| Ok(anchor.clone()),
+            )
         })
         .partition_result();
 
@@ -78,11 +79,11 @@ pub fn validate_includes(
 pub struct Include {
     pub anchor_name: String,
     pub anchor_file: PathBuf,
-    pub include_file: PathBuf,
+    pub file: PathBuf,
     pub line_no: usize,
 }
 
-pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
+pub fn parse_includes(text_w_includes: &str) -> (Vec<Include>, Vec<Error>) {
     let apply_regex = |regex: Regex| {
         let (includes, errors): (Vec<_>, Vec<_>) = text_w_includes
             .lines()
@@ -105,7 +106,7 @@ pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
                 Ok(Include {
                     anchor_name,
                     anchor_file,
-                    include_file,
+                    file: include_file,
                     line_no,
                 })
             })
@@ -119,7 +120,7 @@ pub fn parse_includes(text_w_includes: String) -> (Vec<Include>, Vec<Error>) {
     )
 }
 
-pub fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anchor>, Vec<Error>) {
+pub fn filter_valid_anchors(starts: Vec<Anchor>, ends: &[Anchor]) -> (Vec<Anchor>, Vec<Error>) {
     let find_anchor_end_by_name = |anchor_name: &str, file: &Path| {
         ends.iter()
             .filter(|el| el.name == *anchor_name && el.file == file)
@@ -135,16 +136,13 @@ pub fn filter_valid_anchors(starts: Vec<Anchor>, ends: Vec<Anchor>) -> (Vec<Anch
             multiple_ends => Err(anyhow!("Found too many matching anchor ends for anchor: {start:?}. The matching ends are: {multiple_ends:?}")),
         }?;
 
-        match check_validity_of_anchor_pair(&begin, &end) {
-            None => Ok((begin, end)),
-            Some(err) => {
-                let err_msg = err.to_string();
-                Err(anyhow!("{err_msg}"))
-            }
-        }
+        check_validity_of_anchor_pair(&begin, &end).map_or_else(|| Ok((begin, end)), |err| {
+                 let err_msg = err.to_string();
+                 Err(anyhow!("{err_msg}"))
+             })
     }).partition_result();
 
-    let additional_errors = filter_unused_ends(&ends, &pairs)
+    let additional_errors = filter_unused_ends(ends, &pairs)
         .into_iter()
         .map(|unused_end| anyhow!("Missing anchor start for {unused_end:?}"))
         .collect::<Vec<_>>();
@@ -209,7 +207,7 @@ pub fn extract_starts_and_ends(
     Ok((begins, ends))
 }
 
-pub fn parse_md_files(text_w_files: String, path: impl AsRef<Path>) -> HashSet<PathBuf> {
+pub fn parse_md_files(text_w_files: &str, path: impl AsRef<Path>) -> HashSet<PathBuf> {
     let regex = Regex::new(r"\((.*\.md)\)").expect("could not construct regex");
 
     text_w_files
@@ -224,10 +222,7 @@ pub fn parse_md_files(text_w_files: String, path: impl AsRef<Path>) -> HashSet<P
         .collect()
 }
 
-pub fn validate_md_files(
-    md_files_summary: HashSet<PathBuf>,
-    md_files_in_src: String,
-) -> Vec<Error> {
+pub fn validate_md_files(md_files_summary: &HashSet<PathBuf>, md_files_in_src: &str) -> Vec<Error> {
     md_files_in_src
         .lines()
         .filter_map(|file| {
@@ -304,7 +299,7 @@ mod tests {
         let data = search_for_pattern("ANCHOR", &[path.to_owned()])?;
 
         let (starts, ends) = extract_starts_and_ends(&data)?;
-        let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, ends);
+        let (valid_anchors, anchor_errors) = filter_valid_anchors(starts, &ends);
 
         let valid_vec = TestEnum::Anchor(valid_anchors.clone());
         let anchor_err_vec = TestEnum::Errors(anchor_errors);
@@ -335,7 +330,7 @@ mod tests {
 
         let text_mentioning_include = search_for_pattern("{{#include", &[path.to_owned()])?;
 
-        let (includes, include_path_errors) = parse_includes(text_mentioning_include);
+        let (includes, include_path_errors) = parse_includes(&text_mentioning_include);
 
         let includes_vec = TestEnum::Include(includes.clone());
 
@@ -345,7 +340,7 @@ mod tests {
             &includes_vec,
             "test_with_more_forward_slashes"
         ));
-        assert!(contains_any(&includes_vec, "")); //Check the file include without anchor
+        assert!(contains_any(&includes_vec, "")); // Check the file include without anchor
 
         let include_path_errors = TestEnum::Errors(include_path_errors);
 
@@ -359,7 +354,7 @@ mod tests {
             "test_anchor_data3.rs\" when canonicalized gives error Os { code: 2, kind: NotFound"
         ));
 
-        let (include_errors, _) = validate_includes(includes, valid_anchors);
+        let (include_errors, _) = validate_includes(includes, &valid_anchors);
 
         let include_err_vec = TestEnum::Errors(include_errors);
 
@@ -377,9 +372,9 @@ mod tests {
         let path = test_data.path();
 
         let text_with_md_files = search_for_pattern(".md", &[path.join("docs/src/SUMMARY.md")])?;
-        let md_files_in_summary = parse_md_files(text_with_md_files, path.join("docs/src/"));
+        let md_files_in_summary = parse_md_files(&text_with_md_files, path.join("docs/src/"));
         let md_files_in_src = find_files("*.md", path.join("docs/src/"), "SUMMARY.md")?;
-        let md_files_errors = validate_md_files(md_files_in_summary, md_files_in_src);
+        let md_files_errors = validate_md_files(&md_files_in_summary, &md_files_in_src);
 
         let error_msg = md_files_errors.first().unwrap().to_string();
 

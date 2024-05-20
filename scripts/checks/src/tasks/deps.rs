@@ -5,8 +5,7 @@ use super::short_sha256;
 use super::task::Task;
 
 use itertools::Itertools;
-use serde::Serialize;
-use serde::Serializer;
+use serde::{Serialize, Serializer};
 
 #[derive(Debug, Clone, serde::Serialize, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum SwayArtifacts {
@@ -15,16 +14,13 @@ pub enum SwayArtifacts {
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RustDeps {
+pub struct Rust {
     pub nightly: bool,
     #[serde(serialize_with = "comma_separated")]
     pub components: BTreeSet<String>,
 }
 
-pub(crate) fn comma_separated<S>(
-    components: &BTreeSet<String>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
+fn comma_separated<S>(components: &BTreeSet<String>, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
@@ -33,14 +29,14 @@ where
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CargoDeps {
+pub struct Cargo {
     pub hack: bool,
     pub nextest: bool,
     pub machete: bool,
     pub udeps: bool,
 }
 
-impl std::ops::Add for CargoDeps {
+impl std::ops::Add for Cargo {
     type Output = Self;
     fn add(mut self, other: Self) -> Self {
         self += other;
@@ -48,7 +44,7 @@ impl std::ops::Add for CargoDeps {
     }
 }
 
-impl std::ops::AddAssign for CargoDeps {
+impl std::ops::AddAssign for Cargo {
     fn add_assign(&mut self, other: Self) {
         self.hack |= other.hack;
         self.nextest |= other.nextest;
@@ -57,18 +53,18 @@ impl std::ops::AddAssign for CargoDeps {
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct CiDeps {
+pub struct All {
     pub fuel_core_binary: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub rust: Option<RustDeps>,
+    pub rust: Option<Rust>,
     pub wasm: bool,
-    pub cargo: CargoDeps,
+    pub cargo: Cargo,
     pub typos_cli: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sway_artifacts: Option<SwayArtifacts>,
 }
 
-impl std::ops::Add for CiDeps {
+impl std::ops::Add for All {
     type Output = Self;
     fn add(mut self, other: Self) -> Self {
         self += other;
@@ -76,7 +72,7 @@ impl std::ops::Add for CiDeps {
     }
 }
 
-impl std::ops::AddAssign for CiDeps {
+impl std::ops::AddAssign for All {
     fn add_assign(&mut self, other: Self) {
         self.fuel_core_binary |= other.fuel_core_binary;
 
@@ -102,11 +98,7 @@ impl std::ops::AddAssign for CiDeps {
 
         let sway_artifacts = match (self.sway_artifacts, other.sway_artifacts) {
             (Some(self_sway), Some(other_sway)) => {
-                if self_sway != other_sway {
-                    panic!(
-                        "Deps cannot be unified. Cannot have type paths and normal artifacts at once! {self_sway:?} != {other_sway:?}",
-                    );
-                }
+                assert_ne!(self_sway,other_sway, "Deps cannot be unified. Cannot have type paths and normal artifacts at once! {self_sway:?} != {other_sway:?}");
                 Some(self_sway)
             }
             (Some(self_sway), None) => Some(self_sway),
@@ -119,7 +111,7 @@ impl std::ops::AddAssign for CiDeps {
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CiJob {
-    pub(crate) deps: CiDeps,
+    pub(crate) deps: All,
     // Comma separated task ids
     pub(crate) task_ids: String,
     pub(crate) name: String,
@@ -128,7 +120,7 @@ pub struct CiJob {
 }
 
 impl CiJob {
-    pub fn new(deps: CiDeps, tasks: &[&Task], name: String) -> Self {
+    pub fn new(deps: All, tasks: &[&Task], name: String) -> Self {
         let ids = tasks.iter().map(|t| t.id()).join(",");
         Self {
             deps,

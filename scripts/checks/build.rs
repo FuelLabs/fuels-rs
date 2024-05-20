@@ -6,11 +6,11 @@ fn main() {
 
     let path = path
         .canonicalize()
-        .unwrap_or_else(|_| panic!("Path not found: {:?}", path));
+        .unwrap_or_else(|_| panic!("Path not found: {path:?}"));
 
     let members = workspace_members(&path);
 
-    generate_rust_code(members);
+    generate_rust_code(&members);
 
     println!("cargo:rerun-if-changed={}", path.display());
 }
@@ -30,10 +30,10 @@ fn workspace_members(cargo: &Path) -> Vec<String> {
     cargo_toml.workspace.members
 }
 
-fn generate_rust_code(members: Vec<String>) {
+fn generate_rust_code(members: &[String]) {
     let members = members
         .iter()
-        .map(|member| format!("{:?}", member))
+        .map(|member| format!("{member:?}"))
         .join(",\n");
 
     let code = format!("static WORKSPACE_MEMBERS: &[&str] = &[{members}];");

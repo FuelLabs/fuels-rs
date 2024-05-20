@@ -1,4 +1,4 @@
-use super::deps::CiDeps;
+use super::deps::All;
 use itertools::Itertools;
 use std::fmt::Display;
 
@@ -8,16 +8,16 @@ pub enum Command {
         program: String,
         args: Vec<String>,
         env: Vec<(String, String)>,
-        deps: CiDeps,
+        deps: All,
     },
     MdCheck,
 }
 
 impl Command {
-    pub fn deps(&self) -> CiDeps {
+    pub fn deps(&self) -> All {
         match self {
-            Command::Custom { deps, .. } => deps.clone(),
-            Command::MdCheck => CiDeps::default(),
+            Self::Custom { deps, .. } => deps.clone(),
+            Self::MdCheck => All::default(),
         }
     }
 }
@@ -25,7 +25,7 @@ impl Command {
 impl Display for Command {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Command::Custom {
+            Self::Custom {
                 program, args, env, ..
             } => {
                 let args = args.iter().join(" ");
@@ -39,7 +39,7 @@ impl Display for Command {
                     write!(f, "{env} {program} {args}")
                 }
             }
-            Command::MdCheck { .. } => write!(f, "MdCheck"),
+            Self::MdCheck { .. } => write!(f, "MdCheck"),
         }
     }
 }
