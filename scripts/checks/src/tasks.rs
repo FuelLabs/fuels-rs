@@ -10,6 +10,8 @@ use sha2::Digest;
 use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
+use self::ci_job::CiJob;
+
 pub mod builder;
 pub mod ci_job;
 pub mod command;

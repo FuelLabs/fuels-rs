@@ -1,6 +1,6 @@
 use crate::{
     cli,
-    tasks::{builder::Builder, deps::CiJob, Tasks},
+    tasks::{builder::Builder, ci_job::CiJob, Tasks},
 };
 use std::path::PathBuf;
 
