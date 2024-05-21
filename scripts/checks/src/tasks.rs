@@ -62,7 +62,7 @@ impl Tasks {
                 let (tasks_requiring_type_paths, normal_tasks) =
                     separate_out_type_path_tasks(tasks);
 
-                let name = self.create_job_name(cwd);
+                let name = self.create_job_name(&cwd);
 
                 // You cannot have type paths and not have them in the same job, so they need to be
                 // separate jobs.
@@ -151,7 +151,7 @@ impl Tasks {
         });
     }
 
-    fn create_job_name(&self, cwd: PathBuf) -> String {
+    fn create_job_name(&self, cwd: &Path) -> String {
         // So we don't take up much real estate printing the full canonicalized path
         let relative_path = cwd.strip_prefix(&self.workspace_root).unwrap_or_else(|_| {
             panic!(

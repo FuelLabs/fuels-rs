@@ -1,10 +1,7 @@
-use itertools::Itertools;
-
 use crate::md_check;
 
 use super::{
     command::Command,
-    deps,
     report::{Report, Status},
     short_sha256,
 };
