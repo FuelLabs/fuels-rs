@@ -206,10 +206,10 @@ If <code>cargo generate</code> is not already installed, you can install it with
 <!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuels = &quot;{{versions.fuels}}&quot;
+<pre><code class="language-toml">fuels = &quot;0.62.0&quot;
 </code></pre>
 <blockquote>
-<p><strong>Note</strong> We're using version <code>{{versions.fuels}}</code> of the SDK, which is the latest version at the time of this writing.</p>
+<p><strong>Note</strong> We're using version <code>0.62.0</code> of the SDK, which is the latest version at the time of this writing.</p>
 </blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><code class="language-rust ignore">use fuels::prelude::*;
@@ -400,7 +400,7 @@ To build these tests, run the following command:</p>
 <pre><code class="language-rust ignore">        let _balances = provider.get_balances(wallet.address()).await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="retrying-requests"><a class="header" href="#retrying-requests">Retrying requests</a></h1>
-<p>The <a href="https://docs.rs/fuels/0.47.0/fuels/accounts/provider/struct.Provider.html"><code>Provider</code></a> can be configured to retry a request upon receiving a <code>io::Error</code>.</p>
+<p>The <a href="https://docs.rs/fuels/0.62.0/fuels/accounts/provider/struct.Provider.html"><code>Provider</code></a> can be configured to retry a request upon receiving a <code>io::Error</code>.</p>
 <blockquote>
 <p>Note: Currently all node errors are received as <code>io::Error</code>s. So, if configured, a retry will happen even if, for example, a transaction failed to verify.</p>
 </blockquote>
@@ -2712,7 +2712,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         assert_eq!([0u8; 32], *address);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="contractid"><a class="header" href="#contractid"><code>ContractId</code></a></h1>
-<p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
+<p>Like <code>Bytes32</code>, <code>ContractId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/0.49.0/fuel_types/struct.ContractId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating a <code>ContractId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
@@ -2736,7 +2736,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         assert_eq!([0u8; 32], *contract_id);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="assetid"><a class="header" href="#assetid"><code>AssetId</code></a></h1>
-<p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/%7B%7Bversions.fuel-types%7D%7D/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
+<p>Like <code>Bytes32</code>, <code>AssetId</code> is a wrapper on <code>[u8; 32]</code> with similar methods and implements the same traits (see <a href="https://docs.rs/fuel-types/0.49.0/fuel_types/struct.AssetId.html">fuel-types documentation</a>).</p>
 <p>These are the main ways of creating an <code>AssetId</code>:</p>
 <pre><code class="language-rust ignore">        use std::str::FromStr;
 
