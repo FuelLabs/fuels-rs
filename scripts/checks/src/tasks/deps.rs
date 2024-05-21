@@ -49,7 +49,7 @@ impl std::ops::AddAssign for Cargo {
 }
 
 #[derive(Debug, Default, Clone, serde::Serialize, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct All {
+pub struct Deps {
     pub fuel_core_binary: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rust: Option<Rust>,
@@ -60,7 +60,7 @@ pub struct All {
     pub sway_artifacts: Option<Sway>,
 }
 
-impl std::ops::Add for All {
+impl std::ops::Add for Deps {
     type Output = Self;
     fn add(mut self, other: Self) -> Self {
         self += other;
@@ -68,7 +68,7 @@ impl std::ops::Add for All {
     }
 }
 
-impl std::ops::AddAssign for All {
+impl std::ops::AddAssign for Deps {
     fn add_assign(&mut self, other: Self) {
         self.fuel_core_binary |= other.fuel_core_binary;
 

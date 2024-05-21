@@ -4,7 +4,7 @@ use super::{deps, task::Task};
 
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CiJob {
-    deps: deps::All,
+    deps: deps::Deps,
     // Comma separated task ids
     task_ids: String,
     name: String,
@@ -13,7 +13,7 @@ pub struct CiJob {
 }
 
 impl CiJob {
-    pub fn new(deps: deps::All, tasks: &[&Task], name: String) -> Self {
+    pub fn new(deps: deps::Deps, tasks: &[&Task], name: String) -> Self {
         let ids = tasks.iter().map(|t| t.id()).join(",");
         Self {
             deps,

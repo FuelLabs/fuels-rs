@@ -1,4 +1,4 @@
-use super::deps::All;
+use crate::tasks::deps;
 use itertools::Itertools;
 use std::fmt::Display;
 
@@ -8,16 +8,16 @@ pub enum Command {
         program: String,
         args: Vec<String>,
         env: Vec<(String, String)>,
-        deps: All,
+        deps: deps::Deps,
     },
     MdCheck,
 }
 
 impl Command {
-    pub fn deps(&self) -> All {
+    pub fn deps(&self) -> deps::Deps {
         match self {
             Self::Custom { deps, .. } => deps.clone(),
-            Self::MdCheck => All::default(),
+            Self::MdCheck => deps::Deps::default(),
         }
     }
 }
