@@ -82,10 +82,10 @@ cargo test -- --nocapture
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "{{versions.fuels}}"
+fuels = "0.62.0"
 ```
 
-> **Note** We're using version `{{versions.fuels}}` of the SDK, which is the latest version at the time of this writing.
+> **Note** We're using version `0.62.0` of the SDK, which is the latest version at the time of this writing.
 
 And then, in your Rust file that's going to make use of the SDK:
 
