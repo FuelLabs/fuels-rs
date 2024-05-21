@@ -22,7 +22,3 @@ impl Configurables {
         }
     }
 }
-#[cfg(test)]
-mod tests {
-    use fuels_core as _;
-}

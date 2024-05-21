@@ -12,7 +12,7 @@ async fn main() -> anyhow::Result<()> {
     let cli = cli::Cli::parse();
     util::configure_child_process_cleanup()?;
 
-    if cli.print_ci_jobs_desc {
+    if cli.dump_ci_config {
         let jobs = customize::ci_jobs(cli.root.clone());
         // Json used because the CI needs it as such
         let jsonified = serde_json::to_string_pretty(&jobs)?;

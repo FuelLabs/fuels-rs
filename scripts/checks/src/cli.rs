@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use clap::{arg, Parser, ValueEnum};
 
 #[derive(Parser)]
-#[command(about = "Runs pre-release checks deemed to heavy for CI.")]
+#[command(about = "Runs various checks. Some part of the CI, others meant to be run manually.")]
 pub struct Cli {
     /// Comma separated list of tasks to run
     #[arg(
@@ -19,9 +19,9 @@ pub struct Cli {
     #[arg(short, long, action)]
     pub list_tasks: bool,
 
-    /// Print json job description to be used for the CI
+    /// Print the JSON object used as configuration for the CI matrix step
     #[arg(long)]
-    pub print_ci_jobs_desc: bool,
+    pub dump_ci_config: bool,
 
     /// Only run tasks in the given directories
     #[arg(

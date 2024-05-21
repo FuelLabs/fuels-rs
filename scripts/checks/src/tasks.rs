@@ -11,12 +11,11 @@ use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 
 pub mod builder;
+pub mod ci_job;
 pub mod command;
 pub mod deps;
 pub mod report;
 pub mod task;
-
-use self::deps::SwayArtifacts;
 
 fn short_sha256(input: &str) -> String {
     let mut hasher = sha2::Sha256::default();
@@ -50,56 +49,27 @@ impl Tasks {
         }
     }
 
-    pub fn ci_jobs(&self) -> Vec<deps::CiJob> {
+    pub fn ci_jobs(&self) -> Vec<CiJob> {
+        // tasks grouped by dir to reuse compilation artifacts and shorten CI time
         self.tasks
             .iter()
             .sorted_by_key(|task| task.cwd.clone())
             .group_by(|task| task.cwd.clone())
             .into_iter()
             .flat_map(|(cwd, tasks)| {
-                let (tasks_requiring_type_paths, normal_tasks): (Vec<_>, Vec<_>) =
-                    tasks.into_iter().partition(|task| {
-                        task.cmd
-                            .deps()
-                            .sway_artifacts
-                            .is_some_and(|dep| matches!(dep, SwayArtifacts::TypePaths))
-                    });
+                let (tasks_requiring_type_paths, normal_tasks) =
+                    separate_out_type_path_tasks(tasks);
 
-                let type_paths_deps = tasks_requiring_type_paths
-                    .iter()
-                    .map(|ty| ty.cmd.deps())
-                    .reduce(|acc, next| acc + next);
+                let name = self.create_job_name(cwd);
 
-                let normal_deps = normal_tasks
-                    .iter()
-                    .map(|ty| ty.cmd.deps())
-                    .reduce(|acc, next| acc + next);
-
-                let mut jobs = vec![];
-
-                let relative_path = cwd.strip_prefix(&self.workspace_root).unwrap_or_else(|_| {
-                    panic!("{cwd:?} is a prefix of {}", self.workspace_root.display())
-                });
-
-                let name = if relative_path.is_empty() {
-                    "workspace".to_string()
-                } else {
-                    format!("{}", relative_path.display())
-                };
-
-                if let Some(deps) = type_paths_deps {
-                    jobs.push(deps::CiJob::new(
-                        deps,
-                        &tasks_requiring_type_paths,
-                        name.clone(),
-                    ));
-                }
-
-                if let Some(deps) = normal_deps {
-                    jobs.push(deps::CiJob::new(deps, &normal_tasks, name));
-                }
-
-                jobs
+                // You cannot have type paths and not have them in the same job, so they need to be
+                // separate jobs.
+                [
+                    job_with_merged_deps(&tasks_requiring_type_paths, name.clone()),
+                    job_with_merged_deps(&normal_tasks, name),
+                ]
+                .into_iter()
+                .flatten()
             })
             .collect()
     }
@@ -174,8 +144,43 @@ impl Tasks {
         self.tasks.retain(|task| {
             matches!(
                 task.cmd.deps().sway_artifacts,
-                Some(SwayArtifacts::Normal) | None
+                Some(deps::Sway::Normal) | None
             )
         });
     }
+
+    fn create_job_name(&self, cwd: PathBuf) -> String {
+        // So we don't take up much real estate printing the full canonicalized path
+        let relative_path = cwd.strip_prefix(&self.workspace_root).unwrap_or_else(|_| {
+            panic!(
+                "expected {cwd:?} to be a prefix of {}",
+                self.workspace_root.display()
+            )
+        });
+
+        if relative_path.is_empty() {
+            "workspace".to_string()
+        } else {
+            format!("{}", relative_path.display())
+        }
+    }
+}
+
+fn job_with_merged_deps(tasks: &[&task::Task], name: String) -> Option<CiJob> {
+    tasks
+        .iter()
+        .map(|ty| ty.cmd.deps())
+        .reduce(|acc, next| acc + next)
+        .map(|dep| CiJob::new(dep, tasks, name))
+}
+
+fn separate_out_type_path_tasks<'a>(
+    tasks: impl IntoIterator<Item = &'a task::Task>,
+) -> (Vec<&'a task::Task>, Vec<&'a task::Task>) {
+    tasks.into_iter().partition(|task| {
+        task.cmd
+            .deps()
+            .sway_artifacts
+            .is_some_and(|dep| matches!(dep, deps::Sway::TypePaths))
+    })
 }

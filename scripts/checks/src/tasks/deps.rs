@@ -8,7 +8,7 @@ use itertools::Itertools;
 use serde::{Serialize, Serializer};
 
 #[derive(Debug, Clone, serde::Serialize, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum SwayArtifacts {
+pub enum Sway {
     TypePaths,
     Normal,
 }
@@ -61,7 +61,7 @@ pub struct All {
     pub cargo: Cargo,
     pub typos_cli: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub sway_artifacts: Option<SwayArtifacts>,
+    pub sway_artifacts: Option<Sway>,
 }
 
 impl std::ops::Add for All {
@@ -106,27 +106,5 @@ impl std::ops::AddAssign for All {
             (None, None) => None,
         };
         self.sway_artifacts = sway_artifacts;
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct CiJob {
-    pub(crate) deps: All,
-    // Comma separated task ids
-    pub(crate) task_ids: String,
-    pub(crate) name: String,
-    // Must not contain commas, rust-cache complains
-    pub(crate) cache_key: String,
-}
-
-impl CiJob {
-    pub fn new(deps: All, tasks: &[&Task], name: String) -> Self {
-        let ids = tasks.iter().map(|t| t.id()).join(",");
-        Self {
-            deps,
-            cache_key: short_sha256(&ids),
-            task_ids: ids,
-            name,
-        }
     }
 }

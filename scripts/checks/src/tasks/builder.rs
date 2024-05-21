@@ -4,13 +4,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use crate::tasks::{
-    command::Command,
-    deps,
-    deps::{All, SwayArtifacts},
-    task::Task,
-    Tasks,
-};
+use crate::tasks::{command::Command, deps, task::Task, Tasks};
 pub struct Builder {
     workspace: PathBuf,
     rust_flags: Vec<String>,
@@ -27,17 +21,18 @@ impl Builder {
     }
 
     pub fn common(&mut self) {
+        let exclude = None;
         let tasks = self
-            .all_workspace_members(None)
+            .all_workspace_members(exclude)
             .into_iter()
             .flat_map(|member| {
                 let deps = {
                     // Some examples run abigen! on sway projects in e2e
                     let sway_artifacts = member
                         .starts_with(self.workspace_path("examples"))
-                        .then_some(SwayArtifacts::Normal);
+                        .then_some(deps::Sway::Normal);
 
-                    All {
+                    deps::All {
                         sway_artifacts,
                         ..Default::default()
                     }
@@ -48,7 +43,7 @@ impl Builder {
                     Self::custom(
                         "typos",
                         "",
-                        &All {
+                        &deps::All {
                             typos_cli: true,
                             ..deps.clone()
                         },
@@ -101,30 +96,30 @@ impl Builder {
         let tasks = [
             self.cargo_nextest(
                 "run --features default,fuel-core-lib,test-type-paths",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_nextest(
                 "run --features default,fuel-core-lib",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::Normal),
                     ..Default::default()
                 },
             ),
             self.cargo_nextest(
                 "run --features default,test-type-paths",
-                All {
+                deps::All {
                     fuel_core_binary: true,
-                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
+                    sway_artifacts: Some(deps::Sway::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_clippy(
                 "--all-targets --no-deps --features default,test-type-paths",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::TypePaths),
                     ..Default::default()
                 },
             ),
@@ -143,7 +138,7 @@ impl Builder {
             cmd: Self::custom(
                 "wasm-pack",
                 "test --node",
-                &All {
+                &deps::All {
                     wasm: true,
                     ..Default::default()
                 },
@@ -158,7 +153,7 @@ impl Builder {
             Self::custom(
                 "cargo-machete",
                 "--skip-target-dir",
-                &All {
+                &deps::All {
                     cargo: deps::Cargo {
                         machete: true,
                         ..Default::default()
@@ -168,15 +163,15 @@ impl Builder {
             ),
             self.cargo_clippy(
                 "--workspace --all-features",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::Normal),
                     ..Default::default()
                 },
             ),
             Self::custom(
                 "typos",
                 "",
-                &All {
+                &deps::All {
                     typos_cli: true,
                     ..Default::default()
                 },
@@ -197,8 +192,8 @@ impl Builder {
             .into_iter()
             .flat_map(|member| {
                 [
-                    self.cargo_hack("--feature-powerset check", All::default()),
-                    self.cargo_hack("--feature-powerset check --tests", All::default()),
+                    self.cargo_hack("--feature-powerset check", deps::All::default()),
+                    self.cargo_hack("--feature-powerset check --tests", deps::All::default()),
                 ]
                 .into_iter()
                 .map(move |cmd| Task {
@@ -215,15 +210,15 @@ impl Builder {
         let tasks = [
             self.cargo_hack(
                 "--feature-powerset check --tests",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::TypePaths),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::TypePaths),
                     ..Default::default()
                 },
             ),
             self.cargo_hack(
                 "--feature-powerset --exclude-features test-type-paths check --tests",
-                All {
-                    sway_artifacts: Some(deps::SwayArtifacts::Normal),
+                deps::All {
+                    sway_artifacts: Some(deps::Sway::Normal),
                     ..Default::default()
                 },
             ),
@@ -243,7 +238,7 @@ impl Builder {
             .all_workspace_members(Some(&ignore))
             .into_iter()
             .flat_map(|member| {
-                let deps = All {
+                let deps = deps::All {
                     cargo: deps::Cargo {
                         udeps: true,
                         ..Default::default()
@@ -269,8 +264,8 @@ impl Builder {
         self.tasks.extend(tasks);
     }
 
-    fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: All) -> Command {
-        deps += All {
+    fn cargo_fmt(&self, cmd: impl Into<String>, mut deps: deps::All) -> Command {
+        deps += deps::All {
             rust: Some(deps::Rust {
                 components: BTreeSet::from_iter(["rustfmt".to_string()]),
                 ..Default::default()
@@ -283,8 +278,8 @@ impl Builder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_clippy(&self, cmd: impl Into<String>, mut deps: All) -> Command {
-        deps += All {
+    fn cargo_clippy(&self, cmd: impl Into<String>, mut deps: deps::All) -> Command {
+        deps += deps::All {
             rust: Some(deps::Rust {
                 components: BTreeSet::from_iter(["clippy".to_string()]),
                 ..Default::default()
@@ -296,8 +291,8 @@ impl Builder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_hack(&self, cmd: impl Into<String>, mut deps: All) -> Command {
-        deps += All {
+    fn cargo_hack(&self, cmd: impl Into<String>, mut deps: deps::All) -> Command {
+        deps += deps::All {
             cargo: deps::Cargo {
                 hack: true,
                 ..Default::default()
@@ -309,8 +304,8 @@ impl Builder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo_nextest(&self, cmd: impl Into<String>, mut deps: All) -> Command {
-        deps += All {
+    fn cargo_nextest(&self, cmd: impl Into<String>, mut deps: deps::All) -> Command {
+        deps += deps::All {
             cargo: deps::Cargo {
                 nextest: true,
                 ..Default::default()
@@ -323,7 +318,7 @@ impl Builder {
         self.cargo(cmd, None, deps)
     }
 
-    fn cargo(&self, cmd: impl Into<String>, env: Option<(&str, &str)>, deps: All) -> Command {
+    fn cargo(&self, cmd: impl Into<String>, env: Option<(&str, &str)>, deps: deps::All) -> Command {
         let envs = {
             let flags = self.rust_flags.iter().join(" ");
             let mut envs = vec![("RUSTFLAGS".to_owned(), flags)];
@@ -348,7 +343,7 @@ impl Builder {
         }
     }
 
-    fn custom(program: &str, args: &str, deps: &All) -> Command {
+    fn custom(program: &str, args: &str, deps: &deps::All) -> Command {
         Command::Custom {
             program: program.to_owned(),
             args: parse_cmd("", args),

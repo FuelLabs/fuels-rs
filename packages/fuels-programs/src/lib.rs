@@ -8,8 +8,3 @@ pub mod receipt_parser;
 pub mod script_calls;
 #[cfg(feature = "std")]
 mod submit_response;
-
-#[cfg(test)]
-mod tests {
-    use fuels_programs as _;
-}
