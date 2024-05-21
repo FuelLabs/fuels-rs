@@ -113,7 +113,7 @@ jobs:
           run: |
             EOF=$(dd if=/dev/urandom bs=15 count=1 status=none | base64)
             echo "config<<$EOF" >> "$GITHUB_OUTPUT"
-            ./target/debug/checks -r . --print-ci-jobs-desc >> "$GITHUB_OUTPUT"
+            ./target/debug/checks -r . --dump-ci-config >> "$GITHUB_OUTPUT"
             echo "$EOF" >> "$GITHUB_OUTPUT"
 
   verify-rust-version:
