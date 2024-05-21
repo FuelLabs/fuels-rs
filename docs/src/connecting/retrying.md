@@ -1,6 +1,6 @@
 # Retrying requests
 
-The [`Provider`](https://docs.rs/fuels/0.47.0/fuels/accounts/provider/struct.Provider.html) can be configured to retry a request upon receiving a `io::Error`.
+The [`Provider`](https://docs.rs/fuels/0.62.0/fuels/accounts/provider/struct.Provider.html) can be configured to retry a request upon receiving a `io::Error`.
 
 > Note: Currently all node errors are received as `io::Error`s. So, if configured, a retry will happen even if, for example, a transaction failed to verify.
 
