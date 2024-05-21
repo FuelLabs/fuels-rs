@@ -10,7 +10,7 @@ repository = { workspace = true }
 rust-version = { workspace = true }
 
 [dependencies]
-clap = { workspace = true }
-color-eyre = { workspace = true }
+clap = { version = "4.5.3", features = ["derive"] }
+color-eyre = "0.6.2"
 semver = { workspace = true }
 versions-replacer = { path = "../versions-replacer" }
