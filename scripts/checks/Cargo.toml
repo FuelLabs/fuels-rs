@@ -1,13 +1,13 @@
 [package]
 name = "checks"
-authors.workspace = true
-edition.workspace = true
-homepage.workspace = true
-readme.workspace = true
-license.workspace = true
-repository.workspace = true
-rust-version.workspace = true
-version.workspace = true
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+readme = { workspace = true }
+license = { workspace = true }
+repository = { workspace = true }
+rust-version = { workspace = true }
+version = { workspace = true }
 publish = false
 
 build = "build.rs"
