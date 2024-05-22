@@ -22,9 +22,9 @@ serde_json = { workspace = true, optional = true }
 
 [dev-dependencies]
 fuels-programs = { workspace = true, features = ["std"] }
+rand = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["macros", "test-util"] }
-rand = { workspace = true }
 
 [features]
 default = ["std"]
