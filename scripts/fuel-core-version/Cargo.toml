@@ -1,0 +1,16 @@
+[package]
+name = "fuel-core-version"
+version = { workspace = true }
+authors = { workspace = true }
+edition = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+publish = false
+repository = { workspace = true }
+rust-version = { workspace = true }
+
+[dependencies]
+clap = { version = "4.5.3", features = ["derive"] }
+color-eyre = "0.6.2"
+semver = { workspace = true }
+versions-replacer = { workspace = true }

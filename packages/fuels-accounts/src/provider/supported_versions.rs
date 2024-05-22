@@ -1,8 +1,7 @@
 use semver::Version;
 
-fn get_supported_fuel_core_version() -> Version {
-    "0.26.0".parse().expect("is valid version")
-}
+pub const SUPPORTED_FUEL_CORE_VERSION: Version =
+    include!("../../../../scripts/fuel-core-version/version.rs");
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct VersionCompatibility {
@@ -13,8 +12,7 @@ pub(crate) struct VersionCompatibility {
 }
 
 pub(crate) fn compare_node_compatibility(network_version: Version) -> VersionCompatibility {
-    let supported_version = get_supported_fuel_core_version();
-    check_version_compatibility(network_version, supported_version)
+    check_version_compatibility(network_version, SUPPORTED_FUEL_CORE_VERSION)
 }
 
 fn check_version_compatibility(
