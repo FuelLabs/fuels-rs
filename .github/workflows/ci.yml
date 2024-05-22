@@ -163,6 +163,8 @@ jobs:
             args: --skip-target-dir
           - command: test_wasm
             args:
+          - command: check_fuel_core_version
+            args:
           - command: check_doc_anchors_valid
             args:
           - command: check_doc_unresolved_links
@@ -235,6 +237,10 @@ jobs:
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           cd wasm-tests
           wasm-pack test --node
+
+      - name: Check that fuel_core version.rs file is up to date
+        if: ${{ matrix.command == 'check_fuel_core_version' }}
+        run: cargo run --bin fuel-core-version -- --manifest-path ./Cargo.toml verify
 
       - name: Check for invalid documentation anchors
         if: ${{ matrix.command == 'check_doc_anchors_valid' }}

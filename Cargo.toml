@@ -25,6 +25,7 @@ members = [
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
   "scripts/check-docs",
+  "scripts/fuel-core-version",
   "scripts/versions-replacer",
   "wasm-tests",
 ]
@@ -100,3 +101,4 @@ fuels-core = { version = "0.62.0", path = "./packages/fuels-core", default-featu
 fuels-macros = { version = "0.62.0", path = "./packages/fuels-macros", default-features = false }
 fuels-programs = { version = "0.62.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.62.0", path = "./packages/fuels-test-helpers", default-features = false }
+versions-replacer = { version = "0.62.0", path = "./scripts/versions-replacer", default-features = false }
