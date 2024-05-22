@@ -25,7 +25,6 @@ members = [
   "packages/fuels-programs",
   "packages/fuels-test-helpers",
   "scripts/checks",
-  "scripts/fuel-core-version",
   "scripts/versions-replacer",
   "wasm-tests",
 ]

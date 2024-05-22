@@ -1,4 +1,4 @@
-use crate::md_check;
+use crate::custom_checks;
 
 use super::{
     command::Command,
@@ -33,11 +33,22 @@ impl Task {
                 program, args, env, ..
             } => self.run_custom(program, args.iter().map(String::as_str), env),
             Command::MdCheck => self.run_md_check(),
+            Command::VerifyCoreVersion => self.run_verify_core_version(),
         }
     }
 
-    pub(crate) fn run_md_check(&self) -> Report {
-        let status = if let Err(e) = md_check::run(&self.cwd) {
+    fn run_verify_core_version(&self) -> Report {
+        let status =
+            if let Err(e) = custom_checks::fuel_core_version::verify_core_version(&self.cwd) {
+                e.into()
+            } else {
+                Status::Success { out: String::new() }
+            };
+        self.report(status)
+    }
+
+    fn run_md_check(&self) -> Report {
+        let status = if let Err(e) = custom_checks::md_check::run(&self.cwd) {
             e.into()
         } else {
             Status::Success { out: String::new() }
@@ -46,12 +57,7 @@ impl Task {
         self.report(status)
     }
 
-    pub(crate) fn run_custom<'a, F>(
-        &self,
-        program: &str,
-        args: F,
-        env: &[(String, String)],
-    ) -> Report
+    fn run_custom<'a, F>(&self, program: &str, args: F, env: &[(String, String)]) -> Report
     where
         F: IntoIterator<Item = &'a str>,
     {

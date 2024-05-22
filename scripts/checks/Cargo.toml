@@ -13,6 +13,7 @@ publish = false
 build = "build.rs"
 
 [dependencies]
+pretty_assertions = { workspace = true, features = ["alloc"] }
 anyhow = { workspace = true, features = ["std"] }
 clap = { workspace = true, features = ["default", "derive"] }
 colored = { workspace = true }
@@ -26,6 +27,7 @@ serde_json = { workspace = true, features = ["std"] }
 sha2 = { workspace = true, features = ["std"] }
 tokio = { workspace = true, features = ["rt-multi-thread", "macros", "signal"] }
 tokio-util = { workspace = true }
+semver = { workspace = true }
 
 [dev-dependencies]
 pretty_assertions = { workspace = true, features = ["std"] }
@@ -36,3 +38,4 @@ tempfile = { workspace = true }
 itertools = { workspace = true, features = ["use_alloc"] }
 serde = { workspace = true, features = ["derive"] }
 toml = { workspace = true, features = ["parse"] }
+semver = { workspace = true }

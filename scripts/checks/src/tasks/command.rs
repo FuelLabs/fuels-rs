@@ -11,13 +11,14 @@ pub enum Command {
         deps: deps::Deps,
     },
     MdCheck,
+    VerifyCoreVersion,
 }
 
 impl Command {
     pub fn deps(&self) -> deps::Deps {
         match self {
             Self::Custom { deps, .. } => deps.clone(),
-            Self::MdCheck => deps::Deps::default(),
+            Self::MdCheck | Self::VerifyCoreVersion => deps::Deps::default(),
         }
     }
 }
@@ -39,7 +40,8 @@ impl Display for Command {
                     write!(f, "{env} {program} {args}")
                 }
             }
-            Self::MdCheck { .. } => write!(f, "MdCheck"),
+            Self::MdCheck => write!(f, "MdCheck"),
+            Self::VerifyCoreVersion => write!(f, "VerifyCoreVersion"),
         }
     }
 }

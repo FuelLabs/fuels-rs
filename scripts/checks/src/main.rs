@@ -2,8 +2,8 @@ use std::io::IsTerminal;
 
 use clap::Parser;
 mod cli;
+mod custom_checks;
 mod customize;
-mod md_check;
 mod tasks;
 mod util;
 

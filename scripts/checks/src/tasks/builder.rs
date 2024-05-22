@@ -11,6 +11,7 @@ pub struct Builder {
     tasks: Vec<Task>,
 }
 
+include!(concat!(env!("OUT_DIR"), "/workspace_cargo.rs"));
 impl Builder {
     pub fn new(workspace: PathBuf, rust_flags: &[&str]) -> Self {
         Self {
@@ -143,6 +144,14 @@ impl Builder {
                     ..Default::default()
                 },
             ),
+        };
+        self.tasks.push(task);
+    }
+
+    pub fn fuels_accounts_core_version(&mut self) {
+        let task = Task {
+            cwd: self.workspace_path("packages/fuels-accounts"),
+            cmd: Command::VerifyCoreVersion,
         };
         self.tasks.push(task);
     }
@@ -384,5 +393,3 @@ fn parse_cmd(prepend: &str, string: &str) -> Vec<String> {
         [vec![prepend.to_owned()], parts].concat()
     }
 }
-
-include!(concat!(env!("OUT_DIR"), "/workspace_members.rs"));

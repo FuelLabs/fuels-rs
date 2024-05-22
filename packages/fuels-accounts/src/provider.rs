@@ -3,6 +3,7 @@ use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
 mod retry_util;
 mod retryable_client;
 mod supported_versions;
+mod version;
 
 #[cfg(feature = "coin-cache")]
 use std::sync::Arc;

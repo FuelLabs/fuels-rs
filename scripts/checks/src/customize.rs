@@ -38,6 +38,7 @@ fn normal(workspace_root: PathBuf) -> Tasks {
     builder.e2e_specific();
     builder.wasm_specific();
     builder.workspace_level();
+    builder.fuels_accounts_core_version();
 
     builder.build()
 }
