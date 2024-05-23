@@ -17,7 +17,6 @@ fuels-code-gen = { workspace = true }
 itertools = { workspace = true }
 proc-macro2 = { workspace = true }
 quote = { workspace = true }
-rand = { workspace = true }
 syn = { workspace = true, features = ["extra-traits"] }
 
 [dev-dependencies]
