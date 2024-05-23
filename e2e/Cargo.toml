@@ -16,8 +16,6 @@ chrono = { workspace = true }
 # TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1375) needs to be removed, `ScriptTransaction` and `CreateTransaction` in `fuels` use `fuel_tx::Input` but don't reexport or convert it into a `fuels` owned type
 fuel-tx = { workspace = true }
 fuels = { workspace = true }
-# TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1376) because setup-program-test uses it but `fuels` did not reexport `rand`
-rand = { workspace = true }
 # used in test assertions
 tai64 = { workspace = true }
 tempfile = { workspace = true }
