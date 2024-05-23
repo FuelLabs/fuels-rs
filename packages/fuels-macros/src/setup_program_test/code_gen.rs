@@ -89,8 +89,8 @@ fn wallet_initialization_code(maybe_command: Option<InitializeWalletCommand>) ->
 
     let num_wallets = wallet_names.len();
     quote! {
-        let [#(#wallet_names),*]: [_; #num_wallets] = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(Some(#num_wallets as u64), None, None),
+        let [#(#wallet_names),*]: [_; #num_wallets] = ::fuels::test_helpers::launch_custom_provider_and_get_wallets(
+            ::fuels::test_helpers::WalletsConfig::new(Some(#num_wallets as u64), None, None),
             None,
             None,
         )
@@ -132,9 +132,9 @@ fn contract_deploying_code(
                 let salt: [u8; 32] = ::fuels::test_helpers::generate_random_salt();
 
                 let #contract_instance_name = {
-                    let load_config = LoadConfiguration::default().with_salt(salt);
+                    let load_config = ::fuels::programs::contract::LoadConfiguration::default().with_salt(salt);
 
-                    let loaded_contract = Contract::load_from(
+                    let loaded_contract = ::fuels::programs::contract::Contract::load_from(
                         #bin_path,
                         load_config
                     )
@@ -142,7 +142,7 @@ fn contract_deploying_code(
 
                     let contract_id = loaded_contract.deploy(
                         &#wallet_name,
-                        TxPolicies::default()
+                        ::fuels::types::transaction::TxPolicies::default()
                     )
                     .await
                     .expect("Failed to deploy the contract");
