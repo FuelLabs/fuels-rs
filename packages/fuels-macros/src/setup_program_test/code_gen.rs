@@ -129,8 +129,7 @@ fn contract_deploying_code(
                 // Generate random salt for contract deployment.
                 // These lines must be inside the `quote!` macro, otherwise the salt remains
                 // identical between macro compilation, causing contract id collision.
-                let mut rng = <::rand::rngs::StdRng as ::rand::SeedableRng>::from_entropy();
-                let salt: [u8; 32] = <::rand::rngs::StdRng as ::rand::Rng>::gen(&mut rng);
+                let salt: [u8; 32] = ::fuels::test_helpers::generate_random_salt();
 
                 let #contract_instance_name = {
                     let load_config = LoadConfiguration::default().with_salt(salt);
