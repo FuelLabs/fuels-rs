@@ -102,3 +102,7 @@ fuels-macros = { version = "0.62.0", path = "./packages/fuels-macros", default-f
 fuels-programs = { version = "0.62.0", path = "./packages/fuels-programs", default-features = false }
 fuels-test-helpers = { version = "0.62.0", path = "./packages/fuels-test-helpers", default-features = false }
 versions-replacer = { version = "0.62.0", path = "./scripts/versions-replacer", default-features = false }
+
+
+[patch.crates-io]
+fuel-abi-types = { git = "https://github.com/FuelLabs/fuel-abi-types", branch = "hal3e/docstrings-getter" }
