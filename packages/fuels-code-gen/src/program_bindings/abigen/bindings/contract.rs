@@ -454,10 +454,16 @@ mod tests {
                 type_id: 1,
                 ..Default::default()
             },
-            attributes: Some(vec![Attribute {
-                name: "doc-comment".to_string(),
-                arguments: vec!["This is a doc string".to_string()],
-            }]),
+            attributes: Some(vec![
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is a doc string".to_string()],
+                },
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is another doc string".to_string()],
+                },
+            ]),
         };
         let types = [
             (
@@ -528,6 +534,7 @@ mod tests {
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = quote! {
             #[doc = "This is a doc string"]
+            #[doc = "This is another doc string"]
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
