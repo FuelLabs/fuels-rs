@@ -17,7 +17,7 @@ pub(crate) struct FunctionGenerator {
     args: Components,
     output_type: TokenStream,
     body: TokenStream,
-    doc: Option<String>,
+    docs: Vec<String>,
 }
 
 impl FunctionGenerator {
@@ -36,7 +36,7 @@ impl FunctionGenerator {
             args,
             output_type: output_type.to_token_stream(),
             body: Default::default(),
-            doc: None,
+            docs: vec![],
         })
     }
 
@@ -50,8 +50,8 @@ impl FunctionGenerator {
         self
     }
 
-    pub fn set_doc(&mut self, text: String) -> &mut Self {
-        self.doc = Some(text);
+    pub fn set_docs(&mut self, docs: Vec<String>) -> &mut Self {
+        self.docs = docs;
         self
     }
 
@@ -82,13 +82,13 @@ impl FunctionGenerator {
 
     pub fn generate(&self) -> TokenStream {
         let name = safe_ident(&self.name);
-        let doc = self
-            .doc
-            .as_ref()
-            .map(|text| {
-                quote! { #[doc = #text] }
+        let docs: Vec<TokenStream> = self
+            .docs
+            .iter()
+            .map(|doc| {
+                quote! { #[doc = #doc] }
             })
-            .unwrap_or_default();
+            .collect();
 
         let arg_declarations = self.args.iter().map(|(name, ty)| {
             get_equivalent_bech32_type(ty)
@@ -104,7 +104,7 @@ impl FunctionGenerator {
         let params = quote! { &self, #(#arg_declarations),* };
 
         quote! {
-            #doc
+            #(#docs)*
             pub fn #name(#params) -> #output_type {
                 #body
             }
@@ -155,15 +155,19 @@ mod tests {
         let function = given_a_fun();
         let mut sut = FunctionGenerator::new(&function)?;
 
-        sut.set_doc("This is a doc".to_string())
-            .set_body(quote! {this is ze body});
+        sut.set_docs(vec![
+            " This is a doc".to_string(),
+            " This is another doc".to_string(),
+        ])
+        .set_body(quote! {this is ze body});
 
         // when
         let tokenized: TokenStream = sut.generate();
 
         // then
         let expected = quote! {
-            #[doc = "This is a doc"]
+            #[doc = " This is a doc"]
+            #[doc = " This is another doc"]
             pub fn test_function(&self, arg_0: self::CustomStruct<::core::primitive::u8>) -> self::CustomStruct<::core::primitive::u64> {
                 this is ze body
             }
