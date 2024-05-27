@@ -14,9 +14,12 @@ use fuel_tx::{
     input::coin::{CoinPredicate, CoinSigned},
     policies::{Policies, PolicyType},
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade,
-    UpgradePurpose, Upload, UploadBody, UploadSubsection, Witness,
+    Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Upgrade, Upload,
+    UploadBody, Witness,
 };
+
+pub use fuel_tx::UpgradePurpose;
+pub use fuel_tx::UploadSubsection;
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use itertools::Itertools;
 
