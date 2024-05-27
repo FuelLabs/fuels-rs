@@ -39,6 +39,7 @@ pub struct SubmitResponse<T: Account, D> {
 }
 
 #[derive(Debug)]
+#[allow(clippy::large_enum_variant)]
 pub enum CallHandler<T: Account, D> {
     Contract(ContractCallHandler<T, D>),
     Script(ScriptCallHandler<T, D>),
