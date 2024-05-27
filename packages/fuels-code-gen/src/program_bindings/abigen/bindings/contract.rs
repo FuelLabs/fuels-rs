@@ -154,10 +154,7 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 
-    generator.set_doc(format!(
-        "Calls the contract's `{}` function",
-        abi_fun.name(),
-    ));
+    generator.set_docs(abi_fun.doc_strings()?);
 
     let original_output = generator.output_type();
     generator.set_output_type(
@@ -189,7 +186,7 @@ mod tests {
 
     use fuel_abi_types::abi::{
         full_program::FullABIFunction,
-        program::{ABIFunction, ProgramABI, TypeApplication, TypeDeclaration},
+        program::{ABIFunction, Attribute, ProgramABI, TypeApplication, TypeDeclaration},
     };
     use pretty_assertions::assert_eq;
     use quote::quote;
@@ -197,7 +194,7 @@ mod tests {
     use crate::{error::Result, program_bindings::abigen::bindings::contract::expand_fn};
 
     #[test]
-    fn test_expand_fn_simple_abi() -> Result<()> {
+    fn expand_contract_method_simple_abi() -> Result<()> {
         let s = r#"
             {
                 "types": [
@@ -332,7 +329,15 @@ mod tests {
                       "name": "",
                       "type": 26,
                       "typeArguments": []
-                    }
+                    },
+                    "attributes": [
+                      {
+                        "name": "doc-comment",
+                        "arguments": [
+                          "This is a doc string"
+                        ]
+                      }
+                    ]
                   }
                 ]
               }
@@ -351,7 +356,7 @@ mod tests {
         )?)?;
 
         let expected = quote! {
-            #[doc = "Calls the contract's `some_abi_funct` function"]
+            #[doc = "This is a doc string"]
             pub fn some_abi_funct(
                 &self,
                 s_1: self::MyStruct1,
@@ -378,7 +383,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_simple() -> Result<()> {
+    fn expand_contract_method_simple() -> Result<()> {
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
                 name: String::from("bimbam"),
@@ -386,6 +391,10 @@ mod tests {
                 ..Default::default()
             }],
             name: "HelloWorld".to_string(),
+            attributes: Some(vec![Attribute {
+                name: "doc-comment".to_string(),
+                arguments: vec!["This is a doc string".to_string()],
+            }]),
             ..Default::default()
         };
         let types = [
@@ -411,7 +420,7 @@ mod tests {
         let result = expand_fn(&FullABIFunction::from_counterpart(&the_function, &types)?);
 
         let expected = quote! {
-            #[doc = "Calls the contract's `HelloWorld` function"]
+            #[doc = "This is a doc string"]
             pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
@@ -431,7 +440,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expand_fn_complex() -> Result<()> {
+    fn expand_contract_method_complex() -> Result<()> {
         // given
         let the_function = ABIFunction {
             inputs: vec![TypeApplication {
@@ -445,7 +454,16 @@ mod tests {
                 type_id: 1,
                 ..Default::default()
             },
-            ..Default::default()
+            attributes: Some(vec![
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is a doc string".to_string()],
+                },
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is another doc string".to_string()],
+                },
+            ]),
         };
         let types = [
             (
@@ -515,7 +533,8 @@ mod tests {
 
         // Some more editing was required because it is not rustfmt-compatible (adding/removing parentheses or commas)
         let expected = quote! {
-            #[doc = "Calls the contract's `hello_world` function"]
+            #[doc = "This is a doc string"]
+            #[doc = "This is another doc string"]
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
