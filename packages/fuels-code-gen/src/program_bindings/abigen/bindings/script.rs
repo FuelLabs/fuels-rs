@@ -1,6 +1,6 @@
 use std::default::Default;
 
-use fuel_abi_types::abi::full_program::FullProgramABI;
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -26,7 +26,8 @@ pub(crate) fn script_bindings(
         return Ok(GeneratedCode::default());
     }
 
-    let main_function = expand_fn(&abi)?;
+    let main_function_abi = extract_main_fn(&abi.functions)?;
+    let main_function = expand_fn(main_function_abi)?;
 
     let log_formatters_lookup = log_formatters_instantiation_code(
         quote! {::fuels::types::ContractId::zeroed()},
@@ -103,9 +104,8 @@ pub(crate) fn script_bindings(
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
-fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
-    let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun)?;
+fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
+    let mut generator = FunctionGenerator::new(fn_abi)?;
 
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
@@ -127,8 +127,88 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
         .set_output_type(
             quote! {::fuels::programs::script_calls::ScriptCallHandler<T, #original_output_type> },
         )
-        .set_doc("Run the script's `main` function with the provided arguments".to_string())
+        .set_docs(fn_abi.doc_strings()?)
         .set_body(body);
 
     Ok(generator.generate())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use fuel_abi_types::abi::{
+        full_program::FullABIFunction,
+        program::{ABIFunction, Attribute, TypeApplication, TypeDeclaration},
+    };
+    use pretty_assertions::assert_eq;
+    use quote::quote;
+
+    use crate::{error::Result, program_bindings::abigen::bindings::script::expand_fn};
+
+    #[test]
+    fn expand_script_main_function() -> Result<()> {
+        let the_function = ABIFunction {
+            inputs: vec![TypeApplication {
+                name: String::from("bimbam"),
+                type_id: 1,
+                ..Default::default()
+            }],
+            name: "main".to_string(),
+            attributes: Some(vec![
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is a doc string".to_string()],
+                },
+                Attribute {
+                    name: "doc-comment".to_string(),
+                    arguments: vec!["This is another doc string".to_string()],
+                },
+            ]),
+            ..Default::default()
+        };
+        let types = [
+            (
+                0,
+                TypeDeclaration {
+                    type_id: 0,
+                    type_field: String::from("()"),
+                    ..Default::default()
+                },
+            ),
+            (
+                1,
+                TypeDeclaration {
+                    type_id: 1,
+                    type_field: String::from("bool"),
+                    ..Default::default()
+                },
+            ),
+        ]
+        .into_iter()
+        .collect::<HashMap<_, _>>();
+        let result = expand_fn(&FullABIFunction::from_counterpart(&the_function, &types)?);
+
+        let expected = quote! {
+            #[doc = "This is a doc string"]
+            #[doc = "This is another doc string"]
+            pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::script_calls::ScriptCallHandler<T, ()> {
+                let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
+                    .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
+                 let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)
+                     .expect("Provider not set up").clone();
+                 ::fuels::programs::script_calls::ScriptCallHandler::new(
+                    self.binary.clone(),
+                    encoded_args,
+                    self.account.clone(),
+                    provider,
+                    self.log_decoder.clone()
+                )
+            }
+        };
+
+        assert_eq!(result?.to_string(), expected.to_string());
+
+        Ok(())
+    }
 }

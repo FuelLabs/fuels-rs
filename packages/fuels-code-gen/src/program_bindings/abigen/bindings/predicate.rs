@@ -1,4 +1,4 @@
-use fuel_abi_types::abi::full_program::FullProgramABI;
+use fuel_abi_types::abi::full_program::{FullABIFunction, FullProgramABI};
 use proc_macro2::{Ident, TokenStream};
 use quote::quote;
 
@@ -19,7 +19,8 @@ pub(crate) fn predicate_bindings(
     abi: FullProgramABI,
     no_std: bool,
 ) -> Result<GeneratedCode> {
-    let encode_function = expand_fn(&abi)?;
+    let main_function_abi = extract_main_fn(&abi.functions)?;
+    let encode_function = expand_fn(main_function_abi)?;
     let encoder_struct_name = ident(&format!("{name}Encoder"));
 
     let configuration_struct_name = ident(&format!("{name}Configurables"));
@@ -53,12 +54,10 @@ pub(crate) fn predicate_bindings(
     Ok(GeneratedCode::new(code, type_paths, no_std))
 }
 
-fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
-    let fun = extract_main_fn(&abi.functions)?;
-    let mut generator = FunctionGenerator::new(fun)?;
+fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
+    let mut generator = FunctionGenerator::new(fn_abi)?;
 
     let arg_tokens = generator.tokenized_args();
-
     let body = quote! {
         self.encoder.encode(&#arg_tokens)
     };
@@ -67,7 +66,7 @@ fn expand_fn(abi: &FullProgramABI) -> Result<TokenStream> {
     };
 
     generator
-        .set_doc("Run the predicate's encode function with the provided arguments".to_string())
+        .set_docs(vec!["Encode the predicate arguments".to_string()])
         .set_name("encode_data".to_string())
         .set_output_type(output_type)
         .set_body(body);
