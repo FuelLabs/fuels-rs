@@ -42,6 +42,7 @@ fn download_executor(path: &Path) {
 
     let mut archive = Archive::new(GzDecoder::new(&mut content));
 
+    let mut extracted = false;
     for entry in archive.entries().unwrap() {
         let mut entry = entry.unwrap();
 
@@ -52,7 +53,12 @@ fn download_executor(path: &Path) {
 
         if entry.path().unwrap() == executor {
             entry.unpack(path).unwrap();
+            extracted = true;
             break;
         }
     }
+    assert!(
+        extracted,
+        "Failed to extract wasm executor from the archive"
+    );
 }
