@@ -74,6 +74,8 @@ impl TestContract for Contract {
         value
     }
 
+    /// This method will read the counter from storage, increment it
+    /// and write the incremented value to storage
     #[storage(read, write)]
     fn increment_counter(value: u64) -> u64 {
         let new_value = read::<u64>(COUNTER_KEY, 0).unwrap_or(0) + value;
