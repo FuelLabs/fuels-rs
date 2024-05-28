@@ -110,13 +110,10 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     let arg_tokens = generator.tokenized_args();
     let body = quote! {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
-            let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account).expect("Provider not set up")
-                .clone();
             ::fuels::programs::script_calls::ScriptCallHandler::new(
                 self.binary.clone(),
                 encoded_args,
                 self.account.clone(),
-                provider,
                 self.log_decoder.clone()
             )
     };
@@ -195,13 +192,10 @@ mod tests {
             pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::script_calls::ScriptCallHandler<T, ()> {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
-                 let provider = ::fuels::accounts::ViewOnlyAccount::try_provider(&self.account)
-                     .expect("Provider not set up").clone();
                  ::fuels::programs::script_calls::ScriptCallHandler::new(
                     self.binary.clone(),
                     encoded_args,
                     self.account.clone(),
-                    provider,
                     self.log_decoder.clone()
                 )
             }
