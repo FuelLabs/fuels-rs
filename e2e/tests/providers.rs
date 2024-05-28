@@ -998,7 +998,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
         provider.send_transaction(tx).await?;
     }
 
-    // Otherwise we ocasionally get `UnknownStateTransactionBytecodeRoot` in CI runs
+    // Otherwise we occasionally get `UnknownStateTransactionBytecodeRoot` in CI runs
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let mut builder =
