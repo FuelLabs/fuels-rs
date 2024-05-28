@@ -72,6 +72,7 @@ pub mod prelude {
             codec::{LogDecoder, LogId, LogResult},
             traits::Signer,
         },
+        macros::setup_program_test,
         programs::{
             call_utils::TxDependencyExtension,
             contract::{
@@ -84,7 +85,7 @@ pub mod prelude {
     };
     pub use super::{
         core::constants::*,
-        macros::{abigen, setup_program_test},
+        macros::abigen,
         tx::Receipt,
         types::{
             bech32::{Bech32Address, Bech32ContractId},
