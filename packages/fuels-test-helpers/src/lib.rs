@@ -13,7 +13,7 @@ use fuels_core::types::{
     message::{Message, MessageStatus},
 };
 pub use node_types::*;
-use rand::Fill;
+use rand::{rngs::StdRng, Fill, Rng, SeedableRng};
 use utils::{into_coin_configs, into_message_configs};
 pub use wallets_config::*;
 mod node_types;
@@ -165,6 +165,10 @@ fn testnet_chain_config() -> ChainConfig {
         consensus_parameters,
         ..ChainConfig::local_testnet()
     }
+}
+
+pub fn generate_random_salt() -> [u8; 32] {
+    StdRng::from_entropy().gen()
 }
 
 #[cfg(test)]
