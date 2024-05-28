@@ -1,10 +1,7 @@
 use std::{collections::HashSet, fmt::Debug, marker::PhantomData};
 
 use fuel_tx::{Bytes32, ContractId, Output, Receipt};
-use fuels_accounts::{
-    provider::{Provider, TransactionCost},
-    Account,
-};
+use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{DecoderConfig, LogDecoder},
     error,
@@ -82,7 +79,6 @@ pub struct ScriptCallHandler<T: Account, D> {
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
     pub account: T,
-    pub provider: Provider,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
 }
@@ -95,7 +91,6 @@ where
         script_binary: Vec<u8>,
         encoded_args: Result<Vec<u8>>,
         account: T,
-        provider: Provider,
         log_decoder: LogDecoder,
     ) -> Self {
         let script_call = ScriptCall {
@@ -111,7 +106,6 @@ where
             tx_policies: TxPolicies::default(),
             cached_tx_id: None,
             account,
-            provider,
             datatype: PhantomData,
             log_decoder,
             decoder_config: DecoderConfig::default(),
@@ -224,13 +218,14 @@ where
     /// The other field of [`FuelCallResponse`], `receipts`, contains the receipts of the transaction.
     async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
         let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(self.provider.chain_id()));
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
 
         let tx_status = if simulate {
-            self.provider.dry_run(tx).await?
+            provider.dry_run(tx).await?
         } else {
-            self.provider.send_transaction_and_await_commit(tx).await?
+            provider.send_transaction_and_await_commit(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
@@ -244,7 +239,9 @@ where
 
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
         let tx = self.build_tx().await?;
-        let tx_id = self.provider.send_transaction(tx).await?;
+        let provider = self.account.try_provider()?;
+
+        let tx_id = provider.send_transaction(tx).await?;
         self.cached_tx_id = Some(tx_id);
 
         Ok(SubmitResponse::new(tx_id, self))
@@ -268,7 +265,8 @@ where
         let tx = self.build_tx().await?;
 
         let transaction_cost = self
-            .provider
+            .account
+            .try_provider()?
             .estimate_transaction_cost(tx, tolerance, block_horizon)
             .await?;
 
