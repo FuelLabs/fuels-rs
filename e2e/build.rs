@@ -43,13 +43,13 @@ fn download_executor(path: &Path) {
     let mut archive = Archive::new(GzDecoder::new(&mut content));
 
     let mut extracted = false;
+   let executor = Path::new(&format!(
+        "fuel-core-{CORE_VERSION}-x86_64-unknown-linux-gnu"
+    ))
+    .join(EXECUTOR_FILE_NAME);
+
     for entry in archive.entries().unwrap() {
         let mut entry = entry.unwrap();
-
-        let executor = Path::new(&format!(
-            "fuel-core-{CORE_VERSION}-x86_64-unknown-linux-gnu"
-        ))
-        .join(EXECUTOR_FILE_NAME);
 
         if entry.path().unwrap() == executor {
             entry.unpack(path).unwrap();
