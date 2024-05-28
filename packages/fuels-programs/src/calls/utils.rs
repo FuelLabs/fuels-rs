@@ -22,7 +22,7 @@ use fuels_core::{
 };
 use itertools::{chain, Itertools};
 
-use crate::contract::ContractCall;
+use crate::calls::ContractCall;
 
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
@@ -533,21 +533,19 @@ mod test {
     use rand::Rng;
 
     use super::*;
-    use crate::contract::CallParameters;
+    use crate::{calls::Callable, contract::CallParameters};
 
-    impl ContractCall {
-        pub fn new_with_random_id() -> Self {
-            ContractCall {
-                contract_id: random_bech32_contract_id(),
-                encoded_args: Ok(Default::default()),
-                encoded_selector: [0; 8].to_vec(),
-                call_parameters: Default::default(),
-                variable_outputs: vec![],
-                external_contracts: Default::default(),
-                output_param: ParamType::Unit,
-                is_payable: false,
-                custom_assets: Default::default(),
-            }
+    fn new_contract_call_with_random_id() -> ContractCall {
+        ContractCall {
+            contract_id: random_bech32_contract_id(),
+            encoded_args: Ok(Default::default()),
+            encoded_selector: [0; 8].to_vec(),
+            call_parameters: Default::default(),
+            variable_outputs: vec![],
+            external_contracts: Default::default(),
+            output_param: ParamType::Unit,
+            is_payable: false,
+            custom_assets: Default::default(),
         }
     }
 
@@ -561,7 +559,7 @@ mod test {
 
     #[test]
     fn contract_input_present() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -586,9 +584,9 @@ mod test {
 
     #[test]
     fn contract_input_is_not_duplicated() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
         let call_w_same_contract =
-            ContractCall::new_with_random_id().with_contract_id(call.contract_id.clone());
+            new_contract_call_with_random_id().with_contract_id(call.contract_id.clone());
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -615,7 +613,7 @@ mod test {
 
     #[test]
     fn contract_output_present() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -636,7 +634,7 @@ mod test {
     fn external_contract_input_present() {
         // given
         let external_contract_id = random_bech32_contract_id();
-        let call = ContractCall::new_with_random_id()
+        let call = new_contract_call_with_random_id()
             .with_external_contracts(vec![external_contract_id.clone()]);
 
         let wallet = WalletUnlocked::new_random(None);
@@ -681,7 +679,7 @@ mod test {
         // given
         let external_contract_id = random_bech32_contract_id();
         let call =
-            ContractCall::new_with_random_id().with_external_contracts(vec![external_contract_id]);
+            new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -720,7 +718,7 @@ mod test {
                 Input::resource_signed(coin)
             })
             .collect();
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -754,7 +752,7 @@ mod test {
             .iter()
             .cloned()
             .map(|variable_output| {
-                ContractCall::new_with_random_id().with_variable_outputs(vec![variable_output])
+                new_contract_call_with_random_id().with_variable_outputs(vec![variable_output])
             })
             .collect::<Vec<_>>();
 
@@ -792,7 +790,7 @@ mod test {
                 .with_asset_id(asset_id)
         })
         .map(|call_parameters| {
-            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
+            new_contract_call_with_random_id().with_call_parameters(call_parameters)
         });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls, AssetId::zeroed());
@@ -809,7 +807,8 @@ mod test {
         use fuel_asm::Instruction;
         use fuels_core::types::param_types::{EnumVariants, ParamType};
 
-        use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
+        use super::new_contract_call_with_random_id;
+        use crate::calls::utils::compute_calls_instructions_len;
 
         // movi, movi, lw, movi + call (for gas)
         const BASE_INSTRUCTION_COUNT: usize = 5;
@@ -818,14 +817,14 @@ mod test {
 
         #[test]
         fn test_simple() {
-            let call = ContractCall::new_with_random_id();
+            let call = new_contract_call_with_random_id();
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(instructions_len, Instruction::SIZE * BASE_INSTRUCTION_COUNT);
         }
 
         #[test]
         fn test_with_gas_offset() {
-            let mut call = ContractCall::new_with_random_id();
+            let mut call = new_contract_call_with_random_id();
             call.call_parameters = call.call_parameters.with_gas_forwarded(0);
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
@@ -836,7 +835,7 @@ mod test {
 
         #[test]
         fn test_with_enum_with_only_non_heap_variants() {
-            let mut call = ContractCall::new_with_random_id();
+            let mut call = new_contract_call_with_random_id();
             call.output_param = ParamType::Enum {
                 name: "".to_string(),
                 enum_variants: EnumVariants::new(vec![

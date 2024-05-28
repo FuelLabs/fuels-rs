@@ -73,7 +73,7 @@ pub mod prelude {
             traits::Signer,
         },
         programs::{
-            call_utils::TxDependencyExtension,
+            calls::utils::TxDependencyExtension,
             contract::{
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
                 SettableContract, StorageConfiguration,

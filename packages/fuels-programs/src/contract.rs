@@ -3,38 +3,36 @@ use std::{
     default::Default,
     fmt::Debug,
     fs, io,
-    marker::PhantomData,
     path::{Path, PathBuf},
 };
 
-use fuel_tx::{
-    AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
-};
+use fuel_tx::{AssetId, Bytes32, Contract as FuelContract, ContractId, Receipt, Salt, StorageSlot};
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
-    codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
+    codec::{DecoderConfig, LogDecoder},
     constants::DEFAULT_CALL_PARAMS_AMOUNT,
-    traits::{Parameterize, Tokenizable},
+    traits::Tokenizable,
     types::{
-        bech32::{Bech32Address, Bech32ContractId},
+        bech32::Bech32ContractId,
         errors::{error, Result},
-        param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
-        tx_status::TxStatus,
-        Selector, Token,
+        Token,
     },
     Configurables,
 };
 
 use crate::{
-    call_response::FuelCallResponse,
-    call_utils::{
-        build_tx_from_contract_calls, new_variable_outputs, sealed,
-        transaction_builder_from_contract_calls, TxDependencyExtension,
+    call_handler::CallHandler,
+    calls::{
+        receipt_parser::ReceiptParser,
+        utils::{
+            build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls,
+            TxDependencyExtension,
+        },
+        Callable, ContractCall,
     },
-    receipt_parser::ReceiptParser,
-    submit_response::{SubmitResponse, SubmitResponseMultiple},
+    responses::{CallResponse, SubmitResponseMultiple},
 };
 
 #[derive(Debug, Clone)]
@@ -399,346 +397,6 @@ fn validate_path_and_extension(file_path: &Path, extension: &str) -> Result<()> 
 }
 
 #[derive(Debug)]
-/// Contains all data relevant to a single contract call
-pub struct ContractCall {
-    pub contract_id: Bech32ContractId,
-    pub encoded_args: Result<Vec<u8>>,
-    pub encoded_selector: Selector,
-    pub call_parameters: CallParameters,
-    pub variable_outputs: Vec<Output>,
-    pub external_contracts: Vec<Bech32ContractId>,
-    pub output_param: ParamType,
-    pub is_payable: bool,
-    pub custom_assets: HashMap<(AssetId, Option<Bech32Address>), u64>,
-}
-
-impl ContractCall {
-    pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
-        ContractCall {
-            contract_id,
-            ..self
-        }
-    }
-
-    pub fn with_external_contracts(
-        self,
-        external_contracts: Vec<Bech32ContractId>,
-    ) -> ContractCall {
-        ContractCall {
-            external_contracts,
-            ..self
-        }
-    }
-
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-        ContractCall {
-            variable_outputs,
-            ..self
-        }
-    }
-
-    pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
-        ContractCall {
-            call_parameters,
-            ..self
-        }
-    }
-
-    pub fn append_variable_outputs(&mut self, num: u64) {
-        self.variable_outputs
-            .extend(new_variable_outputs(num as usize));
-    }
-
-    pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
-        self.external_contracts.push(contract_id)
-    }
-
-    pub fn add_custom_asset(&mut self, asset_id: AssetId, amount: u64, to: Option<Bech32Address>) {
-        *self.custom_assets.entry((asset_id, to)).or_default() += amount;
-    }
-}
-
-#[derive(Debug)]
-#[must_use = "contract calls do nothing unless you `call` them"]
-/// Helper that handles submitting a call to a client and formatting the response
-pub struct ContractCallHandler<T: Account, D> {
-    pub contract_call: ContractCall,
-    pub tx_policies: TxPolicies,
-    decoder_config: DecoderConfig,
-    // Initially `None`, gets set to the right tx id after the transaction is submitted
-    cached_tx_id: Option<Bytes32>,
-    pub account: T,
-    pub datatype: PhantomData<D>,
-    pub log_decoder: LogDecoder,
-}
-
-impl<T, D> ContractCallHandler<T, D>
-where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug,
-{
-    /// Sets external contracts as dependencies to this contract's call.
-    /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contract_ids(&[another_contract_id]).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
-        self.contract_call.external_contracts = contract_ids.to_vec();
-        self
-    }
-
-    /// Sets external contract instances as dependencies to this contract's call.
-    /// Effectively, this will be used to: merge `LogDecoder`s and create
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`] pairs and set them into the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).with_contracts(&[another_contract_instance]).call()
-    /// ```
-    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
-        self.contract_call.external_contracts = contracts.iter().map(|c| c.id()).collect();
-        for c in contracts {
-            self.log_decoder.merge(c.log_decoder());
-        }
-        self
-    }
-
-    /// Adds a custom `asset_id` with its `amount` and an optional `address` to be used for
-    /// generating outputs to this contract's call.
-    ///
-    /// # Parameters
-    /// - `asset_id`: The unique identifier of the asset being added.
-    /// - `amount`: The amount of the asset being added.
-    /// - `address`: The optional account address that the output amount will be sent to.
-    ///              If not provided, the asset will be sent to the users account address.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// let asset_id = AssetId::from([3u8; 32]);
-    /// let amount = 5000;
-    /// my_contract_instance.my_method(...).add_custom_asset(asset_id, amount, None).call()
-    /// ```
-    pub fn add_custom_asset(
-        mut self,
-        asset_id: AssetId,
-        amount: u64,
-        to: Option<Bech32Address>,
-    ) -> Self {
-        self.contract_call.add_custom_asset(asset_id, amount, to);
-        self
-    }
-
-    pub fn is_payable(&self) -> bool {
-        self.contract_call.is_payable
-    }
-
-    /// Sets the transaction policies for a given transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// ```ignore
-    /// let tx_policies = TxPolicies::default().with_gas_price(100);
-    /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
-    /// ```
-    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-        self
-    }
-
-    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
-        self.decoder_config = decoder_config;
-        self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    /// Sets the call parameters for a given contract call.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// let params = CallParameters { amount: 1, asset_id: AssetId::zeroed() };
-    /// my_contract_instance.my_method(...).call_params(params).call()
-    /// ```
-    pub fn call_params(mut self, params: CallParameters) -> Result<Self> {
-        if !self.is_payable() && params.amount > 0 {
-            return Err(error!(Other, "assets forwarded to non-payable method"));
-        }
-        self.contract_call.call_parameters = params;
-        Ok(self)
-    }
-
-    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        transaction_builder_from_contract_calls(
-            std::slice::from_ref(&self.contract_call),
-            self.tx_policies,
-            &self.account,
-        )
-        .await
-    }
-
-    /// Returns the script that executes the contract call
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        build_tx_from_contract_calls(
-            std::slice::from_ref(&self.contract_call),
-            self.tx_policies,
-            &self.account,
-        )
-        .await
-    }
-
-    /// Call a contract's method on the node, in a state-modifying manner.
-    pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
-    }
-
-    pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let tx_id = provider.send_transaction(tx.clone()).await?;
-        self.cached_tx_id = Some(tx_id);
-
-        Ok(SubmitResponse::new(tx_id, self))
-    }
-
-    /// Call a contract's method on the node, in a simulated manner, meaning the state of the
-    /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
-        } else {
-            provider.send_transaction_and_await_commit(tx).await?
-        };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
-    /// Get a contract's estimated cost
-    pub async fn estimate_transaction_cost(
-        &self,
-        tolerance: Option<f64>,
-        block_horizon: Option<u32>,
-    ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance, block_horizon)
-            .await?;
-
-        Ok(transaction_cost)
-    }
-
-    /// Create a [`FuelCallResponse`] from call receipts
-    pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts, self.decoder_config)
-            .parse_call(&self.contract_call.contract_id, &D::param_type())?;
-
-        Ok(FuelCallResponse::new(
-            D::from_token(token)?,
-            receipts,
-            self.log_decoder.clone(),
-            self.cached_tx_id,
-        ))
-    }
-
-    /// Create a [`FuelCallResponse`] from `TxStatus`
-    pub fn get_response_from(&self, tx_status: TxStatus) -> Result<FuelCallResponse<D>> {
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-}
-
-impl<T: Account, D> sealed::Sealed for ContractCallHandler<T, D> {}
-
-#[async_trait::async_trait]
-impl<T, D> TxDependencyExtension for ContractCallHandler<T, D>
-where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug + Send + Sync,
-{
-    async fn simulate(&mut self) -> Result<()> {
-        self.simulate().await?;
-        Ok(())
-    }
-
-    fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_variable_outputs(num);
-        self
-    }
-
-    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.contract_call.append_external_contracts(contract_id);
-        self
-    }
-}
-
-/// Creates an ABI call based on a function [selector](Selector) and
-/// the encoding of its call arguments, which is a slice of [`Token`]s.
-/// It returns a prepared [`ContractCall`] that can further be used to
-/// make the actual transaction.
-/// This method is the underlying implementation of the functions
-/// generated from an ABI JSON spec, i.e, this is what's generated:
-///
-/// ```ignore
-/// quote! {
-///     #doc
-///     pub fn #name(&self #input) -> #result {
-///         contract::method_hash(#tokenized_signature, #arg)
-///     }
-/// }
-/// ```
-///
-/// For more details see `code_gen` in `fuels-core`.
-///
-/// Note that this needs an account because the contract instance needs an account for the calls
-pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
-    contract_id: Bech32ContractId,
-    account: T,
-    encoded_selector: Selector,
-    args: &[Token],
-    log_decoder: LogDecoder,
-    is_payable: bool,
-    encoder_config: EncoderConfig,
-) -> ContractCallHandler<T, D> {
-    let contract_call = ContractCall {
-        contract_id,
-        encoded_selector,
-        encoded_args: ABIEncoder::new(encoder_config).encode(args),
-        call_parameters: CallParameters::default(),
-        variable_outputs: vec![],
-        external_contracts: vec![],
-        output_param: D::param_type(),
-        is_payable,
-        custom_assets: Default::default(),
-    };
-
-    ContractCallHandler {
-        contract_call,
-        tx_policies: TxPolicies::default(),
-        cached_tx_id: None,
-        account,
-        datatype: PhantomData,
-        log_decoder,
-        decoder_config: DecoderConfig::default(),
-    }
-}
-
-#[derive(Debug)]
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles bundling multiple calls into a single transaction
 pub struct MultiContractCallHandler<T: Account> {
@@ -766,6 +424,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub fn with_decoder_config(&mut self, decoder_config: DecoderConfig) -> &mut Self {
         self.decoder_config = decoder_config;
         self.log_decoder.set_decoder_config(decoder_config);
+
         self
     }
 
@@ -773,10 +432,11 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// Note that this is a builder method
     pub fn add_call(
         &mut self,
-        call_handler: ContractCallHandler<impl Account, impl Tokenizable>,
+        call_handler: CallHandler<impl Account, impl Tokenizable, ContractCall>,
     ) -> &mut Self {
         self.log_decoder.merge(call_handler.log_decoder);
-        self.contract_calls.push(call_handler.contract_call);
+        self.contract_calls.push(call_handler.call);
+
         self
     }
 
@@ -784,6 +444,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// Note that this is a builder method
     pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.tx_policies = tx_policies;
+
         self
     }
 
@@ -817,7 +478,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
-    pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
+    pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<CallResponse<D>> {
         self.call_or_simulate(false).await
     }
 
@@ -836,14 +497,14 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// It is the same as the [call] method because the API is more user-friendly this way.
     ///
     /// [call]: Self::call
-    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<CallResponse<D>> {
         self.call_or_simulate(true).await
     }
 
     async fn call_or_simulate<D: Tokenizable + Debug>(
         &mut self,
         simulate: bool,
-    ) -> Result<FuelCallResponse<D>> {
+    ) -> Result<CallResponse<D>> {
         let tx = self.build_tx().await?;
         let provider = self.account.try_provider()?;
 
@@ -891,7 +552,7 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         receipts: Vec<Receipt>,
-    ) -> Result<FuelCallResponse<D>> {
+    ) -> Result<CallResponse<D>> {
         let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
 
         let final_tokens = self
@@ -901,7 +562,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             .collect::<Result<Vec<_>>>()?;
 
         let tokens_as_tuple = Token::Tuple(final_tokens);
-        let response = FuelCallResponse::<D>::new(
+        let response = CallResponse::<D>::new(
             D::from_token(tokens_as_tuple)?,
             receipts,
             self.log_decoder.clone(),
@@ -937,7 +598,7 @@ where
         self.contract_calls
             .iter_mut()
             .take(1)
-            .for_each(|call| call.append_external_contracts(contract_id.clone()));
+            .for_each(|call| call.append_contract(contract_id.clone()));
         self
     }
 }

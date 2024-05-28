@@ -148,9 +148,6 @@ fn expand_functions(functions: &[FullABIFunction]) -> Result<TokenStream> {
 /// Transforms a function defined in [`FullABIFunction`] into a [`TokenStream`]
 /// that represents that same function signature as a Rust-native function
 /// declaration.
-///
-/// The generated function prepares the necessary data and proceeds to call
-/// [::fuels_contract::contract::method_hash] for the actual call.
 pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
     let mut generator = FunctionGenerator::new(abi_fun)?;
 
@@ -158,14 +155,14 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
 
     let original_output = generator.output_type();
     generator.set_output_type(
-        quote! {::fuels::programs::contract::ContractCallHandler<T, #original_output> },
+        quote! {::fuels::programs::call_handler::CallHandler<T, #original_output, ::fuels::programs::calls::ContractCall> },
     );
 
     let fn_selector = generator.fn_selector();
     let arg_tokens = generator.tokenized_args();
     let is_payable = abi_fun.is_payable();
     let body = quote! {
-            ::fuels::programs::contract::method_hash(
+            ::fuels::programs::call_handler::CallHandler::new_contract_call(
                 self.contract_id.clone(),
                 self.account.clone(),
                 #fn_selector,
@@ -361,7 +358,7 @@ mod tests {
                 &self,
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
-            ) -> ::fuels::programs::contract::ContractCallHandler<T, self::MyStruct1> {
+            ) -> ::fuels::programs::call_handler::CallHandler<T, self::MyStruct1, ::fuels::programs::calls::ContractCall> {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
@@ -421,7 +418,7 @@ mod tests {
 
         let expected = quote! {
             #[doc = "This is a doc string"]
-            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::contract::ContractCallHandler<T, ()> {
+            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::call_handler::CallHandler<T, (), ::fuels::programs::calls::ContractCall> {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
@@ -538,7 +535,7 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
-            ) -> ::fuels::programs::contract::ContractCallHandler<T, self::EntropyCirclesEnum> {
+            ) -> ::fuels::programs::call_handler::CallHandler<T, self::EntropyCirclesEnum, ::fuels::programs::calls::ContractCall> {
                 ::fuels::programs::contract::method_hash(
                     self.contract_id.clone(),
                     self.account.clone(),
