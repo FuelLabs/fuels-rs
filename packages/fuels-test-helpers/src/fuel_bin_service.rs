@@ -84,6 +84,9 @@ impl ExtendedConfig {
             .map(|(_, arg)| arg.to_string()),
         );
 
+        // TODO
+        //args.push("--min-gas-price=1".to_string());
+
         Ok(args)
     }
 

@@ -314,9 +314,11 @@ impl Contract {
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
 
+        dbg!("passed adjust for fee");
         let provider = account.try_provider()?;
 
         let tx = tb.build(provider).await?;
+        dbg!(&tx);
 
         provider
             .send_transaction_and_await_commit(tx)

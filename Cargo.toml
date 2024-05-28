@@ -37,7 +37,7 @@ homepage = "https://fuel.network/"
 readme = "README.md"
 license = "Apache-2.0"
 repository = "https://github.com/FuelLabs/fuels-rs"
-rust-version = "1.76.0"
+rust-version = "1.75.0"
 version = "0.62.0"
 
 [workspace.dependencies]
@@ -77,12 +77,12 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.26.0", default-features = false }
-fuel-core-chain-config = { version = "0.26.0", default-features = false }
-fuel-core-client = { version = "0.26.0", default-features = false }
-fuel-core-poa = { version = "0.26.0", default-features = false }
-fuel-core-services = { version = "0.26.0", default-features = false }
-fuel-core-types = { version = "0.26.0", default-features = false }
+fuel-core = { path = "../fuel/fuel-core/crates/fuel-core", default-features = false }
+fuel-core-chain-config = { path = "../fuel/fuel-core/crates/chain-config", default-features = false }
+fuel-core-client = { path = "../fuel/fuel-core/crates/client", default-features = false }
+fuel-core-poa = { path = "../fuel/fuel-core/crates/services/consensus_module/poa", default-features = false }
+fuel-core-services = { path = "../fuel/fuel-core/crates/services", default-features = false }
+fuel-core-types = { path = "../fuel/fuel-core/crates/types", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.49.0" }

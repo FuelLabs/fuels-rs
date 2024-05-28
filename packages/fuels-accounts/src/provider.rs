@@ -284,7 +284,11 @@ impl Provider {
     pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
         let [tx_status] = self
             .client
-            .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
+            .dry_run_opt(
+                Transactions::new().insert(tx).as_slice(),
+                Some(false),
+                Some(0),
+            )
             .await?
             .into_iter()
             .map(Into::into)
@@ -301,7 +305,7 @@ impl Provider {
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .client
-            .dry_run_opt(transactions.as_slice(), Some(false))
+            .dry_run_opt(transactions.as_slice(), Some(false), Some(0))
             .await?
             .into_iter()
             .map(|execution_status| (execution_status.id, execution_status.into()))
@@ -679,7 +683,7 @@ impl DryRunner for Provider {
     async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
         let [tx_execution_status] = self
             .client
-            .dry_run_opt(&vec![tx], Some(false))
+            .dry_run_opt(&vec![tx], Some(false), Some(0))
             .await?
             .try_into()
             .expect("should have only one element");
