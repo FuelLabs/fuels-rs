@@ -644,10 +644,8 @@ where
 
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<FuelCallResponse<D>> {
-        let token = ReceiptParser::new(&receipts, self.decoder_config).parse_call(
-            &self.contract_call.contract_id,
-            &self.contract_call.output_param,
-        )?;
+        let token = ReceiptParser::new(&receipts, self.decoder_config)
+            .parse_call(&self.contract_call.contract_id, &D::param_type())?;
 
         Ok(FuelCallResponse::new(
             D::from_token(token)?,
