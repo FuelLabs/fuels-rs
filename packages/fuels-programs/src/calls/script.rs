@@ -8,7 +8,7 @@ use fuels_core::types::{
 };
 use itertools::chain;
 
-use crate::calls::utils::{generate_contract_inputs, generate_contract_outputs};
+use crate::calls::utils::{generate_contract_inputs, generate_contract_outputs, sealed};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single script call
@@ -63,3 +63,5 @@ impl ScriptCall {
             .map_err(|e| error!(Codec, "cannot encode script call arguments: {e}"))
     }
 }
+
+impl sealed::Sealed for ScriptCall {}

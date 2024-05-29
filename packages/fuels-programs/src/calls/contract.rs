@@ -8,7 +8,7 @@ use fuels_core::types::{
     Selector,
 };
 
-use crate::contract::CallParameters;
+use crate::{calls::utils::sealed, contract::CallParameters};
 
 #[derive(Debug, Clone)]
 /// Contains all data relevant to a single contract call
@@ -50,3 +50,5 @@ impl ContractCall {
         *self.custom_assets.entry((asset_id, to)).or_default() += amount;
     }
 }
+
+impl sealed::Sealed for ContractCall {}

@@ -19,8 +19,10 @@ use fuels_core::{
 
 use crate::{
     calls::{
-        utils::{sealed, TxDependencyExtension},
-        Callable, ContractCall, ScriptCall,
+        receipt_parser::ReceiptParser,
+        traits::{Buildable, Extendable, Parsable},
+        utils::sealed,
+        ContractCall, ScriptCall, TxDependencyExtension,
     },
     contract::{CallParameters, SettableContract},
     responses::{CallResponse, SubmitResponse},
@@ -30,21 +32,74 @@ use crate::{
 #[must_use = "contract calls do nothing unless you `call` them"]
 /// Helper that handles submitting a call to a client and formatting the response
 pub struct CallHandler<T, D, C> {
+    pub account: T,
     pub call: C,
     pub tx_policies: TxPolicies,
+    pub log_decoder: LogDecoder,
+    pub datatype: PhantomData<D>,
     decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
-    pub account: T,
-    pub datatype: PhantomData<D>,
-    pub log_decoder: LogDecoder,
+}
+
+impl<T, D, C> CallHandler<T, D, C> {
+    /// Sets the transaction policies for a given transaction.
+    /// Note that this is a builder method, i.e. use it as a chain:
+    /// ```ignore
+    /// let tx_policies = TxPolicies::default().with_gas_price(100);
+    /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
+    /// ```
+    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
+        self.tx_policies = tx_policies;
+        self
+    }
+
+    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
+        self.decoder_config = decoder_config;
+        self.log_decoder.set_decoder_config(decoder_config);
+        self
+    }
 }
 
 impl<T, D, C> CallHandler<T, D, C>
 where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
-    C: Callable,
+    C: Buildable,
+{
+    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
+        self.call
+            .transaction_builder(self.tx_policies, &self.account)
+            .await
+    }
+
+    /// Returns the script that executes the contract call
+    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
+        self.call.build_tx(self.tx_policies, &self.account).await
+    }
+
+    /// Get a call's estimated cost
+    pub async fn estimate_transaction_cost(
+        &self,
+        tolerance: Option<f64>,
+        block_horizon: Option<u32>,
+    ) -> Result<TransactionCost> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        let transaction_cost = provider
+            .estimate_transaction_cost(tx, tolerance, block_horizon)
+            .await?;
+
+        Ok(transaction_cost)
+    }
+}
+
+impl<T, D, C> CallHandler<T, D, C>
+where
+    T: Account,
+    D: Tokenizable + Parameterize + Debug,
+    C: Extendable + Buildable + Parsable,
 {
     /// Sets external contracts as dependencies to this contract's call.
     /// Effectively, this will be used to create [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
@@ -80,34 +135,6 @@ where
         self
     }
 
-    /// Sets the transaction policies for a given transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    /// ```ignore
-    /// let tx_policies = TxPolicies::default().with_gas_price(100);
-    /// my_contract_instance.my_method(...).with_tx_policies(tx_policies).call()
-    /// ```
-    pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
-        self.tx_policies = tx_policies;
-        self
-    }
-
-    pub fn with_decoder_config(mut self, decoder_config: DecoderConfig) -> Self {
-        self.decoder_config = decoder_config;
-        self.log_decoder.set_decoder_config(decoder_config);
-        self
-    }
-
-    pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
-        self.call
-            .transaction_builder(self.tx_policies, &self.account)
-            .await
-    }
-
-    /// Returns the script that executes the contract call
-    pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        self.call.build_tx(self.tx_policies, &self.account).await
-    }
-
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<CallResponse<D>> {
         self.call_or_simulate(false).await
@@ -120,7 +147,7 @@ where
         let tx_id = provider.send_transaction(tx.clone()).await?;
         self.cached_tx_id = Some(tx_id);
 
-        Ok(SubmitResponse::new(tx_id, self))
+        Ok(SubmitResponse::<T, D, C>::new(tx_id, self))
     }
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
@@ -145,27 +172,11 @@ where
         self.get_response(receipts)
     }
 
-    /// Get a contract's estimated cost
-    pub async fn estimate_transaction_cost(
-        &self,
-        tolerance: Option<f64>,
-        block_horizon: Option<u32>,
-    ) -> Result<TransactionCost> {
-        let script = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        let transaction_cost = provider
-            .estimate_transaction_cost(script, tolerance, block_horizon)
-            .await?;
-
-        Ok(transaction_cost)
-    }
-
     /// Create a [`FuelCallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>> {
         let token = self
             .call
-            .parse_token(&receipts, self.decoder_config, &D::param_type())?;
+            .parse_call(&receipts, self.decoder_config, &D::param_type())?;
 
         Ok(CallResponse::new(
             D::from_token(token)?,
@@ -209,13 +220,13 @@ where
             custom_assets: Default::default(),
         };
         CallHandler {
+            account,
             call,
             tx_policies: TxPolicies::default(),
-            cached_tx_id: None,
-            account,
-            datatype: PhantomData,
             log_decoder,
+            datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
+            cached_tx_id: None,
         }
     }
 
@@ -286,13 +297,13 @@ where
         };
 
         Self {
+            account,
             call,
             tx_policies: TxPolicies::default(),
-            cached_tx_id: None,
-            account,
-            datatype: PhantomData,
             log_decoder,
+            datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
+            cached_tx_id: None,
         }
     }
 
@@ -314,7 +325,7 @@ impl<T, D, C> TxDependencyExtension for CallHandler<T, D, C>
 where
     T: Account,
     D: Tokenizable + Parameterize + Debug + Send + Sync,
-    C: Callable + Send + Sync,
+    C: Extendable + Buildable + Parsable + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
         self.simulate().await?;
@@ -330,6 +341,143 @@ where
 
     fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
         self.call.append_contract(contract_id);
+
+        self
+    }
+}
+
+impl<T> CallHandler<T, (), Vec<ContractCall>>
+where
+    T: Account,
+{
+    pub fn new_multi_call(account: T) -> Self {
+        Self {
+            account,
+            call: vec![],
+            tx_policies: TxPolicies::default(),
+            log_decoder: LogDecoder::new(Default::default()),
+            datatype: PhantomData,
+            decoder_config: DecoderConfig::default(),
+            cached_tx_id: None,
+        }
+    }
+
+    /// Adds a contract call to be bundled in the transaction
+    /// Note that this is a builder method
+    pub fn add_call(
+        mut self,
+        call_handler: CallHandler<impl Account, impl Tokenizable, ContractCall>,
+    ) -> Self {
+        self.log_decoder.merge(call_handler.log_decoder);
+        self.call.push(call_handler.call);
+
+        self
+    }
+
+    /// Call contract methods on the node, in a state-modifying manner.
+    pub async fn call<D: Tokenizable + Debug>(mut self) -> Result<CallResponse<D>> {
+        self.call_or_simulate(false).await
+    }
+
+    pub async fn submit(mut self) -> Result<SubmitResponse<T, (), Vec<ContractCall>>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        let tx_id = provider.send_transaction(tx).await?;
+        self.cached_tx_id = Some(tx_id);
+
+        Ok(SubmitResponse::<T, (), Vec<ContractCall>>::new(tx_id, self))
+    }
+
+    /// Call contract methods on the node, in a simulated manner, meaning the state of the
+    /// blockchain is *not* modified but simulated.
+    /// It is the same as the [call] method because the API is more user-friendly this way.
+    ///
+    /// [call]: Self::call
+    pub async fn simulate<D: Tokenizable + Debug>(&mut self) -> Result<CallResponse<D>> {
+        self.call_or_simulate(true).await
+    }
+
+    async fn call_or_simulate<D: Tokenizable + Debug>(
+        &mut self,
+        simulate: bool,
+    ) -> Result<CallResponse<D>> {
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
+        let tx_status = if simulate {
+            provider.dry_run(tx).await?
+        } else {
+            provider.send_transaction_and_await_commit(tx).await?
+        };
+
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
+    }
+
+    /// Simulates a call without needing to resolve the generic for the return type
+    async fn simulate_without_decode(&self) -> Result<()> {
+        let provider = self.account.try_provider()?;
+        let tx = self.build_tx().await?;
+
+        provider.dry_run(tx).await?.check(None)?;
+
+        Ok(())
+    }
+
+    /// Create a [`FuelCallResponse`] from call receipts
+    pub fn get_response<D: Tokenizable + Debug>(
+        &self,
+        receipts: Vec<Receipt>,
+    ) -> Result<CallResponse<D>> {
+        let mut receipt_parser = ReceiptParser::new(&receipts, self.decoder_config);
+
+        let final_tokens = self
+            .call
+            .iter()
+            .map(|call| receipt_parser.parse_call(&call.contract_id, &call.output_param))
+            .collect::<Result<Vec<_>>>()?;
+
+        let tokens_as_tuple = Token::Tuple(final_tokens);
+        let response = CallResponse::<D>::new(
+            D::from_token(tokens_as_tuple)?,
+            receipts,
+            self.log_decoder.clone(),
+            self.cached_tx_id,
+        );
+
+        Ok(response)
+    }
+}
+
+#[async_trait::async_trait]
+impl<T> TxDependencyExtension for CallHandler<T, (), Vec<ContractCall>>
+where
+    T: Account,
+{
+    async fn simulate(&mut self) -> Result<()> {
+        self.simulate_without_decode().await?;
+
+        Ok(())
+    }
+
+    fn append_variable_outputs(mut self, num: u64) -> Self {
+        self.call
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_variable_outputs(num));
+
+        self
+    }
+
+    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.call
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_contract(contract_id.clone()));
 
         self
     }

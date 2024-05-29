@@ -1,0 +1,114 @@
+use fuels_accounts::Account;
+use fuels_core::types::{
+    errors::{error, Result},
+    transaction::{ScriptTransaction, TxPolicies},
+    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
+};
+
+use crate::calls::{
+    utils::{build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls},
+    ContractCall, ScriptCall,
+};
+
+#[async_trait::async_trait]
+pub trait Buildable: sealed::Sealed {
+    async fn transaction_builder<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransactionBuilder>;
+
+    async fn build_tx<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransaction>;
+}
+
+#[async_trait::async_trait]
+impl Buildable for ContractCall {
+    async fn transaction_builder<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransactionBuilder> {
+        transaction_builder_from_contract_calls(std::slice::from_ref(self), tx_policies, account)
+            .await
+    }
+
+    async fn build_tx<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransaction> {
+        build_tx_from_contract_calls(std::slice::from_ref(self), tx_policies, account).await
+    }
+}
+
+#[async_trait::async_trait]
+impl Buildable for ScriptCall {
+    async fn transaction_builder<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        _account: &T,
+    ) -> Result<ScriptTransactionBuilder> {
+        let (inputs, outputs) = self.prepare_inputs_outputs()?;
+
+        Ok(ScriptTransactionBuilder::default()
+            .with_tx_policies(tx_policies)
+            .with_script(self.script_binary.clone())
+            .with_script_data(self.compute_script_data()?)
+            .with_inputs(inputs)
+            .with_outputs(outputs))
+    }
+
+    async fn build_tx<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransaction> {
+        let mut tb = self.transaction_builder(tx_policies, account).await?;
+
+        account.add_witnesses(&mut tb)?;
+        account.adjust_for_fee(&mut tb, 0).await?;
+
+        tb.build(account.try_provider()?).await
+    }
+}
+
+impl sealed::Sealed for Vec<ContractCall> {}
+
+#[async_trait::async_trait]
+impl Buildable for Vec<ContractCall> {
+    async fn transaction_builder<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransactionBuilder> {
+        validate_contract_calls(self)?;
+
+        transaction_builder_from_contract_calls(self, tx_policies, account).await
+    }
+
+    /// Returns the script that executes the contract calls
+    async fn build_tx<T: Account>(
+        &self,
+        tx_policies: TxPolicies,
+        account: &T,
+    ) -> Result<ScriptTransaction> {
+        validate_contract_calls(self)?;
+
+        build_tx_from_contract_calls(self, tx_policies, account).await
+    }
+}
+
+fn validate_contract_calls(calls: &[ContractCall]) -> Result<()> {
+    if calls.is_empty() {
+        return Err(error!(
+            Other,
+            "no calls added. Have you used '.add_calls()'?"
+        ));
+    }
+
+    Ok(())
+}

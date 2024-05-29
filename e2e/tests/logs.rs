@@ -269,9 +269,7 @@ async fn test_multi_call_log_single_contract() -> Result<()> {
     let call_handler_1 = contract_methods.produce_logs_values();
     let call_handler_2 = contract_methods.produce_logs_variables();
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -322,9 +320,7 @@ async fn test_multi_call_log_multiple_contracts() -> Result<()> {
     let call_handler_1 = contract_instance.methods().produce_logs_values();
     let call_handler_2 = contract_instance2.methods().produce_logs_variables();
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -394,9 +390,7 @@ async fn test_multi_call_contract_with_contract_logs() -> Result<()> {
         .logs_from_external_contract(contract_id)
         .with_contracts(&[&contract_instance]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -498,9 +492,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         let call_handler_1 = contract_methods.require_string();
         let call_handler_2 = contract_methods.require_custom_generic();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -522,9 +514,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
         let call_handler_1 = contract_methods.require_custom_generic();
         let call_handler_2 = contract_methods.require_string();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -575,9 +565,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         let call_handler_1 = contract_methods.require_string();
         let call_handler_2 = contract_methods2.require_custom_generic();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -599,9 +587,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
         let call_handler_1 = contract_methods2.require_custom_generic();
         let call_handler_2 = contract_methods.require_string();
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let mut multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -1030,9 +1016,7 @@ async fn test_multi_call_contract_require_from_contract() -> Result<()> {
         .require_from_contract(contract_id)
         .with_contracts(&[&lib_contract_instance]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -1412,7 +1396,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     }
     {
         // Multi call: decoding with too low max_tokens will fail
-        let response = MultiContractCallHandler::new(wallet.clone())
+        let response = CallHandler::new_multi_call(wallet.clone())
             .add_call(methods.i_log_a_1k_el_array())
             .with_decoder_config(DecoderConfig {
                 max_tokens: 100,
@@ -1430,7 +1414,7 @@ async fn can_configure_decoder_for_contract_log_decoding() -> Result<()> {
     }
     {
         // Multi call: increasing limits makes the test pass
-        let response = MultiContractCallHandler::new(wallet.clone())
+        let response = CallHandler::new_multi_call(wallet.clone())
             .add_call(methods.i_log_a_1k_el_array())
             .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,

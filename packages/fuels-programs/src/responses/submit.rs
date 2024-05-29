@@ -8,7 +8,11 @@ use fuels_core::{
 };
 
 use crate::{
-    call_handler::CallHandler, calls::Callable, contract::MultiContractCallHandler,
+    call_handler::CallHandler,
+    calls::{
+        traits::{Buildable, Extendable, Parsable},
+        ContractCall,
+    },
     responses::CallResponse,
 };
 
@@ -40,7 +44,7 @@ impl<T, D, C> SubmitResponse<T, D, C>
 where
     T: Account,
     D: Tokenizable + Parameterize + Debug,
-    C: Callable,
+    C: Extendable + Buildable + Parsable,
 {
     pub fn new(tx_id: Bytes32, call_handler: CallHandler<T, D, C>) -> Self {
         Self {
@@ -65,17 +69,8 @@ where
 }
 
 /// Represents the response of a submitted transaction with multiple contract calls.
-///
-/// This struct is similar to `SubmitResponse` but is designed to handle transactions
-/// with multiple contract calls.
-#[derive(Debug)]
-pub struct SubmitResponseMultiple<T: Account> {
-    tx_id: Bytes32,
-    call_handler: MultiContractCallHandler<T>,
-}
-
-impl<T: Account> SubmitResponseMultiple<T> {
-    pub fn new(tx_id: Bytes32, call_handler: MultiContractCallHandler<T>) -> Self {
+impl<T: Account> SubmitResponse<T, (), Vec<ContractCall>> {
+    pub fn new(tx_id: Bytes32, call_handler: CallHandler<T, (), Vec<ContractCall>>) -> Self {
         Self {
             tx_id,
             call_handler,
