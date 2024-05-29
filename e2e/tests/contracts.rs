@@ -1,3 +1,4 @@
+use fuel_tx::ConsensusParameters;
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
@@ -1867,6 +1868,35 @@ async fn msg_sender_gas_estimation_issue() {
         .methods()
         .message_sender()
         .call_params(call_params)
+        .unwrap()
+        .call()
+        .await
+        .unwrap();
+}
+
+#[tokio::test]
+async fn variable_output_estimation_is_optimized() {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/var_outputs"
+        )),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let coins = 250;
+    let recipient = Identity::Address(wallet.address().into());
+    let resp = contract_methods
+        .mint(coins, recipient)
+        .estimate_tx_dependencies(Some(250))
+        .await
         .unwrap()
         .call()
         .await
