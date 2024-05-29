@@ -73,11 +73,8 @@ pub mod prelude {
             traits::Signer,
         },
         programs::{
-            call_handler::CallHandler,
-            calls::TxDependencyExtension,
-            contract::{
-                CallParameters, Contract, LoadConfiguration, SettableContract, StorageConfiguration,
-            },
+            calls::{CallHandler, CallParameters, SettableContract, TxDependencyExtension},
+            contract::{Contract, LoadConfiguration, StorageConfiguration},
         },
         test_helpers::*,
         types::transaction_builders::*,

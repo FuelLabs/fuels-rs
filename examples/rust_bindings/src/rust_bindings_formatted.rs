@@ -93,7 +93,7 @@ pub mod abigen_bindings {
                 )
             }
         }
-        impl<T: Account> contract::SettableContract for MyContract<T> {
+        impl<T: Account> calls::SettableContract for MyContract<T> {
             fn id(&self) -> Bech32ContractId {
                 self.contract_id.clone()
             }

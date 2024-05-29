@@ -15,7 +15,7 @@ Once you unwrap the `FuelCallResponse`, you have access to this struct:
 <!-- call_resp:example:end -->
 
 ```rust,ignore
-{{#include ../../../packages/fuels-programs/src/call_response.rs:fuel_call_response}}
+{{#include ../../../packages/fuels-programs/src/responses/call.rs:call_response}}
 ```
 
 <!-- This section should explain the fields of the `FuelCallResponse` struct -->

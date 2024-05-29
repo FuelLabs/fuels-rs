@@ -11,7 +11,7 @@ use fuels_core::{
 /// field holds the decoded typed value returned by the contract's method. The other field holds all
 /// the receipts returned by the call.
 #[derive(Debug)]
-// ANCHOR: fuel_call_response
+// ANCHOR: call_response
 pub struct CallResponse<D> {
     pub value: D,
     pub receipts: Vec<Receipt>,
@@ -19,7 +19,7 @@ pub struct CallResponse<D> {
     pub log_decoder: LogDecoder,
     pub tx_id: Option<Bytes32>,
 }
-// ANCHOR_END: fuel_call_response
+// ANCHOR_END: call_response
 
 impl<D> CallResponse<D> {
     /// Get the gas used from ScriptResult receipt

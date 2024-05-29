@@ -111,7 +111,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     let original_output_type = generator.output_type();
     let body = quote! {
             let encoded_args = ::fuels::core::codec::ABIEncoder::new(self.encoder_config).encode(&#arg_tokens);
-            ::fuels::programs::call_handler::CallHandler::new_script_call(
+            ::fuels::programs::calls::CallHandler::new_script_call(
                 self.binary.clone(),
                 encoded_args,
                 self.account.clone(),
@@ -120,7 +120,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     };
 
     generator
-        .set_output_type(quote! {::fuels::programs::call_handler::CallHandler<T, #original_output_type, ::fuels::programs::calls::ScriptCall> })
+        .set_output_type(quote! {::fuels::programs::calls::CallHandler<T, #original_output_type, ::fuels::programs::calls::ScriptCall> })
         .set_docs(fn_abi.doc_strings()?)
         .set_body(body);
 
@@ -186,10 +186,10 @@ mod tests {
         let expected = quote! {
             #[doc = "This is a doc string"]
             #[doc = "This is another doc string"]
-            pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::call_handler::CallHandler<T, (), ::fuels::programs::call::ScriptCall> {
+            pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<T, (), ::fuels::programs::calls::ScriptCall> {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
-                 ::fuels::programs::call_handler::CallHandler::new_script_call(
+                 ::fuels::programs::calls::CallHandler::new_script_call(
                     self.binary.clone(),
                     encoded_args,
                     self.account.clone(),

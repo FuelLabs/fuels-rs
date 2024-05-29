@@ -22,11 +22,17 @@ use crate::{
         receipt_parser::ReceiptParser,
         traits::{Buildable, Extendable, Parsable},
         utils::sealed,
-        ContractCall, ScriptCall, TxDependencyExtension,
+        CallParameters, ContractCall, ScriptCall, TxDependencyExtension,
     },
-    contract::{CallParameters, SettableContract},
     responses::{CallResponse, SubmitResponse},
 };
+
+// Trait implemented by contract instances so that
+// they can be passed to the `with_contracts` method
+pub trait SettableContract {
+    fn id(&self) -> Bech32ContractId;
+    fn log_decoder(&self) -> LogDecoder;
+}
 
 #[derive(Debug, Clone)]
 #[must_use = "contract calls do nothing unless you `call` them"]

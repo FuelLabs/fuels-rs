@@ -8,10 +8,9 @@ use fuels_core::{
 };
 
 use crate::{
-    call_handler::CallHandler,
     calls::{
         traits::{Buildable, Extendable, Parsable},
-        ContractCall,
+        CallHandler, ContractCall,
     },
     responses::CallResponse,
 };
