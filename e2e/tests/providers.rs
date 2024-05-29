@@ -965,11 +965,11 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     let mut wallet = WalletUnlocked::new_random(None);
 
     // Need more coins to avoid "not enough coins to fit the target"
-    let coin_amount = 100;
+    let num_coins = 100;
     let coins = setup_single_asset_coins(
         wallet.address(),
         AssetId::zeroed(),
-        coin_amount,
+       num_coins,
         DEFAULT_COIN_AMOUNT,
     );
 
