@@ -969,7 +969,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     let coins = setup_single_asset_coins(
         wallet.address(),
         AssetId::zeroed(),
-       num_coins,
+        num_coins,
         DEFAULT_COIN_AMOUNT,
     );
 
