@@ -3,14 +3,15 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
-    iter::repeat,
+    iter::{repeat, repeat_with},
 };
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
+use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_crypto::{Message as CryptoMessage, Signature};
 use fuel_tx::{
-    field::{Inputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit, Witnesses},
+    field::{Inputs, Outputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
     policies::{Policies, PolicyType},
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
@@ -37,17 +38,31 @@ use crate::{
     utils::{calculate_witnesses_size, sealed},
 };
 
+pub struct DryRun {
+    pub succeeded: bool,
+    pub script_gas: u64,
+    pub variable_outputs: usize,
+}
+
+impl DryRun {
+    pub fn gas_with_tolerance(&self, tolerance: f32) -> u64 {
+        let gas_used = self.script_gas as f64;
+        let adjusted_gas = gas_used * (1.0 + f64::from(tolerance));
+        adjusted_gas as u64
+    }
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64>;
+    async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: DryRunner> DryRunner for &T {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
-        (*self).dry_run_and_get_used_gas(tx, tolerance).await
+    async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
+        (*self).dry_run(tx).await
     }
 
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64> {
@@ -341,6 +356,18 @@ impl Debug for dyn Signer + Send + Sync {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum VariableOutputPolicy {
+    EstimateMinimum,
+    Exactly(usize),
+}
+
+impl Default for VariableOutputPolicy {
+    fn default() -> Self {
+        Self::Exactly(0)
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct ScriptTransactionBuilder {
     pub script: Vec<u8>,
@@ -351,6 +378,7 @@ pub struct ScriptTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
     pub gas_price_estimation_block_horizon: u32,
+    pub variable_output_policy: VariableOutputPolicy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -398,6 +426,7 @@ impl ScriptTransactionBuilder {
         let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
+        // TODO: segfault: there is no need to add the dry run witnesses here if we're not going to dry run
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -415,8 +444,29 @@ impl ScriptTransactionBuilder {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
         } else {
-            Self::run_estimation(tx.clone(), &provider, self.gas_estimation_tolerance).await?
+            // TODO: segfault: we should not dry run twice
+            let dry_run = Self::run_estimation(tx.clone(), &provider).await?;
+            dry_run.gas_with_tolerance(self.gas_estimation_tolerance)
         };
+
+        let variable_outputs = match self.variable_output_policy {
+            VariableOutputPolicy::Exactly(num) => num,
+            VariableOutputPolicy::EstimateMinimum => {
+                let dry_run = Self::run_estimation(tx.clone(), &provider).await?;
+                dry_run.variable_outputs
+            }
+        };
+
+        eprintln!("variable_outputs: {}", variable_outputs);
+
+        tx.outputs_mut().extend(
+            repeat(Output::Variable {
+                amount: 0,
+                to: Address::zeroed(),
+                asset_id: AssetId::zeroed(),
+            })
+            .take(variable_outputs),
+        );
 
         *tx.script_gas_limit_mut() = script_gas_limit;
 
@@ -433,11 +483,7 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    async fn run_estimation(
-        mut tx: fuel_tx::Script,
-        provider: impl DryRunner,
-        tolerance: f32,
-    ) -> Result<u64> {
+    async fn run_estimation(mut tx: fuel_tx::Script, provider: impl DryRunner) -> Result<DryRun> {
         let consensus_params = provider.consensus_parameters();
         if let Some(fake_input) =
             needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
@@ -445,16 +491,32 @@ impl ScriptTransactionBuilder {
             tx.inputs_mut().push(fake_input);
 
             // Add an empty `Witness` for the `coin_signed` we just added
-            tx.witnesses_mut().push(Default::default());
+            tx.witnesses_mut().push(Witness::default());
             tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
         }
+
+        let free_outputs = consensus_params
+            .tx_params()
+            .max_outputs()
+            .saturating_sub(u16::try_from(tx.outputs().len()).unwrap_or(u16::MAX));
+        tx.outputs_mut().extend(
+            repeat(Output::Variable {
+                amount: 0,
+                to: Address::zeroed(),
+                asset_id: AssetId::zeroed(),
+            })
+            .take(free_outputs as usize),
+        );
 
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
         *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
 
-        provider
-            .dry_run_and_get_used_gas(tx.into(), tolerance)
-            .await
+        provider.dry_run(tx.into()).await
+    }
+
+    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
+        self.variable_output_policy = variable_outputs;
+        self
     }
 
     pub fn with_script(mut self, script: Vec<u8>) -> Self {
@@ -576,6 +638,7 @@ impl ScriptTransactionBuilder {
             unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
+            variable_output_policy: self.variable_output_policy,
         }
     }
 }
@@ -994,8 +1057,12 @@ mod tests {
     #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
-        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
-            Ok(0)
+        async fn dry_run(&self, _: FuelTransaction) -> Result<DryRun> {
+            Ok(DryRun {
+                succeeded: true,
+                script_gas: 0,
+                variable_outputs: 0,
+            })
         }
 
         fn consensus_parameters(&self) -> &ConsensusParameters {
