@@ -962,7 +962,7 @@ impl UpgradeTransactionBuilder {
         tx_policies: TxPolicies,
     ) -> Self {
         let serialized_consensus_parameters = postcard::to_allocvec(consensus_parameters)
-            .expect("Impossible to fail unless it not enough memory");
+            .expect("Impossible to fail unless there is not enough memory");
         let checksum = Hasher::hash(&serialized_consensus_parameters);
         let witness_index = 0;
         let outputs = vec![];
