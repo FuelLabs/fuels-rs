@@ -7,6 +7,24 @@ pub fn null_contract_id() -> Bech32ContractId {
         .unwrap()
 }
 
+mod hygiene {
+    #[tokio::test]
+    async fn setup_program_test_is_hygienic() {
+        fuels::prelude::setup_program_test!(
+            Wallets("wallet"),
+            Abigen(Contract(
+                name = "SimpleContract",
+                project = "e2e/sway/bindings/simple_contract"
+            )),
+            Deploy(
+                name = "simple_contract_instance",
+                contract = "SimpleContract",
+                wallet = "wallet"
+            ),
+        );
+    }
+}
+
 #[tokio::test]
 async fn compile_bindings_from_contract_file() {
     setup_program_test!(
