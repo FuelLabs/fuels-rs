@@ -80,6 +80,14 @@ impl Downloader {
         Ok(())
     }
 
+    fn make_cargo_watch_downloaded_files(&self) {
+        let executor_path = self.executor_path();
+        println!("cargo:rerun-if-changed={}", executor_path.display());
+
+        let version_path = self.version_path();
+        println!("cargo:rerun-if-changed={}", version_path.display());
+    }
+
     fn executor_path(&self) -> PathBuf {
         self.dir.join(Self::EXECUTOR_FILE_NAME)
     }
@@ -93,12 +101,7 @@ fn main() {
     println!("cargo:rerun-if-changed=build.rs");
 
     let downloader = Downloader::new();
-
-    let executor_path = downloader.executor_path();
-    println!("cargo:rerun-if-changed={}", executor_path.display());
-
-    let version_path = downloader.version_path();
-    println!("cargo:rerun-if-changed={}", version_path.display());
+    downloader.make_cargo_watch_downloaded_files();
 
     if downloader.should_download().unwrap() {
         downloader.download().unwrap();
