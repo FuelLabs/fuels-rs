@@ -4,7 +4,7 @@ use fuels::{
     tx::ContractParameters,
     types::{errors::transaction::Reason, Bits256, Identity},
 };
-use tokio::time::{error::Elapsed, Instant};
+use tokio::time::Instant;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
