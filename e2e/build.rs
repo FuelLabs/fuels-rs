@@ -48,10 +48,9 @@ impl Downloader {
         let link = LINK_TEMPLATE.replace("VERSION", &CORE_VERSION.to_string());
 
         let response = reqwest::blocking::get(link)?;
-        assert!(
-            response.status().is_success(),
-            "Failed to download wasm executor"
-        );
+        if !response.status().is_success() {
+            anyhow::bail!("Failed to download wasm executor: {}", response.status());
+        }
 
         let mut content = Cursor::new(response.bytes()?);
 
