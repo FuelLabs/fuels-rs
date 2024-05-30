@@ -1857,7 +1857,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .await?;
 
     // using `fuel-core-lib` in debug builds is 20x slower so we won't validate in that case so we
-    // don't have to maitain two expectations
+    // don't have to maintain two expectations
     if !cfg!(all(debug_assertions, feature = "fuel-core-lib")) {
         let elapsed = start.elapsed().as_secs();
         let limit = 2;
