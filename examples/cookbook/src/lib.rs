@@ -173,7 +173,9 @@ mod tests {
                 continue;
             }
 
-            let input = wallet_1.get_asset_inputs_for_amount(id, amount).await?;
+            let input = wallet_1
+                .get_asset_inputs_for_amount(id, amount, None)
+                .await?;
             inputs.extend(input);
 
             let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
@@ -263,7 +265,7 @@ mod tests {
 
         // ANCHOR: custom_tx_io_base
         let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &receiver,
@@ -274,7 +276,7 @@ mod tests {
 
         // ANCHOR: custom_tx_io_other
         let other_asset_inputs = predicate
-            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount)
+            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount, None)
             .await?;
         let other_asset_outputs =
             predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);

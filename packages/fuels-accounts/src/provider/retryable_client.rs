@@ -163,8 +163,11 @@ impl RetryableClient {
         utxo_validation: Option<bool>,
         gas_price: Option<u64>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, gas_price))
-            .await
+        self.wrap(|| {
+            self.client
+                .dry_run_opt(tx, utxo_validation, gas_price.map(Into::into))
+        })
+        .await
     }
 
     pub async fn coins(

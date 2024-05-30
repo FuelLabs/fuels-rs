@@ -835,6 +835,7 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let contract_balances = contract_instance.get_balances().await?;
     assert!(contract_balances.is_empty());
 
+    dbg!("aaaaa");
     // Transfer an amount to the contract
     let amount = 8;
     wallet
@@ -1718,7 +1719,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
     let amount = 10;
     let new_base_inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
 

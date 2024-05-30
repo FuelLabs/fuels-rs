@@ -261,10 +261,7 @@ macro_rules! impl_tx_trait {
                     .collect();
             }
 
-            fn generate_fuel_policies(
-                &self,
-                consensus_parameters: &ConsensusParameters,
-            ) -> Result<Policies> {
+            fn generate_fuel_policies(&self) -> Result<Policies> {
                 let witness_limit = match self.tx_policies.witness_limit() {
                     Some(limit) => limit,
                     None => self.calculate_witnesses_size()?,
@@ -272,9 +269,7 @@ macro_rules! impl_tx_trait {
                 let mut policies = Policies::default().with_witness_limit(witness_limit);
 
                 // `MaxFee` set to max until we estimate a reasonable value
-                let max_gas_per_tx = consensus_parameters.tx_params().max_gas_per_tx();
-                dbg!(max_gas_per_tx);
-                policies.set(PolicyType::MaxFee, Some(max_gas_per_tx));
+                policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
 
@@ -315,7 +310,6 @@ macro_rules! impl_tx_trait {
                 provider: impl DryRunner,
                 block_horizon: u32,
             ) -> Result<()> {
-                dbg!("TUUUU");
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
 
@@ -329,8 +323,6 @@ macro_rules! impl_tx_trait {
                     Other,
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
-
-                dbg!(tx_fee.max_fee());
 
                 tx.policies_mut()
                     .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
@@ -403,8 +395,8 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let consensus_parameters = provider.consensus_parameters();
-        let policies = self.generate_fuel_policies(consensus_parameters)?;
+        let chain_id = provider.consensus_parameters().chain_id();
+        let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
         let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
@@ -424,25 +416,15 @@ impl ScriptTransactionBuilder {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
         } else {
-            dbg!("before script gas estimation");
             Self::run_estimation(tx.clone(), &provider, self.gas_estimation_tolerance).await?
         };
-        dbg!("after script gas estimation");
 
         *tx.script_gas_limit_mut() = script_gas_limit;
-
-        dbg!("before set");
         Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
             .await?;
 
-        dbg!("after set");
-        dbg!(tx.policies());
-
-        let missing_witnesses = generate_missing_witnesses(
-            tx.id(&consensus_parameters.chain_id()),
-            &self.unresolved_signers,
-        )
-        .await?;
+        let missing_witnesses =
+            generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)
@@ -646,10 +628,9 @@ impl CreateTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
-        let consensus_parameters = provider.consensus_parameters();
-        let chain_id = consensus_parameters.chain_id();
+        let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies(consensus_parameters)?;
+        let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
@@ -661,11 +642,8 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
-        dbg!("create before");
         Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
             .await?;
-        dbg!("create after");
-        dbg!(tx.policies());
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;

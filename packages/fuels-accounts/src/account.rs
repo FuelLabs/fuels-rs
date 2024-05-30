@@ -8,6 +8,7 @@ use fuels_core::types::{
     bech32::{Bech32Address, Bech32ContractId},
     coin::Coin,
     coin_type::CoinType,
+    coin_type_id::CoinTypeId,
     errors::Result,
     input::Input,
     message::Message,
@@ -17,7 +18,10 @@ use fuels_core::types::{
 };
 
 use crate::{
-    accounts_utils::{adjust_inputs_outputs, calculate_missing_base_amount, extract_message_nonce},
+    accounts_utils::{
+        adjust_inputs_outputs, available_base_assets_and_amount, calculate_missing_base_amount,
+        extract_message_nonce, partition_excluded_coins,
+    },
     provider::{Provider, ResourceFilter},
 };
 
@@ -73,12 +77,16 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<CoinType>> {
+        let (excluded_utxos, excluded_message_nonces) = partition_excluded_coins(excluded_coins);
+
         let filter = ResourceFilter {
             from: self.address().clone(),
             asset_id: Some(asset_id),
             amount,
-            ..Default::default()
+            excluded_utxos,
+            excluded_message_nonces,
         };
 
         self.try_provider()?.get_spendable_resources(filter).await
@@ -95,6 +103,7 @@ pub trait Account: ViewOnlyAccount {
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>>;
 
     /// Returns a vector containing the output coin and change output given an asset and amount
@@ -121,12 +130,19 @@ pub trait Account: ViewOnlyAccount {
         used_base_amount: u64,
     ) -> Result<()> {
         let provider = self.try_provider()?;
+
+        let (base_assets, base_amount) =
+            available_base_assets_and_amount(tb, provider.base_asset_id());
         let missing_base_amount =
-            calculate_missing_base_amount(tb, used_base_amount, provider).await?;
+            calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
-                .get_asset_inputs_for_amount(*provider.base_asset_id(), missing_base_amount)
+                .get_asset_inputs_for_amount(
+                    *provider.base_asset_id(),
+                    missing_base_amount,
+                    Some(base_assets),
+                )
                 .await?;
 
             adjust_inputs_outputs(
@@ -157,7 +173,9 @@ pub trait Account: ViewOnlyAccount {
     ) -> Result<(TxId, Vec<Receipt>)> {
         let provider = self.try_provider()?;
 
-        let inputs = self.get_asset_inputs_for_amount(asset_id, amount).await?;
+        let inputs = self
+            .get_asset_inputs_for_amount(asset_id, amount, None)
+            .await?;
         let outputs = self.get_asset_outputs_for_amount(to, asset_id, amount);
 
         let mut tx_builder =
@@ -173,11 +191,28 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
 
+        let is: Vec<String> = tx_builder
+            .inputs
+            .clone()
+            .into_iter()
+            .filter_map(|i| match i {
+                Input::ResourceSigned { resource } => match resource {
+                    CoinType::Message(msg) => Some(msg.message_id().to_string()),
+                    _ => None,
+                },
+                Input::ResourcePredicate { resource, .. } => match resource {
+                    CoinType::Message(msg) => Some(msg.message_id().to_string()),
+                    _ => None,
+                },
+                _ => None,
+            })
+            .collect();
+        dbg!(is);
+
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(provider.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
-
         let receipts = tx_status.take_receipts_checked(None)?;
 
         Ok((tx_id, receipts))
@@ -212,7 +247,10 @@ pub trait Account: ViewOnlyAccount {
             plain_contract_id,
         )];
 
-        inputs.extend(self.get_asset_inputs_for_amount(asset_id, balance).await?);
+        inputs.extend(
+            self.get_asset_inputs_for_amount(asset_id, balance, None)
+                .await?,
+        );
 
         let outputs = vec![
             Output::contract(0, zeroes, zeroes),
@@ -254,7 +292,7 @@ pub trait Account: ViewOnlyAccount {
         let provider = self.try_provider()?;
 
         let inputs = self
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
             .await?;
 
         let mut tb = ScriptTransactionBuilder::prepare_message_to_output(

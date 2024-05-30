@@ -129,8 +129,16 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         )
         .await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // The predicate has received the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        total_balance - expected_fee,
+    )
+    .await;
     Ok(())
 }
 
@@ -167,12 +175,14 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -218,11 +228,13 @@ async fn pay_with_predicate() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        192
+        192 - expected_fee
     );
 
     let response = contract_methods
@@ -232,11 +244,13 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        191
+        191 - expected_fee
     );
 
     Ok(())
@@ -283,11 +297,13 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        192
+        192 - expected_fee
     );
 
     let response = contract_methods
@@ -296,12 +312,14 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .call()
         .await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
     assert_eq!(42, response.value);
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        191
+        191 - expected_fee
     );
 
     Ok(())
@@ -457,10 +475,10 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     predicate.set_provider(provider.clone());
 
     let mut inputs = wallet
-        .get_asset_inputs_for_amount(asset_id, wallet_balance)
+        .get_asset_inputs_for_amount(asset_id, wallet_balance, None)
         .await?;
     let predicate_inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, predicate_balance)
+        .get_asset_inputs_for_amount(asset_id, predicate_balance, None)
         .await?;
     inputs.extend(predicate_inputs);
 
@@ -473,11 +491,13 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance + wallet_balance,
+        predicate_balance + wallet_balance - expected_fee,
     )
     .await;
 
@@ -541,7 +561,12 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .call()
             .await?;
 
-        assert_eq!(predicate.get_asset_balance(&AssetId::zeroed()).await?, 1800);
+        // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+        let expected_fee = 2;
+        assert_eq!(
+            predicate.get_asset_balance(&AssetId::zeroed()).await?,
+            1800 - expected_fee
+        );
     }
     {
         let custom_asset = AssetId::from([1u8; 32]);
@@ -654,12 +679,14 @@ async fn predicate_default_configurables() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -715,12 +742,14 @@ async fn predicate_configurables() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -798,7 +827,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     wallet.set_provider(provider.clone());
 
     let inputs = predicate
-        .get_asset_inputs_for_amount(non_base_asset_id, amount)
+        .get_asset_inputs_for_amount(non_base_asset_id, amount, None)
         .await?;
     let outputs = vec![
         Output::change(wallet.address().into(), 0, non_base_asset_id),
@@ -852,7 +881,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     let amount_to_send = 12;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);
@@ -873,12 +902,14 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // The predicate has spent the funds
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance - amount_to_send,
+        predicate_balance - amount_to_send - expected_fee,
     )
     .await;
 
@@ -918,7 +949,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
 
     let amount_to_send = 12;
     let inputs = predicate
-        .get_asset_inputs_for_amount(asset_id, amount_to_send)
+        .get_asset_inputs_for_amount(asset_id, amount_to_send, None)
         .await?;
     let outputs =
         predicate.get_asset_outputs_for_amount(receiver.address(), asset_id, amount_to_send);

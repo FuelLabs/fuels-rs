@@ -183,7 +183,7 @@ impl Provider {
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
 
-        self.validate_transaction(tx.clone()).await?;
+        //self.validate_transaction(tx.clone()).await?;
 
         Ok(tx)
     }

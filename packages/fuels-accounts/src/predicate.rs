@@ -4,7 +4,7 @@ use std::{fmt::Debug, fs};
 use fuels_core::types::{input::Input, AssetId};
 use fuels_core::{
     error,
-    types::{bech32::Bech32Address, errors::Result},
+    types::{bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result},
     Configurables,
 };
 
@@ -118,9 +118,10 @@ impl Account for Predicate {
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
         Ok(self
-            .get_spendable_resources(asset_id, amount)
+            .get_spendable_resources(asset_id, amount, excluded_coins)
             .await?
             .into_iter()
             .map(|resource| {

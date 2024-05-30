@@ -175,7 +175,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     let base_amount = 30;
     let base_asset_id = AssetId::zeroed();
     let inputs = wallet
-        .get_asset_inputs_for_amount(base_asset_id, base_amount)
+        .get_asset_inputs_for_amount(base_asset_id, base_amount, None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(&Address::zeroed().into(), base_asset_id, base_amount);
@@ -241,8 +241,10 @@ async fn test_transfer() -> Result<()> {
 
     let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
 
-    // Check that wallet two now has two coins
-    assert_eq!(wallet_2_final_coins.len(), 2);
+    // Check that wallet two now has a coin
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
+    assert_eq!(wallet_2_final_coins.len(), 2 - expected_fee);
     Ok(())
 }
 
@@ -284,8 +286,12 @@ async fn send_transfer_transactions() -> Result<()> {
     assert_eq!(script.gas_limit(), expected_script_gas_limit);
     assert_eq!(script.maturity(), maturity as u32);
 
-    let wallet_1_spendable_resources = wallet_1.get_spendable_resources(base_asset_id, 1).await?;
-    let wallet_2_spendable_resources = wallet_2.get_spendable_resources(base_asset_id, 1).await?;
+    let wallet_1_spendable_resources = wallet_1
+        .get_spendable_resources(base_asset_id, 1, None)
+        .await?;
+    let wallet_2_spendable_resources = wallet_2
+        .get_spendable_resources(base_asset_id, 1, None)
+        .await?;
     let wallet_1_all_coins = wallet_1.get_coins(base_asset_id).await?;
     let wallet_2_all_coins = wallet_2.get_coins(base_asset_id).await?;
 
@@ -316,7 +322,9 @@ async fn transfer_coins_with_change() -> Result<()> {
         .await?;
 
     let base_asset_id = AssetId::zeroed();
-    let wallet_1_final_coins = wallet_1.get_spendable_resources(base_asset_id, 1).await?;
+    let wallet_1_final_coins = wallet_1
+        .get_spendable_resources(base_asset_id, 1, None)
+        .await?;
 
     // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
     let resulting_amount = wallet_1_final_coins.first().unwrap();
@@ -440,7 +448,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
     for wallet in &wallets {
         inputs.extend(
             wallet
-                .get_asset_inputs_for_amount(*provider.base_asset_id(), amount_to_transfer)
+                .get_asset_inputs_for_amount(*provider.base_asset_id(), amount_to_transfer, None)
                 .await?,
         );
     }
