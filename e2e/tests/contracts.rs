@@ -4,6 +4,7 @@ use fuels::{
     tx::ContractParameters,
     types::{errors::transaction::Reason, Bits256, Identity},
 };
+use tokio::time::Instant;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1830,9 +1831,7 @@ async fn msg_sender_gas_estimation_issue() {
 }
 
 #[tokio::test]
-async fn variable_output_estimation_is_optimized() {
-    // TODO: segfault: this test is probably redundant
-    // TODO: segfault: test how too many outputs err is handled
+async fn variable_output_estimation_is_optimized() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1848,12 +1847,16 @@ async fn variable_output_estimation_is_optimized() {
 
     let contract_methods = contract_instance.methods();
 
-    let coins = 240;
+    let coins = 252;
     let recipient = Identity::Address(wallet.address().into());
-    let resp = contract_methods
+    let start = Instant::now();
+    let _ = contract_methods
         .mint(coins, recipient)
         .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
-        .await
-        .unwrap();
+        .await?;
+
+    assert!(start.elapsed().as_secs() <= 2, "Estimation took too long");
+
+    Ok(())
 }
