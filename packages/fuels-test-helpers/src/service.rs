@@ -67,6 +67,7 @@ impl FuelService {
     ) -> ServiceConfig {
         use fuel_core::combined_database::CombinedDatabaseConfig;
         use fuel_core_chain_config::SnapshotReader;
+        use fuel_core_client::client::schema::schema::__fields::BalanceEdge::node;
 
         use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
 
@@ -89,7 +90,7 @@ impl FuelService {
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),
-            static_gas_price: 1,
+            static_gas_price: node_config.static_gas_price,
             ..ServiceConfig::local_node()
         }
     }
