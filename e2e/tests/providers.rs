@@ -1,4 +1,4 @@
-use std::ops::Add;
+use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
 use fuels::{
@@ -956,6 +956,58 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
 
     let status = provider.tx_status(&tx_id).await?;
     assert!(matches!(status, TxStatus::Success { .. }));
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
+    let mut wallet = WalletUnlocked::new_random(None);
+
+    // Need more coins to avoid "not enough coins to fit the target"
+    let num_coins = 100;
+    let coins = setup_single_asset_coins(
+        wallet.address(),
+        AssetId::zeroed(),
+        num_coins,
+        DEFAULT_COIN_AMOUNT,
+    );
+
+    let mut chain_config = ChainConfig::local_testnet();
+    chain_config
+        .consensus_parameters
+        .set_privileged_address(wallet.address().into());
+
+    let provider = setup_test_provider(coins, vec![], None, Some(chain_config)).await?;
+    wallet.set_provider(provider.clone());
+
+    // This is downloaded over in `build.rs`
+    let executor = std::fs::read(Path::new(env!("OUT_DIR")).join("fuel-core-wasm-executor.wasm"))?;
+
+    let subsection_size = 65536;
+    let subsections = UploadSubsection::split_bytecode(&executor, subsection_size).unwrap();
+
+    let root = subsections[0].root;
+    for subsection in subsections {
+        let mut builder =
+            UploadTransactionBuilder::prepare_subsection_upload(subsection, TxPolicies::default());
+        wallet.add_witnesses(&mut builder)?;
+        wallet.adjust_for_fee(&mut builder, 0).await?;
+        let tx = builder.build(&provider).await?;
+
+        provider.send_transaction(tx).await?;
+    }
+
+    // Otherwise we occasionally get `UnknownStateTransactionBytecodeRoot` in CI runs
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
+    let mut builder =
+        UpgradeTransactionBuilder::prepare_state_transition_upgrade(root, TxPolicies::default());
+    wallet.add_witnesses(&mut builder)?;
+    wallet.adjust_for_fee(&mut builder, 0).await?;
+    let tx = builder.build(provider.clone()).await?;
+
+    provider.send_transaction(tx).await?;
 
     Ok(())
 }
