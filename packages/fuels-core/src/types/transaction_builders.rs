@@ -420,8 +420,6 @@ impl ScriptTransactionBuilder {
             }
         };
 
-        eprintln!("variable_outputs: {}", variable_outputs);
-
         add_variable_outputs(&mut tx, variable_outputs);
 
         *tx.script_gas_limit_mut() = script_gas_limit;
