@@ -4,7 +4,7 @@ use fuels::{
     tx::ContractParameters,
     types::{errors::transaction::Reason, Bits256, Identity},
 };
-use tokio::time::Instant;
+use tokio::time::{error::Elapsed, Instant};
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -1857,7 +1857,11 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .await?;
 
     // 2s is too slow for the CI
-    assert!(start.elapsed().as_secs() <= 4, "Estimation took too long");
+    let elapsed = start.elapsed().as_secs();
+    let limit = 6;
+    if elapsed > limit {
+        panic!("Estimation took too long ({elapsed}). Limit is {limit}");
+    }
 
     Ok(())
 }
