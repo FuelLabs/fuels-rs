@@ -1,10 +1,7 @@
 use std::fmt::Debug;
 
 use async_trait::async_trait;
-use fuel_tx::{
-    ConsensusParameters,
-    Transaction as FuelTransaction,
-};
+use fuel_tx::{ConsensusParameters, Transaction as FuelTransaction};
 
 use crate::types::errors::Result;
 
