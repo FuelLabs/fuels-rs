@@ -1856,11 +1856,14 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .call()
         .await?;
 
-    // 2s is too slow for the CI
-    let elapsed = start.elapsed().as_secs();
-    let limit = 6;
-    if elapsed > limit {
-        panic!("Estimation took too long ({elapsed}). Limit is {limit}");
+    // using `fuel-core-lib` in debug builds is 20x slower so we won't validate in that case so we
+    // don't have to maitain two expectations
+    if !cfg!(all(debug_assertions, feature = "fuel-core-lib")) {
+        let elapsed = start.elapsed().as_secs();
+        let limit = 2;
+        if elapsed > limit {
+            panic!("Estimation took too long ({elapsed}). Limit is {limit}");
+        }
     }
 
     Ok(())
