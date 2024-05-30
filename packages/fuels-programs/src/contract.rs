@@ -481,6 +481,13 @@ where
         self
     }
 
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
     pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
         self.variable_output_policy = variable_outputs;
         self
@@ -778,6 +785,13 @@ impl<T: Account> MultiContractCallHandler<T> {
         self
     }
 
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract multi-call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
     pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
         self.variable_output_policy = variable_outputs;
         self

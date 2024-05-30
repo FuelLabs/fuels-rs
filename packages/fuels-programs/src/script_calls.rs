@@ -119,6 +119,13 @@ where
         self
     }
 
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the script call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
     pub fn with_variable_output_policy(
         mut self,
         variable_output_policy: VariableOutputPolicy,

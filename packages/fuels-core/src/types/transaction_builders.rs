@@ -363,9 +363,13 @@ impl Debug for dyn Signer + Send + Sync {
     }
 }
 
+/// Controls the SDK behavior regarding variable transaction outputs.
 #[derive(Debug, Clone, Copy)]
 pub enum VariableOutputPolicy {
+    /// Perform a dry run of the transaction estimating the minimum number of variable outputs to
+    /// add.
     EstimateMinimum,
+    /// Add exactly these many variable outputs to the transaction.
     Exactly(usize),
 }
 
