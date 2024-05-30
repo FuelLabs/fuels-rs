@@ -10,6 +10,8 @@ rust-version = { workspace = true }
 version = { workspace = true }
 publish = false
 
+build = "build.rs"
+
 [dev-dependencies]
 # used in test assertions
 chrono = { workspace = true }
@@ -20,6 +22,12 @@ fuels = { workspace = true }
 tai64 = { workspace = true }
 tempfile = { workspace = true }
 tokio = { workspace = true, features = ["test-util"] }
+
+[build-dependencies]
+flate2 = { workspace = true, features = ["zlib"] }
+reqwest = { workspace = true, features = ["blocking", "default-tls"] }
+semver = { workspace = true }
+tar = { workspace = true }
 
 [features]
 default = ["fuels/default", "coin-cache"]

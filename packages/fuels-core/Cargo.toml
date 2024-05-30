@@ -25,6 +25,7 @@ fuel-vm = { workspace = true }
 fuels-macros = { workspace = true }
 hex = { workspace = true, features = ["std"] }
 itertools = { workspace = true }
+postcard = { version = "1", default-features = true, features = ["alloc"] }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true, default-features = true }
 thiserror = { workspace = true, default-features = false }
