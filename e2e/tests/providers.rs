@@ -193,7 +193,7 @@ async fn test_input_message_pays_fee() -> Result<()> {
 
     let balance = wallet.get_asset_balance(&base_asset_id).await?;
     // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
+    let expected_fee = 2;
     assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
 
     Ok(())

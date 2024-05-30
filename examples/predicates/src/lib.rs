@@ -68,7 +68,7 @@ mod tests {
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
-        let amount_to_predicate = 512;
+        let amount_to_predicate = 500;
 
         wallet
             .transfer(

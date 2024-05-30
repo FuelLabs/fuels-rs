@@ -121,21 +121,27 @@ mod tests {
         use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
-        let num_wallets = Some(2);
-        let coins_per_wallet = Some(1);
-        let coin_amount = Some(1);
+        let num_wallets = 2;
+        let coins_per_wallet = 1;
+        let coin_amount = 2;
 
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(num_wallets, coins_per_wallet, coin_amount),
+            WalletsConfig::new(Some(num_wallets), Some(coins_per_wallet), Some(coin_amount)),
             None,
             None,
         )
         .await?;
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
+        let transfer_amount = 1;
         let asset_id = Default::default();
         let (_tx_id, _receipts) = wallets[0]
-            .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
+            .transfer(
+                wallets[1].address(),
+                transfer_amount,
+                asset_id,
+                TxPolicies::default(),
+            )
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;

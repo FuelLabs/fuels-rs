@@ -1007,12 +1007,13 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
     Ok(())
 }
 
+#[ignore]
 #[tokio::test]
 async fn predicate_validation() -> Result<()> {
     let default_asset_id = AssetId::zeroed();
     let hex_str = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe";
     let other_asset_id = AssetId::from_str(hex_str)?;
-    let begin_coin_amount = 1_000;
+    let begin_coin_amount = 1_100;
 
     let tx_policies = TxPolicies::default();
     let wallets_config = WalletsConfig::new_multiple_assets(

@@ -52,7 +52,7 @@ pub async fn launch_provider_and_get_wallet() -> Result<WalletUnlocked> {
 /// ```
 pub async fn launch_custom_provider_and_get_wallets(
     wallet_config: WalletsConfig,
-    provider_config: Option<NodeConfig>,
+    node_config: Option<NodeConfig>,
     chain_config: Option<ChainConfig>,
 ) -> Result<Vec<WalletUnlocked>> {
     const SIZE_SECRET_KEY: usize = size_of::<SecretKey>();
@@ -76,7 +76,7 @@ pub async fn launch_custom_provider_and_get_wallets(
         .flat_map(|wallet| setup_custom_assets_coins(wallet.address(), wallet_config.assets()))
         .collect::<Vec<_>>();
 
-    let provider = setup_test_provider(all_coins, vec![], provider_config, chain_config).await?;
+    let provider = setup_test_provider(all_coins, vec![], node_config, chain_config).await?;
 
     for wallet in &mut wallets {
         wallet.set_provider(provider.clone());
