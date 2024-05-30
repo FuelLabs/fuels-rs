@@ -1,39 +1,25 @@
 use std::{
     collections::HashMap,
-    fmt::{Debug, Formatter},
-    iter::{repeat, repeat_with},
+    iter::{repeat},
 };
 
-use async_trait::async_trait;
-use fuel_asm::{op, GTFArgs, RegId};
-use fuel_core_types::services::executor::TransactionExecutionResult;
-use fuel_crypto::{Message as CryptoMessage, Signature};
+use fuel_crypto::{Signature};
 use fuel_tx::{
-    field::{Inputs, Outputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit, Witnesses},
+    field::{Inputs, Outputs, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
-    policies::{Policies, PolicyType},
-    Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
-    Transaction as FuelTransaction, TransactionFee, TxId, TxPointer, UniqueIdentifier, Witness,
+    Chargeable, Input as FuelInput, Output, TxPointer, Witness,
 };
-use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
 use itertools::Itertools;
 
 use crate::{
-    constants::{SIGNATURE_WITNESS_SIZE, WITNESS_STATIC_SIZE, WORD_SIZE},
-    traits::Signer,
+    constants::{WITNESS_STATIC_SIZE},
     types::{
-        bech32::Bech32Address,
-        coin::Coin,
-        coin_type::CoinType,
-        errors::{error, error_transaction, Result},
-        input::Input,
-        message::Message,
+        errors::{Result},
         transaction::{
-            CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
+            Transaction,
         },
-        Address, AssetId, ContractId,
+        Address, AssetId,
     },
-    utils::{calculate_witnesses_size, sealed},
 };
 
 use crate::types::transaction_builders::DryRun;

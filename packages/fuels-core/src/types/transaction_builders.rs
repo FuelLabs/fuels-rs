@@ -3,16 +3,14 @@
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
-    iter::{repeat, repeat_with},
+    iter::{repeat},
 };
 
 use async_trait::async_trait;
 use fuel_asm::{op, GTFArgs, RegId};
-use fuel_core_types::services::executor::TransactionExecutionResult;
 use fuel_crypto::{Message as CryptoMessage, Signature};
 use fuel_tx::{
     field::{Inputs, Outputs, Policies as PoliciesField, ScriptGasLimit, WitnessLimit, Witnesses},
-    input::coin::{CoinPredicate, CoinSigned},
     policies::{Policies, PolicyType},
     Chargeable, ConsensusParameters, Create, Input as FuelInput, Output, Script, StorageSlot,
     Transaction as FuelTransaction, TransactionFee, TxPointer, UniqueIdentifier, Witness,

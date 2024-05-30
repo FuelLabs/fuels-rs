@@ -16,7 +16,7 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
-use fuel_core_types::services::executor::{TransactionExecutionResult, TransactionExecutionStatus};
+use fuel_core_types::services::executor::{TransactionExecutionResult};
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };

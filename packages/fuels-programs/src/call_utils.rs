@@ -3,7 +3,7 @@ use std::{collections::HashSet, iter, vec};
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
-use fuel_types::{Address, Word};
+use fuel_types::Word;
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -510,10 +510,6 @@ mod test {
                 custom_assets: Default::default(),
             }
         }
-    }
-
-    fn random_bech32_addr() -> Bech32Address {
-        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
     fn random_bech32_contract_id() -> Bech32ContractId {

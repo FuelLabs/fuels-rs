@@ -1,4 +1,3 @@
-use fuel_tx::{ConsensusParameters, TxId};
 use fuels::{
     core::codec::{calldata, encode_fn_selector, DecoderConfig, EncoderConfig},
     prelude::*,
