@@ -1849,7 +1849,7 @@ async fn variable_output_estimation_is_optimized() {
 
     let contract_methods = contract_instance.methods();
 
-    let coins = 250;
+    let coins = 240;
     let recipient = Identity::Address(wallet.address().into());
     let resp = contract_methods
         .mint(coins, recipient)

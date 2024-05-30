@@ -35,9 +35,6 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub gas_forwarded_offset: Option<usize>,
 }
 
-/// How many times to attempt to resolve missing tx dependencies.
-pub const DEFAULT_TX_ESTIMATION_ATTEMPTS: u64 = 10;
-
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
@@ -64,7 +61,7 @@ pub trait TxDependencyExtension: Sized + sealed::Sealed {
     /// Simulates the call and attempts to resolve missing contract outputs.
     /// Forwards the received error if it cannot be fixed.
     async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_ESTIMATION_ATTEMPTS);
+        let attempts = max_attempts.unwrap_or(10);
 
         for _ in 0..attempts {
             match self.simulate().await {
