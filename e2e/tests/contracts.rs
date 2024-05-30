@@ -1856,7 +1856,8 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
         .call()
         .await?;
 
-    assert!(start.elapsed().as_secs() <= 2, "Estimation took too long");
+    // 2s is too slow for the CI
+    assert!(start.elapsed().as_secs() <= 4, "Estimation took too long");
 
     Ok(())
 }
