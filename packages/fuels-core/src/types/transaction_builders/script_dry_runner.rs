@@ -48,11 +48,12 @@ impl<R: DryRunner> ScriptDryRunner<R> {
 
     fn saturate_with_variable_outputs(&mut self, tx: &mut fuel_tx::Script) {
         let consensus_params = self.dry_runner.consensus_parameters();
-        let free_outputs = consensus_params
-            .tx_params()
-            .max_outputs()
-            .saturating_sub(u16::try_from(tx.outputs().len()).unwrap_or(u16::MAX));
-        super::add_variable_outputs(tx, usize::from(free_outputs));
+
+        let max_outputs = usize::from(consensus_params.tx_params().max_outputs());
+        let used_outputs = tx.outputs().len();
+
+        let unused_outputs = max_outputs.saturating_sub(used_outputs);
+        super::add_variable_outputs(tx, unused_outputs);
     }
 
     // When dry running a tx with `utxo_validation` off, the node will not validate signatures.
