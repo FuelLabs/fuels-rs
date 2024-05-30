@@ -67,7 +67,6 @@ impl FuelService {
     ) -> ServiceConfig {
         use fuel_core::combined_database::CombinedDatabaseConfig;
         use fuel_core_chain_config::SnapshotReader;
-        use fuel_core_client::client::schema::schema::__fields::BalanceEdge::node;
 
         use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
 

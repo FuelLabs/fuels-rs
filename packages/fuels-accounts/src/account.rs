@@ -136,6 +136,7 @@ pub trait Account: ViewOnlyAccount {
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
+        dbg!(missing_base_amount, base_amount, &base_assets);
         if missing_base_amount > 0 {
             let new_base_inputs = self
                 .get_asset_inputs_for_amount(

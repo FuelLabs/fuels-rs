@@ -53,12 +53,13 @@ pub fn available_base_assets_and_amount(
     let iter =
         tb.inputs()
             .iter()
-            .filter_map(move |input| match input {
+            .filter_map(|input| match input {
                 Input::ResourceSigned { resource, .. }
                 | Input::ResourcePredicate { resource, .. } => match resource {
                     CoinType::Coin(Coin {
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
+                        dbg!(amount);
                         sum += amount;
                         Some(resource.id())
                     }

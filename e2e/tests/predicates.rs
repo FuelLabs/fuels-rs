@@ -120,17 +120,17 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     wallet
         .transfer(
             predicate.address(),
-            total_balance,
+            total_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
         .await?;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // The predicate has received the funds
     assert_address_balance(
         predicate.address(),
@@ -163,10 +163,12 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -175,8 +177,6 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
@@ -667,10 +667,12 @@ async fn predicate_default_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -679,8 +681,6 @@ async fn predicate_default_configurables() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
@@ -730,10 +730,12 @@ async fn predicate_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -742,8 +744,6 @@ async fn predicate_configurables() -> Result<()> {
     // The predicate has spent the funds
     assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
 
-    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
-    let expected_fee = 1;
     // Funds were transferred
     assert_address_balance(
         receiver.address(),
