@@ -38,18 +38,18 @@ pub(crate) fn contract_bindings(
 
     let code = quote! {
         #[derive(Debug, Clone)]
-        pub struct #name<T: ::fuels::accounts::Account> {
+        pub struct #name<A: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
-            account: T,
+            account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<T: ::fuels::accounts::Account> #name<T>
+        impl<A: ::fuels::accounts::Account> #name<A>
         {
             pub fn new(
                 contract_id: impl ::core::convert::Into<::fuels::types::bech32::Bech32ContractId>,
-                account: T,
+                account: A,
             ) -> Self {
                 let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
                 let log_decoder = ::fuels::core::codec::LogDecoder::new(#log_formatters);
@@ -61,7 +61,7 @@ pub(crate) fn contract_bindings(
                 &self.contract_id
             }
 
-            pub fn account(&self) -> T {
+            pub fn account(&self) -> A {
                 self.account.clone()
             }
 
@@ -76,7 +76,7 @@ pub(crate) fn contract_bindings(
             }
 
             pub fn with_encoder_config(mut self, encoder_config: ::fuels::core::codec::EncoderConfig)
-            -> #name::<T> {
+            -> #name::<A> {
                 self.encoder_config = encoder_config;
 
                 self
@@ -89,7 +89,7 @@ pub(crate) fn contract_bindings(
                                   .map_err(::std::convert::Into::into)
             }
 
-            pub fn methods(&self) -> #methods_name<T> {
+            pub fn methods(&self) -> #methods_name<A> {
                 #methods_name {
                     contract_id: self.contract_id.clone(),
                     account: self.account.clone(),
@@ -100,19 +100,19 @@ pub(crate) fn contract_bindings(
         }
 
         // Implement struct that holds the contract methods
-        pub struct #methods_name<T: ::fuels::accounts::Account> {
+        pub struct #methods_name<A: ::fuels::accounts::Account> {
             contract_id: ::fuels::types::bech32::Bech32ContractId,
-            account: T,
+            account: A,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<T: ::fuels::accounts::Account> #methods_name<T> {
+        impl<A: ::fuels::accounts::Account> #methods_name<A> {
             #contract_functions
         }
 
-        impl<T: ::fuels::accounts::Account>
-            ::fuels::programs::calls::SettableContract for #name<T>
+        impl<A: ::fuels::accounts::Account>
+            ::fuels::programs::calls::SettableContract for #name<A>
         {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
@@ -155,7 +155,7 @@ pub(crate) fn expand_fn(abi_fun: &FullABIFunction) -> Result<TokenStream> {
 
     let original_output = generator.output_type();
     generator.set_output_type(
-        quote! {::fuels::programs::calls::CallHandler<T, #original_output, ::fuels::programs::calls::ContractCall> },
+        quote! {::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, #original_output> },
     );
 
     let fn_selector = generator.fn_selector();
@@ -358,7 +358,7 @@ mod tests {
                 &self,
                 s_1: self::MyStruct1,
                 s_2: self::MyStruct2
-            ) -> ::fuels::programs::calls::CallHandler<T, self::MyStruct1, ::fuels::programs::calls::ContractCall> {
+            ) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, self::MyStruct1> {
                 ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
@@ -418,7 +418,7 @@ mod tests {
 
         let expected = quote! {
             #[doc = "This is a doc string"]
-            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<T, (), ::fuels::programs::calls::ContractCall> {
+            pub fn HelloWorld(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, ()> {
                 ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
@@ -535,7 +535,7 @@ mod tests {
             pub fn hello_world(
                 &self,
                 the_only_allowed_input: self::SomeWeirdFrenchCuisine
-            ) -> ::fuels::programs::calls::CallHandler<T, self::EntropyCirclesEnum, ::fuels::programs::calls::ContractCall> {
+            ) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ContractCall, self::EntropyCirclesEnum> {
                 ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),

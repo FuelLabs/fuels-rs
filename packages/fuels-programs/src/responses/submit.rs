@@ -34,25 +34,25 @@ use crate::{
 ///
 /// ```
 #[derive(Debug)]
-pub struct SubmitResponse<T, D, C> {
+pub struct SubmitResponse<A, C, T> {
     tx_id: Bytes32,
-    call_handler: CallHandler<T, D, C>,
+    call_handler: CallHandler<A, C, T>,
 }
 
-impl<T, D, C> SubmitResponse<T, D, C>
+impl<A, C, T> SubmitResponse<A, C, T>
 where
-    T: Account,
-    D: Tokenizable + Parameterize + Debug,
+    A: Account,
     C: Extendable + Buildable + Parsable,
+    T: Tokenizable + Parameterize + Debug,
 {
-    pub fn new(tx_id: Bytes32, call_handler: CallHandler<T, D, C>) -> Self {
+    pub fn new(tx_id: Bytes32, call_handler: CallHandler<A, C, T>) -> Self {
         Self {
             tx_id,
             call_handler,
         }
     }
 
-    pub async fn response(self) -> Result<CallResponse<D>> {
+    pub async fn response(self) -> Result<CallResponse<T>> {
         let provider = self.call_handler.account.try_provider()?;
         let receipts = provider
             .tx_status(&self.tx_id)
@@ -68,15 +68,15 @@ where
 }
 
 /// Represents the response of a submitted transaction with multiple contract calls.
-impl<T: Account> SubmitResponse<T, (), Vec<ContractCall>> {
-    pub fn new(tx_id: Bytes32, call_handler: CallHandler<T, (), Vec<ContractCall>>) -> Self {
+impl<A: Account> SubmitResponse<A, Vec<ContractCall>, ()> {
+    pub fn new(tx_id: Bytes32, call_handler: CallHandler<A, Vec<ContractCall>, ()>) -> Self {
         Self {
             tx_id,
             call_handler,
         }
     }
 
-    pub async fn response<D: Tokenizable + Debug>(self) -> Result<CallResponse<D>> {
+    pub async fn response<T: Tokenizable + Debug>(self) -> Result<CallResponse<T>> {
         let provider = self.call_handler.account.try_provider()?;
         let receipts = provider
             .tx_status(&self.tx_id)

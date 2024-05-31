@@ -40,16 +40,16 @@ pub(crate) fn script_bindings(
 
     let code = quote! {
         #[derive(Debug,Clone)]
-        pub struct #name<T: ::fuels::accounts::Account>{
-            account: T,
+        pub struct #name<A: ::fuels::accounts::Account>{
+            account: A,
             binary: ::std::vec::Vec<u8>,
             log_decoder: ::fuels::core::codec::LogDecoder,
             encoder_config: ::fuels::core::codec::EncoderConfig,
         }
 
-        impl<T: ::fuels::accounts::Account> #name<T>
+        impl<A: ::fuels::accounts::Account> #name<A>
         {
-            pub fn new(account: T, binary_filepath: &str) -> Self {
+            pub fn new(account: A, binary_filepath: &str) -> Self {
                 let binary = ::std::fs::read(binary_filepath)
                                             .expect(&format!("could not read script binary {binary_filepath:?}"));
                 Self {
@@ -120,7 +120,7 @@ fn expand_fn(fn_abi: &FullABIFunction) -> Result<TokenStream> {
     };
 
     generator
-        .set_output_type(quote! {::fuels::programs::calls::CallHandler<T, #original_output_type, ::fuels::programs::calls::ScriptCall> })
+        .set_output_type(quote! {::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ScriptCall, #original_output_type> })
         .set_docs(fn_abi.doc_strings()?)
         .set_body(body);
 
@@ -186,7 +186,7 @@ mod tests {
         let expected = quote! {
             #[doc = "This is a doc string"]
             #[doc = "This is another doc string"]
-            pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<T, (), ::fuels::programs::calls::ScriptCall> {
+            pub fn main(&self, bimbam: ::core::primitive::bool) -> ::fuels::programs::calls::CallHandler<A, ::fuels::programs::calls::ScriptCall, ()> {
                 let encoded_args=::fuels::core::codec::ABIEncoder::new(self.encoder_config)
                     .encode(&[::fuels::core::traits::Tokenizable::into_token(bimbam)]);
                  ::fuels::programs::calls::CallHandler::new_script_call(
