@@ -59,7 +59,6 @@ pub fn available_base_assets_and_amount(
                     CoinType::Coin(Coin {
                         amount, asset_id, ..
                     }) if asset_id == base_asset_id => {
-                        dbg!(amount);
                         sum += amount;
                         Some(resource.id())
                     }
