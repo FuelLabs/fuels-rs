@@ -1,7 +1,5 @@
+use crate::provider::supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use semver::Version;
-
-pub const SUPPORTED_FUEL_CORE_VERSION: Version =
-    include!("../../../../scripts/fuel-core-version/version.rs");
 
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct VersionCompatibility {

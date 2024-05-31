@@ -14,3 +14,4 @@ clap = { version = "4.5.3", features = ["derive"] }
 color-eyre = "0.6.2"
 semver = { workspace = true }
 versions-replacer = { workspace = true }
+fuels-accounts = { workspace = true }
