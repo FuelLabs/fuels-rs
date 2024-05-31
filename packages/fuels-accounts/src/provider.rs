@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Debug, net::SocketAddr};
 
 mod retry_util;
 mod retryable_client;
+mod supported_fuel_core_version;
 mod supported_versions;
 
 #[cfg(feature = "coin-cache")]
@@ -41,6 +42,7 @@ use fuels_core::{
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
+pub use supported_fuel_core_version::SUPPORTED_FUEL_CORE_VERSION;
 use tai64::Tai64;
 #[cfg(feature = "coin-cache")]
 use tokio::sync::Mutex;
