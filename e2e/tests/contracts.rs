@@ -466,7 +466,7 @@ async fn test_large_return_data() -> Result<()> {
 
     let res = contract_methods.get_contract_id().call().await?;
 
-    // First `value` is from `FuelCallResponse`.
+    // First `value` is from `CallResponse`.
     // Second `value` is from the `ContractId` type.
     assert_eq!(
         res.value,
@@ -1547,32 +1547,30 @@ async fn test_heap_type_multicall() -> Result<()> {
         ),
         Deploy(
             name = "contract_instance",
-            contract = "TestContract",
+            contract = "VectorOutputContract",
             wallet = "wallet"
         ),
         Deploy(
             name = "contract_instance_2",
-            contract = "VectorOutputContract",
+            contract = "TestContract",
             wallet = "wallet"
         ),
     );
 
     {
-        // One heap type at the last position is allowed
-        let call_handler_1 = contract_instance.methods().get_single(7);
-        let call_handler_2 = contract_instance.methods().get_single(42);
-        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_1 = contract_instance.methods().u8_in_vec(5);
+        let call_handler_2 = contract_instance_2.methods().get_single(7);
+        let call_handler_3 = contract_instance.methods().u8_in_vec(3);
 
         let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let handle = multi_call_handler.submit().await?;
-        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.response().await?.value;
+        let (val_1, val_2, val_3): (Vec<u8>, u64, Vec<u8>) = multi_call_handler.call().await?.value;
 
-        assert_eq!(val_1, 7);
-        assert_eq!(val_2, 42);
+        assert_eq!(val_1, vec![0, 1, 2, 3, 4]);
+        assert_eq!(val_2, 7);
         assert_eq!(val_3, vec![0, 1, 2]);
     }
 

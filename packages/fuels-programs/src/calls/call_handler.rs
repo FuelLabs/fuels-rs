@@ -178,7 +178,7 @@ where
         self.get_response(receipts)
     }
 
-    /// Create a [`FuelCallResponse`] from call receipts
+    /// Create a [`CallResponse`] from call receipts
     pub fn get_response(&self, receipts: Vec<Receipt>) -> Result<CallResponse<D>> {
         let token = self
             .call
@@ -192,7 +192,7 @@ where
         ))
     }
 
-    /// Create a [`FuelCallResponse`] from `TxStatus`
+    /// Create a [`CallResponse`] from `TxStatus`
     pub fn get_response_from(&self, tx_status: TxStatus) -> Result<CallResponse<D>> {
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
@@ -434,7 +434,7 @@ where
         Ok(())
     }
 
-    /// Create a [`FuelCallResponse`] from call receipts
+    /// Create a [`CallResponse`] from call receipts
     pub fn get_response<D: Tokenizable + Debug>(
         &self,
         receipts: Vec<Receipt>,
