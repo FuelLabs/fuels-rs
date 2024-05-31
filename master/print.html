@@ -206,10 +206,10 @@ If <code>cargo generate</code> is not already installed, you can install it with
 <!-- run_test_nocap:example:end -->
 <h2 id="importing-the-fuel-rust-sdk"><a class="header" href="#importing-the-fuel-rust-sdk">Importing the Fuel Rust SDK</a></h2>
 <p>Add these dependencies on your <code>Cargo.toml</code>:</p>
-<pre><code class="language-toml">fuels = &quot;0.62.0&quot;
+<pre><code class="language-toml">fuels = &quot;0.63.0&quot;
 </code></pre>
 <blockquote>
-<p><strong>Note</strong> We're using version <code>0.62.0</code> of the SDK, which is the latest version at the time of this writing.</p>
+<p><strong>Note</strong> We're using version <code>0.63.0</code> of the SDK, which is the latest version at the time of this writing.</p>
 </blockquote>
 <p>And then, in your Rust file that's going to make use of the SDK:</p>
 <pre><code class="language-rust ignore">use fuels::prelude::*;
@@ -317,11 +317,11 @@ To build these tests, run the following command:</p>
 <h2 id="features"><a class="header" href="#features">Features</a></h2>
 <h3 id="fuel-core-lib"><a class="header" href="#fuel-core-lib">Fuel-core lib</a></h3>
 <p>The <code>fuel-core-lib</code> feature allows us to run a <code>fuel-core</code> node without installing the <code>fuel-core</code> binary on the local machine. Using the <code>fuel-core-lib</code> feature flag entails downloading all the dependencies needed to run the fuel-core node.</p>
-<pre><code class="language-rust ignore">fuels = { version = &quot;0.62.0&quot;, features = [&quot;fuel-core-lib&quot;] }
+<pre><code class="language-rust ignore">fuels = { version = &quot;0.63.0&quot;, features = [&quot;fuel-core-lib&quot;] }
 </code></pre>
 <h3 id="rocksdb"><a class="header" href="#rocksdb">RocksDB</a></h3>
 <p>The <code>rocksdb</code> is an additional feature that, when combined with <code>fuel-core-lib</code>, provides persistent storage capabilities while using <code>fuel-core</code> as a library.</p>
-<pre><code class="language-rust ignore">fuels = { version = &quot;0.62.0&quot;, features = [&quot;rocksdb&quot;] }
+<pre><code class="language-rust ignore">fuels = { version = &quot;0.63.0&quot;, features = [&quot;rocksdb&quot;] }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="rocksdb-1"><a class="header" href="#rocksdb-1">RocksDB</a></h1>
 <p>RocksDB enables the preservation of the blockchain's state locally, facilitating its future utilization.</p>
