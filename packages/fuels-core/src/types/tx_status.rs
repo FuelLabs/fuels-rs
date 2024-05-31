@@ -19,6 +19,8 @@ use crate::{
 pub enum TxStatus {
     Success {
         receipts: Vec<Receipt>,
+        total_gas: u64,
+        total_fee: u64,
     },
     Submitted,
     SqueezedOut {
@@ -28,6 +30,8 @@ pub enum TxStatus {
         receipts: Vec<Receipt>,
         reason: String,
         revert_id: u64,
+        total_gas: u64,
+        total_fee: u64,
     },
 }
 
@@ -41,6 +45,7 @@ impl TxStatus {
                 receipts,
                 reason,
                 revert_id: id,
+                ..
             } => Self::map_revert_error(receipts, reason, *id, log_decoder),
             _ => Ok(()),
         }
@@ -86,7 +91,7 @@ impl TxStatus {
 
     pub fn take_receipts(self) -> Vec<Receipt> {
         match self {
-            TxStatus::Success { receipts } | TxStatus::Revert { receipts, .. } => receipts,
+            TxStatus::Success { receipts, .. } | TxStatus::Revert { receipts, .. } => receipts,
             _ => vec![],
         }
     }
@@ -97,11 +102,22 @@ impl From<ClientTransactionStatus> for TxStatus {
     fn from(client_status: ClientTransactionStatus) -> Self {
         match client_status {
             ClientTransactionStatus::Submitted { .. } => TxStatus::Submitted {},
-            ClientTransactionStatus::Success { receipts, .. } => TxStatus::Success { receipts },
+            ClientTransactionStatus::Success {
+                receipts,
+                total_gas,
+                total_fee,
+                ..
+            } => TxStatus::Success {
+                receipts,
+                total_gas,
+                total_fee,
+            },
             ClientTransactionStatus::Failure {
                 reason,
                 program_state,
                 receipts,
+                total_gas,
+                total_fee,
                 ..
             } => {
                 let revert_id = program_state
@@ -114,6 +130,8 @@ impl From<ClientTransactionStatus> for TxStatus {
                     receipts,
                     reason,
                     revert_id,
+                    total_gas,
+                    total_fee,
                 }
             }
             ClientTransactionStatus::SqueezedOut { reason } => TxStatus::SqueezedOut { reason },
@@ -125,9 +143,22 @@ impl From<ClientTransactionStatus> for TxStatus {
 impl From<TransactionExecutionStatus> for TxStatus {
     fn from(value: TransactionExecutionStatus) -> Self {
         match value.result {
-            TransactionExecutionResult::Success { receipts, .. } => Self::Success { receipts },
+            TransactionExecutionResult::Success {
+                receipts,
+                total_gas,
+                total_fee,
+                ..
+            } => Self::Success {
+                receipts,
+                total_gas,
+                total_fee,
+            },
             TransactionExecutionResult::Failed {
-                result, receipts, ..
+                result,
+                receipts,
+                total_gas,
+                total_fee,
+                ..
             } => {
                 let revert_id = result
                     .and_then(|result| match result {
@@ -140,6 +171,8 @@ impl From<TransactionExecutionStatus> for TxStatus {
                     receipts,
                     reason,
                     revert_id,
+                    total_gas,
+                    total_fee,
                 }
             }
         }
