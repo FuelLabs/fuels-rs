@@ -15,6 +15,7 @@ fuel-core-chain-config = { workspace = true, features = ["test-helpers"] }
 fuel-core-client = { workspace = true }
 fuel-core-poa = { workspace = true }
 fuel-core-services = { workspace = true }
+fuel-core-types = { workspace = true }
 fuel-crypto = { workspace = true }
 fuel-tx = { workspace = true }
 fuel-types = { workspace = true, features = ["random"] }

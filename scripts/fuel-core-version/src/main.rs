@@ -8,6 +8,7 @@ use color_eyre::{
     eyre::{bail, ContextCompat},
     Result,
 };
+use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use semver::Version;
 use versions_replacer::metadata::collect_versions_from_cargo_toml;
 
@@ -40,11 +41,10 @@ fn get_version_file_path(
 }
 
 fn verify_version_from_file(version: Version) -> Result<()> {
-    let version_from_file: Version = include!("../version.rs");
-    if version != version_from_file {
+    if version != SUPPORTED_FUEL_CORE_VERSION {
         bail!(
             "fuel_core version in version.rs ({}) doesn't match one in Cargo.toml ({})",
-            version_from_file,
+            SUPPORTED_FUEL_CORE_VERSION,
             version
         );
     }
