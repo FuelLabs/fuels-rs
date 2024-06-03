@@ -1007,154 +1007,72 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
     Ok(())
 }
 
-#[ignore]
 #[tokio::test]
-async fn predicate_validation() -> Result<()> {
-    let default_asset_id = AssetId::zeroed();
-    let hex_str = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe";
-    let other_asset_id = AssetId::from_str(hex_str)?;
-    let begin_coin_amount = 1_100;
-
-    let tx_policies = TxPolicies::default();
-    let wallets_config = WalletsConfig::new_multiple_assets(
-        2,
-        vec![
-            AssetConfig {
-                id: default_asset_id,
-                num_coins: 1,
-                coin_amount: begin_coin_amount,
-            },
-            AssetConfig {
-                id: other_asset_id,
-                num_coins: 1,
-                coin_amount: begin_coin_amount,
-            },
-        ],
-    );
-
-    let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
-
-    let first_wallet = &wallets[0];
-    let second_wallet = &wallets[1];
-
+async fn predicate_transfers_non_base_asset() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
-    let code_path = "./sway/predicates/basic_predicate/out/release/basic_predicate.bin";
 
-    // the predicate evaluates to true if the two arguments are equal
-    let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
-    let predicate_with_correct_data: Predicate = Predicate::load_from(code_path)?
-        .with_provider(first_wallet.try_provider()?.clone())
-        .with_data(correct_predicate_data);
+    let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
+    let mut predicate: Predicate =
+        Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
+            .with_data(predicate_data);
 
-    let incorrect_predicate_data = MyPredicateEncoder::default().encode_data(1000, 0)?;
-    let predicate_with_incorrect_data: Predicate = Predicate::load_from(code_path)?
-        .with_provider(first_wallet.try_provider()?.clone())
-        .with_data(incorrect_predicate_data);
+    let num_coins = 4;
+    let num_message = 6;
+    let amount = 20;
+    let (_, predicate_balance, receiver, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+    let other_asset_id = AssetId::from([1u8; 32]);
 
-    // The predicate needs to be funded with the target asset id, and the base asset id to pay for
-    // gas, even for just validation.
-    let amount_to_transfer_to_predicate = 1000;
-    first_wallet
+    predicate
         .transfer(
-            // the data doesn't change the predicate's address
-            predicate_with_correct_data.address(),
-            amount_to_transfer_to_predicate,
+            receiver.address(),
             other_asset_id,
-            tx_policies,
+            predicate_balance,
+            TxPolicies::default(),
         )
         .await?;
-    first_wallet
+
+    assert_eq!(predicate.get_asset_balance(&other_asset_id).await?, 0,);
+
+    assert_eq!(
+        receiver.get_asset_balance(&other_asset_id).await?,
+        predicate_balance,
+    );
+}
+
+#[tokio::test]
+async fn predicate_with_invalid_data_fails() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(0, 100)?;
+    let mut predicate: Predicate =
+        Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
+            .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_message = 6;
+    let amount = 20;
+    let (_, predicate_balance, receiver, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+    let other_asset_id = AssetId::from([1u8; 32]);
+
+    let error_string = predicate
         .transfer(
-            predicate_with_correct_data.address(),
-            amount_to_transfer_to_predicate,
-            default_asset_id,
-            tx_policies,
+            receiver.address(),
+            other_asset_id,
+            predicate_balance,
+            TxPolicies::default(),
         )
-        .await?;
+        .await
+        .unwrap_err()
+        .to_string();
 
-    let amount_to_unlock = 500;
-    // Test with a non-default asset ID,to check that fee estimation works
-    {
-        // Check that a validated predicate => transfer can occur
-        predicate_with_correct_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                other_asset_id,
-                tx_policies,
-            )
-            .await?;
-        assert_eq!(
-            second_wallet.get_asset_balance(&other_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-
-        let error_string = predicate_with_incorrect_data
-            .transfer(second_wallet.address(), 10, other_asset_id, tx_policies)
-            .await
-            .unwrap_err()
-            .to_string();
-        assert!(
-            error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))")
-        );
-        let transfer_error_string = predicate_with_incorrect_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                other_asset_id,
-                tx_policies,
-            )
-            .await
-            .unwrap_err()
-            .to_string();
-        // the transfer failed as expected
-        assert!(transfer_error_string
-            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
-        // so the balance is not modified
-        assert_eq!(
-            second_wallet.get_asset_balance(&other_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-    }
-
-    // Test with default asset ID
-    {
-        // Check that a validated predicate => transfer can occur
-        predicate_with_correct_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                default_asset_id,
-                tx_policies,
-            )
-            .await?;
-        assert_eq!(
-            second_wallet.get_asset_balance(&default_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-
-        let transfer_error_string = predicate_with_incorrect_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                default_asset_id,
-                tx_policies,
-            )
-            .await
-            .unwrap_err()
-            .to_string();
-        // the transfer failed as expected
-        assert!(transfer_error_string
-            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
-        // so the balance is not modified
-        assert_eq!(
-            second_wallet.get_asset_balance(&default_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-    }
-
-    Ok(())
+    assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+    assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
 }
