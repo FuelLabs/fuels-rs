@@ -1027,7 +1027,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
 
-    let send_amount = 100;
+    let send_amount = num_coins * amount;
     predicate
         .transfer(
             receiver.address(),
@@ -1067,7 +1067,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
 
-    let send_amount = 100;
+    let send_amount = num_coins * amount;
     let error_string = predicate
         .transfer(
             receiver.address(),
