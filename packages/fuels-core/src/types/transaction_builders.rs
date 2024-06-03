@@ -309,7 +309,7 @@ macro_rules! impl_tx_trait {
                 };
                 let mut policies = Policies::default().with_witness_limit(witness_limit);
 
-                // `MaxFee` set to max until we estimate a reasonable value
+                // `MaxFee` set to `tip` or `0` for `dry_run`
                 policies.set(PolicyType::MaxFee, self.tx_policies.tip().or(Some(0)));
                 policies.set(PolicyType::Maturity, self.tx_policies.maturity());
                 policies.set(PolicyType::Tip, self.tx_policies.tip());
@@ -488,7 +488,6 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
         let num_witnesses = self.num_witnesses()?;
-        let chain_id = provider.consensus_parameters().chain_id();
         let policies = self.generate_fuel_policies()?;
 
         let has_no_code = self.script.is_empty();
@@ -516,8 +515,11 @@ impl ScriptTransactionBuilder {
         Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
             .await?;
 
-        let missing_witnesses =
-            generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
+        let missing_witnesses = generate_missing_witnesses(
+            tx.id(&provider.consensus_parameters().chain_id()),
+            &self.unresolved_signers,
+        )
+        .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
 
         Ok(tx)

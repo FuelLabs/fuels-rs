@@ -15,7 +15,7 @@ pub enum Trigger {
     Interval { block_time: Duration },
 }
 
-//#[cfg(feature = "fuel-core-lib")]
+#[cfg(feature = "fuel-core-lib")]
 impl From<Trigger> for fuel_core_poa::Trigger {
     fn from(value: Trigger) -> Self {
         match value {

@@ -136,7 +136,6 @@ pub trait Account: ViewOnlyAccount {
         let missing_base_amount =
             calculate_missing_base_amount(tb, base_amount, used_base_amount, provider).await?;
 
-        dbg!(missing_base_amount, base_amount, &base_assets);
         if missing_base_amount > 0 {
             let new_base_inputs = self
                 .get_asset_inputs_for_amount(
@@ -191,24 +190,6 @@ pub trait Account: ViewOnlyAccount {
         };
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
-
-        let is: Vec<String> = tx_builder
-            .inputs
-            .clone()
-            .into_iter()
-            .filter_map(|i| match i {
-                Input::ResourceSigned { resource } => match resource {
-                    CoinType::Message(msg) => Some(msg.message_id().to_string()),
-                    _ => None,
-                },
-                Input::ResourcePredicate { resource, .. } => match resource {
-                    CoinType::Message(msg) => Some(msg.message_id().to_string()),
-                    _ => None,
-                },
-                _ => None,
-            })
-            .collect();
-        dbg!(is);
 
         let tx = tx_builder.build(provider).await?;
         let tx_id = tx.id(provider.chain_id());

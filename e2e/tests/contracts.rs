@@ -835,7 +835,6 @@ async fn test_contract_instance_get_balances() -> Result<()> {
     let contract_balances = contract_instance.get_balances().await?;
     assert!(contract_balances.is_empty());
 
-    dbg!("aaaaa");
     // Transfer an amount to the contract
     let amount = 8;
     wallet
