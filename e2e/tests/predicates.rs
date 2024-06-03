@@ -1015,21 +1015,23 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
-    let predicate: Predicate =
+    let mut predicate: Predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (_, predicate_balance, receiver, _, _) =
+    let (provider, _, receiver, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
+    predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
 
+    let send_amount = 100;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            send_amount,
             other_asset_id,
             TxPolicies::default(),
         )
@@ -1039,7 +1041,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
 
     assert_eq!(
         receiver.get_asset_balance(&other_asset_id).await?,
-        predicate_balance,
+        send_amount,
     );
 
     Ok(())
@@ -1053,21 +1055,23 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 100)?;
-    let predicate: Predicate =
+    let mut predicate: Predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
     let num_coins = 4;
     let num_message = 6;
     let amount = 20;
-    let (_, predicate_balance, receiver, _, _) =
+    let (provider, _, receiver, _, _) =
         setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
+    predicate.set_provider(provider);
     let other_asset_id = AssetId::from([1u8; 32]);
 
+    let send_amount = 100;
     let error_string = predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            send_amount,
             other_asset_id,
             TxPolicies::default(),
         )
