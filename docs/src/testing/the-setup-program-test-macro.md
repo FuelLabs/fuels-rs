@@ -29,7 +29,9 @@ Available `COMMAND`s:
 Example: `Options(profile="debug")`
 
 Description: Sets options from `ARG`s to be used by other `COMMAND`s.
+
 Available options:
+
 - `profile`: sets the `cargo` build profile. Variants: `"release"` (default),  `"debug"`
 
 Cardinality: 0 or 1.
