@@ -81,12 +81,12 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { path = "../fuel/fuel-core/crates/fuel-core", default-features = false }
-fuel-core-chain-config = { path = "../fuel/fuel-core/crates/chain-config", default-features = false }
-fuel-core-client = { path = "../fuel/fuel-core/crates/client", default-features = false }
-fuel-core-poa = { path = "../fuel/fuel-core/crates/services/consensus_module/poa", default-features = false }
-fuel-core-services = { path = "../fuel/fuel-core/crates/services", default-features = false }
-fuel-core-types = { path = "../fuel/fuel-core/crates/types", default-features = false }
+fuel-core = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
+fuel-core-chain-config = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
+fuel-core-client = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
+fuel-core-poa = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
+fuel-core-services = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
+fuel-core-types = { git = "https://github.com/FuelLabs/fuel-core", branch = "feature/dry-run-w-settable-gas", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
 fuel-asm = { version = "0.50.0" }

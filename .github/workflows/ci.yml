@@ -17,7 +17,7 @@ env:
   DASEL_VERSION: https://github.com/TomWright/dasel/releases/download/v2.3.6/dasel_linux_amd64
   RUSTFLAGS: "-D warnings"
   FUEL_CORE_VERSION: 0.27.0
-  FUEL_CORE_PATCH_BRANCH:
+  FUEL_CORE_PATCH_BRANCH: feature/dry-run-w-settable-gas
   RUST_VERSION: 1.76.0
   FORC_VERSION: 0.60.0
   FORC_PATCH_BRANCH: ""

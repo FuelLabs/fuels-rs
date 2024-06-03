@@ -1,4 +1,4 @@
-use std::{default::Default, str::FromStr};
+use std::default::Default;
 
 use fuels::{
     core::{
@@ -1015,7 +1015,7 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
-    let mut predicate: Predicate =
+    let predicate: Predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
@@ -1023,14 +1023,14 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
     let num_message = 6;
     let amount = 20;
     let (_, predicate_balance, receiver, _, _) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     let other_asset_id = AssetId::from([1u8; 32]);
 
     predicate
         .transfer(
             receiver.address(),
-            other_asset_id,
             predicate_balance,
+            other_asset_id,
             TxPolicies::default(),
         )
         .await?;
@@ -1041,6 +1041,8 @@ async fn predicate_transfers_non_base_asset() -> Result<()> {
         receiver.get_asset_balance(&other_asset_id).await?,
         predicate_balance,
     );
+
+    Ok(())
 }
 
 #[tokio::test]
@@ -1051,7 +1053,7 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     ));
 
     let predicate_data = MyPredicateEncoder::default().encode_data(0, 100)?;
-    let mut predicate: Predicate =
+    let predicate: Predicate =
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_data(predicate_data);
 
@@ -1059,14 +1061,14 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
     let num_message = 6;
     let amount = 20;
     let (_, predicate_balance, receiver, _, _) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+        setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
     let other_asset_id = AssetId::from([1u8; 32]);
 
     let error_string = predicate
         .transfer(
             receiver.address(),
-            other_asset_id,
             predicate_balance,
+            other_asset_id,
             TxPolicies::default(),
         )
         .await
@@ -1075,4 +1077,6 @@ async fn predicate_with_invalid_data_fails() -> Result<()> {
 
     assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
     assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
+
+    Ok(())
 }
