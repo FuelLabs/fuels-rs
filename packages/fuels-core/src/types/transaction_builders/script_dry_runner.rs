@@ -11,7 +11,7 @@ use itertools::Itertools;
 use super::dry_runner::DryRun;
 use crate::{
     constants::WITNESS_STATIC_SIZE,
-    types::{errors::Result, transaction_builders::DryRunner, AssetId},
+    types::{errors::Result, transaction_builders::DryRunner},
 };
 
 pub(crate) struct ScriptDryRunner<R> {
@@ -84,10 +84,7 @@ impl<R: DryRunner> ScriptDryRunner<R> {
     }
 
     fn add_fake_coins(&mut self, tx: &mut fuel_tx::Script) {
-        let consensus_params = self.dry_runner.consensus_parameters();
-        if let Some(fake_input) =
-            Self::needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
-        {
+        if let Some(fake_input) = Self::needs_fake_spendable_input(tx.inputs()) {
             tx.inputs_mut().push(fake_input);
 
             // Add an empty `Witness` for the `coin_signed` we just added
@@ -96,22 +93,18 @@ impl<R: DryRunner> ScriptDryRunner<R> {
         }
     }
 
-    fn needs_fake_base_input(
-        inputs: &[FuelInput],
-        base_asset_id: &AssetId,
-    ) -> Option<fuel_tx::Input> {
-        let has_base_asset = inputs.iter().any(|i| match i {
-            FuelInput::CoinSigned(CoinSigned { asset_id, .. })
-            | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-                if asset_id == base_asset_id =>
-            {
-                true
-            }
-            FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
-            _ => false,
+    fn needs_fake_spendable_input(inputs: &[FuelInput]) -> Option<fuel_tx::Input> {
+        let has_spendable_input = inputs.iter().any(|i| {
+            matches!(
+                i,
+                FuelInput::CoinSigned(CoinSigned { .. })
+                    | FuelInput::CoinPredicate(CoinPredicate { .. })
+                    | FuelInput::MessageCoinSigned(_)
+                    | FuelInput::MessageCoinPredicate(_)
+            )
         });
 
-        if has_base_asset {
+        if has_spendable_input {
             return None;
         }
 
