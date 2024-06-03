@@ -1,4 +1,4 @@
-use std::{collections::HashMap, iter::repeat};
+use std::iter::repeat;
 
 use fuel_crypto::Signature;
 use fuel_tx::{
@@ -16,28 +16,44 @@ use crate::{
 
 pub(crate) struct ScriptDryRunner<R> {
     dry_runner: R,
-    cache: HashMap<fuel_tx::Script, DryRun>,
     num_total_witnesses: usize,
+    last_dry_run: Option<DryRun>,
 }
 
 impl<R> ScriptDryRunner<R> {
     pub fn new(dry_runner: R, num_total_witnesses: usize) -> Self {
         Self {
             dry_runner,
-            cache: HashMap::new(),
             num_total_witnesses,
+            last_dry_run: None,
         }
     }
 }
 
 impl<R: DryRunner> ScriptDryRunner<R> {
-    pub async fn run(&mut self, mut tx: fuel_tx::Script) -> Result<DryRun> {
+    pub async fn run(
+        &mut self,
+        mut tx: fuel_tx::Script,
+        saturate_variable_outputs: bool,
+    ) -> Result<DryRun> {
         self.add_fake_witnesses(&mut tx);
         self.add_fake_coins(&mut tx);
-        self.saturate_with_variable_outputs(&mut tx);
+        if saturate_variable_outputs {
+            self.saturate_with_variable_outputs(&mut tx);
+        }
         self.set_script_gas_limit_to_max(&mut tx);
 
-        self.cached_or_run(tx).await
+        self._run(tx).await
+    }
+
+    pub fn last_dry_run(&self) -> Option<DryRun> {
+        self.last_dry_run
+    }
+
+    async fn _run(&mut self, tx: fuel_tx::Script) -> Result<DryRun> {
+        let dry_run = self.dry_runner.dry_run(tx.clone().into()).await?;
+        self.last_dry_run = Some(dry_run);
+        Ok(dry_run)
     }
 
     fn set_script_gas_limit_to_max(&mut self, tx: &mut fuel_tx::Script) {
@@ -123,16 +139,5 @@ impl<R: DryRunner> ScriptDryRunner<R> {
             TxPointer::default(),
             0,
         ))
-    }
-
-    async fn cached_or_run(&mut self, tx: fuel_tx::Script) -> Result<DryRun> {
-        if let Some(result) = self.cache.get(&tx) {
-            return Ok(*result);
-        }
-
-        let result = self.dry_runner.dry_run(tx.clone().into()).await?;
-        self.cache.insert(tx, result);
-
-        Ok(result)
     }
 }

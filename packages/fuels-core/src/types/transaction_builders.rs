@@ -364,6 +364,18 @@ impl Debug for dyn Signer + Send + Sync {
 }
 
 /// Controls the SDK behavior regarding variable transaction outputs.
+///
+/// # Warning
+///
+/// Estimation of variable outputs is performed by saturating the transaction with variable outputs
+/// and counting the number of outputs used. This process can be particularly unreliable in cases
+/// where the script introspects the number of variable outputs and adjusts its logic accordingly.
+/// The script could theoretically mint outputs until all variable outputs are utilized.
+///
+/// In such scenarios, estimation of necessary variable outputs becomes nearly impossible.
+///
+/// It is advised to avoid relying on automatic estimation of variable outputs if the script
+/// contains logic that dynamically adjusts based on the number of outputs.
 #[derive(Debug, Clone, Copy)]
 pub enum VariableOutputPolicy {
     /// Perform a dry run of the transaction estimating the minimum number of variable outputs to
@@ -472,64 +484,106 @@ impl ScriptTransactionBuilder {
         })
     }
 
-    async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
+    async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
         let num_resolved_witnesses = self.num_witnesses()?;
-        let policies = self.generate_fuel_policies()?;
+        let mut script_dry_runner = self.script_dry_runner(num_resolved_witnesses, &dry_runner);
 
-        let has_no_code = self.script.is_empty();
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
-            self.script,
-            self.script_data,
-            policies,
+            self.script.clone(),
+            self.script_data.clone(),
+            self.generate_fuel_policies()?,
             resolve_fuel_inputs(
-                self.inputs,
+                self.inputs.clone(),
                 num_resolved_witnesses,
                 &self.unresolved_witness_indexes,
             )?,
-            self.outputs,
+            self.outputs.clone(),
             vec![],
         );
 
-        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
-            + num_resolved_witnesses as usize;
-
-        let mut dry_runner = ScriptDryRunner::new(&provider, total_witnesses);
-
-        let script_gas_limit = if has_no_code {
-            0
-        } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
-            // Use the user defined value even if it makes the transaction revert.
-            gas_limit
-        } else {
-            dry_runner
-                .run(tx.clone())
-                .await?
-                .gas_with_tolerance(self.gas_estimation_tolerance)
-        };
-
-        let variable_outputs = match self.variable_output_policy {
-            VariableOutputPolicy::Exactly(num) => num,
-            VariableOutputPolicy::EstimateMinimum => {
-                dry_runner.run(tx.clone()).await?.variable_outputs
-            }
-        };
-
-        add_variable_outputs(&mut tx, variable_outputs);
-
-        *tx.script_gas_limit_mut() = script_gas_limit;
-
-        Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
+        self.add_variable_outputs(&mut script_dry_runner, &mut tx)
             .await?;
 
+        // should come after variable outputs because it can then reuse the dry run made for variable outputs
+        self.set_script_gas_limit(&mut script_dry_runner, &mut tx)
+            .await?;
+
+        Self::set_max_fee_policy(
+            &mut tx,
+            &dry_runner,
+            self.gas_price_estimation_block_horizon,
+        )
+        .await?;
+
+        self.set_witnesses(&mut tx, dry_runner).await?;
+
+        Ok(tx)
+    }
+
+    async fn set_witnesses(self, tx: &mut fuel_tx::Script, provider: impl DryRunner) -> Result<()> {
         let missing_witnesses = generate_missing_witnesses(
             tx.id(&provider.consensus_parameters().chain_id()),
             &self.unresolved_signers,
         )
         .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
+        Ok(())
+    }
 
-        Ok(tx)
+    async fn set_script_gas_limit(
+        &self,
+        dry_runner: &mut ScriptDryRunner<&impl DryRunner>,
+        tx: &mut fuel_tx::Script,
+    ) -> Result<()> {
+        let has_no_code = self.script.is_empty();
+        let script_gas_limit = if has_no_code {
+            0
+        } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
+            // Use the user defined value even if it makes the transaction revert.
+            gas_limit
+        } else {
+            let dry_run = if let Some(dry_run) = dry_runner.last_dry_run() {
+                // Even if the last dry run included variable outputs they only affect the transaction fee,
+                // the script's gas usage remains unchanged. By opting into variable output estimation, the user
+                // acknowledges the issues with tx introspection and asserts that there is no introspective logic
+                // based on the number of variable outputs.
+                //
+                // Therefore, we can trust the gas usage from the last dry run and reuse it, avoiding the need
+                // for an additional dry run.
+                dry_run
+            } else {
+                dry_runner.run(tx.clone(), false).await?
+            };
+            dry_run.gas_with_tolerance(self.gas_estimation_tolerance)
+        };
+
+        *tx.script_gas_limit_mut() = script_gas_limit;
+        Ok(())
+    }
+
+    fn script_dry_runner<D>(&self, num_resolved_witnesses: u16, dry_runner: D) -> ScriptDryRunner<D>
+    where
+        D: DryRunner,
+    {
+        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
+            + num_resolved_witnesses as usize;
+        ScriptDryRunner::new(dry_runner, total_witnesses)
+    }
+
+    async fn add_variable_outputs(
+        &self,
+        dry_runner: &mut ScriptDryRunner<&impl DryRunner>,
+        tx: &mut fuel_tx::Script,
+    ) -> Result<()> {
+        let variable_outputs = match self.variable_output_policy {
+            VariableOutputPolicy::Exactly(num) => num,
+            VariableOutputPolicy::EstimateMinimum => {
+                dry_runner.run(tx.clone(), true).await?.variable_outputs
+            }
+        };
+        add_variable_outputs(tx, variable_outputs);
+        Ok(())
     }
 
     pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
