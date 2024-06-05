@@ -53,3 +53,4 @@ Each configurable constant will get a dedicated `with` method in the SDK. For ex
 
 ```rust,ignore
 {{#include ../../../e2e/tests/predicates.rs:predicate_configurables}}
+```

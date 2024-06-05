@@ -2,9 +2,9 @@
 
 You can run a script using its JSON-ABI and the path to its binary file. You can run the scripts with arguments. For this, you have to use the `abigen!` macro seen [previously](./abigen/the-abigen-macro.md).
 
-````rust,ignore
+```rust,ignore
 {{#include ../../e2e/tests/scripts.rs:script_with_arguments}}
-````
+```
 
 Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:
 
@@ -56,3 +56,4 @@ Each configurable constant will get a dedicated `with` method in the SDK. For ex
 
 ```rust,ignore
 {{#include ../../e2e/tests/configurables.rs:script_configurables}}
+```
