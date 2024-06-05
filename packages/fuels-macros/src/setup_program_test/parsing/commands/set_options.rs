@@ -18,7 +18,7 @@ impl FromStr for BuildProfile {
         match s {
             "debug" => Ok(Self::Debug),
             "release" => Ok(Self::Release),
-            _ => Err(r#"invalid build profile option: must be "default" or "release""#),
+            _ => Err(r#"invalid build profile option: must be "debug" or "release""#),
         }
     }
 }
