@@ -78,7 +78,7 @@ pub mod prelude {
             call_utils::TxDependencyExtension,
             contract::{
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
-                SettableContract, StorageConfiguration,
+                SettableContract, StorageConfiguration, Validation,
             },
         },
         test_helpers::*,

@@ -12,7 +12,7 @@ use fuels_core::{
         input::Input,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+            BuildableTransaction, ScriptContext, ScriptTransactionBuilder, TransactionBuilder,
         },
         tx_status::TxStatus,
     },
@@ -208,7 +208,8 @@ where
         self.account.add_witnesses(&mut tb)?;
         self.account.adjust_for_fee(&mut tb, 0).await?;
 
-        tb.build(self.account.try_provider()?).await
+        tb.build(self.account.try_provider()?, ScriptContext::Normal)
+            .await
     }
 
     /// Call a script on the node. If `simulate == true`, then the call is done in a

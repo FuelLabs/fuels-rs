@@ -1,6 +1,7 @@
 use fuels::{
     core::codec::EncoderConfig,
     prelude::*,
+    programs::contract::Validation,
     types::{Bits256, SizedAsciiString, U256},
 };
 
@@ -253,4 +254,34 @@ async fn configurable_encoder_config_is_applied() {
             .to_string()
             .contains("token limit `1` reached while encoding. Try increasing it"),)
     }
+}
+
+#[tokio::test]
+async fn simulations_can_be_made_without_coins() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/configurables"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        )
+    );
+    let contract_id = contract_instance.contract_id();
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+
+    let response = MyContract::new(contract_id, no_funds_wallet.clone())
+        .methods()
+        .return_configurables()
+        .simulate(Validation::Minimal)
+        .await?;
+
+    assert_eq!(response.value.1, 8);
+
+    Ok(())
 }

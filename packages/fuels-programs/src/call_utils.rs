@@ -16,7 +16,7 @@ use fuels_core::{
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+            BuildableTransaction, ScriptContext, ScriptTransactionBuilder, TransactionBuilder,
         },
     },
 };
@@ -166,7 +166,8 @@ pub(crate) async fn build_tx_from_contract_calls(
     account.add_witnesses(&mut tb)?;
     account.adjust_for_fee(&mut tb, used_base_amount).await?;
 
-    tb.build(account.try_provider()?).await
+    tb.build(account.try_provider()?, ScriptContext::Normal)
+        .await
 }
 
 /// Compute the length of the calling scripts for the two types of contract calls: those that return

@@ -20,7 +20,10 @@ use fuels_core::{
         errors::{error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
+        transaction_builders::{
+            BuildableTransaction, Context, CreateTransactionBuilder, ScriptContext,
+            ScriptTransactionBuilder,
+        },
         tx_status::TxStatus,
         Selector, Token,
     },
@@ -316,7 +319,7 @@ impl Contract {
 
         let provider = account.try_provider()?;
 
-        let tx = tb.build(provider).await?;
+        let tx = tb.build(provider, Context::Normal).await?;
 
         provider
             .send_transaction_and_await_commit(tx)
@@ -472,6 +475,18 @@ pub struct ContractCallHandler<T: Account, D> {
     pub log_decoder: LogDecoder,
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum Validation {
+    /// The transaction will be subject to all validations -- the tx fee must be covered, witnesses
+    /// and UTXOs must be valid, etc.
+    #[default]
+    Realistic,
+    /// Most validation is disabled. Witnesses are replaced with fake ones, fake base assets are
+    /// added if necessary. Useful for fetching state without having to have an account
+    /// with base assets.
+    Minimal,
+}
+
 impl<T, D> ContractCallHandler<T, D>
 where
     T: Account,
@@ -591,7 +606,16 @@ where
 
     /// Call a contract's method on the node, in a state-modifying manner.
     pub async fn call(mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
+        let tx = self.build_tx().await?;
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponse<T, D>> {
@@ -606,20 +630,20 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
-    }
-
-    async fn call_or_simulate(&mut self, simulate: bool) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
+    pub async fn simulate(&mut self, validation: Validation) -> Result<FuelCallResponse<D>> {
         let provider = self.account.try_provider()?;
 
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+        let tx_status = if let Validation::Minimal = validation {
+            let tx = self
+                .transaction_builder()
+                .await?
+                .build(provider, ScriptContext::UnvalidatedStateRead)
+                .await?;
 
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
+            provider.dry_run_no_validation(tx).await?
         } else {
-            provider.send_transaction_and_await_commit(tx).await?
+            let tx = self.build_tx().await?;
+            provider.dry_run(tx).await?
         };
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
@@ -672,7 +696,7 @@ where
     D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
-        self.simulate().await?;
+        self.simulate(Validation::Realistic).await?;
         Ok(())
     }
 

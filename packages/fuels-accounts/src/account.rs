@@ -12,7 +12,9 @@ use fuels_core::types::{
     input::Input,
     message::Message,
     transaction::{Transaction, TxPolicies},
-    transaction_builders::{BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder},
+    transaction_builders::{
+        BuildableTransaction, ScriptContext, ScriptTransactionBuilder, TransactionBuilder,
+    },
     transaction_response::TransactionResponse,
 };
 
@@ -173,7 +175,7 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
 
-        let tx = tx_builder.build(provider).await?;
+        let tx = tx_builder.build(provider, ScriptContext::default()).await?;
         let tx_id = tx.id(provider.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -232,7 +234,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, balance).await?;
 
-        let tx = tb.build(provider).await?;
+        let tx = tb.build(provider, ScriptContext::default()).await?;
 
         let tx_id = tx.id(provider.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -268,7 +270,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, amount).await?;
 
-        let tx = tb.build(provider).await?;
+        let tx = tb.build(provider, ScriptContext::default()).await?;
 
         let tx_id = tx.id(provider.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -384,7 +386,9 @@ mod tests {
         tb.add_signer(wallet.clone())?;
         // ANCHOR_END: sign_tb
 
-        let tx = tb.build(&MockDryRunner::default()).await?; // Resolve signatures and add corresponding witness indexes
+        let tx = tb
+            .build(&MockDryRunner::default(), ScriptContext::default())
+            .await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses
         let bytes = <[u8; Signature::LEN]>::try_from(tx.witnesses().first().unwrap().as_ref())?;

@@ -158,11 +158,17 @@ async fn test_multiple_read_calls() -> Result<()> {
     // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
     // We can notice here that, thanks to this, we don't generate a TransactionId collision,
     // even if the transactions are theoretically the same.
-    let stored = contract_methods.read().simulate().await?;
+    let stored = contract_methods
+        .read()
+        .simulate(Validation::Realistic)
+        .await?;
 
     assert_eq!(stored.value, 42);
 
-    let stored = contract_methods.read().simulate().await?;
+    let stored = contract_methods
+        .read()
+        .simulate(Validation::Realistic)
+        .await?;
 
     assert_eq!(stored.value, 42);
     Ok(())
@@ -1723,7 +1729,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     tb.inputs_mut().extend(new_base_inputs);
 
     // ANCHOR: tb_build_without_signatures
-    let mut tx = tb.build_without_signatures(provider).await?;
+    let mut tx = tb.build(provider, ScriptContext::NoSignatures).await?;
     // ANCHOR: tx_sign_with
     tx.sign_with(&wallet, provider.chain_id()).await?;
     // ANCHOR_END: tx_sign_with
@@ -1787,7 +1793,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         let encoding_error = instance_with_encoder_config
             .methods()
             .get(0, 1)
-            .simulate()
+            .simulate(Validation::Realistic)
             .await
             .expect_err("should error");
 

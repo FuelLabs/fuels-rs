@@ -307,7 +307,7 @@ async fn test_script_transaction_builder() -> Result<()> {
     wallet.adjust_for_fee(&mut tb, 0).await?;
     tb.add_signer(wallet.clone())?;
 
-    let tx = tb.build(provider).await?;
+    let tx = tb.build(provider, ScriptContext::Normal).await?;
 
     let tx_id = provider.send_transaction(tx).await?;
     let tx_status = provider.tx_status(&tx_id).await?;

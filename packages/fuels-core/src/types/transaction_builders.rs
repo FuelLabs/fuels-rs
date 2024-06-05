@@ -72,30 +72,48 @@ struct UnresolvedWitnessIndexes {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction: sealed::Sealed {
     type TxType: Transaction;
+    type Context;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
-
-    /// Building without signatures will set the witness indexes of signed coins in the
-    /// order as they appear in the inputs. Multiple coins with the same owner will have
-    /// the same witness index. Make sure you sign the built transaction in the expected order.
-    async fn build_without_signatures(self, provider: impl DryRunner) -> Result<Self::TxType>;
+    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType>;
 }
 
 impl sealed::Sealed for ScriptTransactionBuilder {}
 
+#[derive(Debug, Clone, Default)]
+pub enum ScriptContext {
+    /// Transaction is estimated and signatures are automatically added.
+    #[default]
+    Normal,
+    /// Transaction is estimated but no signatures are added.
+    /// Building without signatures will set the witness indexes of signed coins in the
+    /// order as they appear in the inputs. Multiple coins with the same owner will have
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
+    NoSignatures,
+    /// No estimation is done and no signatures are added. Fake coins are added if no spendable inputs
+    /// are present. Meant only for transactions that are to be dry-run with validations off.
+    /// Useful for reading state with unfunded accounts.
+    UnvalidatedStateRead,
+}
+
+#[derive(Debug, Clone, Default)]
+pub enum Context {
+    /// Transaction is estimated and signatures are automatically added.
+    #[default]
+    Normal,
+    /// Transaction is estimated but no signatures are added.
+    /// Building without signatures will set the witness indexes of signed coins in the
+    /// order as they appear in the inputs. Multiple coins with the same owner will have
+    /// the same witness index. Make sure you sign the built transaction in the expected order.
+    NoSignatures,
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
+    type Context = ScriptContext;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
-    }
-
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
-        self.build(provider).await
+    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
+        self.build(provider, context).await
     }
 }
 
@@ -104,16 +122,10 @@ impl sealed::Sealed for CreateTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
+    type Context = Context;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
-    }
-
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
-        self.build(provider).await
+    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
+        self.build(provider, context).await
     }
 }
 
@@ -122,16 +134,10 @@ impl sealed::Sealed for UploadTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UploadTransactionBuilder {
     type TxType = UploadTransaction;
+    type Context = Context;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
-    }
-
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
-        self.build(provider).await
+    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
+        self.build(provider, context).await
     }
 }
 
@@ -140,16 +146,10 @@ impl sealed::Sealed for UpgradeTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UpgradeTransactionBuilder {
     type TxType = UpgradeTransaction;
+    type Context = Context;
 
-    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.build(provider).await
-    }
-
-    async fn build_without_signatures(mut self, provider: impl DryRunner) -> Result<Self::TxType> {
-        self.set_witness_indexes();
-        self.unresolved_signers = Default::default();
-
-        self.build(provider).await
+    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
+        self.build(provider, context).await
     }
 }
 
@@ -214,9 +214,9 @@ macro_rules! impl_tx_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
+                let context = Self::Context::NoSignatures;
                 let mut tx =
-                    BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
-                        .await?;
+                    BuildableTransaction::build(fee_estimation_tb, &provider, context).await?;
 
                 let consensus_parameters = provider.consensus_parameters();
 
@@ -467,10 +467,29 @@ impl_tx_trait!(UploadTransactionBuilder, UploadTransaction);
 impl_tx_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
-    async fn build(self, provider: impl DryRunner) -> Result<ScriptTransaction> {
+    async fn build(
+        mut self,
+        provider: impl DryRunner,
+        context: ScriptContext,
+    ) -> Result<ScriptTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match context {
+            ScriptContext::Normal => self.resolve_fuel_tx(&provider).await?,
+            ScriptContext::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+
+                self.resolve_fuel_tx(&provider).await?
+            }
+            ScriptContext::UnvalidatedStateRead => {
+                self.resolve_fuel_tx_no_validation(provider.consensus_parameters())?
+            }
+        };
+
         Ok(ScriptTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -484,6 +503,35 @@ impl ScriptTransactionBuilder {
         repeat(witness)
             .take(num_witnesses as usize + unresolved_witnesses_len)
             .collect()
+    }
+
+    fn resolve_fuel_tx_no_validation(
+        self,
+        consensus_parameters: &ConsensusParameters,
+    ) -> Result<Script> {
+        let num_witnesses = self.num_witnesses()?;
+        let policies = self.generate_fuel_policies()?;
+
+        let dry_run_witnesses = self.create_dry_run_witnesses(num_witnesses);
+        let mut tx = FuelTransaction::script(
+            0, // default value - will be overwritten
+            self.script,
+            self.script_data,
+            policies,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            self.outputs,
+            dry_run_witnesses,
+        );
+
+        ensure_spendable_input_exists(&mut tx);
+
+        let max_gas = tx.max_gas(
+            consensus_parameters.gas_costs(),
+            consensus_parameters.fee_params(),
+        ) + 1;
+        *tx.script_gas_limit_mut() = consensus_parameters.tx_params().max_gas_per_tx() - max_gas;
+
+        Ok(tx)
     }
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Script> {
@@ -532,15 +580,7 @@ impl ScriptTransactionBuilder {
         tolerance: f32,
     ) -> Result<u64> {
         let consensus_params = provider.consensus_parameters();
-        if let Some(fake_input) =
-            needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
-        {
-            tx.inputs_mut().push(fake_input);
-
-            // Add an empty `Witness` for the `coin_signed` we just added
-            tx.witnesses_mut().push(Default::default());
-            tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
-        }
+        ensure_spendable_input_exists(&mut tx);
 
         let max_gas = tx.max_gas(consensus_params.gas_costs(), consensus_params.fee_params()) + 1;
         *tx.script_gas_limit_mut() = consensus_params.tx_params().max_gas_per_tx() - max_gas;
@@ -673,19 +713,28 @@ impl ScriptTransactionBuilder {
     }
 }
 
-fn needs_fake_base_input(inputs: &[FuelInput], base_asset_id: &AssetId) -> Option<fuel_tx::Input> {
-    let has_base_asset = inputs.iter().any(|i| match i {
-        FuelInput::CoinSigned(CoinSigned { asset_id, .. })
-        | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
-            if asset_id == base_asset_id =>
-        {
-            true
-        }
-        FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
-        _ => false,
+fn ensure_spendable_input_exists(tx: &mut fuel_tx::Script) {
+    if let Some(fake_input) = needs_fake_input(tx.inputs()) {
+        tx.inputs_mut().push(fake_input);
+
+        // Add an empty `Witness` for the `coin_signed` we just added
+        tx.witnesses_mut().push(Default::default());
+        tx.set_witness_limit(tx.witness_limit() + WITNESS_STATIC_SIZE as u64);
+    }
+}
+
+fn needs_fake_input(inputs: &[FuelInput]) -> Option<fuel_tx::Input> {
+    let has_spendable_input = inputs.iter().any(|i| {
+        matches!(
+            i,
+            FuelInput::CoinSigned(CoinSigned { .. })
+                | FuelInput::CoinPredicate(CoinPredicate { .. })
+                | FuelInput::MessageCoinSigned(_)
+                | FuelInput::MessageCoinPredicate(_)
+        )
     });
 
-    if has_base_asset {
+    if has_spendable_input {
         return None;
     }
 
@@ -716,10 +765,25 @@ fn needs_fake_base_input(inputs: &[FuelInput], base_asset_id: &AssetId) -> Optio
 }
 
 impl CreateTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<CreateTransaction> {
+    pub async fn build(
+        mut self,
+        provider: impl DryRunner,
+        context: Context,
+    ) -> Result<CreateTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match context {
+            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
+
         Ok(CreateTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -810,10 +874,25 @@ impl CreateTransactionBuilder {
 }
 
 impl UploadTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<UploadTransaction> {
+    pub async fn build(
+        mut self,
+        provider: impl DryRunner,
+        context: Context,
+    ) -> Result<UploadTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+
+        let tx = match context {
+            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
+
         Ok(UploadTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -916,10 +995,23 @@ impl UploadTransactionBuilder {
 }
 
 impl UpgradeTransactionBuilder {
-    pub async fn build(self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
+    pub async fn build(
+        mut self,
+        provider: impl DryRunner,
+        context: Context,
+    ) -> Result<UpgradeTransaction> {
+        let is_using_predicates = self.is_using_predicates();
+        let tx = match context {
+            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::NoSignatures => {
+                self.set_witness_indexes();
+                self.unresolved_signers = Default::default();
+                self.resolve_fuel_tx(&provider).await?
+            }
+        };
         Ok(UpgradeTransaction {
-            is_using_predicates: self.is_using_predicates(),
-            tx: self.resolve_fuel_tx(&provider).await?,
+            is_using_predicates,
+            tx,
         })
     }
 
@@ -1295,7 +1387,7 @@ mod tests {
 
         // when
         let tx = tb
-            .build_without_signatures(&MockDryRunner::default())
+            .build(&MockDryRunner::default(), Context::NoSignatures)
             .await?;
 
         // then
@@ -1330,7 +1422,7 @@ mod tests {
 
         // when
         let tx = tb
-            .build_without_signatures(&MockDryRunner::default())
+            .build(&MockDryRunner::default(), ScriptContext::NoSignatures)
             .await?;
 
         // then
