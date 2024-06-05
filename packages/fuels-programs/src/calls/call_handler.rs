@@ -20,7 +20,7 @@ use fuels_core::{
 use crate::{
     calls::{
         receipt_parser::ReceiptParser,
-        traits::{Buildable, Extendable, Parsable},
+        traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::sealed,
         CallParameters, ContractCall, ScriptCall, TxDependencyExtension,
     },
@@ -29,7 +29,7 @@ use crate::{
 
 // Trait implemented by contract instances so that
 // they can be passed to the `with_contracts` method
-pub trait SettableContract {
+pub trait ContractDependency {
     fn id(&self) -> Bech32ContractId;
     fn log_decoder(&self) -> LogDecoder;
 }
@@ -70,7 +70,7 @@ impl<A, C, T> CallHandler<A, C, T> {
 impl<A, C, T> CallHandler<A, C, T>
 where
     A: Account,
-    C: Buildable,
+    C: TransactionTuner,
     T: Tokenizable + Parameterize + Debug,
 {
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
@@ -104,7 +104,7 @@ where
 impl<A, C, T> CallHandler<A, C, T>
 where
     A: Account,
-    C: Extendable + Buildable + Parsable,
+    C: ContractDependencyConfigurator + TransactionTuner + ResponseParser,
     T: Tokenizable + Parameterize + Debug,
 {
     /// Sets external contracts as dependencies to this contract's call.
@@ -131,7 +131,7 @@ where
     /// ```ignore
     /// my_contract_instance.my_method(...).with_contracts(&[another_contract_instance]).call()
     /// ```
-    pub fn with_contracts(mut self, contracts: &[&dyn SettableContract]) -> Self {
+    pub fn with_contracts(mut self, contracts: &[&dyn ContractDependency]) -> Self {
         self.call = self
             .call
             .with_external_contracts(contracts.iter().map(|c| c.id()).collect());
@@ -330,7 +330,7 @@ impl<A, C, T> sealed::Sealed for CallHandler<A, C, T> {}
 impl<A, C, T> TxDependencyExtension for CallHandler<A, C, T>
 where
     A: Account,
-    C: Extendable + Buildable + Parsable + Send + Sync,
+    C: ContractDependencyConfigurator + TransactionTuner + ResponseParser + Send + Sync,
     T: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {

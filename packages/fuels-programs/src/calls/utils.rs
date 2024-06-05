@@ -468,7 +468,7 @@ mod test {
     use rand::Rng;
 
     use super::*;
-    use crate::calls::{traits::Extendable, CallParameters};
+    use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
 
     fn new_contract_call_with_random_id() -> ContractCall {
         ContractCall {

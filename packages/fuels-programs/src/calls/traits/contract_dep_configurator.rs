@@ -5,13 +5,13 @@ use crate::calls::{
     ContractCall, ScriptCall,
 };
 
-pub trait Extendable: sealed::Sealed {
+pub trait ContractDependencyConfigurator: sealed::Sealed {
     fn append_contract(&mut self, contract_id: Bech32ContractId);
     fn append_variable_outputs(&mut self, num: u64);
     fn with_external_contracts(self, external_contracts: Vec<Bech32ContractId>) -> Self;
 }
 
-impl Extendable for ContractCall {
+impl ContractDependencyConfigurator for ContractCall {
     fn append_contract(&mut self, contract_id: Bech32ContractId) {
         self.external_contracts.push(contract_id)
     }
@@ -29,7 +29,7 @@ impl Extendable for ContractCall {
     }
 }
 
-impl Extendable for ScriptCall {
+impl ContractDependencyConfigurator for ScriptCall {
     fn append_contract(&mut self, contract_id: Bech32ContractId) {
         self.external_contracts.push(contract_id)
     }

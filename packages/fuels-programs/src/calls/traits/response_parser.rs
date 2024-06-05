@@ -6,7 +6,7 @@ use fuels_core::{
 
 use crate::calls::{receipt_parser::ReceiptParser, utils::sealed, ContractCall, ScriptCall};
 
-pub trait Parsable: sealed::Sealed {
+pub trait ResponseParser: sealed::Sealed {
     fn parse_call(
         &self,
         receipts: &[Receipt],
@@ -15,7 +15,7 @@ pub trait Parsable: sealed::Sealed {
     ) -> Result<Token>;
 }
 
-impl Parsable for ContractCall {
+impl ResponseParser for ContractCall {
     fn parse_call(
         &self,
         receipts: &[Receipt],
@@ -26,7 +26,7 @@ impl Parsable for ContractCall {
     }
 }
 
-impl Parsable for ScriptCall {
+impl ResponseParser for ScriptCall {
     fn parse_call(
         &self,
         receipts: &[Receipt],

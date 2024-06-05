@@ -548,18 +548,21 @@ mod tests {
             .add_call(call_handler_1)
             .add_call(call_handler_2);
         // ANCHOR_END: multi_call_build
+        let multi_call_handler_tmp = multi_call_handler.clone();
 
         // ANCHOR: multi_call_values
-        let (counter, array): (u64, [u64; 2]) = multi_call_handler.clone().call().await?.value;
+        let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
         // ANCHOR_END: multi_call_values
 
+        let multi_call_handler = multi_call_handler_tmp.clone();
         // ANCHOR: multi_contract_call_response
-        let response = multi_call_handler.clone().call::<(u64, [u64; 2])>().await?;
+        let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_contract_call_response
 
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
 
+        let multi_call_handler = multi_call_handler_tmp.clone();
         // ANCHOR: submit_response_multicontract
         let submitted_tx = multi_call_handler.submit().await?;
         let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;

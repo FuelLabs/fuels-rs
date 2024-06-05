@@ -110,7 +110,7 @@ pub mod abigen_bindings {
                 )
             }
         }
-        impl<A: ::fuels::accounts::Account> ::fuels::programs::calls::SettableContract for MyContract<A> {
+        impl<A: ::fuels::accounts::Account> ::fuels::programs::calls::ContractDependency for MyContract<A> {
             fn id(&self) -> ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }

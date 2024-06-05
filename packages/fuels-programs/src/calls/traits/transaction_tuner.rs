@@ -11,7 +11,7 @@ use crate::calls::{
 };
 
 #[async_trait::async_trait]
-pub trait Buildable: sealed::Sealed {
+pub trait TransactionTuner: sealed::Sealed {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
@@ -26,7 +26,7 @@ pub trait Buildable: sealed::Sealed {
 }
 
 #[async_trait::async_trait]
-impl Buildable for ContractCall {
+impl TransactionTuner for ContractCall {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
@@ -46,7 +46,7 @@ impl Buildable for ContractCall {
 }
 
 #[async_trait::async_trait]
-impl Buildable for ScriptCall {
+impl TransactionTuner for ScriptCall {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
@@ -79,7 +79,7 @@ impl Buildable for ScriptCall {
 impl sealed::Sealed for Vec<ContractCall> {}
 
 #[async_trait::async_trait]
-impl Buildable for Vec<ContractCall> {
+impl TransactionTuner for Vec<ContractCall> {
     async fn transaction_builder<T: Account>(
         &self,
         tx_policies: TxPolicies,
