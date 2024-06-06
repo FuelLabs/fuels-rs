@@ -4,6 +4,7 @@ use fuels::{
     tx::ContractParameters,
     types::{errors::transaction::Reason, Bits256, Identity},
 };
+use tokio::time::Instant;
 
 #[tokio::test]
 async fn test_multiple_args() -> Result<()> {
@@ -700,24 +701,10 @@ async fn test_output_variable_estimation() -> Result<()> {
     }
 
     {
-        // Should fail due to insufficient attempts (needs at least 3)
-        let response = contract_methods
-            .mint_to_addresses(amount, addresses)
-            .estimate_tx_dependencies(Some(2))
-            .await;
-
-        assert!(matches!(
-            response,
-            Err(Error::Transaction(Reason::Reverted { .. }))
-        ));
-    }
-
-    {
         // Should add 3 output variables automatically
         let _ = contract_methods
             .mint_to_addresses(amount, addresses)
-            .estimate_tx_dependencies(Some(3))
-            .await?
+            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
             .call()
             .await?;
 
@@ -725,35 +712,6 @@ async fn test_output_variable_estimation() -> Result<()> {
             let balance = wallet.get_asset_balance(&mint_asset_id).await?;
             assert_eq!(balance, amount);
         }
-    }
-
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_output_variable_estimation_default_attempts() -> Result<()> {
-    abigen!(Contract(
-        name = "MyContract",
-        abi = "e2e/sway/contracts/token_ops/out/release/token_ops-abi.json"
-    ));
-
-    let (wallets, addresses, mint_asset_id, contract_id) =
-        setup_output_variable_estimation_test().await?;
-
-    let contract_instance = MyContract::new(contract_id, wallets[0].clone());
-    let contract_methods = contract_instance.methods();
-    let amount = 1000;
-
-    let _ = contract_methods
-        .mint_to_addresses(amount, addresses)
-        .estimate_tx_dependencies(None)
-        .await?
-        .call()
-        .await?;
-
-    for wallet in wallets.iter() {
-        let balance = wallet.get_asset_balance(&mint_asset_id).await?;
-        assert_eq!(balance, amount);
     }
 
     Ok(())
@@ -796,8 +754,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     multi_call_handler.add_call(call_handler);
 
     let _ = multi_call_handler
-        .estimate_tx_dependencies(None)
-        .await?
+        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call::<((), (), ())>()
         .await?;
 
@@ -932,7 +889,7 @@ async fn test_contract_set_estimation() -> Result<()> {
     let res = contract_caller_instance
         .methods()
         .increment_from_contract(lib_contract_id, 42)
-        .estimate_tx_dependencies(None)
+        .determine_missing_contracts(None)
         .await?
         .call()
         .await?;
@@ -995,7 +952,7 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     multi_call_handler.add_call(call_handler);
 
     let call_response = multi_call_handler
-        .estimate_tx_dependencies(None)
+        .determine_missing_contracts(None)
         .await?
         .call::<(u64, u64, u64, u64)>()
         .await?;
@@ -1262,7 +1219,7 @@ async fn low_level_call() -> Result<()> {
             Bytes(function_selector),
             Bytes(call_data),
         )
-        .estimate_tx_dependencies(None)
+        .determine_missing_contracts(None)
         .await?
         .call()
         .await?;
@@ -1290,7 +1247,7 @@ async fn low_level_call() -> Result<()> {
             Bytes(function_selector),
             Bytes(call_data),
         )
-        .estimate_tx_dependencies(None)
+        .determine_missing_contracts(None)
         .await?
         .call()
         .await?;
@@ -1871,4 +1828,43 @@ async fn msg_sender_gas_estimation_issue() {
         .call()
         .await
         .unwrap();
+}
+
+#[tokio::test]
+async fn variable_output_estimation_is_optimized() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/var_outputs"
+        )),
+        Deploy(
+            contract = "MyContract",
+            name = "contract_instance",
+            wallet = "wallet"
+        )
+    );
+
+    let contract_methods = contract_instance.methods();
+
+    let coins = 252;
+    let recipient = Identity::Address(wallet.address().into());
+    let start = Instant::now();
+    let _ = contract_methods
+        .mint(coins, recipient)
+        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
+        .call()
+        .await?;
+
+    // using `fuel-core-lib` in debug builds is 20x slower so we won't validate in that case so we
+    // don't have to maintain two expectations
+    if !cfg!(all(debug_assertions, feature = "fuel-core-lib")) {
+        let elapsed = start.elapsed().as_secs();
+        let limit = 2;
+        if elapsed > limit {
+            panic!("Estimation took too long ({elapsed}). Limit is {limit}");
+        }
+    }
+
+    Ok(())
 }
