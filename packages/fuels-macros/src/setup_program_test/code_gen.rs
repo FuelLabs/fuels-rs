@@ -9,21 +9,23 @@ use quote::quote;
 use syn::LitStr;
 
 use crate::setup_program_test::parsing::{
-    AbigenCommand, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
-    TestProgramCommands,
+    AbigenCommand, BuildProfile, DeployContractCommand, InitializeWalletCommand, LoadScriptCommand,
+    SetOptionsCommand, TestProgramCommands,
 };
 
 pub(crate) fn generate_setup_program_test_code(
     commands: TestProgramCommands,
 ) -> syn::Result<TokenStream> {
     let TestProgramCommands {
+        set_options,
         initialize_wallets,
         generate_bindings,
         deploy_contract,
         load_scripts,
     } = commands;
 
-    let project_lookup = generate_project_lookup(&generate_bindings)?;
+    let SetOptionsCommand { profile } = set_options.unwrap_or_default();
+    let project_lookup = generate_project_lookup(&generate_bindings, profile)?;
     let abigen_code = abigen_code(&project_lookup)?;
     let wallet_code = wallet_initialization_code(initialize_wallets);
     let deploy_code = contract_deploying_code(&deploy_contract, &project_lookup);
@@ -37,12 +39,15 @@ pub(crate) fn generate_setup_program_test_code(
     })
 }
 
-fn generate_project_lookup(commands: &AbigenCommand) -> syn::Result<HashMap<String, Project>> {
+fn generate_project_lookup(
+    commands: &AbigenCommand,
+    profile: BuildProfile,
+) -> syn::Result<HashMap<String, Project>> {
     let pairs = commands
         .targets
         .iter()
         .map(|command| -> syn::Result<_> {
-            let project = Project::new(command.program_type, &command.project)?;
+            let project = Project::new(command.program_type, &command.project, profile.clone())?;
             Ok((command.name.value(), project))
         })
         .collect::<Result<Vec<_>, _>>()?;
@@ -189,10 +194,11 @@ struct Project {
     program_type: ProgramType,
     path: PathBuf,
     path_span: Span,
+    profile: BuildProfile,
 }
 
 impl Project {
-    fn new(program_type: ProgramType, dir: &LitStr) -> syn::Result<Self> {
+    fn new(program_type: ProgramType, dir: &LitStr, profile: BuildProfile) -> syn::Result<Self> {
         let path = Path::new(&dir.value()).canonicalize().map_err(|_| {
             syn::Error::new_spanned(
                 dir.clone(),
@@ -204,12 +210,20 @@ impl Project {
             program_type,
             path,
             path_span: dir.span(),
+            profile,
         })
     }
 
     fn compile_file_path(&self, suffix: &str, description: &str) -> String {
         self.path
-            .join(["out/release/", self.project_name(), suffix].concat())
+            .join(
+                [
+                    format!("out/{}/", &self.profile).as_str(),
+                    self.project_name(),
+                    suffix,
+                ]
+                .concat(),
+            )
             .to_str()
             .unwrap_or_else(|| panic!("could not join path for {description}"))
             .to_string()

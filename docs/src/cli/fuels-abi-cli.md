@@ -1,6 +1,6 @@
 # `fuels-abi-cli`
 
-Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified [here](https://specs.fuel.network/master/abi/index.html).
+Simple CLI program to encode Sway function calls and decode their output. The ABI being encoded and decoded is specified [here](https://docs.fuel.network/docs/specs/abi/).
 
 ## Usage
 
