@@ -92,7 +92,7 @@ pub enum ScriptContext {
     /// No estimation is done and no signatures are added. Fake coins are added if no spendable inputs
     /// are present. Meant only for transactions that are to be dry-run with validations off.
     /// Useful for reading state with unfunded accounts.
-    UnvalidatedStateRead,
+    UnfundedStateReading,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -482,8 +482,8 @@ impl ScriptTransactionBuilder {
 
                 self.resolve_fuel_tx(&provider).await?
             }
-            ScriptContext::UnvalidatedStateRead => {
-                self.resolve_fuel_tx_no_validation(provider.consensus_parameters())?
+            ScriptContext::UnfundedStateReading => {
+                self.resolve_fuel_tx_for_state_reading(provider.consensus_parameters())?
             }
         };
 
@@ -505,7 +505,7 @@ impl ScriptTransactionBuilder {
             .collect()
     }
 
-    fn resolve_fuel_tx_no_validation(
+    fn resolve_fuel_tx_for_state_reading(
         self,
         consensus_parameters: &ConsensusParameters,
     ) -> Result<Script> {

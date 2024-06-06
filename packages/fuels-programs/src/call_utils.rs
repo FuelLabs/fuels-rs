@@ -24,8 +24,9 @@ use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 
+/// Used to control simulations/dry-runs
 #[derive(Debug, Clone, Default)]
-pub enum Validation {
+pub enum Execution {
     /// The transaction will be subject to all validations -- the tx fee must be covered, witnesses
     /// and UTXOs must be valid, etc.
     #[default]
@@ -33,7 +34,7 @@ pub enum Validation {
     /// Most validation is disabled. Witnesses are replaced with fake ones, fake base assets are
     /// added if necessary. Useful for fetching state without having to have an account
     /// with base assets.
-    Minimal,
+    UnfundedStateRead,
 }
 
 #[derive(Default)]

@@ -160,14 +160,14 @@ async fn test_multiple_read_calls() -> Result<()> {
     // even if the transactions are theoretically the same.
     let stored = contract_methods
         .read()
-        .simulate(Validation::Realistic)
+        .simulate(Execution::Realistic)
         .await?;
 
     assert_eq!(stored.value, 42);
 
     let stored = contract_methods
         .read()
-        .simulate(Validation::Realistic)
+        .simulate(Execution::Realistic)
         .await?;
 
     assert_eq!(stored.value, 42);
@@ -1793,7 +1793,7 @@ async fn contract_encoder_config_is_applied() -> Result<()> {
         let encoding_error = instance_with_encoder_config
             .methods()
             .get(0, 1)
-            .simulate(Validation::Realistic)
+            .simulate(Execution::Realistic)
             .await
             .expect_err("should error");
 
@@ -1901,7 +1901,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
     let response = MyContract::new(contract_id, no_funds_wallet.clone())
         .methods()
         .get(5, 6)
-        .simulate(Validation::Minimal)
+        .simulate(Execution::UnfundedStateRead)
         .await?;
 
     assert_eq!(response.value, 11);
@@ -1941,7 +1941,7 @@ async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
         .add_call(call_handler_2);
 
     let value: (u64, u64) = multi_call_handler
-        .simulate(Validation::Minimal)
+        .simulate(Execution::UnfundedStateRead)
         .await?
         .value;
 

@@ -361,7 +361,7 @@ mod tests {
         // you would mint 100 coins if the transaction wasn't simulated
         let counter = contract_methods
             .mint_coins(100)
-            .simulate(Validation::Realistic)
+            .simulate(Execution::Realistic)
             .await?;
         // ANCHOR_END: simulate
         let response = contract_methods.mint_coins(1_000_000).call().await?;

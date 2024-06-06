@@ -34,7 +34,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         build_tx_from_contract_calls, new_variable_outputs, sealed,
-        transaction_builder_from_contract_calls, TxDependencyExtension, Validation,
+        transaction_builder_from_contract_calls, Execution, TxDependencyExtension,
     },
     receipt_parser::ReceiptParser,
     submit_response::{SubmitResponse, SubmitResponseMultiple},
@@ -618,14 +618,14 @@ where
 
     /// Call a contract's method on the node, in a simulated manner, meaning the state of the
     /// blockchain is *not* modified but simulated.
-    pub async fn simulate(&mut self, validation: Validation) -> Result<FuelCallResponse<D>> {
+    pub async fn simulate(&mut self, execution: Execution) -> Result<FuelCallResponse<D>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Validation::Minimal = validation {
+        let tx_status = if let Execution::UnfundedStateRead = execution {
             let tx = self
                 .transaction_builder()
                 .await?
-                .build(provider, ScriptContext::UnvalidatedStateRead)
+                .build(provider, ScriptContext::UnfundedStateReading)
                 .await?;
 
             provider.dry_run_no_validation(tx).await?
@@ -684,7 +684,7 @@ where
     D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
-        self.simulate(Validation::Realistic).await?;
+        self.simulate(Execution::Realistic).await?;
         Ok(())
     }
 
@@ -830,7 +830,16 @@ impl<T: Account> MultiContractCallHandler<T> {
 
     /// Call contract methods on the node, in a state-modifying manner.
     pub async fn call<D: Tokenizable + Debug>(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(false).await
+        let tx = self.build_tx().await?;
+
+        let provider = self.account.try_provider()?;
+
+        self.cached_tx_id = Some(tx.id(provider.chain_id()));
+
+        let tx_status = provider.send_transaction_and_await_commit(tx).await?;
+
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+        self.get_response(receipts)
     }
 
     pub async fn submit(mut self) -> Result<SubmitResponseMultiple<T>> {
@@ -850,15 +859,15 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// [call]: Self::call
     pub async fn simulate<D: Tokenizable + Debug>(
         &mut self,
-        validation: Validation,
+        execution: Execution,
     ) -> Result<FuelCallResponse<D>> {
         let provider = self.account.try_provider()?;
 
-        let tx_status = if let Validation::Minimal = validation {
+        let tx_status = if let Execution::UnfundedStateRead = execution {
             let tx = self
                 .transaction_builder()
                 .await?
-                .build(provider, ScriptContext::UnvalidatedStateRead)
+                .build(provider, ScriptContext::UnfundedStateReading)
                 .await?;
 
             provider.dry_run_no_validation(tx).await?
@@ -866,26 +875,6 @@ impl<T: Account> MultiContractCallHandler<T> {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
         };
-        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
-
-        self.get_response(receipts)
-    }
-
-    async fn call_or_simulate<D: Tokenizable + Debug>(
-        &mut self,
-        simulate: bool,
-    ) -> Result<FuelCallResponse<D>> {
-        let tx = self.build_tx().await?;
-        let provider = self.account.try_provider()?;
-
-        self.cached_tx_id = Some(tx.id(provider.chain_id()));
-
-        let tx_status = if simulate {
-            provider.dry_run(tx).await?
-        } else {
-            provider.send_transaction_and_await_commit(tx).await?
-        };
-
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
