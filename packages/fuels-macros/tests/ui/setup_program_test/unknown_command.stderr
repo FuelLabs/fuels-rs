@@ -1,4 +1,4 @@
-error: Unrecognized command. Expected one of: 'Wallets', 'Abigen', 'Deploy', 'LoadScript'
+error: Unrecognized command. Expected one of: 'Options', 'Wallets', 'Abigen', 'Deploy', 'LoadScript'
   --> tests/ui/setup_program_test/unknown_command.rs:10:5
    |
 10 |     UnknownCommand()
