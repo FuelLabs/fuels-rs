@@ -71,7 +71,7 @@ pub enum ScriptContext {
     /// the same witness index. Make sure you sign the built transaction in the expected order.
     NoSignatures,
     /// No estimation is done and no signatures are added. Fake coins are added if no spendable inputs
-    /// are present. Unused outputs are filled with variable outputs. Meant only for transactions that are to be dry-run with validations off.
+    /// are present. Meant only for transactions that are to be dry-run with validations off.
     /// Useful for reading state with unfunded accounts.
     StateReadOnly,
 }
@@ -376,7 +376,7 @@ impl Debug for dyn Signer + Send + Sync {
 ///
 /// It is advised to avoid relying on automatic estimation of variable outputs if the script
 /// contains logic that dynamically adjusts based on the number of outputs.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum VariableOutputPolicy {
     /// Perform a dry run of the transaction estimating the minimum number of variable outputs to
     /// add.
@@ -556,7 +556,15 @@ impl ScriptTransactionBuilder {
             vec![],
         );
 
-        script_dry_runner.prepare_for_estimation(&mut tx, true);
+        let should_saturate_variable_outputs =
+            if let VariableOutputPolicy::Exactly(n) = self.variable_output_policy {
+                add_variable_outputs(&mut tx, n);
+                false
+            } else {
+                true
+            };
+
+        script_dry_runner.prepare_for_estimation(&mut tx, should_saturate_variable_outputs);
 
         Ok(tx)
     }

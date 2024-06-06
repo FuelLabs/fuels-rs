@@ -33,8 +33,7 @@ pub enum Execution {
     #[default]
     Realistic,
     /// Most validation is disabled. Witnesses are replaced with fake ones, fake base assets are
-    /// added if necessary. Unused outputs are filled with variable outputs. Useful for fetching state without needing an account
-    /// with base assets.
+    /// added if necessary. Useful for fetching state without needing an account with base assets.
     StateReadOnly,
 }
 
