@@ -23,7 +23,7 @@ use crate::{
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::find_id_of_missing_contract,
         utils::sealed,
-        CallParameters, ContractCall, ScriptCall, TxDependencyExtension,
+        CallParameters, ContractCall, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
 };
@@ -136,6 +136,7 @@ where
     /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.call = self.call.with_external_contracts(contract_ids.to_vec());
+
         self
     }
 
@@ -154,6 +155,7 @@ where
         for c in contracts {
             self.log_decoder.merge(c.log_decoder());
         }
+
         self
     }
 
@@ -213,6 +215,26 @@ where
         let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
 
         self.get_response(receipts)
+    }
+
+    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(10);
+
+        for _ in 0..attempts {
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
+
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
+                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+                        self.call.append_external_contract(contract_id);
+                    }
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        self.simulate().await.map(|_| self)
     }
 }
 
@@ -342,40 +364,6 @@ where
 
 impl<A, C, T> sealed::Sealed for CallHandler<A, C, T> {}
 
-#[async_trait::async_trait]
-impl<A, C, T> TxDependencyExtension for CallHandler<A, C, T>
-where
-    A: Account,
-    C: ContractDependencyConfigurator + TransactionTuner + ResponseParser + Send + Sync,
-    T: Tokenizable + Parameterize + Debug + Send + Sync,
-{
-    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.call.append_external_contract(contract_id);
-
-        self
-    }
-
-    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
-
-        for _ in 0..attempts {
-            match self.simulate().await {
-                Ok(_) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self = self.append_external_contract(contract_id);
-                    }
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        self.simulate().await.map(|_| self)
-    }
-}
-
 impl<A> CallHandler<A, Vec<ContractCall>, ()>
 where
     A: Account,
@@ -391,6 +379,22 @@ where
             cached_tx_id: None,
             variable_output_policy: VariableOutputPolicy::default(),
         }
+    }
+
+    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Result<Self> {
+        if self.call.is_empty() {
+            return Err(error!(
+                Other,
+                "no calls added. Have you used '.add_calls()'?"
+            ));
+        }
+
+        self.call
+            .iter_mut()
+            .take(1)
+            .for_each(|call| call.append_external_contract(contract_id.clone()));
+
+        Ok(self)
     }
 
     /// Adds a contract call to be bundled in the transaction
@@ -482,23 +486,10 @@ where
 
         Ok(response)
     }
-}
 
-#[async_trait::async_trait]
-impl<A> TxDependencyExtension for CallHandler<A, Vec<ContractCall>, ()>
-where
-    A: Account,
-{
-    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.call
-            .iter_mut()
-            .take(1)
-            .for_each(|call| call.append_external_contract(contract_id.clone()));
-
-        self
-    }
-
-    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
+    /// Simulates the call and attempts to resolve missing contract outputs.
+    /// Forwards the received error if it cannot be fixed.
+    pub async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
         let attempts = max_attempts.unwrap_or(10);
 
         for _ in 0..attempts {
@@ -507,7 +498,7 @@ where
 
                 Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
                     if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self = self.append_external_contract(contract_id);
+                        self = self.append_external_contract(contract_id)?;
                     }
                 }
 

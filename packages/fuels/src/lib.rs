@@ -75,7 +75,7 @@ pub mod prelude {
         },
         macros::setup_program_test,
         programs::{
-            calls::{CallHandler, CallParameters, ContractDependency, TxDependencyExtension},
+            calls::{CallHandler, CallParameters, ContractDependency},
             contract::{Contract, LoadConfiguration, StorageConfiguration},
         },
         test_helpers::*,
