@@ -24,6 +24,18 @@ use itertools::{chain, Itertools};
 
 use crate::contract::ContractCall;
 
+#[derive(Debug, Clone, Default)]
+pub enum Validation {
+    /// The transaction will be subject to all validations -- the tx fee must be covered, witnesses
+    /// and UTXOs must be valid, etc.
+    #[default]
+    Realistic,
+    /// Most validation is disabled. Witnesses are replaced with fake ones, fake base assets are
+    /// added if necessary. Useful for fetching state without having to have an account
+    /// with base assets.
+    Minimal,
+}
+
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
 /// data from which they can be loaded into registers

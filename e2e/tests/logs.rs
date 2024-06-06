@@ -515,7 +515,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Validation::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -539,7 +539,7 @@ async fn test_multi_call_require_log_single_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Validation::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -592,7 +592,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Validation::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -616,7 +616,7 @@ async fn test_multi_call_require_log_multi_contract() -> Result<()> {
             .add_call(call_handler_2);
 
         let error = multi_call_handler
-            .simulate::<((), ())>()
+            .simulate::<((), ())>(Validation::Realistic)
             .await
             .expect_err("should return a revert error");
 
@@ -918,10 +918,18 @@ async fn test_script_require_log() -> Result<()> {
     );
 
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Validation::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1216,10 +1224,18 @@ async fn test_script_asserts_log() -> Result<()> {
         )
     );
     macro_rules! reverts_with_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Validation::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);
@@ -1227,10 +1243,18 @@ async fn test_script_asserts_log() -> Result<()> {
     }
 
     macro_rules! reverts_with_assert_eq_msg {
-        ($arg:expr, $execution:ident, $msg:expr) => {
+        ($arg:expr, call, $msg:expr) => {
             let error = script_instance
                 .main($arg)
-                .$execution()
+                .call()
+                .await
+                .expect_err("should return a revert error");
+            assert_revert_containing_msg($msg, error);
+        };
+        ($arg:expr, simulate, $msg:expr) => {
+            let error = script_instance
+                .main($arg)
+                .simulate(Validation::Realistic)
                 .await
                 .expect_err("should return a revert error");
             assert_revert_containing_msg($msg, error);

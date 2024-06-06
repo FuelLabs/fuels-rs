@@ -23,7 +23,7 @@ use crate::{
     call_response::FuelCallResponse,
     call_utils::{
         generate_contract_inputs, generate_contract_outputs, new_variable_outputs, sealed,
-        TxDependencyExtension,
+        TxDependencyExtension, Validation,
     },
     contract::SettableContract,
     receipt_parser::ReceiptParser,
@@ -253,8 +253,24 @@ where
     /// It is the same as the [`call`] method because the API is more user-friendly this way.
     ///
     /// [`call`]: Self::call
-    pub async fn simulate(&mut self) -> Result<FuelCallResponse<D>> {
-        self.call_or_simulate(true).await
+    pub async fn simulate(&mut self, validation: Validation) -> Result<FuelCallResponse<D>> {
+        let provider = self.account.try_provider()?;
+
+        let tx_status = if let Validation::Minimal = validation {
+            let tx = self
+                .transaction_builder()
+                .await?
+                .build(provider, ScriptContext::UnvalidatedStateRead)
+                .await?;
+
+            provider.dry_run_no_validation(tx).await?
+        } else {
+            let tx = self.build_tx().await?;
+            provider.dry_run(tx).await?
+        };
+        let receipts = tx_status.take_receipts_checked(Some(&self.log_decoder))?;
+
+        self.get_response(receipts)
     }
 
     /// Get a scripts's estimated cost
@@ -304,7 +320,7 @@ where
     D: Tokenizable + Parameterize + Debug + Send + Sync,
 {
     async fn simulate(&mut self) -> Result<()> {
-        self.simulate().await?;
+        self.simulate(Validation::Realistic).await?;
 
         Ok(())
     }

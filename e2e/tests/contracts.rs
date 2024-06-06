@@ -1878,3 +1878,74 @@ async fn msg_sender_gas_estimation_issue() {
         .await
         .unwrap();
 }
+
+#[tokio::test]
+async fn simulations_can_be_made_without_coins() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        )
+    );
+    let contract_id = contract_instance.contract_id();
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+
+    let response = MyContract::new(contract_id, no_funds_wallet.clone())
+        .methods()
+        .get(5, 6)
+        .simulate(Validation::Minimal)
+        .await?;
+
+    assert_eq!(response.value, 11);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn simulations_can_be_made_without_coins_multicall() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "MyContract",
+            wallet = "wallet"
+        )
+    );
+    let contract_id = contract_instance.contract_id();
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+    let contract_instance = MyContract::new(contract_id, no_funds_wallet.clone());
+
+    let contract_methods = contract_instance.methods();
+
+    let call_handler_1 = contract_methods.get(1, 2);
+    let call_handler_2 = contract_methods.get(3, 4);
+
+    let mut multi_call_handler = MultiContractCallHandler::new(no_funds_wallet);
+
+    multi_call_handler
+        .add_call(call_handler_1)
+        .add_call(call_handler_2);
+
+    let value: (u64, u64) = multi_call_handler
+        .simulate(Validation::Minimal)
+        .await?
+        .value;
+
+    assert_eq!(value, (3, 7));
+
+    Ok(())
+}

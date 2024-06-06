@@ -358,7 +358,7 @@ async fn script_encoder_config_is_applied() {
 
         let encoding_error = script_instance_with_encoder_config
             .main(1, 2)
-            .simulate()
+            .simulate(Validation::Realistic)
             .await
             .expect_err("should error");
 
@@ -366,4 +366,33 @@ async fn script_encoder_config_is_applied() {
             "cannot encode script call arguments: codec: token limit `1` reached while encoding"
         ));
     }
+}
+#[tokio::test]
+async fn simulations_can_be_made_without_coins() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "e2e/sway/scripts/basic_script"
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+    let provider = wallet.provider().cloned();
+
+    let no_funds_wallet = WalletUnlocked::new_random(provider);
+    let script_instance = script_instance.with_account(no_funds_wallet);
+
+    let value = script_instance
+        .main(1000, 2000)
+        .simulate(Validation::Minimal)
+        .await?
+        .value;
+
+    assert_eq!(value.as_ref(), "hello");
+
+    Ok(())
 }

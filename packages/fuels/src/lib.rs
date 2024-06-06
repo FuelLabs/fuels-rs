@@ -75,10 +75,10 @@ pub mod prelude {
         },
         macros::setup_program_test,
         programs::{
-            call_utils::TxDependencyExtension,
+            call_utils::{TxDependencyExtension, Validation},
             contract::{
                 CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
-                SettableContract, StorageConfiguration, Validation,
+                SettableContract, StorageConfiguration,
             },
         },
         test_helpers::*,
