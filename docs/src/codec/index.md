@@ -1,6 +1,6 @@
 # Codec
 
-Encoding and decoding are done as per [the fuel spec](https://specs.fuel.network/master/abi/argument-encoding.html). To this end, `fuels` makes use of the [`ABIEncoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html) and the [`ABIDecoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html).
+Encoding and decoding are done as per [the fuel spec](https://docs.fuel.network/docs/specs/abi/argument-encoding/). To this end, `fuels` makes use of the [`ABIEncoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIEncoder.html) and the [`ABIDecoder`](https://docs.rs/fuels/latest/fuels/core/codec/struct.ABIDecoder.html).
 
 ## Prerequisites for decoding/encoding
 
