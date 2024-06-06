@@ -13,6 +13,7 @@ use fuels_core::{
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+            VariableOutputPolicy,
         },
         tx_status::TxStatus,
     },
@@ -22,8 +23,7 @@ use itertools::chain;
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        generate_contract_inputs, generate_contract_outputs, new_variable_outputs, sealed,
-        TxDependencyExtension,
+        generate_contract_inputs, generate_contract_outputs, sealed, TxDependencyExtension,
     },
     contract::SettableContract,
     receipt_parser::ReceiptParser,
@@ -38,7 +38,6 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub variable_outputs: Vec<Output>,
 }
 
 impl ScriptCall {
@@ -62,11 +61,6 @@ impl ScriptCall {
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
         self.external_contracts.push(contract_id)
     }
-
-    pub fn append_variable_outputs(&mut self, num: u64) {
-        self.variable_outputs
-            .extend(new_variable_outputs(num as usize));
-    }
 }
 
 #[derive(Debug)]
@@ -81,6 +75,7 @@ pub struct ScriptCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
+    variable_output_policy: VariableOutputPolicy,
 }
 
 impl<T: Account, D> ScriptCallHandler<T, D>
@@ -99,7 +94,6 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
-            variable_outputs: vec![],
         };
         Self {
             script_call,
@@ -109,6 +103,7 @@ where
             datatype: PhantomData,
             log_decoder,
             decoder_config: DecoderConfig::default(),
+            variable_output_policy: VariableOutputPolicy::default(),
         }
     }
 
@@ -121,6 +116,21 @@ where
     /// ```
     pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.tx_policies = tx_policies;
+        self
+    }
+
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the script call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
+    pub fn with_variable_output_policy(
+        mut self,
+        variable_output_policy: VariableOutputPolicy,
+    ) -> Self {
+        self.variable_output_policy = variable_output_policy;
         self
     }
 
@@ -183,7 +193,6 @@ where
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.script_call.outputs.clone(),
-            self.script_call.variable_outputs.clone(),
         )
         .collect();
 
@@ -194,6 +203,7 @@ where
         let (inputs, outputs) = self.prepare_inputs_outputs().await?;
 
         Ok(ScriptTransactionBuilder::default()
+            .with_variable_output_policy(self.variable_output_policy)
             .with_tx_policies(self.tx_policies)
             .with_script(self.script_call.script_binary.clone())
             .with_script_data(self.compute_script_data()?)
@@ -306,11 +316,6 @@ where
         self.simulate().await?;
 
         Ok(())
-    }
-
-    fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.script_call.append_variable_outputs(num);
-        self
     }
 
     fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {

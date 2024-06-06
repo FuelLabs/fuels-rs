@@ -7,9 +7,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use fuel_tx::{
-    AssetId, Bytes32, Contract as FuelContract, ContractId, Output, Receipt, Salt, StorageSlot,
-};
+use fuel_tx::{AssetId, Bytes32, Contract as FuelContract, ContractId, Receipt, Salt, StorageSlot};
 use fuels_accounts::{provider::TransactionCost, Account};
 use fuels_core::{
     codec::{ABIEncoder, DecoderConfig, EncoderConfig, LogDecoder},
@@ -20,7 +18,9 @@ use fuels_core::{
         errors::{error, Result},
         param_types::ParamType,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::{CreateTransactionBuilder, ScriptTransactionBuilder},
+        transaction_builders::{
+            CreateTransactionBuilder, ScriptTransactionBuilder, VariableOutputPolicy,
+        },
         tx_status::TxStatus,
         Selector, Token,
     },
@@ -30,8 +30,8 @@ use fuels_core::{
 use crate::{
     call_response::FuelCallResponse,
     call_utils::{
-        build_tx_from_contract_calls, new_variable_outputs, sealed,
-        transaction_builder_from_contract_calls, TxDependencyExtension,
+        build_tx_from_contract_calls, sealed, transaction_builder_from_contract_calls,
+        TxDependencyExtension,
     },
     receipt_parser::ReceiptParser,
     submit_response::{SubmitResponse, SubmitResponseMultiple},
@@ -405,7 +405,6 @@ pub struct ContractCall {
     pub encoded_args: Result<Vec<u8>>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
@@ -430,23 +429,11 @@ impl ContractCall {
         }
     }
 
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-        ContractCall {
-            variable_outputs,
-            ..self
-        }
-    }
-
     pub fn with_call_parameters(self, call_parameters: CallParameters) -> ContractCall {
         ContractCall {
             call_parameters,
             ..self
         }
-    }
-
-    pub fn append_variable_outputs(&mut self, num: u64) {
-        self.variable_outputs
-            .extend(new_variable_outputs(num as usize));
     }
 
     pub fn append_external_contracts(&mut self, contract_id: Bech32ContractId) {
@@ -470,6 +457,7 @@ pub struct ContractCallHandler<T: Account, D> {
     pub account: T,
     pub datatype: PhantomData<D>,
     pub log_decoder: LogDecoder,
+    variable_output_policy: VariableOutputPolicy,
 }
 
 impl<T, D> ContractCallHandler<T, D>
@@ -490,6 +478,18 @@ where
     /// [`Output::Contract`]: fuel_tx::Output::Contract
     pub fn with_contract_ids(mut self, contract_ids: &[Bech32ContractId]) -> Self {
         self.contract_call.external_contracts = contract_ids.to_vec();
+        self
+    }
+
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
+    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
+        self.variable_output_policy = variable_outputs;
         self
     }
 
@@ -585,6 +585,7 @@ where
             std::slice::from_ref(&self.contract_call),
             self.tx_policies,
             &self.account,
+            self.variable_output_policy,
         )
         .await
     }
@@ -676,11 +677,6 @@ where
         Ok(())
     }
 
-    fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.contract_call.append_variable_outputs(num);
-        self
-    }
-
     fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
         self.contract_call.append_external_contracts(contract_id);
         self
@@ -720,7 +716,6 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         encoded_selector,
         encoded_args: ABIEncoder::new(encoder_config).encode(args),
         call_parameters: CallParameters::default(),
-        variable_outputs: vec![],
         external_contracts: vec![],
         output_param: D::param_type(),
         is_payable,
@@ -735,6 +730,7 @@ pub fn method_hash<D: Tokenizable + Parameterize + Debug, T: Account>(
         datatype: PhantomData,
         log_decoder,
         decoder_config: DecoderConfig::default(),
+        variable_output_policy: VariableOutputPolicy::default(),
     }
 }
 
@@ -749,6 +745,7 @@ pub struct MultiContractCallHandler<T: Account> {
     cached_tx_id: Option<Bytes32>,
     decoder_config: DecoderConfig,
     pub account: T,
+    variable_output_policy: VariableOutputPolicy,
 }
 
 impl<T: Account> MultiContractCallHandler<T> {
@@ -760,6 +757,7 @@ impl<T: Account> MultiContractCallHandler<T> {
             account,
             log_decoder: LogDecoder::new(Default::default()),
             decoder_config: DecoderConfig::default(),
+            variable_output_policy: VariableOutputPolicy::default(),
         }
     }
 
@@ -784,6 +782,18 @@ impl<T: Account> MultiContractCallHandler<T> {
     /// Note that this is a builder method
     pub fn with_tx_policies(mut self, tx_policies: TxPolicies) -> Self {
         self.tx_policies = tx_policies;
+        self
+    }
+
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract multi-call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
+    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
+        self.variable_output_policy = variable_outputs;
         self
     }
 
@@ -813,7 +823,13 @@ impl<T: Account> MultiContractCallHandler<T> {
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
         self.validate_contract_calls()?;
 
-        build_tx_from_contract_calls(&self.contract_calls, self.tx_policies, &self.account).await
+        build_tx_from_contract_calls(
+            &self.contract_calls,
+            self.tx_policies,
+            &self.account,
+            self.variable_output_policy,
+        )
+        .await
     }
 
     /// Call contract methods on the node, in a state-modifying manner.
@@ -922,15 +938,6 @@ where
     async fn simulate(&mut self) -> Result<()> {
         self.simulate_without_decode().await?;
         Ok(())
-    }
-
-    fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.contract_calls
-            .iter_mut()
-            .take(1)
-            .for_each(|call| call.append_variable_outputs(num));
-
-        self
     }
 
     fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
