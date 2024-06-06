@@ -3464,6 +3464,14 @@ of <code>COMMAND(ARG...)...</code></p>
 <li>a sub-command (e.g. <code>Abigen(Contract(name=&quot;MyContract&quot;, project=&quot;some_project&quot;))</code>)</li>
 </ul>
 <p>Available <code>COMMAND</code>s:</p>
+<h2 id="options"><a class="header" href="#options">Options</a></h2>
+<p>Example: <code>Options(profile=&quot;debug&quot;)</code></p>
+<p>Description: Sets options from <code>ARG</code>s to be used by other <code>COMMAND</code>s.</p>
+<p>Available options:</p>
+<ul>
+<li><code>profile</code>: sets the <code>cargo</code> build profile. Variants: <code>&quot;release&quot;</code> (default),  <code>&quot;debug&quot;</code></li>
+</ul>
+<p>Cardinality: 0 or 1.</p>
 <h2 id="wallets"><a class="header" href="#wallets">Wallets</a></h2>
 <p>Example: <code>Wallets(&quot;a_wallet&quot;, &quot;another_wallet&quot;...)</code></p>
 <p>Description: Launches a local provider and generates wallets with names taken from the provided <code>ARG</code>s.</p>
