@@ -27,6 +27,7 @@ members = [
   'sway/contracts/storage',
   'sway/contracts/token_ops',
   'sway/contracts/transaction_block_height',
+  'sway/contracts/var_outputs',
   'sway/logs/contract_logs',
   'sway/logs/contract_logs_abi',
   'sway/logs/contract_with_contract_logs',

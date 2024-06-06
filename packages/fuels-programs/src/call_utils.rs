@@ -3,7 +3,7 @@ use std::{collections::HashSet, iter, vec};
 use fuel_abi_types::error_codes::FAILED_TRANSFER_TO_ADDRESS_SIGNAL;
 use fuel_asm::{op, RegId};
 use fuel_tx::{AssetId, Bytes32, ContractId, Output, PanicReason, Receipt, TxPointer, UtxoId};
-use fuel_types::{Address, Word};
+use fuel_types::Word;
 use fuels_accounts::Account;
 use fuels_core::{
     constants::WORD_SIZE,
@@ -17,6 +17,7 @@ use fuels_core::{
         transaction::{ScriptTransaction, TxPolicies},
         transaction_builders::{
             BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
+            VariableOutputPolicy,
         },
     },
 };
@@ -34,9 +35,6 @@ pub(crate) struct CallOpcodeParamsOffset {
     pub gas_forwarded_offset: Option<usize>,
 }
 
-/// How many times to attempt to resolve missing tx dependencies.
-pub const DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS: u64 = 10;
-
 pub(crate) mod sealed {
     pub trait Sealed {}
 }
@@ -44,17 +42,6 @@ pub(crate) mod sealed {
 #[async_trait::async_trait]
 pub trait TxDependencyExtension: Sized + sealed::Sealed {
     async fn simulate(&mut self) -> Result<()>;
-
-    /// Appends `num` [`fuel_tx::Output::Variable`]s to the transaction.
-    /// Note that this is a builder method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).append_variable_outputs(num).call()
-    /// my_script_instance.main(...).append_variable_outputs(num).call()
-    /// ```
-    ///
-    /// [`Output::Variable`]: fuel_tx::Output::Variable
-    fn append_variable_outputs(self, num: u64) -> Self;
 
     /// Appends additional external contracts as dependencies to this call.
     /// Effectively, this will be used to create additional
@@ -71,35 +58,26 @@ pub trait TxDependencyExtension: Sized + sealed::Sealed {
     /// [`Output::Contract`]: fuel_tx::Output::Contract
     fn append_contract(self, contract_id: Bech32ContractId) -> Self;
 
-    fn append_missing_dependencies(mut self, receipts: &[Receipt]) -> Self {
-        if is_missing_output_variables(receipts) {
-            self = self.append_variable_outputs(1);
-        }
-        if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-            self = self.append_contract(contract_id);
-        }
-
-        self
-    }
-
-    /// Simulates the call and attempts to resolve missing tx dependencies.
+    /// Simulates the call and attempts to resolve missing contract outputs.
     /// Forwards the received error if it cannot be fixed.
-    async fn estimate_tx_dependencies(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(DEFAULT_TX_DEP_ESTIMATION_ATTEMPTS);
+    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(10);
 
         for _ in 0..attempts {
             match self.simulate().await {
-                Ok(_) => return Ok(self),
+                Ok(()) => return Ok(self),
 
                 Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    self = self.append_missing_dependencies(receipts);
+                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+                        self = self.append_contract(contract_id);
+                    }
                 }
 
                 Err(other_error) => return Err(other_error),
             }
         }
 
-        self.simulate().await.map(|_| self)
+        self.simulate().await.map(|()| self)
     }
 }
 
@@ -151,8 +129,11 @@ pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
     account: &impl Account,
+    variable_outputs: VariableOutputPolicy,
 ) -> Result<ScriptTransaction> {
-    let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account).await?;
+    let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account)
+        .await?
+        .with_variable_output_policy(variable_outputs);
 
     let base_asset_id = *account.try_provider()?.base_asset_id();
     let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
@@ -397,7 +378,6 @@ pub(crate) fn get_transaction_inputs_outputs(
         generate_contract_outputs(num_of_contracts),
         generate_asset_change_outputs(address, asset_ids),
         generate_custom_outputs(calls),
-        extract_variable_outputs(calls)
     )
     .collect();
 
@@ -435,13 +415,6 @@ fn extract_unique_asset_ids(asset_inputs: &[Input], base_asset_id: AssetId) -> H
             }
             _ => None,
         })
-        .collect()
-}
-
-fn extract_variable_outputs(calls: &[ContractCall]) -> Vec<Output> {
-    calls
-        .iter()
-        .flat_map(|call| call.variable_outputs.clone())
         .collect()
 }
 
@@ -510,17 +483,6 @@ pub fn find_id_of_missing_contract(receipts: &[Receipt]) -> Option<Bech32Contrac
     })
 }
 
-pub fn new_variable_outputs(num: usize) -> Vec<Output> {
-    vec![
-        Output::Variable {
-            amount: 0,
-            to: Address::zeroed(),
-            asset_id: AssetId::zeroed(),
-        };
-        num
-    ]
-}
-
 #[cfg(test)]
 mod test {
     use std::slice;
@@ -542,17 +504,12 @@ mod test {
                 encoded_args: Ok(Default::default()),
                 encoded_selector: [0; 8].to_vec(),
                 call_parameters: Default::default(),
-                variable_outputs: vec![],
                 external_contracts: Default::default(),
                 output_param: ParamType::Unit,
                 is_payable: false,
                 custom_assets: Default::default(),
             }
         }
-    }
-
-    fn random_bech32_addr() -> Bech32Address {
-        Bech32Address::new("fuel", rand::thread_rng().gen::<[u8; 32]>())
     }
 
     fn random_bech32_contract_id() -> Bech32ContractId {
@@ -741,38 +698,6 @@ mod test {
             .collect();
 
         assert_eq!(change_outputs, expected_change_outputs);
-    }
-
-    #[test]
-    fn variable_outputs_appended_to_outputs() {
-        // given
-        let variable_outputs = [100, 200].map(|amount| {
-            Output::variable(random_bech32_addr().into(), amount, Default::default())
-        });
-
-        let calls = variable_outputs
-            .iter()
-            .cloned()
-            .map(|variable_output| {
-                ContractCall::new_with_random_id().with_variable_outputs(vec![variable_output])
-            })
-            .collect::<Vec<_>>();
-
-        let wallet = WalletUnlocked::new_random(None);
-
-        // when
-        let (_, outputs) = get_transaction_inputs_outputs(
-            &calls,
-            Default::default(),
-            wallet.address(),
-            AssetId::zeroed(),
-        );
-
-        // then
-        let actual_variable_outputs: HashSet<Output> = outputs[2..].iter().cloned().collect();
-        let expected_outputs: HashSet<Output> = variable_outputs.into();
-
-        assert_eq!(expected_outputs, actual_variable_outputs);
     }
 
     #[test]

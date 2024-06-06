@@ -369,7 +369,7 @@ mod tests {
         // withdraw some tokens to wallet
         let response = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
         // ANCHOR_END: variable_outputs
@@ -422,7 +422,7 @@ mod tests {
         // ANCHOR: dependency_estimation_manual
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .with_contract_ids(&[called_contract_id.into()])
             .call()
             .await?;
@@ -435,7 +435,8 @@ mod tests {
         // ANCHOR: dependency_estimation
         let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .estimate_tx_dependencies(Some(2))
+            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
+            .determine_missing_contracts(Some(2))
             .await?
             .call()
             .await?;
@@ -736,7 +737,7 @@ mod tests {
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .estimate_tx_dependencies(None)
+            .determine_missing_contracts(None)
             .await?
             .call()
             .await?;
