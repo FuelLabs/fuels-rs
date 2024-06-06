@@ -88,7 +88,7 @@ impl RetryableClient {
         self.retry_config = retry_config;
     }
 
-    async fn wrap<T, Fut>(&self, action: impl Fn() -> Fut) -> RequestResult<T>
+    async fn wrap<T, Fut>(&self, action: impl FnMut() -> Fut) -> RequestResult<T>
     where
         Fut: Future<Output = io::Result<T>>,
     {
@@ -148,6 +148,14 @@ impl RetryableClient {
         self.wrap(|| self.client.estimate_gas_price(block_horizon))
             .await
             .map(Into::into)
+    }
+
+    pub async fn estimate_predicates(&self, tx: &mut Transaction) -> RequestResult<()> {
+        // TODO(oleksii): use &mut Transaction in RetryableClient::wrap
+        self.client
+            .estimate_predicates(tx)
+            .await
+            .map_err(|e| RequestError::IO(e.to_string()))
     }
 
     pub async fn dry_run(

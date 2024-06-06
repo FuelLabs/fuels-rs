@@ -256,6 +256,10 @@ impl Provider {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
     }
 
+    pub async fn estimate_predicates(&self, tx: impl Transaction) -> Result<()> {
+        Ok(self.client.estimate_predicates(&mut tx.into()).await?)
+    }
+
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
         let [tx_status] = self
             .client
