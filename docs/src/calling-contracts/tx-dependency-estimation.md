@@ -8,7 +8,7 @@ The following example uses a contract call that calls an external contract and l
 {{#include ../../../examples/contracts/src/lib.rs:dependency_estimation_fail}}
 ```
 
-As mentioned in previous chapters, you can specify the external contract with `.with_contracts()` and add an output variable with `append_variable_outputs()` to resolve this:
+As mentioned in previous chapters, you can specify the external contract and add an output variable to resolve this:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:dependency_estimation_manual}}

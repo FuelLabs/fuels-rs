@@ -18,7 +18,6 @@ pub struct ScriptCall {
     pub inputs: Vec<Input>,
     pub outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
-    pub variable_outputs: Vec<Output>,
 }
 
 impl ScriptCall {
@@ -49,7 +48,6 @@ impl ScriptCall {
         let outputs = chain!(
             generate_contract_outputs(num_of_contracts),
             self.outputs.clone(),
-            self.variable_outputs.clone(),
         )
         .collect();
 

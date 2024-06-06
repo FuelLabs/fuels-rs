@@ -7,11 +7,11 @@ use fuels_core::{
     traits::{Parameterize, Tokenizable},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{error, Result},
+        errors::{error, transaction::Reason, Error, Result},
         input::Input,
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
-        transaction_builders::ScriptTransactionBuilder,
+        transaction_builders::{ScriptTransactionBuilder, VariableOutputPolicy},
         tx_status::TxStatus,
         Selector, Token,
     },
@@ -21,6 +21,7 @@ use crate::{
     calls::{
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
+        utils::find_id_of_missing_contract,
         utils::sealed,
         CallParameters, ContractCall, ScriptCall, TxDependencyExtension,
     },
@@ -46,6 +47,7 @@ pub struct CallHandler<A, C, T> {
     decoder_config: DecoderConfig,
     // Initially `None`, gets set to the right tx id after the transaction is submitted
     cached_tx_id: Option<Bytes32>,
+    variable_output_policy: VariableOutputPolicy,
 }
 
 impl<A, C, T> CallHandler<A, C, T> {
@@ -65,6 +67,18 @@ impl<A, C, T> CallHandler<A, C, T> {
         self.log_decoder.set_decoder_config(decoder_config);
         self
     }
+
+    /// If this method is not called, the default policy is to not add any variable outputs.
+    ///
+    /// # Parameters
+    /// - `variable_outputs`: The [`VariableOutputPolicy`] to apply for the contract call.
+    ///
+    /// # Returns
+    /// - `Self`: The updated SDK configuration.
+    pub fn with_variable_output_policy(mut self, variable_outputs: VariableOutputPolicy) -> Self {
+        self.variable_output_policy = variable_outputs;
+        self
+    }
 }
 
 impl<A, C, T> CallHandler<A, C, T>
@@ -75,13 +89,15 @@ where
 {
     pub async fn transaction_builder(&self) -> Result<ScriptTransactionBuilder> {
         self.call
-            .transaction_builder(self.tx_policies, &self.account)
+            .transaction_builder(self.tx_policies, self.variable_output_policy, &self.account)
             .await
     }
 
     /// Returns the script that executes the contract call
     pub async fn build_tx(&self) -> Result<ScriptTransaction> {
-        self.call.build_tx(self.tx_policies, &self.account).await
+        self.call
+            .build_tx(self.tx_policies, self.variable_output_policy, &self.account)
+            .await
     }
 
     /// Get a call's estimated cost
@@ -219,7 +235,6 @@ where
             encoded_selector,
             encoded_args: ABIEncoder::new(encoder_config).encode(args),
             call_parameters: CallParameters::default(),
-            variable_outputs: vec![],
             external_contracts: vec![],
             output_param: T::param_type(),
             is_payable,
@@ -233,6 +248,7 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
+            variable_output_policy: VariableOutputPolicy::default(),
         }
     }
 
@@ -299,7 +315,6 @@ where
             inputs: vec![],
             outputs: vec![],
             external_contracts: vec![],
-            variable_outputs: vec![],
         };
 
         Self {
@@ -310,6 +325,7 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
+            variable_output_policy: VariableOutputPolicy::default(),
         }
     }
 
@@ -333,22 +349,30 @@ where
     C: ContractDependencyConfigurator + TransactionTuner + ResponseParser + Send + Sync,
     T: Tokenizable + Parameterize + Debug + Send + Sync,
 {
-    async fn simulate(&mut self) -> Result<()> {
-        self.simulate().await?;
-
-        Ok(())
-    }
-
-    fn append_variable_outputs(mut self, num: u64) -> Self {
-        self.call.append_variable_outputs(num);
+    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Self {
+        self.call.append_external_contract(contract_id);
 
         self
     }
 
-    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.call.append_contract(contract_id);
+    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(10);
 
-        self
+        for _ in 0..attempts {
+            match self.simulate().await {
+                Ok(_) => return Ok(self),
+
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
+                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+                        self = self.append_external_contract(contract_id);
+                    }
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        self.simulate().await.map(|_| self)
     }
 }
 
@@ -365,6 +389,7 @@ where
             datatype: PhantomData,
             decoder_config: DecoderConfig::default(),
             cached_tx_id: None,
+            variable_output_policy: VariableOutputPolicy::default(),
         }
     }
 
@@ -464,27 +489,32 @@ impl<A> TxDependencyExtension for CallHandler<A, Vec<ContractCall>, ()>
 where
     A: Account,
 {
-    async fn simulate(&mut self) -> Result<()> {
-        self.simulate_without_decode().await?;
-
-        Ok(())
-    }
-
-    fn append_variable_outputs(mut self, num: u64) -> Self {
+    fn append_external_contract(mut self, contract_id: Bech32ContractId) -> Self {
         self.call
             .iter_mut()
             .take(1)
-            .for_each(|call| call.append_variable_outputs(num));
+            .for_each(|call| call.append_external_contract(contract_id.clone()));
 
         self
     }
 
-    fn append_contract(mut self, contract_id: Bech32ContractId) -> Self {
-        self.call
-            .iter_mut()
-            .take(1)
-            .for_each(|call| call.append_contract(contract_id.clone()));
+    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
+        let attempts = max_attempts.unwrap_or(10);
 
-        self
+        for _ in 0..attempts {
+            match self.simulate_without_decode().await {
+                Ok(_) => return Ok(self),
+
+                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
+                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
+                        self = self.append_external_contract(contract_id);
+                    }
+                }
+
+                Err(other_error) => return Err(other_error),
+            }
+        }
+
+        self.simulate_without_decode().await.map(|_| self)
     }
 }

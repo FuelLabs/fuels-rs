@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use fuel_tx::{AssetId, Output};
+use fuel_tx::AssetId;
 use fuels_core::{
     constants::DEFAULT_CALL_PARAMS_AMOUNT,
     types::{
@@ -20,7 +20,6 @@ pub struct ContractCall {
     pub encoded_args: Result<Vec<u8>>,
     pub encoded_selector: Selector,
     pub call_parameters: CallParameters,
-    pub variable_outputs: Vec<Output>,
     pub external_contracts: Vec<Bech32ContractId>,
     pub output_param: ParamType,
     pub is_payable: bool,
@@ -31,13 +30,6 @@ impl ContractCall {
     pub fn with_contract_id(self, contract_id: Bech32ContractId) -> Self {
         ContractCall {
             contract_id,
-            ..self
-        }
-    }
-
-    pub fn with_variable_outputs(self, variable_outputs: Vec<Output>) -> ContractCall {
-        ContractCall {
-            variable_outputs,
             ..self
         }
     }
