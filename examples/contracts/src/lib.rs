@@ -364,6 +364,19 @@ mod tests {
             .simulate(Execution::Realistic)
             .await?;
         // ANCHOR_END: simulate
+
+        let contract_id = ContractId::default();
+        let asset_id = AssetId::zeroed();
+
+        // ANCHOR: simulate_read_state
+        // you don't need any funds to read state
+        let balance = contract_methods
+            .get_balance(contract_id, asset_id)
+            .simulate(Execution::StateReadOnly)
+            .await?
+            .value;
+        // ANCHOR_END: simulate_read_state
+
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
