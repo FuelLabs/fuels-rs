@@ -125,8 +125,7 @@ async fn test_output_variable_estimation() -> Result<()> {
     let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
     let _ = script_call
         .with_inputs(inputs)
-        .estimate_tx_dependencies(None)
-        .await?
+        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
         .await?;
 
@@ -388,7 +387,7 @@ async fn simulations_can_be_made_without_coins() -> Result<()> {
 
     let value = script_instance
         .main(1000, 2000)
-        .simulate(Execution::UnfundedStateRead)
+        .simulate(Execution::StateReadOnly)
         .await?
         .value;
 
