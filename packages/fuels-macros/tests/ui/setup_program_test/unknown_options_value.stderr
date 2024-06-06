@@ -1,0 +1,5 @@
+error: invalid build profile option: must be "debug" or "release"
+ --> tests/ui/setup_program_test/unknown_options_value.rs:3:39
+  |
+3 | setup_program_test!(Options(profile = "not_a_profile"));
+  |                                       ^^^^^^^^^^^^^^^
