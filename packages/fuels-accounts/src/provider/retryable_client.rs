@@ -151,7 +151,6 @@ impl RetryableClient {
     }
 
     pub async fn estimate_predicates(&self, mut tx: Transaction) -> RequestResult<Transaction> {
-        // TODO(oleksii): use &mut Transaction in RetryableClient::wrap
         self.client
             .estimate_predicates(&mut tx)
             .await
