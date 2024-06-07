@@ -17,6 +17,7 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
+use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -180,7 +181,7 @@ impl Provider {
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx.estimate_predicates(self.consensus_parameters())?;
+            self.estimate_predicates_with_node_fallback(&mut tx).await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
@@ -256,8 +257,29 @@ impl Provider {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
     }
 
-    pub async fn estimate_predicates(&self, tx: impl Transaction) -> Result<()> {
-        Ok(self.client.estimate_predicates(&mut tx.into()).await?)
+    async fn estimate_predicates_with_node_fallback<T: Transaction>(
+        &self,
+        tx: &mut T,
+    ) -> Result<()> {
+        if self.latest_chain_executor_version().await? > LATEST_STATE_TRANSITION_VERSION {
+            *tx = self
+                .client
+                .estimate_predicates(tx.clone().into())
+                .await?
+                .try_into()?
+        } else {
+            tx.estimate_predicates(self.consensus_parameters())?;
+        }
+        Ok(())
+    }
+
+    async fn latest_chain_executor_version(&self) -> Result<u32> {
+        self.chain_info().await.map(|chain_info| {
+            chain_info
+                .latest_block
+                .header
+                .state_transition_bytecode_version
+        })
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {

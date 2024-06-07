@@ -150,12 +150,13 @@ impl RetryableClient {
             .map(Into::into)
     }
 
-    pub async fn estimate_predicates(&self, tx: &mut Transaction) -> RequestResult<()> {
+    pub async fn estimate_predicates(&self, mut tx: Transaction) -> RequestResult<Transaction> {
         // TODO(oleksii): use &mut Transaction in RetryableClient::wrap
         self.client
-            .estimate_predicates(tx)
+            .estimate_predicates(&mut tx)
             .await
-            .map_err(|e| RequestError::IO(e.to_string()))
+            .map_err(|e| RequestError::IO(e.to_string()))?;
+        Ok(tx)
     }
 
     pub async fn dry_run(
