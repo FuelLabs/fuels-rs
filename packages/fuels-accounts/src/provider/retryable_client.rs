@@ -88,7 +88,7 @@ impl RetryableClient {
         self.retry_config = retry_config;
     }
 
-    async fn wrap<T, Fut>(&self, action: impl FnMut() -> Fut) -> RequestResult<T>
+    async fn wrap<T, Fut>(&self, action: impl Fn() -> Fut) -> RequestResult<T>
     where
         Fut: Future<Output = io::Result<T>>,
     {
