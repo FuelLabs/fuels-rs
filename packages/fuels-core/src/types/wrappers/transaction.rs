@@ -358,17 +358,6 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
-        impl EstimablePredicates for $wrapper {
-            fn estimate_predicates(
-                &mut self,
-                consensus_parameters: &ConsensusParameters,
-            ) -> Result<()> {
-                self.tx.estimate_predicates(&consensus_parameters.into())?;
-
-                Ok(())
-            }
-        }
-
         impl ValidatablePredicates for $wrapper {
             fn validate_predicates(
                 self,
@@ -522,6 +511,30 @@ impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
 impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
+impl EstimablePredicates for UploadTransaction {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
+        self.tx.estimate_predicates(&consensus_parameters.into())?;
+
+        Ok(())
+    }
+}
+
+impl EstimablePredicates for UpgradeTransaction {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
+        self.tx.estimate_predicates(&consensus_parameters.into())?;
+
+        Ok(())
+    }
+}
+
+impl EstimablePredicates for CreateTransaction {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
+        self.tx.estimate_predicates(&consensus_parameters.into())?;
+
+        Ok(())
+    }
+}
+
 impl CreateTransaction {
     pub fn salt(&self) -> &FuelSalt {
         self.tx.salt()
@@ -533,6 +546,14 @@ impl CreateTransaction {
 
     pub fn storage_slots(&self) -> &Vec<StorageSlot> {
         self.tx.storage_slots()
+    }
+}
+
+impl EstimablePredicates for ScriptTransaction {
+    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
+        self.tx.estimate_predicates(&consensus_parameters.into())?;
+
+        Ok(())
     }
 }
 
