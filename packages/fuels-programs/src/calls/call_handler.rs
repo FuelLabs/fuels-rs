@@ -22,7 +22,6 @@ use crate::{
         receipt_parser::ReceiptParser,
         traits::{ContractDependencyConfigurator, ResponseParser, TransactionTuner},
         utils::find_id_of_missing_contract,
-        utils::sealed,
         CallParameters, ContractCall, ScriptCall,
     },
     responses::{CallResponse, SubmitResponse},
@@ -361,8 +360,6 @@ where
         self
     }
 }
-
-impl<A, C, T> sealed::Sealed for CallHandler<A, C, T> {}
 
 impl<A> CallHandler<A, Vec<ContractCall>, ()>
 where
