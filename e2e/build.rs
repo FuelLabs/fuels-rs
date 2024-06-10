@@ -1,5 +1,5 @@
 use flate2::read::GzDecoder;
-use semver::Version;
+use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use std::{
     io::Cursor,
     path::{Path, PathBuf},
@@ -12,8 +12,6 @@ struct Downloader {
 
 impl Downloader {
     const EXECUTOR_FILE_NAME: &'static str = "fuel-core-wasm-executor.wasm";
-    const CORRECT_VERSION_CONTENTS: &'static str =
-        include_str!("../scripts/fuel-core-version/version.rs");
 
     pub fn new() -> Self {
         let env = std::env::var("OUT_DIR").unwrap();
@@ -32,8 +30,8 @@ impl Downloader {
             return Ok(true);
         }
 
-        let saved_version = std::fs::read_to_string(self.version_path())?;
-        if saved_version != Self::CORRECT_VERSION_CONTENTS {
+        let saved_version = semver::Version::parse(&std::fs::read_to_string(self.version_path())?)?;
+        if saved_version != SUPPORTED_FUEL_CORE_VERSION {
             return Ok(true);
         }
 
@@ -44,8 +42,7 @@ impl Downloader {
         std::fs::create_dir_all(&self.dir)?;
 
         const LINK_TEMPLATE: &str = "https://github.com/FuelLabs/fuel-core/releases/download/vVERSION/fuel-core-VERSION-x86_64-unknown-linux-gnu.tar.gz";
-        const CORE_VERSION: semver::Version = include!("../scripts/fuel-core-version/version.rs");
-        let link = LINK_TEMPLATE.replace("VERSION", &CORE_VERSION.to_string());
+        let link = LINK_TEMPLATE.replace("VERSION", &SUPPORTED_FUEL_CORE_VERSION.to_string());
 
         let response = reqwest::blocking::get(link)?;
         if !response.status().is_success() {
@@ -58,7 +55,7 @@ impl Downloader {
 
         let mut extracted = false;
         let executor_in_tar = Path::new(&format!(
-            "fuel-core-{CORE_VERSION}-x86_64-unknown-linux-gnu"
+            "fuel-core-{SUPPORTED_FUEL_CORE_VERSION}-x86_64-unknown-linux-gnu"
         ))
         .join(Self::EXECUTOR_FILE_NAME);
 
@@ -67,7 +64,10 @@ impl Downloader {
 
             if entry.path()? == executor_in_tar {
                 entry.unpack(self.executor_path())?;
-                std::fs::write(self.version_path(), Self::CORRECT_VERSION_CONTENTS)?;
+                std::fs::write(
+                    self.version_path(),
+                    format!("{SUPPORTED_FUEL_CORE_VERSION}"),
+                )?;
 
                 extracted = true;
                 break;

@@ -24,6 +24,18 @@ of `COMMAND(ARG...)...`
 
 Available `COMMAND`s:
 
+## Options
+
+Example: `Options(profile="debug")`
+
+Description: Sets options from `ARG`s to be used by other `COMMAND`s.
+
+Available options:
+
+- `profile`: sets the `cargo` build profile. Variants: `"release"` (default),  `"debug"`
+
+Cardinality: 0 or 1.
+
 ## Wallets
 
 Example: `Wallets("a_wallet", "another_wallet"...)`

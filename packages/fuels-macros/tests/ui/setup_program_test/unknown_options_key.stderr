@@ -1,0 +1,5 @@
+error: attribute 'unknown' not recognized. Expected one of: 'profile'
+ --> tests/ui/setup_program_test/unknown_options_key.rs:3:29
+  |
+3 | setup_program_test!(Options(unknown = "debug"));
+  |                             ^^^^^^^

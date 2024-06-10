@@ -26,6 +26,7 @@ tokio = { workspace = true, features = ["test-util"] }
 [build-dependencies]
 anyhow = { workspace = true, features = ["std"] }
 flate2 = { workspace = true, features = ["zlib"] }
+fuels-accounts = { workspace = true, features = ["std"] }
 reqwest = { workspace = true, features = ["blocking", "default-tls"] }
 semver = { workspace = true }
 tar = { workspace = true }

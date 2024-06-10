@@ -995,11 +995,8 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
         wallet.adjust_for_fee(&mut builder, 0).await?;
         let tx = builder.build(&provider).await?;
 
-        provider.send_transaction(tx).await?;
+        provider.send_transaction_and_await_commit(tx).await?;
     }
-
-    // Otherwise we occasionally get `UnknownStateTransactionBytecodeRoot` in CI runs
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let mut builder =
         UpgradeTransactionBuilder::prepare_state_transition_upgrade(root, TxPolicies::default());
