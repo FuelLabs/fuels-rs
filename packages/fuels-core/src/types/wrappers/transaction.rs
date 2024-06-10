@@ -27,7 +27,7 @@ use crate::{
     traits::Signer,
     types::{
         bech32::Bech32Address,
-        errors::{error, error_transaction, Result},
+        errors::{error, error_transaction, Error, Result},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -213,7 +213,8 @@ pub trait ValidatablePredicates: sealed::Sealed {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction>
+    TryFrom<FuelTransaction, Error = Error>
+    + Into<FuelTransaction>
     + EstimablePredicates
     + ValidatablePredicates
     + GasValidation
@@ -322,6 +323,20 @@ macro_rules! impl_tx_wrapper {
         impl From<$wrapper> for FuelTransaction {
             fn from(tx: $wrapper) -> Self {
                 tx.tx.into()
+            }
+        }
+
+        impl TryFrom<FuelTransaction> for $wrapper {
+            type Error = Error;
+
+            fn try_from(tx: FuelTransaction) -> Result<Self> {
+                match tx {
+                    FuelTransaction::$wrapped(tx) => Ok(tx.into()),
+                    _ => Err(error_transaction!(
+                        Other,
+                        "couldn't convert Transaction into a wrapper of type $wrapper"
+                    )),
+                }
             }
         }
 

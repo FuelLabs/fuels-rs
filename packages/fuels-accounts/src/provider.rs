@@ -17,6 +17,7 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
+use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -27,7 +28,7 @@ use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        block::Block,
+        block::{Block, Header},
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
@@ -176,11 +177,17 @@ impl Provider {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
-        let latest_block_height = chain_info.latest_block.header.height;
+        let Header {
+            height: latest_block_height,
+            state_transition_bytecode_version: latest_chain_executor_version,
+            ..
+        } = chain_info.latest_block.header;
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx.estimate_predicates(self.consensus_parameters())?;
+            tx = self
+                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+                .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
@@ -254,6 +261,22 @@ impl Provider {
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
+    }
+
+    async fn estimate_predicates_with_node_fallback<T: Transaction>(
+        &self,
+        mut tx: T,
+        latest_chain_executor_version: u32,
+    ) -> Result<T> {
+        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
+            self.client
+                .estimate_predicates(&tx.into())
+                .await?
+                .try_into()
+        } else {
+            tx.estimate_predicates(self.consensus_parameters())?;
+            Ok(tx)
+        }
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
