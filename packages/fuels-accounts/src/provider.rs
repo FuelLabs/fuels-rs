@@ -28,7 +28,7 @@ use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        block::Block,
+        block::{Block, Header},
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
@@ -177,11 +177,17 @@ impl Provider {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
-        let latest_block_height = chain_info.latest_block.header.height;
+        let Header {
+            height: latest_block_height,
+            state_transition_bytecode_version: latest_chain_executor_version,
+            ..
+        } = chain_info.latest_block.header;
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            self.estimate_predicates_with_node_fallback(&mut tx).await?;
+            tx = self
+                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+                .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
@@ -259,27 +265,18 @@ impl Provider {
 
     async fn estimate_predicates_with_node_fallback<T: Transaction>(
         &self,
-        tx: &mut T,
-    ) -> Result<()> {
-        if self.latest_chain_executor_version().await? > LATEST_STATE_TRANSITION_VERSION {
-            *tx = self
-                .client
-                .estimate_predicates(tx.clone().into())
+        mut tx: T,
+        latest_chain_executor_version: u32,
+    ) -> Result<T> {
+        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
+            self.client
+                .estimate_predicates(&tx.into())
                 .await?
-                .try_into()?
+                .try_into()
         } else {
             tx.estimate_predicates(self.consensus_parameters())?;
+            Ok(tx)
         }
-        Ok(())
-    }
-
-    async fn latest_chain_executor_version(&self) -> Result<u32> {
-        self.chain_info().await.map(|chain_info| {
-            chain_info
-                .latest_block
-                .header
-                .state_transition_bytecode_version
-        })
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {

@@ -332,7 +332,7 @@ macro_rules! impl_tx_wrapper {
             fn try_from(tx: FuelTransaction) -> Result<Self> {
                 match tx {
                     FuelTransaction::$wrapped(tx) => Ok(tx.into()),
-                    _ => Err(error!(
+                    _ => Err(error_transaction!(
                         Other,
                         "couldn't convert Transaction into a wrapper of type $wrapper"
                     )),
