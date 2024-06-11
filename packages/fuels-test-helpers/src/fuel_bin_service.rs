@@ -74,11 +74,6 @@ impl ExtendedConfig {
             }
         };
 
-        let latest_state_transition_version = LATEST_STATE_TRANSITION_VERSION - 1;
-        args.push(format!(
-            "--native-executor-version={latest_state_transition_version}"
-        ));
-
         args.extend(
             [
                 (self.node_config.vm_backtrace, "--vm-backtrace"),
