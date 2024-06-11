@@ -6,28 +6,28 @@
 # https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html#details
 resolver = "2"
 members = [
-  "e2e",
-  "examples/codec",
-  "examples/contracts",
-  "examples/cookbook",
-  "examples/debugging",
-  "examples/macros",
-  "examples/predicates",
-  "examples/providers",
-  "examples/rust_bindings",
-  "examples/types",
-  "examples/wallets",
-  "packages/fuels",
-  "packages/fuels-accounts",
-  "packages/fuels-code-gen",
-  "packages/fuels-core",
-  "packages/fuels-macros",
-  "packages/fuels-programs",
-  "packages/fuels-test-helpers",
-  "scripts/check-docs",
-  "scripts/fuel-core-version",
-  "scripts/versions-replacer",
-  "wasm-tests",
+    "e2e",
+    "examples/codec",
+    "examples/contracts",
+    "examples/cookbook",
+    "examples/debugging",
+    "examples/macros",
+    "examples/predicates",
+    "examples/providers",
+    "examples/rust_bindings",
+    "examples/types",
+    "examples/wallets",
+    "packages/fuels",
+    "packages/fuels-accounts",
+    "packages/fuels-code-gen",
+    "packages/fuels-core",
+    "packages/fuels-macros",
+    "packages/fuels-programs",
+    "packages/fuels-test-helpers",
+    "scripts/check-docs",
+    "scripts/fuel-core-version",
+    "scripts/versions-replacer",
+    "wasm-tests",
 ]
 
 [workspace.package]
@@ -58,8 +58,8 @@ portpicker = "0.1.1"
 proc-macro2 = "1.0.70"
 quote = "1.0.33"
 rand = { version = "0.8.5", default-features = false, features = [
-  "std_rng",
-  "getrandom",
+    "std_rng",
+    "getrandom",
 ] }
 regex = "1.10.2"
 reqwest = { version = "0.12", default-features = false }
@@ -81,21 +81,21 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.27.0", default-features = false }
-fuel-core-chain-config = { version = "0.27.0", default-features = false }
-fuel-core-client = { version = "0.27.0", default-features = false }
-fuel-core-poa = { version = "0.27.0", default-features = false }
-fuel-core-services = { version = "0.27.0", default-features = false }
-fuel-core-types = { version = "0.27.0", default-features = false }
+fuel-core = { version = "0.28.0", default-features = false }
+fuel-core-chain-config = { version = "0.28.0", default-features = false }
+fuel-core-client = { version = "0.28.0", default-features = false }
+fuel-core-poa = { version = "0.28.0", default-features = false }
+fuel-core-services = { version = "0.28.0", default-features = false }
+fuel-core-types = { version = "0.28.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.50.0" }
-fuel-crypto = { version = "0.50.0" }
-fuel-merkle = { version = "0.50.0" }
-fuel-storage = { version = "0.50.0" }
-fuel-tx = { version = "0.50.0" }
-fuel-types = { version = "0.50.0" }
-fuel-vm = { version = "0.50.0" }
+fuel-asm = { version = "0.52.0" }
+fuel-crypto = { version = "0.52.0" }
+fuel-merkle = { version = "0.52.0" }
+fuel-storage = { version = "0.52.0" }
+fuel-tx = { version = "0.52.0" }
+fuel-types = { version = "0.52.0" }
+fuel-vm = { version = "0.52.0" }
 
 # Workspace projects
 fuels = { version = "0.63.1", path = "./packages/fuels", default-features = false }
