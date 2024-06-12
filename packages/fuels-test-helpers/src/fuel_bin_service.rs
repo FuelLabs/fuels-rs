@@ -7,7 +7,6 @@ use std::{
 use fuel_core_chain_config::{ChainConfig, SnapshotWriter, StateConfig};
 use fuel_core_client::client::FuelClient;
 use fuel_core_services::State;
-use fuel_core_types::blockchain::header::LATEST_STATE_TRANSITION_VERSION;
 use fuels_core::{error, types::errors::Result as FuelResult};
 use portpicker::{is_free, pick_unused_port};
 use tempfile::{tempdir, TempDir};
@@ -73,11 +72,6 @@ impl ExtendedConfig {
                 ));
             }
         };
-
-        let latest_state_transition_version = LATEST_STATE_TRANSITION_VERSION - 1;
-        args.push(format!(
-            "--native-executor-version={latest_state_transition_version}"
-        ));
 
         args.extend(
             [

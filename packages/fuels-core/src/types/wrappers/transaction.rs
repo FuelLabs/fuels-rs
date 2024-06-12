@@ -177,6 +177,7 @@ impl TxPolicies {
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_vm::prelude::MemoryInstance;
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -368,7 +369,7 @@ macro_rules! impl_tx_wrapper {
                     .tx
                     .into_checked(block_height.into(), consensus_parameters)?;
                 let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-                checked.check_predicates(&check_predicates_parameters)?;
+                checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
 
                 Ok(())
             }
@@ -513,7 +514,8 @@ impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
 impl EstimablePredicates for UploadTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -521,7 +523,8 @@ impl EstimablePredicates for UploadTransaction {
 
 impl EstimablePredicates for UpgradeTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -529,7 +532,8 @@ impl EstimablePredicates for UpgradeTransaction {
 
 impl EstimablePredicates for CreateTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -551,7 +555,8 @@ impl CreateTransaction {
 
 impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
