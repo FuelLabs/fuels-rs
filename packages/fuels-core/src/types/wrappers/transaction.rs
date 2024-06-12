@@ -27,7 +27,7 @@ use crate::{
     traits::Signer,
     types::{
         bech32::Bech32Address,
-        errors::{error, error_transaction, Result},
+        errors::{error, error_transaction, Error, Result},
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -177,6 +177,7 @@ impl TxPolicies {
 }
 
 use fuel_tx::field::{BytecodeWitnessIndex, Salt, StorageSlots};
+use fuel_vm::prelude::MemoryInstance;
 
 use crate::types::coin_type_id::CoinTypeId;
 
@@ -213,7 +214,8 @@ pub trait ValidatablePredicates: sealed::Sealed {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait Transaction:
-    Into<FuelTransaction>
+    TryFrom<FuelTransaction, Error = Error>
+    + Into<FuelTransaction>
     + EstimablePredicates
     + ValidatablePredicates
     + GasValidation
@@ -325,6 +327,20 @@ macro_rules! impl_tx_wrapper {
             }
         }
 
+        impl TryFrom<FuelTransaction> for $wrapper {
+            type Error = Error;
+
+            fn try_from(tx: FuelTransaction) -> Result<Self> {
+                match tx {
+                    FuelTransaction::$wrapped(tx) => Ok(tx.into()),
+                    _ => Err(error_transaction!(
+                        Other,
+                        "couldn't convert Transaction into a wrapper of type $wrapper"
+                    )),
+                }
+            }
+        }
+
         impl From<$wrapped> for $wrapper {
             fn from(tx: $wrapped) -> Self {
                 let is_using_predicates = tx.inputs().iter().any(|input| {
@@ -353,7 +369,7 @@ macro_rules! impl_tx_wrapper {
                     .tx
                     .into_checked(block_height.into(), consensus_parameters)?;
                 let check_predicates_parameters: CheckPredicateParams = consensus_parameters.into();
-                checked.check_predicates(&check_predicates_parameters)?;
+                checked.check_predicates(&check_predicates_parameters, MemoryInstance::new())?;
 
                 Ok(())
             }
@@ -498,7 +514,8 @@ impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
 impl EstimablePredicates for UploadTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -506,7 +523,8 @@ impl EstimablePredicates for UploadTransaction {
 
 impl EstimablePredicates for UpgradeTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -514,7 +532,8 @@ impl EstimablePredicates for UpgradeTransaction {
 
 impl EstimablePredicates for CreateTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }
@@ -536,7 +555,8 @@ impl CreateTransaction {
 
 impl EstimablePredicates for ScriptTransaction {
     fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx.estimate_predicates(&consensus_parameters.into())?;
+        self.tx
+            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
 
         Ok(())
     }

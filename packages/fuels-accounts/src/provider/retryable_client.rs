@@ -150,6 +150,15 @@ impl RetryableClient {
             .map(Into::into)
     }
 
+    pub async fn estimate_predicates(&self, tx: &Transaction) -> RequestResult<Transaction> {
+        self.wrap(|| async {
+            let mut new_tx = tx.clone();
+            self.client.estimate_predicates(&mut new_tx).await?;
+            Ok(new_tx)
+        })
+        .await
+    }
+
     pub async fn dry_run(
         &self,
         tx: &[Transaction],
@@ -162,7 +171,7 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation))
+        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, None))
             .await
     }
 
