@@ -747,4 +747,19 @@ impl DryRunner for Provider {
     fn consensus_parameters(&self) -> &ConsensusParameters {
         self.consensus_parameters()
     }
+
+    async fn estimate_predicates(&self, tx: FuelTransaction) -> Result<FuelTransaction> {
+        let chain_info = self.chain_info().await?;
+        let Header {
+            state_transition_bytecode_version: latest_chain_executor_version,
+            ..
+        } = chain_info.latest_block.header;
+
+        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
+            self.client.estimate_predicates(&tx).await
+        } else {
+            tx.estimate_predicates(self.consensus_parameters())?;
+            Ok(tx)
+        }
+    }
 }
