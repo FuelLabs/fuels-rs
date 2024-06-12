@@ -93,8 +93,7 @@ pub(crate) async fn build_tx_from_contract_calls(
 ) -> Result<ScriptTransaction> {
     let mut tb =
         transaction_builder_from_contract_calls(calls, tx_policies, variable_outputs, account)
-            .await?
-            .with_variable_output_policy(variable_outputs);
+            .await?;
 
     let base_asset_id = *account.try_provider()?.base_asset_id();
     let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
