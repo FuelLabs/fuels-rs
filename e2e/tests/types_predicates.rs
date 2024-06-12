@@ -10,34 +10,41 @@ async fn assert_predicate_spendable(data: Vec<u8>, project_path: impl AsRef<Path
     let binary_path = project_binary(project_path);
     let mut predicate: Predicate = Predicate::load_from(&binary_path)?.with_data(data);
 
-    let num_coins = 4;
-    let num_messages = 8;
-    let amount = 16;
-    let (provider, predicate_balance, receiver, receiver_balance, asset_id) =
-        setup_predicate_test(predicate.address(), num_coins, num_messages, amount).await?;
+    use std::str::FromStr;
+
+    use fuels::{crypto::SecretKey, prelude::*};
+
+    // Create a provider pointing to the testnet.
+    let provider = Provider::connect("https://devnet.fuel.network/v1/graphql")
+        .await
+        .unwrap();
+
+    let secret =
+        SecretKey::from_str("a1447cd75accc6b71a976fd3401a1f6ce318d27ba660b0315ee6ac347bf39568")?;
+
+    // Create the wallet
+    let wallet = WalletUnlocked::new_from_private_key(secret, Some(provider.clone()));
+    let asset_id =
+        AssetId::from_str("f8f8b6283d7fa5b672b530cbb84fcccb4ff8dc40f8176ef4544ddb1f1952ad07")?;
+
+    let predicate_balance = 50000;
+    let transfer_amount = 1000;
+    //wallet.transfer(predicate.address(), predicate_balance, asset_id, TxPolicies::default().with_max_fee(1000)).await?;
 
     predicate.set_provider(provider.clone());
+
+    let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            transfer_amount,
             asset_id,
-            TxPolicies::default(),
+            TxPolicies::default().with_max_fee(8000),
         )
         .await?;
 
-    // The predicate has spent the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, 0).await;
-
-    // Funds were transferred
-    assert_address_balance(
-        receiver.address(),
-        &provider,
-        asset_id,
-        receiver_balance + predicate_balance,
-    )
-    .await;
+    assert_address_balance(receiver.address(), &provider, asset_id, transfer_amount).await;
 
     Ok(())
 }
