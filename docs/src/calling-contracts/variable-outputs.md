@@ -11,15 +11,15 @@ Let's say you deployed a contract with the following method:
 {{#include ../../../e2e/sway/contracts/token_ops/src/main.sw:variable_outputs}}
 ```
 
-When calling `transfer_coins_to_output` with the SDK, you can specify the number of variable outputs by chaining `append_variable_outputs(amount)` to your call. Like this:
+When calling `transfer_coins_to_output` with the SDK, you can specify the number of variable outputs:
 
 ```rust,ignore
 {{#include ../../../examples/contracts/src/lib.rs:variable_outputs}}
 ```
 
-<!-- This section should explain what the `append_variable_outputs` method does -->
-<!-- append_variable_outputs:example:start -->
-`append_variable_outputs` effectively appends a given amount of `Output::Variable`s to the transaction's list of outputs. This output type indicates that the amount and the owner may vary based on transaction execution.
-<!-- append_variable_outputs:example:end -->
+<!-- This section should explain what the `with_variable_output_policy` method does -->
+<!-- with_variable_output_policy:example:start -->
+`with_variable_output_policy` sets the policy regarding variable outputs. You can either set the number of variable outputs yourself by providing `VariableOutputPolicy::Exactly(n)` or let the SDK estimate it for you with `VariableOutputPolicy::EstimateMinimum`. A variable output indicates that the amount and the owner may vary based on transaction execution.
+<!-- with_variable_output_policy:example:end -->
 
-> **Note:** that the Sway `lib-std` function `mint_to_address` calls `transfer_to_address` under the hood, so you need to call `append_variable_outputs` in the Rust SDK tests like you would for `transfer_to_address`.
+> **Note:** that the Sway `lib-std` function `mint_to_address` calls `transfer_to_address` under the hood, so you need to call `with_variable_output_policy` in the Rust SDK tests like you would for `transfer_to_address`.
