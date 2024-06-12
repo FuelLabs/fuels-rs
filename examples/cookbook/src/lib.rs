@@ -70,7 +70,7 @@ mod tests {
         contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)?
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
         // ANCHOR_END: liquidity_deposit
@@ -86,7 +86,7 @@ mod tests {
         contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)?
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
 

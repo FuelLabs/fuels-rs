@@ -127,8 +127,7 @@ async fn test_output_variable_estimation() -> Result<()> {
         .await?;
     let _ = script_call
         .with_inputs(inputs)
-        .estimate_tx_dependencies(None)
-        .await?
+        .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
         .call()
         .await?;
 

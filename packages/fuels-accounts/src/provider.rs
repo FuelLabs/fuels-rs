@@ -17,6 +17,10 @@ use fuel_core_client::client::{
         gas_price::{EstimateGasPrice, LatestGasPrice},
     },
 };
+use fuel_core_types::{
+    blockchain::header::LATEST_STATE_TRANSITION_VERSION,
+    services::executor::TransactionExecutionResult,
+};
 use fuel_tx::{
     AssetId, ConsensusParameters, Receipt, Transaction as FuelTransaction, TxId, UtxoId,
 };
@@ -27,7 +31,7 @@ use fuels_core::{
     constants::{DEFAULT_GAS_ESTIMATION_BLOCK_HORIZON, DEFAULT_GAS_ESTIMATION_TOLERANCE},
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        block::Block,
+        block::{Block, Header},
         chain_info::ChainInfo,
         coin::Coin,
         coin_type::CoinType,
@@ -36,7 +40,7 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
-        transaction_builders::DryRunner,
+        transaction_builders::{DryRun, DryRunner},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
     },
@@ -176,11 +180,17 @@ impl Provider {
         tx.precompute(&self.chain_id())?;
 
         let chain_info = self.chain_info().await?;
-        let latest_block_height = chain_info.latest_block.header.height;
+        let Header {
+            height: latest_block_height,
+            state_transition_bytecode_version: latest_chain_executor_version,
+            ..
+        } = chain_info.latest_block.header;
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx.estimate_predicates(self.consensus_parameters())?;
+            tx = self
+                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+                .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
         }
@@ -254,6 +264,22 @@ impl Provider {
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
+    }
+
+    async fn estimate_predicates_with_node_fallback<T: Transaction>(
+        &self,
+        mut tx: T,
+        latest_chain_executor_version: u32,
+    ) -> Result<T> {
+        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
+            self.client
+                .estimate_predicates(&tx.into())
+                .await?
+                .try_into()
+        } else {
+            tx.estimate_predicates(self.consensus_parameters())?;
+            Ok(tx)
+        }
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
@@ -618,12 +644,12 @@ impl Provider {
         tolerance: f64,
     ) -> Result<u64> {
         let receipts = self.dry_run_no_validation(tx).await?.take_receipts();
-        let gas_used = self.get_gas_used(&receipts);
+        let gas_used = self.get_script_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
     }
 
-    fn get_gas_used(&self, receipts: &[Receipt]) -> u64 {
+    fn get_script_gas_used(&self, receipts: &[Receipt]) -> u64 {
         receipts
             .iter()
             .rfind(|r| matches!(r, Receipt::ScriptResult { .. }))
@@ -682,7 +708,7 @@ impl Provider {
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait::async_trait)]
 impl DryRunner for Provider {
-    async fn dry_run_and_get_used_gas(&self, tx: FuelTransaction, tolerance: f32) -> Result<u64> {
+    async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
             .client
             .dry_run_opt(&vec![tx], Some(false), Some(0))
@@ -690,9 +716,28 @@ impl DryRunner for Provider {
             .try_into()
             .expect("should have only one element");
 
-        let gas_used = self.get_gas_used(tx_execution_status.result.receipts());
+        let receipts = tx_execution_status.result.receipts();
+        let script_gas = self.get_script_gas_used(receipts);
 
-        Ok((gas_used as f64 * (1.0 + tolerance as f64)) as u64)
+        let variable_outputs = receipts
+            .iter()
+            .filter(
+                |receipt| matches!(receipt, Receipt::TransferOut { amount, .. } if *amount != 0),
+            )
+            .count();
+
+        let succeeded = matches!(
+            tx_execution_status.result,
+            TransactionExecutionResult::Success { .. }
+        );
+
+        let dry_run = DryRun {
+            succeeded,
+            script_gas,
+            variable_outputs,
+        };
+
+        Ok(dry_run)
     }
 
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64> {
