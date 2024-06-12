@@ -290,7 +290,10 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{transaction::Transaction, transaction_builders::DryRunner},
+        types::{
+            transaction::Transaction,
+            transaction_builders::{DryRun, DryRunner},
+        },
     };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -334,8 +337,12 @@ mod tests {
 
     #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
     impl DryRunner for MockDryRunner {
-        async fn dry_run_and_get_used_gas(&self, _: FuelTransaction, _: f32) -> Result<u64> {
-            Ok(0)
+        async fn dry_run(&self, _: FuelTransaction) -> Result<DryRun> {
+            Ok(DryRun {
+                succeeded: true,
+                script_gas: 0,
+                variable_outputs: 0,
+            })
         }
 
         fn consensus_parameters(&self) -> &ConsensusParameters {

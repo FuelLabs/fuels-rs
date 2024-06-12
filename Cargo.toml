@@ -81,21 +81,21 @@ which = { version = "6.0.0", default-features = false }
 zeroize = "1.7.0"
 
 # Dependencies from the `fuel-core` repository:
-fuel-core = { version = "0.27.0", default-features = false }
-fuel-core-chain-config = { version = "0.27.0", default-features = false }
-fuel-core-client = { version = "0.27.0", default-features = false }
-fuel-core-poa = { version = "0.27.0", default-features = false }
-fuel-core-services = { version = "0.27.0", default-features = false }
-fuel-core-types = { version = "0.27.0", default-features = false }
+fuel-core = { version = "0.28.0", default-features = false }
+fuel-core-chain-config = { version = "0.28.0", default-features = false }
+fuel-core-client = { version = "0.28.0", default-features = false }
+fuel-core-poa = { version = "0.28.0", default-features = false }
+fuel-core-services = { version = "0.28.0", default-features = false }
+fuel-core-types = { version = "0.28.0", default-features = false }
 
 # Dependencies from the `fuel-vm` repository:
-fuel-asm = { version = "0.50.0" }
-fuel-crypto = { version = "0.50.0" }
-fuel-merkle = { version = "0.50.0" }
-fuel-storage = { version = "0.50.0" }
-fuel-tx = { version = "0.50.0" }
-fuel-types = { version = "0.50.0" }
-fuel-vm = { version = "0.50.0" }
+fuel-asm = { version = "0.52.0" }
+fuel-crypto = { version = "0.52.0" }
+fuel-merkle = { version = "0.52.0" }
+fuel-storage = { version = "0.52.0" }
+fuel-tx = { version = "0.52.0" }
+fuel-types = { version = "0.52.0" }
+fuel-vm = { version = "0.52.0" }
 
 # Workspace projects
 fuels = { version = "0.63.1", path = "./packages/fuels", default-features = false }
