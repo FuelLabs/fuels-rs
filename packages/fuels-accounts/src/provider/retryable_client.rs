@@ -171,7 +171,7 @@ impl RetryableClient {
         tx: &[Transaction],
         utxo_validation: Option<bool>,
     ) -> RequestResult<Vec<TransactionExecutionStatus>> {
-        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation))
+        self.wrap(|| self.client.dry_run_opt(tx, utxo_validation, None))
             .await
     }
 
