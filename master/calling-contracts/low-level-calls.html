@@ -184,7 +184,7 @@
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .estimate_tx_dependencies(None)
+            .determine_missing_contracts(None)
             .await?
             .call()
             .await?;

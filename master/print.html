@@ -1912,23 +1912,23 @@ let is_error = response.is_err();
         transfer(recipient, asset_id, coins);
     }
 </code></pre>
-<p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs by chaining <code>append_variable_outputs(amount)</code> to your call. Like this:</p>
+<p>When calling <code>transfer_coins_to_output</code> with the SDK, you can specify the number of variable outputs:</p>
 <pre><code class="language-rust ignore">        let address = wallet.address();
         let asset_id = contract_id.asset_id(&amp;Bits256::zeroed());
 
         // withdraw some tokens to wallet
         let response = contract_methods
             .transfer(1_000_000, asset_id, address.into())
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
 </code></pre>
-<!-- This section should explain what the `append_variable_outputs` method does -->
-<!-- append_variable_outputs:example:start -->
-<p><code>append_variable_outputs</code> effectively appends a given amount of <code>Output::Variable</code>s to the transaction's list of outputs. This output type indicates that the amount and the owner may vary based on transaction execution.</p>
-<!-- append_variable_outputs:example:end -->
+<!-- This section should explain what the `with_variable_output_policy` method does -->
+<!-- with_variable_output_policy:example:start -->
+<p><code>with_variable_output_policy</code> sets the policy regarding variable outputs. You can either set the number of variable outputs yourself by providing <code>VariableOutputPolicy::Exactly(n)</code> or let the SDK estimate it for you with <code>VariableOutputPolicy::EstimateMinimum</code>. A variable output indicates that the amount and the owner may vary based on transaction execution.</p>
+<!-- with_variable_output_policy:example:end -->
 <blockquote>
-<p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>append_variable_outputs</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
+<p><strong>Note:</strong> that the Sway <code>lib-std</code> function <code>mint_to_address</code> calls <code>transfer_to_address</code> under the hood, so you need to call <code>with_variable_output_policy</code> in the Rust SDK tests like you would for <code>transfer_to_address</code>.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="read-only-calls"><a class="header" href="#read-only-calls">Read-only calls</a></h1>
 <!-- This section should explain read-only calls  -->
@@ -2011,10 +2011,10 @@ let is_error = response.is_err();
             Err(Error::Transaction(Reason::Reverted { .. }))
         ));
 </code></pre>
-<p>As mentioned in previous chapters, you can specify the external contract with <code>.with_contracts()</code> and add an output variable with <code>append_variable_outputs()</code> to resolve this:</p>
+<p>As mentioned in previous chapters, you can specify the external contract and add an output variable to resolve this:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .with_contract_ids(&amp;[called_contract_id.into()])
             .call()
             .await?;
@@ -2022,7 +2022,8 @@ let is_error = response.is_err();
 <p>But this requires you to know the contract ID of the external contract and the needed number of output variables. Alternatively, by chaining <code>.estimate_tx_dependencies()</code> instead, the dependencies will be estimated by the SDK and set automatically. The optional parameter is the maximum number of simulation attempts:</p>
 <pre><code class="language-rust ignore">        let response = contract_methods
             .mint_then_increment_from_contract(called_contract_id, amount, address.into())
-            .estimate_tx_dependencies(Some(2))
+            .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
+            .determine_missing_contracts(Some(2))
             .await?
             .call()
             .await?;
@@ -2117,7 +2118,7 @@ let is_error = response.is_err();
                 Bytes(function_selector),
                 Bytes(call_data),
             )
-            .estimate_tx_dependencies(None)
+            .determine_missing_contracts(None)
             .await?
             .call()
             .await?;
@@ -3786,7 +3787,7 @@ impl LiquidityPool for Contract {
         contract_methods
             .deposit(wallet.address().into())
             .call_params(call_params)?
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
 </code></pre>
@@ -3801,7 +3802,7 @@ impl LiquidityPool for Contract {
         contract_methods
             .withdraw(wallet.address().into())
             .call_params(call_params)?
-            .append_variable_outputs(1)
+            .with_variable_output_policy(VariableOutputPolicy::Exactly(1))
             .call()
             .await?;
 
