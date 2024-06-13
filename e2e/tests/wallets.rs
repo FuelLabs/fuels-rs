@@ -277,7 +277,7 @@ async fn send_transfer_transactions() -> Result<()> {
         TransactionType::Script(tx) => tx,
         _ => panic!("Received unexpected tx type!"),
     };
-    // Transfer scripts have `script_gas_limit` set user defined value
+    // Transfer scripts uses set `script_gas_limit` despite not having script code
     assert_eq!(script.gas_limit(), script_gas_limit);
     assert_eq!(script.maturity(), maturity as u32);
 

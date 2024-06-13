@@ -372,10 +372,6 @@ mod tests {
         async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
         }
-
-        async fn estimate_predicates(&self, tx: FuelTransaction) -> Result<FuelTransaction> {
-            unimplemented!()
-        }
     }
 
     #[tokio::test]
