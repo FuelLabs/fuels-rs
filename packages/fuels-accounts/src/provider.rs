@@ -309,13 +309,18 @@ impl Provider {
             .collect())
     }
 
-    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
+    pub async fn dry_run_opt(
+        &self,
+        tx: impl Transaction,
+        utxo_validation: bool,
+        gas_price: Option<u64>,
+    ) -> Result<TxStatus> {
         let [tx_status] = self
             .client
             .dry_run_opt(
                 Transactions::new().insert(tx).as_slice(),
-                Some(false),
-                Some(0),
+                Some(utxo_validation),
+                gas_price,
             )
             .await?
             .into_iter()
@@ -327,13 +332,15 @@ impl Provider {
         Ok(tx_status)
     }
 
-    pub async fn dry_run_no_validation_multiple(
+    pub async fn dry_run_opt_multiple(
         &self,
         transactions: Transactions,
+        utxo_validation: bool,
+        gas_price: Option<u64>,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .client
-            .dry_run_opt(transactions.as_slice(), Some(false), Some(0))
+            .dry_run_opt(transactions.as_slice(), Some(utxo_validation), gas_price)
             .await?
             .into_iter()
             .map(|execution_status| (execution_status.id, execution_status.into()))
@@ -643,7 +650,7 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let receipts = self.dry_run_no_validation(tx).await?.take_receipts();
+        let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
         let gas_used = self.get_script_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
