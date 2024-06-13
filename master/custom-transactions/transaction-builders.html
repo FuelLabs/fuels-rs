@@ -164,7 +164,7 @@
 </code></pre>
 <p>Next, we need to define transaction inputs of the base asset that sum up to <strong>ask_amount</strong>. We also need transaction outputs that will assign those assets to the predicate address and thereby unlock it. The methods <code>get_asset_inputs_for_amount</code> and <code>get_asset_outputs_for_amount</code> can help with that. We need to specify the asset ID, the target amount, and the target address:</p>
 <pre><code class="language-rust ignore">        let base_inputs = hot_wallet
-            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount)
+            .get_asset_inputs_for_amount(*provider.base_asset_id(), ask_amount, None)
             .await?;
         let base_outputs = hot_wallet.get_asset_outputs_for_amount(
             &amp;receiver,
@@ -174,7 +174,7 @@
 </code></pre>
 <p>Let's repeat the same process but this time for transferring the assets held by the predicate to our cold storage:</p>
 <pre><code class="language-rust ignore">        let other_asset_inputs = predicate
-            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount)
+            .get_asset_inputs_for_amount(bridged_asset_id, locked_amount, None)
             .await?;
         let other_asset_outputs =
             predicate.get_asset_outputs_for_amount(cold_wallet.address(), bridged_asset_id, 500);
