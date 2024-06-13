@@ -1675,7 +1675,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
 
     let amount = 10;
     let new_base_inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), amount, None)
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
 

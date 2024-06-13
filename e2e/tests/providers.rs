@@ -640,7 +640,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {
         let resources = wallet
-            .get_spendable_resources(*provider.base_asset_id(), requested_amount)
+            .get_spendable_resources(*provider.base_asset_id(), requested_amount, None)
             .await
             .unwrap();
         assert_eq!(resources.len(), 3);
@@ -751,7 +751,9 @@ async fn create_transfer(
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
@@ -807,7 +809,9 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     let amount = 1;
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
@@ -852,7 +856,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
     let coins = wallet
-        .get_spendable_resources(*provider.base_asset_id(), 1)
+        .get_spendable_resources(*provider.base_asset_id(), 1, None)
         .await?;
     assert_eq!(coins.len(), 1);
 
@@ -906,7 +910,7 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 100);
@@ -938,7 +942,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let provider = wallet.try_provider()?;
 
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
         &Bech32Address::default(),

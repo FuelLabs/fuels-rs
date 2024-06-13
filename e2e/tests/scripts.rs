@@ -122,7 +122,9 @@ async fn test_output_variable_estimation() -> Result<()> {
         asset_id,
         Identity::Address(receiver.address().into()),
     );
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let _ = script_call
         .with_inputs(inputs)
         .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)

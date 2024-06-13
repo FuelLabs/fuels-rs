@@ -102,7 +102,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let mut asset_inputs = vec![];
     for (asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount)
+            .get_asset_inputs_for_amount(*asset_id, *amount, None)
             .await?;
         asset_inputs.extend(resources);
     }
