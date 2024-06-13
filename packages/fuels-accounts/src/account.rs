@@ -20,7 +20,7 @@ use fuels_core::types::{
 use crate::{
     accounts_utils::{
         adjust_inputs_outputs, available_base_assets_and_amount, calculate_missing_base_amount,
-        extract_message_nonce, partition_excluded_coins,
+        extract_message_nonce, split_into_utxo_ids_and_nonces,
     },
     provider::{Provider, ResourceFilter},
 };
@@ -79,7 +79,8 @@ pub trait ViewOnlyAccount: std::fmt::Debug + Send + Sync + Clone {
         amount: u64,
         excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<CoinType>> {
-        let (excluded_utxos, excluded_message_nonces) = partition_excluded_coins(excluded_coins);
+        let (excluded_utxos, excluded_message_nonces) =
+            split_into_utxo_ids_and_nonces(excluded_coins);
 
         let filter = ResourceFilter {
             from: self.address().clone(),
@@ -130,7 +131,6 @@ pub trait Account: ViewOnlyAccount {
         used_base_amount: u64,
     ) -> Result<()> {
         let provider = self.try_provider()?;
-
         let (base_assets, base_amount) =
             available_base_assets_and_amount(tb, provider.base_asset_id());
         let missing_base_amount =

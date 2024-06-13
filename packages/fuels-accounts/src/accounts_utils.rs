@@ -20,7 +20,7 @@ pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
 pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
     available_base_amount: u64,
-    used_base_amount: u64,
+    reserved_base_amount: u64,
     provider: &Provider,
 ) -> Result<u64> {
     let transaction_fee = tb
@@ -31,7 +31,7 @@ pub async fn calculate_missing_base_amount(
             "error calculating `TransactionFee`"
         ))?;
 
-    let total_used = transaction_fee.max_fee() + used_base_amount;
+    let total_used = transaction_fee.max_fee() + reserved_base_amount;
     let missing_amount = if total_used > available_base_amount {
         total_used - available_base_amount
     } else if !is_consuming_utxos(tb) {
@@ -75,7 +75,7 @@ pub fn available_base_assets_and_amount(
     (iter, sum)
 }
 
-pub fn partition_excluded_coins(
+pub fn split_into_utxo_ids_and_nonces(
     excluded_coins: Option<Vec<CoinTypeId>>,
 ) -> (Vec<UtxoId>, Vec<Nonce>) {
     excluded_coins
