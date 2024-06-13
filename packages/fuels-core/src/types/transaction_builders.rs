@@ -977,8 +977,12 @@ impl UpgradeTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
-            .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
+                .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
