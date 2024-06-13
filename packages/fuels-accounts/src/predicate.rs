@@ -1,10 +1,10 @@
 use std::{fmt::Debug, fs};
 
 #[cfg(feature = "std")]
-use fuels_core::types::{input::Input, AssetId};
+use fuels_core::types::{coin_type_id::CoinTypeId, input::Input, AssetId};
 use fuels_core::{
     error,
-    types::{bech32::Bech32Address, coin_type_id::CoinTypeId, errors::Result},
+    types::{bech32::Bech32Address, errors::Result},
     Configurables,
 };
 
