@@ -1042,7 +1042,7 @@ async fn tx_respects_policies() -> Result<()> {
     provider.produce_blocks(4, None).await?;
 
     // trigger a transaction that contains script code to verify
-    // that policies preceed estimated values
+    // that policies precede estimated values
     let response = contract_instance
         .methods()
         .initialize_counter(42)
