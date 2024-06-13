@@ -4,7 +4,7 @@ use fuel_crypto::Signature;
 use fuel_tx::{
     field::{Inputs, Outputs, ScriptGasLimit, WitnessLimit, Witnesses},
     input::coin::{CoinPredicate, CoinSigned},
-    Chargeable, Input as FuelInput, TxPointer, Witness,
+    AssetId, Chargeable, Input as FuelInput, TxPointer, Witness,
 };
 use itertools::Itertools;
 
@@ -84,7 +84,11 @@ impl<R: DryRunner> ScriptDryRunner<R> {
     }
 
     fn add_fake_coins(&mut self, tx: &mut fuel_tx::Script) {
-        if let Some(fake_input) = Self::needs_fake_spendable_input(tx.inputs()) {
+        let consensus_params = self.dry_runner.consensus_parameters();
+
+        if let Some(fake_input) =
+            Self::needs_fake_base_input(tx.inputs(), consensus_params.base_asset_id())
+        {
             tx.inputs_mut().push(fake_input);
 
             // Add an empty `Witness` for the `coin_signed` we just added
@@ -93,18 +97,22 @@ impl<R: DryRunner> ScriptDryRunner<R> {
         }
     }
 
-    fn needs_fake_spendable_input(inputs: &[FuelInput]) -> Option<fuel_tx::Input> {
-        let has_spendable_input = inputs.iter().any(|i| {
-            matches!(
-                i,
-                FuelInput::CoinSigned(CoinSigned { .. })
-                    | FuelInput::CoinPredicate(CoinPredicate { .. })
-                    | FuelInput::MessageCoinSigned(_)
-                    | FuelInput::MessageCoinPredicate(_)
-            )
+    fn needs_fake_base_input(
+        inputs: &[FuelInput],
+        base_asset_id: &AssetId,
+    ) -> Option<fuel_tx::Input> {
+        let has_base_asset = inputs.iter().any(|i| match i {
+            FuelInput::CoinSigned(CoinSigned { asset_id, .. })
+            | FuelInput::CoinPredicate(CoinPredicate { asset_id, .. })
+                if asset_id == base_asset_id =>
+            {
+                true
+            }
+            FuelInput::MessageCoinSigned(_) | FuelInput::MessageCoinPredicate(_) => true,
+            _ => false,
         });
 
-        if has_spendable_input {
+        if has_base_asset {
             return None;
         }
 
@@ -128,7 +136,7 @@ impl<R: DryRunner> ScriptDryRunner<R> {
             Default::default(),
             fake_owner,
             1_000_000_000,
-            Default::default(),
+            *base_asset_id,
             TxPointer::default(),
             0,
         ))
