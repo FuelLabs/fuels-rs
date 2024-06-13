@@ -1008,3 +1008,62 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn tx_respects_policies() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let tip = 22;
+    let witness_limit = 1000;
+    let maturity = 4;
+    let max_fee = 10_000;
+    let script_gas_limit = 3000;
+    let tx_policies = TxPolicies::new(
+        Some(tip),
+        Some(witness_limit),
+        Some(maturity),
+        Some(max_fee),
+        Some(script_gas_limit),
+    );
+
+    // advance the block height to ensure the maturity is respected
+    let provider = wallet.try_provider()?;
+    provider.produce_blocks(4, None).await?;
+
+    // trigger a transaction that contains script code to verify
+    // that policies precede estimated values
+    let response = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .with_tx_policies(tx_policies)
+        .call()
+        .await?;
+
+    let tx_response = provider
+        .get_transaction_by_id(&response.tx_id.unwrap())
+        .await?
+        .expect("tx should exist");
+    let script = match tx_response.transaction {
+        TransactionType::Script(tx) => tx,
+        _ => panic!("expected script transaction"),
+    };
+
+    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.tip().unwrap(), tip);
+    assert_eq!(script.witness_limit().unwrap(), witness_limit);
+    assert_eq!(script.max_fee().unwrap(), max_fee);
+    assert_eq!(script.gas_limit(), script_gas_limit);
+
+    Ok(())
+}
