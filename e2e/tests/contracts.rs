@@ -1868,3 +1868,54 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
+    use fuels::prelude::*;
+    use fuels::tx::ConsensusParameters;
+
+    abigen!(Contract(
+        name = "MyContract",
+        abi = "e2e/sway/contracts/contract_test/out/release/contract_test-abi.json"
+    ));
+
+    let asset_id = AssetId::new([1; 32]);
+
+    let mut consensus_parameters = ConsensusParameters::default();
+    consensus_parameters.set_base_asset_id(asset_id);
+
+    let config = ChainConfig {
+        consensus_parameters,
+        ..Default::default()
+    };
+
+    let asset_base = AssetConfig {
+        id: asset_id,
+        num_coins: 1,
+        coin_amount: 10_000,
+    };
+
+    let wallet_config = WalletsConfig::new_multiple_assets(1, vec![asset_base]);
+    let wallets = launch_custom_provider_and_get_wallets(wallet_config, None, Some(config)).await?;
+    let wallet = wallets.first().expect("has wallet");
+
+    let contract_id = Contract::load_from(
+        "sway/contracts/contract_test/out/release/contract_test.bin",
+        LoadConfiguration::default(),
+    )?
+    .deploy(wallet, TxPolicies::default())
+    .await?;
+
+    let contract_instance = MyContract::new(contract_id, wallet.clone());
+
+    let response = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .with_tx_policies(TxPolicies::default().with_tip(10))
+        .call()
+        .await?;
+
+    assert_eq!(42, response.value);
+
+    Ok(())
+}
