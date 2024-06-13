@@ -486,7 +486,8 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
         let num_resolved_witnesses = self.num_witnesses()?;
-        let mut script_dry_runner = self.script_dry_runner(num_resolved_witnesses, &dry_runner);
+        let predefined_witnesses = self.witnesses.clone();
+        let mut script_dry_runner = self.script_dry_runner(predefined_witnesses, &dry_runner);
 
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -566,13 +567,16 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    fn script_dry_runner<D>(&self, num_resolved_witnesses: u16, dry_runner: D) -> ScriptDryRunner<D>
+    fn script_dry_runner<D>(
+        &self,
+        predefined_witnesses: Vec<Witness>,
+        dry_runner: D,
+    ) -> ScriptDryRunner<D>
     where
         D: DryRunner,
     {
-        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
-            + num_resolved_witnesses as usize;
-        ScriptDryRunner::new(dry_runner, total_witnesses)
+        let num_unresolved_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len();
+        ScriptDryRunner::new(dry_runner, predefined_witnesses, num_unresolved_witnesses)
     }
 
     async fn add_variable_outputs(

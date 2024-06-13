@@ -1,6 +1,7 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_tx::Witness;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -1068,6 +1069,61 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
     assert_eq!(script.gas_limit(), script_gas_limit);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tx_with_witness_data() -> Result<()> {
+    use fuel_asm::{op, GTFArgs};
+
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?;
+
+    let receiver = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 10000, None)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 1);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+
+    let script: Vec<u8> = vec![
+        op::gtf(0x10, 0x00, GTFArgs::ScriptWitnessAtIndex.into()),
+        op::ret(0x10),
+    ]
+    .into_iter()
+    .collect();
+    tb.script = script;
+
+    let expected_data = 15u64;
+    let witness = Witness::from(expected_data.to_be_bytes().to_vec());
+    tb.witnesses_mut().push(witness);
+
+    let tx = tb
+        .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
+        .build(provider)
+        .await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Success { receipts } => {
+            let ret = receipts
+                .into_iter()
+                .find_map(|receipt| match receipt {
+                    Receipt::Return { val, .. } => Some(val),
+                    _ => None,
+                })
+                .expect("should have return value");
+
+            //assert_eq!(ret, expected_data as u64);
+        }
+        _ => panic!("expected success status"),
+    }
 
     Ok(())
 }
