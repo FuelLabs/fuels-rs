@@ -138,7 +138,7 @@ pub trait Account: ViewOnlyAccount {
 
         if missing_base_amount > 0 {
             let new_base_inputs = self
-                .get_asset_inputs_for_amount(*provider.base_asset_id(), missing_base_amount, None)
+                .get_asset_inputs_for_amount(*provider.base_asset_id(), missing_base_amount, Some(base_assets))
                 .await?;
 
             adjust_inputs_outputs(
