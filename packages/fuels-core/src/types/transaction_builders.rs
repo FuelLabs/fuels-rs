@@ -509,12 +509,16 @@ impl ScriptTransactionBuilder {
         self.set_script_gas_limit(&mut script_dry_runner, &mut tx)
             .await?;
 
-        Self::set_max_fee_policy(
-            &mut tx,
-            &dry_runner,
-            self.gas_price_estimation_block_horizon,
-        )
-        .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &dry_runner,
+                self.gas_price_estimation_block_horizon,
+            )
+            .await?;
+        }
 
         self.set_witnesses(&mut tx, dry_runner).await?;
 
@@ -537,11 +541,11 @@ impl ScriptTransactionBuilder {
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let has_no_code = self.script.is_empty();
-        let script_gas_limit = if has_no_code {
-            0
-        } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
+        let script_gas_limit = if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
+        } else if has_no_code {
+            0
         } else {
             let dry_run = if let Some(dry_run) = dry_runner.last_dry_run() {
                 // Even if the last dry run included variable outputs they only affect the transaction fee,
@@ -749,8 +753,12 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
-            .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
+                .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
@@ -847,8 +855,12 @@ impl UploadTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
-            .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
+                .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
@@ -947,8 +959,12 @@ impl UpgradeTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
-            .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
+                .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;

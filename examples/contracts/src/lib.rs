@@ -240,7 +240,6 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42)
-            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
@@ -259,11 +258,11 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
         assert_eq!(42, response.value);
+
         Ok(())
     }
 
