@@ -1092,6 +1092,9 @@ async fn tx_with_witness_data() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
 
+    // we test that the witness data wasn't tempered with during the build (gas estimation) process
+    // if the witness data is tempered with, the estimation will be off and the transaction
+    // will error out with `OutOfGas`
     let script: Vec<u8> = vec![
         // load witness data into register 0x10
         op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
@@ -1099,9 +1102,14 @@ async fn tx_with_witness_data() -> Result<()> {
         // load expected value into register 0x11
         op::movi(0x11, 0x0f),
         // load the offset of the revert instruction into register 0x12
-        op::movi(0x12, 0x06),
+        op::movi(0x12, 0x08),
         // compare the two values and jump to the revert instruction if they are not equal
         op::jne(0x10, 0x11, 0x12),
+        // do some expensive operation so gas estimation is higher if comparison passes
+        op::gtf(0x13, 0x01, GTFArgs::WitnessData.into()),
+        op::gtf(0x14, 0x01, GTFArgs::WitnessDataLength.into()),
+        op::aloc(0x14),
+        op::eck1(RegId::HP, 0x13, 0x13),
         // return the witness data
         op::ret(0x10),
         op::rvrt(RegId::ZERO),
@@ -1121,7 +1129,6 @@ async fn tx_with_witness_data() -> Result<()> {
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
-    dbg!(&status);
     match status {
         TxStatus::Success { receipts } => {
             let ret: u64 = receipts
