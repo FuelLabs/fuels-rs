@@ -1092,7 +1092,8 @@ async fn tx_with_witness_data() -> Result<()> {
     tb.add_signer(wallet.clone())?;
 
     let script: Vec<u8> = vec![
-        op::gtf(0x10, 0x00, GTFArgs::ScriptWitnessAtIndex.into()),
+        op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
+        op::lw(0x10, 0x10, 0x00),
         op::ret(0x10),
     ]
     .into_iter()
@@ -1120,7 +1121,7 @@ async fn tx_with_witness_data() -> Result<()> {
                 })
                 .expect("should have return value");
 
-            //assert_eq!(ret, expected_data as u64);
+            assert_eq!(ret, expected_data as u64);
         }
         _ => panic!("expected success status"),
     }
