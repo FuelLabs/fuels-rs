@@ -640,7 +640,7 @@ async fn test_get_spendable_with_exclusion() -> Result<()> {
     let requested_amount = coin_amount_1 + coin_amount_2 + message_amount;
     {
         let resources = wallet
-            .get_spendable_resources(*provider.base_asset_id(), requested_amount)
+            .get_spendable_resources(*provider.base_asset_id(), requested_amount, None)
             .await
             .unwrap();
         assert_eq!(resources.len(), 3);
@@ -751,7 +751,9 @@ async fn create_transfer(
     to: &Bech32Address,
 ) -> Result<ScriptTransaction> {
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(to, asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
@@ -807,7 +809,9 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     let amount = 1;
     let asset_id = AssetId::zeroed();
-    let inputs = wallet.get_asset_inputs_for_amount(asset_id, amount).await?;
+    let inputs = wallet
+        .get_asset_inputs_for_amount(asset_id, amount, None)
+        .await?;
     let outputs = wallet.get_asset_outputs_for_amount(&Bech32Address::default(), asset_id, amount);
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default())
@@ -852,7 +856,7 @@ async fn test_cache_invalidation_on_await() -> Result<()> {
     assert!(matches!(tx_status, TxStatus::Revert { .. }));
 
     let coins = wallet
-        .get_spendable_resources(*provider.base_asset_id(), 1)
+        .get_spendable_resources(*provider.base_asset_id(), 1, None)
         .await?;
     assert_eq!(coins.len(), 1);
 
@@ -906,7 +910,7 @@ async fn test_build_with_provider() -> Result<()> {
     let receiver = WalletUnlocked::new_random(Some(provider.clone()));
 
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
         .await?;
     let outputs =
         wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 100);
@@ -938,7 +942,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
     let provider = wallet.try_provider()?;
 
     let inputs = wallet
-        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100)
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 100, None)
         .await?;
     let outputs = wallet.get_asset_outputs_for_amount(
         &Bech32Address::default(),
@@ -1005,6 +1009,65 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
     let tx = builder.build(provider.clone()).await?;
 
     provider.send_transaction(tx).await?;
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tx_respects_policies() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "TestContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            contract = "TestContract",
+            wallet = "wallet"
+        ),
+    );
+
+    let tip = 22;
+    let witness_limit = 1000;
+    let maturity = 4;
+    let max_fee = 10_000;
+    let script_gas_limit = 3000;
+    let tx_policies = TxPolicies::new(
+        Some(tip),
+        Some(witness_limit),
+        Some(maturity),
+        Some(max_fee),
+        Some(script_gas_limit),
+    );
+
+    // advance the block height to ensure the maturity is respected
+    let provider = wallet.try_provider()?;
+    provider.produce_blocks(4, None).await?;
+
+    // trigger a transaction that contains script code to verify
+    // that policies precede estimated values
+    let response = contract_instance
+        .methods()
+        .initialize_counter(42)
+        .with_tx_policies(tx_policies)
+        .call()
+        .await?;
+
+    let tx_response = provider
+        .get_transaction_by_id(&response.tx_id.unwrap())
+        .await?
+        .expect("tx should exist");
+    let script = match tx_response.transaction {
+        TransactionType::Script(tx) => tx,
+        _ => panic!("expected script transaction"),
+    };
+
+    assert_eq!(script.maturity(), maturity as u32);
+    assert_eq!(script.tip().unwrap(), tip);
+    assert_eq!(script.witness_limit().unwrap(), witness_limit);
+    assert_eq!(script.max_fee().unwrap(), max_fee);
+    assert_eq!(script.gas_limit(), script_gas_limit);
 
     Ok(())
 }

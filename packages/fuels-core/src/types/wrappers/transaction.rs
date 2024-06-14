@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
-        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField, ScriptData,
-        ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Policies as PoliciesField,
+        Script as ScriptField, ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -13,6 +13,7 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
+    policies::PolicyType,
     Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Upgrade, Upload, Witness,
@@ -250,6 +251,12 @@ pub trait Transaction:
 
     fn witnesses(&self) -> &Vec<Witness>;
 
+    fn max_fee(&self) -> Option<u64>;
+
+    fn witness_limit(&self) -> Option<u64>;
+
+    fn tip(&self) -> Option<u64>;
+
     fn is_using_predicates(&self) -> bool;
 
     /// Precompute transaction metadata. The metadata is required for
@@ -443,6 +450,18 @@ macro_rules! impl_tx_wrapper {
 
             fn precompute(&mut self, chain_id: &ChainId) -> Result<()> {
                 Ok(self.tx.precompute(chain_id)?)
+            }
+
+            fn max_fee(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::MaxFee)
+            }
+
+            fn witness_limit(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::WitnessLimit)
+            }
+
+            fn tip(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Tip)
             }
 
             fn append_witness(&mut self, witness: Witness) -> Result<usize> {
