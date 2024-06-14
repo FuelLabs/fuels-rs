@@ -197,7 +197,11 @@ pub trait EstimablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
-    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()>;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()>;
 }
 
 pub trait GasValidation: sealed::Sealed {
@@ -518,12 +522,16 @@ impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UploadTransaction {
-    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
         if let Some(tx) = provider
-            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
             .await?
         {
-            self.tx = tx.as_upload().expect("is script").to_owned();
+            tx.as_upload().expect("is upload").clone_into(&mut self.tx);
         } else {
             self.tx.estimate_predicates(
                 &provider.consensus_parameters().into(),
@@ -538,12 +546,18 @@ impl EstimablePredicates for UploadTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UpgradeTransaction {
-    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
         if let Some(tx) = provider
-            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
             .await?
         {
-            self.tx = tx.as_upgrade().expect("is script").to_owned();
+            tx.as_upgrade()
+                .expect("is upgrade")
+                .clone_into(&mut self.tx);
         } else {
             self.tx.estimate_predicates(
                 &provider.consensus_parameters().into(),
@@ -558,12 +572,16 @@ impl EstimablePredicates for UpgradeTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for CreateTransaction {
-    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
         if let Some(tx) = provider
-            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
             .await?
         {
-            self.tx = tx.as_create().expect("is script").to_owned();
+            tx.as_create().expect("is create").clone_into(&mut self.tx);
         } else {
             self.tx.estimate_predicates(
                 &provider.consensus_parameters().into(),
@@ -592,12 +610,16 @@ impl CreateTransaction {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for ScriptTransaction {
-    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
         if let Some(tx) = provider
-            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
             .await?
         {
-            self.tx = tx.as_script().expect("is script").to_owned();
+            tx.as_script().expect("is script").clone_into(&mut self.tx);
         } else {
             self.tx.estimate_predicates(
                 &provider.consensus_parameters().into(),

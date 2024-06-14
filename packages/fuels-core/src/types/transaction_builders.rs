@@ -202,7 +202,7 @@ macro_rules! impl_tx_trait {
                 let consensus_parameters = provider.consensus_parameters();
 
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(&provider).await?;
+                    tx.estimate_predicates(&provider, None).await?;
                 }
 
                 Ok(TransactionFee::checked_from_tx(
@@ -1299,9 +1299,10 @@ mod tests {
             Ok(0)
         }
 
-        async fn maybe_estimate_predicates_with_node(
+        async fn maybe_estimate_predicates(
             &self,
             _tx: &FuelTransaction,
+            _: Option<u32>,
         ) -> Result<Option<FuelTransaction>> {
             Ok(None)
         }
