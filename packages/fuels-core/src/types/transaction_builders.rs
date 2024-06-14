@@ -202,7 +202,7 @@ macro_rules! impl_tx_trait {
                 let consensus_parameters = provider.consensus_parameters();
 
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(consensus_parameters)?;
+                    tx.estimate_predicates(&provider).await?;
                 }
 
                 Ok(TransactionFee::checked_from_tx(
@@ -583,6 +583,7 @@ impl ScriptTransactionBuilder {
             }
         };
         add_variable_outputs(tx, variable_outputs);
+
         Ok(())
     }
 
@@ -1296,6 +1297,13 @@ mod tests {
 
         async fn estimate_gas_price(&self, _block_horizon: u32) -> Result<u64> {
             Ok(0)
+        }
+
+        async fn maybe_estimate_predicates_with_node(
+            &self,
+            _tx: &FuelTransaction,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
         }
     }
 

@@ -352,6 +352,13 @@ mod tests {
         async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
         }
+
+        async fn maybe_estimate_predicates_with_node(
+            &self,
+            _tx: &FuelTransaction,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
+        }
     }
 
     #[tokio::test]

@@ -269,17 +269,11 @@ impl Provider {
     async fn estimate_predicates_with_node_fallback<T: Transaction>(
         &self,
         mut tx: T,
-        latest_chain_executor_version: u32,
+        _latest_chain_executor_version: u32,
     ) -> Result<T> {
-        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
-            self.client
-                .estimate_predicates(&tx.into())
-                .await?
-                .try_into()
-        } else {
-            tx.estimate_predicates(self.consensus_parameters())?;
-            Ok(tx)
-        }
+        tx.estimate_predicates(self).await?;
+
+        Ok(tx)
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
@@ -742,5 +736,21 @@ impl DryRunner for Provider {
 
     fn consensus_parameters(&self) -> &ConsensusParameters {
         self.consensus_parameters()
+    }
+
+    async fn maybe_estimate_predicates_with_node(
+        &self,
+        tx: &FuelTransaction,
+    ) -> Result<Option<FuelTransaction>> {
+        let chain_info = self.chain_info().await?;
+        let Header {
+            state_transition_bytecode_version: latest_chain_executor_version,
+            ..
+        } = chain_info.latest_block.header;
+
+        Ok(
+            (latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION)
+                .then_some(self.client.estimate_predicates(tx).await?),
+        )
     }
 }

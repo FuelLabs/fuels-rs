@@ -25,6 +25,10 @@ pub trait DryRunner: Send + Sync {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
+    async fn maybe_estimate_predicates_with_node(
+        &self,
+        tx: &FuelTransaction,
+    ) -> Result<Option<FuelTransaction>>;
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
@@ -39,5 +43,12 @@ impl<T: DryRunner> DryRunner for &T {
 
     fn consensus_parameters(&self) -> &ConsensusParameters {
         (*self).consensus_parameters()
+    }
+
+    async fn maybe_estimate_predicates_with_node(
+        &self,
+        tx: &FuelTransaction,
+    ) -> Result<Option<FuelTransaction>> {
+        (*self).maybe_estimate_predicates_with_node(tx).await
     }
 }

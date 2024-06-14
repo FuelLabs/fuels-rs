@@ -28,6 +28,7 @@ use crate::{
     types::{
         bech32::Bech32Address,
         errors::{error, error_transaction, Error, Result},
+        transaction_builders::DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -190,11 +191,13 @@ pub enum TransactionType {
     Upgrade(UpgradeTransaction),
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait EstimablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()>;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()>;
 }
 
 pub trait GasValidation: sealed::Sealed {
@@ -512,28 +515,61 @@ impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
 impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UploadTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .await?
+        {
+            self.tx = tx.as_upload().expect("is script").to_owned();
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UpgradeTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .await?
+        {
+            self.tx = tx.as_upgrade().expect("is script").to_owned();
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for CreateTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .await?
+        {
+            self.tx = tx.as_create().expect("is script").to_owned();
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
@@ -553,10 +589,21 @@ impl CreateTransaction {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for ScriptTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(&mut self, provider: impl DryRunner) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates_with_node(&self.tx.clone().into())
+            .await?
+        {
+            self.tx = tx.as_script().expect("is script").to_owned();
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
