@@ -1097,7 +1097,7 @@ async fn tx_with_witness_data() -> Result<()> {
         op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
         op::lw(0x10, 0x10, 0x00),
         // load expected value into register 0x11
-        op::movi(0x11, 0x0a),
+        op::movi(0x11, 0x0f),
         // load the offset of the revert instruction into register 0x12
         op::movi(0x12, 0x06),
         // compare the two values and jump to the revert instruction if they are not equal
