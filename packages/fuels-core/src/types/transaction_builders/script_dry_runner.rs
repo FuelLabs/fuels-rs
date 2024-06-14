@@ -29,7 +29,7 @@ impl<R> ScriptDryRunner<R> {
     ) -> Self {
         Self {
             dry_runner,
-            predifined_witnesses,
+            predefined_witnesses,
             num_unresolved_witnesses,
             last_dry_run: None,
         }
@@ -90,7 +90,7 @@ impl<R: DryRunner> ScriptDryRunner<R> {
 
         let predefined_witnesses = std::mem::take(&mut self.predefined_witnesses);
 
-        *tx.witnesses_mut() = [predifined_witnesses, dry_run_witnesses].concat();
+        *tx.witnesses_mut() = [predefined_witnesses, dry_run_witnesses].concat();
     }
 
     fn add_fake_coins(&mut self, tx: &mut fuel_tx::Script) {
