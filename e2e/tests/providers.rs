@@ -1072,3 +1072,19 @@ async fn tx_respects_policies() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn can_setup_static_gas_price() -> Result<()> {
+    let expected_gas_price = 474;
+    let node_config = NodeConfig {
+        static_gas_price: expected_gas_price,
+        ..Default::default()
+    };
+    let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
+
+    let gas_price = provider.estimate_gas_price(0).await?.gas_price;
+
+    assert_eq!(gas_price, expected_gas_price);
+    
+    Ok(())
+}
