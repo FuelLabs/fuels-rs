@@ -40,9 +40,9 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
-        transaction_builders::{DryRun, DryRunner},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
+        DryRun, DryRunner,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};

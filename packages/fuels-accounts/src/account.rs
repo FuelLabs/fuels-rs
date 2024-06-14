@@ -311,10 +311,7 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{
-            transaction::Transaction,
-            transaction_builders::{DryRun, DryRunner},
-        },
+        types::{transaction::Transaction, DryRun, DryRunner},
     };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 

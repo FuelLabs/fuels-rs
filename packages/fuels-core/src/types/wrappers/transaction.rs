@@ -29,7 +29,7 @@ use crate::{
     types::{
         bech32::Bech32Address,
         errors::{error, error_transaction, Error, Result},
-        transaction_builders::DryRunner,
+        DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };

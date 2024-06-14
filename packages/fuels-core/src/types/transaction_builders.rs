@@ -35,15 +35,12 @@ use crate::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
             UpgradeTransaction, UploadTransaction,
         },
-        Address, AssetId, ContractId,
+        Address, AssetId, ContractId, DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
 
-mod dry_runner;
 mod script_dry_runner;
-
-pub use dry_runner::*;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -1201,12 +1198,11 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
-    use dry_runner::DryRun;
     use fuel_crypto::Signature;
     use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
 
     use super::*;
-    use crate::types::{bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
