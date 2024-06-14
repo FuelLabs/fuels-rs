@@ -16,7 +16,7 @@ use crate::{
 
 pub(crate) struct ScriptDryRunner<R> {
     dry_runner: R,
-    predifined_witnesses: Vec<Witness>,
+    predefined_witnesses: Vec<Witness>,
     num_unresolved_witnesses: usize,
     last_dry_run: Option<DryRun>,
 }
@@ -24,7 +24,7 @@ pub(crate) struct ScriptDryRunner<R> {
 impl<R> ScriptDryRunner<R> {
     pub fn new(
         dry_runner: R,
-        predifined_witnesses: Vec<Witness>,
+        predefined_witnesses: Vec<Witness>,
         num_unresolved_witnesses: usize,
     ) -> Self {
         Self {
@@ -88,7 +88,7 @@ impl<R: DryRunner> ScriptDryRunner<R> {
             .take(self.num_unresolved_witnesses)
             .collect();
 
-        let predifined_witnesses = std::mem::take(&mut self.predifined_witnesses);
+        let predefined_witnesses = std::mem::take(&mut self.predefined_witnesses);
 
         *tx.witnesses_mut() = [predifined_witnesses, dry_run_witnesses].concat();
     }
