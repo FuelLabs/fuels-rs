@@ -15,6 +15,7 @@ build = "build.rs"
 [dev-dependencies]
 # used in test assertions
 chrono = { workspace = true }
+fuel-asm = { workspace = true }
 # TODO: [issue](https://github.com/FuelLabs/fuels-rs/issues/1375) needs to be removed, `ScriptTransaction` and `CreateTransaction` in `fuels` use `fuel_tx::Input` but don't reexport or convert it into a `fuels` owned type
 fuel-tx = { workspace = true }
 fuels = { workspace = true }
