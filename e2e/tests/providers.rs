@@ -1,6 +1,7 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_asm::RegId;
 use fuel_tx::Witness;
 use fuels::{
     accounts::Account,
@@ -1092,9 +1093,18 @@ async fn tx_with_witness_data() -> Result<()> {
     tb.add_signer(wallet.clone())?;
 
     let script: Vec<u8> = vec![
+        // load witness data into register 0x10
         op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
         op::lw(0x10, 0x10, 0x00),
+        // load expected value into register 0x11
+        op::movi(0x11, 0x0a),
+        // load the offset of the revert instruction into register 0x12
+        op::movi(0x12, 0x06),
+        // compare the two values and jump to the revert instruction if they are not equal
+        op::jne(0x10, 0x11, 0x12),
+        // return the witness data
         op::ret(0x10),
+        op::rvrt(RegId::ZERO),
     ]
     .into_iter()
     .collect();
@@ -1111,6 +1121,7 @@ async fn tx_with_witness_data() -> Result<()> {
 
     let status = provider.send_transaction_and_await_commit(tx).await?;
 
+    dbg!(&status);
     match status {
         TxStatus::Success { receipts } => {
             let ret = receipts
