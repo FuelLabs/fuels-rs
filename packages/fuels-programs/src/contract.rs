@@ -315,6 +315,7 @@ impl Contract {
         account.adjust_for_fee(&mut tb, 0).await?;
 
         let provider = account.try_provider()?;
+
         let tx = tb.build(provider).await?;
 
         provider

@@ -1,5 +1,6 @@
 #![cfg(feature = "std")]
 
+use core::num;
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},
@@ -304,19 +305,18 @@ macro_rules! impl_tx_trait {
                     .any(|input| matches!(input, Input::ResourcePredicate { .. }))
             }
 
-            // TODO: open issue to reenable this check by comparing against max wintesses defined in consensus parameters
-            // fn num_witnesses(&self) -> Result<u16> {
-            //     let num_witnesses = self.witnesses().len();
+            fn num_witnesses(&self) -> Result<u16> {
+                let num_witnesses = self.witnesses().len();
 
-            //     if num_witnesses + self.unresolved_signers.len() > u16::MAX as usize {
-            //         return Err(error_transaction!(
-            //             Builder,
-            //             "tx exceeds maximum number of witnesses"
-            //         ));
-            //     }
+                if num_witnesses + self.unresolved_signers.len() > u16::MAX as usize {
+                    return Err(error_transaction!(
+                        Builder,
+                        "tx exceeds maximum number of witnesses"
+                    ));
+                }
 
-            //     Ok(num_witnesses as u16)
-            // }
+                Ok(num_witnesses as u16)
+            }
 
             fn calculate_witnesses_size(&self) -> Result<u64> {
                 let witnesses_size = calculate_witnesses_size(&self.witnesses);
@@ -486,9 +486,8 @@ impl ScriptTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let predefined_witnesses = self.witnesses.clone();
-        let num_witnesses = predefined_witnesses.len();
-        let mut script_dry_runner = self.script_dry_runner(predefined_witnesses, &dry_runner);
+        let num_resolved_witnesses = self.num_witnesses()?;
+        let mut script_dry_runner = self.script_dry_runner(num_resolved_witnesses, &dry_runner);
 
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -497,7 +496,7 @@ impl ScriptTransactionBuilder {
             self.generate_fuel_policies()?,
             resolve_fuel_inputs(
                 self.inputs.clone(),
-                num_witnesses as u16,
+                num_resolved_witnesses,
                 &self.unresolved_witness_indexes,
             )?,
             self.outputs.clone(),
@@ -569,16 +568,13 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    fn script_dry_runner<D>(
-        &self,
-        predifined_witnesses: Vec<Witness>,
-        dry_runner: D,
-    ) -> ScriptDryRunner<D>
+    fn script_dry_runner<D>(&self, num_resolved_witnesses: u16, dry_runner: D) -> ScriptDryRunner<D>
     where
         D: DryRunner,
     {
-        let num_unresolved_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len();
-        ScriptDryRunner::new(dry_runner, predifined_witnesses, num_unresolved_witnesses)
+        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
+            + num_resolved_witnesses as usize;
+        ScriptDryRunner::new(dry_runner, total_witnesses)
     }
 
     async fn add_variable_outputs(
@@ -746,7 +742,7 @@ impl CreateTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.witnesses.len();
+        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::create(
@@ -754,11 +750,7 @@ impl CreateTransactionBuilder {
             policies,
             self.salt,
             self.storage_slots,
-            resolve_fuel_inputs(
-                self.inputs,
-                num_witnesses as u16,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -848,7 +840,7 @@ impl UploadTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upload> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.witnesses.len();
+        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::upload(
@@ -860,11 +852,7 @@ impl UploadTransactionBuilder {
                 proof_set: self.proof_set,
             },
             policies,
-            resolve_fuel_inputs(
-                self.inputs,
-                num_witnesses as u16,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -962,17 +950,13 @@ impl UpgradeTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.witnesses.len();
+        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
 
         let mut tx = FuelTransaction::upgrade(
             self.purpose,
             policies,
-            resolve_fuel_inputs(
-                self.inputs,
-                num_witnesses as u16,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );

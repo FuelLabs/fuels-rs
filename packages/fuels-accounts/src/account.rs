@@ -195,7 +195,6 @@ pub trait Account: ViewOnlyAccount {
         let tx_id = tx.id(provider.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
-        
         let receipts = tx_status.take_receipts_checked(None)?;
 
         Ok((tx_id, receipts))
