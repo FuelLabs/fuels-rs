@@ -1113,7 +1113,7 @@ async fn tx_with_witness_data() -> Result<()> {
 
     match status {
         TxStatus::Success { receipts } => {
-            let ret = receipts
+            let ret: u64 = receipts
                 .into_iter()
                 .find_map(|receipt| match receipt {
                     Receipt::Return { val, .. } => Some(val),
@@ -1121,7 +1121,7 @@ async fn tx_with_witness_data() -> Result<()> {
                 })
                 .expect("should have return value");
 
-            assert_eq!(ret, expected_data as u64);
+            assert_eq!(ret, expected_data);
         }
         _ => panic!("expected success status"),
     }
