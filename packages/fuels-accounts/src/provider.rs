@@ -601,7 +601,7 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        tx: T,
+        mut tx: T,
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
@@ -613,6 +613,10 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(tx.clone(), tolerance)
             .await?;
+
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(self, None).await?;
+        }
 
         let transaction_fee = tx
             .clone()
