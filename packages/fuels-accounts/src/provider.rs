@@ -188,8 +188,7 @@ impl Provider {
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx = self
-                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+            tx.estimate_predicates(self, Some(latest_chain_executor_version))
                 .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
@@ -264,17 +263,6 @@ impl Provider {
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
-    }
-
-    async fn estimate_predicates_with_node_fallback<T: Transaction>(
-        &self,
-        mut tx: T,
-        latest_chain_executor_version: u32,
-    ) -> Result<T> {
-        tx.estimate_predicates(self, Some(latest_chain_executor_version))
-            .await?;
-
-        Ok(tx)
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
