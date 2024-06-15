@@ -18,7 +18,6 @@ use fuel_tx::{
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
-use fuel_vm::{checked_transaction::EstimatePredicates, interpreter::MemoryInstance};
 use itertools::Itertools;
 use script_dry_runner::ScriptDryRunner;
 
@@ -325,23 +324,21 @@ macro_rules! impl_tx_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: PoliciesField + Chargeable + EstimatePredicates>(
+            async fn set_max_fee_policy<T: Clone + PoliciesField + Chargeable + Into<$tx_ty>>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
             ) -> Result<()> {
+                let mut wrapper_tx: $tx_ty = tx.clone().into();
+                wrapper_tx.estimate_predicates(&provider, None).await?;
+
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
-
-                tx.estimate_predicates(
-                    &provider.consensus_parameters().into(),
-                    MemoryInstance::new(),
-                )?;
 
                 let tx_fee = TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
-                    tx,
+                    &wrapper_tx.tx,
                     gas_price,
                 )
                 .ok_or(error_transaction!(
