@@ -196,11 +196,11 @@ macro_rules! impl_tx_trait {
                     BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
                         .await?;
 
-                let consensus_parameters = provider.consensus_parameters();
-
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(&provider, None).await?;
                 }
+
+                let consensus_parameters = provider.consensus_parameters();
 
                 Ok(TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
