@@ -20,6 +20,7 @@ impl DryRun {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
@@ -32,6 +33,7 @@ pub trait DryRunner: Send + Sync {
     ) -> Result<Option<FuelTransaction>>;
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: DryRunner> DryRunner for &T {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
