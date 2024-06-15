@@ -8,10 +8,9 @@ use fuel_tx::{
 };
 use itertools::Itertools;
 
-use super::dry_runner::DryRun;
 use crate::{
     constants::WITNESS_STATIC_SIZE,
-    types::{errors::Result, transaction_builders::DryRunner},
+    types::{errors::Result, DryRun, DryRunner},
 };
 
 pub(crate) struct ScriptDryRunner<R> {

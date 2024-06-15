@@ -35,15 +35,12 @@ use crate::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
             UpgradeTransaction, UploadTransaction,
         },
-        Address, AssetId, ContractId,
+        Address, AssetId, ContractId, DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
 
-mod dry_runner;
 mod script_dry_runner;
-
-pub use dry_runner::*;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -199,11 +196,11 @@ macro_rules! impl_tx_trait {
                     BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
                         .await?;
 
-                let consensus_parameters = provider.consensus_parameters();
-
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(consensus_parameters)?;
+                    tx.estimate_predicates(&provider, None).await?;
                 }
+
+                let consensus_parameters = provider.consensus_parameters();
 
                 Ok(TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
@@ -591,6 +588,7 @@ impl ScriptTransactionBuilder {
             }
         };
         add_variable_outputs(tx, variable_outputs);
+
         Ok(())
     }
 
@@ -1200,12 +1198,11 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
-    use dry_runner::DryRun;
     use fuel_crypto::Signature;
     use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
 
     use super::*;
-    use crate::types::{bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -1316,6 +1313,14 @@ mod tests {
 
         async fn estimate_gas_price(&self, _block_horizon: u32) -> Result<u64> {
             Ok(0)
+        }
+
+        async fn maybe_estimate_predicates(
+            &self,
+            _tx: &FuelTransaction,
+            _: Option<u32>,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
         }
     }
 
