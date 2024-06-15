@@ -18,6 +18,7 @@ use fuel_tx::{
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
+use fuel_vm::{checked_transaction::EstimatePredicates, interpreter::MemoryInstance};
 use itertools::Itertools;
 use script_dry_runner::ScriptDryRunner;
 
@@ -324,13 +325,18 @@ macro_rules! impl_tx_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
+            async fn set_max_fee_policy<T: PoliciesField + Chargeable + EstimatePredicates>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
             ) -> Result<()> {
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
+
+                tx.estimate_predicates(
+                    &provider.consensus_parameters().into(),
+                    MemoryInstance::new(),
+                )?;
 
                 let tx_fee = TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
@@ -343,8 +349,9 @@ macro_rules! impl_tx_trait {
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
 
-                tx.policies_mut()
-                    .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
+                let max_fee = tx_fee.max_fee();
+                let new_max_fee = max_fee + max_fee / 10; // 10% buffer
+                tx.policies_mut().set(PolicyType::MaxFee, Some(new_max_fee));
 
                 Ok(())
             }
