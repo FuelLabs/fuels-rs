@@ -20,13 +20,20 @@ impl DryRun {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait DryRunner: Send + Sync {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun>;
     async fn estimate_gas_price(&self, block_horizon: u32) -> Result<u64>;
     fn consensus_parameters(&self) -> &ConsensusParameters;
+    async fn maybe_estimate_predicates(
+        &self,
+        tx: &FuelTransaction,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<Option<FuelTransaction>>;
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl<T: DryRunner> DryRunner for &T {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
@@ -39,5 +46,15 @@ impl<T: DryRunner> DryRunner for &T {
 
     fn consensus_parameters(&self) -> &ConsensusParameters {
         (*self).consensus_parameters()
+    }
+
+    async fn maybe_estimate_predicates(
+        &self,
+        tx: &FuelTransaction,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<Option<FuelTransaction>> {
+        (*self)
+            .maybe_estimate_predicates(tx, latest_chain_executor_version)
+            .await
     }
 }

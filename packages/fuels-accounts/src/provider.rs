@@ -40,9 +40,9 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
-        transaction_builders::{DryRun, DryRunner},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
+        DryRun, DryRunner,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
@@ -188,8 +188,7 @@ impl Provider {
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx = self
-                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+            tx.estimate_predicates(self, Some(latest_chain_executor_version))
                 .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
@@ -264,22 +263,6 @@ impl Provider {
 
     pub async fn estimate_gas_price(&self, block_horizon: u32) -> Result<EstimateGasPrice> {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
-    }
-
-    async fn estimate_predicates_with_node_fallback<T: Transaction>(
-        &self,
-        mut tx: T,
-        latest_chain_executor_version: u32,
-    ) -> Result<T> {
-        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
-            self.client
-                .estimate_predicates(&tx.into())
-                .await?
-                .try_into()
-        } else {
-            tx.estimate_predicates(self.consensus_parameters())?;
-            Ok(tx)
-        }
     }
 
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
@@ -753,5 +736,27 @@ impl DryRunner for Provider {
 
     fn consensus_parameters(&self) -> &ConsensusParameters {
         self.consensus_parameters()
+    }
+
+    async fn maybe_estimate_predicates(
+        &self,
+        tx: &FuelTransaction,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<Option<FuelTransaction>> {
+        let latest_chain_executor_version = match latest_chain_executor_version {
+            Some(exec_version) => exec_version,
+            None => {
+                self.chain_info()
+                    .await?
+                    .latest_block
+                    .header
+                    .state_transition_bytecode_version
+            }
+        };
+
+        Ok(
+            (latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION)
+                .then_some(self.client.estimate_predicates(tx).await?),
+        )
     }
 }
