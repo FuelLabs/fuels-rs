@@ -168,11 +168,6 @@ mod tests {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string)?;
 
-            // leave the base asset to cover transaction fees
-            if id == *provider.base_asset_id() {
-                continue;
-            }
-
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
                 .await?;
@@ -196,6 +191,7 @@ mod tests {
 
         let tx = tb.build(&provider).await?;
 
+        dbg!(&tx);
         provider.send_transaction_and_await_commit(tx).await?;
 
         let balances = wallet_2.get_balances().await?;

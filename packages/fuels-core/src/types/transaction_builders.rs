@@ -1,6 +1,5 @@
 #![cfg(feature = "std")]
 
-use core::num;
 use std::{
     collections::HashMap,
     fmt::{Debug, Formatter},

@@ -1087,7 +1087,7 @@ async fn can_setup_static_gas_price() -> Result<()> {
     let gas_price = provider.estimate_gas_price(0).await?.gas_price;
 
     assert_eq!(gas_price, expected_gas_price);
-    
+
     Ok(())
 }
 
