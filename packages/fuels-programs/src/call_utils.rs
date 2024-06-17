@@ -119,7 +119,8 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_script(script)
         .with_script_data(script_data.clone())
         .with_inputs(inputs)
-        .with_outputs(outputs))
+        .with_outputs(outputs)
+        .with_gas_estimation_tolerance(0.05))
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is

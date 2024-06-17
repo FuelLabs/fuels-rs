@@ -311,10 +311,7 @@ mod tests {
     use fuel_tx::{Address, ConsensusParameters, Output, Transaction as FuelTransaction};
     use fuels_core::{
         traits::Signer,
-        types::{
-            transaction::Transaction,
-            transaction_builders::{DryRun, DryRunner},
-        },
+        types::{transaction::Transaction, DryRun, DryRunner},
     };
     use rand::{rngs::StdRng, RngCore, SeedableRng};
 
@@ -372,6 +369,14 @@ mod tests {
 
         async fn estimate_gas_price(&self, _block_header: u32) -> Result<u64> {
             Ok(0)
+        }
+
+        async fn maybe_estimate_predicates(
+            &self,
+            _: &FuelTransaction,
+            _: Option<u32>,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
         }
     }
 

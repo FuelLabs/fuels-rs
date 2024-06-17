@@ -18,6 +18,7 @@ use fuel_tx::{
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
+use fuel_vm::{checked_transaction::EstimatePredicates, interpreter::MemoryInstance};
 use itertools::Itertools;
 use script_dry_runner::ScriptDryRunner;
 
@@ -35,15 +36,12 @@ use crate::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
             UpgradeTransaction, UploadTransaction,
         },
-        Address, AssetId, ContractId,
+        Address, AssetId, ContractId, DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
 
-mod dry_runner;
 mod script_dry_runner;
-
-pub use dry_runner::*;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -199,11 +197,11 @@ macro_rules! impl_tx_trait {
                     BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
                         .await?;
 
-                let consensus_parameters = provider.consensus_parameters();
-
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(consensus_parameters)?;
+                    tx.estimate_predicates(&provider, None).await?;
                 }
+
+                let consensus_parameters = provider.consensus_parameters();
 
                 Ok(TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
@@ -327,13 +325,18 @@ macro_rules! impl_tx_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
+            async fn set_max_fee_policy<T: PoliciesField + Chargeable + EstimatePredicates>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
             ) -> Result<()> {
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
+
+                tx.estimate_predicates(
+                    &provider.consensus_parameters().into(),
+                    MemoryInstance::new(),
+                )?;
 
                 let tx_fee = TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
@@ -346,8 +349,9 @@ macro_rules! impl_tx_trait {
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
 
-                tx.policies_mut()
-                    .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
+                let max_fee = tx_fee.max_fee();
+                let new_max_fee = max_fee + max_fee / 10; // 10% buffer
+                tx.policies_mut().set(PolicyType::MaxFee, Some(new_max_fee));
 
                 Ok(())
             }
@@ -486,7 +490,8 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
         let num_resolved_witnesses = self.num_witnesses()?;
-        let mut script_dry_runner = self.script_dry_runner(num_resolved_witnesses, &dry_runner);
+        let predefined_witnesses = self.witnesses.clone();
+        let mut script_dry_runner = self.script_dry_runner(predefined_witnesses, &dry_runner);
 
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -566,13 +571,16 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    fn script_dry_runner<D>(&self, num_resolved_witnesses: u16, dry_runner: D) -> ScriptDryRunner<D>
+    fn script_dry_runner<D>(
+        &self,
+        predefined_witnesses: Vec<Witness>,
+        dry_runner: D,
+    ) -> ScriptDryRunner<D>
     where
         D: DryRunner,
     {
-        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
-            + num_resolved_witnesses as usize;
-        ScriptDryRunner::new(dry_runner, total_witnesses)
+        let num_unresolved_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len();
+        ScriptDryRunner::new(dry_runner, predefined_witnesses, num_unresolved_witnesses)
     }
 
     async fn add_variable_outputs(
@@ -587,6 +595,7 @@ impl ScriptTransactionBuilder {
             }
         };
         add_variable_outputs(tx, variable_outputs);
+
         Ok(())
     }
 
@@ -1196,12 +1205,11 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
-    use dry_runner::DryRun;
     use fuel_crypto::Signature;
     use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
 
     use super::*;
-    use crate::types::{bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -1312,6 +1320,14 @@ mod tests {
 
         async fn estimate_gas_price(&self, _block_horizon: u32) -> Result<u64> {
             Ok(0)
+        }
+
+        async fn maybe_estimate_predicates(
+            &self,
+            _tx: &FuelTransaction,
+            _: Option<u32>,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
         }
     }
 

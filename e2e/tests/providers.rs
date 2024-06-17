@@ -1,6 +1,8 @@
 use std::{ops::Add, path::Path};
 
 use chrono::{DateTime, Duration, TimeZone, Utc};
+use fuel_asm::RegId;
+use fuel_tx::Witness;
 use fuels::{
     accounts::Account,
     client::{PageDirection, PaginationRequest},
@@ -1068,6 +1070,79 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
     assert_eq!(script.gas_limit(), script_gas_limit);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn tx_with_witness_data() -> Result<()> {
+    use fuel_asm::{op, GTFArgs};
+
+    let wallet = launch_provider_and_get_wallet().await?;
+    let provider = wallet.try_provider()?;
+
+    let receiver = WalletUnlocked::new_random(Some(provider.clone()));
+
+    let inputs = wallet
+        .get_asset_inputs_for_amount(*provider.base_asset_id(), 10000, None)
+        .await?;
+    let outputs =
+        wallet.get_asset_outputs_for_amount(receiver.address(), *provider.base_asset_id(), 1);
+
+    let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
+    tb.add_signer(wallet.clone())?;
+
+    // we test that the witness data wasn't tempered with during the build (gas estimation) process
+    // if the witness data is tempered with, the estimation will be off and the transaction
+    // will error out with `OutOfGas`
+    let script: Vec<u8> = vec![
+        // load witness data into register 0x10
+        op::gtf(0x10, 0x00, GTFArgs::WitnessData.into()),
+        op::lw(0x10, 0x10, 0x00),
+        // load expected value into register 0x11
+        op::movi(0x11, 0x0f),
+        // load the offset of the revert instruction into register 0x12
+        op::movi(0x12, 0x08),
+        // compare the two values and jump to the revert instruction if they are not equal
+        op::jne(0x10, 0x11, 0x12),
+        // do some expensive operation so gas estimation is higher if comparison passes
+        op::gtf(0x13, 0x01, GTFArgs::WitnessData.into()),
+        op::gtf(0x14, 0x01, GTFArgs::WitnessDataLength.into()),
+        op::aloc(0x14),
+        op::eck1(RegId::HP, 0x13, 0x13),
+        // return the witness data
+        op::ret(0x10),
+        op::rvrt(RegId::ZERO),
+    ]
+    .into_iter()
+    .collect();
+    tb.script = script;
+
+    let expected_data = 15u64;
+    let witness = Witness::from(expected_data.to_be_bytes().to_vec());
+    tb.witnesses_mut().push(witness);
+
+    let tx = tb
+        .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
+        .build(provider)
+        .await?;
+
+    let status = provider.send_transaction_and_await_commit(tx).await?;
+
+    match status {
+        TxStatus::Success { receipts } => {
+            let ret: u64 = receipts
+                .into_iter()
+                .find_map(|receipt| match receipt {
+                    Receipt::Return { val, .. } => Some(val),
+                    _ => None,
+                })
+                .expect("should have return value");
+
+            assert_eq!(ret, expected_data);
+        }
+        _ => panic!("expected success status"),
+    }
 
     Ok(())
 }
