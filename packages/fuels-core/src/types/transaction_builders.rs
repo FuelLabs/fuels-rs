@@ -350,9 +350,8 @@ macro_rules! impl_tx_trait {
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
 
-                let max_fee = tx_fee.max_fee();
-                let new_max_fee = max_fee + max_fee / 10; // 10% buffer
-                tx.policies_mut().set(PolicyType::MaxFee, Some(new_max_fee));
+                tx.policies_mut()
+                    .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
 
                 Ok(())
             }
