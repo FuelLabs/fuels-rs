@@ -1,7 +1,8 @@
-use crate::{error, types::errors::Result};
 use fuel_asm::Instruction;
 use fuel_tx::{field::Script, ConsensusParameters};
 use fuel_types::bytes::padded_len_usize;
+
+use crate::{error, types::errors::Result};
 
 /// Gets the base offset for a script or a predicate. The offset depends on the `max_inputs`
 /// field of the `ConsensusParameters` and the static offset.

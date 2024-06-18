@@ -11,7 +11,7 @@ use fuels_core::{
     offsets::call_script_data_offset,
     types::{
         bech32::{Bech32Address, Bech32ContractId},
-        errors::{transaction::Reason, Error, Result},
+        errors::Result,
         input::Input,
         param_types::ParamType,
         transaction::{ScriptTransaction, TxPolicies},
@@ -23,7 +23,7 @@ use fuels_core::{
 };
 use itertools::{chain, Itertools};
 
-use crate::contract::ContractCall;
+use crate::calls::ContractCall;
 
 #[derive(Default)]
 /// Specifies offsets of [`Opcode::CALL`][`fuel_asm::Opcode::CALL`] parameters stored in the script
@@ -39,52 +39,11 @@ pub(crate) mod sealed {
     pub trait Sealed {}
 }
 
-#[async_trait::async_trait]
-pub trait TxDependencyExtension: Sized + sealed::Sealed {
-    async fn simulate(&mut self) -> Result<()>;
-
-    /// Appends additional external contracts as dependencies to this call.
-    /// Effectively, this will be used to create additional
-    /// [`fuel_tx::Input::Contract`]/[`fuel_tx::Output::Contract`]
-    /// pairs and set them into the transaction. Note that this is a builder
-    /// method, i.e. use it as a chain:
-    ///
-    /// ```ignore
-    /// my_contract_instance.my_method(...).append_contract(additional_contract_id).call()
-    /// my_script_instance.main(...).append_contract(additional_contract_id).call()
-    /// ```
-    ///
-    /// [`Input::Contract`]: fuel_tx::Input::Contract
-    /// [`Output::Contract`]: fuel_tx::Output::Contract
-    fn append_contract(self, contract_id: Bech32ContractId) -> Self;
-
-    /// Simulates the call and attempts to resolve missing contract outputs.
-    /// Forwards the received error if it cannot be fixed.
-    async fn determine_missing_contracts(mut self, max_attempts: Option<u64>) -> Result<Self> {
-        let attempts = max_attempts.unwrap_or(10);
-
-        for _ in 0..attempts {
-            match self.simulate().await {
-                Ok(()) => return Ok(self),
-
-                Err(Error::Transaction(Reason::Reverted { ref receipts, .. })) => {
-                    if let Some(contract_id) = find_id_of_missing_contract(receipts) {
-                        self = self.append_contract(contract_id);
-                    }
-                }
-
-                Err(other_error) => return Err(other_error),
-            }
-        }
-
-        self.simulate().await.map(|()| self)
-    }
-}
-
 /// Creates a [`ScriptTransactionBuilder`] from contract calls.
 pub(crate) async fn transaction_builder_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
+    variable_outputs: VariableOutputPolicy,
     account: &impl Account,
 ) -> Result<ScriptTransactionBuilder> {
     let calls_instructions_len = compute_calls_instructions_len(calls)?;
@@ -115,6 +74,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     );
 
     Ok(ScriptTransactionBuilder::default()
+        .with_variable_output_policy(variable_outputs)
         .with_tx_policies(tx_policies)
         .with_script(script)
         .with_script_data(script_data.clone())
@@ -129,12 +89,12 @@ pub(crate) async fn transaction_builder_from_contract_calls(
 pub(crate) async fn build_tx_from_contract_calls(
     calls: &[ContractCall],
     tx_policies: TxPolicies,
-    account: &impl Account,
     variable_outputs: VariableOutputPolicy,
+    account: &impl Account,
 ) -> Result<ScriptTransaction> {
-    let mut tb = transaction_builder_from_contract_calls(calls, tx_policies, account)
-        .await?
-        .with_variable_output_policy(variable_outputs);
+    let mut tb =
+        transaction_builder_from_contract_calls(calls, tx_policies, variable_outputs, account)
+            .await?;
 
     let base_asset_id = *account.try_provider()?.base_asset_id();
     let required_asset_amounts = calculate_required_asset_amounts(calls, base_asset_id);
@@ -496,20 +456,18 @@ mod test {
     use rand::Rng;
 
     use super::*;
-    use crate::contract::CallParameters;
+    use crate::calls::{traits::ContractDependencyConfigurator, CallParameters};
 
-    impl ContractCall {
-        pub fn new_with_random_id() -> Self {
-            ContractCall {
-                contract_id: random_bech32_contract_id(),
-                encoded_args: Ok(Default::default()),
-                encoded_selector: [0; 8].to_vec(),
-                call_parameters: Default::default(),
-                external_contracts: Default::default(),
-                output_param: ParamType::Unit,
-                is_payable: false,
-                custom_assets: Default::default(),
-            }
+    fn new_contract_call_with_random_id() -> ContractCall {
+        ContractCall {
+            contract_id: random_bech32_contract_id(),
+            encoded_args: Ok(Default::default()),
+            encoded_selector: [0; 8].to_vec(),
+            call_parameters: Default::default(),
+            external_contracts: Default::default(),
+            output_param: ParamType::Unit,
+            is_payable: false,
+            custom_assets: Default::default(),
         }
     }
 
@@ -519,7 +477,7 @@ mod test {
 
     #[test]
     fn contract_input_present() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -544,9 +502,9 @@ mod test {
 
     #[test]
     fn contract_input_is_not_duplicated() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
         let call_w_same_contract =
-            ContractCall::new_with_random_id().with_contract_id(call.contract_id.clone());
+            new_contract_call_with_random_id().with_contract_id(call.contract_id.clone());
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -573,7 +531,7 @@ mod test {
 
     #[test]
     fn contract_output_present() {
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -594,7 +552,7 @@ mod test {
     fn external_contract_input_present() {
         // given
         let external_contract_id = random_bech32_contract_id();
-        let call = ContractCall::new_with_random_id()
+        let call = new_contract_call_with_random_id()
             .with_external_contracts(vec![external_contract_id.clone()]);
 
         let wallet = WalletUnlocked::new_random(None);
@@ -639,7 +597,7 @@ mod test {
         // given
         let external_contract_id = random_bech32_contract_id();
         let call =
-            ContractCall::new_with_random_id().with_external_contracts(vec![external_contract_id]);
+            new_contract_call_with_random_id().with_external_contracts(vec![external_contract_id]);
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -678,7 +636,7 @@ mod test {
                 Input::resource_signed(coin)
             })
             .collect();
-        let call = ContractCall::new_with_random_id();
+        let call = new_contract_call_with_random_id();
 
         let wallet = WalletUnlocked::new_random(None);
 
@@ -718,7 +676,7 @@ mod test {
                 .with_asset_id(asset_id)
         })
         .map(|call_parameters| {
-            ContractCall::new_with_random_id().with_call_parameters(call_parameters)
+            new_contract_call_with_random_id().with_call_parameters(call_parameters)
         });
 
         let asset_id_amounts = calculate_required_asset_amounts(&calls, AssetId::zeroed());
@@ -735,7 +693,8 @@ mod test {
         use fuel_asm::Instruction;
         use fuels_core::types::param_types::{EnumVariants, ParamType};
 
-        use crate::{call_utils::compute_calls_instructions_len, contract::ContractCall};
+        use super::new_contract_call_with_random_id;
+        use crate::calls::utils::compute_calls_instructions_len;
 
         // movi, movi, lw, movi + call (for gas)
         const BASE_INSTRUCTION_COUNT: usize = 5;
@@ -744,14 +703,14 @@ mod test {
 
         #[test]
         fn test_simple() {
-            let call = ContractCall::new_with_random_id();
+            let call = new_contract_call_with_random_id();
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(instructions_len, Instruction::SIZE * BASE_INSTRUCTION_COUNT);
         }
 
         #[test]
         fn test_with_gas_offset() {
-            let mut call = ContractCall::new_with_random_id();
+            let mut call = new_contract_call_with_random_id();
             call.call_parameters = call.call_parameters.with_gas_forwarded(0);
             let instructions_len = compute_calls_instructions_len(&[call]).unwrap();
             assert_eq!(
@@ -762,7 +721,7 @@ mod test {
 
         #[test]
         fn test_with_enum_with_only_non_heap_variants() {
-            let mut call = ContractCall::new_with_random_id();
+            let mut call = new_contract_call_with_random_id();
             call.output_param = ParamType::Enum {
                 name: "".to_string(),
                 enum_variants: EnumVariants::new(vec![

@@ -188,9 +188,7 @@ async fn test_multi_call_beginner() -> Result<()> {
     let call_handler_1 = contract_methods.get_single(7);
     let call_handler_2 = contract_methods.get_single(42);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -228,9 +226,7 @@ async fn test_multi_call_pro() -> Result<()> {
     let call_handler_5 = contract_methods.get_array([7; 2]);
     let call_handler_6 = contract_methods.get_array([42; 2]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2)
         .add_call(call_handler_3)
@@ -348,9 +344,7 @@ async fn mult_call_has_same_estimated_and_used_gas() -> Result<()> {
     let call_handler_1 = contract_methods.initialize_counter(42);
     let call_handler_2 = contract_methods.get_array([42; 2]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -473,7 +467,7 @@ async fn test_large_return_data() -> Result<()> {
 
     let res = contract_methods.get_contract_id().call().await?;
 
-    // First `value` is from `FuelCallResponse`.
+    // First `value` is from `CallResponse`.
     // Second `value` is from the `ContractId` type.
     assert_eq!(
         res.value,
@@ -733,11 +727,11 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
     let amount = 1000;
     let total_amount = amount * NUM_OF_CALLS;
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallets[0].clone());
-    (0..NUM_OF_CALLS).for_each(|_| {
+    let mut multi_call_handler = CallHandler::new_multi_call(wallets[0].clone());
+    for _ in 0..NUM_OF_CALLS {
         let call_handler = contract_methods.mint_to_addresses(amount, addresses);
-        multi_call_handler.add_call(call_handler);
-    });
+        multi_call_handler = multi_call_handler.add_call(call_handler);
+    }
 
     wallets[0]
         .force_transfer_to_contract(
@@ -751,7 +745,7 @@ async fn test_output_variable_estimation_multicall() -> Result<()> {
 
     let base_layer_address = Bits256([1u8; 32]);
     let call_handler = contract_methods.send_message(base_layer_address, amount);
-    multi_call_handler.add_call(call_handler);
+    multi_call_handler = multi_call_handler.add_call(call_handler);
 
     let _ = multi_call_handler
         .with_variable_output_policy(VariableOutputPolicy::EstimateMinimum)
@@ -938,18 +932,18 @@ async fn test_output_variable_contract_id_estimation_multicall() -> Result<()> {
     let contract_methods = contract_caller_instance.methods();
 
     let mut multi_call_handler =
-        MultiContractCallHandler::new(wallet.clone()).with_tx_policies(Default::default());
+        CallHandler::new_multi_call(wallet.clone()).with_tx_policies(Default::default());
 
-    (0..3).for_each(|_| {
+    for _ in 0..3 {
         let call_handler = contract_methods.increment_from_contract(lib_contract_id, 42);
-        multi_call_handler.add_call(call_handler);
-    });
+        multi_call_handler = multi_call_handler.add_call(call_handler);
+    }
 
     // add call that does not need ContractId
     let contract_methods = contract_test_instance.methods();
     let call_handler = contract_methods.get(5, 6);
 
-    multi_call_handler.add_call(call_handler);
+    multi_call_handler = multi_call_handler.add_call(call_handler);
 
     let call_response = multi_call_handler
         .determine_missing_contracts(None)
@@ -1172,9 +1166,7 @@ async fn multi_call_from_calls_with_different_account_types() -> Result<()> {
     let call_handler_1 = contract_methods_wallet.initialize_counter(42);
     let call_handler_2 = contract_methods_predicate.get_array([42; 2]);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet);
-
-    multi_call_handler
+    let _multi_call_handler = CallHandler::new_multi_call(wallet)
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -1434,7 +1426,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     }
     {
         // Multi call: Will not work if max_tokens not big enough
-        MultiContractCallHandler::new(wallet.clone())
+        CallHandler::new_multi_call(wallet.clone())
         .add_call(methods.i_return_a_1k_el_array())
         .with_decoder_config(DecoderConfig { max_tokens: 100, ..Default::default() })
         .call::<([u8; 1000],)>().await.expect_err(
@@ -1443,7 +1435,7 @@ async fn can_configure_decoding_of_contract_return() -> Result<()> {
     }
     {
         // Multi call: Works when configured
-        MultiContractCallHandler::new(wallet.clone())
+        CallHandler::new_multi_call(wallet.clone())
             .add_call(methods.i_return_a_1k_el_array())
             .with_decoder_config(DecoderConfig {
                 max_tokens: 1001,
@@ -1483,9 +1475,7 @@ async fn test_contract_submit_and_response() -> Result<()> {
     let call_handler_1 = contract_methods.get_single(7);
     let call_handler_2 = contract_methods.get_single(42);
 
-    let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-    multi_call_handler
+    let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
         .add_call(call_handler_1)
         .add_call(call_handler_2);
 
@@ -1514,34 +1504,30 @@ async fn test_heap_type_multicall() -> Result<()> {
         ),
         Deploy(
             name = "contract_instance",
-            contract = "TestContract",
+            contract = "VectorOutputContract",
             wallet = "wallet"
         ),
         Deploy(
             name = "contract_instance_2",
-            contract = "VectorOutputContract",
+            contract = "TestContract",
             wallet = "wallet"
         ),
     );
 
     {
-        // One heap type at the last position is allowed
-        let call_handler_1 = contract_instance.methods().get_single(7);
-        let call_handler_2 = contract_instance.methods().get_single(42);
-        let call_handler_3 = contract_instance_2.methods().u8_in_vec(3);
+        let call_handler_1 = contract_instance.methods().u8_in_vec(5);
+        let call_handler_2 = contract_instance_2.methods().get_single(7);
+        let call_handler_3 = contract_instance.methods().u8_in_vec(3);
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2)
             .add_call(call_handler_3);
 
-        let handle = multi_call_handler.submit().await?;
-        let (val_1, val_2, val_3): (u64, u64, Vec<u8>) = handle.response().await?.value;
+        let (val_1, val_2, val_3): (Vec<u8>, u64, Vec<u8>) = multi_call_handler.call().await?.value;
 
-        assert_eq!(val_1, 7);
-        assert_eq!(val_2, 42);
+        assert_eq!(val_1, vec![0, 1, 2, 3, 4]);
+        assert_eq!(val_2, 7);
         assert_eq!(val_3, vec![0, 1, 2]);
     }
 
@@ -1638,9 +1624,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
         let call_handler_1 = contract_instance.methods().get_single(x);
         let call_handler_2 = contract_instance_2.methods().u32_vec(vec_input);
 
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -1871,8 +1855,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
 
 #[tokio::test]
 async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
-    use fuels::prelude::*;
-    use fuels::tx::ConsensusParameters;
+    use fuels::{prelude::*, tx::ConsensusParameters};
 
     abigen!(Contract(
         name = "MyContract",
