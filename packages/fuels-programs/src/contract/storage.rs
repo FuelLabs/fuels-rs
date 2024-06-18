@@ -129,8 +129,9 @@ pub(crate) fn validate_path_and_extension(file_path: &Path, extension: &str) -> 
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use std::collections::HashSet;
+
+    use super::*;
 
     #[test]
     fn merging_overrides_storage_slots() {

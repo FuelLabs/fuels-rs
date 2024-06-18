@@ -1,9 +1,10 @@
-use flate2::read::GzDecoder;
-use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use std::{
     io::Cursor,
     path::{Path, PathBuf},
 };
+
+use flate2::read::GzDecoder;
+use fuels_accounts::provider::SUPPORTED_FUEL_CORE_VERSION;
 use tar::Archive;
 
 struct Downloader {

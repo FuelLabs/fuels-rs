@@ -1,6 +1,7 @@
+use std::{default::Default, fmt::Debug};
+
 use fuel_tx::Salt;
 use fuels_core::Configurables;
-use std::{default::Default, fmt::Debug};
 
 use crate::contract::StorageConfiguration;
 

@@ -1855,8 +1855,7 @@ async fn variable_output_estimation_is_optimized() -> Result<()> {
 
 #[tokio::test]
 async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
-    use fuels::prelude::*;
-    use fuels::tx::ConsensusParameters;
+    use fuels::{prelude::*, tx::ConsensusParameters};
 
     abigen!(Contract(
         name = "MyContract",

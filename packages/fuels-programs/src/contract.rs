@@ -1,9 +1,6 @@
 mod load;
 mod storage;
 
-pub use load::*;
-pub use storage::*;
-
 use std::{
     fmt::Debug,
     fs,
@@ -18,6 +15,8 @@ use fuels_core::types::{
     transaction::TxPolicies,
     transaction_builders::CreateTransactionBuilder,
 };
+pub use load::*;
+pub use storage::*;
 
 /// [`Contract`] is a struct to interface with a contract. That includes things such as
 /// compiling, deploying, and running transactions against a contract.
