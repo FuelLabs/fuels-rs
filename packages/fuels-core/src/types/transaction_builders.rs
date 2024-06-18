@@ -18,7 +18,6 @@ use fuel_tx::{
 };
 pub use fuel_tx::{UpgradePurpose, UploadSubsection};
 use fuel_types::{bytes::padded_len_usize, Bytes32, Salt};
-use fuel_vm::{checked_transaction::EstimatePredicates, interpreter::MemoryInstance};
 use itertools::Itertools;
 use script_dry_runner::ScriptDryRunner;
 
@@ -325,23 +324,25 @@ macro_rules! impl_tx_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: PoliciesField + Chargeable + EstimatePredicates>(
+            async fn set_max_fee_policy<T: Clone + PoliciesField + Chargeable + Into<$tx_ty>>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
+                is_using_predicates: bool,
             ) -> Result<()> {
+                let mut wrapper_tx: $tx_ty = tx.clone().into();
+
+                if is_using_predicates {
+                    wrapper_tx.estimate_predicates(&provider, None).await?;
+                }
+
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
-
-                tx.estimate_predicates(
-                    &provider.consensus_parameters().into(),
-                    MemoryInstance::new(),
-                )?;
 
                 let tx_fee = TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
-                    tx,
+                    &wrapper_tx.tx,
                     gas_price,
                 )
                 .ok_or(error_transaction!(
@@ -349,9 +350,8 @@ macro_rules! impl_tx_trait {
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
 
-                let max_fee = tx_fee.max_fee();
-                let new_max_fee = max_fee + max_fee / 10; // 10% buffer
-                tx.policies_mut().set(PolicyType::MaxFee, Some(new_max_fee));
+                tx.policies_mut()
+                    .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
 
                 Ok(())
             }
@@ -521,6 +521,7 @@ impl ScriptTransactionBuilder {
                 &mut tx,
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
+                self.is_using_predicates(),
             )
             .await?;
         }
@@ -751,6 +752,7 @@ impl CreateTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
@@ -765,8 +767,13 @@ impl CreateTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
-            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
-                .await?;
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
+            .await?;
         }
 
         let missing_witnesses =
@@ -849,6 +856,7 @@ impl UploadTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::upload(
             UploadBody {
@@ -867,8 +875,13 @@ impl UploadTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
-            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
-                .await?;
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
+            .await?;
         }
 
         let missing_witnesses =
@@ -959,6 +972,7 @@ impl UpgradeTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::upgrade(
             self.purpose,
@@ -971,8 +985,13 @@ impl UpgradeTransactionBuilder {
         if let Some(max_fee) = self.tx_policies.max_fee() {
             tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
         } else {
-            Self::set_max_fee_policy(&mut tx, &provider, self.gas_price_estimation_block_horizon)
-                .await?;
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
+            .await?;
         }
 
         let missing_witnesses =
