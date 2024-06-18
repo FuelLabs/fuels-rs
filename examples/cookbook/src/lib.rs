@@ -191,7 +191,6 @@ mod tests {
 
         let tx = tb.build(&provider).await?;
 
-        dbg!(&tx);
         provider.send_transaction_and_await_commit(tx).await?;
 
         let balances = wallet_2.get_balances().await?;
