@@ -8,7 +8,7 @@ use thiserror::Error;
 pub mod transaction {
     use super::*;
 
-    #[derive(Error, Debug)]
+    #[derive(Error, Debug, Clone)]
     pub enum Reason {
         #[error("builder: {0}")]
         Builder(String),
@@ -28,7 +28,7 @@ pub mod transaction {
 }
 use transaction::Reason;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone)]
 pub enum Error {
     #[error("io: {0}")]
     IO(String),

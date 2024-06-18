@@ -544,17 +544,17 @@ mod tests {
         // ANCHOR_END: multi_call_prepare
 
         // ANCHOR: multi_call_build
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
         // ANCHOR_END: multi_call_build
+        let multi_call_handler_tmp = multi_call_handler.clone();
 
         // ANCHOR: multi_call_values
         let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
         // ANCHOR_END: multi_call_values
 
+        let multi_call_handler = multi_call_handler_tmp.clone();
         // ANCHOR: multi_contract_call_response
         let response = multi_call_handler.call::<(u64, [u64; 2])>().await?;
         // ANCHOR_END: multi_contract_call_response
@@ -562,6 +562,7 @@ mod tests {
         assert_eq!(counter, 42);
         assert_eq!(array, [42; 2]);
 
+        let multi_call_handler = multi_call_handler_tmp.clone();
         // ANCHOR: submit_response_multicontract
         let submitted_tx = multi_call_handler.submit().await?;
         let (counter, array): (u64, [u64; 2]) = submitted_tx.response().await?.value;
@@ -595,12 +596,10 @@ mod tests {
         let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         // ANCHOR: multi_call_cost_estimation
-        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
         let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
 
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 

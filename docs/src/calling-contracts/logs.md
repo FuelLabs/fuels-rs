@@ -8,7 +8,7 @@ Consider the following contract method:
 {{#include ../../../e2e/sway/logs/contract_logs/src/main.sw:produce_logs}}
 ```
 
-You can access the logged values in Rust by calling `decode_logs_with_type::<T>` from a `FuelCallResponse`, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
+You can access the logged values in Rust by calling `decode_logs_with_type::<T>` from a `CallResponse`, where `T` is the type of the logged variables you want to retrieve. The result will be a `Vec<T>`:
 
 ```rust,ignore
 {{#include ../../../e2e/tests/logs.rs:produce_logs}}
