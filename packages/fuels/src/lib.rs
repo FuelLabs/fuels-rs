@@ -75,11 +75,8 @@ pub mod prelude {
         },
         macros::setup_program_test,
         programs::{
-            call_utils::TxDependencyExtension,
-            contract::{
-                CallParameters, Contract, LoadConfiguration, MultiContractCallHandler,
-                SettableContract, StorageConfiguration,
-            },
+            calls::{CallHandler, CallParameters, ContractDependency},
+            contract::{Contract, LoadConfiguration, StorageConfiguration},
         },
         test_helpers::*,
         types::transaction_builders::*,
