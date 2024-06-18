@@ -113,7 +113,7 @@ mod tests {
             .await?;
         // ANCHOR_END: contract_call_cost_estimation
 
-        let expected_gas = 2613;
+        let expected_gas = 2692;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 
@@ -240,7 +240,6 @@ mod tests {
         let response = contract_instance_1
             .methods()
             .initialize_counter(42)
-            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
@@ -259,11 +258,11 @@ mod tests {
         let response = contract_instance_2
             .methods()
             .initialize_counter(42) // Build the ABI call
-            .with_tx_policies(TxPolicies::default().with_script_gas_limit(1_000_000))
             .call()
             .await?;
 
         assert_eq!(42, response.value);
+
         Ok(())
     }
 
@@ -628,7 +627,7 @@ mod tests {
             .await?;
         // ANCHOR_END: multi_call_cost_estimation
 
-        let expected_gas = 4063;
+        let expected_gas = 4191;
 
         assert_eq!(transaction_cost.gas_used, expected_gas);
 

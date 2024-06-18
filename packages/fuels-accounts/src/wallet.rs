@@ -7,6 +7,7 @@ use fuels_core::{
     traits::Signer,
     types::{
         bech32::{Bech32Address, FUEL_BECH32_HRP},
+        coin_type_id::CoinTypeId,
         errors::{error, Result},
         input::Input,
         transaction_builders::TransactionBuilder,
@@ -209,9 +210,10 @@ impl Account for WalletUnlocked {
         &self,
         asset_id: AssetId,
         amount: u64,
+        excluded_coins: Option<Vec<CoinTypeId>>,
     ) -> Result<Vec<Input>> {
         Ok(self
-            .get_spendable_resources(asset_id, amount)
+            .get_spendable_resources(asset_id, amount, excluded_coins)
             .await?
             .into_iter()
             .map(Input::resource_signed)

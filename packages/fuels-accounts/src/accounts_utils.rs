@@ -1,13 +1,15 @@
-use fuel_tx::{AssetId, Output, Receipt};
+use fuel_tx::{AssetId, Output, Receipt, UtxoId};
 use fuel_types::Nonce;
 use fuels_core::types::{
     bech32::Bech32Address,
     coin::Coin,
     coin_type::CoinType,
+    coin_type_id::CoinTypeId,
     errors::{error, error_transaction, Error, Result},
     input::Input,
     transaction_builders::TransactionBuilder,
 };
+use itertools::{Either, Itertools};
 
 use crate::provider::Provider;
 
@@ -17,7 +19,8 @@ pub fn extract_message_nonce(receipts: &[Receipt]) -> Option<Nonce> {
 
 pub async fn calculate_missing_base_amount(
     tb: &impl TransactionBuilder,
-    used_base_amount: u64,
+    available_base_amount: u64,
+    reserved_base_amount: u64,
     provider: &Provider,
 ) -> Result<u64> {
     let transaction_fee = tb
@@ -28,11 +31,9 @@ pub async fn calculate_missing_base_amount(
             "error calculating `TransactionFee`"
         ))?;
 
-    let available_amount = available_base_amount(tb, provider.base_asset_id());
-
-    let total_used = transaction_fee.max_fee() + used_base_amount;
-    let missing_amount = if total_used > available_amount {
-        total_used - available_amount
+    let total_used = transaction_fee.max_fee() + reserved_base_amount;
+    let missing_amount = if total_used > available_base_amount {
+        total_used - available_base_amount
     } else if !is_consuming_utxos(tb) {
         // A tx needs to have at least 1 spendable input
         // Enforce a minimum required amount on the base asset if no other inputs are present
@@ -44,22 +45,49 @@ pub async fn calculate_missing_base_amount(
     Ok(missing_amount)
 }
 
-fn available_base_amount(tb: &impl TransactionBuilder, base_asset_id: &AssetId) -> u64 {
-    tb.inputs()
-        .iter()
-        .filter_map(|input| match input {
-            Input::ResourceSigned { resource, .. } | Input::ResourcePredicate { resource, .. } => {
-                match resource {
+pub fn available_base_assets_and_amount(
+    tb: &impl TransactionBuilder,
+    base_asset_id: &AssetId,
+) -> (Vec<CoinTypeId>, u64) {
+    let mut sum = 0;
+    let iter =
+        tb.inputs()
+            .iter()
+            .filter_map(|input| match input {
+                Input::ResourceSigned { resource, .. }
+                | Input::ResourcePredicate { resource, .. } => match resource {
                     CoinType::Coin(Coin {
                         amount, asset_id, ..
-                    }) if asset_id == base_asset_id => Some(*amount),
-                    CoinType::Message(message) => Some(message.amount),
+                    }) if asset_id == base_asset_id => {
+                        sum += amount;
+                        Some(resource.id())
+                    }
+                    CoinType::Message(message) => {
+                        sum += message.amount;
+                        Some(resource.id())
+                    }
                     _ => None,
-                }
-            }
-            _ => None,
+                },
+                _ => None,
+            })
+            .collect_vec();
+
+    (iter, sum)
+}
+
+pub fn split_into_utxo_ids_and_nonces(
+    excluded_coins: Option<Vec<CoinTypeId>>,
+) -> (Vec<UtxoId>, Vec<Nonce>) {
+    excluded_coins
+        .map(|excluded_coins| {
+            excluded_coins
+                .iter()
+                .partition_map(|coin_id| match coin_id {
+                    CoinTypeId::UtxoId(utxo_id) => Either::Left(*utxo_id),
+                    CoinTypeId::Nonce(nonce) => Either::Right(*nonce),
+                })
         })
-        .sum()
+        .unwrap_or_default()
 }
 
 fn is_consuming_utxos(tb: &impl TransactionBuilder) -> bool {

@@ -9,12 +9,14 @@ use crate::{error, types::errors::Result};
 
 pub mod bech32;
 mod core;
+mod dry_runner;
 pub mod errors;
 pub mod param_types;
 mod token;
 pub mod transaction_builders;
 pub mod tx_status;
 mod wrappers;
+pub use dry_runner::*;
 
 pub type ByteArray = [u8; 8];
 pub type Selector = Vec<u8>;

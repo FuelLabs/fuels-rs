@@ -4,8 +4,8 @@ use async_trait::async_trait;
 use fuel_crypto::{Message, Signature};
 use fuel_tx::{
     field::{
-        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Script as ScriptField, ScriptData,
-        ScriptGasLimit, WitnessLimit, Witnesses,
+        Inputs, Maturity, MintAmount, MintAssetId, Outputs, Policies as PoliciesField,
+        Script as ScriptField, ScriptData, ScriptGasLimit, WitnessLimit, Witnesses,
     },
     input::{
         coin::{CoinPredicate, CoinSigned},
@@ -13,6 +13,7 @@ use fuel_tx::{
             MessageCoinPredicate, MessageCoinSigned, MessageDataPredicate, MessageDataSigned,
         },
     },
+    policies::PolicyType,
     Bytes32, Cacheable, Chargeable, ConsensusParameters, Create, FormatValidityChecks, Input, Mint,
     Output, Salt as FuelSalt, Script, StorageSlot, Transaction as FuelTransaction, TransactionFee,
     UniqueIdentifier, Upgrade, Upload, Witness,
@@ -28,6 +29,7 @@ use crate::{
     types::{
         bech32::Bech32Address,
         errors::{error, error_transaction, Error, Result},
+        DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
@@ -190,11 +192,17 @@ pub enum TransactionType {
     Upgrade(UpgradeTransaction),
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait EstimablePredicates: sealed::Sealed {
     /// If a transaction contains predicates, we have to estimate them
     /// before sending the transaction to the node. The estimation will check
     /// all predicates and set the `predicate_gas_used` to the actual consumed gas.
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()>;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()>;
 }
 
 pub trait GasValidation: sealed::Sealed {
@@ -249,6 +257,12 @@ pub trait Transaction:
     fn outputs(&self) -> &Vec<Output>;
 
     fn witnesses(&self) -> &Vec<Witness>;
+
+    fn max_fee(&self) -> Option<u64>;
+
+    fn witness_limit(&self) -> Option<u64>;
+
+    fn tip(&self) -> Option<u64>;
 
     fn is_using_predicates(&self) -> bool;
 
@@ -445,6 +459,18 @@ macro_rules! impl_tx_wrapper {
                 Ok(self.tx.precompute(chain_id)?)
             }
 
+            fn max_fee(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::MaxFee)
+            }
+
+            fn witness_limit(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::WitnessLimit)
+            }
+
+            fn tip(&self) -> Option<u64> {
+                self.tx.policies().get(PolicyType::Tip)
+            }
+
             fn append_witness(&mut self, witness: Witness) -> Result<usize> {
                 let witness_size = calculate_witnesses_size(
                     self.tx.witnesses().iter().chain(std::iter::once(&witness)),
@@ -512,28 +538,75 @@ impl_tx_wrapper!(CreateTransaction, Create);
 impl_tx_wrapper!(UploadTransaction, Upload);
 impl_tx_wrapper!(UpgradeTransaction, Upgrade);
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UploadTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_upload().expect("is upload").clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for UpgradeTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_upgrade()
+                .expect("is upgrade")
+                .clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for CreateTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_create().expect("is create").clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }
@@ -553,10 +626,25 @@ impl CreateTransaction {
     }
 }
 
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl EstimablePredicates for ScriptTransaction {
-    fn estimate_predicates(&mut self, consensus_parameters: &ConsensusParameters) -> Result<()> {
-        self.tx
-            .estimate_predicates(&consensus_parameters.into(), MemoryInstance::new())?;
+    async fn estimate_predicates(
+        &mut self,
+        provider: impl DryRunner,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<()> {
+        if let Some(tx) = provider
+            .maybe_estimate_predicates(&self.tx.clone().into(), latest_chain_executor_version)
+            .await?
+        {
+            tx.as_script().expect("is script").clone_into(&mut self.tx);
+        } else {
+            self.tx.estimate_predicates(
+                &provider.consensus_parameters().into(),
+                MemoryInstance::new(),
+            )?;
+        }
 
         Ok(())
     }

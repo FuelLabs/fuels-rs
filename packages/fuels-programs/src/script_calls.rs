@@ -209,7 +209,8 @@ where
             .with_script(self.script_call.script_binary.clone())
             .with_script_data(self.compute_script_data()?)
             .with_inputs(inputs)
-            .with_outputs(outputs))
+            .with_outputs(outputs)
+            .with_gas_estimation_tolerance(0.05))
     }
 
     /// Returns the transaction that executes the script call
@@ -260,7 +261,7 @@ where
                 .build(provider, ScriptContext::StateReadOnly)
                 .await?;
 
-            provider.dry_run_no_validation(tx).await?
+            provider.dry_run_opt(tx, false, None).await?
         } else {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?

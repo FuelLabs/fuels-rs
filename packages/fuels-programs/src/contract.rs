@@ -627,7 +627,7 @@ where
                 .build(provider, ScriptContext::StateReadOnly)
                 .await?;
 
-            provider.dry_run_no_validation(tx).await?
+            provider.dry_run_opt(tx, false, None).await?
         } else {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
@@ -884,7 +884,7 @@ impl<T: Account> MultiContractCallHandler<T> {
                 .build(provider, ScriptContext::StateReadOnly)
                 .await?;
 
-            provider.dry_run_no_validation(tx).await?
+            provider.dry_run_opt(tx, false, None).await?
         } else {
             let tx = self.build_tx().await?;
             provider.dry_run(tx).await?
