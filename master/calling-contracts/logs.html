@@ -152,7 +152,7 @@
         log(l);
     }
 </code></pre>
-<p>You can access the logged values in Rust by calling <code>decode_logs_with_type::&lt;T&gt;</code> from a <code>FuelCallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
+<p>You can access the logged values in Rust by calling <code>decode_logs_with_type::&lt;T&gt;</code> from a <code>CallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
 <pre><code class="language-rust ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 

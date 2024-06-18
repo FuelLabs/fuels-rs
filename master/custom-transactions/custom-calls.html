@@ -138,7 +138,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="custom-contract-and-script-calls"><a class="header" href="#custom-contract-and-script-calls">Custom contract and script calls</a></h1>
-<p>When preparing a contract call via <code>ContractCallHandler</code> or a script call via <code>ScriptCallHandler</code>, the Rust SDK uses a transaction builder in the background. You can fetch this builder and customize it before submitting it to the network. After the transaction is executed successfully, you can use the corresponding <code>ContractCallHandler</code> or <code>ScriptCallHandler</code> to generate a <a href="../calling-contracts/call-response.html">call response</a>. The call response can be used to decode return values and logs. Below are examples for both contract and script calls.</p>
+<p>When preparing a contract call via <code>CallHandler</code>, the Rust SDK uses a transaction builder in the background. You can fetch this builder and customize it before submitting it to the network. After the transaction is executed successfully, you can use the corresponding <code>CallHandler</code> to generate a <a href="../calling-contracts/call-response.html">call response</a>. The call response can be used to decode return values and logs. Below are examples for both contract and script calls.</p>
 <h2 id="custom-contract-call"><a class="header" href="#custom-contract-call">Custom contract call</a></h2>
 <pre><code class="language-rust ignore">        let call_handler = contract_instance.methods().initialize_counter(counter);
 

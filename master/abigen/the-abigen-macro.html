@@ -330,119 +330,140 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 <p>you'll generate this (shortened for brevity's sake):</p>
 <pre><code class="language-rust ignore">pub mod abigen_bindings {
     pub mod my_contract_mod {
-        use ::fuels::{
-            accounts::{Account, ViewOnlyAccount},
-            core::{
-                codec,
-                traits::{Parameterize, Tokenizable},
-                Configurables,
-            },
-            programs::{
-                contract::{self, ContractCallHandler},
-                logs::{self, LogDecoder},
-            },
-            types::{bech32::Bech32ContractId, errors::Result, AssetId},
-        };
-
-        pub struct MyContract&lt;T: Account&gt; {
-            contract_id: Bech32ContractId,
-            account: T,
-            log_decoder: LogDecoder,
+        #[derive(Debug, Clone)]
+        pub struct MyContract&lt;A: ::fuels::accounts::Account&gt; {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            account: A,
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
-        impl&lt;T: Account&gt; MyContract&lt;T&gt; {
+        impl&lt;A: ::fuels::accounts::Account&gt; MyContract&lt;A&gt; {
             pub fn new(
-                contract_id: impl ::core::convert::Into&lt;Bech32ContractId&gt;,
-                account: T,
+                contract_id: impl ::core::convert::Into&lt;::fuels::types::bech32::Bech32ContractId&gt;,
+                account: A,
             ) -&gt; Self {
-                let contract_id: Bech32ContractId = contract_id.into();
-                let log_decoder = LogDecoder::new(logs::log_formatters_lookup(
-                    vec![],
-                    contract_id.clone().into(),
-                ));
+                let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
+                let log_decoder = ::fuels::core::codec::LogDecoder::new(
+                    ::fuels::core::codec::log_formatters_lookup(vec![], contract_id.clone().into()),
+                );
+                let encoder_config = ::fuels::core::codec::EncoderConfig::default();
                 Self {
                     contract_id,
                     account,
                     log_decoder,
+                    encoder_config,
                 }
             }
-            pub fn contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
+            pub fn contract_id(&amp;self) -&gt; &amp;::fuels::types::bech32::Bech32ContractId {
                 &amp;self.contract_id
             }
-            pub fn account(&amp;self) -&gt; T {
+            pub fn account(&amp;self) -&gt; A {
                 self.account.clone()
             }
-            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; MyContract&lt;U&gt; {
+            pub fn with_account&lt;U: ::fuels::accounts::Account&gt;(self, account: U) -&gt; MyContract&lt;U&gt; {
                 MyContract {
-                    contract_id: self.contract_id.clone(),
+                    contract_id: self.contract_id,
                     account,
-                    log_decoder: self.log_decoder.clone(),
+                    log_decoder: self.log_decoder,
+                    encoder_config: self.encoder_config,
                 }
             }
-            pub async fn get_balances(&amp;self) -&gt; Result&lt;::std::collections::HashMap&lt;AssetId, u64&gt;&gt; {
-                ViewOnlyAccount::try_provider(&amp;self.account)?
+            pub fn with_encoder_config(
+                mut self,
+                encoder_config: ::fuels::core::codec::EncoderConfig,
+            ) -&gt; MyContract&lt;A&gt; {
+                self.encoder_config = encoder_config;
+                self
+            }
+            pub async fn get_balances(
+                &amp;self,
+            ) -&gt; ::fuels::types::errors::Result&lt;
+                ::std::collections::HashMap&lt;::fuels::types::AssetId, u64&gt;,
+            &gt; {
+                ::fuels::accounts::ViewOnlyAccount::try_provider(&amp;self.account)?
                     .get_contract_balances(&amp;self.contract_id)
                     .await
                     .map_err(::std::convert::Into::into)
             }
-            pub fn methods(&amp;self) -&gt; MyContractMethods&lt;T&gt; {
+            pub fn methods(&amp;self) -&gt; MyContractMethods&lt;A&gt; {
                 MyContractMethods {
                     contract_id: self.contract_id.clone(),
                     account: self.account.clone(),
                     log_decoder: self.log_decoder.clone(),
+                    encoder_config: self.encoder_config.clone(),
                 }
             }
         }
-        pub struct MyContractMethods&lt;T: Account&gt; {
-            contract_id: Bech32ContractId,
-            account: T,
-            log_decoder: LogDecoder,
+        pub struct MyContractMethods&lt;A: ::fuels::accounts::Account&gt; {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            account: A,
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
-        impl&lt;T: Account&gt; MyContractMethods&lt;T&gt; {
-            #[doc = &quot;Calls the contract's `initialize_counter` function&quot;]
-            pub fn initialize_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
-                contract::method_hash(
+        impl&lt;A: ::fuels::accounts::Account&gt; MyContractMethods&lt;A&gt; {
+            #[doc = &quot; This method will read the counter from storage, increment it&quot;]
+            #[doc = &quot; and write the incremented value to storage&quot;]
+            pub fn increment_counter(
+                &amp;self,
+                value: ::core::primitive::u64,
+            ) -&gt; ::fuels::programs::calls::CallHandler&lt;
+                A,
+                ::fuels::programs::calls::ContractCall,
+                ::core::primitive::u64,
+            &gt; {
+                ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::encode_fn_selector(&quot;initialize_counter&quot;),
-                    &amp;[Tokenizable::into_token(value)],
+                    ::fuels::core::codec::encode_fn_selector(&quot;increment_counter&quot;),
+                    &amp;[::fuels::core::traits::Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
-                    ABIEncoder::new(EncoderConfig::default()),
+                    self.encoder_config.clone(),
                 )
             }
-            #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
-            pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
-                contract::method_hash(
+            pub fn initialize_counter(
+                &amp;self,
+                value: ::core::primitive::u64,
+            ) -&gt; ::fuels::programs::calls::CallHandler&lt;
+                A,
+                ::fuels::programs::calls::ContractCall,
+                ::core::primitive::u64,
+            &gt; {
+                ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::encode_fn_selector(&quot;increment_counter&quot;),
-                    &amp;[value.into_token()],
+                    ::fuels::core::codec::encode_fn_selector(&quot;initialize_counter&quot;),
+                    &amp;[::fuels::core::traits::Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
-                    ABIEncoder::new(EncoderConfig::default()),
+                    self.encoder_config.clone(),
                 )
             }
         }
-        impl&lt;T: Account&gt; contract::SettableContract for MyContract&lt;T&gt; {
-            fn id(&amp;self) -&gt; Bech32ContractId {
+        impl&lt;A: ::fuels::accounts::Account&gt; ::fuels::programs::calls::ContractDependency for MyContract&lt;A&gt; {
+            fn id(&amp;self) -&gt; ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
-            fn log_decoder(&amp;self) -&gt; LogDecoder {
+            fn log_decoder(&amp;self) -&gt; ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
             }
         }
         #[derive(Clone, Debug, Default)]
         pub struct MyContractConfigurables {
             offsets_with_data: ::std::vec::Vec&lt;(u64, ::std::vec::Vec&lt;u8&gt;)&gt;,
+            encoder: ::fuels::core::codec::ABIEncoder,
         }
         impl MyContractConfigurables {
-            pub fn new() -&gt; Self {
-                ::std::default::Default::default()
+            pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -&gt; Self {
+                Self {
+                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config),
+                    ..::std::default::Default::default()
+                }
             }
         }
-        impl From&lt;MyContractConfigurables&gt; for Configurables {
+        impl From&lt;MyContractConfigurables&gt; for ::fuels::core::Configurables {
             fn from(config: MyContractConfigurables) -&gt; Self {
-                Configurables::new(config.offsets_with_data)
+                ::fuels::core::Configurables::new(config.offsets_with_data)
             }
         }
     }

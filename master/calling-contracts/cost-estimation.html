@@ -138,7 +138,7 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
-<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>ContractCallHandler</code> and <code>MultiContractCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
+<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>CallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
 <pre><code class="language-rust ignore">pub struct TransactionCost {
     pub gas_price: u64,
     pub gas_used: u64,
@@ -157,12 +157,10 @@
             .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
 </code></pre>
-<pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        let call_handler_1 = contract_methods.initialize_counter(42);
+<pre><code class="language-rust ignore">        let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
 
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 

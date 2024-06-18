@@ -1175,119 +1175,140 @@ It is <strong>highly</strong> encouraged that you generate all your bindings in 
 <p>you'll generate this (shortened for brevity's sake):</p>
 <pre><code class="language-rust ignore">pub mod abigen_bindings {
     pub mod my_contract_mod {
-        use ::fuels::{
-            accounts::{Account, ViewOnlyAccount},
-            core::{
-                codec,
-                traits::{Parameterize, Tokenizable},
-                Configurables,
-            },
-            programs::{
-                contract::{self, ContractCallHandler},
-                logs::{self, LogDecoder},
-            },
-            types::{bech32::Bech32ContractId, errors::Result, AssetId},
-        };
-
-        pub struct MyContract&lt;T: Account&gt; {
-            contract_id: Bech32ContractId,
-            account: T,
-            log_decoder: LogDecoder,
+        #[derive(Debug, Clone)]
+        pub struct MyContract&lt;A: ::fuels::accounts::Account&gt; {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            account: A,
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
-        impl&lt;T: Account&gt; MyContract&lt;T&gt; {
+        impl&lt;A: ::fuels::accounts::Account&gt; MyContract&lt;A&gt; {
             pub fn new(
-                contract_id: impl ::core::convert::Into&lt;Bech32ContractId&gt;,
-                account: T,
+                contract_id: impl ::core::convert::Into&lt;::fuels::types::bech32::Bech32ContractId&gt;,
+                account: A,
             ) -&gt; Self {
-                let contract_id: Bech32ContractId = contract_id.into();
-                let log_decoder = LogDecoder::new(logs::log_formatters_lookup(
-                    vec![],
-                    contract_id.clone().into(),
-                ));
+                let contract_id: ::fuels::types::bech32::Bech32ContractId = contract_id.into();
+                let log_decoder = ::fuels::core::codec::LogDecoder::new(
+                    ::fuels::core::codec::log_formatters_lookup(vec![], contract_id.clone().into()),
+                );
+                let encoder_config = ::fuels::core::codec::EncoderConfig::default();
                 Self {
                     contract_id,
                     account,
                     log_decoder,
+                    encoder_config,
                 }
             }
-            pub fn contract_id(&amp;self) -&gt; &amp;Bech32ContractId {
+            pub fn contract_id(&amp;self) -&gt; &amp;::fuels::types::bech32::Bech32ContractId {
                 &amp;self.contract_id
             }
-            pub fn account(&amp;self) -&gt; T {
+            pub fn account(&amp;self) -&gt; A {
                 self.account.clone()
             }
-            pub fn with_account&lt;U: Account&gt;(&amp;self, account: U) -&gt; MyContract&lt;U&gt; {
+            pub fn with_account&lt;U: ::fuels::accounts::Account&gt;(self, account: U) -&gt; MyContract&lt;U&gt; {
                 MyContract {
-                    contract_id: self.contract_id.clone(),
+                    contract_id: self.contract_id,
                     account,
-                    log_decoder: self.log_decoder.clone(),
+                    log_decoder: self.log_decoder,
+                    encoder_config: self.encoder_config,
                 }
             }
-            pub async fn get_balances(&amp;self) -&gt; Result&lt;::std::collections::HashMap&lt;AssetId, u64&gt;&gt; {
-                ViewOnlyAccount::try_provider(&amp;self.account)?
+            pub fn with_encoder_config(
+                mut self,
+                encoder_config: ::fuels::core::codec::EncoderConfig,
+            ) -&gt; MyContract&lt;A&gt; {
+                self.encoder_config = encoder_config;
+                self
+            }
+            pub async fn get_balances(
+                &amp;self,
+            ) -&gt; ::fuels::types::errors::Result&lt;
+                ::std::collections::HashMap&lt;::fuels::types::AssetId, u64&gt;,
+            &gt; {
+                ::fuels::accounts::ViewOnlyAccount::try_provider(&amp;self.account)?
                     .get_contract_balances(&amp;self.contract_id)
                     .await
                     .map_err(::std::convert::Into::into)
             }
-            pub fn methods(&amp;self) -&gt; MyContractMethods&lt;T&gt; {
+            pub fn methods(&amp;self) -&gt; MyContractMethods&lt;A&gt; {
                 MyContractMethods {
                     contract_id: self.contract_id.clone(),
                     account: self.account.clone(),
                     log_decoder: self.log_decoder.clone(),
+                    encoder_config: self.encoder_config.clone(),
                 }
             }
         }
-        pub struct MyContractMethods&lt;T: Account&gt; {
-            contract_id: Bech32ContractId,
-            account: T,
-            log_decoder: LogDecoder,
+        pub struct MyContractMethods&lt;A: ::fuels::accounts::Account&gt; {
+            contract_id: ::fuels::types::bech32::Bech32ContractId,
+            account: A,
+            log_decoder: ::fuels::core::codec::LogDecoder,
+            encoder_config: ::fuels::core::codec::EncoderConfig,
         }
-        impl&lt;T: Account&gt; MyContractMethods&lt;T&gt; {
-            #[doc = &quot;Calls the contract's `initialize_counter` function&quot;]
-            pub fn initialize_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
-                contract::method_hash(
+        impl&lt;A: ::fuels::accounts::Account&gt; MyContractMethods&lt;A&gt; {
+            #[doc = &quot; This method will read the counter from storage, increment it&quot;]
+            #[doc = &quot; and write the incremented value to storage&quot;]
+            pub fn increment_counter(
+                &amp;self,
+                value: ::core::primitive::u64,
+            ) -&gt; ::fuels::programs::calls::CallHandler&lt;
+                A,
+                ::fuels::programs::calls::ContractCall,
+                ::core::primitive::u64,
+            &gt; {
+                ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::encode_fn_selector(&quot;initialize_counter&quot;),
-                    &amp;[Tokenizable::into_token(value)],
+                    ::fuels::core::codec::encode_fn_selector(&quot;increment_counter&quot;),
+                    &amp;[::fuels::core::traits::Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
-                    ABIEncoder::new(EncoderConfig::default()),
+                    self.encoder_config.clone(),
                 )
             }
-            #[doc = &quot;Calls the contract's `increment_counter` function&quot;]
-            pub fn increment_counter(&amp;self, value: u64) -&gt; ContractCallHandler&lt;T, u64&gt; {
-                contract::method_hash(
+            pub fn initialize_counter(
+                &amp;self,
+                value: ::core::primitive::u64,
+            ) -&gt; ::fuels::programs::calls::CallHandler&lt;
+                A,
+                ::fuels::programs::calls::ContractCall,
+                ::core::primitive::u64,
+            &gt; {
+                ::fuels::programs::calls::CallHandler::new_contract_call(
                     self.contract_id.clone(),
                     self.account.clone(),
-                    codec::encode_fn_selector(&quot;increment_counter&quot;),
-                    &amp;[value.into_token()],
+                    ::fuels::core::codec::encode_fn_selector(&quot;initialize_counter&quot;),
+                    &amp;[::fuels::core::traits::Tokenizable::into_token(value)],
                     self.log_decoder.clone(),
                     false,
-                    ABIEncoder::new(EncoderConfig::default()),
+                    self.encoder_config.clone(),
                 )
             }
         }
-        impl&lt;T: Account&gt; contract::SettableContract for MyContract&lt;T&gt; {
-            fn id(&amp;self) -&gt; Bech32ContractId {
+        impl&lt;A: ::fuels::accounts::Account&gt; ::fuels::programs::calls::ContractDependency for MyContract&lt;A&gt; {
+            fn id(&amp;self) -&gt; ::fuels::types::bech32::Bech32ContractId {
                 self.contract_id.clone()
             }
-            fn log_decoder(&amp;self) -&gt; LogDecoder {
+            fn log_decoder(&amp;self) -&gt; ::fuels::core::codec::LogDecoder {
                 self.log_decoder.clone()
             }
         }
         #[derive(Clone, Debug, Default)]
         pub struct MyContractConfigurables {
             offsets_with_data: ::std::vec::Vec&lt;(u64, ::std::vec::Vec&lt;u8&gt;)&gt;,
+            encoder: ::fuels::core::codec::ABIEncoder,
         }
         impl MyContractConfigurables {
-            pub fn new() -&gt; Self {
-                ::std::default::Default::default()
+            pub fn new(encoder_config: ::fuels::core::codec::EncoderConfig) -&gt; Self {
+                Self {
+                    encoder: ::fuels::core::codec::ABIEncoder::new(encoder_config),
+                    ..::std::default::Default::default()
+                }
             }
         }
-        impl From&lt;MyContractConfigurables&gt; for Configurables {
+        impl From&lt;MyContractConfigurables&gt; for ::fuels::core::Configurables {
             fn from(config: MyContractConfigurables) -&gt; Self {
-                Configurables::new(config.offsets_with_data)
+                ::fuels::core::Configurables::new(config.offsets_with_data)
             }
         }
     }
@@ -1812,14 +1833,14 @@ half-word   byte   op                raw           notes
 <ol>
 <li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section).</li>
 <li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async.</li>
-<li><code>.unwrap()</code> the <code>Result&lt;FuelCallResponse, Error&gt;</code> returned by the contract call.</li>
+<li><code>.unwrap()</code> the <code>Result&lt;CallResponse, Error&gt;</code> returned by the contract call.</li>
 </ol>
 <!-- chaining:example:end -->
-<!-- This section should preface what the `FuelCallResponse` is -->
+<!-- This section should preface what the `CallResponse` is -->
 <!-- call_resp:example:start -->
-<p>Once you unwrap the <code>FuelCallResponse</code>, you have access to this struct:</p>
+<p>Once you unwrap the <code>CallResponse</code>, you have access to this struct:</p>
 <!-- call_resp:example:end -->
-<pre><code class="language-rust ignore">pub struct FuelCallResponse&lt;D&gt; {
+<pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
     pub value: D,
     pub receipts: Vec&lt;Receipt&gt;,
     pub gas_used: u64,
@@ -1827,7 +1848,7 @@ half-word   byte   op                raw           notes
     pub tx_id: Option&lt;Bytes32&gt;,
 }
 </code></pre>
-<!-- This section should explain the fields of the `FuelCallResponse` struct -->
+<!-- This section should explain the fields of the `CallResponse` struct -->
 <!-- call_resp_fields:example:start -->
 <p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM, E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing two components, a <code>u64</code>, and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust).</p>
 <ul>
@@ -1874,7 +1895,7 @@ let is_error = response.is_err();
         log(l);
     }
 </code></pre>
-<p>You can access the logged values in Rust by calling <code>decode_logs_with_type::&lt;T&gt;</code> from a <code>FuelCallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
+<p>You can access the logged values in Rust by calling <code>decode_logs_with_type::&lt;T&gt;</code> from a <code>CallResponse</code>, where <code>T</code> is the type of the logged variables you want to retrieve. The result will be a <code>Vec&lt;T&gt;</code>:</p>
 <pre><code class="language-rust ignore">    let contract_methods = contract_instance.methods();
     let response = contract_methods.produce_logs_variables().call().await?;
 
@@ -1946,7 +1967,7 @@ let is_error = response.is_err();
 <p>At the moment, it's up to you to know whether a contract method changes state or not, and use <code>.call()</code> or <code>.simulate()</code> accordingly.</p>
 <!-- simulate:example:end -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="calling-other-contracts"><a class="header" href="#calling-other-contracts">Calling other contracts</a></h1>
-<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>ContractCallHandler</code> provides methods that prepare those inputs and outputs for you. You have two methods that you can use: <code>with_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
+<p>If your contract method is calling other contracts you will have to add the appropriate <code>Inputs</code> and <code>Outputs</code> to your transaction. For your convenience, the <code>CallHandler</code> provides methods that prepare those inputs and outputs for you. You have two methods that you can use: <code>with_contracts(&amp;[&amp;contract_instance, ...])</code> and <code>with_contract_ids(&amp;[&amp;contract_id, ...])</code>.</p>
 <p><code>with_contracts(&amp;[&amp;contract_instance, ...])</code> requires contract instances that were created using the <code>abigen</code> macro. When setting the external contracts with this method, logs and require revert errors originating from the external contract can be propagated and decoded by the calling contract.</p>
 <pre><code class="language-rust ignore">    let response = contract_caller_instance
         .methods()
@@ -1964,22 +1985,20 @@ let is_error = response.is_err();
         .await?;
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="multiple-contract-calls"><a class="header" href="#multiple-contract-calls">Multiple contract calls</a></h1>
-<p>With <code>MultiContractCallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
+<p>With <code>CallHandler</code>, you can execute multiple contract calls within a single transaction. To achieve this, you first prepare all the contract calls that you want to bundle:</p>
 <pre><code class="language-rust ignore">        let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
 
         let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
 </code></pre>
 <p>You can also set call parameters, variable outputs, or external contracts for every contract call, as long as you don't execute it with <code>call()</code> or <code>simulate()</code>.</p>
-<p>Next, you provide the prepared calls to your <code>MultiContractCallHandler</code> and optionally configure transaction policies:</p>
-<pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        multi_call_handler
+<p>Next, you provide the prepared calls to your <code>CallHandler</code> and optionally configure transaction policies:</p>
+<pre><code class="language-rust ignore">        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 </code></pre>
 <blockquote>
-<p><strong>Note:</strong> any transaction policies configured on separate contract calls are disregarded in favor of the parameters provided to <code>MultiContractCallHandler</code>.</p>
+<p><strong>Note:</strong> any transaction policies configured on separate contract calls are disregarded in favor of the parameters provided to the multi-call <code>CallHandler</code>.</p>
 </blockquote>
 <p>Furthermore, if you need to separate submission from value retrieval for any reason, you can do so as follows:</p>
 <pre><code class="language-rust ignore">        let submitted_tx = multi_call_handler.submit().await?;
@@ -1989,12 +2008,9 @@ let is_error = response.is_err();
 <p>To get the output values of the bundled calls, you need to provide explicit type annotations when saving the result of <code>call()</code> or <code>simulate()</code> to a variable:</p>
 <pre><code class="language-rust ignore">        let (counter, array): (u64, [u64; 2]) = multi_call_handler.call().await?.value;
 </code></pre>
-<p>You can also interact with the <code>FuelCallResponse</code> by moving the type annotation to the invoked method:</p>
+<p>You can also interact with the <code>CallResponse</code> by moving the type annotation to the invoked method:</p>
 <pre><code class="language-rust ignore">        let response = multi_call_handler.call::&lt;(u64, [u64; 2])&gt;().await?;
 </code></pre>
-<blockquote>
-<p><strong>Note:</strong> The <code>MultiContractCallHandler</code> supports only one contract call that returns a heap type. Because of the way heap types are handled, this contract call needs to be at the last position, i.e., added last with <code>add_call</code>. This is a temporary limitation that we hope to lift soon. In the meantime, if you have multiple calls handling heap types, split them across multiple regular, single calls.</p>
-</blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="transaction-dependency-estimation"><a class="header" href="#transaction-dependency-estimation">Transaction dependency estimation</a></h1>
 <p>Previously, we mentioned that a contract call might require you to manually specify external contracts, variable outputs, or output messages. The SDK can also attempt to estimate and set these dependencies for you at the cost of running multiple simulated calls in the background.</p>
 <p>The following example uses a contract call that calls an external contract and later mints assets to a specified address. Calling it without including the dependencies will result in a revert:</p>
@@ -2033,7 +2049,7 @@ let is_error = response.is_err();
 <p><strong>Note:</strong> <code>estimate_tx_dependencies()</code> can also be used when working with script calls or multi calls. <code>estimate_tx_dependencies()</code> does not currently resolve the dependencies needed for logging from an external contract. For more information, see <a href="calling-contracts/./logs.html">here</a>. If no resolution was found after exhausting all simulation attempts, the last received error will be propagated. The same will happen if an error is unrelated to transaction dependencies.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="estimating-contract-call-cost"><a class="header" href="#estimating-contract-call-cost">Estimating contract call cost</a></h1>
-<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>ContractCallHandler</code> and <code>MultiContractCallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
+<p>With the function <code>estimate_transaction_cost(tolerance: Option&lt;f64&gt;, block_horizon: Option&lt;u32&gt;)</code> provided by <code>CallHandler</code>, you can get a cost estimation for a specific call. The return type, <code>TransactionCost</code>, is a struct that contains relevant information for the estimation:</p>
 <pre><code class="language-rust ignore">pub struct TransactionCost {
     pub gas_price: u64,
     pub gas_used: u64,
@@ -2052,12 +2068,10 @@ let is_error = response.is_err();
             .estimate_transaction_cost(tolerance, block_horizon) // Get estimated transaction cost
             .await?;
 </code></pre>
-<pre><code class="language-rust ignore">        let mut multi_call_handler = MultiContractCallHandler::new(wallet.clone());
-
-        let call_handler_1 = contract_methods.initialize_counter(42);
+<pre><code class="language-rust ignore">        let call_handler_1 = contract_methods.initialize_counter(42);
         let call_handler_2 = contract_methods.get_array([42; 2]);
 
-        multi_call_handler
+        let multi_call_handler = CallHandler::new_multi_call(wallet.clone())
             .add_call(call_handler_1)
             .add_call(call_handler_2);
 
@@ -2615,7 +2629,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
 <p><strong>Note</strong> In contrast to adding signers to a transaction builder, when signing a built transaction, you must ensure that the order of signatures matches the order of signed inputs. Multiple signed inputs with the same owner will have the same witness index.</p>
 </blockquote>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-contract-and-script-calls"><a class="header" href="#custom-contract-and-script-calls">Custom contract and script calls</a></h1>
-<p>When preparing a contract call via <code>ContractCallHandler</code> or a script call via <code>ScriptCallHandler</code>, the Rust SDK uses a transaction builder in the background. You can fetch this builder and customize it before submitting it to the network. After the transaction is executed successfully, you can use the corresponding <code>ContractCallHandler</code> or <code>ScriptCallHandler</code> to generate a <a href="custom-transactions/../calling-contracts/call-response.html">call response</a>. The call response can be used to decode return values and logs. Below are examples for both contract and script calls.</p>
+<p>When preparing a contract call via <code>CallHandler</code>, the Rust SDK uses a transaction builder in the background. You can fetch this builder and customize it before submitting it to the network. After the transaction is executed successfully, you can use the corresponding <code>CallHandler</code> to generate a <a href="custom-transactions/../calling-contracts/call-response.html">call response</a>. The call response can be used to decode return values and logs. Below are examples for both contract and script calls.</p>
 <h2 id="custom-contract-call"><a class="header" href="#custom-contract-call">Custom contract call</a></h2>
 <pre><code class="language-rust ignore">        let call_handler = contract_instance.methods().initialize_counter(counter);
 

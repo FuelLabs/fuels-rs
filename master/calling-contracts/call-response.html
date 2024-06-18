@@ -144,14 +144,14 @@
 <ol>
 <li>You have to choose between <code>.call()</code> and <code>.simulate()</code> (more on this in the next section).</li>
 <li>Contract calls are asynchronous, so you can choose to either <code>.await</code> it or perform concurrent tasks, making full use of Rust's async.</li>
-<li><code>.unwrap()</code> the <code>Result&lt;FuelCallResponse, Error&gt;</code> returned by the contract call.</li>
+<li><code>.unwrap()</code> the <code>Result&lt;CallResponse, Error&gt;</code> returned by the contract call.</li>
 </ol>
 <!-- chaining:example:end -->
-<!-- This section should preface what the `FuelCallResponse` is -->
+<!-- This section should preface what the `CallResponse` is -->
 <!-- call_resp:example:start -->
-<p>Once you unwrap the <code>FuelCallResponse</code>, you have access to this struct:</p>
+<p>Once you unwrap the <code>CallResponse</code>, you have access to this struct:</p>
 <!-- call_resp:example:end -->
-<pre><code class="language-rust ignore">pub struct FuelCallResponse&lt;D&gt; {
+<pre><code class="language-rust ignore">pub struct CallResponse&lt;D&gt; {
     pub value: D,
     pub receipts: Vec&lt;Receipt&gt;,
     pub gas_used: u64,
@@ -159,7 +159,7 @@
     pub tx_id: Option&lt;Bytes32&gt;,
 }
 </code></pre>
-<!-- This section should explain the fields of the `FuelCallResponse` struct -->
+<!-- This section should explain the fields of the `CallResponse` struct -->
 <!-- call_resp_fields:example:start -->
 <p>Where <code>value</code> will hold the value returned by its respective contract method, represented by the exact type returned by the FuelVM, E.g., if your contract returns a FuelVM's <code>u64</code>, <code>value</code>'s <code>D</code> will be a <code>u64</code>. If it's a FuelVM's tuple <code>(u8,bool)</code>, then <code>D</code> will be a <code>(u8,bool)</code>. If it's a custom type, for instance, a Sway struct <code>MyStruct</code> containing two components, a <code>u64</code>, and a <code>b256</code>, <code>D</code> will be a struct generated at compile-time, called <code>MyStruct</code> with <code>u64</code> and a <code>[u8; 32]</code> (the equivalent of <code>b256</code> in Rust).</p>
 <ul>
