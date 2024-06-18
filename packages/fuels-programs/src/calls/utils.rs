@@ -61,7 +61,7 @@ pub(crate) async fn transaction_builder_from_contract_calls(
     let mut asset_inputs = vec![];
     for (asset_id, amount) in &required_asset_amounts {
         let resources = account
-            .get_asset_inputs_for_amount(*asset_id, *amount)
+            .get_asset_inputs_for_amount(*asset_id, *amount, None)
             .await?;
         asset_inputs.extend(resources);
     }
@@ -79,7 +79,8 @@ pub(crate) async fn transaction_builder_from_contract_calls(
         .with_script(script)
         .with_script_data(script_data.clone())
         .with_inputs(inputs)
-        .with_outputs(outputs))
+        .with_outputs(outputs)
+        .with_gas_estimation_tolerance(0.05))
 }
 
 /// Creates a [`ScriptTransaction`] from contract calls. The internal [Transaction] is

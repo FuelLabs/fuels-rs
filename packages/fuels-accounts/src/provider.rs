@@ -40,9 +40,9 @@ use fuels_core::{
         message_proof::MessageProof,
         node_info::NodeInfo,
         transaction::{Transaction, Transactions},
-        transaction_builders::{DryRun, DryRunner},
         transaction_response::TransactionResponse,
         tx_status::TxStatus,
+        DryRun, DryRunner,
     },
 };
 pub use retry_util::{Backoff, RetryConfig};
@@ -188,8 +188,7 @@ impl Provider {
         tx.check(latest_block_height, self.consensus_parameters())?;
 
         if tx.is_using_predicates() {
-            tx = self
-                .estimate_predicates_with_node_fallback(tx, latest_chain_executor_version)
+            tx.estimate_predicates(self, Some(latest_chain_executor_version))
                 .await?;
             tx.clone()
                 .validate_predicates(self.consensus_parameters(), latest_block_height)?;
@@ -266,22 +265,6 @@ impl Provider {
         Ok(self.client.estimate_gas_price(block_horizon).await?)
     }
 
-    async fn estimate_predicates_with_node_fallback<T: Transaction>(
-        &self,
-        mut tx: T,
-        latest_chain_executor_version: u32,
-    ) -> Result<T> {
-        if latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION {
-            self.client
-                .estimate_predicates(&tx.into())
-                .await?
-                .try_into()
-        } else {
-            tx.estimate_predicates(self.consensus_parameters())?;
-            Ok(tx)
-        }
-    }
-
     pub async fn dry_run(&self, tx: impl Transaction) -> Result<TxStatus> {
         let [tx_status] = self
             .client
@@ -309,10 +292,19 @@ impl Provider {
             .collect())
     }
 
-    pub async fn dry_run_no_validation(&self, tx: impl Transaction) -> Result<TxStatus> {
+    pub async fn dry_run_opt(
+        &self,
+        tx: impl Transaction,
+        utxo_validation: bool,
+        gas_price: Option<u64>,
+    ) -> Result<TxStatus> {
         let [tx_status] = self
             .client
-            .dry_run_opt(Transactions::new().insert(tx).as_slice(), Some(false))
+            .dry_run_opt(
+                Transactions::new().insert(tx).as_slice(),
+                Some(utxo_validation),
+                gas_price,
+            )
             .await?
             .into_iter()
             .map(Into::into)
@@ -323,13 +315,15 @@ impl Provider {
         Ok(tx_status)
     }
 
-    pub async fn dry_run_no_validation_multiple(
+    pub async fn dry_run_opt_multiple(
         &self,
         transactions: Transactions,
+        utxo_validation: bool,
+        gas_price: Option<u64>,
     ) -> Result<Vec<(TxId, TxStatus)>> {
         Ok(self
             .client
-            .dry_run_opt(transactions.as_slice(), Some(false))
+            .dry_run_opt(transactions.as_slice(), Some(utxo_validation), gas_price)
             .await?
             .into_iter()
             .map(|execution_status| (execution_status.id, execution_status.into()))
@@ -607,7 +601,7 @@ impl Provider {
 
     pub async fn estimate_transaction_cost<T: Transaction>(
         &self,
-        tx: T,
+        mut tx: T,
         tolerance: Option<f64>,
         block_horizon: Option<u32>,
     ) -> Result<TransactionCost> {
@@ -619,6 +613,10 @@ impl Provider {
         let gas_used = self
             .get_gas_used_with_tolerance(tx.clone(), tolerance)
             .await?;
+
+        if tx.is_using_predicates() {
+            tx.estimate_predicates(self, None).await?;
+        }
 
         let transaction_fee = tx
             .clone()
@@ -639,7 +637,7 @@ impl Provider {
         tx: T,
         tolerance: f64,
     ) -> Result<u64> {
-        let receipts = self.dry_run_no_validation(tx).await?.take_receipts();
+        let receipts = self.dry_run_opt(tx, false, None).await?.take_receipts();
         let gas_used = self.get_script_gas_used(&receipts);
 
         Ok((gas_used as f64 * (1.0 + tolerance)) as u64)
@@ -707,7 +705,7 @@ impl DryRunner for Provider {
     async fn dry_run(&self, tx: FuelTransaction) -> Result<DryRun> {
         let [tx_execution_status] = self
             .client
-            .dry_run_opt(&vec![tx], Some(false))
+            .dry_run_opt(&vec![tx], Some(false), Some(0))
             .await?
             .try_into()
             .expect("should have only one element");
@@ -742,5 +740,27 @@ impl DryRunner for Provider {
 
     fn consensus_parameters(&self) -> &ConsensusParameters {
         self.consensus_parameters()
+    }
+
+    async fn maybe_estimate_predicates(
+        &self,
+        tx: &FuelTransaction,
+        latest_chain_executor_version: Option<u32>,
+    ) -> Result<Option<FuelTransaction>> {
+        let latest_chain_executor_version = match latest_chain_executor_version {
+            Some(exec_version) => exec_version,
+            None => {
+                self.chain_info()
+                    .await?
+                    .latest_block
+                    .header
+                    .state_transition_bytecode_version
+            }
+        };
+
+        Ok(
+            (latest_chain_executor_version > LATEST_STATE_TRANSITION_VERSION)
+                .then_some(self.client.estimate_predicates(tx).await?),
+        )
     }
 }

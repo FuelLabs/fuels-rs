@@ -35,15 +35,12 @@ use crate::{
             CreateTransaction, EstimablePredicates, ScriptTransaction, Transaction, TxPolicies,
             UpgradeTransaction, UploadTransaction,
         },
-        Address, AssetId, ContractId,
+        Address, AssetId, ContractId, DryRunner,
     },
     utils::{calculate_witnesses_size, sealed},
 };
 
-mod dry_runner;
 mod script_dry_runner;
-
-pub use dry_runner::*;
 
 #[derive(Debug, Clone, Default)]
 struct UnresolvedWitnessIndexes {
@@ -199,11 +196,11 @@ macro_rules! impl_tx_trait {
                     BuildableTransaction::build_without_signatures(fee_estimation_tb, &provider)
                         .await?;
 
-                let consensus_parameters = provider.consensus_parameters();
-
                 if tx.is_using_predicates() {
-                    tx.estimate_predicates(consensus_parameters)?;
+                    tx.estimate_predicates(&provider, None).await?;
                 }
+
+                let consensus_parameters = provider.consensus_parameters();
 
                 Ok(TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
@@ -327,18 +324,25 @@ macro_rules! impl_tx_trait {
                 Ok(padded_len as u64)
             }
 
-            async fn set_max_fee_policy<T: PoliciesField + Chargeable>(
+            async fn set_max_fee_policy<T: Clone + PoliciesField + Chargeable + Into<$tx_ty>>(
                 tx: &mut T,
                 provider: impl DryRunner,
                 block_horizon: u32,
+                is_using_predicates: bool,
             ) -> Result<()> {
+                let mut wrapper_tx: $tx_ty = tx.clone().into();
+
+                if is_using_predicates {
+                    wrapper_tx.estimate_predicates(&provider, None).await?;
+                }
+
                 let gas_price = provider.estimate_gas_price(block_horizon).await?;
                 let consensus_parameters = provider.consensus_parameters();
 
                 let tx_fee = TransactionFee::checked_from_tx(
                     &consensus_parameters.gas_costs(),
                     consensus_parameters.fee_params(),
-                    tx,
+                    &wrapper_tx.tx,
                     gas_price,
                 )
                 .ok_or(error_transaction!(
@@ -486,7 +490,8 @@ impl ScriptTransactionBuilder {
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
         let num_resolved_witnesses = self.num_witnesses()?;
-        let mut script_dry_runner = self.script_dry_runner(num_resolved_witnesses, &dry_runner);
+        let predefined_witnesses = self.witnesses.clone();
+        let mut script_dry_runner = self.script_dry_runner(predefined_witnesses, &dry_runner);
 
         let mut tx = FuelTransaction::script(
             0, // default value - will be overwritten
@@ -509,12 +514,17 @@ impl ScriptTransactionBuilder {
         self.set_script_gas_limit(&mut script_dry_runner, &mut tx)
             .await?;
 
-        Self::set_max_fee_policy(
-            &mut tx,
-            &dry_runner,
-            self.gas_price_estimation_block_horizon,
-        )
-        .await?;
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &dry_runner,
+                self.gas_price_estimation_block_horizon,
+                self.is_using_predicates(),
+            )
+            .await?;
+        }
 
         self.set_witnesses(&mut tx, dry_runner).await?;
 
@@ -537,11 +547,11 @@ impl ScriptTransactionBuilder {
         tx: &mut fuel_tx::Script,
     ) -> Result<()> {
         let has_no_code = self.script.is_empty();
-        let script_gas_limit = if has_no_code {
-            0
-        } else if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
+        let script_gas_limit = if let Some(gas_limit) = self.tx_policies.script_gas_limit() {
             // Use the user defined value even if it makes the transaction revert.
             gas_limit
+        } else if has_no_code {
+            0
         } else {
             let dry_run = if let Some(dry_run) = dry_runner.last_dry_run() {
                 // Even if the last dry run included variable outputs they only affect the transaction fee,
@@ -562,13 +572,16 @@ impl ScriptTransactionBuilder {
         Ok(())
     }
 
-    fn script_dry_runner<D>(&self, num_resolved_witnesses: u16, dry_runner: D) -> ScriptDryRunner<D>
+    fn script_dry_runner<D>(
+        &self,
+        predefined_witnesses: Vec<Witness>,
+        dry_runner: D,
+    ) -> ScriptDryRunner<D>
     where
         D: DryRunner,
     {
-        let total_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len()
-            + num_resolved_witnesses as usize;
-        ScriptDryRunner::new(dry_runner, total_witnesses)
+        let num_unresolved_witnesses = self.unresolved_witness_indexes.owner_to_idx_offset.len();
+        ScriptDryRunner::new(dry_runner, predefined_witnesses, num_unresolved_witnesses)
     }
 
     async fn add_variable_outputs(
@@ -583,6 +596,7 @@ impl ScriptTransactionBuilder {
             }
         };
         add_variable_outputs(tx, variable_outputs);
+
         Ok(())
     }
 
@@ -738,6 +752,7 @@ impl CreateTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::create(
             self.bytecode_witness_index,
@@ -749,8 +764,17 @@ impl CreateTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
             .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
@@ -832,6 +856,7 @@ impl UploadTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::upload(
             UploadBody {
@@ -847,8 +872,17 @@ impl UploadTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
             .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
@@ -938,6 +972,7 @@ impl UpgradeTransactionBuilder {
         let chain_id = provider.consensus_parameters().chain_id();
         let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
+        let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::upgrade(
             self.purpose,
@@ -947,8 +982,17 @@ impl UpgradeTransactionBuilder {
             self.witnesses,
         );
 
-        Self::set_max_fee_policy(&mut tx, provider, self.gas_price_estimation_block_horizon)
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &provider,
+                self.gas_price_estimation_block_horizon,
+                is_using_predicates,
+            )
             .await?;
+        }
 
         let missing_witnesses =
             generate_missing_witnesses(tx.id(&chain_id), &self.unresolved_signers).await?;
@@ -1180,12 +1224,11 @@ async fn generate_missing_witnesses(
 mod tests {
     use std::iter::repeat_with;
 
-    use dry_runner::DryRun;
     use fuel_crypto::Signature;
     use fuel_tx::{input::coin::CoinSigned, ConsensusParameters, UtxoId};
 
     use super::*;
-    use crate::types::{bech32::Bech32Address, message::MessageStatus};
+    use crate::types::{bech32::Bech32Address, message::MessageStatus, DryRun};
 
     #[test]
     fn storage_slots_are_sorted_when_set() {
@@ -1296,6 +1339,14 @@ mod tests {
 
         async fn estimate_gas_price(&self, _block_horizon: u32) -> Result<u64> {
             Ok(0)
+        }
+
+        async fn maybe_estimate_predicates(
+            &self,
+            _tx: &FuelTransaction,
+            _: Option<u32>,
+        ) -> Result<Option<FuelTransaction>> {
+            Ok(None)
         }
     }
 
