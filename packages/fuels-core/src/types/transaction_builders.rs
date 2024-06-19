@@ -554,7 +554,6 @@ impl ScriptTransactionBuilder {
             0
         } else {
             let dry_run = if let Some(dry_run) = dry_runner.last_dry_run() {
-                // TODO: ADD THIS TO DOCS
                 // Even if the last dry run included variable outputs they only affect the transaction fee,
                 // the script's gas usage remains unchanged. By opting into variable output estimation, the user
                 // acknowledges the issues with tx introspection and asserts that there is no introspective logic
