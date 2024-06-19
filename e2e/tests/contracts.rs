@@ -156,19 +156,18 @@ async fn test_multiple_read_calls() -> Result<()> {
     let contract_methods = contract_instance.methods();
     contract_methods.store(42).call().await?;
 
-    // Use "simulate" because the methods don't actually run a transaction, but just a dry-run
-    // We can notice here that, thanks to this, we don't generate a TransactionId collision,
-    // even if the transactions are theoretically the same.
+    // Use "simulate" because the methods don't actually
+    // run a transaction, but just a dry-run
     let stored = contract_methods
         .read()
-        .simulate(Execution::Realistic)
+        .simulate(Execution::StateReadOnly)
         .await?;
 
     assert_eq!(stored.value, 42);
 
     let stored = contract_methods
         .read()
-        .simulate(Execution::Realistic)
+        .simulate(Execution::StateReadOnly)
         .await?;
 
     assert_eq!(stored.value, 42);
