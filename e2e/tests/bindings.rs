@@ -44,7 +44,7 @@ async fn compile_bindings_from_contract_file() {
         .methods()
         .takes_int_returns_bool(42);
 
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap();
+    let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
 }
@@ -95,7 +95,7 @@ async fn compile_bindings_from_inline_contract() -> Result<()> {
     let contract_instance = SimpleContract::new(null_contract_id(), wallet);
 
     let call_handler = contract_instance.methods().takes_ints_returns_bool(42_u32);
-    let encoded_args = call_handler.contract_call.encoded_args.unwrap();
+    let encoded_args = call_handler.call.encoded_args.unwrap();
 
     assert_eq!(encoded_args, [0, 0, 0, 42]);
 
