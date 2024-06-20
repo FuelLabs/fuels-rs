@@ -1547,7 +1547,7 @@ async fn generics_test() -> Result<()> {
 }
 
 #[tokio::test]
-async fn vectors() -> Result<()> {
+async fn contract_vectors() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
