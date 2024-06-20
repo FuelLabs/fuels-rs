@@ -196,7 +196,7 @@ fn main(a: u32, b: u64) -&gt; bool {
         assert_eq!(balance, 500);
 </code></pre>
 <p>Then we can transfer assets owned by the predicate via the <a href="../accounts.html">Account</a> trait:</p>
-<pre><code class="language-rust ignore">        let amount_to_unlock = 500;
+<pre><code class="language-rust ignore">        let amount_to_unlock = 300;
 
         predicate
             .transfer(
@@ -207,14 +207,9 @@ fn main(a: u32, b: u64) -&gt; bool {
             )
             .await?;
 
-        // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
-
-        assert_eq!(balance, 0);
-
         // Second wallet balance is updated.
         let balance = second_wallet.get_asset_balance(&amp;AssetId::zeroed()).await?;
-        assert_eq!(balance, 1500);
+        assert_eq!(balance, 1300);
 </code></pre>
 <h2 id="configurable-constants"><a class="header" href="#configurable-constants">Configurable constants</a></h2>
 <p>Same as contracts and scripts, you can define configurable constants in <code>predicates</code>, which can be changed during the predicate execution. Here is an example of how the constants are defined.</p>

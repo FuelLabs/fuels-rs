@@ -454,21 +454,27 @@ pub enum Backoff {
 <pre><code class="language-rust ignore">        use fuels::prelude::*;
 
         // Setup 2 test wallets with 1 coin each
-        let num_wallets = Some(2);
-        let coins_per_wallet = Some(1);
-        let coin_amount = Some(1);
+        let num_wallets = 2;
+        let coins_per_wallet = 1;
+        let coin_amount = 2;
 
         let wallets = launch_custom_provider_and_get_wallets(
-            WalletsConfig::new(num_wallets, coins_per_wallet, coin_amount),
+            WalletsConfig::new(Some(num_wallets), Some(coins_per_wallet), Some(coin_amount)),
             None,
             None,
         )
         .await?;
 
         // Transfer the base asset with amount 1 from wallet 1 to wallet 2
+        let transfer_amount = 1;
         let asset_id = Default::default();
         let (_tx_id, _receipts) = wallets[0]
-            .transfer(wallets[1].address(), 1, asset_id, TxPolicies::default())
+            .transfer(
+                wallets[1].address(),
+                transfer_amount,
+                asset_id,
+                TxPolicies::default(),
+            )
             .await?;
 
         let wallet_2_final_coins = wallets[1].get_coins(AssetId::zeroed()).await?;
@@ -2344,7 +2350,7 @@ fn main(a: u32, b: u64) -&gt; bool {
         assert_eq!(balance, 500);
 </code></pre>
 <p>Then we can transfer assets owned by the predicate via the <a href="predicates/../accounts.html">Account</a> trait:</p>
-<pre><code class="language-rust ignore">        let amount_to_unlock = 500;
+<pre><code class="language-rust ignore">        let amount_to_unlock = 300;
 
         predicate
             .transfer(
@@ -2355,14 +2361,9 @@ fn main(a: u32, b: u64) -&gt; bool {
             )
             .await?;
 
-        // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&amp;AssetId::zeroed()).await?;
-
-        assert_eq!(balance, 0);
-
         // Second wallet balance is updated.
         let balance = second_wallet.get_asset_balance(&amp;AssetId::zeroed()).await?;
-        assert_eq!(balance, 1500);
+        assert_eq!(balance, 1300);
 </code></pre>
 <h2 id="configurable-constants-2"><a class="header" href="#configurable-constants-2">Configurable constants</a></h2>
 <p>Same as contracts and scripts, you can define configurable constants in <code>predicates</code>, which can be changed during the predicate execution. Here is an example of how the constants are defined.</p>
@@ -2504,7 +2505,7 @@ fn main(signatures: [B512; 3]) -&gt; bool {
             .with_data(predicate_data);
 </code></pre>
 <p>Next, we transfer some assets from a wallet to the created predicate. We also confirm that the funds are indeed transferred.</p>
-<pre><code class="language-rust ignore">        let amount_to_predicate = 512;
+<pre><code class="language-rust ignore">        let amount_to_predicate = 500;
 
         wallet
             .transfer(
@@ -2519,23 +2520,18 @@ fn main(signatures: [B512; 3]) -&gt; bool {
         assert_eq!(predicate_balance, amount_to_predicate);
 </code></pre>
 <p>We can use the <code>transfer</code> method from the <a href="predicates/../accounts.html">Account</a> trait to transfer the assets. If the predicate data is correct, the <code>receiver</code> wallet will get the funds, and we will verify that the amount is correct.</p>
-<pre><code class="language-rust ignore">        predicate
+<pre><code class="language-rust ignore">        let amount_to_receiver = 300;
+        predicate
             .transfer(
                 receiver.address(),
-                amount_to_predicate,
+                amount_to_receiver,
                 asset_id,
                 TxPolicies::default(),
             )
             .await?;
 
         let receiver_balance_after = receiver.get_asset_balance(&amp;asset_id).await?;
-        assert_eq!(
-            initial_balance + amount_to_predicate,
-            receiver_balance_after
-        );
-
-        let predicate_balance = predicate.get_asset_balance(&amp;asset_id).await?;
-        assert_eq!(predicate_balance, 0);
+        assert_eq!(initial_balance + amount_to_receiver, receiver_balance_after);
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="custom-transactions"><a class="header" href="#custom-transactions">Custom transactions</a></h1>
 <p>Until now, we have used helpers to create transactions, send them with a provider, and parse the results. However, sometimes we must make custom transactions with specific inputs, outputs, witnesses, etc. In the next chapter, we will show how to use the Rust SDKs transaction builders to accomplish this.</p>
@@ -3842,7 +3838,7 @@ impl LiquidityPool for Contract {
 </code></pre>
 <p>We prepare two wallets with randomized addresses. Next, we want one of our wallets to have some random assets, so we set them up with <code>setup_multiple_assets_coins()</code>. Having created the coins, we can start a provider and assign it to the previously created wallets.</p>
 <p>Transactions require us to define input and output coins. Let's assume we do not know the assets owned by <code>wallet_1</code>. We retrieve its balances, i.e. tuples consisting of a string representing the asset ID and the respective amount. This lets us use the helpers <code>get_asset_inputs_for_amount()</code>, <code>get_asset_outputs_for_amount()</code> to create the appropriate inputs and outputs.</p>
-<p>For the sake of simplicity, we avoid transferring the base asset so we don't have to worry about transaction fees:</p>
+<p>We transfer only a part of the base asset balance so that the rest can cover transaction fees:</p>
 <pre><code class="language-rust ignore">        let balances = wallet_1.get_balances().await?;
 
         let mut inputs = vec![];
@@ -3850,17 +3846,18 @@ impl LiquidityPool for Contract {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&amp;id_string)?;
 
-            // leave the base asset to cover transaction fees
-            if id == *provider.base_asset_id() {
-                continue;
-            }
-
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
                 .await?;
             inputs.extend(input);
 
-            let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
+            // we don't transfer the full base asset so we can cover fees
+            let output = if id == *provider.base_asset_id() {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+            } else {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+            };
+
             outputs.extend(output);
         }
 </code></pre>
@@ -3875,9 +3872,13 @@ impl LiquidityPool for Contract {
 
         let balances = wallet_2.get_balances().await?;
 
-        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
-        for (_, balance) in balances {
-            assert_eq!(balance, AMOUNT);
+        assert_eq!(balances.len(), NUM_ASSETS as usize);
+        for (id, balance) in balances {
+            if id == provider.base_asset_id().to_string() {
+                assert_eq!(balance, AMOUNT / 2);
+            } else {
+                assert_eq!(balance, AMOUNT);
+            }
         }
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="debugging"><a class="header" href="#debugging">Debugging</a></h1>
