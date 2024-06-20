@@ -77,7 +77,7 @@ pub enum ScriptContext {
 pub enum Context {
     /// Transaction is estimated and signatures are automatically added.
     #[default]
-    Normal,
+    Complete,
     /// Transaction is estimated but no signatures are added.
     /// Building without signatures will set the witness indexes of signed coins in the
     /// order as they appear in the inputs. Multiple coins with the same owner will have
@@ -501,7 +501,9 @@ impl ScriptTransactionBuilder {
 
                 self.resolve_fuel_tx(&provider).await?
             }
-            ScriptContext::StateReadOnly => self.resolve_fuel_tx_for_state_reading(provider)?,
+            ScriptContext::StateReadOnly => {
+                self.resolve_fuel_tx_for_state_reading(provider).await?
+            }
         };
 
         Ok(ScriptTransaction {
@@ -548,7 +550,7 @@ impl ScriptTransactionBuilder {
         Ok(tx)
     }
 
-    fn resolve_fuel_tx_for_state_reading(self, dry_runner: impl DryRunner) -> Result<Script> {
+    async fn resolve_fuel_tx_for_state_reading(self, dry_runner: impl DryRunner) -> Result<Script> {
         let predefined_witnesses = self.witnesses.clone();
         let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
@@ -570,6 +572,18 @@ impl ScriptTransactionBuilder {
                 true
             };
 
+        if let Some(max_fee) = self.tx_policies.max_fee() {
+            tx.policies_mut().set(PolicyType::MaxFee, Some(max_fee));
+        } else {
+            Self::set_max_fee_policy(
+                &mut tx,
+                &dry_runner,
+                self.gas_price_estimation_block_horizon,
+                self.is_using_predicates(),
+            )
+            .await?;
+        }
+
         script_tx_estimator.prepare_for_estimation(&mut tx, should_saturate_variable_outputs);
 
         Ok(tx)
@@ -582,6 +596,7 @@ impl ScriptTransactionBuilder {
         )
         .await?;
         *tx.witnesses_mut() = [self.witnesses, missing_witnesses].concat();
+
         Ok(())
     }
 
@@ -794,7 +809,7 @@ impl CreateTransactionBuilder {
         self.set_witness_indexes()?;
 
         let tx = match context {
-            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::Complete => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
                 self.unresolved_signers = Default::default();
 
@@ -913,7 +928,7 @@ impl UploadTransactionBuilder {
         self.set_witness_indexes()?;
 
         let tx = match context {
-            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::Complete => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
                 self.unresolved_signers = Default::default();
 
@@ -1044,7 +1059,7 @@ impl UpgradeTransactionBuilder {
         self.set_witness_indexes()?;
 
         let tx = match context {
-            Context::Normal => self.resolve_fuel_tx(&provider).await?,
+            Context::Complete => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
                 self.unresolved_signers = Default::default();
 

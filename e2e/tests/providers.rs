@@ -1002,7 +1002,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
             UploadTransactionBuilder::prepare_subsection_upload(subsection, TxPolicies::default());
         wallet.add_witnesses(&mut builder)?;
         wallet.adjust_for_fee(&mut builder, 0).await?;
-        let tx = builder.build(&provider, Context::Normal).await?;
+        let tx = builder.build(&provider, Context::Complete).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
     }
@@ -1011,7 +1011,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
         UpgradeTransactionBuilder::prepare_state_transition_upgrade(root, TxPolicies::default());
     wallet.add_witnesses(&mut builder)?;
     wallet.adjust_for_fee(&mut builder, 0).await?;
-    let tx = builder.build(provider.clone(), Context::Normal).await?;
+    let tx = builder.build(provider.clone(), Context::Complete).await?;
 
     provider.send_transaction(tx).await?;
 

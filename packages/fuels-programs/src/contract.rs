@@ -97,7 +97,7 @@ impl Contract {
 
         let provider = account.try_provider()?;
 
-        let tx = tb.build(provider, Context::Normal).await?;
+        let tx = tb.build(provider, Context::Complete).await?;
 
         provider
             .send_transaction_and_await_commit(tx)
