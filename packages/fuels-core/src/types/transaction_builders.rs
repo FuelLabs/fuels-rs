@@ -61,7 +61,7 @@ impl sealed::Sealed for ScriptTransactionBuilder {}
 pub enum ScriptContext {
     /// Transaction is estimated and signatures are automatically added.
     #[default]
-    Normal,
+    Complete,
     /// Transaction is estimated but no signatures are added.
     /// Building without signatures will set the witness indexes of signed coins in the
     /// order as they appear in the inputs. Multiple coins with the same owner will have
@@ -265,7 +265,10 @@ macro_rules! impl_tx_trait {
         }
 
         impl $ty {
-            fn set_witness_indexes(&mut self) {
+            fn set_witness_indexes(&mut self) -> Result<()> {
+                // Take into consideration witnesses that are already added
+                // when creating the indexes for the unresolved ones
+                let num_witnesses = self.num_witnesses()?;
                 self.unresolved_witness_indexes.owner_to_idx_offset = self
                     .inputs()
                     .iter()
@@ -276,8 +279,10 @@ macro_rules! impl_tx_trait {
                     .unique()
                     .cloned()
                     .enumerate()
-                    .map(|(idx, owner)| (owner, idx as u64))
+                    .map(|(idx, owner)| (owner, (num_witnesses as usize + idx) as u64))
                     .collect();
+
+                Ok(())
             }
 
             fn generate_fuel_policies(&self) -> Result<Policies> {
@@ -487,11 +492,11 @@ impl ScriptTransactionBuilder {
         context: ScriptContext,
     ) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        self.set_witness_indexes()?;
 
         let tx = match context {
-            ScriptContext::Normal => self.resolve_fuel_tx(&provider).await?,
+            ScriptContext::Complete => self.resolve_fuel_tx(&provider).await?,
             ScriptContext::NoSignatures => {
-                self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
 
                 self.resolve_fuel_tx(&provider).await?
@@ -506,7 +511,6 @@ impl ScriptTransactionBuilder {
     }
 
     async fn resolve_fuel_tx(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let num_resolved_witnesses = self.num_witnesses()?;
         let predefined_witnesses = self.witnesses.clone();
         let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
@@ -515,11 +519,7 @@ impl ScriptTransactionBuilder {
             self.script.clone(),
             self.script_data.clone(),
             self.generate_fuel_policies()?,
-            resolve_fuel_inputs(
-                self.inputs.clone(),
-                num_resolved_witnesses,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs.clone(), &self.unresolved_witness_indexes)?,
             self.outputs.clone(),
             vec![],
         );
@@ -549,7 +549,6 @@ impl ScriptTransactionBuilder {
     }
 
     fn resolve_fuel_tx_for_state_reading(self, dry_runner: impl DryRunner) -> Result<Script> {
-        let num_resolved_witnesses = self.num_witnesses()?;
         let predefined_witnesses = self.witnesses.clone();
         let mut script_tx_estimator = self.script_tx_estimator(predefined_witnesses, &dry_runner);
 
@@ -558,11 +557,7 @@ impl ScriptTransactionBuilder {
             self.script.clone(),
             self.script_data.clone(),
             self.generate_fuel_policies()?,
-            resolve_fuel_inputs(
-                self.inputs.clone(),
-                num_resolved_witnesses,
-                &self.unresolved_witness_indexes,
-            )?,
+            resolve_fuel_inputs(self.inputs.clone(), &self.unresolved_witness_indexes)?,
             self.outputs.clone(),
             vec![],
         );
@@ -796,12 +791,13 @@ impl CreateTransactionBuilder {
         context: Context,
     ) -> Result<CreateTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        self.set_witness_indexes()?;
 
         let tx = match context {
             Context::Normal => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
-                self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
+
                 self.resolve_fuel_tx(&provider).await?
             }
         };
@@ -814,7 +810,6 @@ impl CreateTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Create> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
 
@@ -823,7 +818,7 @@ impl CreateTransactionBuilder {
             policies,
             self.salt,
             self.storage_slots,
-            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            resolve_fuel_inputs(self.inputs, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -915,12 +910,13 @@ impl UploadTransactionBuilder {
         context: Context,
     ) -> Result<UploadTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        self.set_witness_indexes()?;
 
         let tx = match context {
             Context::Normal => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
-                self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
+
                 self.resolve_fuel_tx(&provider).await?
             }
         };
@@ -933,7 +929,6 @@ impl UploadTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upload> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
 
@@ -946,7 +941,7 @@ impl UploadTransactionBuilder {
                 proof_set: self.proof_set,
             },
             policies,
-            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            resolve_fuel_inputs(self.inputs, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -1046,11 +1041,13 @@ impl UpgradeTransactionBuilder {
         context: Context,
     ) -> Result<UpgradeTransaction> {
         let is_using_predicates = self.is_using_predicates();
+        self.set_witness_indexes()?;
+
         let tx = match context {
             Context::Normal => self.resolve_fuel_tx(&provider).await?,
             Context::NoSignatures => {
-                self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
+
                 self.resolve_fuel_tx(&provider).await?
             }
         };
@@ -1062,14 +1059,13 @@ impl UpgradeTransactionBuilder {
 
     async fn resolve_fuel_tx(self, provider: impl DryRunner) -> Result<Upgrade> {
         let chain_id = provider.consensus_parameters().chain_id();
-        let num_witnesses = self.num_witnesses()?;
         let policies = self.generate_fuel_policies()?;
         let is_using_predicates = self.is_using_predicates();
 
         let mut tx = FuelTransaction::upgrade(
             self.purpose,
             policies,
-            resolve_fuel_inputs(self.inputs, num_witnesses, &self.unresolved_witness_indexes)?,
+            resolve_fuel_inputs(self.inputs, &self.unresolved_witness_indexes)?,
             self.outputs,
             self.witnesses,
         );
@@ -1143,14 +1139,13 @@ impl UpgradeTransactionBuilder {
 /// data offsets for predicates and set witness indexes for signed coins.
 fn resolve_fuel_inputs(
     inputs: Vec<Input>,
-    num_witnesses: u16,
     unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<Vec<FuelInput>> {
     inputs
         .into_iter()
         .map(|input| match input {
             Input::ResourceSigned { resource } => {
-                resolve_signed_resource(resource, num_witnesses, unresolved_witness_indexes)
+                resolve_signed_resource(resource, unresolved_witness_indexes)
             }
             Input::ResourcePredicate {
                 resource,
@@ -1176,7 +1171,6 @@ fn resolve_fuel_inputs(
 
 fn resolve_signed_resource(
     resource: CoinType,
-    num_witnesses: u16,
     unresolved_witness_indexes: &UnresolvedWitnessIndexes,
 ) -> Result<FuelInput> {
     match resource {
@@ -1190,9 +1184,7 @@ fn resolve_signed_resource(
                     Builder,
                     "signature missing for coin with owner: `{owner:?}`"
                 ))
-                .map(|witness_idx_offset| {
-                    create_coin_input(coin, num_witnesses + *witness_idx_offset as u16)
-                })
+                .map(|witness_idx_offset| create_coin_input(coin, *witness_idx_offset as u16))
         }
         CoinType::Message(message) => {
             let recipient = &message.recipient;
@@ -1205,7 +1197,7 @@ fn resolve_signed_resource(
                     "signature missing for message with recipient: `{recipient:?}`"
                 ))
                 .map(|witness_idx_offset| {
-                    create_coin_message_input(message, num_witnesses + *witness_idx_offset as u16)
+                    create_coin_message_input(message, *witness_idx_offset as u16)
                 })
         }
     }

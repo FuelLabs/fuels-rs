@@ -193,7 +193,7 @@ pub trait Account: ViewOnlyAccount {
         self.adjust_for_fee(&mut tx_builder, used_base_amount)
             .await?;
 
-        let tx = tx_builder.build(provider, ScriptContext::Normal).await?;
+        let tx = tx_builder.build(provider, ScriptContext::Complete).await?;
         let tx_id = tx.id(provider.chain_id());
 
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -255,7 +255,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, balance).await?;
 
-        let tx = tb.build(provider, ScriptContext::Normal).await?;
+        let tx = tb.build(provider, ScriptContext::Complete).await?;
 
         let tx_id = tx.id(provider.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -291,7 +291,7 @@ pub trait Account: ViewOnlyAccount {
         self.add_witnesses(&mut tb)?;
         self.adjust_for_fee(&mut tb, amount).await?;
 
-        let tx = tb.build(provider, ScriptContext::Normal).await?;
+        let tx = tb.build(provider, ScriptContext::Complete).await?;
 
         let tx_id = tx.id(provider.chain_id());
         let tx_status = provider.send_transaction_and_await_commit(tx).await?;
@@ -420,7 +420,7 @@ mod tests {
         // ANCHOR_END: sign_tb
 
         let tx = tb
-            .build(&MockDryRunner::default(), ScriptContext::Normal)
+            .build(&MockDryRunner::default(), ScriptContext::Complete)
             .await?; // Resolve signatures and add corresponding witness indexes
 
         // Extract the signature from the tx witnesses

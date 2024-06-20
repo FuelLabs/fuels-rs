@@ -763,7 +763,7 @@ async fn create_transfer(
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(wallet.try_provider()?, ScriptContext::Normal)
+    tb.build(wallet.try_provider()?, ScriptContext::Complete)
         .await
 }
 
@@ -823,7 +823,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(wallet.try_provider()?, ScriptContext::Normal)
+    tb.build(wallet.try_provider()?, ScriptContext::Complete)
         .await
 }
 
@@ -922,7 +922,7 @@ async fn test_build_with_provider() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
 
-    let tx = tb.build(provider, ScriptContext::Normal).await?;
+    let tx = tb.build(provider, ScriptContext::Complete).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -956,7 +956,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
-    let tx = tb.build(provider, ScriptContext::Normal).await?;
+    let tx = tb.build(provider, ScriptContext::Complete).await?;
     let tx_id = tx.id(provider.chain_id());
 
     provider.send_transaction(tx).await?;
@@ -1126,7 +1126,7 @@ async fn tx_with_witness_data() -> Result<()> {
 
     let tx = tb
         .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
-        .build(provider, ScriptContext::Normal)
+        .build(provider, ScriptContext::Complete)
         .await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;

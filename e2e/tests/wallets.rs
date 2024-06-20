@@ -142,7 +142,7 @@ async fn adjust_fee_empty_transaction() -> Result<()> {
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
     let tx = tb
-        .build(wallet.try_provider()?, ScriptContext::Normal)
+        .build(wallet.try_provider()?, ScriptContext::Complete)
         .await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -188,7 +188,7 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
     wallet.adjust_for_fee(&mut tb, base_amount).await?;
 
     let tx = tb
-        .build(wallet.try_provider()?, ScriptContext::Normal)
+        .build(wallet.try_provider()?, ScriptContext::Complete)
         .await?;
 
     let zero_utxo_id = UtxoId::new(Bytes32::zeroed(), 0);
@@ -469,7 +469,7 @@ async fn test_transfer_with_multiple_signatures() -> Result<()> {
         tb.add_signer(wallet.clone())?;
     }
 
-    let tx = tb.build(provider, ScriptContext::Normal).await?;
+    let tx = tb.build(provider, ScriptContext::Complete).await?;
     provider.send_transaction_and_await_commit(tx).await?;
 
     assert_eq!(

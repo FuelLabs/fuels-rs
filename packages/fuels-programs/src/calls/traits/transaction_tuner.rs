@@ -96,7 +96,7 @@ impl TransactionTuner for ScriptCall {
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
 
-        tb.build(account.try_provider()?, ScriptContext::Normal)
+        tb.build(account.try_provider()?, ScriptContext::Complete)
             .await
     }
 }
