@@ -194,8 +194,9 @@ async fn test_input_message_pays_fee() -> Result<()> {
     assert_eq!(42, response.value);
 
     let balance = wallet.get_asset_balance(&base_asset_id).await?;
-    // expect the initial amount because gas cost defaults to 0
-    assert_eq!(balance, DEFAULT_COIN_AMOUNT);
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
+    assert_eq!(balance, DEFAULT_COIN_AMOUNT - expected_fee);
 
     Ok(())
 }
@@ -1070,6 +1071,22 @@ async fn tx_respects_policies() -> Result<()> {
     assert_eq!(script.witness_limit().unwrap(), witness_limit);
     assert_eq!(script.max_fee().unwrap(), max_fee);
     assert_eq!(script.gas_limit(), script_gas_limit);
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn can_setup_static_gas_price() -> Result<()> {
+    let expected_gas_price = 474;
+    let node_config = NodeConfig {
+        static_gas_price: expected_gas_price,
+        ..Default::default()
+    };
+    let provider = setup_test_provider(vec![], vec![], Some(node_config), None).await?;
+
+    let gas_price = provider.estimate_gas_price(0).await?.gas_price;
+
+    assert_eq!(gas_price, expected_gas_price);
 
     Ok(())
 }

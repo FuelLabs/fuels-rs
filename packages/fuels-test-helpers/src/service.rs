@@ -89,6 +89,7 @@ impl FuelService {
             utxo_validation: node_config.utxo_validation,
             debug: node_config.debug,
             block_production: node_config.block_production.into(),
+            static_gas_price: node_config.static_gas_price,
             ..ServiceConfig::local_node()
         }
     }

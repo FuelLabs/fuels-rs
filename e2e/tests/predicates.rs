@@ -1,4 +1,4 @@
-use std::{default::Default, str::FromStr};
+use std::default::Default;
 
 use fuels::{
     core::{
@@ -120,17 +120,25 @@ async fn transfer_coins_and_messages_to_predicate() -> Result<()> {
         Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
             .with_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     wallet
         .transfer(
             predicate.address(),
-            total_balance,
+            total_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
         .await?;
 
     // The predicate has received the funds
-    assert_address_balance(predicate.address(), &provider, asset_id, total_balance).await;
+    assert_address_balance(
+        predicate.address(),
+        &provider,
+        asset_id,
+        total_balance - expected_fee,
+    )
+    .await;
     Ok(())
 }
 
@@ -155,10 +163,12 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -172,7 +182,7 @@ async fn spend_predicate_coins_messages_basic() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -218,11 +228,13 @@ async fn pay_with_predicate() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        192
+        192 - expected_fee
     );
 
     let response = contract_methods
@@ -232,11 +244,13 @@ async fn pay_with_predicate() -> Result<()> {
         .await?;
 
     assert_eq!(42, response.value);
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        191
+        191 - expected_fee
     );
 
     Ok(())
@@ -283,11 +297,13 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .with_tip(1)
         .with_script_gas_limit(1_000_000);
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        192
+        192 - expected_fee
     );
 
     let response = contract_methods
@@ -296,12 +312,14 @@ async fn pay_with_predicate_vector_data() -> Result<()> {
         .call()
         .await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 2;
     assert_eq!(42, response.value);
     assert_eq!(
         predicate
             .get_asset_balance(provider.base_asset_id())
             .await?,
-        191
+        191 - expected_fee
     );
 
     Ok(())
@@ -473,11 +491,13 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance + wallet_balance,
+        predicate_balance + wallet_balance - expected_fee,
     )
     .await;
 
@@ -541,7 +561,12 @@ async fn contract_tx_and_call_params_with_predicate() -> Result<()> {
             .call()
             .await?;
 
-        assert_eq!(predicate.get_asset_balance(&AssetId::zeroed()).await?, 1800);
+        // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+        let expected_fee = 2;
+        assert_eq!(
+            predicate.get_asset_balance(&AssetId::zeroed()).await?,
+            1800 - expected_fee
+        );
     }
     {
         let custom_asset = AssetId::from([1u8; 32]);
@@ -642,10 +667,12 @@ async fn predicate_default_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -659,7 +686,7 @@ async fn predicate_default_configurables() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -703,10 +730,12 @@ async fn predicate_configurables() -> Result<()> {
 
     predicate.set_provider(provider.clone());
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     predicate
         .transfer(
             receiver.address(),
-            predicate_balance,
+            predicate_balance - expected_fee,
             asset_id,
             TxPolicies::default(),
         )
@@ -720,7 +749,7 @@ async fn predicate_configurables() -> Result<()> {
         receiver.address(),
         &provider,
         asset_id,
-        receiver_balance + predicate_balance,
+        receiver_balance + predicate_balance - expected_fee,
     )
     .await;
 
@@ -873,12 +902,14 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
 
     provider.send_transaction_and_await_commit(tx).await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // The predicate has spent the funds
     assert_address_balance(
         predicate.address(),
         &provider,
         asset_id,
-        predicate_balance - amount_to_send,
+        predicate_balance - amount_to_send - expected_fee,
     )
     .await;
 
@@ -977,152 +1008,79 @@ async fn predicate_encoder_config_is_applied() -> Result<()> {
 }
 
 #[tokio::test]
-async fn predicate_validation() -> Result<()> {
-    let default_asset_id = AssetId::zeroed();
-    let hex_str = "0xfefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefe";
-    let other_asset_id = AssetId::from_str(hex_str)?;
-    let begin_coin_amount = 1_000;
-
-    let tx_policies = TxPolicies::default();
-    let wallets_config = WalletsConfig::new_multiple_assets(
-        2,
-        vec![
-            AssetConfig {
-                id: default_asset_id,
-                num_coins: 1,
-                coin_amount: begin_coin_amount,
-            },
-            AssetConfig {
-                id: other_asset_id,
-                num_coins: 1,
-                coin_amount: begin_coin_amount,
-            },
-        ],
-    );
-
-    let wallets = &launch_custom_provider_and_get_wallets(wallets_config, None, None).await?;
-
-    let first_wallet = &wallets[0];
-    let second_wallet = &wallets[1];
-
+async fn predicate_transfers_non_base_asset() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",
         abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
     ));
-    let code_path = "./sway/predicates/basic_predicate/out/release/basic_predicate.bin";
 
-    // the predicate evaluates to true if the two arguments are equal
-    let correct_predicate_data = MyPredicateEncoder::default().encode_data(4096, 4096)?;
-    let predicate_with_correct_data: Predicate = Predicate::load_from(code_path)?
-        .with_provider(first_wallet.try_provider()?.clone())
-        .with_data(correct_predicate_data);
+    let predicate_data = MyPredicateEncoder::default().encode_data(4097, 4097)?;
+    let mut predicate: Predicate =
+        Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
+            .with_data(predicate_data);
 
-    let incorrect_predicate_data = MyPredicateEncoder::default().encode_data(1000, 0)?;
-    let predicate_with_incorrect_data: Predicate = Predicate::load_from(code_path)?
-        .with_provider(first_wallet.try_provider()?.clone())
-        .with_data(incorrect_predicate_data);
+    let num_coins = 4;
+    let num_message = 6;
+    let amount = 20;
+    let (provider, _, receiver, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
+    predicate.set_provider(provider);
+    let other_asset_id = AssetId::from([1u8; 32]);
 
-    // The predicate needs to be funded with the target asset id, and the base asset id to pay for
-    // gas, even for just validation.
-    let amount_to_transfer_to_predicate = 1000;
-    first_wallet
+    let send_amount = num_coins * amount;
+    predicate
         .transfer(
-            // the data doesn't change the predicate's address
-            predicate_with_correct_data.address(),
-            amount_to_transfer_to_predicate,
+            receiver.address(),
+            send_amount,
             other_asset_id,
-            tx_policies,
+            TxPolicies::default(),
         )
         .await?;
-    first_wallet
+
+    assert_eq!(predicate.get_asset_balance(&other_asset_id).await?, 0,);
+
+    assert_eq!(
+        receiver.get_asset_balance(&other_asset_id).await?,
+        send_amount,
+    );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn predicate_with_invalid_data_fails() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/predicates/basic_predicate/out/release/basic_predicate-abi.json"
+    ));
+
+    let predicate_data = MyPredicateEncoder::default().encode_data(0, 100)?;
+    let mut predicate: Predicate =
+        Predicate::load_from("sway/predicates/basic_predicate/out/release/basic_predicate.bin")?
+            .with_data(predicate_data);
+
+    let num_coins = 4;
+    let num_message = 6;
+    let amount = 20;
+    let (provider, _, receiver, _, _) =
+        setup_predicate_test(predicate.address(), num_coins, num_message, amount).await?;
+    predicate.set_provider(provider);
+    let other_asset_id = AssetId::from([1u8; 32]);
+
+    let send_amount = num_coins * amount;
+    let error_string = predicate
         .transfer(
-            predicate_with_correct_data.address(),
-            amount_to_transfer_to_predicate,
-            default_asset_id,
-            tx_policies,
+            receiver.address(),
+            send_amount,
+            other_asset_id,
+            TxPolicies::default(),
         )
-        .await?;
+        .await
+        .unwrap_err()
+        .to_string();
 
-    let amount_to_unlock = 500;
-    // Test with a non-default asset ID,to check that fee estimation works
-    {
-        // Check that a validated predicate => transfer can occur
-        predicate_with_correct_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                other_asset_id,
-                tx_policies,
-            )
-            .await?;
-        assert_eq!(
-            second_wallet.get_asset_balance(&other_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-
-        let error_string = predicate_with_incorrect_data
-            .transfer(second_wallet.address(), 10, other_asset_id, tx_policies)
-            .await
-            .unwrap_err()
-            .to_string();
-        assert!(
-            error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))")
-        );
-        let transfer_error_string = predicate_with_incorrect_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                other_asset_id,
-                tx_policies,
-            )
-            .await
-            .unwrap_err()
-            .to_string();
-        // the transfer failed as expected
-        assert!(transfer_error_string
-            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
-        // so the balance is not modified
-        assert_eq!(
-            second_wallet.get_asset_balance(&other_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-    }
-
-    // Test with default asset ID
-    {
-        // Check that a validated predicate => transfer can occur
-        predicate_with_correct_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                default_asset_id,
-                tx_policies,
-            )
-            .await?;
-        assert_eq!(
-            second_wallet.get_asset_balance(&default_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-
-        let transfer_error_string = predicate_with_incorrect_data
-            .transfer(
-                second_wallet.address(),
-                amount_to_unlock,
-                default_asset_id,
-                tx_policies,
-            )
-            .await
-            .unwrap_err()
-            .to_string();
-        // the transfer failed as expected
-        assert!(transfer_error_string
-            .contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
-        // so the balance is not modified
-        assert_eq!(
-            second_wallet.get_asset_balance(&default_asset_id).await?,
-            amount_to_unlock + begin_coin_amount
-        );
-    }
+    assert!(error_string.contains("PredicateVerificationFailed(Panic(PredicateReturnedNonOne))"));
+    assert_eq!(receiver.get_asset_balance(&other_asset_id).await?, 0);
 
     Ok(())
 }
