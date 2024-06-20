@@ -168,17 +168,18 @@ mod tests {
         for (id_string, amount) in balances {
             let id = AssetId::from_str(&id_string)?;
 
-            // leave the base asset to cover transaction fees
-            if id == *provider.base_asset_id() {
-                continue;
-            }
-
             let input = wallet_1
                 .get_asset_inputs_for_amount(id, amount, None)
                 .await?;
             inputs.extend(input);
 
-            let output = wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount);
+            // we don't transfer the full base asset so we can cover fees
+            let output = if id == *provider.base_asset_id() {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount / 2)
+            } else {
+                wallet_1.get_asset_outputs_for_amount(wallet_2.address(), id, amount)
+            };
+
             outputs.extend(output);
         }
         // ANCHOR_END: transfer_multiple_input
@@ -194,9 +195,13 @@ mod tests {
 
         let balances = wallet_2.get_balances().await?;
 
-        assert_eq!(balances.len(), (NUM_ASSETS - 1) as usize);
-        for (_, balance) in balances {
-            assert_eq!(balance, AMOUNT);
+        assert_eq!(balances.len(), NUM_ASSETS as usize);
+        for (id, balance) in balances {
+            if id == provider.base_asset_id().to_string() {
+                assert_eq!(balance, AMOUNT / 2);
+            } else {
+                assert_eq!(balance, AMOUNT);
+            }
         }
         // ANCHOR_END: transfer_multiple_transaction
 

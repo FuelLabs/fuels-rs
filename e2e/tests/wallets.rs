@@ -211,38 +211,36 @@ async fn adjust_fee_resources_to_transfer_with_base_asset() -> Result<()> {
 
 #[tokio::test]
 async fn test_transfer() -> Result<()> {
-    // Create the actual wallets/signers
     let mut wallet_1 = WalletUnlocked::new_random(None);
     let mut wallet_2 = WalletUnlocked::new_random(None).lock();
 
-    // Setup a coin for each wallet
+    let amount = 100;
+    let num_coins = 1;
     let base_asset_id = AssetId::zeroed();
-    let mut coins_1 = setup_single_asset_coins(wallet_1.address(), base_asset_id, 1, 1);
-    let coins_2 = setup_single_asset_coins(wallet_2.address(), base_asset_id, 1, 1);
+    let mut coins_1 =
+        setup_single_asset_coins(wallet_1.address(), base_asset_id, num_coins, amount);
+    let coins_2 = setup_single_asset_coins(wallet_2.address(), base_asset_id, num_coins, amount);
     coins_1.extend(coins_2);
 
-    // Setup a provider and node with both set of coins
     let provider = setup_test_provider(coins_1, vec![], None, None).await?;
-
-    // Set provider for wallets
     wallet_1.set_provider(provider.clone());
     wallet_2.set_provider(provider);
 
-    // Transfer 1 from wallet 1 to wallet 2
     let _receipts = wallet_1
         .transfer(
             wallet_2.address(),
-            1,
+            amount / 2,
             Default::default(),
             TxPolicies::default(),
         )
         .await
         .unwrap();
 
-    let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
+    let wallet_2_coins = wallet_2.get_coins(base_asset_id).await.unwrap();
+    let wallet_2_balance = wallet_2.get_asset_balance(&base_asset_id).await?;
+    assert_eq!(wallet_2_coins.len(), 2);
+    assert_eq!(wallet_2_balance, amount + amount / 2);
 
-    // Check that wallet two now has two coins
-    assert_eq!(wallet_2_final_coins.len(), 2);
     Ok(())
 }
 
@@ -323,9 +321,14 @@ async fn transfer_coins_with_change() -> Result<()> {
         .get_spendable_resources(base_asset_id, 1, None)
         .await?;
 
+    // TODO: https://github.com/FuelLabs/fuels-rs/issues/1394
+    let expected_fee = 1;
     // Assert that we've sent 2 from wallet 1, resulting in an amount of 3 in wallet 1.
     let resulting_amount = wallet_1_final_coins.first().unwrap();
-    assert_eq!(resulting_amount.amount(), AMOUNT - SEND_AMOUNT);
+    assert_eq!(
+        resulting_amount.amount(),
+        AMOUNT - SEND_AMOUNT - expected_fee
+    );
 
     let wallet_2_final_coins = wallet_2.get_coins(base_asset_id).await?;
     assert_eq!(wallet_2_final_coins.len(), 1);
