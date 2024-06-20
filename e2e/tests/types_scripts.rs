@@ -330,7 +330,7 @@ async fn script_handles_u256() -> Result<()> {
 }
 
 #[tokio::test]
-async fn script_handles_std_string() -> Result<()> {
+async fn script_std_string() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Script(
@@ -344,8 +344,35 @@ async fn script_handles_std_string() -> Result<()> {
         )
     );
 
-    let arg = String::from("Hello World");
-    script_instance.main(arg).call().await?;
+    let response = script_instance
+        .main("script-input".to_string())
+        .call()
+        .await?;
+    assert_eq!(response.value, "script-return".to_string());
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn script_string_slice() -> Result<()> {
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Script(
+            name = "MyScript",
+            project = "e2e/sway/types/scripts/script_string_slice",
+        )),
+        LoadScript(
+            name = "script_instance",
+            script = "MyScript",
+            wallet = "wallet"
+        )
+    );
+
+    let response = script_instance
+        .main("script-input".try_into()?)
+        .call()
+        .await?;
+    assert_eq!(response.value, "script-return");
 
     Ok(())
 }
