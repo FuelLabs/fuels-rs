@@ -68,7 +68,7 @@ mod tests {
         // ANCHOR_END: predicate_load
 
         // ANCHOR: predicate_receive
-        let amount_to_predicate = 512;
+        let amount_to_predicate = 500;
 
         wallet
             .transfer(
@@ -84,23 +84,18 @@ mod tests {
         // ANCHOR_END: predicate_receive
 
         // ANCHOR: predicate_spend
+        let amount_to_receiver = 300;
         predicate
             .transfer(
                 receiver.address(),
-                amount_to_predicate,
+                amount_to_receiver,
                 asset_id,
                 TxPolicies::default(),
             )
             .await?;
 
         let receiver_balance_after = receiver.get_asset_balance(&asset_id).await?;
-        assert_eq!(
-            initial_balance + amount_to_predicate,
-            receiver_balance_after
-        );
-
-        let predicate_balance = predicate.get_asset_balance(&asset_id).await?;
-        assert_eq!(predicate_balance, 0);
+        assert_eq!(initial_balance + amount_to_receiver, receiver_balance_after);
         // ANCHOR_END: predicate_spend
 
         Ok(())
@@ -152,7 +147,7 @@ mod tests {
         // ANCHOR_END: predicate_data_lock_amount
 
         // ANCHOR: predicate_data_unlock
-        let amount_to_unlock = 500;
+        let amount_to_unlock = 300;
 
         predicate
             .transfer(
@@ -163,14 +158,9 @@ mod tests {
             )
             .await?;
 
-        // Predicate balance is zero.
-        let balance = predicate.get_asset_balance(&AssetId::zeroed()).await?;
-
-        assert_eq!(balance, 0);
-
         // Second wallet balance is updated.
         let balance = second_wallet.get_asset_balance(&AssetId::zeroed()).await?;
-        assert_eq!(balance, 1500);
+        assert_eq!(balance, 1300);
         // ANCHOR_END: predicate_data_unlock
         Ok(())
     }

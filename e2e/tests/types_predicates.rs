@@ -110,7 +110,11 @@ async fn setup_predicate_test(
         receiver_amount,
     ));
 
-    let provider = setup_test_provider(coins, messages, None, None).await?;
+    let node_config = NodeConfig {
+        static_gas_price: 0,
+        ..Default::default()
+    };
+    let provider = setup_test_provider(coins, messages, Some(node_config), None).await?;
     receiver.set_provider(provider.clone());
 
     Ok((
