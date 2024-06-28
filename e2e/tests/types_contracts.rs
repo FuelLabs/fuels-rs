@@ -1539,7 +1539,6 @@ async fn generics_test() -> Result<()> {
                 10u32,
             )],
         };
-
         contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
