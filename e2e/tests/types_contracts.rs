@@ -1567,11 +1567,11 @@ async fn contract_vectors() -> Result<()> {
         let arg = vec![0, 1, 2];
         methods.u32_vec(arg).call().await?;
     }
-    //{ //TODO: @hal3e enable this
-    //    // vec of vecs of u32s
-    //    let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
-    //    methods.vec_in_vec(arg.clone()).call().await?;
-    //}
+    {
+        // vec of vecs of u32s
+        let arg = vec![vec![0, 1, 2], vec![0, 1, 2]];
+        methods.vec_in_vec(arg.clone()).call().await?;
+    }
     {
         // vec of structs
         // ANCHOR: passing_in_vec
@@ -1614,21 +1614,21 @@ async fn contract_vectors() -> Result<()> {
         let arg = (vec![0, 1, 2], vec![0, 1, 2]);
         methods.vec_in_tuple(arg.clone()).call().await?;
     }
-    //{ //TODO: @hal3e enable this
-    //    // vec in a vec in a struct in a vec
-    //    let arg = vec![
-    //        SomeStruct {
-    //            a: vec![vec![0, 1, 2], vec![3, 4, 5]],
-    //        },
-    //        SomeStruct {
-    //            a: vec![vec![6, 7, 8], vec![9, 10, 11]],
-    //        },
-    //    ];
-    //    methods
-    //        .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
-    //        .call()
-    //        .await?;
-    //}
+    {
+        // vec in a vec in a struct in a vec
+        let arg = vec![
+            SomeStruct {
+                a: vec![vec![0, 1, 2], vec![3, 4, 5]],
+            },
+            SomeStruct {
+                a: vec![vec![6, 7, 8], vec![9, 10, 11]],
+            },
+        ];
+        methods
+            .vec_in_a_vec_in_a_struct_in_a_vec(arg.clone())
+            .call()
+            .await?;
+    }
 
     Ok(())
 }

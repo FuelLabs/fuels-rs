@@ -222,7 +222,6 @@ async fn spend_predicate_coins_messages_vector() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: @hal3e enable this
 async fn spend_predicate_coins_messages_vectors() -> Result<()> {
     abigen!(Predicate(
         name = "MyPredicate",

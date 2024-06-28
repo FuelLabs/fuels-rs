@@ -148,7 +148,6 @@ async fn main_function_tuple_types() -> Result<()> {
 }
 
 #[tokio::test]
-#[ignore] // TODO: @hal3e enable this
 async fn main_function_vector_arguments() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
