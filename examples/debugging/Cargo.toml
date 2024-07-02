@@ -11,7 +11,7 @@ description = "Fuel Rust SDK debugging examples."
 
 [dev-dependencies]
 fuel-abi-types = { workspace = true }
-fuels = { workspace = true }
+fuels = { workspace = true, features = ["default"] }
 rand = { workspace = true }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }

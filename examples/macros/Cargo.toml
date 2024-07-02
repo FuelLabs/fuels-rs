@@ -10,5 +10,5 @@ repository = { workspace = true }
 description = "Fuel Rust SDK macro examples."
 
 [dev-dependencies]
-fuels = { workspace = true }
+fuels = { workspace = true, features = ["default"] }
 tokio = { workspace = true, features = ["full"] }

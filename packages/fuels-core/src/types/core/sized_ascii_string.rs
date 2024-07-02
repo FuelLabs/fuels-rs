@@ -54,6 +54,12 @@ impl From<AsciiString> for String {
     }
 }
 
+impl<const LEN: usize> AsRef<str> for SizedAsciiString<LEN> {
+    fn as_ref(&self) -> &str {
+        &self.data
+    }
+}
+
 impl Display for AsciiString {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.data)
@@ -178,12 +184,6 @@ impl<'de, const LEN: usize> Deserialize<'de> for SizedAsciiString<LEN> {
     }
 }
 
-impl<const LEN: usize> AsRef<[u8]> for SizedAsciiString<LEN> {
-    fn as_ref(&self) -> &[u8] {
-        self.data.as_bytes()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -296,7 +296,7 @@ mod tests {
     fn test_can_convert_sized_ascii_to_bytes() {
         let sized_str = SizedAsciiString::<3>::new("abc".to_string()).unwrap();
 
-        let bytes: &[u8] = sized_str.as_ref();
+        let bytes: &[u8] = sized_str.as_ref().as_bytes();
         assert_eq!(bytes, &[97, 98, 99]);
     }
 }

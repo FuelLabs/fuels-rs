@@ -34,7 +34,7 @@
   - [Call response](./calling-contracts/call-response.md)
   - [Logs](./calling-contracts/logs.md)
   - [Variable outputs and messages](./calling-contracts/variable-outputs.md)
-  - [Read-only calls](./calling-contracts/read-only.md)
+  - [Simulating calls](./calling-contracts/simulation.md)
   - [Calling other contracts](./calling-contracts/other-contracts.md)
   - [Multiple contract calls](./calling-contracts/multicalls.md)
   - [Transaction dependency estimation](./calling-contracts/tx-dependency-estimation.md)

@@ -358,8 +358,24 @@ mod tests {
         let contract_methods = MyContract::new(contract_id.clone(), wallet.clone()).methods();
         // ANCHOR: simulate
         // you would mint 100 coins if the transaction wasn't simulated
-        let counter = contract_methods.mint_coins(100).simulate().await?;
+        let counter = contract_methods
+            .mint_coins(100)
+            .simulate(Execution::Realistic)
+            .await?;
         // ANCHOR_END: simulate
+
+        {
+            let contract_id = contract_id.clone();
+            // ANCHOR: simulate_read_state
+            // you don't need any funds to read state
+            let balance = contract_methods
+                .get_balance(contract_id, AssetId::zeroed())
+                .simulate(Execution::StateReadOnly)
+                .await?
+                .value;
+            // ANCHOR_END: simulate_read_state
+        }
+
         let response = contract_methods.mint_coins(1_000_000).call().await?;
         // ANCHOR: variable_outputs
         let address = wallet.address();
@@ -863,7 +879,7 @@ mod tests {
         wallet.adjust_for_fee(&mut tb, 0).await?;
         tb.add_signer(wallet.clone())?;
 
-        let tx = tb.build(provider).await?;
+        let tx = tb.build(provider, ScriptContext::Complete).await?;
 
         let tx_id = provider.send_transaction(tx).await?;
         let tx_status = provider.tx_status(&tx_id).await?;
