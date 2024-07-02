@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use fuels::{
     prelude::*,
     tx::StorageSlot,
@@ -57,28 +55,32 @@ async fn test_init_storage_automatically() -> Result<()> {
     .deploy(&wallet, TxPolicies::default())
     .await?;
 
-    let key1 =
-        Bytes32::from_str("de9090cb50e71c2588c773487d1da7066d0c719849a7e58dc8b6397a25c567c0")
-            .unwrap();
-    let key2 =
-        Bytes32::from_str("f383b0ce51358be57daa3b725fe44acdb2d880604e367199080b4379c41bb6ed")
-            .unwrap();
-
     let contract_methods = MyContract::new(contract_id, wallet.clone()).methods();
+    {
+        let key: Bytes32 =
+            "d95f4c8d717d52323d34c1118b3f0598a5ec3cabae386887507cabd6dd546a43".parse()?;
 
-    let value = contract_methods
-        .get_value_b256(Bits256(*key1))
-        .call()
-        .await?
-        .value;
-    assert_eq!(value.0, [1u8; 32]);
+        let value = contract_methods
+            .get_value_b256(Bits256(*key))
+            .call()
+            .await?
+            .value;
 
-    let value = contract_methods
-        .get_value_u64(Bits256(*key2))
-        .call()
-        .await?
-        .value;
-    assert_eq!(value, 64);
+        assert_eq!(value.0, [1u8; 32]);
+    }
+    {
+        let key: Bytes32 =
+            "c979570128d5f52725e9a343a7f4992d8ed386d7c8cfd25f1c646c51c2ac6b4b".parse()?;
+
+        let value = contract_methods
+            .get_value_u64(Bits256(*key))
+            .call()
+            .await?
+            .value;
+
+        assert_eq!(value, 64);
+    }
+
     Ok(())
 }
 

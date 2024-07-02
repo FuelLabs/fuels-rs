@@ -422,3 +422,16 @@ async fn predicate_handles_std_string() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn predicate_string_slice() -> Result<()> {
+    abigen!(Predicate(
+        name = "MyPredicate",
+        abi = "e2e/sway/types/predicates/predicate_string_slice/out/release/predicate_string_slice-abi.json"
+    ));
+
+    let data = MyPredicateEncoder::default().encode_data("predicate-input".try_into()?)?;
+    assert_predicate_spendable(data, "sway/types/predicates/predicate_string_slice").await?;
+
+    Ok(())
+}
