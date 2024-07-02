@@ -89,6 +89,7 @@ members = [
   'sway/types/predicates/predicate_generics',
   'sway/types/predicates/predicate_raw_slice',
   'sway/types/predicates/predicate_std_lib_string',
+  'sway/types/predicates/predicate_string_slice',
   'sway/types/predicates/predicate_tuples',
   'sway/types/predicates/predicate_u128',
   'sway/types/predicates/predicate_u256',
@@ -101,10 +102,9 @@ members = [
   'sway/types/scripts/script_bytes',
   'sway/types/scripts/script_generics',
   'sway/types/scripts/script_heap_types',
-  #TODO: Decide what to do with this test project once
-  # https://github.com/FuelLabs/sway/issues/5727 is resolved
-  # 'sway/types/scripts/script_raw_slice',
+  'sway/types/scripts/script_raw_slice',
   'sway/types/scripts/script_std_lib_string',
+  'sway/types/scripts/script_string_slice',
   'sway/types/scripts/script_tuples',
   'sway/types/scripts/script_u128',
   'sway/types/scripts/script_u256',

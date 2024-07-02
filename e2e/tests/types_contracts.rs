@@ -1539,7 +1539,6 @@ async fn generics_test() -> Result<()> {
                 10u32,
             )],
         };
-
         contract_methods.complex_test(arg1.clone()).call().await?;
     }
 
@@ -1547,7 +1546,7 @@ async fn generics_test() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_vector() -> Result<()> {
+async fn contract_vectors() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1976,7 +1975,7 @@ async fn test_bytes_as_input() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_raw_slice() -> Result<()> {
+async fn contract_raw_slice() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -2021,7 +2020,7 @@ async fn test_contract_raw_slice() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_contract_returning_string_slice() -> Result<()> {
+async fn contract_string_slice() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -2037,16 +2036,17 @@ async fn test_contract_returning_string_slice() -> Result<()> {
 
     let contract_methods = contract_instance.methods();
 
-    {
-        let response = contract_methods.return_str().call().await?;
-        assert_eq!(response.value, "contract-return");
-    }
+    let response = contract_methods
+        .handles_str("contract-input".try_into()?)
+        .call()
+        .await?;
+    assert_eq!(response.value, "contract-return");
 
     Ok(())
 }
 
 #[tokio::test]
-async fn test_contract_std_lib_string() -> Result<()> {
+async fn contract_std_lib_string() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
