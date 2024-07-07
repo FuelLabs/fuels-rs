@@ -41,4 +41,4 @@ std = [
   "fuels-test-helpers?/std",
 ]
 fuel-core-lib = ["fuels-test-helpers?/fuel-core-lib", "dep:fuel-core"]
-rocksdb = ["fuel-core?/rocksdb"]
+rocksdb = ["fuel-core?/rocksdb", "fuels-test-helpers?/rocksdb"]

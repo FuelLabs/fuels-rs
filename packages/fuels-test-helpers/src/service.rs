@@ -65,7 +65,12 @@ impl FuelService {
         chain_config: ChainConfig,
         state_config: StateConfig,
     ) -> ServiceConfig {
-        use fuel_core::combined_database::CombinedDatabaseConfig;
+        use std::time::Duration;
+
+        use fuel_core::{
+            combined_database::CombinedDatabaseConfig,
+            fuel_core_graphql_api::ServiceConfig as GraphQLConfig,
+        };
         use fuel_core_chain_config::SnapshotReader;
 
         use crate::{DbType, MAX_DATABASE_CACHE_SIZE};
@@ -81,9 +86,19 @@ impl FuelService {
                 DbType::RocksDb(path) => path.clone().unwrap_or_default(),
             },
             database_type: node_config.database_type.into(),
+            #[cfg(feature = "rocksdb")]
+            state_rewind_policy: Default::default(),
         };
         ServiceConfig {
-            addr: node_config.addr,
+            graphql_config: GraphQLConfig {
+                addr: node_config.addr,
+                max_queries_depth: 16,
+                max_queries_complexity: 20000,
+                max_queries_recursive_depth: 16,
+                request_body_bytes_limit: 16 * 1024 * 1024,
+                query_log_threshold_time: Duration::from_secs(2),
+                api_request_timeout: Duration::from_secs(60),
+            },
             combined_db_config,
             snapshot_reader,
             utxo_validation: node_config.utxo_validation,

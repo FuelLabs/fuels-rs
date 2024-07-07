@@ -5,6 +5,7 @@ mod tests {
     use fuels::prelude::Result;
 
     #[tokio::test]
+    #[ignore] // TODO: ignore until testnet is updated to `fuel-core` `0.31.0`
     async fn connect_to_fuel_node() -> Result<()> {
         // ANCHOR: connect_to_testnet
         use std::str::FromStr;
