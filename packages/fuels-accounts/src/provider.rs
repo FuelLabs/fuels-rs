@@ -491,19 +491,27 @@ impl Provider {
         &self,
         contract_id: &Bech32ContractId,
     ) -> Result<HashMap<AssetId, u64>> {
-        // We don't paginate results because there are likely at most ~100 different assets in one
-        // wallet
-        let pagination = PaginationRequest {
+        let mut pagination = PaginationRequest {
             cursor: None,
-            results: 9999,
+            results: 512,
             direction: PageDirection::Forward,
         };
 
-        let balances_vec = self
-            .client
-            .contract_balances(&contract_id.into(), pagination)
-            .await?
-            .results;
+        let mut balances_vec = vec![];
+        loop {
+            let mut paginated_result = self
+                .client
+                .contract_balances(&contract_id.into(), pagination.clone())
+                .await?;
+
+            pagination.cursor = paginated_result.cursor;
+            balances_vec.append(&mut paginated_result.results);
+
+            if !paginated_result.has_next_page {
+                break;
+            }
+        }
+
         let balances = balances_vec
             .into_iter()
             .map(
@@ -514,6 +522,7 @@ impl Provider {
                  }| (asset_id, amount),
             )
             .collect();
+
         Ok(balances)
     }
 
