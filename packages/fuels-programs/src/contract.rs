@@ -90,7 +90,8 @@ impl Contract {
             self.salt,
             self.storage_slots,
             tx_policies,
-        );
+        )
+        .with_max_fee_estimation_tolerance(0.05);
 
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
