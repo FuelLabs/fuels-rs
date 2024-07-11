@@ -41,7 +41,7 @@ See [the `fuels-rs` book](https://fuellabs.github.io/fuels-rs/latest/)
 First, build the test projects using `forc`:
 
 ```shell
-forc build --release --path packages/fuels
+forc build --release --path e2e
 ```
 
 Then you can run the SDK tests with:
@@ -73,7 +73,7 @@ Before doing anything else, try all these commands:
 ```shell
 cargo clean
 rm Cargo.lock
-forc build --release --path packages/fuels
+forc build --release --path e2e
 cargo test
 ```
 
