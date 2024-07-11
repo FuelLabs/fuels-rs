@@ -1928,7 +1928,6 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
             let builder = contract_instance
                 .methods()
                 .initialize_counter(42)
-                .with_tx_policies(TxPolicies::default().with_tip(10))
                 .transaction_builder()
                 .await
                 .unwrap();
