@@ -329,6 +329,7 @@ macro_rules! impl_tx_trait {
                 provider: impl DryRunner,
                 block_horizon: u32,
                 is_using_predicates: bool,
+                max_fee_estimation_tolerance: f32,
             ) -> Result<()> {
                 let mut wrapper_tx: $tx_ty = tx.clone().into();
 
@@ -350,8 +351,12 @@ macro_rules! impl_tx_trait {
                     "error calculating `TransactionFee` in `TransactionBuilder`"
                 ))?;
 
+                let calculated_max_fee = tx_fee.max_fee();
+                let max_fee_w_tolerance =
+                    calculated_max_fee as f64 * (1.0 + f64::from(max_fee_estimation_tolerance));
+
                 tx.policies_mut()
-                    .set(PolicyType::MaxFee, Some(tx_fee.max_fee()));
+                    .set(PolicyType::MaxFee, Some(max_fee_w_tolerance as u64));
 
                 Ok(())
             }
@@ -404,6 +409,7 @@ pub struct ScriptTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub gas_estimation_tolerance: f32,
+    pub max_fee_estimation_tolerance: f32,
     pub gas_price_estimation_block_horizon: u32,
     pub variable_output_policy: VariableOutputPolicy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
@@ -421,6 +427,7 @@ pub struct CreateTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub salt: Salt,
     pub gas_price_estimation_block_horizon: u32,
+    pub max_fee_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -442,6 +449,7 @@ pub struct UploadTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
+    pub max_fee_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -454,6 +462,7 @@ pub struct UpgradeTransactionBuilder {
     pub witnesses: Vec<Witness>,
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
+    pub max_fee_estimation_tolerance: f32,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -471,6 +480,7 @@ impl Default for UpgradeTransactionBuilder {
             gas_price_estimation_block_horizon: Default::default(),
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
+            max_fee_estimation_tolerance: Default::default(),
         }
     }
 }
@@ -522,6 +532,7 @@ impl ScriptTransactionBuilder {
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
                 self.is_using_predicates(),
+                self.max_fee_estimation_tolerance,
             )
             .await?;
         }
@@ -617,6 +628,11 @@ impl ScriptTransactionBuilder {
 
     pub fn with_gas_estimation_tolerance(mut self, tolerance: f32) -> Self {
         self.gas_estimation_tolerance = tolerance;
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 
@@ -725,6 +741,7 @@ impl ScriptTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             variable_output_policy: self.variable_output_policy,
+            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
         }
     }
 }
@@ -772,6 +789,7 @@ impl CreateTransactionBuilder {
                 &provider,
                 self.gas_price_estimation_block_horizon,
                 is_using_predicates,
+                self.max_fee_estimation_tolerance,
             )
             .await?;
         }
@@ -803,6 +821,11 @@ impl CreateTransactionBuilder {
 
     pub fn with_salt(mut self, salt: impl Into<Salt>) -> Self {
         self.salt = salt.into();
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 
@@ -840,6 +863,7 @@ impl CreateTransactionBuilder {
             unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
+            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
         }
     }
 }
@@ -880,6 +904,7 @@ impl UploadTransactionBuilder {
                 &provider,
                 self.gas_price_estimation_block_horizon,
                 is_using_predicates,
+                self.max_fee_estimation_tolerance,
             )
             .await?;
         }
@@ -913,6 +938,11 @@ impl UploadTransactionBuilder {
 
     pub fn with_proof_set(mut self, proof_set: Vec<Bytes32>) -> Self {
         self.proof_set = proof_set;
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 
@@ -956,6 +986,7 @@ impl UploadTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             proof_set: vec![],
+            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
         }
     }
 }
@@ -990,6 +1021,7 @@ impl UpgradeTransactionBuilder {
                 &provider,
                 self.gas_price_estimation_block_horizon,
                 is_using_predicates,
+                self.max_fee_estimation_tolerance,
             )
             .await?;
         }
@@ -1003,6 +1035,11 @@ impl UpgradeTransactionBuilder {
 
     pub fn with_purpose(mut self, upgrade_purpose: UpgradePurpose) -> Self {
         self.purpose = upgrade_purpose;
+        self
+    }
+
+    pub fn with_max_fee_estimation_tolerance(mut self, max_fee_estimation_tolerance: f32) -> Self {
+        self.max_fee_estimation_tolerance = max_fee_estimation_tolerance;
         self
     }
 
@@ -1043,6 +1080,7 @@ impl UpgradeTransactionBuilder {
             unresolved_witness_indexes: self.unresolved_witness_indexes.clone(),
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
+            max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
         }
     }
 }
