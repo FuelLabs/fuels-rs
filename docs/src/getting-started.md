@@ -101,7 +101,7 @@ Another way to experience the SDK is to look at the source code. The `e2e/tests/
 > To build these tests, run the following command:
 
 ```shell
-forc build --release --path packages/fuels
+forc build --release --path e2e
 ```
 
 > `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
