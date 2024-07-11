@@ -1902,3 +1902,58 @@ async fn contract_call_with_non_zero_base_asset_id_and_tip() -> Result<()> {
 
     Ok(())
 }
+
+#[tokio::test]
+async fn max_fee_estimation_respects_tolerance() -> Result<()> {
+    use fuels::prelude::*;
+
+    setup_program_test!(
+        Wallets("wallet"),
+        Abigen(Contract(
+            name = "MyContract",
+            project = "e2e/sway/contracts/contract_test"
+        )),
+        Deploy(
+            name = "contract_instance",
+            wallet = "wallet",
+            contract = "MyContract"
+        )
+    );
+    let provider = wallet.provider().unwrap();
+
+    let calculate_max_fee = |tolerance: f32| {
+        let contract_instance = contract_instance.clone();
+        let provider = provider.clone();
+        async move {
+            let builder = contract_instance
+                .methods()
+                .initialize_counter(42)
+                .transaction_builder()
+                .await
+                .unwrap();
+
+            assert_eq!(
+                builder.max_fee_estimation_tolerance, 0.05,
+                "Expected pre-set tolerance of 0.05"
+            );
+
+            builder
+                .with_max_fee_estimation_tolerance(tolerance)
+                .build(&provider)
+                .await
+                .unwrap()
+                .max_fee()
+                .unwrap()
+        }
+    };
+
+    let no_increase_max_fee = calculate_max_fee(0.0).await;
+    let increased_max_fee = calculate_max_fee(2.00).await;
+
+    assert_eq!(
+        increased_max_fee as f64 / no_increase_max_fee as f64,
+        1.00 + 2.00
+    );
+
+    Ok(())
+}

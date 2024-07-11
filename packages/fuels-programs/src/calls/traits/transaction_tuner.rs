@@ -79,7 +79,8 @@ impl TransactionTuner for ScriptCall {
             .with_script_data(self.compute_script_data()?)
             .with_inputs(inputs)
             .with_outputs(outputs)
-            .with_gas_estimation_tolerance(0.05))
+            .with_gas_estimation_tolerance(0.05)
+            .with_max_fee_estimation_tolerance(0.05))
     }
 
     async fn build_tx<T: Account>(
