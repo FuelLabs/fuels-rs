@@ -594,6 +594,7 @@ impl ScriptTransactionBuilder {
                 &dry_runner,
                 self.gas_price_estimation_block_horizon,
                 self.is_using_predicates(),
+                self.max_fee_estimation_tolerance,
             )
             .await?;
         }

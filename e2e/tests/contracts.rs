@@ -2013,7 +2013,7 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 
             builder
                 .with_max_fee_estimation_tolerance(tolerance)
-                .build(&provider)
+                .build(&provider, ScriptContext::Complete)
                 .await
                 .unwrap()
                 .max_fee()
