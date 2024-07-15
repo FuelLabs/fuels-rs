@@ -13,7 +13,7 @@ use fuels_core::types::{
     bech32::Bech32ContractId,
     errors::{error, Result},
     transaction::TxPolicies,
-    transaction_builders::{Context, CreateTransactionBuilder},
+    transaction_builders::CreateTransactionBuilder,
 };
 pub use load::*;
 pub use storage::*;
@@ -98,7 +98,7 @@ impl Contract {
 
         let provider = account.try_provider()?;
 
-        let tx = tb.build(provider, Context::Complete).await?;
+        let tx = tb.build(provider).await?;
 
         provider
             .send_transaction_and_await_commit(tx)

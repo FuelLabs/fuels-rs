@@ -3,8 +3,7 @@ use fuels_core::types::{
     errors::{error, Result},
     transaction::{ScriptTransaction, TxPolicies},
     transaction_builders::{
-        BuildableTransaction, ScriptContext, ScriptTransactionBuilder, TransactionBuilder,
-        VariableOutputPolicy,
+        BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder, VariableOutputPolicy,
     },
 };
 
@@ -97,8 +96,7 @@ impl TransactionTuner for ScriptCall {
         account.add_witnesses(&mut tb)?;
         account.adjust_for_fee(&mut tb, 0).await?;
 
-        tb.build(account.try_provider()?, ScriptContext::Complete)
-            .await
+        tb.build(account.try_provider()?).await
     }
 }
 

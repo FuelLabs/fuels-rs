@@ -764,8 +764,7 @@ async fn create_transfer(
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(wallet.try_provider()?, ScriptContext::Complete)
-        .await
+    tb.build(wallet.try_provider()?).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -824,8 +823,7 @@ async fn create_revert_tx(wallet: &WalletUnlocked) -> Result<ScriptTransaction> 
 
     wallet.adjust_for_fee(&mut tb, amount).await?;
 
-    tb.build(wallet.try_provider()?, ScriptContext::Complete)
-        .await
+    tb.build(wallet.try_provider()?).await
 }
 
 #[cfg(feature = "coin-cache")]
@@ -923,7 +921,7 @@ async fn test_build_with_provider() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
 
-    let tx = tb.build(provider, ScriptContext::Complete).await?;
+    let tx = tb.build(provider).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -957,7 +955,7 @@ async fn can_produce_blocks_with_trig_never() -> Result<()> {
 
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
     tb.add_signer(wallet.clone())?;
-    let tx = tb.build(provider, ScriptContext::Complete).await?;
+    let tx = tb.build(provider).await?;
     let tx_id = tx.id(provider.chain_id());
 
     provider.send_transaction(tx).await?;
@@ -1002,7 +1000,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
             UploadTransactionBuilder::prepare_subsection_upload(subsection, TxPolicies::default());
         wallet.add_witnesses(&mut builder)?;
         wallet.adjust_for_fee(&mut builder, 0).await?;
-        let tx = builder.build(&provider, Context::Complete).await?;
+        let tx = builder.build(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
     }
@@ -1011,7 +1009,7 @@ async fn can_upload_executor_and_trigger_upgrade() -> Result<()> {
         UpgradeTransactionBuilder::prepare_state_transition_upgrade(root, TxPolicies::default());
     wallet.add_witnesses(&mut builder)?;
     wallet.adjust_for_fee(&mut builder, 0).await?;
-    let tx = builder.build(provider.clone(), Context::Complete).await?;
+    let tx = builder.build(provider.clone()).await?;
 
     provider.send_transaction(tx).await?;
 
@@ -1143,7 +1141,7 @@ async fn tx_with_witness_data() -> Result<()> {
 
     let tx = tb
         .with_tx_policies(TxPolicies::default().with_witness_limit(1000))
-        .build(provider, ScriptContext::Complete)
+        .build(provider)
         .await?;
 
     let status = provider.send_transaction_and_await_commit(tx).await?;

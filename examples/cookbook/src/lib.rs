@@ -10,7 +10,7 @@ mod tests {
             bech32::Bech32Address,
             transaction::TxPolicies,
             transaction_builders::{
-                BuildableTransaction, ScriptContext, ScriptTransactionBuilder, TransactionBuilder,
+                BuildableTransaction, ScriptTransactionBuilder, TransactionBuilder,
             },
             tx_status::TxStatus,
             AssetId,
@@ -189,7 +189,7 @@ mod tests {
             ScriptTransactionBuilder::prepare_transfer(inputs, outputs, TxPolicies::default());
         tb.add_signer(wallet_1.clone())?;
 
-        let tx = tb.build(&provider, ScriptContext::Complete).await?;
+        let tx = tb.build(&provider).await?;
 
         provider.send_transaction_and_await_commit(tx).await?;
 
@@ -314,7 +314,7 @@ mod tests {
         // ANCHOR_END: custom_tx_policies
 
         // ANCHOR: custom_tx_build
-        let tx = tb.build(&provider, ScriptContext::Complete).await?;
+        let tx = tb.build(&provider).await?;
         let tx_id = provider.send_transaction(tx).await?;
         // ANCHOR_END: custom_tx_build
 

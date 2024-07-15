@@ -487,7 +487,7 @@ async fn predicate_transfer_with_signed_resources() -> Result<()> {
     let mut tb = ScriptTransactionBuilder::prepare_transfer(inputs, outputs, Default::default());
     tb.add_signer(wallet.clone())?;
 
-    let tx = tb.build(&provider, ScriptContext::Complete).await?;
+    let tx = tb.build(&provider).await?;
 
     provider.send_transaction_and_await_commit(tx).await?;
 
@@ -787,7 +787,7 @@ async fn predicate_adjust_fee_persists_message_w_data() -> Result<()> {
         TxPolicies::default().with_tip(1),
     );
     predicate.adjust_for_fee(&mut tb, 1000).await?;
-    let tx = tb.build(&provider, ScriptContext::Complete).await?;
+    let tx = tb.build(&provider).await?;
 
     assert_eq!(tx.inputs().len(), 2);
     assert_eq!(tx.inputs()[0].message_id().unwrap(), message.message_id());
@@ -843,7 +843,7 @@ async fn predicate_transfer_non_base_asset() -> Result<()> {
     tb.add_signer(wallet.clone())?;
     wallet.adjust_for_fee(&mut tb, 0).await?;
 
-    let tx = tb.build(&provider, ScriptContext::Complete).await?;
+    let tx = tb.build(&provider).await?;
 
     provider
         .send_transaction_and_await_commit(tx)
@@ -891,7 +891,7 @@ async fn predicate_can_access_manually_added_witnesses() -> Result<()> {
         outputs,
         TxPolicies::default().with_witness_limit(32),
     )
-    .build(&provider, ScriptContext::Complete)
+    .build(&provider)
     .await?;
 
     let witness = ABIEncoder::default().encode(&[64u64.into_token()])?; // u64 because this is VM memory
@@ -959,7 +959,7 @@ async fn tx_id_not_changed_after_adding_witnesses() -> Result<()> {
         outputs,
         TxPolicies::default().with_witness_limit(32),
     )
-    .build(&provider, ScriptContext::Complete)
+    .build(&provider)
     .await?;
 
     let tx_id = tx.id(provider.chain_id());

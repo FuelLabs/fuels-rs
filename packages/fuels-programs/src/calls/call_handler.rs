@@ -12,7 +12,8 @@ use fuels_core::{
         output::Output,
         transaction::{ScriptTransaction, Transaction, TxPolicies},
         transaction_builders::{
-            BuildableTransaction, ScriptContext, ScriptTransactionBuilder, VariableOutputPolicy,
+            BuildableTransaction, ScriptBuildStrategy, ScriptTransactionBuilder,
+            VariableOutputPolicy,
         },
         tx_status::TxStatus,
         Selector, Token,
@@ -193,7 +194,8 @@ where
             let tx = self
                 .transaction_builder()
                 .await?
-                .build(provider, ScriptContext::StateReadOnly)
+                .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
+                .build(provider)
                 .await?;
 
             provider.dry_run_opt(tx, false, None).await?
@@ -456,7 +458,8 @@ where
             let tx = self
                 .transaction_builder()
                 .await?
-                .build(provider, ScriptContext::StateReadOnly)
+                .with_build_strategy(ScriptBuildStrategy::StateReadOnly)
+                .build(provider)
                 .await?;
 
             provider.dry_run_opt(tx, false, None).await?

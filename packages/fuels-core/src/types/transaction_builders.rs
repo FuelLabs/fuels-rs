@@ -50,15 +50,16 @@ struct UnresolvedWitnessIndexes {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 pub trait BuildableTransaction: sealed::Sealed {
     type TxType: Transaction;
-    type Context;
+    type Strategy;
 
-    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType>;
+    fn with_build_strategy(self, strategy: Self::Strategy) -> Self;
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType>;
 }
 
 impl sealed::Sealed for ScriptTransactionBuilder {}
 
 #[derive(Debug, Clone, Default)]
-pub enum ScriptContext {
+pub enum ScriptBuildStrategy {
     /// Transaction is estimated and signatures are automatically added.
     #[default]
     Complete,
@@ -74,7 +75,7 @@ pub enum ScriptContext {
 }
 
 #[derive(Debug, Clone, Default)]
-pub enum Context {
+pub enum Strategy {
     /// Transaction is estimated and signatures are automatically added.
     #[default]
     Complete,
@@ -88,10 +89,15 @@ pub enum Context {
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for ScriptTransactionBuilder {
     type TxType = ScriptTransaction;
-    type Context = ScriptContext;
+    type Strategy = ScriptBuildStrategy;
 
-    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
-        self.build(provider, context).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
+    }
+
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
     }
 }
 
@@ -100,10 +106,15 @@ impl sealed::Sealed for CreateTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for CreateTransactionBuilder {
     type TxType = CreateTransaction;
-    type Context = Context;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
-        self.build(provider, context).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
+    }
+
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
     }
 }
 
@@ -112,10 +123,15 @@ impl sealed::Sealed for UploadTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UploadTransactionBuilder {
     type TxType = UploadTransaction;
-    type Context = Context;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
-        self.build(provider, context).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
+    }
+
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
     }
 }
 
@@ -124,10 +140,15 @@ impl sealed::Sealed for UpgradeTransactionBuilder {}
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl BuildableTransaction for UpgradeTransactionBuilder {
     type TxType = UpgradeTransaction;
-    type Context = Context;
+    type Strategy = Strategy;
 
-    async fn build(self, provider: impl DryRunner, context: Self::Context) -> Result<Self::TxType> {
-        self.build(provider, context).await
+    fn with_build_strategy(mut self, strategy: Self::Strategy) -> Self {
+        self.build_strategy = strategy;
+        self
+    }
+
+    async fn build(self, provider: impl DryRunner) -> Result<Self::TxType> {
+        self.build(provider).await
     }
 }
 
@@ -183,7 +204,9 @@ macro_rules! impl_tx_trait {
                 &self,
                 provider: impl DryRunner,
             ) -> Result<Option<TransactionFee>> {
-                let mut fee_estimation_tb = self.clone_without_signers();
+                let mut fee_estimation_tb = self
+                    .clone_without_signers()
+                    .with_build_strategy(Self::Strategy::NoSignatures);
 
                 // Add a temporary witness for every `Signer` to include them in the fee
                 // estimation.
@@ -192,9 +215,7 @@ macro_rules! impl_tx_trait {
                     .witnesses_mut()
                     .extend(repeat(witness).take(self.unresolved_signers.len()));
 
-                let context = Self::Context::NoSignatures;
-                let mut tx =
-                    BuildableTransaction::build(fee_estimation_tb, &provider, context).await?;
+                let mut tx = BuildableTransaction::build(fee_estimation_tb, &provider).await?;
 
                 if tx.is_using_predicates() {
                     tx.estimate_predicates(&provider, None).await?;
@@ -412,6 +433,7 @@ pub struct ScriptTransactionBuilder {
     pub max_fee_estimation_tolerance: f32,
     pub gas_price_estimation_block_horizon: u32,
     pub variable_output_policy: VariableOutputPolicy,
+    pub build_strategy: ScriptBuildStrategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -428,6 +450,7 @@ pub struct CreateTransactionBuilder {
     pub salt: Salt,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -450,6 +473,7 @@ pub struct UploadTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -463,6 +487,7 @@ pub struct UpgradeTransactionBuilder {
     pub tx_policies: TxPolicies,
     pub gas_price_estimation_block_horizon: u32,
     pub max_fee_estimation_tolerance: f32,
+    pub build_strategy: Strategy,
     unresolved_witness_indexes: UnresolvedWitnessIndexes,
     unresolved_signers: Vec<Box<dyn Signer + Send + Sync>>,
 }
@@ -481,6 +506,7 @@ impl Default for UpgradeTransactionBuilder {
             unresolved_witness_indexes: Default::default(),
             unresolved_signers: Default::default(),
             max_fee_estimation_tolerance: Default::default(),
+            build_strategy: Default::default(),
         }
     }
 }
@@ -491,22 +517,18 @@ impl_tx_trait!(UploadTransactionBuilder, UploadTransaction);
 impl_tx_trait!(UpgradeTransactionBuilder, UpgradeTransaction);
 
 impl ScriptTransactionBuilder {
-    async fn build(
-        mut self,
-        provider: impl DryRunner,
-        context: ScriptContext,
-    ) -> Result<ScriptTransaction> {
+    async fn build(mut self, provider: impl DryRunner) -> Result<ScriptTransaction> {
         let is_using_predicates = self.is_using_predicates();
 
-        let tx = match context {
-            ScriptContext::Complete => self.resolve_fuel_tx(&provider).await?,
-            ScriptContext::NoSignatures => {
+        let tx = match self.build_strategy {
+            ScriptBuildStrategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            ScriptBuildStrategy::NoSignatures => {
                 self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
 
                 self.resolve_fuel_tx(&provider).await?
             }
-            ScriptContext::StateReadOnly => {
+            ScriptBuildStrategy::StateReadOnly => {
                 self.resolve_fuel_tx_for_state_reading(provider).await?
             }
         };
@@ -804,6 +826,7 @@ impl ScriptTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             variable_output_policy: self.variable_output_policy,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
@@ -820,16 +843,12 @@ fn add_variable_outputs(tx: &mut fuel_tx::Script, variable_outputs: usize) {
 }
 
 impl CreateTransactionBuilder {
-    pub async fn build(
-        mut self,
-        provider: impl DryRunner,
-        context: Context,
-    ) -> Result<CreateTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<CreateTransaction> {
         let is_using_predicates = self.is_using_predicates();
 
-        let tx = match context {
-            Context::Complete => self.resolve_fuel_tx(&provider).await?,
-            Context::NoSignatures => {
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
                 self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
@@ -941,21 +960,18 @@ impl CreateTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
 
 impl UploadTransactionBuilder {
-    pub async fn build(
-        mut self,
-        provider: impl DryRunner,
-        context: Context,
-    ) -> Result<UploadTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<UploadTransaction> {
         let is_using_predicates = self.is_using_predicates();
 
-        let tx = match context {
-            Context::Complete => self.resolve_fuel_tx(&provider).await?,
-            Context::NoSignatures => {
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
                 self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
@@ -1079,20 +1095,17 @@ impl UploadTransactionBuilder {
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             proof_set: vec![],
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
 
 impl UpgradeTransactionBuilder {
-    pub async fn build(
-        mut self,
-        provider: impl DryRunner,
-        context: Context,
-    ) -> Result<UpgradeTransaction> {
+    pub async fn build(mut self, provider: impl DryRunner) -> Result<UpgradeTransaction> {
         let is_using_predicates = self.is_using_predicates();
-        let tx = match context {
-            Context::Complete => self.resolve_fuel_tx(&provider).await?,
-            Context::NoSignatures => {
+        let tx = match self.build_strategy {
+            Strategy::Complete => self.resolve_fuel_tx(&provider).await?,
+            Strategy::NoSignatures => {
                 self.set_witness_indexes();
                 self.unresolved_signers = Default::default();
                 self.resolve_fuel_tx(&provider).await?
@@ -1186,6 +1199,7 @@ impl UpgradeTransactionBuilder {
             unresolved_signers: Default::default(),
             gas_price_estimation_block_horizon: self.gas_price_estimation_block_horizon,
             max_fee_estimation_tolerance: self.max_fee_estimation_tolerance,
+            build_strategy: self.build_strategy.clone(),
         }
     }
 }
@@ -1505,7 +1519,8 @@ mod tests {
 
         // when
         let tx = tb
-            .build(&MockDryRunner::default(), Context::NoSignatures)
+            .with_build_strategy(Strategy::NoSignatures)
+            .build(&MockDryRunner::default())
             .await?;
 
         // then
@@ -1540,7 +1555,8 @@ mod tests {
 
         // when
         let tx = tb
-            .build(&MockDryRunner::default(), ScriptContext::NoSignatures)
+            .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+            .build(&MockDryRunner::default())
             .await?;
 
         // then

@@ -1669,7 +1669,10 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     tb.inputs_mut().extend(new_base_inputs);
 
     // ANCHOR: tb_build_without_signatures
-    let mut tx = tb.build(provider, ScriptContext::NoSignatures).await?;
+    let mut tx = tb
+        .with_build_strategy(ScriptBuildStrategy::NoSignatures)
+        .build(provider)
+        .await?;
     // ANCHOR: tx_sign_with
     tx.sign_with(&wallet, provider.chain_id()).await?;
     // ANCHOR_END: tx_sign_with
@@ -2013,7 +2016,7 @@ async fn max_fee_estimation_respects_tolerance() -> Result<()> {
 
             builder
                 .with_max_fee_estimation_tolerance(tolerance)
-                .build(&provider, ScriptContext::Complete)
+                .build(&provider)
                 .await
                 .unwrap()
                 .max_fee()
