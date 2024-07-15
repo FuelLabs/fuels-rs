@@ -82,10 +82,10 @@ cargo test -- --nocapture
 Add these dependencies on your `Cargo.toml`:
 
 ```toml
-fuels = "0.64.0"
+fuels = "0.65.1"
 ```
 
-> **Note** We're using version `0.64.0` of the SDK, which is the latest version at the time of this writing.
+> **Note** We're using version `0.65.1` of the SDK, which is the latest version at the time of this writing.
 
 And then, in your Rust file that's going to make use of the SDK:
 
@@ -101,7 +101,7 @@ Another way to experience the SDK is to look at the source code. The `e2e/tests/
 > To build these tests, run the following command:
 
 ```shell
-forc build --release --path packages/fuels
+forc build --release --path e2e
 ```
 
 > `forc` can also be used to clean and format the test projects. Check the `help` output for more info.
