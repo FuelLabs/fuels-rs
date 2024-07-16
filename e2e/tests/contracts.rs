@@ -1642,7 +1642,7 @@ async fn test_arguments_with_gas_forwarded() -> Result<()> {
 }
 
 #[tokio::test]
-async fn contract_custom_call_build_without_signatures() -> Result<()> {
+async fn contract_custom_call_no_signatures_strategy() -> Result<()> {
     setup_program_test!(
         Wallets("wallet"),
         Abigen(Contract(
@@ -1668,7 +1668,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
         .await?;
     tb.inputs_mut().extend(new_base_inputs);
 
-    // ANCHOR: tb_build_without_signatures
+    // ANCHOR: tb_no_signatures_strategy
     let mut tx = tb
         .with_build_strategy(ScriptBuildStrategy::NoSignatures)
         .build(provider)
@@ -1676,7 +1676,7 @@ async fn contract_custom_call_build_without_signatures() -> Result<()> {
     // ANCHOR: tx_sign_with
     tx.sign_with(&wallet, provider.chain_id()).await?;
     // ANCHOR_END: tx_sign_with
-    // ANCHOR_END: tb_build_without_signatures
+    // ANCHOR_END: tb_no_signatures_strategy
 
     let tx_id = provider.send_transaction(tx).await?;
     let tx_status = provider.tx_status(&tx_id).await?;
